@@ -1,4 +1,3 @@
-/* 问题框样式 */
 .intro-text {
     font-size: 1.1rem;
     color: var(--text-color);
@@ -157,7 +156,6 @@
     100% { transform: translateY(0) translateX(0); opacity: 0.3; }
 }
 
-/* 书页翻动动画 */
 @keyframes pageFlipping {
     0% { transform: scale(1); }
     25% { transform: scale(1.05) rotate(5deg); }
@@ -166,14 +164,12 @@
     100% { transform: scale(1); }
 }
 
-/* 书本发光效果 */
 @keyframes bookGlow {
     0% { text-shadow: 0 0 8px rgba(122, 162, 247, 0.4); }
     50% { text-shadow: 0 0 15px rgba(122, 162, 247, 0.7); }
     100% { text-shadow: 0 0 8px rgba(122, 162, 247, 0.4); }
 }
 
-/* 书本翻页动画效果 */
 #story .animated-title .book-cover,
 #story .animated-title .book-pages {
     display: inline-block;
@@ -189,8 +185,7 @@
 
 #story .animated-title .book-pages {
     color: #f77daa;
-    margin-left: -14px; /* 负边距使两个图标重叠 */
-    opacity: 0;
+    margin-left: -14px;     opacity: 0;
     transform: rotateY(-90deg);
     transform-origin: left center;
     z-index: 1;
@@ -215,7 +210,6 @@
     color: #7aa2f7;
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
     .questions-box {
         padding: 1.5rem 1rem;
@@ -237,7 +231,6 @@
     }
 }
 
-/* 四方格布局 */
 .story-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -259,7 +252,6 @@
     border-radius: 10px;
 }
 
-/* 适配移动设备 */
 @media (max-width: 768px) {
     .story-grid {
         grid-template-columns: 1fr;
@@ -267,14 +259,12 @@
     }
 }
 
-/* 改进的视频容器样式 */
 .video-container {
     position: relative;
     width: 100%;
     max-width: 800px;
     margin: 20px auto;
-    padding-top: 56.25%; /* 16:9 比例 */
-    box-shadow: 0 4px 16px rgba(122, 162, 247, 0.15);
+    padding-top: 56.25%;     box-shadow: 0 4px 16px rgba(122, 162, 247, 0.15);
     border-radius: 10px;
     overflow: hidden;
     transition: all 0.3s ease;
@@ -284,7 +274,6 @@
     box-shadow: 0 8px 24px rgba(122, 162, 247, 0.2);
 }
 
-/* 视频封面样式 */
 .video-cover {
     position: absolute;
     top: 0;
@@ -314,7 +303,6 @@
     opacity: 1;
 }
 
-/* 播放按钮样式 */
 .play-button {
     position: absolute;
     width: 70px;
@@ -344,15 +332,13 @@
     box-shadow: 0 0 20px rgba(247, 125, 170, 0.4);
 }
 
-/* 视频iframe容器 */
 .video-frame-container {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.02); /* 非常轻微的背景，避免完全透明时的闪烁 */
-    transition: opacity 0.3s ease;
+    background: rgba(255, 255, 255, 0.02);     transition: opacity 0.3s ease;
     z-index: 1;
 }
 
@@ -365,13 +351,11 @@
     background: transparent;
 }
 
-/* 确保视频播放器不会出现边框和黑色背景 */
 iframe {
     background-color: transparent !important;
     border: none !important;
 }
 
-/* 响应式调整 */
 @media (max-width: 768px) {
     .play-button {
         width: 50px;
@@ -383,7 +367,6 @@ iframe {
     }
 }
 
-/* 故事笔记样式 */
 .story-note {
     font-style: italic;
     color: var(--text-color);
@@ -469,7 +452,6 @@ iframe {
     }
 }
 
-/* Logo 故事标题动画效果 */
 .logo-story-header {
     display: flex;
     flex-direction: column;
@@ -480,7 +462,6 @@ iframe {
     overflow: hidden;
 }
 
-/* Logo故事图标基础样式 */
 .logo-story-icon {
     width: 80px;
     height: 80px;
@@ -497,7 +478,6 @@ iframe {
     box-shadow: 0 5px 20px rgba(122, 162, 247, 0.2);
 }
 
-/* 主图标 */
 .logo-story-icon i {
     font-size: 2.5rem;
     color: var(--primary-color);
@@ -509,7 +489,6 @@ iframe {
     font-weight: 900;
 }
 
-/* 替代图标 */
 .logo-story-icon .alt-icon {
     position: absolute;
     top: 0;
@@ -531,7 +510,6 @@ iframe {
     filter: drop-shadow(0 2px 4px rgba(247, 125, 170, 0.3));
 }
 
-/* 悬停效果 - 仅在图标上悬停时触发 */
 .logo-story-icon:hover {
     background: linear-gradient(135deg, rgba(122, 162, 247, 0.2), rgba(247, 125, 170, 0.2));
     transform: translateY(-5px);
@@ -549,12 +527,10 @@ iframe {
     animation: iconBounce 1s ease-in-out;
 }
 
-/* 移除旧的header悬停选择器 */
 .logo-story-header:hover .logo-story-icon i,
 .logo-story-header:hover .logo-story-icon .alt-icon,
 .logo-story-header:hover .logo-story-icon::before {
-    /* 规则已被替换，这里删除旧的样式 */
-}
+    }
 
 .logo-story-title {
     font-size: 2.2rem;
@@ -629,7 +605,6 @@ iframe {
     box-shadow: 0 0 10px var(--accent-color);
 }
 
-/* Logo 动效关键帧动画 */
 @keyframes iconPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); box-shadow: 0 8px 30px rgba(247, 125, 170, 0.3); }
@@ -659,7 +634,6 @@ iframe {
     50% { opacity: 1; }
 }
 
-/* 响应式适配 */
 @media (max-width: 768px) {
     .logo-story-icon {
         width: 60px;
@@ -679,7 +653,6 @@ iframe {
     }
 }
 
-/* 梦开始的地方 - 标题动画效果 */
 .story-begin-header {
     display: flex;
     flex-direction: column;
@@ -706,7 +679,6 @@ iframe {
     box-shadow: 0 5px 20px rgba(122, 162, 247, 0.25);
 }
 
-/* 背景装饰效果 */
 .story-begin-icon::before {
     content: '';
     position: absolute;
@@ -719,7 +691,6 @@ iframe {
     animation: storyBgPulse 4s ease-in-out infinite alternate;
 }
 
-/* 粒子光效 */
 .story-begin-icon::after {
     content: '';
     position: absolute;
@@ -739,7 +710,6 @@ iframe {
     animation: storyRotateConic 10s linear infinite;
 }
 
-/* 星星装饰 */
 .story-begin-icon .story-star {
     position: absolute;
     width: 4px;
@@ -773,7 +743,6 @@ iframe {
     animation: storyStarTwinkle 3.7s ease-in-out infinite 1s;
 }
 
-/* 故事开始图标悬停效果 - 仅悬停在图标上时触发 */
 .story-begin-icon:hover {
     transform: translateY(-5px) rotate(5deg);
     box-shadow: 
@@ -796,14 +765,12 @@ iframe {
     animation: pageFlipping 3s ease-in-out infinite, pinkBookGlow 2s ease-in-out infinite;
 }
 
-/* 添加粉色书本发光效果 */
 @keyframes pinkBookGlow {
     0% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
     50% { text-shadow: 0 0 15px rgba(247, 125, 170, 0.7); }
     100% { text-shadow: 0 0 8px rgba(247, 125, 170, 0.4); }
 }
 
-/* 增强动画关键帧 */
 @keyframes storyIconFloat {
     0%, 100% { transform: translateY(0) rotate(0deg); }
     25% { transform: translateY(-4px) rotate(-2deg); }
@@ -841,7 +808,6 @@ iframe {
     100% { opacity: 0; transform: scale(1.5); }
 }
 
-/* 线条流光效果 */
 @keyframes storyLineShine {
     0% { left: -100%; }
     40%, 60% { left: 100%; }
@@ -918,7 +884,6 @@ iframe {
     box-shadow: 0 0 10px rgba(122, 162, 247, 0.6);
 }
 
-/* 响应式适配 */
 @media (max-width: 768px) {
     .story-begin-icon {
         width: 60px;
@@ -938,7 +903,6 @@ iframe {
     }
 }
 
-/* 关于名字的由来 - 标题动画效果 */
 .name-origin-header {
     display: flex;
     flex-direction: column;
@@ -985,21 +949,17 @@ iframe {
 }
 
 .name-origin-header:hover .name-origin-icon {
-    /* 已被新选择器替换，移除 */
-}
+    }
 
 .name-origin-header:hover .name-origin-icon::before,
 .name-origin-header:hover .name-origin-icon::after {
-    /* 已被新选择器替换，移除 */
-}
+    }
 
 .name-origin-header:hover .name-origin-icon > i {
-    /* 已被新选择器替换，移除 */
-}
+    }
 
 .name-origin-header:hover .name-origin-icon .alt-icon {
-    /* 已被新选择器替换，移除 */
-}
+    }
 
 .name-origin-title {
     font-size: 2.2rem;
@@ -1071,7 +1031,6 @@ iframe {
     box-shadow: 0 0 8px rgba(247, 125, 170, 0.6);
 }
 
-/* 名字由来 - 动画关键帧 */
 @keyframes nameIconRotate {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
@@ -1088,7 +1047,6 @@ iframe {
     100% { transform: translateX(-100%); }
 }
 
-/* 响应式适配 */
 @media (max-width: 768px) {
     .name-origin-icon {
         width: 60px;
@@ -1108,7 +1066,6 @@ iframe {
     }
 }
 
-/* 名字由来图标悬停效果 - 仅悬停在图标上时触发 */
 .name-origin-icon:hover {
     box-shadow: 0 8px 30px rgba(247, 125, 170, 0.4);
 }
@@ -1128,7 +1085,6 @@ iframe {
     transform: scale(1.2) rotate(15deg);
 }
 
-/* Logo故事图标悬停效果 - 仅悬停在图标上时触发 */
 .logo-story-icon:hover::before {
     content: '';
     position: absolute;
@@ -1154,7 +1110,6 @@ iframe {
     animation: iconBounce 1s ease-in-out;
 }
 
-/* 删除旧的header悬停选择器 */
 .story-begin-header:hover .story-begin-icon,
 .name-origin-header:hover .name-origin-icon,
 .logo-story-header:hover .logo-story-icon,
@@ -1168,11 +1123,9 @@ iframe {
 .name-origin-header:hover .name-origin-icon::before,
 .name-origin-header:hover .name-origin-icon::after,
 .logo-story-header:hover .logo-story-icon::before {
-    /* 已被新选择器替换，删除这些规则 */
-    transition: none;
+        transition: none;
 }
 
-/* 图标主体样式 */
 .story-begin-icon i {
     font-size: 2.5rem;
     color: var(--primary-color);
@@ -1184,10 +1137,8 @@ iframe {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 900; /* 确保图标正确加载 */
-}
+    font-weight: 900; }
 
-/* 翻页效果 - 简化实现 */
 .story-begin-icon .book-open {
     position: absolute;
     top: 0;
@@ -1208,7 +1159,6 @@ iframe {
     filter: drop-shadow(0 2px 4px rgba(247, 125, 170, 0.3));
 }
 
-/* 名字由来图标基础样式 */
 .name-origin-icon i {
     font-size: 2.5rem;
     color: var(--accent-color);
@@ -1218,8 +1168,7 @@ iframe {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 900; /* 确保图标正确加载 */
-}
+    font-weight: 900; }
 
 .name-origin-icon .alt-icon {
     position: absolute;
@@ -1241,7 +1190,6 @@ iframe {
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
-/* 平滑过渡效果 */
 .fade-in {
     animation: fadeIn 0.5s ease forwards;
 }
@@ -1251,7 +1199,6 @@ iframe {
     to { opacity: 1; }
 }
 
-/* 结语部分样式 */
 .conclusion-story-header {
     display: flex;
     flex-direction: column;
@@ -1262,7 +1209,6 @@ iframe {
     overflow: hidden;
 }
 
-/* 结语图标基础样式 */
 .conclusion-story-icon {
     width: 80px;
     height: 80px;
@@ -1279,7 +1225,6 @@ iframe {
     box-shadow: 0 5px 20px rgba(247, 125, 170, 0.2);
 }
 
-/* 主图标 */
 .conclusion-story-icon i {
     font-size: 2.5rem;
     color: var(--accent-color);
@@ -1291,7 +1236,6 @@ iframe {
     font-weight: 900;
 }
 
-/* 替代图标 */
 .conclusion-story-icon .alt-icon {
     position: absolute;
     top: 0;
@@ -1313,7 +1257,6 @@ iframe {
     filter: drop-shadow(0 2px 4px rgba(122, 162, 247, 0.3));
 }
 
-/* 悬停效果 - 仅在图标上悬停时触发 */
 .conclusion-story-icon:hover {
     background: linear-gradient(135deg, rgba(247, 125, 170, 0.2), rgba(122, 162, 247, 0.2));
     transform: translateY(-5px);
@@ -1404,7 +1347,6 @@ iframe {
     box-shadow: 0 0 10px var(--primary-color);
 }
 
-/* 结语动效关键帧动画 */
 @keyframes conclusionPulse {
     0%, 100% { transform: scale(1); }
     50% { transform: scale(1.05); box-shadow: 0 8px 30px rgba(122, 162, 247, 0.3); }
@@ -1428,7 +1370,6 @@ iframe {
     50% { opacity: 1; }
 }
 
-/* 响应式适配 */
 @media (max-width: 768px) {
     .conclusion-story-icon {
         width: 60px;
@@ -1620,7 +1561,6 @@ iframe {
     transform: translateX(5px);
 }
 
-/* 为李笑来的引用添加的特殊样式 */
 .quote-highlight {
     display: inline-block;
     position: relative;

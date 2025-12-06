@@ -1,16 +1,12 @@
-// 支持项目的3D交互效果
-// State for support metrics animation
 let SUPPORT_METRICS = { total: 0, totalCNY: 0, count: 0, animated: false };
 
-// Currency state for dynamic conversion
 const CURRENCY_STATE = {
-    target: 'CNY', // 'CNY' | 'USD'
+    target: 'CNY', 
     symbol: '¥',
-    rateCnyToUsd: 0, // exchange rate CNY -> USD
+    rateCnyToUsd: 0, 
     lastUpdated: 0
 };
 
-// Initialize currency based on current language and fetch rate if needed
 function initCurrency() {
     const currentLang = localStorage.getItem('catime-language') || 'zh';
     const isEnglish = currentLang === 'en';
@@ -18,7 +14,6 @@ function initCurrency() {
     CURRENCY_STATE.symbol = isEnglish ? '$' : '¥';
 
     if (isEnglish) {
-        // Load cached rate first (if fresh), then fetch latest in background
         const cached = getCachedRateSync();
         if (cached > 0) {
             CURRENCY_STATE.rateCnyToUsd = cached;
@@ -28,47 +23,38 @@ function initCurrency() {
                 if (rate > 0) {
                     CURRENCY_STATE.rateCnyToUsd = rate;
                     CURRENCY_STATE.lastUpdated = Date.now();
-                    // Update display only after animation played, otherwise keep 0->target animation intact
                     if (SUPPORT_METRICS.animated) {
                         renderSupportTotalImmediate();
                     }
                 }
             })
             .catch(() => {
-                // Keep cached rate if available; otherwise do nothing
             });
     }
 }
 
-// Read cached rate from localStorage synchronously
 function getCachedRateSync() {
     try {
         const raw = localStorage.getItem('catime_rate_cny_usd');
         if (!raw) return 0;
         const obj = JSON.parse(raw);
-        // TTL: 1 hour
         const ttl = 60 * 60 * 1000;
         if (obj && obj.rate && obj.ts && (Date.now() - obj.ts) < ttl) {
             return Number(obj.rate) || 0;
         }
     } catch (e) {
-        // ignore
     }
     return 0;
 }
 
-// Persist rate to localStorage
 function cacheRate(rate) {
     try {
         localStorage.setItem('catime_rate_cny_usd', JSON.stringify({ rate, ts: Date.now() }));
     } catch (e) {
-        // ignore
     }
 }
 
-// Fetch CNY->USD exchange rate with fallbacks
 function loadExchangeRateCnyToUsd() {
-    // Try cache freshness first; if fresh, still fetch latest in background
     const endpoints = [
         'https://api.exchangerate.host/latest?base=CNY&symbols=USD',
         'https://open.er-api.com/v6/latest/CNY',
@@ -89,7 +75,6 @@ function loadExchangeRateCnyToUsd() {
                 } else if (j && j.result === 'success' && j.rates && typeof j.rates.USD === 'number') {
                     rate = j.rates.USD;
                 }
-                // Frankfurter format also uses j.rates.USD
                 if (rate > 0) {
                     cacheRate(rate);
                     return rate;
@@ -102,18 +87,15 @@ function loadExchangeRateCnyToUsd() {
     return tryNext(0);
 }
 
-// Compute display total based on current currency
 function getDisplayTotal(totalCNY) {
     if (CURRENCY_STATE.target === 'USD') {
         const rate = CURRENCY_STATE.rateCnyToUsd || getCachedRateSync();
         if (rate > 0) return totalCNY * rate;
-        // Fallback approximate if no rate yet; will be corrected once fetched
         return totalCNY * 0.14;
     }
     return totalCNY;
 }
 
-// Format currency string by current target
 function formatCurrency(value) {
     const lang = CURRENCY_STATE.target === 'USD' ? 'en-US' : 'zh-CN';
     const amount = Number(value || 0);
@@ -121,7 +103,6 @@ function formatCurrency(value) {
     return `${CURRENCY_STATE.symbol}${formatted}`;
 }
 
-// Re-render total immediately with current settings (no animation)
 function renderSupportTotalImmediate() {
     const totalEl = document.getElementById('support-total-value');
     if (!totalEl) return;
@@ -130,58 +111,48 @@ function renderSupportTotalImmediate() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // AOS (滚动时动画) 库初始化
     AOS.init({
-        duration: 800, // 动画持续时间
-        once: true, // 动画是否只发生一次 - 在向下滚动时
-        offset: 50, // 从原始触发点偏移的距离 (以像素为单位)
+        duration: 800, 
+        once: true, 
+        offset: 50, 
     });
 
-    // 初始化滚动进度指示器
     initScrollProgressIndicator();
 
-    // 为支持项目卡添加3D交互效果
     const supportMethods = document.querySelectorAll('.support-method');
-    const isMobile = window.innerWidth <= 768; // 检测是否是移动设备
+    const isMobile = window.innerWidth <= 768; 
     
     supportMethods.forEach(card => {
         let rect = card.getBoundingClientRect();
         let centerX = (rect.left + rect.right) / 2;
         let centerY = (rect.top + rect.bottom) / 2;
         
-        // 鼠标移动事件处理
         card.addEventListener('mousemove', function(e) {
-            if (isMobile) return; // 在移动设备上不执行这些特效
+            if (isMobile) return; 
             
             rect = card.getBoundingClientRect();
             centerX = (rect.left + rect.right) / 2;
             centerY = (rect.top + rect.bottom) / 2;
             
-            // 计算鼠标与卡片中心的相对距离（-1到1的范围）
             const relativeX = (e.clientX - centerX) / (rect.width / 2);
             const relativeY = (e.clientY - centerY) / (rect.height / 2);
             
-            // 应用旋转效果，最大±10度
             card.style.transform = `translateY(-20px) scale(1.03) rotateX(${-relativeY * 10}deg) rotateY(${relativeX * 10}deg)`;
             
-            // 获取QR码和标签元素
             const qrCode = card.querySelector('.support-qr');
             const label = card.querySelector('.support-label');
             
             if (qrCode) {
-                // QR码沿Z轴移动更多，创造深度感
                 qrCode.style.transform = `translateZ(40px) scale(1.08) rotate(${relativeX * 2}deg)`;
             }
             
             if (label) {
-                // 标签轻微偏移跟随鼠标
                 label.style.transform = `translateZ(25px) translateY(-5px) translateX(${relativeX * 5}px) scale(1.05)`;
             }
         });
         
-        // 鼠标离开时重置效果
         card.addEventListener('mouseleave', function() {
-            if (isMobile) return; // 在移动设备上不执行这些特效
+            if (isMobile) return; 
             
             card.style.transform = '';
             const qrCode = card.querySelector('.support-qr');
@@ -195,7 +166,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 label.style.transform = 'translateZ(10px)';
             }
             
-            // 使用setTimeout添加过渡回原位的动画
             setTimeout(() => {
                 card.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
                 if (qrCode) qrCode.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
@@ -203,9 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 50);
         });
         
-        // 鼠标进入时移除过渡效果，使移动更流畅
         card.addEventListener('mouseenter', function() {
-            if (isMobile) return; // 在移动设备上不执行这些特效
+            if (isMobile) return; 
             
             card.style.transition = 'none';
             const qrCode = card.querySelector('.support-qr');
@@ -221,7 +190,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 为其他支持卡片添加悬停效果
     const supportCards = document.querySelectorAll('.support-card');
     supportCards.forEach(card => {
         card.addEventListener('mouseenter', function() {
@@ -240,7 +208,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // 添加心形动画交互
     const heartAnimation = document.querySelector('.heart-animation');
     if (heartAnimation) {
         heartAnimation.addEventListener('click', function() {
@@ -256,63 +223,49 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 初始化咖啡粒子效果
     initCoffeeParticles();
     
-    // 添加支持页面的翻译
     addSupportTranslations();
 
-    // 初始化货币（根据语言设置）并预取汇率
     initCurrency();
 
-    // 计算并更新累计赞助
     updateSupportTotal();
-    // 统计支持者人数
     updateSupportCount();
-    // 为胶囊添加亮片绽放交互
     initCapsuleSparkles();
-    // 为胶囊添加点击彩带效果
     initCapsuleConfetti();
-    // 在胶囊可见时再触发数字动画
     initCapsuleNumberObserver();
 
-    // 语言切换按钮功能
     const languageToggle = document.getElementById('language-toggle');
     if (languageToggle) {
         const currentLang = localStorage.getItem('catime-language') || 'zh';
         
-        // 根据当前语言设置按钮文本
         if (currentLang === 'zh') {
             languageToggle.innerHTML = '<i class="fas fa-language"></i> English';
         } else {
             languageToggle.innerHTML = '<i class="fas fa-language"></i> 中文';
         }
         
-        // 点击切换语言
         languageToggle.addEventListener('click', function(e) {
             e.preventDefault();
             
             const newLang = currentLang === 'zh' ? 'en' : 'zh';
             localStorage.setItem('catime-language', newLang);
             
-            // 重新加载页面应用新的语言
             window.location.reload();
         });
     }
 });
 
-// 初始化咖啡粒子效果
 function initCoffeeParticles() {
     const coffeeParticlesContainer = document.querySelector('.coffee-particles');
     if (!coffeeParticlesContainer) return;
 
     const coffeeParticles = coffeeParticlesContainer.querySelectorAll('.coffee-particle');
     
-    // 为每个咖啡粒子分配随机的动画延迟和位置
     coffeeParticles.forEach(particle => {
-        const delay = Math.random() * 5; // 0-5秒的随机延迟
-        const duration = 15 + Math.random() * 10; // 15-25秒的随机持续时间
-        const left = Math.random() * 100; // 0-100%的随机水平位置
+        const delay = Math.random() * 5; 
+        const duration = 15 + Math.random() * 10; 
+        const left = Math.random() * 100; 
 
         particle.style.animationDelay = `${delay}s`;
         particle.style.animationDuration = `${duration}s`;
@@ -320,7 +273,6 @@ function initCoffeeParticles() {
     });
 }
 
-// 初始化滚动进度指示器
 function initScrollProgressIndicator() {
     const scrollProgressContainer = document.getElementById('scrollProgressContainer');
     const scrollProgressCircle = document.querySelector('.scroll-progress-circle-fill');
@@ -328,46 +280,36 @@ function initScrollProgressIndicator() {
 
     if (!scrollProgressContainer || !scrollProgressCircle || !scrollProgressPercentage) return;
 
-    // 窗口滚动时更新进度
     window.addEventListener('scroll', function() {
         updateScrollProgress();
     });
 
-    // 点击滚动进度指示器返回顶部
     scrollProgressContainer.addEventListener('click', function() {
-        // 添加点击效果
         this.classList.add('clicked');
         
-        // 平滑滚动到顶部
         window.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
         
-        // 移除点击效果
         setTimeout(() => {
             this.classList.remove('clicked');
         }, 500);
     });
 
-    // 初始化滚动进度
     updateScrollProgress();
 
-    // 更新滚动进度函数
     function updateScrollProgress() {
         const scrollTop = window.scrollY;
         const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
         const scrollPercentage = (scrollTop / scrollHeight) * 100;
         
-        // 更新圆形进度条
-        const perimeter = Math.PI * 2 * 45; // 2πr，r=45
+        const perimeter = Math.PI * 2 * 45; 
         const strokeDashoffset = perimeter * (1 - scrollPercentage / 100);
         scrollProgressCircle.style.strokeDashoffset = strokeDashoffset;
         
-        // 更新百分比文本
         scrollProgressPercentage.textContent = `${Math.round(scrollPercentage)}%`;
         
-        // 根据滚动位置切换容器可见性
         if (scrollTop > 300) {
             scrollProgressContainer.style.opacity = '1';
             scrollProgressContainer.style.transform = 'scale(1)';
@@ -380,29 +322,22 @@ function initScrollProgressIndicator() {
     }
 }
 
-// 添加支持页面的翻译
 function addSupportTranslations() {
-    // 检查当前语言设置
     const currentLang = localStorage.getItem('catime-language') || 'zh';
     
-    // 应用按钮样式，无论是哪种语言
     fixButtonPositions();
     
-    // 如果当前语言是英文，则添加英文翻译
     if (currentLang === 'en') {
-        // 翻译页面标题
         const pageTitle = document.getElementById('page-title');
         if (pageTitle) {
             pageTitle.textContent = 'Catime - Support the Project';
         }
         
-        // 翻译meta描述
         const metaDescription = document.getElementById('meta-description');
         if (metaDescription) {
             metaDescription.setAttribute('content', 'Support Catime Project - A minimalist, modern, efficient transparent timer and pomodoro clock for Windows, with a cute style.');
         }
         
-        // 翻译导航链接
         document.querySelectorAll('.nav-links li a').forEach(link => {
             if (link.textContent === '首页') link.textContent = 'Home';
             if (link.textContent === '指南') link.textContent = 'Guide';
@@ -412,7 +347,6 @@ function addSupportTranslations() {
             }
         });
         
-        // 翻译页面标题区域
         const pageHeader = document.querySelector('.page-header h1');
         if (pageHeader) {
             pageHeader.textContent = 'Support the Project';
@@ -423,20 +357,14 @@ function addSupportTranslations() {
             pageHeaderSubtitle.textContent = 'Your support is our motivation to continuously develop and improve Catime';
         }
         
-        // 翻译主要内容
         translateSupportElements();
         
-        // 确保所有按钮可见
         fixButtonVisibility();
-        
-
     }
 }
 
-// 确保所有支持按钮位置固定，适用于中英文界面
 function fixButtonPositions() {
     setTimeout(() => {
-        // 固定按钮位置
         document.querySelectorAll('.support-card .support-btn').forEach(btn => {
             btn.style.position = 'absolute';
             btn.style.bottom = window.innerWidth <= 480 ? '2rem' : '2.5rem';
@@ -448,32 +376,26 @@ function fixButtonPositions() {
     }, 100);
 }
 
-// 确保所有支持按钮可见
 function fixButtonVisibility() {
-    // 确保所有按钮都是可见的
     document.querySelectorAll('.support-card .support-btn').forEach(btn => {
         btn.style.display = 'flex';
         btn.style.visibility = 'visible';
         btn.style.opacity = '1';
     });
     
-    // 特别检查提交Issues按钮
     const issuesBtn = document.querySelector('.support-card:nth-child(2) .support-btn');
     if (issuesBtn) {
         issuesBtn.style.display = 'flex';
         issuesBtn.style.visibility = 'visible';
         issuesBtn.style.opacity = '1';
         
-        // 确保按钮内容正确显示
         if (issuesBtn.querySelector('i')) {
             issuesBtn.querySelector('i').style.display = 'inline-block';
         }
     }
 }
 
-// 翻译support页面内容元素
 function translateSupportElements() {
-    // 翻译section标题和内容
     document.querySelectorAll('.section-title').forEach(title => {
         if (title.innerHTML.includes('支持项目')) {
             title.innerHTML = 'Support the Project <i class="fas fa-mug-hot"></i>';
@@ -486,7 +408,6 @@ function translateSupportElements() {
         }
     });
     
-    // 翻译支持项目说明
     const projectDesc = document.querySelector('.support-project .section-subtitle');
     if (projectDesc) {
         projectDesc.innerHTML = 'Catime will continue to be open-source and free to use forever.<br>' +
@@ -496,7 +417,6 @@ function translateSupportElements() {
             'Every bit of your support is a powerful drive to keep it moving forward!';
     }
     
-    // 翻译支付方式标签
     document.querySelectorAll('.support-label').forEach(label => {
         if (label.textContent.includes('微信')) {
             label.innerHTML = '<i class="fab fa-weixin"></i> WeChat';
@@ -506,7 +426,6 @@ function translateSupportElements() {
         }
     });
     
-    // 翻译其他支持卡片内容
     const supportCards = document.querySelectorAll('.support-card');
     supportCards.forEach(card => {
         const title = card.querySelector('h3');
@@ -540,24 +459,21 @@ function translateSupportElements() {
         }
     });
     
-        // 翻译感谢支持者部分
     const supportersDesc = document.querySelector('.supporters .section-subtitle');
     if (supportersDesc) {
         supportersDesc.textContent = 'Special thanks to those who have supported the Catime project! Your encouragement is our motivation to move forward.';
     }
 
-        // 翻译累计赞助标签
-        const totalLabel = document.querySelector('.support-total-label');
-        if (totalLabel) {
-            totalLabel.innerHTML = '<i class="fas fa-coins"></i> Total Donations';
-        }
+    const totalLabel = document.querySelector('.support-total-label');
+    if (totalLabel) {
+        totalLabel.innerHTML = '<i class="fas fa-coins"></i> Total Donations';
+    }
 
-        const countLabel = document.querySelector('.support-count-label');
-        if (countLabel) {
-            countLabel.innerHTML = '<i class="fas fa-user-friends"></i> Supporters';
-        }
+    const countLabel = document.querySelector('.support-count-label');
+    if (countLabel) {
+        countLabel.innerHTML = '<i class="fas fa-user-friends"></i> Supporters';
+    }
     
-    // 翻译表格头部
     const tableHeaders = document.querySelectorAll('.supporters-table th');
     if (tableHeaders.length >= 4) {
         tableHeaders[0].textContent = 'Time';
@@ -566,7 +482,6 @@ function translateSupportElements() {
         tableHeaders[3].textContent = 'Message';
     }
     
-    // 翻译表格内容中的留言（这里只翻译重复出现的内容）
     document.querySelectorAll('.supporters-table td').forEach(td => {
         if (td.textContent === '温州市宇波机车部件有限公司') {
             td.textContent = 'Wenzhou Yubo Locomotive Parts CO.,LTD.';
@@ -671,13 +586,11 @@ function translateSupportElements() {
             td.textContent = 'Very good app';
         }
         
-        // 为所有留言单元格添加特殊样式，增强可读性
-        if (td.parentElement && td.cellIndex === 3) { // 第四列是留言列
+        if (td.parentElement && td.cellIndex === 3) { 
             td.style.maxWidth = '250px';
             td.style.wordWrap = 'break-word';
             td.style.whiteSpace = 'normal';
             
-            // 检查是否为英文模式，如果是，增加字体大小提高可读性
             if (localStorage.getItem('catime-language') === 'en') {
                 td.style.fontSize = '0.9rem';
                 td.style.lineHeight = '1.4';
@@ -686,19 +599,16 @@ function translateSupportElements() {
     });
 }
 
-// 汇总表格金额并更新到累计赞助展示
 function updateSupportTotal() {
     const table = document.querySelector('.supporters-table');
     const totalEl = document.getElementById('support-total-value');
     if (!table || !totalEl) return;
 
     let sum = 0;
-    // 遍历表体的每一行的“金额”列（第3列）
     table.querySelectorAll('tbody tr').forEach(row => {
         const amountCell = row.cells && row.cells[2];
         if (!amountCell) return;
         const text = amountCell.textContent.trim();
-        // 支持形如 ¥66.66、¥2.8、¥1、含空格等
         const match = text.replace(/[,\s]/g, '').match(/([\-\+]?)¥?([0-9]+(?:\.[0-9]+)?)/);
         if (match) {
             const sign = match[1] === '-' ? -1 : 1;
@@ -709,22 +619,18 @@ function updateSupportTotal() {
         }
     });
 
-    // Cache in CNY and compute display total for current currency
     SUPPORT_METRICS.totalCNY = sum;
     SUPPORT_METRICS.total = getDisplayTotal(sum);
-    // If already animated once, update text immediately in current currency
     if (SUPPORT_METRICS.animated) {
         totalEl.textContent = formatCurrency(SUPPORT_METRICS.total);
     }
 }
 
-// 统计支持者人数
 function updateSupportCount() {
     const tbody = document.querySelector('.supporters-table tbody');
     const countEl = document.getElementById('support-count-value');
     if (!tbody || !countEl) return;
 
-    // 按用户名去重统计，忽略空白与大小写
     const normalize = (s) => (s || '').replace(/\s+/g, '').toLowerCase();
     const nameSet = new Set();
     Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
@@ -740,12 +646,10 @@ function updateSupportCount() {
     }
 }
 
-// 胶囊悬停时的亮片粒子效果
 function initCapsuleSparkles() {
     const capsule = document.querySelector('.support-total-top');
     if (!capsule) return;
 
-    // 如果用户偏好减少动效，直接返回
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (media.matches) return;
 
@@ -756,21 +660,17 @@ function initCapsuleSparkles() {
         for (let i = 0; i < 10; i++) {
             const s = document.createElement('span');
             s.className = 'sparkle';
-            // 随机起点在胶囊中部
             s.style.left = `${50 + (Math.random() * 40 - 20)}%`;
             s.style.top = `${45 + (Math.random() * 20 - 10)}%`;
-            // 随机延迟/大小
             s.style.setProperty('--d', `${Math.random() * 0.2 + 0.05}s`);
             s.style.setProperty('--tx', `${(Math.random() * 140 - 70)}%`);
             s.style.setProperty('--ty', `${(Math.random() * -120 - 20)}%`);
             capsule.appendChild(s);
-            // 清理
             setTimeout(() => s.remove(), 700);
         }
     }
 }
 
-// 胶囊悬停/触发的彩带效果（带冷却）
 function initCapsuleConfetti() {
     const capsule = document.querySelector('.support-total-top');
     if (!capsule) return;
@@ -790,10 +690,9 @@ function initCapsuleConfetti() {
     }
 }
 
-// 数字动画工具函数
 function animateNumber(element, from, to, duration, formatter) {
     const start = performance.now();
-    const ease = (t) => 1 - Math.pow(1 - t, 3); // easeOutCubic
+    const ease = (t) => 1 - Math.pow(1 - t, 3); 
     function frame(now) {
         const progress = Math.min(1, (now - start) / duration);
         const eased = ease(progress);
@@ -806,7 +705,6 @@ function animateNumber(element, from, to, duration, formatter) {
     requestAnimationFrame(frame);
 }
 
-// 观察胶囊是否进入视口，进入后再播放数字动画（只播放一次）
 function initCapsuleNumberObserver() {
     const capsule = document.querySelector('.support-total-top');
     const totalEl = document.getElementById('support-total-value');
@@ -817,11 +715,9 @@ function initCapsuleNumberObserver() {
     const oncePlay = () => {
         if (SUPPORT_METRICS.animated) return;
         SUPPORT_METRICS.animated = true;
-        // 播放累计赞助（按当前货币），强制从0开始
         const currentTotal = 0;
-        const duration = media.matches ? 0 : 1800; // keep both in sync
+        const duration = media.matches ? 0 : 1800; 
         animateNumber(totalEl, currentTotal, SUPPORT_METRICS.total || 0, duration, (v) => formatCurrency(v));
-        // 播放支持者人数
         const currentCount = parseFloat(countEl.textContent || '0') || 0;
         animateNumber(countEl, currentCount, SUPPORT_METRICS.count || 0, duration, (v) => `${Math.round(v)}`);
     };
@@ -837,7 +733,6 @@ function initCapsuleNumberObserver() {
         }, { threshold: [0, 0.25, 0.5, 1] });
         io.observe(capsule);
     } else {
-        // 回退：滚动时检测
         const onScroll = () => {
             const rect = capsule.getBoundingClientRect();
             if (rect.top < window.innerHeight * 0.75 && rect.bottom > 0) {
@@ -850,7 +745,6 @@ function initCapsuleNumberObserver() {
     }
 }
 
-// 更大面积的全屏彩带
 function launchOverlayConfetti(anchor) {
     const overlay = document.createElement('div');
     overlay.className = 'confetti-overlay';
@@ -861,7 +755,7 @@ function launchOverlayConfetti(anchor) {
     const originY = rect.top + rect.height / 2;
 
     const colors = ['#7aa2f7', '#f799b8', '#ffd45e', '#9ae6b4', '#fbd38d'];
-    const totalPieces = 40; // 更有庆祝感
+    const totalPieces = 40; 
     for (let i = 0; i < totalPieces; i++) {
         const piece = document.createElement('span');
         const isStreamer = Math.random() < 0.25;
@@ -881,7 +775,6 @@ function launchOverlayConfetti(anchor) {
         overlay.appendChild(piece);
     }
 
-    // 自动清理
     setTimeout(() => overlay.remove(), 1800);
 }
 

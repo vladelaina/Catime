@@ -6,18 +6,14 @@
     <meta name="description" content="Catime - 一款为 Windows 设计的极简、现代、高效的透明计时器与番茄钟，带来可爱风格。" id="meta-description">
     <title id="page-title">Catime - 计时器 & 番茄钟</title>
 
-    <!-- Google 字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 
-    <!-- Font Awesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <!-- AOS 滚动动画库 -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-    <!-- 自定义样式表 -->
     <link rel="stylesheet" href="styles/style.css">
     <link rel="stylesheet" href="styles/index.css">
 
@@ -25,22 +21,15 @@
 
 </head>
 <body>
-<!-- ฅᐞ˶⦁༝⦁˶ᐞฅ 喵～被发现啦！想要源码的话，可以在这里找到我哦～ https://github.com/vladelaina/Catime/tree/gh-pages -->
 
-    <!-- 滚动进度指示器将通过组件加载器动态加载 -->
-
-    <!-- 页头/导航 - 由 navigation.js 动态生成 -->
     <header class="main-header"></header>
 
     <main>
-        <!-- 英雄区域 -->
         <section class="hero" id="home">
-            <!-- Spotlight & Background Text -->
             <div class="hero-spotlight"></div>
             <div class="hero-bg-text">CATIME</div>
 
             <div class="container hero-content">
-                <!-- Foreground Typography -->
                 <h1 class="hero-slogan">
                     Time Management,<br>
                     <span class="highlight-text" data-text="Just Got Super Kawaii!">Just Got Super Kawaii!</span>
@@ -74,8 +63,7 @@
                     <div class="barcode-strip"></div>
                 </div>
 
-                <!-- Magnetic Buttons -->
-                <div class="hero-actions">
+                                <div class="hero-actions">
                     <a id="hero-download-btn" href="#" class="btn-magnetic primary" target="_blank" rel="noopener noreferrer">
                         <span class="btn-content"><i class="fas fa-heart"></i> Get Started</span>
                         <span class="btn-glow"></span>
@@ -86,15 +74,12 @@
                     </a>
                 </div>
 
-                <!-- Immersive 3D Visual -->
                 <div class="hero-visual-container">
-                    <!-- Floating Parallax Elements -->
                     <img src="assets/catime.webp" class="floating-element float-cat" alt="Catime Logo" data-parallax-speed="0.04">
                     <div class="floating-element float-icon-1" data-parallax-speed="0.02"><i class="fas fa-stopwatch"></i></div>
                     <div class="floating-element float-icon-2" data-parallax-speed="0.03"><i class="fas fa-ghost"></i></div>
                     <div class="floating-element float-icon-c" data-parallax-speed="0.05" title="Written in Pure C">C</div>
                     
-                    <!-- Ambient Light Behind -->
                     <div class="ambient-light"></div>
 
                     <div class="hero-visual-wrapper">
@@ -117,13 +102,11 @@
             </div>
         </section>
 
-        <!-- 特性区域 -->
         <section class="features" id="core-features">
             <div class="container">
                 <h2 class="section-title" data-aos="fade-up" id="features-title">核心特性 ✨</h2>
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">轻巧可爱，功能不少</p>
                 <div class="features-grid">
-                    <!-- 特性卡片 1 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="200" id="feature-transparent">
                         <div class="feature-icon">
                             <i class="fas fa-ghost"></i>
@@ -131,7 +114,6 @@
                         <h3 id="transparent-title">透明悬浮 & 穿透</h3>
                         <p>像幽灵猫猫一样悬浮，不挡视线，不影响操作，融入桌面背景。</p>
                     </div>
-                    <!-- 特性卡片 2 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="300" id="feature-timer">
                         <div class="feature-icon">
                             <i class="fas fa-hourglass-half"></i>
@@ -139,7 +121,6 @@
                         <h3 id="timer-title">灵活计时模式</h3>
                         <p>预设、自定义、番茄钟，多种模式满足你的不同时间管理需求。</p>
                     </div>
-                    <!-- 特性卡片 3 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="400" id="feature-custom">
                         <div class="feature-icon">
                             <i class="fas fa-wand-magic-sparkles"></i>
@@ -147,7 +128,6 @@
                         <h3 id="custom-title">个性化定制</h3>
                         <p>字体、颜色、布局随心搭配，打造专属于你的可爱计时器。</p>
                     </div>
-                    <!-- 特性卡片 4 -->
                     <div class="feature-card" data-aos="fade-up" data-aos-delay="500" id="feature-action">
                         <div class="feature-icon">
                             <i class="fas fa-bell"></i>
@@ -155,7 +135,6 @@
                         <h3 id="action-title">智能超时动作</h3>
                         <p>时间到！自动执行任务，如提醒、锁屏、关机等，省心省力。</p>
                     </div>
-                     <!-- 特性卡片 5 -->
                      <div class="feature-card" data-aos="fade-up" data-aos-delay="600" id="feature-lightweight">
                         <div class="feature-icon">
                             <i class="fas fa-feather-alt"></i>
@@ -163,7 +142,6 @@
                         <h3 id="lightweight-title">轻量高效</h3>
                         <p>C 语言编写，小巧玲珑，资源占用低，运行顺畅不卡顿。</p>
                     </div>
-                     <!-- 特性卡片 6 -->
                      <div class="feature-card" data-aos="fade-up" data-aos-delay="700" id="feature-opensource">
                         <div class="feature-icon">
                             <i class="fas fa-heart"></i>
@@ -175,31 +153,25 @@
             </div>
         </section>
 
-        <!-- GitHub 星星增长曲线 -->
         <section class="github-stats" id="community-support">
             <div class="container">
                 <h2 class="section-title" data-aos="fade-up" id="stats-title">开源社区认可 ⭐</h2>
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100" data-i18n-key="github-stars-desc">获得超过 3k 的 GitHub 星标，持续增长中</p>
                 
                 <div class="github-chart-container" data-aos="zoom-in" data-aos-delay="200">
-                    <!-- 发光边框效果 -->
                     <div class="glow-border"></div>
-                    <!-- 星星粒子效果 -->
                     <div class="star-particles"></div>
-                    <!-- 使用 Star History 的推荐方法 -->
                     <div id="star-history-chart" style="width: 100%; height: 400px;"></div>
                 </div>
             </div>
         </section>
 
-        <!-- 使用场景区域 -->
         <section class="usage-scenarios" id="use-cases">
             <div class="container">
                 <h2 class="section-title" data-aos="fade-up" id="scenarios-title">使用场景 🌟</h2>
                 <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">Catime，各种场景的得力助手</p>
                 
                 <div class="scenarios-container">
-                    <!-- 场景1：游戏场景 -->
                     <div class="scenario-card" data-aos="fade-up" data-aos-delay="200" id="scenario-gaming">
                         <div class="scenario-visual">
                             <img src="assets/Game scene demonstration.webp" alt="游戏场景下的Catime" class="scenario-img">
@@ -214,7 +186,6 @@
                         </div>
                     </div>
                     
-                    <!-- 场景2：自动打开软件 -->
                     <div class="scenario-card reverse" data-aos="fade-up" data-aos-delay="300" id="scenario-autoopen">
                         <div class="scenario-visual">
                             <img src="assets/Open a file or software.webp" alt="自动打开软件" class="scenario-img">
@@ -229,7 +200,6 @@
                         </div>
                     </div>
                     
-                    <!-- 场景3：PPT演示 -->
                     <div class="scenario-card" data-aos="fade-up" data-aos-delay="400" id="scenario-presentation">
                         <div class="scenario-visual">
                             <img src="assets/ppt.webp" alt="PPT演示时使用" class="scenario-img">
@@ -246,7 +216,6 @@
             </div>
         </section>
 
-        <!-- 号召性行动区域 -->
         <section class="cta-section" data-aos="zoom-in" id="download">
             <div class="container">
                 <h2 id="cta-title">
@@ -281,7 +250,6 @@
 
     </main>
 
-    <!-- 特别感谢区域 -->
     <section class="special-thanks" id="thanks">
         <div class="container">
             <h2 class="section-title" data-aos="fade-up" id="thanks-title">特别感谢 🙏</h2>
@@ -412,8 +380,7 @@
             </div>
         </div>
         
-        <!-- 背景装饰元素 -->
-        <div class="thanks-decoration">
+                <div class="thanks-decoration">
             <span class="thanks-decoration-circle" style="--size: 180px; --delay: 0s; --x: 5%; --y: 15%; --color: rgba(122, 162, 247, 0.05);"></span>
             <span class="thanks-decoration-circle" style="--size: 120px; --delay: 2s; --x: 88%; --y: 65%; --color: rgba(247, 125, 170, 0.05);"></span>
             <span class="thanks-decoration-circle" style="--size: 150px; --delay: 4s; --x: 15%; --y: 80%; --color: rgba(122, 162, 247, 0.05);"></span>
@@ -428,8 +395,7 @@
         </div>
     </section>
 
-    <!-- 贡献者区域 -->
-    <section class="contributors" id="contributors">
+        <section class="contributors" id="contributors">
         <div class="container">
             <h2 class="section-title" data-aos="fade-up" id="contributors-title">致谢贡献者 🙏</h2>
             <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">感谢所有为 Catime 做出贡献的小伙伴们！<br>（按时间排序）</p>
@@ -544,16 +510,11 @@
         </div>
     </section>
 
-    <!-- 页脚将通过组件加载器动态加载 -->
-
-    <!-- JavaScript 库 -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     
-    <!-- 全局配置 - 必须在其他脚本之前加载 -->
     <script src="scripts/config.js"></script>
     
-    <!-- 组件加载器 -->
     <script src="scripts/components.js" data-auto-load></script>
     
     <script src="scripts/navigation.js"></script>

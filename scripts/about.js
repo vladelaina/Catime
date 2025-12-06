@@ -1,26 +1,20 @@
-// 视频播放处理
 document.addEventListener('DOMContentLoaded', function() {
-    // 视频封面点击处理
     const videoContainer = document.getElementById('videoContainer');
     if (videoContainer) {
         const videoCover = videoContainer.querySelector('.video-cover');
         const videoFrameContainer = videoContainer.querySelector('.video-frame-container');
         const autoplayIframe = document.getElementById('autoplayIframe');
         
-        // 预加载封面图
         const preloadImg = new Image();
         preloadImg.src = 'assets/bilibili video cover.jpg';
         
         videoCover.addEventListener('click', function() {
-            // 显示视频容器
             videoCover.style.opacity = '0';
             videoFrameContainer.style.display = 'block';
             
-            // 设置真正的视频URL
             const realSrc = autoplayIframe.getAttribute('data-src');
             autoplayIframe.src = realSrc;
             
-            // 淡入显示iframe
             setTimeout(function() {
                 videoCover.style.display = 'none';
                 autoplayIframe.style.opacity = '1';
@@ -28,30 +22,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 添加about页面的翻译
     addAboutTranslations();
 });
 
-// 添加about页面特定的翻译
 function addAboutTranslations() {
-    // 检查当前语言设置
     const currentLang = localStorage.getItem('catime-language') || 'zh';
     
-    // 如果当前语言是英文，则添加英文翻译
     if (currentLang === 'en') {
-        // 翻译页面标题
         const pageTitle = document.getElementById('page-title');
         if (pageTitle) {
             pageTitle.textContent = 'Catime - About';
         }
         
-        // 翻译meta描述
         const metaDescription = document.getElementById('meta-description');
         if (metaDescription) {
             metaDescription.setAttribute('content', 'Catime About - Learn about the origins of Catime, development stories, and the philosophy behind it.');
         }
         
-        // 翻译导航链接
         document.querySelectorAll('.nav-links li a').forEach(link => {
             if (link.textContent === '首页') link.textContent = 'Home';
             if (link.textContent === '指南') link.textContent = 'Guide';
@@ -64,26 +51,19 @@ function addAboutTranslations() {
             }
         });
         
-        // 翻译关于hero区域
         const guideHeroTitle = document.querySelector('.guide-hero-title');
         if (guideHeroTitle) {
             const guideAccent = guideHeroTitle.querySelector('.guide-accent');
             if (guideAccent) guideAccent.textContent = 'About';
         }
         
-        // 翻译主要内容
         translateAboutElements();
         
-
-        
-        // 翻译特殊元素
         translateSpecialElements();
     }
 }
 
-// 翻译about页面内容元素
 function translateAboutElements() {
-    // 翻译标题和段落
     const translations = {
         "嘿，朋友！": "Hey, Friend!",
         "你可能会有不少好奇：": "You might be curious about:",
@@ -144,33 +124,25 @@ function translateAboutElements() {
         "开源是一段<span class=\"emphasis-text\">没有终点的旅程</span>，真正的意义不仅在于写了多少行代码，更在于我们彼此之间的<span class=\"emphasis-text\">连接与共创</span>。希望在未来的路上，仍能与你们一起前行，让 Catime 与这个社区一起持续成长。": "Open source is a <span class=\"emphasis-text\">journey without an end</span>, and its true meaning lies not just in how many lines of code are written, but in the <span class=\"emphasis-text\">connections and co-creation</span> between us. I hope that on the road ahead, we can continue to move forward together, allowing Catime and this community to grow continuously."
     };
     
-    // 应用翻译到元素
     for (const [key, value] of Object.entries(translations)) {
-        // 选择所有可能包含文本的元素
         const elements = document.querySelectorAll('h1, h2, h3, h4, p, span.question-text, div.feature-content p, div.quote-highlight');
         
         elements.forEach(el => {
-            // 完全匹配
             if (el.innerHTML === key) {
                 el.innerHTML = value;
             } 
-            // 包含匹配（处理带有HTML的内容）
             else if (el.innerHTML && el.innerHTML.includes(key)) {
-                // 替换时注意保留HTML
                 el.innerHTML = el.innerHTML.replace(new RegExp(escapeRegExp(key), 'g'), value);
             }
         });
     }
 }
 
-// 转义正则表达式中的特殊字符
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// 翻译特殊元素
 function translateSpecialElements() {
-    // 翻译section标题
     document.querySelectorAll('.story-begin-title, .name-origin-title, .logo-story-title, .conclusion-story-title').forEach(title => {
         if (title.textContent === '梦开始的地方') title.textContent = 'Where the Dream Began';
         if (title.textContent === '关于名字的由来') title.textContent = 'About the Name';
@@ -178,7 +150,6 @@ function translateSpecialElements() {
         if (title.textContent === '结语') title.textContent = 'Conclusion';
     });
     
-    // 翻译动态内容或带特殊格式的文本
     const questionItems = document.querySelectorAll('.question-item .question-text');
     questionItems.forEach(item => {
         if (item.innerHTML.includes('Catime 这个名字是怎么来的')) {

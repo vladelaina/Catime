@@ -1,4 +1,3 @@
-/* 支持项目区域样式 */
 .support-project {
     padding: 6rem 0;
     background-color: var(--background-color);
@@ -116,7 +115,6 @@
     z-index: -1;
 }
 
-/* QR码单独的悬停效果 */
 .support-qr:hover {
     transform: translateZ(50px) scale(1.06);
     box-shadow: 0 20px 35px rgba(0, 0, 0, 0.12);
@@ -127,7 +125,6 @@
     opacity: 0.7;
 }
 
-/* 鼠标悬停在卡片上的QR码效果 */
 .support-method:hover .support-qr {
     transform: translateZ(30px) scale(1.03);
     box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
@@ -222,7 +219,6 @@
     color: #07c160;
 }
 
-/* Ko-fi 按钮区域 */
 .kofi-button-wrapper {
     margin-top: 3rem;
     text-align: center;
@@ -247,7 +243,6 @@
     text-decoration: none;
 }
 
-/* 确保 Ko-fi 链接保持块级显示 */
 a.support-method {
     text-decoration: none;
     display: block;
@@ -800,8 +795,7 @@ a.support-method {
     margin-right: 6px;
     transition: transform 200ms ease, color 200ms ease;
 }
-/* Total amount display */
-/* deprecated: top-right badge (moved to footer) */
+
 .support-total {
     display: none;
 }
@@ -834,7 +828,6 @@ a.support-method {
     letter-spacing: 0.2px;
 }
 
-/* Highlight supporters count with a distinct accent color */
 .support-count-value {
     color: #ff73a6;
     font-weight: 800;
@@ -872,7 +865,6 @@ a.support-method {
     animation: coinSpin 650ms ease both;
 }
 
-/* animate supporters icon as well */
 .support-total-top:hover .support-count-label i,
 .support-total-top:focus-visible .support-count-label i {
     color: #ff73a6;
@@ -934,7 +926,6 @@ a.support-method {
     animation: pulse 2s infinite;
 }
 
-/* 支持者列表样式 */
 .supporters-list {
     max-width: 900px;
     margin: 3rem auto 0;
@@ -987,14 +978,13 @@ a.support-method {
     color: var(--text-color);
     font-size: 1rem;
     transition: all 0.2s ease;
-    white-space: nowrap; /* 防止内容换行 */
+    white-space: nowrap;
 }
 
-/* 为留言列单独设置样式，允许文本换行 */
 .supporters-table td:last-child {
     white-space: normal;
-    max-width: 250px; /* 设置最大宽度 */
-    word-wrap: break-word; /* 允许单词内断行 */
+    max-width: 250px;
+    word-wrap: break-word;
 }
 
 .supporters-table tr:last-child td {
@@ -1018,7 +1008,7 @@ a.support-method {
     .supporters-list {
         max-width: 95%;
         padding: 0.5rem;
-        overflow-x: auto; /* 添加水平滚动 */
+        overflow-x: auto;
     }
     
     .supporters-table th,
@@ -1035,16 +1025,14 @@ a.support-method {
     
     .supporters-table {
         min-width: 550px;
-        table-layout: fixed; /* 固定表格布局 */
+        table-layout: fixed;
     }
     
-    /* 设置列宽 */
     .supporters-table th:first-child,
     .supporters-table td:first-child {
-        width: 140px; /* 时间列宽度 */
+        width: 140px;
     }
     
-    /* 用户名和金额列宽度 */
     .supporters-table th:nth-child(2),
     .supporters-table td:nth-child(2) {
         width: 80px;
@@ -1055,7 +1043,6 @@ a.support-method {
         width: 60px;
     }
     
-    /* 留言列宽度 */
     .supporters-table th:last-child,
     .supporters-table td:last-child {
         width: 250px;
@@ -1078,7 +1065,7 @@ a.support-method {
     .support-card {
         width: 90%;
         max-width: 350px;
-        height: 350px; /* Adjusted height for mobile */
+        height: 350px;
     }
     
     .heart-animation {
@@ -1113,7 +1100,6 @@ a.support-method {
     }
 }
 
-/* 导航栏支持项目按钮样式 */
 .nav-links .support-btn {
     background: linear-gradient(45deg, var(--accent-color), #f799b8) !important;
     box-shadow: 0 4px 15px rgba(247, 125, 170, 0.3) !important;
@@ -1141,7 +1127,6 @@ a.support-method {
     display: none !important;
 }
 
-/* 其他支持方式标题图标动画 */
 .support-details .section-title i.fa-gift {
     color: #7aa2f7;
     font-size: 1.2em;

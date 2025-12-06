@@ -1,37 +1,29 @@
-/* docs/style.css - 动漫风格主题 */
-
-/* --- CSS 变量 (动漫风格柔和配色) --- */
 :root {
-    /* 主要配色: 柔和蓝色和粉色点缀 */
-    --primary-color: #7aa2f7; /* 柔和蓝色 */
+    --primary-color: #7aa2f7;
     --primary-hover: #9abdfa;
-    --accent-color: #f77daa;   /* 柔和粉色 */
+    --accent-color: #f77daa;
     --accent-hover: #ff9fbc;
 
-    /* 辅助颜色 */
-    --secondary-color: #9aa5ce; /* 淡紫灰色用于文本 */
-    --background-color: #f2f4ff; /* 非常浅的蓝/紫色调 */
-    --surface-color: #ffffff;   /* 白色用于卡片/页头 */
-    --text-color: #414868;      /* 深蓝/灰色 */
-    --heading-color: #2e3a59;   /* 更深的蓝/灰色 */
-    --border-color: #e0e0ff;    /* 浅紫色边框 */
+    --secondary-color: #9aa5ce;
+    --background-color: #f2f4ff;
+    --surface-color: #ffffff;
+    --text-color: #414868;
+    --heading-color: #2e3a59;
+    --border-color: #e0e0ff;
 
-    /* 渐变和阴影 */
-    --gradient-start: #a7c7e7; /* 浅蓝色 */
-    --gradient-end: #e0d6ff;   /* 浅紫色 */
-    --card-shadow: 0 5px 15px rgba(122, 162, 247, 0.1); /* 更柔和的蓝色阴影 */
+    --gradient-start: #a7c7e7;
+    --gradient-end: #e0d6ff;
+    --card-shadow: 0 5px 15px rgba(122, 162, 247, 0.1);
     --card-hover-shadow: 0 8px 25px rgba(122, 162, 247, 0.18);
     --button-shadow: 0 4px 10px rgba(122, 162, 247, 0.2);
     --button-hover-shadow: 0 6px 15px rgba(122, 162, 247, 0.3);
 
-    /* 排版和布局 */
     --font-family: 'Poppins', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --border-radius-base: 10px;  /* 更圆润 */
-    --border-radius-large: 16px; /* 更加圆润 */
+    --border-radius-base: 10px;
+    --border-radius-large: 16px;
     --border-radius-pill: 50px;
 }
 
-/* --- 全局样式和重置 --- */
 *,
 *::before,
 *::after {
@@ -72,7 +64,7 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     line-height: 1.3;
     margin-bottom: 0.75rem;
-    letter-spacing: -0.02em; /* 稍微紧凑的字间距 */
+    letter-spacing: -0.02em;
 }
 
 h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
@@ -82,14 +74,14 @@ h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
 }
 
 a {
-    color: var(--accent-color); /* 链接使用粉色 */
+    color: var(--accent-color);
     text-decoration: none;
     transition: color 0.3s ease;
 }
 
 a:hover {
     color: var(--accent-hover);
-    text-decoration: none; /* 全局移除下划线，获得更整洁的外观 */
+    text-decoration: none;
 }
 
 img {
@@ -98,7 +90,6 @@ img {
     display: block;
 }
 
-/* --- 页头/导航 (Invisible -> Liquid Glass) --- */
 .main-header {
     position: fixed;
     top: 20px;
@@ -108,34 +99,29 @@ img {
     max-width: 1200px;
     z-index: 1000;
     
-    /* Default: Invisible/Airy */
     background-color: transparent;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    border: 1px solid transparent; /* Placeholder for transition */
+    border: 1px solid transparent;
     box-shadow: none;
     
-    padding: 1rem 1.5rem; /* Spacious */
+    padding: 1rem 1.5rem;
     border-radius: 50px;
     transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
-/* Scrolled state: Liquid Glass Materializes */
 .main-header.scrolled {
     top: 10px;
     padding: 0.6rem 1.5rem;
     
-    /* Liquid Glass Effect */
     background-color: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(30px) saturate(180%);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
     
-    /* Borders & Highlights */
     border: 1px solid rgba(255, 255, 255, 0.6);
     border-top: 1px solid rgba(255, 255, 255, 0.8);
     border-bottom: 1px solid rgba(255, 255, 255, 0.4);
     
-    /* Depth & Glow */
     box-shadow: 
         0 10px 40px -10px rgba(0, 0, 0, 0.05),
         inset 0 0 20px rgba(255, 255, 255, 0.5);
@@ -143,13 +129,12 @@ img {
 
 .main-header .container {
     display: flex;
-    justify-content: space-between; /* Distribute space */
+    justify-content: space-between;
     align-items: center;
-    padding: 0; /* Container padding handled by header */
+    padding: 0;
     width: 100%;
 }
 
-/* Minimalist Logo */
 .logo {
     font-size: 1.5rem;
     font-weight: 800;
@@ -163,17 +148,16 @@ img {
 }
 
 .logo-img {
-    height: 2.5rem; /* Slightly smaller for capsule */
+    height: 2.5rem;
     width: auto;
 }
 
-/* Clean Nav Links */
 .nav-links {
     list-style: none;
     display: flex;
     align-items: center;
     gap: 2rem;
-    margin: 0 auto; /* Center the links */
+    margin: 0 auto;
 }
 
 .nav-links a {
@@ -192,10 +176,9 @@ img {
 }
 
 .nav-links a::after {
-    display: none; /* Remove old underline */
+    display: none;
 }
 
-/* Action Buttons Group */
 .action-buttons {
     display: flex;
     align-items: center;
@@ -203,10 +186,9 @@ img {
     flex-shrink: 0;
 }
 
-/* Support Button - Sakura Jelly Style */
 .support-btn {
-    background: linear-gradient(180deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%) !important; /* Candy Gradient */
-    background-image: linear-gradient(to bottom, #ffb7b2 0%, #ff9a9e 100%) !important; /* Stronger Pink */
+    background: linear-gradient(180deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%) !important;
+    background-image: linear-gradient(to bottom, #ffb7b2 0%, #ff9a9e 100%) !important;
     color: white !important;
     border: none;
     padding: 0.6rem 1.4rem !important;
@@ -218,11 +200,10 @@ img {
     gap: 0.5rem;
     white-space: nowrap;
     
-    /* The Jelly Effect */
     box-shadow: 
-        inset 0 2px 0 rgba(255, 255, 255, 0.4), /* Top Highlight */
-        inset 0 -2px 0 rgba(0, 0, 0, 0.05),     /* Bottom Shade */
-        0 4px 10px rgba(255, 154, 158, 0.3);     /* Soft Drop Shadow */
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.05),
+        0 4px 10px rgba(255, 154, 158, 0.3);
         
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     transform: translateY(0);
@@ -233,8 +214,8 @@ img {
     box-shadow: 
         inset 0 2px 0 rgba(255, 255, 255, 0.6),
         inset 0 -2px 0 rgba(0, 0, 0, 0.05),
-        0 8px 20px rgba(255, 154, 158, 0.5); /* Stronger Glow */
-    background-image: linear-gradient(to bottom, #ffc3be 0%, #ff9a9e 100%) !important; /* Brighter */
+        0 8px 20px rgba(255, 154, 158, 0.5);
+    background-image: linear-gradient(to bottom, #ffc3be 0%, #ff9a9e 100%) !important;
 }
 
 .support-btn i {
@@ -247,9 +228,8 @@ img {
     animation: heartbeat 1.5s infinite;
 }
 
-/* Download Button - Ocean Jelly Style */
 .download-btn {
-    background: linear-gradient(to bottom, #89f7fe 0%, #66a6ff 100%) !important; /* Blue Candy */
+    background: linear-gradient(to bottom, #89f7fe 0%, #66a6ff 100%) !important;
     background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%) !important;
     color: white !important;
     border: none;
@@ -262,24 +242,23 @@ img {
     gap: 0.5rem;
     white-space: nowrap;
     
-    /* The Jelly Effect */
     box-shadow: 
-        inset 0 2px 0 rgba(255, 255, 255, 0.4), /* Top Highlight */
-        inset 0 -2px 0 rgba(0, 0, 0, 0.05),     /* Bottom Shade */
-        0 4px 10px rgba(102, 166, 255, 0.3);     /* Soft Drop Shadow */
+        inset 0 2px 0 rgba(255, 255, 255, 0.4),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.05),
+        0 4px 10px rgba(102, 166, 255, 0.3);
         
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.download-btn::before { display: none; } /* Remove old sheen */
+.download-btn::before { display: none; }
 
 .download-btn:hover {
     transform: translateY(-2px) scale(1.05);
     box-shadow: 
         inset 0 2px 0 rgba(255, 255, 255, 0.6),
         inset 0 -2px 0 rgba(0, 0, 0, 0.05),
-        0 8px 20px rgba(102, 166, 255, 0.5); /* Stronger Glow */
-    background-image: linear-gradient(120deg, #a1f9ff 0%, #66a6ff 100%) !important; /* Brighter */
+        0 8px 20px rgba(102, 166, 255, 0.5);
+    background-image: linear-gradient(120deg, #a1f9ff 0%, #66a6ff 100%) !important;
 }
 
 .download-btn i {
@@ -294,7 +273,6 @@ img {
     100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
 }
 
-/* 响应式导航 */
 @media (max-width: 768px) {
     .nav-links {
         gap: 1rem;
@@ -339,16 +317,14 @@ img {
     }
 }
 
-/* --- Catime 2.0: Dimension Break Hero --- */
 .hero {
     position: relative;
-    padding: 8rem 0 6rem; /* Significantly reduced padding */
+    padding: 8rem 0 6rem;
     background-color: #f8faff;
     overflow: hidden;
     perspective: 1000px;
 }
 
-/* Spotlight Effect (JS driven position) */
 .hero-spotlight {
     position: absolute;
     top: 0;
@@ -365,12 +341,11 @@ img {
     mix-blend-mode: soft-light;
 }
 
-/* Huge Background Text - Parallax */
 .hero-bg-text {
     position: absolute;
-    top: 5%; /* Moved up */
+    top: 5%;
     left: 50%;
-    transform: translateX(-50%) translateZ(-50px); /* Removed vertical center translate */
+    transform: translateX(-50%) translateZ(-50px);
     font-size: 25vw;
     font-weight: 900;
     line-height: 1;
@@ -394,7 +369,6 @@ img {
     text-align: center;
 }
 
-/* Slogan & Typography */
 .hero-slogan {
     font-size: 4.5rem;
     font-weight: 800;
@@ -405,7 +379,6 @@ img {
     position: relative;
 }
 
-/* Highlight Text with Glitch/Pop effect */
 .highlight-text {
     background: linear-gradient(135deg, #7aa2f7 0%, #f77daa 100%);
     -webkit-background-clip: text;
@@ -415,7 +388,6 @@ img {
     position: relative;
 }
 
-/* Ciallo Candy Text Effect */
 .ciallo-container {
     display: block;
     margin-top: 0.8rem;
@@ -425,7 +397,7 @@ img {
 
 .ciallo-text {
     font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
-    font-size: 0.65em; /* Slightly larger */
+    font-size: 0.65em;
     font-weight: 700;
     background: linear-gradient(90deg, #7aa2f7 0%, #f77daa 100%);
     -webkit-background-clip: text;
@@ -434,7 +406,6 @@ img {
     display: inline-block;
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
-    /* Clean subtle shadow, no blurry glow */
     filter: drop-shadow(0 2px 4px rgba(122, 162, 247, 0.2));
 }
 
@@ -443,7 +414,6 @@ transform: scale(1.1) rotate(2deg);
 filter: drop-shadow(0 5px 15px rgba(247, 125, 170, 0.3));
 }
 
-/* Magazine Style Hero Layout */
 .magazine-layout {
 display: flex;
 flex-direction: column;
@@ -470,14 +440,13 @@ margin-bottom: 3rem;
     z-index: 0;
 }
 
-/* Editorial Metadata - Vertical Flanking Style */
 .editorial-meta {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     width: 100%;
-    max-width: 95%; /* Use percentage to push to edges */
-    min-width: 800px; /* Ensure minimum width so it doesn't overlap text */
+    max-width: 95%;
+    min-width: 800px;
     display: flex;
     justify-content: space-between;
     pointer-events: none;
@@ -488,7 +457,7 @@ margin-bottom: 3rem;
     display: flex;
     align-items: center;
     gap: 1rem;
-    opacity: 0.5; /* Slightly more subtle */
+    opacity: 0.5;
     transition: opacity 0.3s ease;
 }
 
@@ -498,16 +467,16 @@ margin-bottom: 3rem;
 
 .meta-group.left {
     writing-mode: vertical-rl;
-    transform: rotate(180deg); /* Flip so text reads bottom-to-top */
+    transform: rotate(180deg);
     text-align: right;
-    border-right: 1px solid rgba(122, 162, 247, 0.3); /* Decorative line */
+    border-right: 1px solid rgba(122, 162, 247, 0.3);
     padding-right: 1rem;
 }
 
 .meta-group.right {
     writing-mode: vertical-rl;
     text-align: left;
-    border-left: 1px solid rgba(247, 125, 170, 0.3); /* Decorative line */
+    border-left: 1px solid rgba(247, 125, 170, 0.3);
     padding-left: 1rem;
 }
 
@@ -523,14 +492,13 @@ margin-bottom: 3rem;
 .meta-value {
     font-family: 'JetBrains Mono', 'Consolas', monospace;
     font-size: 0.65rem;
-    color: #b4c6ef; /* Lighter, more subtle */
+    color: #b4c6ef;
     letter-spacing: 0.1em;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-/* Rotate icons for vertical layout */
 .meta-value i {
     transform: rotate(90deg);
 }
@@ -542,7 +510,6 @@ margin-bottom: 3rem;
     margin-top: 5px;
 }
 
-/* The Big Number - Luxury Serif Style */
 .stat-block {
     position: relative;
     line-height: 0.8;
@@ -552,7 +519,7 @@ margin-bottom: 3rem;
 }
 
 .stat-number {
-    font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Noto Serif SC', serif; /* Serif is the key to Luxury */
+    font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Noto Serif SC', serif;
     font-size: 8rem;
     font-style: italic;
     font-weight: 700;
@@ -562,9 +529,8 @@ margin-bottom: 3rem;
     -webkit-text-fill-color: transparent;
     opacity: 0.9;
     letter-spacing: -0.02em;
-    /* Add a text shadow for depth */
     filter: drop-shadow(0 10px 20px rgba(122, 162, 247, 0.15));
-    padding-right: 1rem; /* Balance the italic tilt */
+    padding-right: 1rem;
 }
 
 .stat-unit {
@@ -580,21 +546,20 @@ margin-bottom: 3rem;
     text-transform: uppercase;
 }
 
-/* Technical Specs Line - Refined */
 .tech-spec-line {
     font-family: 'Montserrat', sans-serif;
     font-size: 0.75rem;
     font-weight: 500;
-    letter-spacing: 0.3em; /* Even wider */
+    letter-spacing: 0.3em;
     color: #414868;
     text-transform: uppercase;
     background: rgba(255, 255, 255, 0.6);
     backdrop-filter: blur(5px);
     padding: 0.5rem 1.5rem;
-    border-radius: 1px; /* Sharp edges */
+    border-radius: 1px;
     z-index: 2;
     animation: fadeInUp 1s ease-out 0.2s backwards;
-    position: relative; /* To sit above line */
+    position: relative;
 }
 
 .tech-spec-line .divider {
@@ -605,7 +570,7 @@ margin-bottom: 3rem;
     font-style: italic;
 }
 
-/* Narrative Line - Clean & Sharp */
+
 .narrative-line {
     font-size: 1rem;
     color: #626a87;
@@ -614,215 +579,188 @@ margin-bottom: 3rem;
     margin-top: 0.5rem;
     animation: fadeInUp 1s ease-out 0.4s backwards;
     position: relative;
-    background: var(--surface-color); /* Mask the vertical line behind text */
+    background: var(--surface-color);
     padding: 0 1rem;
 }
 
-/* Barcode Decoration */
 .barcode-strip {
     height: 20px;
     width: 100%;
     max-width: 200px;
-    background-image: linear-gradient(90deg, 
-        #2e3a59 0%, #2e3a59 2%, 
-        transparent 2%, transparent 4%,
-        #2e3a59 4%, #2e3a59 5%,
-        transparent 5%, transparent 8%,
-        #2e3a59 8%, #2e3a59 12%,
-        transparent 12%, transparent 14%,
-        #2e3a59 14%, #2e3a59 20%,
-        transparent 20%, transparent 25%,
-        #2e3a59 25%, #2e3a59 26%,
-        transparent 26%, transparent 30%
-    );
+    background-image: linear-gradient(90deg, #2e3a59 0%, #2e3a59 2%, transparent 2%, transparent 4%, #2e3a59 4%, #2e3a59 5%, transparent 5%, transparent 8%, #2e3a59 8%, #2e3a59 12%, transparent 12%, transparent 14%, #2e3a59 14%, #2e3a59 20%, transparent 20%, transparent 25%, #2e3a59 25%, #2e3a59 26%, transparent 26%, transparent 30%);
     opacity: 0.1;
     margin-top: 1rem;
     background-size: 100% 100%;
 }
 
 @media (max-width: 1024px) {
-    .editorial-meta { display: none; } /* Hide on tablets/mobile */
+    .editorial-meta { display: none; }
     .magazine-layout::before { display: none; }
 }
 
 @media (max-width: 768px) {
     .stat-number { font-size: 5rem; }
-    /* .editorial-meta { width: 90%; }  Removed as it is hidden above */
-    /* .magazine-layout::before { display: none; } Removed duplicate */
     .stat-unit { right: 0; top: 0; transform: none; font-size: 0.8rem; }
 }
 
-/* New Hero Description Design - Magazine Style */
 .hero-sub-container {
-display: flex;
-flex-direction: column;
-align-items: center;
-margin-bottom: 2rem;
-position: relative;
-gap: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+    position: relative;
+    gap: 1rem;
 }
 
-/* Row 1: Badges & Core Text */
 .hero-feature-badges {
-display: flex;
-align-items: center;
-gap: 1rem;
-background: rgba(255, 255, 255, 0.4);
-backdrop-filter: blur(10px);
-padding: 0.6rem 1.2rem;
-border-radius: 50px;
-border: 1px solid rgba(255, 255, 255, 0.6);
-box-shadow: 0 4px 20px rgba(122, 162, 247, 0.1);
-animation: fadeInUp 0.8s ease-out backwards;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    padding: 0.6rem 1.2rem;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 20px rgba(122, 162, 247, 0.1);
+    animation: fadeInUp 0.8s ease-out backwards;
 }
 
 .feature-badge {
-display: inline-flex;
-align-items: center;
-gap: 0.4rem;
-padding: 0.3rem 0.8rem;
-border-radius: 20px;
-font-size: 0.9rem;
-font-weight: 700;
-color: white;
-box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-transition: transform 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
 }
 
 .feature-badge:hover {
-transform: translateY(-2px);
+    transform: translateY(-2px);
 }
 
 .feature-badge.tech {
-background: linear-gradient(135deg, #00599C, #007acc);
+    background: linear-gradient(135deg, #00599C, #007acc);
 }
 
 .feature-badge.size {
-background: linear-gradient(135deg, #10b981, #34d399);
+    background: linear-gradient(135deg, #10b981, #34d399);
 }
 
 .feature-separator {
-color: rgba(46, 58, 89, 0.2);
-font-size: 1.2rem;
-font-weight: 300;
+    color: rgba(46, 58, 89, 0.2);
+    font-size: 1.2rem;
+    font-weight: 300;
 }
 
 .feature-text {
-font-size: 1.05rem;
-font-weight: 600;
-color: #2e3a59;
-letter-spacing: 0.02em;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #2e3a59;
+    letter-spacing: 0.02em;
 }
 
-/* Row 2: Detailed Features */
 .hero-feature-line {
-font-size: 1.1rem;
-color: #626a87;
-display: flex;
-align-items: center;
-gap: 0.6rem;
-animation: fadeInUp 0.8s ease-out 0.2s backwards;
+    font-size: 1.1rem;
+    color: #626a87;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    animation: fadeInUp 0.8s ease-out 0.2s backwards;
 }
 
 .feature-highlight {
-background: linear-gradient(90deg, #7aa2f7, #f77daa);
--webkit-background-clip: text;
-background-clip: text;
--webkit-text-fill-color: transparent;
-font-weight: 700;
+    background: linear-gradient(90deg, #7aa2f7, #f77daa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
 }
 
 .tech-tag {
-background: rgba(255, 255, 255, 0.8);
-border: 1px solid rgba(122, 162, 247, 0.3);
-color: #414868;
-padding: 0.1rem 0.5rem;
-border-radius: 6px;
-font-size: 0.9rem;
-font-weight: 600;
-font-family: 'Consolas', monospace; /* Tech feel */
-box-shadow: 0 2px 4px rgba(122, 162, 247, 0.05);
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    color: #414868;
+    padding: 0.1rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: 'Consolas', monospace;
+    box-shadow: 0 2px 4px rgba(122, 162, 247, 0.05);
 }
 
 .feature-dot {
-color: #f77daa;
-font-size: 0.8rem;
-opacity: 0.6;
+    color: #f77daa;
+    font-size: 0.8rem;
+    opacity: 0.6;
 }
 
 @keyframes fadeInUp {
-from { opacity: 0; transform: translateY(10px); }
-to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Original Signature */
 .signature-decoration {
-font-family: 'Dancing Script', cursive;
-font-size: 1rem;
-color: #f77daa;
-margin-top: 1rem;
-transform: rotate(-5deg);
-opacity: 0.8;
-transition: transform 0.3s ease;
+    font-family: 'Dancing Script', cursive;
+    font-size: 1rem;
+    color: #f77daa;
+    margin-top: 1rem;
+    transform: rotate(-5deg);
+    opacity: 0.8;
+    transition: transform 0.3s ease;
 }
 
 .signature-decoration:hover {
-transform: rotate(0deg) scale(1.1);
+    transform: rotate(0deg) scale(1.1);
 }
 
-/* Magnetic Buttons */
 .hero-actions {
-display: flex;
-gap: 1.5rem;
-margin-bottom: 3rem;
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 3rem;
 }
 
 .btn-magnetic {
-position: relative;
-padding: 1rem 2.5rem;
-border-radius: 50px;
-font-weight: 700; /* Bolder text */
-font-size: 1.1rem;
-text-decoration: none;
-transition: transform 0.1s linear; /* Fast transition for magnetic effect */
-transform-style: preserve-3d;
-display: inline-flex;
-justify-content: center;
-align-items: center;
-overflow: hidden; /* Contain the glow */
+    position: relative;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: transform 0.1s linear;
+    transform-style: preserve-3d;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
 }
 
 .btn-content {
     position: relative;
     z-index: 2;
-    pointer-events: none; /* Pass events to button */
+    pointer-events: none;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-/* Primary Button - Sakura Pink Theme */
 .btn-magnetic.primary {
     background: linear-gradient(135deg, #ff9eb5 0%, #f77daa 100%);
     color: white !important;
-    box-shadow: 
-        0 10px 25px rgba(247, 125, 170, 0.4),
-        inset 0 2px 0 rgba(255, 255, 255, 0.4);
+    box-shadow: 0 10px 25px rgba(247, 125, 170, 0.4), inset 0 2px 0 rgba(255, 255, 255, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Magical Shimmer Effect (Replacing RGB) */
 .btn-glow {
     position: absolute;
     top: -50%;
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(
-        circle, 
-        rgba(255, 255, 255, 0.8) 0%, 
-        rgba(255, 255, 255, 0) 60%
-    );
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 60%);
     z-index: 1;
     opacity: 0;
     transform: scale(0.5);
@@ -842,30 +780,23 @@ overflow: hidden; /* Contain the glow */
 }
 
 .btn-magnetic.primary:hover {
-    box-shadow: 
-        0 15px 35px rgba(247, 125, 170, 0.5),
-        inset 0 2px 0 rgba(255, 255, 255, 0.6);
+    box-shadow: 0 15px 35px rgba(247, 125, 170, 0.5), inset 0 2px 0 rgba(255, 255, 255, 0.6);
 }
 
-/* Secondary Button - Crystal Glass Theme */
 .btn-magnetic.secondary {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(240, 245, 255, 0.8) 100%);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     color: #5c6b8f;
     border: 1px solid rgba(255, 255, 255, 0.8);
-    box-shadow: 
-        0 10px 25px rgba(122, 162, 247, 0.15),
-        inset 0 2px 0 rgba(255, 255, 255, 1);
+    box-shadow: 0 10px 25px rgba(122, 162, 247, 0.15), inset 0 2px 0 rgba(255, 255, 255, 1);
 }
 
 .btn-magnetic.secondary:hover {
     background: white;
     color: #2e3a59;
     border-color: white;
-    box-shadow: 
-        0 15px 35px rgba(122, 162, 247, 0.2),
-        inset 0 2px 0 rgba(255, 255, 255, 1);
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2), inset 0 2px 0 rgba(255, 255, 255, 1);
     transform: translateY(-2px);
 }
 
@@ -878,7 +809,6 @@ overflow: hidden; /* Contain the glow */
     transform: rotate(360deg);
 }
 
-/* Immersive 3D Visual Container */
 .hero-visual-container {
     position: relative;
     width: 100%;
@@ -887,7 +817,6 @@ overflow: hidden; /* Contain the glow */
     perspective: 2000px;
 }
 
-/* Ambient Light Reflection */
 .ambient-light {
     position: absolute;
     top: 50%;
@@ -906,11 +835,10 @@ overflow: hidden; /* Contain the glow */
     to { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
 }
 
-/* Thick Glass Window Shell */
 .hero-visual-wrapper {
     transform-style: preserve-3d;
     transform: rotateX(5deg);
-    transition: transform 0.3s ease-out; /* For mouse follow tilt */
+    transition: transform 0.3s ease-out;
 }
 
 .window-shell-thick {
@@ -919,12 +847,7 @@ overflow: hidden; /* Contain the glow */
     -webkit-backdrop-filter: blur(20px);
     border-radius: 16px;
     padding: 10px;
-    /* Complex shadow for thickness */
-    box-shadow: 
-        0 1px 0 rgba(255,255,255,0.6) inset,
-        0 -1px 0 rgba(255,255,255,0.3) inset,
-        0 20px 50px rgba(0,0,0,0.15),
-        0 0 0 1px rgba(255,255,255,0.4);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.6) inset, 0 -1px 0 rgba(255,255,255,0.3) inset, 0 20px 50px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.4);
     position: relative;
 }
 
@@ -949,8 +872,11 @@ overflow: hidden; /* Contain the glow */
     border-radius: 50%;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
+
 .control.red { background: #ff5f56; }
+
 .control.yellow { background: #ffbd2e; }
+
 .control.green { background: #27c93f; }
 
 .window-title {
@@ -973,10 +899,9 @@ overflow: hidden; /* Contain the glow */
 .hero-video {
     width: 100%;
     display: block;
-    transform: scale(1.01); /* Remove black edges */
+    transform: scale(1.01);
 }
 
-/* Floating Elements */
 .floating-element {
     position: absolute;
     z-index: 20;
@@ -1023,11 +948,10 @@ overflow: hidden; /* Contain the glow */
     animation: floatIcon 7s ease-in-out infinite reverse;
 }
 
-/* Pure C Icon Style */
 .float-icon-c {
     top: -20px;
     right: 35%;
-    color: #00599C; /* C Language Blue */
+    color: #00599C;
     font-family: 'Consolas', 'Monaco', monospace;
     font-weight: 900;
     font-size: 2.2rem;
@@ -1058,7 +982,6 @@ overflow: hidden; /* Contain the glow */
     to { opacity: 0.7; transform: scale(1.1); }
 }
 
-/* Mobile Responsive */
 @media (max-width: 768px) {
     .hero { padding: 8rem 0 6rem; }
     .hero-slogan { font-size: 3rem; }
@@ -1068,7 +991,6 @@ overflow: hidden; /* Contain the glow */
     .float-cat { width: 80px; top: -40px; right: 0; }
     .float-icon-1, .float-icon-2, .float-icon-c { display: none; }
 
-    /* Mobile adjustments for Magazine Description */
     .hero-feature-badges {
         flex-direction: column;
         gap: 0.5rem;

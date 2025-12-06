@@ -1,32 +1,27 @@
-// 全局变量
 let selectedFiles = [];
 let processedFonts = [];
 let pyodide = null;
 let pythonReady = false;
 
-// 文件夹模式相关变量
 let folderMode = false;
 let folderStructure = {
     name: '',
-    folderNames: [], // 所有拖入的文件夹名称（用于组合ZIP文件名）
-    files: [], // 所有文件（包括非字体文件）
-    fontFiles: [], // 仅字体文件
-    directories: new Set() // 所有目录路径
+    folderNames: [],
+    files: [],
+    fontFiles: [],
+    directories: new Set()
 };
 
-// 文件来源跟踪（用于智能下载按钮）
 let fileSourceTracking = {
-    standalone: [], // 单独添加的文件
-    fromFolders: []  // 从文件夹扫描来的文件
+    standalone: [],
+    fromFolders: []
 };
 
-// 计时相关变量
 let processingStartTime = null;
 let timingInterval = null;
 
-// DOM 元素
 const uploadArea = document.getElementById('uploadArea');
-const uploadSection = document.querySelector('.upload-section'); // 外部的上传卡片section
+const uploadSection = document.querySelector('.upload-section');
 const fileInput = document.getElementById('fileInput');
 const fileList = document.getElementById('fileList');
 const fileItems = document.getElementById('fileItems');
@@ -40,7 +35,6 @@ const progressContainer = document.getElementById('progressContainer');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 
-// 计时显示元素（将在进度条显示时动态创建）
 let timingText = null;
 
 const downloadSection = document.getElementById('downloadSection');
@@ -49,46 +43,35 @@ const downloadControls = document.getElementById('downloadControls');
 const downloadAllBtn = document.getElementById('downloadAllBtn');
 const dragOverlay = document.getElementById('dragOverlay');
 
-// ZIP进度条元素
 const zipProgressContainer = document.getElementById('zipProgressContainer');
 const zipProgressFill = document.getElementById('zipProgressFill');
 const zipProgressText = document.getElementById('zipProgressText');
 const zipProgressDetails = document.getElementById('zipProgressDetails');
 
-// 字体处理引擎加载相关元素
 const engineLoadingContainer = document.getElementById('engineLoadingContainer');
 const engineLoadingStatus = document.getElementById('engineLoadingStatus');
 const engineNotReadyHint = document.getElementById('engineNotReadyHint');
 
-// 初始化
 document.addEventListener('DOMContentLoaded', function() {
-    // 确保所有 DOM 元素都已加载
     console.log('DOM 已加载，开始初始化');
     
-    // 检查关键元素是否存在
     const overlay = document.getElementById('dragOverlay');
     console.log('dragOverlay 元素:', overlay);
     
-    // 初始化国际化支持
     initFontToolI18n();
     
-    // 立即初始化基本功能（无需等待处理引擎）
     initDragAndDrop();
     initFileInput();
     initPasteSupport();
     
-    // 显示字体处理引擎加载状态
     showEngineLoadingStatus();
     
-    // 异步初始化字体处理引擎（后台进行）
     initPyodideAsync();
     
-    // 加载通用组件
     if (typeof loadCommonComponents === 'function') {
         loadCommonComponents();
     }
     
-    // 检查JSZip库是否加载
     setTimeout(() => {
         if (typeof JSZip !== 'undefined') {
             console.log('✅ JSZip库加载成功，支持文件夹ZIP下载');
@@ -98,21 +81,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 2000);
 });
 
-// 显示字体处理引擎加载状态
 function showEngineLoadingStatus() {
-    // 确保加载容器可见
     if (engineLoadingContainer) {
         engineLoadingContainer.style.display = 'block';
     }
     
-    // 确保处理按钮被禁用并显示提示
     if (processBtn) {
         processBtn.disabled = true;
         processBtn.style.opacity = '0.6';
         processBtn.style.cursor = 'not-allowed';
     }
     
-    // 显示未就绪提示
     if (engineNotReadyHint) {
         engineNotReadyHint.style.display = 'flex';
     }
@@ -120,26 +99,21 @@ function showEngineLoadingStatus() {
     console.log('🎨 字体处理引擎加载状态已显示');
 }
 
-// 隐藏字体处理引擎加载状态
 function hideEngineLoadingStatus() {
-    // 添加淡出动画
     if (engineLoadingContainer) {
         engineLoadingContainer.classList.add('fade-out');
         
-        // 动画完成后隐藏
         setTimeout(() => {
             engineLoadingContainer.style.display = 'none';
         }, 300);
     }
     
-    // 启用处理按钮
     if (processBtn) {
         processBtn.disabled = false;
         processBtn.style.opacity = '1';
         processBtn.style.cursor = 'pointer';
     }
     
-    // 隐藏未就绪提示
     if (engineNotReadyHint) {
         engineNotReadyHint.classList.add('fade-out');
         
@@ -151,7 +125,6 @@ function hideEngineLoadingStatus() {
     console.log('🎨 字体处理引擎加载状态已隐藏');
 }
 
-// 更新字体处理引擎加载状态文本
 function updateEngineLoadingStatus(message) {
     if (engineLoadingStatus) {
         engineLoadingStatus.textContent = translateText(message);
@@ -159,22 +132,18 @@ function updateEngineLoadingStatus(message) {
     console.log(`⚙️ ${message}`);
 }
 
-// 异步初始化字体处理引擎 - 不阻塞UI
 async function initPyodideAsync() {
     try {
         updateEngineLoadingStatus('正在加载处理引擎...');
         
-        // 加载Pyodide
         pyodide = await loadPyodide();
         
         updateEngineLoadingStatus('正在安装核心库...');
         
-        // 安装必要的包
         await pyodide.loadPackage(['micropip']);
         
         updateEngineLoadingStatus('正在配置字体处理组件...');
         
-        // 修复：正确的异步安装方式
         await pyodide.runPythonAsync(`
             import micropip
             await micropip.install(['fonttools'])
@@ -182,16 +151,13 @@ async function initPyodideAsync() {
         
         updateEngineLoadingStatus('正在初始化字体处理引擎...');
         
-        // 加载字体处理代码 - 重用原有代码
         await loadPythonFontProcessor();
         
-        // 测试处理环境
         await testPythonEnvironment();
         
         pythonReady = true;
         updateEngineLoadingStatus('字体处理引擎已就绪！');
         
-        // 延迟一下让用户看到成功状态
         setTimeout(() => {
             hideEngineLoadingStatus();
         }, 1000);
@@ -204,16 +170,13 @@ async function initPyodideAsync() {
         
         await loadFallbackLibrary();
         
-        // 即使备用方案也要隐藏加载状态
         setTimeout(() => {
             hideEngineLoadingStatus();
         }, 2000);
     }
 }
 
-// 加载字体处理器
 async function loadPythonFontProcessor() {
-        // 加载字体处理代码
         pyodide.runPython(`
 from fontTools.ttLib import TTFont
 from fontTools.subset import Subsetter, Options
@@ -233,17 +196,14 @@ def subset_font(font_data_base64, characters_to_keep):
         print(f"[DEBUG] 开始严格字体处理，要保留的字符: {characters_to_keep}")
         print(f"[DEBUG] Base64数据长度: {len(font_data_base64)} 字符")
         
-        # 解码字体数据
         font_data = base64.b64decode(font_data_base64)
         print(f"[DEBUG] 解码后字体数据大小: {len(font_data)} 字节")
         
-        # 验证原始数据
         if len(font_data) >= 12:
             original_header = font_data[:12]
             header_hex = ' '.join(f'{b:02x}' for b in original_header)
             print(f"[DEBUG] 原始字体文件头: {header_hex}")
             
-            # 检查TTF签名
             signature = int.from_bytes(font_data[:4], 'big')
             if signature == 0x00010000:
                 print("[DEBUG] 原始文件：有效的TTF格式")
@@ -252,7 +212,6 @@ def subset_font(font_data_base64, characters_to_keep):
             else:
                 print(f"[DEBUG] 原始文件：未知格式 0x{signature:08x}")
         
-        # 加载字体
         font_io = io.BytesIO(font_data)
         font = TTFont(font_io)
         
@@ -260,7 +219,6 @@ def subset_font(font_data_base64, characters_to_keep):
         print(f"[DEBUG] 原始表数量: {len(font.keys())}")
         print(f"[DEBUG] 原始表列表: {sorted(list(font.keys()))}")
         
-        # 获取字体基本信息
         if 'head' in font:
             head = font['head']
             print(f"[DEBUG] unitsPerEm: {head.unitsPerEm}")
@@ -270,7 +228,6 @@ def subset_font(font_data_base64, characters_to_keep):
             cmap = font.getBestCmap()
             print(f"[DEBUG] 字符映射数量: {len(cmap) if cmap else 0}")
             
-            # 检查指定字符是否存在
             found_chars = []
             for char in characters_to_keep:
                 char_code = ord(char)
@@ -283,53 +240,45 @@ def subset_font(font_data_base64, characters_to_keep):
             if not found_chars:
                 raise Exception(f'在字体中未找到任何指定字符。字体包含字符范围: U+{min(cmap.keys()):04X} - U+{max(cmap.keys()):04X}')
         
-        # 创建子集化器 - 使用严格清理选项
         options = Options()
         
-        # 设置严格的清理参数 - 彻底移除多余内容
-        options.desubroutinize = True          # 将子程序内联化，简化字体
-        options.drop_tables = [               # 移除不必要的表
-            'DSIG',    # 数字签名表
-            'GSUB',    # 字形替换表（包含复合字形信息）
-            'GPOS',    # 字形定位表
-            'kern',    # 字距调整表
-            'hdmx',    # 水平设备度量表
-            'VDMX',    # 垂直设备度量表
-            'LTSH',    # 线性阈值表
-            'VORG',    # 垂直原点表
+        options.desubroutinize = True          
+        options.drop_tables = [               
+            'DSIG',    
+            'GSUB',    
+            'GPOS',    
+            'kern',    
+            'hdmx',    
+            'VDMX',    
+            'LTSH',    
+            'VORG',    
         ]
-        options.passthrough_tables = False     # 不传递未知表
-        options.recalc_bounds = True          # 重新计算边界
-        options.recalc_timestamp = False      # 不重新计算时间戳
-        options.canonical_order = True       # 使用规范顺序
-        options.flavor = None                 # 输出标准TTF格式
-        options.with_zopfli = False          # 不使用zopfli压缩
+        options.passthrough_tables = False     
+        options.recalc_bounds = True          
+        options.recalc_timestamp = False      
+        options.canonical_order = True       
+        options.flavor = None                 
+        options.with_zopfli = False          
         
-        # 设置名称表保留选项 - 最小化保留
-        options.name_IDs = ['*']              # 保留所有名称ID（字体标识需要）
-        options.name_legacy = False           # 不保留旧式名称
-        options.name_languages = ['*']        # 保留所有语言
+        options.name_IDs = ['*']              
+        options.name_legacy = False           
+        options.name_languages = ['*']        
         
-        # 字形清理选项
-        options.notdef_glyph = True           # 保留 .notdef 字形（必需）
-        options.notdef_outline = False        # 简化 .notdef 字形轮廓
-        options.recommended_glyphs = False    # 不自动添加推荐字形
-        options.glyph_names = False           # 不保留字形名称
+        options.notdef_glyph = True           
+        options.notdef_outline = False        
+        options.recommended_glyphs = False    
+        options.glyph_names = False           
         
-        # 特征表清理
-        options.layout_features = []          # 不保留任何布局特征
-        options.layout_scripts = []           # 不保留任何脚本支持
+        options.layout_features = []          
+        options.layout_scripts = []           
         
-        # 子集化器配置
         subsetter = Subsetter(options=options)
         print(f"[DEBUG] 严格子集化器创建成功，已配置彻底清理选项")
         
-        # 严格字符设置 - 只保留用户指定的字符
         print(f"[DEBUG] 严格模式：只保留指定字符 {repr(characters_to_keep)}")
         subsetter.populate(text=characters_to_keep)
         print(f"[DEBUG] 字符设置完成: {repr(characters_to_keep)} (严格清理模式)")
         
-        # 应用子集化
         print(f"[DEBUG] 开始严格子集化处理...")
         subsetter.subset(font)
         print(f"[DEBUG] 严格子集化完成")
@@ -337,7 +286,6 @@ def subset_font(font_data_base64, characters_to_keep):
         print(f"[DEBUG] 处理后表数量: {len(font.keys())}")
         print(f"[DEBUG] 处理后表列表: {sorted(list(font.keys()))}")
         
-        # 检查关键表是否存在
         critical_tables = ['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name']
         for table in critical_tables:
             if table in font:
@@ -345,12 +293,10 @@ def subset_font(font_data_base64, characters_to_keep):
             else:
                 print(f"[DEBUG] ✗ 关键表 '{table}' 缺失")
         
-        # 验证处理后的字符映射
         if 'cmap' in font:
             new_cmap = font.getBestCmap()
             print(f"[DEBUG] 处理后字符映射数量: {len(new_cmap) if new_cmap else 0}")
             if new_cmap:
-                # 检查关键字符
                 has_space = 32 in new_cmap
                 has_null = 0 in new_cmap
                 print(f"[DEBUG] 关键字符检查: 空格={has_space}, null={has_null}")
@@ -359,27 +305,23 @@ def subset_font(font_data_base64, characters_to_keep):
                     char = chr(char_code) if 32 <= char_code <= 126 else f"U+{char_code:04X}"
                     print(f"[DEBUG] 保留的映射: {char} -> 字形{glyph_id}")
         
-        # 验证字形表
         if 'glyf' in font:
             glyf_table = font['glyf']
             print(f"[DEBUG] 字形表包含 {len(glyf_table)} 个字形")
             
-            # 检查.notdef字形
             if '.notdef' in glyf_table:
                 print(f"[DEBUG] ✓ .notdef字形存在")
             else:
                 print(f"[DEBUG] ✗ .notdef字形缺失")
                 
-            # 列出所有字形
-            glyph_names = list(glyf_table.keys())[:20]  # 只显示前20个
+            glyph_names = list(glyf_table.keys())[:20]  
             print(f"[DEBUG] 字形列表(前20个): {glyph_names}")
         
-        # 验证name表
         if 'name' in font:
             name_table = font['name']
             font_family = None
             for record in name_table.names:
-                if record.nameID == 1:  # Font Family name
+                if record.nameID == 1:  
                     try:
                         font_family = record.toUnicode()
                         break
@@ -387,13 +329,11 @@ def subset_font(font_data_base64, characters_to_keep):
                         pass
             print(f"[DEBUG] 字体家族名称: {font_family}")
         
-        # 验证OS/2表
         if 'OS/2' in font:
             os2_table = font['OS/2']
             print(f"[DEBUG] OS/2表版本: {os2_table.version}")
             print(f"[DEBUG] 字重: {os2_table.usWeightClass}")
         
-        # 验证maxp表
         if 'maxp' in font:
             maxp_table = font['maxp']
             print(f"[DEBUG] 最大字形数: {maxp_table.numGlyphs}")
@@ -402,24 +342,19 @@ def subset_font(font_data_base64, characters_to_keep):
             if hasattr(maxp_table, 'maxContours'):
                 print(f"[DEBUG] 最大轮廓数: {maxp_table.maxContours}")
         
-        # 输出处理后的字体
         output_io = io.BytesIO()
         print(f"[DEBUG] 开始保存字体...")
         font.save(output_io)
         print(f"[DEBUG] 字体保存完成")
         
-        # 关闭字体对象
         font.close()
         
-        # 获取输出数据
         output_data = output_io.getvalue()
         print(f"[DEBUG] 生成的字体大小: {len(output_data)} 字节")
         
-        # 详细验证输出
         if len(output_data) < 100:
             raise Exception(f'生成的字体文件过小({len(output_data)}字节)')
         
-        # 验证文件头
         if len(output_data) >= 12:
             output_header = output_data[:12]
             header_hex = ' '.join(f'{b:02x}' for b in output_header)
@@ -433,7 +368,6 @@ def subset_font(font_data_base64, characters_to_keep):
             else:
                 print(f"[DEBUG] 输出文件：异常格式 0x{signature:08x}")
         
-        # 尝试重新验证生成的字体
         try:
             print(f"[DEBUG] 开始验证生成的字体...")
             verify_io = io.BytesIO(output_data)
@@ -441,7 +375,6 @@ def subset_font(font_data_base64, characters_to_keep):
             verify_cmap = verify_font.getBestCmap()
             print(f"[DEBUG] 验证成功！生成的字体包含 {len(verify_cmap) if verify_cmap else 0} 个字符映射")
             
-            # 额外的完整性检查
             verify_glyf = verify_font.get('glyf')
             if verify_glyf:
                 print(f"[DEBUG] 字形表包含 {len(verify_glyf)} 个字形")
@@ -452,7 +385,6 @@ def subset_font(font_data_base64, characters_to_keep):
             import traceback
             print(f"[ERROR] 验证错误详情: {traceback.format_exc()}")
             
-        # 严格清理模式兼容性检查
         print(f"[INFO] === 严格清理模式处理完成 ===")
         print(f"[INFO] 处理模式: 严格子集化 + 彻底清理复合字形")
         print(f"[INFO] 清理选项: 移除GSUB/GPOS表，去除复合字形信息")
@@ -483,19 +415,16 @@ def subset_font(font_data_base64, characters_to_keep):
             'message': f'处理失败: {str(e)}'
         }
 
-# 测试函数可用性
 def test_fonttools():
     return "FontTools库已就绪"
         `);
 }
 
-// 测试处理环境
 async function testPythonEnvironment() {
     try {
         const test_result = pyodide.runPython('test_fonttools()');
         console.log(`✅ ${test_result}`);
         
-        // 额外测试：确保subset_font函数已定义
         const function_test = pyodide.runPython(`
 import inspect
 if 'subset_font' in globals():
@@ -512,12 +441,10 @@ else:
     }
 }
 
-// 初始化字体处理引擎 - 保留原函数用于兼容性
 async function initPyodide() {
     return await initPyodideAsync();
 }
 
-// 加载备用库
 async function loadFallbackLibrary() {
     try {
         const script = document.createElement('script');
@@ -534,8 +461,6 @@ async function loadFallbackLibrary() {
     }
 }
 
-// 初始化拖拽功能
-// 全页面拖拽相关变量
 let dragCounter = 0;
 
 function initDragAndDrop() {
@@ -548,12 +473,10 @@ function initDragAndDrop() {
         return;
     }
     
-    // 防止默认行为
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         document.addEventListener(eventName, preventDefaults, false);
     });
 
-    // 全页面拖拽进入/离开检测
     document.addEventListener('dragenter', handleDragEnter, false);
     document.addEventListener('dragleave', handleDragLeave, false);
     document.addEventListener('dragover', handleDragOver, false);
@@ -561,7 +484,6 @@ function initDragAndDrop() {
     
     console.log('已添加全页面拖拽事件监听器');
 
-    // 原有上传区域的拖拽处理
     if (uploadArea) {
         ['dragenter', 'dragover'].forEach(eventName => {
             uploadArea.addEventListener(eventName, highlight, false);
@@ -572,14 +494,12 @@ function initDragAndDrop() {
         });
     }
 
-    // 拖拽覆盖层的点击事件（点击覆盖层隐藏）
     dragOverlay.addEventListener('click', function(e) {
         if (e.target === dragOverlay) {
             hideDragOverlay();
         }
     });
 
-    // ESC 键支持
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && dragOverlay.classList.contains('active')) {
             hideDragOverlay();
@@ -588,7 +508,6 @@ function initDragAndDrop() {
     
     console.log('拖拽功能初始化完成');
     
-    // 添加测试按钮（仅用于调试）
     if (window.location.search.includes('debug=true')) {
         const testBtn = document.createElement('button');
         testBtn.textContent = translateText('测试覆盖层');
@@ -616,7 +535,6 @@ function handleDragEnter(e) {
     dragCounter++;
     console.log('拖拽进入事件，计数器:', dragCounter);
     
-    // 简化检测逻辑：只要有拖拽类型就显示覆盖层
     if (e.dataTransfer && e.dataTransfer.types) {
         const hasFiles = e.dataTransfer.types.includes('Files');
         console.log('拖拽类型:', e.dataTransfer.types, '包含文件:', hasFiles);
@@ -638,20 +556,17 @@ function handleDragLeave(e) {
 }
 
 function handleDragOver(e) {
-    // 简化检测逻辑：只要有拖拽文件类型就显示覆盖层
     if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
         showDragOverlay();
     }
 }
 
 function checkDraggedFiles(dataTransfer) {
-    // 支持的字体文件扩展名
     const fontExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
     
     for (let i = 0; i < dataTransfer.items.length; i++) {
         const item = dataTransfer.items[i];
         
-        // 如果是文件夹，总是显示覆盖层
         if (item.kind === 'file') {
             const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
             if (entry && entry.isDirectory) {
@@ -659,7 +574,6 @@ function checkDraggedFiles(dataTransfer) {
             }
         }
         
-        // 检查文件类型
         if (item.kind === 'file') {
             const file = item.getAsFile();
             if (file) {
@@ -671,7 +585,6 @@ function checkDraggedFiles(dataTransfer) {
             }
         }
         
-        // 检查 MIME 类型
         if (item.type) {
             const validMimeTypes = [
                 'font/ttf',
@@ -697,7 +610,6 @@ function handlePageDrop(e) {
     dragCounter = 0;
     hideDragOverlay();
     
-    // 处理文件拖拽
     handleDrop(e);
 }
 
@@ -732,7 +644,6 @@ function unhighlight(e) {
 async function handleDrop(e) {
     const dt = e.dataTransfer;
     
-    // 当前拖拽的文件夹结构信息（不重置现有文件）
     let currentDropFolderMode = false;
     let currentDropFolderStructure = {
         name: '',
@@ -741,16 +652,13 @@ async function handleDrop(e) {
         directories: new Set()
     };
     
-    // 检查是否支持文件夹拖拽
     if (dt.items && dt.items.length > 0) {
         console.log('正在扫描拖拽的内容...');
         console.log('拖拽项目数量:', dt.items.length);
         
-        // 使用DataTransferItemList处理文件夹
         const files = [];
         const scanPromises = [];
         
-        // 首先检查是否有文件夹被拖拽
         let mainFolderEntry = null;
         for (let i = 0; i < dt.items.length; i++) {
             const item = dt.items[i];
@@ -761,25 +669,22 @@ async function handleDrop(e) {
                 if (entry) {
                     console.log(`条目 ${i}:`, entry.name, entry.isDirectory ? '目录' : '文件');
                     
-                    // 检测是否为文件夹拖拽
                     if (entry.isDirectory) {
                         currentDropFolderMode = true;
                         currentDropFolderStructure.name = entry.name;
                         mainFolderEntry = entry;
                         console.log(`📁 检测到文件夹模式: ${entry.name}`);
                         console.log('主文件夹条目:', entry.name);
-                        break; // 找到主文件夹后停止，只处理这一个文件夹
+                        break; 
                     }
                 }
             }
         }
         
-        // 只扫描主文件夹，避免扫描额外内容
         if (mainFolderEntry) {
             console.log('开始扫描主文件夹:', mainFolderEntry.name);
             scanPromises.push(scanEntryForCurrentDrop(mainFolderEntry, files, currentDropFolderStructure));
         } else {
-            // 没有文件夹，处理单个文件
             for (let i = 0; i < dt.items.length; i++) {
                 const item = dt.items[i];
                 if (item.kind === 'file') {
@@ -787,7 +692,6 @@ async function handleDrop(e) {
                     if (entry && entry.isFile) {
                         scanPromises.push(scanEntryForCurrentDrop(entry, files, currentDropFolderStructure));
                     } else {
-                        // 后备：直接获取文件
                         const file = item.getAsFile();
                         if (file) files.push(file);
                     }
@@ -798,14 +702,11 @@ async function handleDrop(e) {
         await Promise.all(scanPromises);
         
         if (files.length > 0) {
-            // 合并当前拖拽的文件夹结构到全局状态
             if (currentDropFolderMode) {
-                // 如果当前是文件夹模式，合并到全局文件夹结构
                 folderMode = true;
                 if (!folderStructure.name) {
                     folderStructure.name = currentDropFolderStructure.name;
                 }
-                // 添加文件夹名称到列表中（去重）
                 if (!folderStructure.folderNames.includes(currentDropFolderStructure.name)) {
                     folderStructure.folderNames.push(currentDropFolderStructure.name);
                 }
@@ -813,14 +714,12 @@ async function handleDrop(e) {
                 folderStructure.fontFiles.push(...currentDropFolderStructure.fontFiles);
                 currentDropFolderStructure.directories.forEach(dir => folderStructure.directories.add(dir));
                 
-                // 记录文件来源
                 files.forEach(file => {
                     if (!fileSourceTracking.fromFolders.some(f => f.name === file.name && f.size === file.size)) {
                         fileSourceTracking.fromFolders.push(file);
                     }
                 });
             } else {
-                // 单独文件模式，记录到standalone
                 files.forEach(file => {
                     if (!fileSourceTracking.standalone.some(f => f.name === file.name && f.size === file.size)) {
                         fileSourceTracking.standalone.push(file);
@@ -831,7 +730,6 @@ async function handleDrop(e) {
             const totalFiles = currentDropFolderMode ? currentDropFolderStructure.files.length : files.length;
             const nonFontFiles = totalFiles - files.length;
             
-            // 更新扫描信息显示（显示在文件列表旁边）
             updateScanInfo(totalFiles, files.length, nonFontFiles, currentDropFolderMode);
             
             console.log(`📁 扫描完成，发现 ${totalFiles} 个文件 (${files.length} 个字体文件, ${nonFontFiles} 个其他文件)`);
@@ -846,22 +744,18 @@ async function handleDrop(e) {
             console.warn('未在拖拽的内容中找到任何文件');
         }
     } else {
-        // 后备：使用传统的files方式
         const files = dt.files;
         handleFiles(files);
     }
 }
 
-// 初始化文件输入
 function initFileInput() {
     fileInput.addEventListener('change', function(e) {
         handleFiles(e.target.files);
     });
     
-    // 为上传区域添加点击事件
     if (uploadArea) {
         uploadArea.addEventListener('click', function(e) {
-            // 确保点击的不是按钮本身
             if (!e.target.closest('button')) {
                 fileInput.click();
             }
@@ -872,19 +766,16 @@ function initFileInput() {
     }
 }
 
-// 初始化粘贴支持
 function initPasteSupport() {
     document.addEventListener('paste', async function(e) {
         console.log('检测到粘贴事件');
         
-        // 检查剪贴板是否包含内容
         const clipboardData = e.clipboardData || window.clipboardData;
         if (!clipboardData) {
             console.log('无法访问剪贴板数据');
             return;
         }
         
-        // 重置文件夹状态
         folderMode = false;
         folderStructure = {
             name: '',
@@ -897,17 +788,14 @@ function initPasteSupport() {
         let files = [];
         let foundFolderStructure = false;
         
-        // 优先尝试处理文件夹（使用 items API）
         if (clipboardData.items && clipboardData.items.length > 0) {
             console.log(`剪贴板中发现 ${clipboardData.items.length} 个项目`);
             
-            // 检查是否有文件夹条目
             for (let i = 0; i < clipboardData.items.length; i++) {
                 const item = clipboardData.items[i];
                 console.log(`项目 ${i}:`, item.kind, item.type);
                 
                 if (item.kind === 'file') {
-                    // 尝试获取文件夹条目（如果支持）
                     const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
                     if (entry) {
                         console.log(`条目 ${i}:`, entry.name, entry.isDirectory ? '目录' : '文件');
@@ -918,11 +806,9 @@ function initPasteSupport() {
                             folderStructure.name = entry.name;
                             foundFolderStructure = true;
                             
-                            // 阻止默认粘贴行为
                             e.preventDefault();
                             
                             try {
-                                // 扫描文件夹结构
                                 await scanEntry(entry, files);
                                 
                                 if (files.length > 0) {
@@ -931,13 +817,10 @@ function initPasteSupport() {
                                     
                                     console.log(`📁 文件夹扫描完成: ${totalFiles} 个文件 (${files.length} 个字体文件)`);
                                     
-                                    // 更新扫描信息显示
                                     updateScanInfo(totalFiles, files.length, nonFontFiles, folderMode);
                                     
-                                    // 显示成功消息
                                     showTemporaryMessage(`${translateText('通过粘贴添加了文件夹')} "${entry.name}"${translateText('，包含')} ${files.length}${translateText('个字体文件')}`, 'success');
                                     
-                                    // 处理文件
                                     handleFiles(files);
                                 } else {
                                     showTemporaryMessage(`${translateText('文件夹')} "${entry.name}"${translateText('中没有找到字体文件')}`, 'warning');
@@ -946,9 +829,8 @@ function initPasteSupport() {
                                 console.error('文件夹扫描失败:', error);
                                 showTemporaryMessage(translateText('文件夹处理失败，请尝试拖拽文件夹'), 'error');
                             }
-                            return; // 处理完文件夹后退出
+                            return; 
                         } else if (entry.isFile) {
-                            // 单个文件，添加到文件列表
                             try {
                                 await scanEntry(entry, files);
                             } catch (error) {
@@ -960,7 +842,6 @@ function initPasteSupport() {
             }
         }
         
-        // 如果没有找到文件夹结构，使用传统的 files API
         if (!foundFolderStructure) {
             const clipboardFiles = clipboardData.files;
             if (!clipboardFiles || clipboardFiles.length === 0) {
@@ -970,7 +851,6 @@ function initPasteSupport() {
             
             console.log(`剪贴板中发现 ${clipboardFiles.length} 个文件`);
             
-            // 过滤字体文件
             const fontFiles = Array.from(clipboardFiles).filter(file => {
                 const extension = file.name.toLowerCase().split('.').pop();
                 return ['ttf', 'otf', 'woff', 'woff2'].includes(extension);
@@ -979,13 +859,10 @@ function initPasteSupport() {
             if (fontFiles.length > 0) {
                 console.log(`检测到 ${fontFiles.length} 个字体文件，开始处理`);
                 
-                // 阻止默认粘贴行为
                 e.preventDefault();
                 
-                // 显示临时消息提示用户
                 showTemporaryMessage(`${translateText('通过粘贴添加了')} ${fontFiles.length}${translateText('个字体文件')}`, 'success');
                 
-                // 使用现有的文件处理逻辑
                 handleFiles(fontFiles);
             } else {
                 console.log('剪贴板中没有字体文件');
@@ -999,49 +876,41 @@ function initPasteSupport() {
     console.log('全局粘贴支持已初始化（包含文件夹支持）');
 }
 
-// 递归扫描文件夹条目（与本地版本逻辑一致，记录完整结构）
 async function scanEntry(entry, files, basePath = '') {
     console.log(`扫描条目: ${entry.name}, 类型: ${entry.isDirectory ? '目录' : '文件'}, 基础路径: ${basePath}`);
     
     if (entry.isFile) {
-        // 这是一个文件
         return new Promise((resolve) => {
             entry.file((file) => {
-                // 计算文件的相对路径
                 const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
                 console.log(`处理文件: ${file.name}, 相对路径: ${relativePath}`);
                 
-                // 创建文件信息对象
                 const fileInfo = {
                     file: file,
                     relativePath: relativePath,
                     isFont: false
                 };
                 
-                // 检查是否为字体文件
                 const extension = file.name.toLowerCase().split('.').pop();
                 if (['ttf', 'otf', 'woff', 'woff2'].includes(extension)) {
                     fileInfo.isFont = true;
-                    files.push(file); // 保持原有逻辑，只把字体文件加入selectedFiles
+                    files.push(file); 
                     folderStructure.fontFiles.push(fileInfo);
                     console.log(`✅ 字体文件: ${relativePath}`);
                 } else {
                     console.log(`📄 普通文件: ${relativePath}`);
                 }
                 
-                // 所有文件都记录到文件夹结构中
                 folderStructure.files.push(fileInfo);
                 
-                // 记录目录路径
                 if (basePath) {
                     folderStructure.directories.add(basePath);
                 }
                 
                 resolve();
-            }, () => resolve()); // 错误时继续
+            }, () => resolve()); 
         });
     } else if (entry.isDirectory) {
-        // 这是一个文件夹，递归扫描（与本地版本的os.walk相同）
         const currentPath = basePath ? `${basePath}/${entry.name}` : entry.name;
         console.log(`进入目录: ${entry.name}, 完整路径: ${currentPath}`);
         folderStructure.directories.add(currentPath);
@@ -1059,58 +928,49 @@ async function scanEntry(entry, files, basePath = '') {
                     const subPromises = entries.map(subEntry => scanEntry(subEntry, files, currentPath));
                     await Promise.all(subPromises);
                     
-                    // 继续读取（因为readEntries可能不会一次返回所有条目）
                     await readEntries();
-                }, () => resolve()); // 错误时继续
+                }, () => resolve()); 
             };
             readEntries();
         });
     }
 }
 
-// 为当前拖拽扫描条目（使用传入的文件夹结构）
 async function scanEntryForCurrentDrop(entry, files, targetFolderStructure, basePath = '') {
     console.log(`扫描条目: ${entry.name}, 类型: ${entry.isDirectory ? '目录' : '文件'}, 基础路径: ${basePath}`);
     
     if (entry.isFile) {
-        // 这是一个文件
         return new Promise((resolve) => {
             entry.file((file) => {
-                // 计算文件的相对路径
                 const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
                 console.log(`处理文件: ${file.name}, 相对路径: ${relativePath}`);
                 
-                // 创建文件信息对象
                 const fileInfo = {
                     file: file,
                     relativePath: relativePath,
                     isFont: false
                 };
                 
-                // 检查是否为字体文件
                 const extension = file.name.toLowerCase().split('.').pop();
                 if (['ttf', 'otf', 'woff', 'woff2'].includes(extension)) {
                     fileInfo.isFont = true;
-                    files.push(file); // 保持原有逻辑，只把字体文件加入selectedFiles
+                    files.push(file); 
                     targetFolderStructure.fontFiles.push(fileInfo);
                     console.log(`✅ 字体文件: ${relativePath}`);
                 } else {
                     console.log(`📄 普通文件: ${relativePath}`);
                 }
                 
-                // 所有文件都记录到传入的文件夹结构中
                 targetFolderStructure.files.push(fileInfo);
                 
-                // 记录目录路径
                 if (basePath) {
                     targetFolderStructure.directories.add(basePath);
                 }
                 
                 resolve();
-            }, () => resolve()); // 错误时继续
+            }, () => resolve()); 
         });
     } else if (entry.isDirectory) {
-        // 这是一个文件夹，递归扫描（与本地版本的os.walk相同）
         const currentPath = basePath ? `${basePath}/${entry.name}` : entry.name;
         console.log(`进入目录: ${entry.name}, 完整路径: ${currentPath}`);
         targetFolderStructure.directories.add(currentPath);
@@ -1128,16 +988,14 @@ async function scanEntryForCurrentDrop(entry, files, targetFolderStructure, base
                     const subPromises = entries.map(subEntry => scanEntryForCurrentDrop(subEntry, files, targetFolderStructure, currentPath));
                     await Promise.all(subPromises);
                     
-                    // 继续读取（因为readEntries可能不会一次返回所有条目）
                     await readEntries();
-                }, () => resolve()); // 错误时继续
+                }, () => resolve()); 
             };
             readEntries();
         });
     }
 }
 
-// 处理选中的文件
 function handleFiles(files) {
     const fontFiles = Array.from(files).filter(file => {
         const extension = file.name.toLowerCase().split('.').pop();
@@ -1149,7 +1007,6 @@ function handleFiles(files) {
         return;
     }
 
-    // 检查重复文件（基于文件名和大小）
     let addedCount = 0;
     fontFiles.forEach(file => {
         if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
@@ -1160,7 +1017,6 @@ function handleFiles(files) {
 
     updateFileList();
     
-    // 如果不是从文件夹扫描来的，也显示扫描信息
     if (!folderMode && selectedFiles.length > 0) {
         updateScanInfo(selectedFiles.length, selectedFiles.length, 0, false);
     }
@@ -1168,7 +1024,6 @@ function handleFiles(files) {
     if (addedCount > 0) {
         console.log(`✅ 成功添加 ${addedCount} 个字体文件，总计 ${selectedFiles.length} 个文件待处理。`);
         
-        // 如果添加的文件数量比总文件数少，说明有文件夹被扫描
         if (fontFiles.length > addedCount) {
             console.log(`📁 文件夹模式：已自动扫描并添加字体文件（与本地版本保持一致）`);
         }
@@ -1177,7 +1032,6 @@ function handleFiles(files) {
     }
 }
 
-// 更新扫描信息显示
 function updateScanInfo(totalFiles, fontFiles, nonFontFiles, isFolder) {
     if (!scanInfo || !scanInfoText) return;
     
@@ -1195,7 +1049,6 @@ function updateScanInfo(totalFiles, fontFiles, nonFontFiles, isFolder) {
         
         scanInfoText.textContent = infoText;
         
-        // 添加淡入动画
         scanInfo.style.opacity = '0';
         setTimeout(() => {
             scanInfo.style.opacity = '1';
@@ -1205,18 +1058,16 @@ function updateScanInfo(totalFiles, fontFiles, nonFontFiles, isFolder) {
     }
 }
 
-// 隐藏扫描信息
 function hideScanInfo() {
     if (scanInfo) {
         scanInfo.style.display = 'none';
     }
 }
 
-// 更新文件列表显示
 function updateFileList() {
     if (selectedFiles.length === 0) {
         fileList.style.display = 'none';
-        hideScanInfo(); // 没有文件时隐藏扫描信息
+        hideScanInfo(); 
         return;
     }
 
@@ -1240,28 +1091,23 @@ function updateFileList() {
         fileItems.appendChild(fileItem);
     });
 
-    // 自动滚动到文件列表区域
     scrollToFileList();
 }
 
-// 通用的自动滚动函数，可以滚动到指定元素
 function scrollToElement(targetElement, elementName = '目标区域') {
     if (!targetElement || targetElement.style.display === 'none') {
         console.log(`❌ ${elementName}不存在或不可见，跳过滚动`);
         return;
     }
     
-    // 添加短暂延迟，确保DOM更新完成
     setTimeout(() => {
         try {
-            // 获取导航栏高度
             const header = document.querySelector('.main-header');
             let headerHeight = 0;
             
             if (header) {
                 const headerRect = header.getBoundingClientRect();
                 headerHeight = headerRect.height;
-                // 如果导航栏是fixed或sticky，需要考虑其实际占用的空间
                 const headerStyle = window.getComputedStyle(header);
                 if (headerStyle.position === 'fixed' || headerStyle.position === 'sticky') {
                     headerHeight = headerRect.height;
@@ -1270,31 +1116,25 @@ function scrollToElement(targetElement, elementName = '目标区域') {
             
             console.log(`📏 导航栏高度: ${headerHeight}px`);
             
-            // 获取目标元素的位置
             const targetRect = targetElement.getBoundingClientRect();
             const currentScrollY = window.scrollY;
             
-            // 考虑高亮动画状态下的上升效果，并增加安全边距避免被导航栏覆盖
-            const highlightOffsetY = 3; // 高亮动画时向上移动3px
-            const safetyMargin = 8; // 额外的安全边距，确保不被导航栏覆盖
-            const totalOffsetY = highlightOffsetY + safetyMargin; // 总偏移量 = 动画偏移 + 安全边距
+            const highlightOffsetY = 3; 
+            const safetyMargin = 8; 
+            const totalOffsetY = highlightOffsetY + safetyMargin; 
             
-            // 计算需要滚动的距离，让目标元素有足够的安全距离不被导航栏覆盖
             let targetScrollY = currentScrollY + targetRect.top - headerHeight - totalOffsetY;
             
-            // 安全检查：确保滚动位置不会是负数或超出页面范围
             const maxScrollY = document.documentElement.scrollHeight - window.innerHeight;
             targetScrollY = Math.max(0, Math.min(targetScrollY, maxScrollY));
             
-            // 检查是否真的需要滚动（避免不必要的微小滚动）
             const scrollDifference = Math.abs(targetScrollY - currentScrollY);
-            const minScrollThreshold = 5; // 小于5px的滚动就不执行
+            const minScrollThreshold = 5; 
             
             console.log(`🎯 滚动到${elementName} - 当前位置: ${currentScrollY}px, 目标位置: ${targetScrollY}px, 需要滚动: ${targetScrollY - currentScrollY}px`);
             console.log(`🔄 总偏移量: ${totalOffsetY}px (高亮动画${highlightOffsetY}px + 安全边距${safetyMargin}px), 确保不被导航栏覆盖`);
             
             if (scrollDifference > minScrollThreshold) {
-                // 平滑滚动到计算出的精确位置
                 window.scrollTo({
                     top: targetScrollY,
                     behavior: 'smooth'
@@ -1306,24 +1146,21 @@ function scrollToElement(targetElement, elementName = '目标区域') {
             }
             
         } catch (error) {
-            // 如果精确滚动失败，使用备用方案
             console.warn(`精确滚动到${elementName}失败，使用备用方案:`, error);
             
             try {
-                // 备用方案：使用scrollIntoView并手动调整
                 targetElement.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start',
                     inline: 'nearest'
                 });
                 
-                // 延迟调整位置
                 setTimeout(() => {
                     const header = document.querySelector('.main-header');
                     if (header) {
                         const headerHeight = header.getBoundingClientRect().height;
                         const targetRect = targetElement.getBoundingClientRect();
-                        const totalOffsetY = 11; // 保持与主逻辑一致的总偏移量（3+8）
+                        const totalOffsetY = 11; 
                         
                         if (targetRect.top < headerHeight + totalOffsetY) {
                             window.scrollBy({
@@ -1335,33 +1172,28 @@ function scrollToElement(targetElement, elementName = '目标区域') {
                 }, 300);
                 
             } catch (fallbackError) {
-                // 最后的备用方案：手动计算滚动位置
                 console.warn(`所有滚动方案失败，使用基础滚动:`, fallbackError);
                 try {
                     const rect = targetElement.getBoundingClientRect();
                     const header = document.querySelector('.main-header');
                     const headerHeight = header ? header.getBoundingClientRect().height : 0;
-                    const totalOffsetY = 11; // 考虑高亮动画偏移 + 安全边距（3+8）
+                    const totalOffsetY = 11; 
                     window.scrollTo(0, window.scrollY + rect.top - headerHeight - totalOffsetY);
                 } catch {
-                    // 最后的最后：基础滚动
                     targetElement.scrollIntoView();
                 }
             }
         }
-    }, 150); // 150ms 延迟确保渲染完成
+    }, 150); 
 }
 
-// 自动滚动到文件列表区域
 function scrollToFileList() {
     scrollToElement(fileList, '文件列表区域');
     
-    // 为文件列表添加特有的高亮动画
     if (fileList && fileList.style.display === 'block') {
         setTimeout(() => {
             fileList.style.animation = 'highlightFileList 1.5s ease-in-out';
             
-            // 清除动画效果
             setTimeout(() => {
                 fileList.style.animation = '';
             }, 1500);
@@ -1369,16 +1201,13 @@ function scrollToFileList() {
     }
 }
 
-// 自动滚动到下载区域
 function scrollToDownloadSection() {
     scrollToElement(downloadSection, '处理后的字体区域');
     
-    // 为下载区域添加特有的高亮动画
     if (downloadSection && downloadSection.style.display === 'block') {
         setTimeout(() => {
             downloadSection.style.animation = 'highlightFileList 1.5s ease-in-out';
             
-            // 清除动画效果
             setTimeout(() => {
                 downloadSection.style.animation = '';
             }, 1500);
@@ -1386,16 +1215,13 @@ function scrollToDownloadSection() {
     }
 }
 
-// 自动滚动到上传区域（第一个卡片）
 function scrollToUploadArea() {
     scrollToElement(uploadSection, '上传卡片区域');
     
-    // 为整个上传卡片添加特有的高亮动画
     if (uploadSection) {
         setTimeout(() => {
             uploadSection.style.animation = 'highlightFileList 1.5s ease-in-out';
             
-            // 清除动画效果
             setTimeout(() => {
                 uploadSection.style.animation = '';
             }, 1500);
@@ -1411,7 +1237,6 @@ function removeFile(index) {
 
 function clearFiles() {
     selectedFiles = [];
-    // 重置文件夹模式和扫描信息
     folderMode = false;
     folderStructure = {
         name: '',
@@ -1420,7 +1245,6 @@ function clearFiles() {
         fontFiles: [],
         directories: new Set()
     };
-    // 重置文件来源跟踪
     fileSourceTracking = {
         standalone: [],
         fromFolders: []
@@ -1451,33 +1275,25 @@ function updateProgress(current, total) {
     progressText.textContent = `${Math.round(percentage)}% (${current}/${total})`;
 }
 
-// 创建并显示计时元素
 function createTimingDisplay() {
-    // 如果计时元素已存在，先移除
     if (timingText) {
         timingText.remove();
     }
     
-    // 创建计时显示元素
     timingText = document.createElement('div');
     timingText.className = 'timing-text';
     timingText.innerHTML = `<i class="fas fa-clock"></i> ${translateText('已耗时: ')}0${translateText('秒')}`;
     
-    // 将计时元素添加到进度条容器中
     progressContainer.appendChild(timingText);
     
-    // 开始计时更新
     startTimingUpdate();
 }
 
-// 开始计时更新
 function startTimingUpdate() {
-    // 清除之前的计时器
     if (timingInterval) {
         clearInterval(timingInterval);
     }
     
-    // 每秒更新一次耗时显示
     timingInterval = setInterval(() => {
         if (processingStartTime) {
             const elapsedTime = Date.now() - processingStartTime;
@@ -1485,11 +1301,9 @@ function startTimingUpdate() {
         }
     }, 1000);
     
-    // 立即更新一次
     updateTimingDisplay(0);
 }
 
-// 更新计时显示
 function updateTimingDisplay(elapsedTime) {
     if (!timingText) return;
     
@@ -1509,7 +1323,6 @@ function updateTimingDisplay(elapsedTime) {
     timingText.innerHTML = `<i class="fas fa-clock"></i> ${translateText('已耗时: ')}${timeString}`;
 }
 
-// 停止计时并显示最终耗时
 function stopTimingAndShowResult() {
     if (timingInterval) {
         clearInterval(timingInterval);
@@ -1536,11 +1349,9 @@ function stopTimingAndShowResult() {
     }
 }
 
-// 开始处理字体
 async function startProcessing() {
     if (selectedFiles.length === 0) {
         showTemporaryMessage(translateText('请先选择要处理的字体文件！'), 'warning');
-        // 自动滚动到上传区域，方便用户选择字体文件
         scrollToUploadArea();
         return;
     }
@@ -1556,21 +1367,18 @@ async function startProcessing() {
         return;
     }
 
-    // 记录开始时间
     processingStartTime = Date.now();
     
     processBtn.disabled = true;
     processBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${translateText('处理中...')}`;
     progressContainer.style.display = 'block';
-    downloadSection.style.display = 'block'; // 立即显示下载区域
-    downloadItems.innerHTML = ''; // 清空现有内容
+    downloadSection.style.display = 'block'; 
+    downloadItems.innerHTML = ''; 
     
-    // 创建并显示计时元素
     createTimingDisplay();
     
     processedFonts = [];
     
-    // 初始化下载区域标题
     const downloadTitle = downloadSection.querySelector('h2');
     downloadTitle.innerHTML = `<i class="fas fa-download"></i> ${translateText('处理后的字体')} <span style="font-size: 14px; color: #666; font-weight: normal;">(${translateText('处理中...')})</span>`;
     
@@ -1591,17 +1399,14 @@ async function startProcessing() {
                 processedFonts.push(processedFont);
                 console.log(`✅ 完成: ${file.name}`);
                 
-                // 立即添加这个处理完成的文件到下载区域
                 addSingleDownloadItem(processedFont, processedFonts.length - 1);
-                updateDownloadSectionTitle(); // 更新标题统计
+                updateDownloadSectionTitle(); 
                 
-                // 如果是第一个处理完成的文件，显示下载控制按钮
                 if (processedFonts.length === 1) {
                     addBatchDownloadButton();
                 }
                 
-                // 在处理大文件后添加小延迟，让浏览器有时间清理内存
-                if (file.size > 1024 * 1024) { // 大于1MB的文件
+                if (file.size > 1024 * 1024) { 
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
                 
@@ -1617,10 +1422,8 @@ async function startProcessing() {
         if (processedFonts.length > 0) {
             showDownloadSection();
             
-            // 自动滚动到处理后的字体区域
             scrollToDownloadSection();
             
-            // 显示处理完成的成功消息
             const successCount = processedFonts.length;
             const totalCount = selectedFiles.length;
             
@@ -1631,7 +1434,6 @@ async function startProcessing() {
             }
         } else {
             showTemporaryMessage(translateText('字体处理失败，没有成功处理任何文件'), 'error');
-            // 隐藏处理后的字体卡片，因为没有成功处理任何文件
             downloadSection.style.display = 'none';
             downloadItems.innerHTML = '';
             downloadControls.style.display = 'none';
@@ -1642,7 +1444,6 @@ async function startProcessing() {
         console.error(`处理过程中发生错误: ${error.message}`);
         console.error('Processing error:', error);
         
-        // 处理过程中发生异常，隐藏处理后的字体卡片
         downloadSection.style.display = 'none';
         downloadItems.innerHTML = '';
         downloadControls.style.display = 'none';
@@ -1650,7 +1451,6 @@ async function startProcessing() {
         
         showTemporaryMessage(translateText('字体处理过程中发生错误，请重试'), 'error');
     } finally {
-        // 停止计时并显示最终结果
         stopTimingAndShowResult();
         
         processBtn.disabled = false;
@@ -1658,7 +1458,6 @@ async function startProcessing() {
     }
 }
 
-// 处理单个字体文件
 async function processFont(file, characters) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1670,17 +1469,15 @@ async function processFont(file, characters) {
                 let subsetFont;
                 
                 if (pythonReady && pyodide) {
-                    // 使用专业处理引擎
                     subsetFont = await createPythonSubset(arrayBuffer, characters);
                 } else if (typeof opentype !== 'undefined') {
-                    // 使用OpenType.js备用方案
                     subsetFont = await createOpenTypeSubset(arrayBuffer, characters);
                 } else {
                     throw new Error('没有可用的字体处理引擎');
                 }
                 
                 resolve({
-                    name: file.name,  // 保持原始文件名
+                    name: file.name,  
                     data: subsetFont.buffer,
                     originalSize: file.size,
                     newSize: subsetFont.buffer.byteLength
@@ -1699,43 +1496,34 @@ async function processFont(file, characters) {
     });
 }
 
-// 使用专业处理引擎创建字体子集
 async function createPythonSubset(fontBuffer, characters) {
     try {
-        // 正确的base64编码，保证数据完整性
         const uint8Array = new Uint8Array(fontBuffer);
         
-        // 方法1：使用原生的浏览器API（最安全）
         let base64Data;
         try {
-            // 直接转换整个ArrayBuffer为Base64
             const binaryString = String.fromCharCode.apply(null, uint8Array);
             base64Data = btoa(binaryString);
         } catch (rangeError) {
-            // 如果数组太大，使用分块方法但保持数据完整性
             console.log('文件较大，使用分块处理...');
             
             let binaryString = '';
-            const chunkSize = 8192; // 8KB chunks
+            const chunkSize = 8192; 
             
             for (let i = 0; i < uint8Array.length; i += chunkSize) {
                 const chunk = uint8Array.slice(i, i + chunkSize);
-                // 安全地构建二进制字符串
                 for (let j = 0; j < chunk.length; j++) {
                     binaryString += String.fromCharCode(chunk[j]);
                 }
             }
             
-            // 对完整的二进制字符串进行Base64编码
             base64Data = btoa(binaryString);
         }
         
-        // 验证base64编码
         if (!base64Data || base64Data.length === 0) {
             throw new Error('Base64编码失败');
         }
         
-        // 验证编码完整性：解码验证
         try {
             const decoded = atob(base64Data);
             const expectedLength = uint8Array.length;
@@ -1748,10 +1536,8 @@ async function createPythonSubset(fontBuffer, characters) {
             throw new Error(`Base64编码验证失败：${validationError.message}`);
         }
         
-        // 在处理引擎中处理字体
         console.log(`设置处理变量: font_data_b64(${base64Data.length}字符), chars_to_keep(${characters})`);
         
-        // 分批设置大型base64数据，避免内存问题
         try {
             pyodide.globals.set('font_data_b64', base64Data);
             pyodide.globals.set('chars_to_keep', characters);
@@ -1762,18 +1548,15 @@ async function createPythonSubset(fontBuffer, characters) {
             throw error;
         }
         
-        // 验证变量是否正确设置
         const var_check = pyodide.runPython(`
 f"处理引擎收到的变量: font_data_b64长度={len(font_data_b64)}, chars_to_keep='{chars_to_keep}'"
         `);
         console.log('处理引擎变量验证:', var_check);
         
-        // 捕获处理引擎的print输出
         const originalConsole = pyodide.runPython(`
 import sys
 from io import StringIO
 
-# 创建一个字符串缓冲区来捕获print输出
 capture_output = StringIO()
 original_stdout = sys.stdout
 sys.stdout = capture_output
@@ -1784,12 +1567,10 @@ sys.stdout = capture_output
             result = pyodide.runPython(`
 result = subset_font(font_data_b64, chars_to_keep)
 
-# 恢复原始stdout并获取捕获的输出
 sys.stdout = original_stdout
 captured_output = capture_output.getvalue()
 capture_output.close()
 
-# 将调试信息添加到结果中
 result['debug_output'] = captured_output
 result
             `);
@@ -1798,17 +1579,14 @@ result
             throw new Error(`处理引擎代码执行失败: ${processingError.message}`);
         }
         
-        // 验证result对象
         if (!result) {
             console.error('处理引擎返回的结果无效:', result);
             throw new Error('处理引擎返回了无效的结果');
         }
         
-        // 显示处理引擎调试输出 - 正确处理Pyodide Proxy对象
         console.log('处理引擎结果对象类型:', typeof result);
         console.log('处理引擎结果对象:', result);
         
-        // 从Pyodide Proxy获取属性的正确方式
         let success, debug_output, error_detail, error, message, data, size;
         
         try {
@@ -1825,7 +1603,6 @@ result
         } catch (accessError) {
             console.error('访问Proxy属性失败:', accessError);
             
-            // 尝试转换为JS对象
             try {
                 const jsResult = result.toJs ? result.toJs() : result;
                 console.log('转换后的JS对象:', jsResult);
@@ -1847,11 +1624,10 @@ result
             console.log(debug_output);
             console.log('=== 调试输出结束 ===');
             
-            // 也在页面日志中显示关键信息
             const debugLines = debug_output.split('\n');
             debugLines.forEach(line => {
                 if (line.includes('[DEBUG]') || line.includes('[ERROR]') || line.includes('[WARNING]')) {
-                    const cleanLine = line.replace(/^\[.*?\]\s*/, ''); // 移除时间戳
+                    const cleanLine = line.replace(/^\[.*?\]\s*/, ''); 
                     console.log(`🔍 ${cleanLine}`);
                 }
             });
@@ -1860,13 +1636,11 @@ result
         }
         
         if (!success) {
-            // 记录详细错误信息
             console.error('处理引擎处理失败，详细信息:', { success, message, error, error_detail });
             
             if (error_detail) {
                 console.error('处理引擎详细错误:', error_detail);
                 
-                // 分析具体错误类型并提供解决建议
                 if (error_detail.includes('AssertionError')) {
                     console.error('❌ 字体文件数据损坏或格式不兼容');
                     if (error_detail.includes('assert len(data) == self.length')) {
@@ -1892,33 +1666,27 @@ result
             throw new Error(errorMsg);
         }
         
-        // 使用解析出的属性
         result = { success, debug_output, error_detail, error, message, data, size };
         
-        // 改进的base64解码
         const binaryString = atob(result.data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
         
-        // 详细验证生成的字体数据
         console.log(`JavaScript收到的字体数据大小: ${bytes.length} 字节`);
         
         if (bytes.length < 100) {
             throw new Error(`生成的字体文件过小(${bytes.length}字节)，可能损坏`);
         }
         
-        // 验证TTF文件头
         const header = new DataView(bytes.buffer, 0, Math.min(12, bytes.length));
         const signature = header.getUint32(0, false);
         
-        // 显示文件头的16进制
         const headerBytes = new Uint8Array(bytes.buffer, 0, Math.min(12, bytes.length));
         const headerHex = Array.from(headerBytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
         console.log(`JavaScript验证文件头: ${headerHex}`);
         
-        // TTF文件应该以0x00010000或'OTTO'开头
         if (signature === 0x00010000) {
             console.log('  ✅ JavaScript验证：有效的TTF格式字体');
         } else if (signature === 0x4F54544F) {
@@ -1934,7 +1702,6 @@ result
             });
         }
         
-        // 额外检查：验证文件是否真的是完整的字体文件
         if (bytes.length >= 12) {
             const numTables = header.getUint16(4, false);
             console.log(`字体表数量: ${numTables}`);
@@ -1957,7 +1724,6 @@ result
     }
 }
 
-// 备用方案：使用OpenType.js
 async function createOpenTypeSubset(fontBuffer, characters) {
     try {
         const font = opentype.parse(fontBuffer);
@@ -1969,7 +1735,6 @@ async function createOpenTypeSubset(fontBuffer, characters) {
         const glyphsToKeep = [];
         const charToGlyph = {};
         
-        // 添加 .notdef 字形
         if (font.glyphs.glyphs[0]) {
             glyphsToKeep.push(font.glyphs.glyphs[0]);
         }
@@ -1992,7 +1757,6 @@ async function createOpenTypeSubset(fontBuffer, characters) {
             throw new Error('在字体中未找到任何指定字符');
         }
         
-        // 创建新字体
         const newFont = new opentype.Font({
             familyName: (font.names?.fontFamily?.en || 'SimplifiedFont'),
             styleName: (font.names?.fontSubfamily?.en || 'Regular'),
@@ -2002,7 +1766,6 @@ async function createOpenTypeSubset(fontBuffer, characters) {
             glyphs: glyphsToKeep
         });
         
-        // 设置字符映射
         if (!newFont.encoding) newFont.encoding = {};
         if (!newFont.encoding.cmap) newFont.encoding.cmap = {};
         if (!newFont.encoding.cmap.glyphIndexMap) newFont.encoding.cmap.glyphIndexMap = {};
@@ -2030,12 +1793,10 @@ async function createOpenTypeSubset(fontBuffer, characters) {
     }
 }
 
-// 更新下载区域标题统计
 function updateDownloadSectionTitle() {
     const downloadTitle = downloadSection.querySelector('h2');
     
     if (processedFonts.length === 0) {
-        // 没有处理后的字体时，重置标题为原始状态
         downloadTitle.innerHTML = `<i class="fas fa-download"></i> ${translateText('处理后的字体')}`;
         return;
     }
@@ -2052,11 +1813,10 @@ function updateDownloadSectionTitle() {
     `;
 }
 
-// 添加单个下载项
 function addSingleDownloadItem(font, index) {
     const downloadItem = document.createElement('div');
     downloadItem.className = 'download-item';
-    downloadItem.setAttribute('data-index', index); // 用于删除时识别
+    downloadItem.setAttribute('data-index', index); 
     
     const compressionRatio = ((font.originalSize - font.newSize) / font.originalSize * 100).toFixed(1);
     
@@ -2081,31 +1841,23 @@ function addSingleDownloadItem(font, index) {
     downloadItems.appendChild(downloadItem);
 }
 
-// 显示下载区域（现在主要用于批量下载按钮和最终整理）
 function showDownloadSection() {
-    // 确保下载区域已显示（实际上在开始处理时就已显示）
     downloadSection.style.display = 'block';
     
-    // 所有文件都处理完成后，添加批量下载按钮
     if (processedFonts.length > 0) {
         addBatchDownloadButton();
     }
 }
 
-// 显示批量下载按钮
 function addBatchDownloadButton() {
     if (processedFonts.length > 0) {
-        // 显示下载控制区域
         downloadControls.style.display = 'block';
         
-        // 更新按钮文本
         updateDownloadButtonText();
     }
 }
 
-// 更新下载按钮文本（智能按钮功能）
 function updateDownloadButtonText() {
-    // 分析文件来源
     const standaloneCount = fileSourceTracking.standalone.length;
     const folderCount = fileSourceTracking.fromFolders.length;
     const totalCount = standaloneCount + folderCount;
@@ -2114,17 +1866,13 @@ function updateDownloadButtonText() {
     let downloadAllHint = '';
     
     if (totalCount === 0) {
-        // 没有文件，使用默认文案
         downloadAllText = `<i class="fas fa-download"></i> ${translateText('下载字体文件')}`;
     } else if (standaloneCount > 0 && folderCount === 0) {
-        // 纯单独文件
         downloadAllText = `<i class="fas fa-download"></i> ${translateText('下载所有字体文件')}`;
     } else if (standaloneCount === 0 && folderCount > 0) {
-        // 纯文件夹文件
         downloadAllText = `<i class="fas fa-archive"></i> ${translateText('下载完整文件夹 (ZIP)')}`;
         downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">${translateText('包含目录结构和所有非字体文件')}</small>`;
     } else {
-        // 混合模式（既有单独文件又有文件夹文件）
         downloadAllText = `<i class="fas fa-download"></i> ${translateText('下载所有字体文件')}`;
         downloadAllHint = `<small style="display: block; margin-top: 5px; color: #666;">${standaloneCount}${translateText('个单独文件')} + ${folderCount}${translateText('个文件夹文件')} (ZIP)</small>`;
     }
@@ -2148,7 +1896,6 @@ function downloadFont(index) {
     console.log(`已下载: ${font.name}`);
 }
 
-// 删除处理后的字体
 function removeProcessedFont(index) {
     if (index < 0 || index >= processedFonts.length) {
         console.warn('无效的字体索引:', index);
@@ -2158,49 +1905,38 @@ function removeProcessedFont(index) {
     const font = processedFonts[index];
     console.log(`删除处理后的字体: ${font.name}`);
     
-    // 从数组中移除
     processedFonts.splice(index, 1);
     
-    // 重新生成所有下载项（因为索引会改变）
     updateDownloadItemsDisplay();
     
-    // 更新标题统计
     updateDownloadSectionTitle();
     
-    // 更新下载按钮文本
     if (downloadAllBtn && typeof updateDownloadButtonText === 'function') {
         updateDownloadButtonText();
     }
     
-    // 如果没有处理后的字体了，隐藏整个下载区域
     if (processedFonts.length === 0) {
         downloadControls.style.display = 'none';
         downloadSection.style.display = 'none';
         console.log('📦 已隐藏处理后的字体卡片');
         
-        // 自动滚动到上传区域，方便用户重新开始操作
         scrollToUploadArea();
     }
     
     console.log(`已删除字体，剩余 ${processedFonts.length} 个字体`);
     
-    // 显示删除成功提示
     showTemporaryMessage(`${translateText('已删除字体: ')}${font.name}`, 'success');
 }
 
-// 更新下载项显示
 function updateDownloadItemsDisplay() {
-    // 清空现有显示
     downloadItems.innerHTML = '';
     
-    // 重新生成所有下载项（确保索引正确）
     processedFonts.forEach((font, index) => {
         addSingleDownloadItem(font, index);
     });
 }
 
 async function downloadAllFonts() {
-    // 添加调试信息
     console.log('=== downloadAllFonts 调试信息 ===');
     console.log('folderMode:', folderMode);
     console.log('folderStructure:', folderStructure);
@@ -2209,21 +1945,18 @@ async function downloadAllFonts() {
     console.log('JSZip可用:', typeof JSZip !== 'undefined');
     console.log('================================');
     
-    // 优先基于处理后字体数量判断：如果只有一个字体，直接下载
     if (processedFonts.length === 1) {
         console.log('🔍 检测到只有一个处理后的字体，直接下载');
         downloadFont(0);
         return;
     }
     
-    // 分析文件来源
     const standaloneCount = fileSourceTracking.standalone.length;
     const folderCount = fileSourceTracking.fromFolders.length;
     
     console.log(`📊 文件来源分析: ${standaloneCount}个单独文件, ${folderCount}个文件夹文件`);
     
     if (standaloneCount > 0 && folderCount === 0) {
-        // 纯单独文件模式：逐个下载多个文件
         console.log('🔍 下载模式: 纯单独文件模式');
         console.log('开始下载所有文件...');
         
@@ -2234,19 +1967,16 @@ async function downloadAllFonts() {
         
         console.log('所有文件下载完成！');
     } else if (standaloneCount === 0 && folderCount > 0) {
-        // 纯文件夹模式：ZIP下载
         console.log('🔍 下载模式: 纯文件夹ZIP模式');
         showZipProgress();
         await downloadFolderAsZip();
     } else {
-        // 混合模式：创建包含单独文件和文件夹结构的ZIP
         console.log('🔍 下载模式: 混合模式ZIP (单独文件 + 文件夹结构)');
         showZipProgress();
         await downloadMixedModeAsZip();
     }
 }
 
-// 文件夹模式：下载ZIP文件（与本地版本保持一致的目录结构）
 async function downloadFolderAsZip() {
     console.log('=== downloadFolderAsZip 调试信息 ===');
     console.log('JSZip类型:', typeof JSZip);
@@ -2271,29 +2001,25 @@ async function downloadFolderAsZip() {
     
     try {
         const zip = new JSZip();
-        // 生成ZIP文件名：如果有多个文件夹，使用组合名称
         const outputFolderName = folderStructure.folderNames.length > 1 
             ? folderStructure.folderNames.join('_') 
             : folderStructure.name;
         console.log('输出文件夹名称:', outputFolderName);
         console.log('文件夹列表:', folderStructure.folderNames);
         
-        // 第1步：创建目录结构 (10%)
         updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
         console.log('开始创建目录，总数:', folderStructure.directories.size);
         let dirCount = 0;
         folderStructure.directories.forEach(dirPath => {
             let fullPath;
             if (folderStructure.folderNames.length > 1) {
-                // 多文件夹模式：保持完整的目录结构
                 fullPath = `${dirPath}/`;
             } else {
-                // 单文件夹模式：移除根文件夹名称，扁平化结构
                 const relativePath = dirPath.replace(new RegExp(`^${folderStructure.name}/?`), '');
                 if (relativePath) {
                     fullPath = `${relativePath}/`;
                 } else {
-                    return; // 跳过空的相对路径
+                    return; 
                 }
             }
             zip.folder(fullPath);
@@ -2302,17 +2028,14 @@ async function downloadFolderAsZip() {
         });
         console.log(`✅ 完成创建 ${dirCount} 个目录（${folderStructure.folderNames.length > 1 ? '多文件夹保持结构' : '单文件夹扁平化'}）`);
         
-        // 第2步：准备字体映射 (20%)
         updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
         const processedFontMap = new Map();
         processedFonts.forEach(font => {
-            // 现在字体名称已经是原始名称，不需要移除前缀
             processedFontMap.set(font.name, font.data);
             console.log(`映射字体: ${font.name} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
         });
         console.log(`✅ 字体映射完成，共 ${processedFontMap.size} 个字体`);
         
-        // 第3步：添加文件到ZIP (20% -> 80%)
         console.log('开始添加文件到ZIP，总数:', folderStructure.files.length);
         let addedFiles = 0;
         let skippedFiles = 0;
@@ -2322,24 +2045,19 @@ async function downloadFolderAsZip() {
             const fileInfo = folderStructure.files[i];
             const { file, relativePath, isFont } = fileInfo;
             
-            // 根据文件夹数量决定路径处理方式
             let finalPath;
             if (folderStructure.folderNames.length > 1) {
-                // 多文件夹模式：保持完整路径
                 finalPath = relativePath;
             } else {
-                // 单文件夹模式：移除根文件夹名称，创建扁平化结构
                 const flattenedPath = relativePath.replace(new RegExp(`^${folderStructure.name}/?`), '');
-                finalPath = flattenedPath || file.name; // 如果路径为空，直接使用文件名
+                finalPath = flattenedPath || file.name; 
             }
             
-            // 更新进度 (20% -> 80%)
             const fileProgress = 20 + (i / totalFiles) * 60;
             updateZipProgress(fileProgress, '正在添加文件...', `处理 ${finalPath} (${i + 1}/${totalFiles})`);
             
             try {
                 if (isFont) {
-                    // 字体文件：使用处理后的数据
                     const processedData = processedFontMap.get(file.name);
                     if (processedData) {
                         zip.file(finalPath, processedData);
@@ -2350,7 +2068,6 @@ async function downloadFolderAsZip() {
                         skippedFiles++;
                     }
                 } else {
-                    // 非字体文件：直接复制原文件
                     const fileData = await readFileAsArrayBuffer(file);
                     zip.file(finalPath, fileData);
                     console.log(`✅ 复制原文件: ${finalPath} (${fileData.byteLength}字节)`);
@@ -2365,12 +2082,10 @@ async function downloadFolderAsZip() {
         console.log(`✅ 文件添加完成: 成功${addedFiles}个, 跳过${skippedFiles}个`);
         console.log(`📦 已添加 ${addedFiles} 个文件到ZIP中`);
         
-        // 第4步：生成ZIP文件 (80% -> 95%)
         updateZipProgress(80, '正在生成ZIP文件...', '压缩数据，请稍候...');
         console.log('📦 正在生成ZIP文件...');
         console.log('开始生成ZIP文件...');
         
-        // 生成ZIP文件
         const zipBlob = await zip.generateAsync({
             type: 'blob',
             compression: 'DEFLATE',
@@ -2382,7 +2097,6 @@ async function downloadFolderAsZip() {
         console.log(`✅ ZIP文件生成完成，大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         console.log(`📦 ZIP文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         
-        // 第5步：准备下载 (95% -> 100%)
         updateZipProgress(95, '正在准备下载...', `文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         console.log('开始下载ZIP文件...');
         const url = URL.createObjectURL(zipBlob);
@@ -2393,7 +2107,6 @@ async function downloadFolderAsZip() {
         console.log('下载链接:', url);
         console.log('下载文件名:', `${outputFolderName}.zip`);
         
-        // 完成
         updateZipProgress(100, '下载完成！', `${outputFolderName}.zip 已开始下载`);
         
         document.body.appendChild(a);
@@ -2404,7 +2117,6 @@ async function downloadFolderAsZip() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        // 使用已经声明的totalFiles变量
         const fontFiles = folderStructure.fontFiles.length;
         const nonFontFiles = totalFiles - fontFiles;
         
@@ -2413,19 +2125,16 @@ async function downloadFolderAsZip() {
         console.log(`📁 单独文件夹模式：扁平化结构，解压后直接可用，无需额外操作`);
         console.log('ZIP下载过程完成');
         
-        // 隐藏进度条
         hideZipProgress();
         
     } catch (error) {
         console.error(`❌创建ZIP文件失败: ${error.message}`);
         console.error('ZIP creation error:', error);
         
-        // 出错时也要隐藏进度条
         hideZipProgress();
     }
 }
 
-// 混合模式：下载ZIP文件（单独文件放根目录 + 文件夹文件保持结构）
 async function downloadMixedModeAsZip() {
     console.log('=== downloadMixedModeAsZip 调试信息 ===');
     console.log('JSZip类型:', typeof JSZip);
@@ -2445,24 +2154,20 @@ async function downloadMixedModeAsZip() {
     try {
         const zip = new JSZip();
         
-        // 生成ZIP文件名：结合单独文件名和文件夹名
         let nameComponents = [];
         
-        // 添加单独文件名（去掉扩展名）
         if (fileSourceTracking.standalone.length > 0) {
             const standaloneNames = fileSourceTracking.standalone.map(file => {
-                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); // 去掉扩展名
+                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, ''); 
                 return nameWithoutExt;
             });
             nameComponents.push(...standaloneNames);
         }
         
-        // 添加文件夹名
         if (folderStructure.folderNames.length > 0) {
             nameComponents.push(...folderStructure.folderNames);
         }
         
-        // 如果没有任何组件，使用默认名称
         const outputFolderName = nameComponents.length > 0 
             ? nameComponents.join('_')
             : 'processed_fonts';
@@ -2472,44 +2177,37 @@ async function downloadMixedModeAsZip() {
         console.log('文件夹列表:', folderStructure.folderNames);
         console.log('名称组件:', nameComponents);
         
-        // 第1步：创建目录结构 (10%)
         updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
         console.log('开始创建目录，总数:', folderStructure.directories.size);
         let dirCount = 0;
         folderStructure.directories.forEach(dirPath => {
-            // 混合模式：直接使用相对路径，不额外包装
             const fullPath = `${dirPath}/`;
             zip.folder(fullPath);
             dirCount++;
-            if (dirCount <= 5) { // 只显示前5个目录
+            if (dirCount <= 5) { 
                 console.log('创建目录:', fullPath);
             }
         });
         console.log(`✅ 完成创建 ${dirCount} 个目录`);
         
-        // 第2步：准备字体映射 (20%)
         updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
         const processedFontMap = new Map();
         processedFonts.forEach(font => {
-            // 现在字体名称已经是原始名称，不需要移除前缀
             processedFontMap.set(font.name, font.data);
             console.log(`映射字体: ${font.name} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
         });
         console.log(`✅ 字体映射完成，共 ${processedFontMap.size} 个字体`);
 
-        // 第3步：添加单独文件到ZIP根目录 (20% -> 40%)
         console.log('开始添加单独文件到ZIP根目录，总数:', fileSourceTracking.standalone.length);
         let addedStandaloneFiles = 0;
         
         for (let i = 0; i < fileSourceTracking.standalone.length; i++) {
             const file = fileSourceTracking.standalone[i];
             
-            // 更新进度 (20% -> 40%)
             const fileProgress = 20 + (i / fileSourceTracking.standalone.length) * 20;
             updateZipProgress(fileProgress, '正在添加单独文件...', `处理 ${file.name} (${i + 1}/${fileSourceTracking.standalone.length})`);
             
             try {
-                // 单独文件：查找处理后的数据并放在根目录
                 const processedData = processedFontMap.get(file.name);
                 if (processedData) {
                     zip.file(file.name, processedData);
@@ -2524,7 +2222,6 @@ async function downloadMixedModeAsZip() {
         }
         console.log(`✅ 单独文件添加完成: 成功${addedStandaloneFiles}个`);
         
-        // 第4步：添加文件夹文件到ZIP (40% -> 80%)
         console.log('开始添加文件夹文件到ZIP，总数:', folderStructure.files.length);
         let addedFolderFiles = 0;
         let skippedFiles = 0;
@@ -2534,13 +2231,11 @@ async function downloadMixedModeAsZip() {
             const fileInfo = folderStructure.files[i];
             const { file, relativePath, isFont } = fileInfo;
             
-            // 更新进度 (40% -> 80%)
             const fileProgress = 40 + (i / totalFolderFiles) * 40;
             updateZipProgress(fileProgress, '正在添加文件夹文件...', `处理 ${relativePath} (${i + 1}/${totalFolderFiles})`);
             
             try {
                 if (isFont) {
-                    // 字体文件：使用处理后的数据，直接使用相对路径（不额外包装）
                     const processedData = processedFontMap.get(file.name);
                     if (processedData) {
                         zip.file(relativePath, processedData);
@@ -2551,7 +2246,6 @@ async function downloadMixedModeAsZip() {
                         skippedFiles++;
                     }
                 } else {
-                    // 非字体文件：直接复制原文件，直接使用相对路径（不额外包装）
                     const fileData = await readFileAsArrayBuffer(file);
                     zip.file(relativePath, fileData);
                     console.log(`✅ 复制原文件: ${relativePath} (${fileData.byteLength}字节)`);
@@ -2566,11 +2260,9 @@ async function downloadMixedModeAsZip() {
         console.log(`✅ 文件夹文件添加完成: 成功${addedFolderFiles}个, 跳过${skippedFiles}个`);
         console.log(`📦 混合模式ZIP: ${addedStandaloneFiles}个单独文件(根目录) + ${addedFolderFiles}个文件夹文件(目录结构)`);
         
-        // 第5步：生成ZIP文件 (80% -> 95%)
         updateZipProgress(80, '正在生成ZIP文件...', '压缩数据，请稍候...');
         console.log('📦 正在生成混合模式ZIP文件...');
         
-        // 生成ZIP文件
         const zipBlob = await zip.generateAsync({
             type: 'blob',
             compression: 'DEFLATE',
@@ -2581,7 +2273,6 @@ async function downloadMixedModeAsZip() {
         
         console.log(`✅ 混合模式ZIP文件生成完成，大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         
-        // 第6步：准备下载 (95% -> 100%)
         updateZipProgress(95, '正在准备下载...', `文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         console.log('开始下载混合模式ZIP文件...');
         const url = URL.createObjectURL(zipBlob);
@@ -2592,7 +2283,6 @@ async function downloadMixedModeAsZip() {
         console.log('下载链接:', url);
         console.log('下载文件名:', `${outputFolderName}.zip`);
         
-        // 完成
         updateZipProgress(100, '下载完成！', `${outputFolderName}.zip 已开始下载`);
         
         document.body.appendChild(a);
@@ -2610,19 +2300,16 @@ async function downloadMixedModeAsZip() {
         console.log(`📁 混合模式处理完成`);
         console.log('混合模式ZIP下载过程完成');
         
-        // 隐藏进度条
         hideZipProgress();
         
     } catch (error) {
         console.error(`❌创建混合模式ZIP文件失败: ${error.message}`);
         console.error('Mixed mode ZIP creation error:', error);
         
-        // 出错时也要隐藏进度条
         hideZipProgress();
     }
 }
 
-// 辅助函数：读取文件为ArrayBuffer
 function readFileAsArrayBuffer(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -2632,7 +2319,6 @@ function readFileAsArrayBuffer(file) {
     });
 }
 
-// ZIP进度条显示和控制函数
 function showZipProgress() {
     if (zipProgressContainer) {
         zipProgressContainer.style.display = 'block';
@@ -2646,7 +2332,7 @@ function hideZipProgress() {
     if (zipProgressContainer) {
         setTimeout(() => {
             zipProgressContainer.style.display = 'none';
-        }, 2000); // 2秒后隐藏，让用户看到完成状态
+        }, 2000); 
     }
 }
 
@@ -2656,7 +2342,6 @@ function updateZipProgress(percentage, statusText, detailText) {
         zipProgressText.textContent = statusText;
         zipProgressDetails.textContent = detailText;
         
-        // 添加一点动画效果
         if (percentage >= 100) {
             zipProgressFill.style.background = 'linear-gradient(90deg, #4caf50, #8bc34a)';
             zipProgressText.innerHTML = '<i class="fas fa-check"></i> ' + statusText;
@@ -2664,17 +2349,13 @@ function updateZipProgress(percentage, statusText, detailText) {
     }
 }
 
-// 清理全部已处理的文件
 function clearAllProcessedFiles() {
     console.log('🧹 开始清理全部文件和处理结果...');
     
-    // 清空已选择的文件数组
     selectedFiles = [];
     
-    // 清空已处理的字体数组
     processedFonts = [];
     
-    // 重置文件夹模式相关变量
     folderMode = false;
     folderStructure = {
         name: '',
@@ -2684,49 +2365,38 @@ function clearAllProcessedFiles() {
         directories: new Set()
     };
     
-    // 重置文件来源跟踪
     fileSourceTracking = {
         standalone: [],
         fromFolders: []
     };
     
-    // 隐藏和重置文件列表
     updateFileList();
     hideScanInfo();
     
-    // 隐藏下载区域
     downloadSection.style.display = 'none';
     downloadItems.innerHTML = '';
     downloadControls.style.display = 'none';
     
-    // 重置进度条
     resetProgressBar();
     
-    // 重置计时显示
     resetTimingDisplay();
     
-    // 重置处理按钮状态
     processBtn.disabled = false;
     processBtn.innerHTML = `<i class="fas fa-rocket"></i> ${translateText('开始处理字体')}`;
     
-    // 重置处理开始时间
     processingStartTime = null;
     
-    // 清空文件输入框的值
     if (fileInput) {
         fileInput.value = '';
     }
     
     console.log('✅ 完全清理完成！已重置到初始状态');
     
-    // 显示清理成功的提示
     showTemporaryMessage(translateText('已清理全部文件和处理结果，界面已重置'), 'success');
     
-    // 自动滚动到上传区域，方便用户重新开始操作
     scrollToUploadArea();
 }
 
-// 重置进度条
 function resetProgressBar() {
     if (progressContainer) {
         progressContainer.style.display = 'none';
@@ -2735,24 +2405,19 @@ function resetProgressBar() {
     }
 }
 
-// 重置计时显示
 function resetTimingDisplay() {
-    // 清除计时器
     if (timingInterval) {
         clearInterval(timingInterval);
         timingInterval = null;
     }
     
-    // 移除计时显示元素
     if (timingText) {
         timingText.remove();
         timingText = null;
     }
 }
 
-// 显示临时消息提示
 function showTemporaryMessage(message, type = 'info') {
-    // 根据类型选择合适的图标
     let iconClass = 'info-circle';
     switch (type) {
         case 'success':
@@ -2770,7 +2435,6 @@ function showTemporaryMessage(message, type = 'info') {
             break;
     }
     
-    // 创建消息元素
     const messageDiv = document.createElement('div');
     messageDiv.className = `temporary-message ${type}`;
     messageDiv.innerHTML = `
@@ -2778,15 +2442,12 @@ function showTemporaryMessage(message, type = 'info') {
         <span>${message}</span>
     `;
     
-    // 添加到页面顶部
     document.body.insertBefore(messageDiv, document.body.firstChild);
     
-    // 添加动画效果
     setTimeout(() => {
         messageDiv.classList.add('show');
     }, 100);
     
-    // 3秒后自动移除
     setTimeout(() => {
         messageDiv.classList.remove('show');
         setTimeout(() => {
@@ -2797,7 +2458,6 @@ function showTemporaryMessage(message, type = 'info') {
     }, 3000);
 }
 
-// 文件列表滚动进度条
 function updateFileScrollProgress() {
     if (!fileItems || fileItems.children.length === 0) {
         fileScrollFill.style.width = '0%';
@@ -2808,33 +2468,27 @@ function updateFileScrollProgress() {
     const scrollHeight = fileItems.scrollHeight;
     const clientHeight = fileItems.clientHeight;
     
-    // 如果内容高度小于等于容器高度，则不需要滚动条
     if (scrollHeight <= clientHeight) {
         fileScrollFill.style.width = '100%';
         return;
     }
     
-    // 计算滚动百分比
     const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100;
     fileScrollFill.style.width = Math.min(100, Math.max(0, scrollPercentage)) + '%';
 }
 
-// 初始化文件列表滚动监听器
 function initFileScrollProgress() {
     if (fileItems) {
         fileItems.addEventListener('scroll', updateFileScrollProgress);
-        // 内容变化时也更新进度条
         const observer = new MutationObserver(updateFileScrollProgress);
         observer.observe(fileItems, { childList: true, subtree: true });
     }
 }
 
-// 在页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', function() {
     initFileScrollProgress();
 });
 
-// 错误处理
 window.addEventListener('error', function(e) {
     console.error(`发生错误: ${e.message}`);
 });
@@ -2844,43 +2498,30 @@ window.addEventListener('unhandledrejection', function(e) {
     e.preventDefault();
 });
 
-// ===== 国际化支持 =====
-
-// 字体工具页面的国际化初始化
 function initFontToolI18n() {
-    // 首先定义翻译函数，确保其他函数可以使用
     setupTranslateFunction();
     
-    // 检查当前语言设置
     const currentLang = localStorage.getItem('catime-language') || 'zh';
     
-    // 设置html标签的lang属性
     const htmlRoot = document.getElementById('html-root');
     if (htmlRoot) {
         htmlRoot.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
     }
     
-    // 如果是英文，应用翻译
     if (currentLang === 'en') {
         applyFontToolTranslations();
     }
     
-    // 确保语言切换按钮正常工作
     setTimeout(initLanguageToggleForFontTool, 100);
 }
 
-// 设置翻译函数
 function setupTranslateFunction() {
-    // 翻译映射表
     const translations = {
-        // 页面标题和描述
         'Catime - 字体简化工具': 'Catime - Font Simplifier',
         'Catime 字体简化工具 - 批量处理字体文件，只保留指定字符的专业级 Web 版本': 'Catime Font Simplifier - Professional web tool for batch processing font files, keeping only specified characters',
         
-        // 主标题
         '字体简化工具': 'Font Simplifier',
         
-        // 上传区域
         '拖拽字体文件或文件夹到这里': 'Drag font files or folders here',
         '或者通过 Ctrl+V 粘贴': 'Or paste with Ctrl+V',
         '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件': 'Support drag/paste folders, automatically scan all font files in subfolders',
@@ -2889,10 +2530,8 @@ function setupTranslateFunction() {
         '支持 .ttf, .otf, .woff, .woff2 格式': 'Support .ttf, .otf, .woff, .woff2 formats',
         '可以拖拽/粘贴文件夹，自动扫描所有字体文件': 'Drag/paste folders to auto-scan all font files',
         
-        // 文件列表
         '清除所有文件': 'Clear All Files',
         
-        // 字符设置
         '要保留的字符': 'Characters to Keep',
         '请输入要保留的字符，例如：0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz': 'Enter characters to keep, e.g.: 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
         '数字+:.': 'Numbers+:.',
@@ -2900,10 +2539,8 @@ function setupTranslateFunction() {
         '英文字母': 'Letters',
         '字母+数字': 'Letters+Numbers',
         
-        // 处理按钮
         '开始处理字体': 'Start Processing',
         
-        // 字体处理引擎加载
         '正在准备字体处理引擎': 'Preparing Font Processing Engine',
         '正在加载处理引擎...': 'Loading processing engine...',
         '正在安装核心库...': 'Installing core libraries...',
@@ -2913,19 +2550,15 @@ function setupTranslateFunction() {
         '引擎加载失败，启用备用方案...': 'Engine loading failed, enabling fallback...',
         '字体处理引擎正在初始化，请稍候...': 'Font processing engine is initializing, please wait...',
         
-        // 下载区域
         '处理后的字体': 'Processed Fonts',
         '下载字体文件': 'Download Fonts',
         '清理全部': 'Clear All',
         
-        // 状态信息
         '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。': 'Fully local processing. All calculations are done in your browser. No data is uploaded to any server.',
         
-        // ZIP进度
         '正在生成ZIP文件...': 'Generating ZIP file...',
         '准备中...': 'Preparing...',
         
-        // 动态生成的文本
         '处理中...': 'Processing...',
         '处理完成': 'Processing Completed',
         '下载': 'Download',
@@ -2975,17 +2608,14 @@ function setupTranslateFunction() {
         '测试覆盖层': 'Test Overlay',
     };
     
-    // 创建全局翻译函数
     window.translateText = function(text) {
         if (localStorage.getItem('catime-language') !== 'en') return text;
         return translations[text] || text;
     };
 }
 
-// 应用字体工具页面的英文翻译
 function applyFontToolTranslations() {
     
-    // 应用页面标题翻译
     const pageTitle = document.querySelector('title');
     if (pageTitle) {
         const translatedTitle = translateText(pageTitle.textContent);
@@ -2994,7 +2624,6 @@ function applyFontToolTranslations() {
         }
     }
     
-    // 应用meta描述翻译
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
         const content = metaDescription.getAttribute('content');
@@ -3004,7 +2633,6 @@ function applyFontToolTranslations() {
         }
     }
     
-    // 应用页面内容翻译 - 主要的静态文本
     const staticTexts = [
         '字体简化工具',
         '拖拽字体文件或文件夹到这里',
@@ -3033,16 +2661,13 @@ function applyFontToolTranslations() {
     staticTexts.forEach(chinese => {
         const english = translateText(chinese);
         if (english !== chinese) {
-            // 查找包含中文文本的元素
             const elements = document.querySelectorAll('*:not(script):not(style)');
             elements.forEach(element => {
-                // 只处理文本节点，避免影响HTML结构
                 if (element.childNodes.length > 0) {
                     element.childNodes.forEach(node => {
                         if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === chinese) {
                             node.textContent = english;
                             
-                            // 为特定文本添加英文特殊样式
                             if (chinese === '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。') {
                                 element.classList.add('english-notice');
                             } else if (chinese === '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件') {
@@ -3052,12 +2677,10 @@ function applyFontToolTranslations() {
                     });
                 }
                 
-                // 处理placeholder属性
                 if (element.placeholder === chinese) {
                     element.placeholder = english;
                 }
                 
-                // 处理title属性
                 if (element.title === chinese) {
                     element.title = english;
                 }
@@ -3065,54 +2688,43 @@ function applyFontToolTranslations() {
         }
     });
     
-    // 特殊处理一些复杂的文本替换
     handleSpecialTranslations();
     
-    // 更新按钮文本
     updateButtonTexts();
 }
 
-// 更新按钮文本（用于语言切换后）
 function updateButtonTexts() {
-    // 重置处理按钮文本
     if (processBtn && !processBtn.disabled) {
         processBtn.innerHTML = `<i class="fas fa-rocket"></i> ${translateText('开始处理字体')}`;
     }
     
-    // 如果有下载按钮，更新其文本
     if (downloadAllBtn && typeof updateDownloadButtonText === 'function') {
         updateDownloadButtonText();
     }
 }
 
-// 处理特殊的翻译情况
 function handleSpecialTranslations() {
     const lang = localStorage.getItem('catime-language') || 'zh';
     if (lang !== 'en') return;
     
-    // 处理主标题中的复合文本
     const heroTitle = document.querySelector('.guide-hero-title');
     if (heroTitle) {
         const catimeSpan = heroTitle.querySelector('.catime-text');
         const accentSpan = heroTitle.querySelector('.guide-accent');
         if (catimeSpan && accentSpan) {
-            // 保持Catime不变，只翻译"字体简化工具"
             accentSpan.textContent = 'Font Simplifier';
         }
     }
 }
 
-// 为字体工具页面初始化语言切换功能
 function initLanguageToggleForFontTool() {
     const languageToggle = document.getElementById('language-toggle');
     if (!languageToggle) return;
     
     const currentLang = localStorage.getItem('catime-language') || 'zh';
     
-    // 设置按钮文本
     updateToggleTextForFontTool(currentLang);
     
-    // 添加点击事件监听器（如果还没有的话）
     if (!languageToggle.dataset.fontToolListener) {
         languageToggle.addEventListener('click', function(e) {
             e.preventDefault();
@@ -3120,7 +2732,6 @@ function initLanguageToggleForFontTool() {
             const newLang = currentLang === 'zh' ? 'en' : 'zh';
             localStorage.setItem('catime-language', newLang);
             
-            // 重新加载页面以应用新语言
             window.location.reload();
         });
         
@@ -3128,7 +2739,6 @@ function initLanguageToggleForFontTool() {
     }
 }
 
-// 更新语言切换按钮文本（字体工具页面专用）
 function updateToggleTextForFontTool(lang) {
     const languageToggle = document.getElementById('language-toggle');
     if (!languageToggle) return;

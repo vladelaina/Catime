@@ -6,35 +6,25 @@
     <meta name="description" content="Catime 字体简化工具 - 批量处理字体文件，只保留指定字符的专业级 Web 版本">
     <title>Catime - 字体简化工具</title>
 
-    <!-- Google 字体 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
 
-    <!-- Font Awesome 图标 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <!-- AOS 滚动动画库 -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-    <!-- 主项目样式表 -->
     <link rel="stylesheet" href="../../styles/style.css">
     <link rel="stylesheet" href="../../styles/about.css">
     
-    <!-- 字体工具专用样式表 -->
     <link rel="stylesheet" href="styles.css">
     
     <link rel="icon" type="image/png" href="../../assets/catime.webp">
 </head>
 <body>
-    <!-- ฅᐞ˶⦁༝⦁˶ᐞฅ 喵～被发现啦！想要源码的话，可以在这里找到我哦～ https://github.com/vladelaina/Catime/tree/gh-pages -->
 
-    <!-- 滚动进度指示器将通过组件加载器动态加载 -->
-
-    <!-- 页头/导航 - 由 navigation.js 动态生成 -->
     <header class="main-header"></header>
 
-    <!-- 全页面拖拽覆盖层 -->
     <div class="drag-overlay" id="dragOverlay">
         <div class="drag-overlay-content">
             <div class="drag-overlay-icon">
@@ -54,7 +44,6 @@
     </div>
 
     <main>
-        <!-- 工具头部 -->
         <section class="guide-hero">
             <div class="container">
                 <h1 class="guide-hero-title" data-aos="fade-up"><span class="catime-text">Catime</span><span class="guide-accent">字体简化工具</span></h1>
@@ -71,9 +60,7 @@
 
 
 
-        <!-- 主内容区 -->
         <div class="main-content">
-            <!-- 文件上传区域 -->
             <section class="upload-section">
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-content">
@@ -91,17 +78,14 @@
                     </div>
                 </div>
                 
-                <!-- 文件列表 -->
                 <div class="file-list" id="fileList" style="display: none;">
                     <div class="file-list-header">
-                        <!-- 扫描结果信息 -->
                         <div class="scan-info" id="scanInfo" style="display: none;">
                             <i class="fas fa-search"></i>
                             <span id="scanInfoText">扫描结果将在这里显示</span>
                         </div>
                     </div>
                     <div class="file-items" id="fileItems"></div>
-                    <!-- 文件列表滚动进度条 -->
                     <div class="file-scroll-progress" id="fileScrollProgress">
                         <div class="file-scroll-fill" id="fileScrollFill"></div>
                     </div>
@@ -111,7 +95,6 @@
                 </div>
             </section>
 
-            <!-- 字符设置和处理区域 -->
             <section class="character-process-section">
                 <h2><i class="fas fa-keyboard"></i> 要保留的字符</h2>
                 <div class="character-input-area">
@@ -121,7 +104,6 @@
                         rows="3"
                     ></textarea>
                     
-                    <!-- 快捷按钮 -->
                     <div class="quick-buttons">
                         <button class="btn btn-outline" onclick="setCharacters('0123456789:.')">
                             数字+:.
@@ -138,7 +120,6 @@
                     </div>
                 </div>
                 
-                <!-- 字体处理引擎加载状态 -->
                 <div class="engine-loading-container" id="engineLoadingContainer">
                     <div class="engine-loading-content">
                         <div class="processing-loading-icon">
@@ -159,19 +140,16 @@
                     </div>
                 </div>
                 
-                <!-- 处理按钮区域 -->
                 <div class="process-control-area">
                     <button class="btn btn-success btn-large" id="processBtn" onclick="startProcessing()" disabled>
                         <i class="fas fa-rocket"></i> 开始处理字体
                     </button>
                     
-                    <!-- 引擎未就绪提示 -->
                     <div class="engine-not-ready-hint" id="engineNotReadyHint">
                         <i class="fas fa-info-circle"></i>
                         <span>字体处理引擎正在初始化，请稍候...</span>
                     </div>
                     
-                    <!-- 进度条 -->
                     <div class="progress-container" id="progressContainer" style="display: none;">
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill"></div>
@@ -183,12 +161,10 @@
 
 
 
-            <!-- 下载区域 -->
             <section class="download-section" id="downloadSection" style="display: none;">
                 <div class="download-header">
                     <h2><i class="fas fa-download"></i> 处理后的字体</h2>
                     
-                    <!-- 下载控制按钮区域 -->
                     <div class="download-controls" id="downloadControls" style="display: none;">
                         <button class="btn btn-success btn-compact" id="downloadAllBtn" onclick="downloadAllFonts()">
                             <i class="fas fa-download"></i> 下载字体文件
@@ -200,7 +176,6 @@
                     </div>
                 </div>
                 
-                <!-- ZIP生成进度条 -->
                 <div class="zip-progress-container" id="zipProgressContainer" style="display: none;">
                     <div class="zip-progress-header">
                         <i class="fas fa-archive"></i>
@@ -217,46 +192,26 @@
         </div>
     </main>
 
-    <!-- 本地处理说明 -->
     <div class="local-processing-notice">
         <div class="container">
             <p><i class="fas fa-shield-alt"></i> 完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。</p>
         </div>
     </div>
 
-    <!-- 页脚将通过组件加载器动态加载 -->
-
-    <!-- JavaScript 库 -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     
-    <!-- 加载字体处理引擎核心库 -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
     
-    <!-- JSZip for folder structure download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
-    <!-- 全局配置 - 必须在其他脚本之前加载 -->
     <script src="../../scripts/config.js"></script>
     
-    <!-- 组件加载器 -->
     <script src="../../scripts/components.js"></script>
     
-    <!-- 统一导航管理 -->
     <script src="../../scripts/navigation.js"></script>
     
-    <!-- 主项目公共脚本 -->
     <script src="../../scripts/main.js"></script>
     
-    <script>
-        // 初始化 AOS 动画
-        if (typeof AOS !== 'undefined') {
-            AOS.init({
-                duration: 800,
-                easing: 'ease-out-quart',
-                once: true
-            });
-        }
-    </script>
     
     <script src="script.js"></script>
 </body>

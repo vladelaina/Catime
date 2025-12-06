@@ -1,26 +1,20 @@
-// 指南页面特有功能
 document.addEventListener('DOMContentLoaded', function() {
-    // 视频封面点击处理
     const videoContainer = document.getElementById('videoContainer');
     if (videoContainer) {
         const videoCover = videoContainer.querySelector('.video-cover');
         const videoFrameContainer = videoContainer.querySelector('.video-frame-container');
         const autoplayIframe = document.getElementById('autoplayIframe');
         
-        // 预加载封面图
         const preloadImg = new Image();
         preloadImg.src = 'assets/bilibili video cover2.jpg';
         
         videoCover.addEventListener('click', function() {
-            // 显示视频容器
             videoCover.style.opacity = '0';
             videoFrameContainer.style.display = 'block';
             
-            // 设置真正的视频URL
             const realSrc = autoplayIframe.getAttribute('data-src');
             autoplayIframe.src = realSrc;
             
-            // 淡入显示iframe
             setTimeout(function() {
                 videoCover.style.display = 'none';
                 autoplayIframe.style.opacity = '1';
@@ -28,30 +22,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 添加指南页面的翻译
     addGuideTranslations();
 });
 
-// 添加指南页面特定的翻译
 function addGuideTranslations() {
-    // 检查当前语言设置
     const currentLang = localStorage.getItem('catime-language') || 'zh';
     
-    // 如果当前语言是英文，则添加英文翻译
     if (currentLang === 'en') {
-        // 翻译页面标题
         const pageTitle = document.getElementById('page-title');
         if (pageTitle) {
             pageTitle.textContent = 'Catime - Guide';
         }
         
-        // 翻译meta描述
         const metaDescription = document.getElementById('meta-description');
         if (metaDescription) {
             metaDescription.setAttribute('content', 'Catime Guide - Learn about the latest time management tips, software updates, and user stories.');
         }
         
-        // 翻译导航链接
         document.querySelectorAll('.nav-links li a').forEach(link => {
             if (link.textContent === '首页') link.textContent = 'Home';
             if (link.textContent === '指南') link.textContent = 'Guide';
@@ -64,7 +51,6 @@ function addGuideTranslations() {
             }
         });
         
-        // 翻译指南hero区域
         const guideHeroTitle = document.querySelector('.guide-hero-title');
         if (guideHeroTitle) {
             const catimeText = guideHeroTitle.querySelector('.catime-text');
@@ -72,17 +58,13 @@ function addGuideTranslations() {
             if (guideAccent) guideAccent.textContent = ' User Guide';
         }
         
-        // 翻译主要内容
         translateGuideElements();
         
-        // 翻译特殊部分的内容
         translateSpecialElements();
     }
 }
 
-// 翻译指南页面内容元素
 function translateGuideElements() {
-    // 翻译标题和段落
     const translations = {
         "Hi~ 我的朋友！": "Hi~ My Friend!",
         "这里是 <a href=\"https://vladelaina.com/\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"bilibili-link\"><span class=\"highlight\">Vladelaina</span></a>，Catime 的开发者，也是一名普通的大学生。": "I'm <a href=\"https://vladelaina.com/\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"bilibili-link\"><span class=\"highlight\">Vladelaina</span></a>, the developer of Catime and also an ordinary college student.",
@@ -118,45 +100,35 @@ function translateGuideElements() {
         "～": ".",
         "恭喜完成!": "Congratulations!",
         "至此，恭喜🎉你已经掌握了Catime的核心内容，剩下的部分基本都是字面意思😉。": "Congratulations! 🎉 You've now mastered the core features of Catime. The rest is pretty self-explanatory! 😉",
-        // 添加视频部分的翻译
         "<i class=\"fas fa-play-circle\"></i> 演示视频": "<i class=\"fas fa-play-circle\"></i> Demo Video",
         "这里有一个演示视频，帮助你更好地了解Catime的使用方法：": "Here's a demo video to help you better understand how to use Catime:",
-        // 添加缺少的翻译
         "返回顶部": "Back to Top",
         "86-不存在的战区-": "86 -Eighty Six-",
         "魔女之旅": "Wandering Witch: The Journey of Elaina",
         "section-intro": "section-intro en"
     };
     
-    // 应用翻译到元素
     for (const [key, value] of Object.entries(translations)) {
-        // 选择所有可能包含文本的元素
         const elements = document.querySelectorAll('h1, h2, h3, h4, p, span, div.tip-content h4, div.conclusion-content h3, div.operation-details h3, div.feature-content p, div.anime-icons span, a');
         
         elements.forEach(el => {
-            // 完全匹配
             if (el.innerHTML === key) {
                 el.innerHTML = value;
             } 
-            // 包含匹配（处理带有HTML的内容）
             else if (el.innerHTML && el.innerHTML.includes(key)) {
-                // 替换时注意保留HTML
                 el.innerHTML = el.innerHTML.replace(new RegExp(escapeRegExp(key), 'g'), value);
             }
         });
     }
 
-    // 处理特定链接中的文本和修复"About My Name"部分
     const infoCard = document.querySelector('.info-card');
     if (infoCard) {
         const paragraphs = infoCard.querySelectorAll('p');
         if (paragraphs.length >= 1) {
-            // 修复第一个段落中的重复内容
             paragraphs[0].innerHTML = "\"Vladelaina\" combines the names of my favorite anime heroines — <strong>Vladilena Milizé</strong> from <a href=\"https://en.wikipedia.org/wiki/86_(novel_series)\" target=\"_blank\" rel=\"noopener noreferrer\">86 -Eighty Six-</a> and <strong>Elaina</strong> from <a href=\"https://en.wikipedia.org/wiki/Wandering_Witch:_The_Journey_of_Elaina\" target=\"_blank\" rel=\"noopener noreferrer\">Wandering Witch: The Journey of Elaina</a>.";
         }
     }
 
-    // 处理普通的链接翻译
     document.querySelectorAll('a').forEach(link => {
         if (link.href && link.href.includes('86_(novel_series)') && link.textContent.includes('86-不存在的战区-')) {
             link.textContent = '86 -Eighty Six-';
@@ -167,39 +139,31 @@ function translateGuideElements() {
     });
 }
 
-// 转义正则表达式中的特殊字符
 function escapeRegExp(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// 翻译特殊元素，这些元素可能无法通过普通选择器匹配
 function translateSpecialElements() {
-    // 翻译特性标签
     document.querySelectorAll('.feature-tag').forEach(tag => {
         if (tag.textContent === '简单') tag.textContent = 'Simple';
         if (tag.textContent === '无需安装') tag.textContent = 'No Install';
     });
     
-    // 翻译动漫图标
     document.querySelectorAll('.anime-icon').forEach(icon => {
         if (icon.textContent === '魔女之旅') icon.textContent = 'Wandering Witch';
         if (icon.textContent === '86') icon.textContent = '86';
     });
     
-    // 完全替换feature-highlight中的内容
     const featureHighlight = document.querySelector('.feature-highlight p');
     if (featureHighlight) {
-        // 直接替换为完全翻译好的HTML
         featureHighlight.innerHTML = `My friend, I bet you're eager to move the window position, like to the bottom left of the screen. To do this, just <span class="text-accent"><i class="fas fa-mouse-pointer icon-animate-rotate"></i> right-click the tray icon and select "Edit Mode"</span>. At this point, <span class="text-primary"><i class="fas fa-window-maximize icon-animate-bounce"></i> the window will change to an acrylic background</span> and you can use <span class="text-success"><i class="fas fa-arrows-alt icon-animate-jump"></i> mouse drag to adjust position, scroll wheel to resize</span>. After adjusting, <span class="text-warning"><i class="fas fa-check-circle icon-animate-pulse"></i> right-click on the window to exit edit mode</span>.`;
     }
 
-    // 翻译section-intro
     const sectionIntro = document.querySelector('.section-intro');
     if (sectionIntro && sectionIntro.textContent.includes('Catime 的所有操作都通过点击任务栏图标完成')) {
         sectionIntro.textContent = 'All Catime operations are performed by clicking the taskbar icon:';
     }
 
-    // 翻译alt属性
     document.querySelectorAll('img').forEach(img => {
         if (img.alt === 'First time use') img.alt = 'First time use';
         if (img.alt === 'Move out') img.alt = 'Move out';
