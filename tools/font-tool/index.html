@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN" id="html-root">
+<html lang="en" id="html-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Catime 字体简化工具 - 批量处理字体文件，只保留指定字符的专业级 Web 版本">
-    <title>Catime - 字体简化工具</title>
+    <meta name="description" content="Catime Font Simplifier - A professional web-based tool to batch process font files and keep only specified characters.">
+    <title>Catime - Font Simplifier</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,9 +31,9 @@
                 <i class="fas fa-font"></i>
             </div>
             <div class="drag-overlay-text">
-                <h2>拖拽字体文件到这里</h2>
-                <p>支持 .ttf, .otf, .woff, .woff2 格式</p>
-                <p>可以拖拽/粘贴文件夹，自动扫描所有字体文件</p>
+                <h2>Drop Font Files Here</h2>
+                <p>Supports .ttf, .otf, .woff, .woff2</p>
+                <p>Drag folders to automatically scan for fonts</p>
             </div>
             <div class="drag-overlay-animation">
                 <div class="bounce-dot"></div>
@@ -46,7 +46,7 @@
     <main>
         <section class="guide-hero">
             <div class="container">
-                <h1 class="guide-hero-title" data-aos="fade-up"><span class="catime-text">Catime</span><span class="guide-accent">字体简化工具</span></h1>
+                <h1 class="guide-hero-title" data-aos="fade-up"><span class="catime-text">Catime</span><span class="guide-accent">Font Simplifier</span></h1>
                 <div class="guide-hero-decoration">
                     <div class="floating-icon icon1"><i class="fas fa-font"></i></div>
                     <div class="floating-icon icon2"><i class="fas fa-star"></i></div>  
@@ -65,15 +65,15 @@
                 <div class="upload-area" id="uploadArea">
                     <div class="upload-content">
                         <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                        <p>拖拽字体文件或文件夹到这里</p>
-                        <p class="upload-subtitle">或者通过 Ctrl+V 粘贴</p>
+                        <p>Drag & Drop Font Files or Folders Here</p>
+                        <p class="upload-subtitle">Or Paste via Ctrl+V</p>
                         <div class="folder-hint">
                             <i class="fas fa-folder"></i> 
-                            支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件
+                            Drag folders to automatically scan for fonts in all subdirectories
                         </div>
                         <input type="file" id="fileInput" multiple accept=".ttf,.otf,.woff,.woff2" style="display: none;">
                         <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                            <i class="fas fa-file-upload"></i> 选择文件
+                            <i class="fas fa-file-upload"></i> Select Files
                         </button>
                     </div>
                 </div>
@@ -82,7 +82,7 @@
                     <div class="file-list-header">
                         <div class="scan-info" id="scanInfo" style="display: none;">
                             <i class="fas fa-search"></i>
-                            <span id="scanInfoText">扫描结果将在这里显示</span>
+                            <span id="scanInfoText">Scan results will appear here</span>
                         </div>
                     </div>
                     <div class="file-items" id="fileItems"></div>
@@ -90,32 +90,32 @@
                         <div class="file-scroll-fill" id="fileScrollFill"></div>
                     </div>
                     <button class="btn btn-secondary" onclick="clearFiles()">
-                        <i class="fas fa-trash"></i> 清除所有文件
+                        <i class="fas fa-trash"></i> Clear All Files
                     </button>
                 </div>
             </section>
 
             <section class="character-process-section">
-                <h2><i class="fas fa-keyboard"></i> 要保留的字符</h2>
+                <h2><i class="fas fa-keyboard"></i> Characters to Keep</h2>
                 <div class="character-input-area">
                     <textarea 
                         id="charactersInput" 
-                        placeholder="请输入要保留的字符，例如：0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+                        placeholder="Enter characters to keep, e.g., 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
                         rows="3"
                     ></textarea>
                     
                     <div class="quick-buttons">
                         <button class="btn btn-outline" onclick="setCharacters('0123456789:.')">
-                            数字+:.
+                            Numbers + :.
                         </button>
                         <button class="btn btn-outline" onclick="setCharacters('0123456789')">
-                            数字 0-9
+                            Numbers 0-9
                         </button>
                         <button class="btn btn-outline" onclick="setCharacters('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')">
-                            英文字母
+                            English Letters
                         </button>
                         <button class="btn btn-outline" onclick="setCharacters('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')">
-                            字母+数字
+                            Alphanumeric
                         </button>
                     </div>
                 </div>
@@ -134,20 +134,20 @@
                             </div>
                         </div>
                         <div class="engine-loading-text">
-                            <h3 class="engine-loading-title">正在准备字体处理引擎</h3>
-                            <p id="engineLoadingStatus">正在加载处理引擎...</p>
+                            <h3 class="engine-loading-title">Preparing Font Engine</h3>
+                            <p id="engineLoadingStatus">Loading processing engine...</p>
                         </div>
                     </div>
                 </div>
                 
                 <div class="process-control-area">
                     <button class="btn btn-success btn-large" id="processBtn" onclick="startProcessing()" disabled>
-                        <i class="fas fa-rocket"></i> 开始处理字体
+                        <i class="fas fa-rocket"></i> Start Processing
                     </button>
                     
                     <div class="engine-not-ready-hint" id="engineNotReadyHint">
                         <i class="fas fa-info-circle"></i>
-                        <span>字体处理引擎正在初始化，请稍候...</span>
+                        <span>Font processing engine is initializing, please wait...</span>
                     </div>
                     
                     <div class="progress-container" id="progressContainer" style="display: none;">
@@ -163,15 +163,15 @@
 
             <section class="download-section" id="downloadSection" style="display: none;">
                 <div class="download-header">
-                    <h2><i class="fas fa-download"></i> 处理后的字体</h2>
+                    <h2><i class="fas fa-download"></i> Processed Fonts</h2>
                     
                     <div class="download-controls" id="downloadControls" style="display: none;">
                         <button class="btn btn-success btn-compact" id="downloadAllBtn" onclick="downloadAllFonts()">
-                            <i class="fas fa-download"></i> 下载字体文件
+                            <i class="fas fa-download"></i> Download Files
                         </button>
                         
-                        <button class="btn btn-danger btn-compact" onclick="clearAllProcessedFiles()" title="清理全部处理结果，重新开始">
-                            <i class="fas fa-trash-alt"></i> 清理全部
+                        <button class="btn btn-danger btn-compact" onclick="clearAllProcessedFiles()" title="Clear all results and start over">
+                            <i class="fas fa-trash-alt"></i> Clear All
                         </button>
                     </div>
                 </div>
@@ -179,12 +179,12 @@
                 <div class="zip-progress-container" id="zipProgressContainer" style="display: none;">
                     <div class="zip-progress-header">
                         <i class="fas fa-archive"></i>
-                        <span id="zipProgressText">正在生成ZIP文件...</span>
+                        <span id="zipProgressText">Generating ZIP...</span>
                     </div>
                     <div class="zip-progress-bar">
                         <div class="zip-progress-fill" id="zipProgressFill"></div>
                     </div>
-                    <div class="zip-progress-details" id="zipProgressDetails">准备中...</div>
+                    <div class="zip-progress-details" id="zipProgressDetails">Preparing...</div>
                 </div>
                 
                 <div class="download-items" id="downloadItems"></div>
@@ -194,7 +194,7 @@
 
     <div class="local-processing-notice">
         <div class="container">
-            <p><i class="fas fa-shield-alt"></i> 完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。</p>
+            <p><i class="fas fa-shield-alt"></i> 100% Local Processing. All calculations are done in your browser. Data is not uploaded to any server.</p>
         </div>
     </div>
 

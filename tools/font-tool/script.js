@@ -53,12 +53,10 @@ const engineLoadingStatus = document.getElementById('engineLoadingStatus');
 const engineNotReadyHint = document.getElementById('engineNotReadyHint');
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM 已加载，开始初始化');
+    console.log('DOM Loaded, initializing');
     
     const overlay = document.getElementById('dragOverlay');
-    console.log('dragOverlay 元素:', overlay);
-    
-    initFontToolI18n();
+    console.log('dragOverlay element:', overlay);
     
     initDragAndDrop();
     initFileInput();
@@ -74,9 +72,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     setTimeout(() => {
         if (typeof JSZip !== 'undefined') {
-            console.log('✅ JSZip库加载成功，支持文件夹ZIP下载');
+            console.log('✅ JSZip loaded successfully, folder ZIP download supported');
         } else {
-            console.log('❌ JSZip库加载失败，ZIP下载功能将不可用');
+            console.log('❌ JSZip failed to load, ZIP download will be unavailable');
         }
     }, 2000);
 });
@@ -96,7 +94,7 @@ function showEngineLoadingStatus() {
         engineNotReadyHint.style.display = 'flex';
     }
     
-    console.log('🎨 字体处理引擎加载状态已显示');
+    console.log('🎨 Font processing engine loading status shown');
 }
 
 function hideEngineLoadingStatus() {
@@ -122,51 +120,51 @@ function hideEngineLoadingStatus() {
         }, 300);
     }
     
-    console.log('🎨 字体处理引擎加载状态已隐藏');
+    console.log('🎨 Font processing engine loading status hidden');
 }
 
 function updateEngineLoadingStatus(message) {
     if (engineLoadingStatus) {
-        engineLoadingStatus.textContent = translateText(message);
+        engineLoadingStatus.textContent = message;
     }
     console.log(`⚙️ ${message}`);
 }
 
 async function initPyodideAsync() {
     try {
-        updateEngineLoadingStatus('正在加载处理引擎...');
+        updateEngineLoadingStatus('Loading processing engine...');
         
         pyodide = await loadPyodide();
         
-        updateEngineLoadingStatus('正在安装核心库...');
+        updateEngineLoadingStatus('Installing core libraries...');
         
         await pyodide.loadPackage(['micropip']);
         
-        updateEngineLoadingStatus('正在配置字体处理组件...');
+        updateEngineLoadingStatus('Configuring font processing components...');
         
         await pyodide.runPythonAsync(`
             import micropip
             await micropip.install(['fonttools'])
         `);
         
-        updateEngineLoadingStatus('正在初始化字体处理引擎...');
+        updateEngineLoadingStatus('Initializing font processing engine...');
         
         await loadPythonFontProcessor();
         
         await testPythonEnvironment();
         
         pythonReady = true;
-        updateEngineLoadingStatus('字体处理引擎已就绪！');
+        updateEngineLoadingStatus('Font processing engine ready!');
         
         setTimeout(() => {
             hideEngineLoadingStatus();
         }, 1000);
         
-        console.log('🚀 专业字体处理引擎初始化完成！');
+        console.log('🚀 Professional font processing engine initialized!');
         
     } catch (error) {
-        console.error('❌ 处理引擎初始化失败，将尝试备用方案...', error);
-        updateEngineLoadingStatus('引擎加载失败，启用备用方案...');
+        console.error('❌ Engine initialization failed, attempting fallback...', error);
+        updateEngineLoadingStatus('Engine load failed, using fallback...');
         
         await loadFallbackLibrary();
         
@@ -185,7 +183,7 @@ import io
 
 def subset_font(font_data_base64, characters_to_keep):
     """
-    更严格的字体子集化处理 - 彻底清理多余字符和复合字形
+    Stricter font subsetting - Thorough cleanup of extra characters and composite glyphs
     """
     try:
         from fontTools.ttLib import TTFont
@@ -193,52 +191,52 @@ def subset_font(font_data_base64, characters_to_keep):
         import base64
         import io
         
-        print(f"[DEBUG] 开始严格字体处理，要保留的字符: {characters_to_keep}")
-        print(f"[DEBUG] Base64数据长度: {len(font_data_base64)} 字符")
+        print(f"[DEBUG] Starting strict font processing, characters to keep: {characters_to_keep}")
+        print(f"[DEBUG] Base64 data length: {len(font_data_base64)} chars")
         
         font_data = base64.b64decode(font_data_base64)
-        print(f"[DEBUG] 解码后字体数据大小: {len(font_data)} 字节")
+        print(f"[DEBUG] Decoded font data size: {len(font_data)} bytes")
         
         if len(font_data) >= 12:
             original_header = font_data[:12]
             header_hex = ' '.join(f'{b:02x}' for b in original_header)
-            print(f"[DEBUG] 原始字体文件头: {header_hex}")
+            print(f"[DEBUG] Original font header: {header_hex}")
             
             signature = int.from_bytes(font_data[:4], 'big')
             if signature == 0x00010000:
-                print("[DEBUG] 原始文件：有效的TTF格式")
+                print("[DEBUG] Original file: Valid TTF format")
             elif signature == 0x4F54544F:
-                print("[DEBUG] 原始文件：有效的OTF格式") 
+                print("[DEBUG] Original file: Valid OTF format") 
             else:
-                print(f"[DEBUG] 原始文件：未知格式 0x{signature:08x}")
+                print(f"[DEBUG] Original file: Unknown format 0x{signature:08x}")
         
         font_io = io.BytesIO(font_data)
         font = TTFont(font_io)
         
-        print(f"[DEBUG] 字体加载成功")
-        print(f"[DEBUG] 原始表数量: {len(font.keys())}")
-        print(f"[DEBUG] 原始表列表: {sorted(list(font.keys()))}")
+        print(f"[DEBUG] Font loaded successfully")
+        print(f"[DEBUG] Original table count: {len(font.keys())}")
+        print(f"[DEBUG] Original table list: {sorted(list(font.keys()))}")
         
         if 'head' in font:
             head = font['head']
             print(f"[DEBUG] unitsPerEm: {head.unitsPerEm}")
-            print(f"[DEBUG] 字体创建时间: {head.created}")
+            print(f"[DEBUG] Font created: {head.created}")
         
         if 'cmap' in font:
             cmap = font.getBestCmap()
-            print(f"[DEBUG] 字符映射数量: {len(cmap) if cmap else 0}")
+            print(f"[DEBUG] Char map count: {len(cmap) if cmap else 0}")
             
             found_chars = []
             for char in characters_to_keep:
                 char_code = ord(char)
                 if cmap and char_code in cmap:
                     found_chars.append(char)
-                    print(f"[DEBUG] 找到字符 '{char}' (U+{char_code:04X}) -> 字形{cmap[char_code]}")
+                    print(f"[DEBUG] Found char '{char}' (U+{char_code:04X}) -> Glyph{cmap[char_code]}")
                 else:
-                    print(f"[DEBUG] 未找到字符 '{char}' (U+{char_code:04X})")
+                    print(f"[DEBUG] Char not found '{char}' (U+{char_code:04X})")
             
             if not found_chars:
-                raise Exception(f'在字体中未找到任何指定字符。字体包含字符范围: U+{min(cmap.keys()):04X} - U+{max(cmap.keys()):04X}')
+                raise Exception(f'No specified characters found in font. Font contains range: U+{min(cmap.keys()):04X} - U+{max(cmap.keys()):04X}')
         
         options = Options()
         
@@ -273,49 +271,49 @@ def subset_font(font_data_base64, characters_to_keep):
         options.layout_scripts = []           
         
         subsetter = Subsetter(options=options)
-        print(f"[DEBUG] 严格子集化器创建成功，已配置彻底清理选项")
+        print(f"[DEBUG] Strict subsetter created with cleanup options")
         
-        print(f"[DEBUG] 严格模式：只保留指定字符 {repr(characters_to_keep)}")
+        print(f"[DEBUG] Strict mode: Keeping only {repr(characters_to_keep)}")
         subsetter.populate(text=characters_to_keep)
-        print(f"[DEBUG] 字符设置完成: {repr(characters_to_keep)} (严格清理模式)")
+        print(f"[DEBUG] Char setup complete: {repr(characters_to_keep)} (Strict mode)")
         
-        print(f"[DEBUG] 开始严格子集化处理...")
+        print(f"[DEBUG] Starting strict subsetting...")
         subsetter.subset(font)
-        print(f"[DEBUG] 严格子集化完成")
+        print(f"[DEBUG] Strict subsetting complete")
         
-        print(f"[DEBUG] 处理后表数量: {len(font.keys())}")
-        print(f"[DEBUG] 处理后表列表: {sorted(list(font.keys()))}")
+        print(f"[DEBUG] Post-process table count: {len(font.keys())}")
+        print(f"[DEBUG] Post-process table list: {sorted(list(font.keys()))}")
         
         critical_tables = ['cmap', 'head', 'hhea', 'hmtx', 'maxp', 'name']
         for table in critical_tables:
             if table in font:
-                print(f"[DEBUG] ✓ 关键表 '{table}' 存在")
+                print(f"[DEBUG] ✓ Critical table '{table}' exists")
             else:
-                print(f"[DEBUG] ✗ 关键表 '{table}' 缺失")
+                print(f"[DEBUG] ✗ Critical table '{table}' missing")
         
         if 'cmap' in font:
             new_cmap = font.getBestCmap()
-            print(f"[DEBUG] 处理后字符映射数量: {len(new_cmap) if new_cmap else 0}")
+            print(f"[DEBUG] Post-process char map count: {len(new_cmap) if new_cmap else 0}")
             if new_cmap:
                 has_space = 32 in new_cmap
                 has_null = 0 in new_cmap
-                print(f"[DEBUG] 关键字符检查: 空格={has_space}, null={has_null}")
+                print(f"[DEBUG] Critical char check: space={has_space}, null={has_null}")
                 
                 for char_code, glyph_id in new_cmap.items():
                     char = chr(char_code) if 32 <= char_code <= 126 else f"U+{char_code:04X}"
-                    print(f"[DEBUG] 保留的映射: {char} -> 字形{glyph_id}")
+                    print(f"[DEBUG] Kept mapping: {char} -> Glyph{glyph_id}")
         
         if 'glyf' in font:
             glyf_table = font['glyf']
-            print(f"[DEBUG] 字形表包含 {len(glyf_table)} 个字形")
+            print(f"[DEBUG] Glyph table contains {len(glyf_table)} glyphs")
             
             if '.notdef' in glyf_table:
-                print(f"[DEBUG] ✓ .notdef字形存在")
+                print(f"[DEBUG] ✓ .notdef glyph exists")
             else:
-                print(f"[DEBUG] ✗ .notdef字形缺失")
+                print(f"[DEBUG] ✗ .notdef glyph missing")
                 
             glyph_names = list(glyf_table.keys())[:20]  
-            print(f"[DEBUG] 字形列表(前20个): {glyph_names}")
+            print(f"[DEBUG] Glyph list (first 20): {glyph_names}")
         
         if 'name' in font:
             name_table = font['name']
@@ -327,96 +325,96 @@ def subset_font(font_data_base64, characters_to_keep):
                         break
                     except:
                         pass
-            print(f"[DEBUG] 字体家族名称: {font_family}")
+            print(f"[DEBUG] Font Family: {font_family}")
         
         if 'OS/2' in font:
             os2_table = font['OS/2']
-            print(f"[DEBUG] OS/2表版本: {os2_table.version}")
-            print(f"[DEBUG] 字重: {os2_table.usWeightClass}")
+            print(f"[DEBUG] OS/2 Version: {os2_table.version}")
+            print(f"[DEBUG] Weight Class: {os2_table.usWeightClass}")
         
         if 'maxp' in font:
             maxp_table = font['maxp']
-            print(f"[DEBUG] 最大字形数: {maxp_table.numGlyphs}")
+            print(f"[DEBUG] Max Glyphs: {maxp_table.numGlyphs}")
             if hasattr(maxp_table, 'maxPoints'):
-                print(f"[DEBUG] 最大点数: {maxp_table.maxPoints}")
+                print(f"[DEBUG] Max Points: {maxp_table.maxPoints}")
             if hasattr(maxp_table, 'maxContours'):
-                print(f"[DEBUG] 最大轮廓数: {maxp_table.maxContours}")
+                print(f"[DEBUG] Max Contours: {maxp_table.maxContours}")
         
         output_io = io.BytesIO()
-        print(f"[DEBUG] 开始保存字体...")
+        print(f"[DEBUG] Saving font...")
         font.save(output_io)
-        print(f"[DEBUG] 字体保存完成")
+        print(f"[DEBUG] Font saved")
         
         font.close()
         
         output_data = output_io.getvalue()
-        print(f"[DEBUG] 生成的字体大小: {len(output_data)} 字节")
+        print(f"[DEBUG] Generated font size: {len(output_data)} bytes")
         
         if len(output_data) < 100:
-            raise Exception(f'生成的字体文件过小({len(output_data)}字节)')
+            raise Exception(f'Generated font file too small ({len(output_data)} bytes)')
         
         if len(output_data) >= 12:
             output_header = output_data[:12]
             header_hex = ' '.join(f'{b:02x}' for b in output_header)
-            print(f"[DEBUG] 输出字体文件头: {header_hex}")
+            print(f"[DEBUG] Output font header: {header_hex}")
             
             signature = int.from_bytes(output_data[:4], 'big')
             if signature == 0x00010000:
-                print("[DEBUG] 输出文件：有效的TTF格式")
+                print("[DEBUG] Output file: Valid TTF format")
             elif signature == 0x4F54544F:
-                print("[DEBUG] 输出文件：有效的OTF格式")
+                print("[DEBUG] Output file: Valid OTF format")
             else:
-                print(f"[DEBUG] 输出文件：异常格式 0x{signature:08x}")
+                print(f"[DEBUG] Output file: Abnormal format 0x{signature:08x}")
         
         try:
-            print(f"[DEBUG] 开始验证生成的字体...")
+            print(f"[DEBUG] Verifying generated font...")
             verify_io = io.BytesIO(output_data)
             verify_font = TTFont(verify_io)
             verify_cmap = verify_font.getBestCmap()
-            print(f"[DEBUG] 验证成功！生成的字体包含 {len(verify_cmap) if verify_cmap else 0} 个字符映射")
+            print(f"[DEBUG] Verification success! Generated font contains {len(verify_cmap) if verify_cmap else 0} char mappings")
             
             verify_glyf = verify_font.get('glyf')
             if verify_glyf:
-                print(f"[DEBUG] 字形表包含 {len(verify_glyf)} 个字形")
+                print(f"[DEBUG] Glyph table contains {len(verify_glyf)} glyphs")
             
             verify_font.close()
         except Exception as verify_error:
-            print(f"[ERROR] 生成的字体验证失败: {verify_error}")
+            print(f"[ERROR] Generated font verification failed: {verify_error}")
             import traceback
-            print(f"[ERROR] 验证错误详情: {traceback.format_exc()}")
+            print(f"[ERROR] Verification error detail: {traceback.format_exc()}")
             
-        print(f"[INFO] === 严格清理模式处理完成 ===")
-        print(f"[INFO] 处理模式: 严格子集化 + 彻底清理复合字形")
-        print(f"[INFO] 清理选项: 移除GSUB/GPOS表，去除复合字形信息")
-        print(f"[INFO] 输入字符: {repr(characters_to_keep)}")
-        print(f"[INFO] 输出大小: {len(output_data)} 字节")
-        print(f"[INFO] 已彻底清理多余字符和复合字形")
+        print(f"[INFO] === Strict Cleanup Complete ===")
+        print(f"[INFO] Mode: Strict Subsetting + Thorough Composite Glyph Cleanup")
+        print(f"[INFO] Options: Removed GSUB/GPOS tables, stripped composite glyph info")
+        print(f"[INFO] Input Chars: {repr(characters_to_keep)}")
+        print(f"[INFO] Output Size: {len(output_data)} bytes")
+        print(f"[INFO] Thoroughly cleaned extra chars and composite glyphs")
         print(f"[INFO] =====================================")
         
         result_base64 = base64.b64encode(output_data).decode('utf-8')
-        print(f"[DEBUG] Base64编码完成，长度: {len(result_base64)} 字符")
+        print(f"[DEBUG] Base64 encoding complete, length: {len(result_base64)} chars")
         
         return {
             'success': True,
             'data': result_base64,
             'size': len(output_data),
-            'message': f'严格清理完成，只保留 {len(characters_to_keep)} 个指定字符'
+            'message': f'Strict cleanup complete, kept {len(characters_to_keep)} specified characters'
         }
         
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        print(f"[ERROR] 处理失败: {str(e)}")
-        print(f"[ERROR] 详细错误: {error_detail}")
+        print(f"[ERROR] Processing failed: {str(e)}")
+        print(f"[ERROR] Detailed error: {error_detail}")
         return {
             'success': False,
             'error': str(e),
             'error_detail': error_detail,
-            'message': f'处理失败: {str(e)}'
+            'message': f'Processing failed: {str(e)}'
         }
 
 def test_fonttools():
-    return "FontTools库已就绪"
+    return "FontTools library ready"
         `);
 }
 
@@ -429,14 +427,14 @@ async function testPythonEnvironment() {
 import inspect
 if 'subset_font' in globals():
     sig = inspect.signature(subset_font)
-    f"subset_font函数已定义，参数: {list(sig.parameters.keys())}"
+    f"subset_font defined, params: {list(sig.parameters.keys())}"
 else:
-    "ERROR: subset_font函数未定义"
+    "ERROR: subset_font not defined"
         `);
         console.log(`🔧 ${function_test}`);
         
     } catch (testError) {
-        console.error(`❌ 处理环境测试失败: ${testError.message}`, testError);
+        console.error(`❌ Processing environment test failed: ${testError.message}`, testError);
         throw testError;
     }
 }
@@ -450,26 +448,26 @@ async function loadFallbackLibrary() {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/opentype.js/1.3.4/opentype.min.js';
         script.onload = () => {
-            console.log('📋 备用字体处理库已加载，功能有限。');
+            console.log('📋 Fallback font library loaded, limited functionality.');
         };
         script.onerror = () => {
-            console.error('❌ 无法加载任何字体处理库。');
+            console.error('❌ Failed to load any font library.');
         };
         document.head.appendChild(script);
     } catch (error) {
-        console.error('❌ 备用库加载失败。', error);
+        console.error('❌ Fallback load failed.', error);
     }
 }
 
 let dragCounter = 0;
 
 function initDragAndDrop() {
-    console.log('初始化拖拽功能');
+    console.log('Initializing drag and drop');
     console.log('dragOverlay:', dragOverlay);
     console.log('uploadArea:', uploadArea);
     
     if (!dragOverlay) {
-        console.error('拖拽覆盖层元素未找到！');
+        console.error('Drag overlay element not found!');
         return;
     }
     
@@ -482,7 +480,7 @@ function initDragAndDrop() {
     document.addEventListener('dragover', handleDragOver, false);
     document.addEventListener('drop', handlePageDrop, false);
     
-    console.log('已添加全页面拖拽事件监听器');
+    console.log('Page-wide drag listeners added');
 
     if (uploadArea) {
         ['dragenter', 'dragover'].forEach(eventName => {
@@ -506,11 +504,11 @@ function initDragAndDrop() {
         }
     });
     
-    console.log('拖拽功能初始化完成');
+    console.log('Drag functionality initialized');
     
     if (window.location.search.includes('debug=true')) {
         const testBtn = document.createElement('button');
-        testBtn.textContent = translateText('测试覆盖层');
+        testBtn.textContent = 'Test Overlay';
         testBtn.style.position = 'fixed';
         testBtn.style.top = '10px';
         testBtn.style.right = '10px';
@@ -533,15 +531,15 @@ function preventDefaults(e) {
 
 function handleDragEnter(e) {
     dragCounter++;
-    console.log('拖拽进入事件，计数器:', dragCounter);
+    console.log('Drag enter, counter:', dragCounter);
     
     if (e.dataTransfer && e.dataTransfer.types) {
         const hasFiles = e.dataTransfer.types.includes('Files');
-        console.log('拖拽类型:', e.dataTransfer.types, '包含文件:', hasFiles);
+        console.log('Drag types:', e.dataTransfer.types, 'Has files:', hasFiles);
         
         if (hasFiles) {
             showDragOverlay();
-            console.log('检测到文件拖拽，显示覆盖层');
+            console.log('Files detected, showing overlay');
         }
     }
 }
@@ -614,22 +612,22 @@ function handlePageDrop(e) {
 }
 
 function showDragOverlay() {
-    console.log('显示拖拽覆盖层');
+    console.log('Show drag overlay');
     if (dragOverlay) {
         dragOverlay.classList.add('active');
         document.body.style.overflow = 'hidden';
-        console.log('覆盖层已激活');
+        console.log('Overlay activated');
     } else {
-        console.error('dragOverlay 元素未找到');
+        console.error('dragOverlay element not found');
     }
 }
 
 function hideDragOverlay() {
-    console.log('隐藏拖拽覆盖层');
+    console.log('Hide drag overlay');
     if (dragOverlay) {
         dragOverlay.classList.remove('active');
         document.body.style.overflow = '';
-        console.log('覆盖层已隐藏');
+        console.log('Overlay hidden');
     }
 }
 
@@ -653,8 +651,8 @@ async function handleDrop(e) {
     };
     
     if (dt.items && dt.items.length > 0) {
-        console.log('正在扫描拖拽的内容...');
-        console.log('拖拽项目数量:', dt.items.length);
+        console.log('Scanning dropped content...');
+        console.log('Dropped items count:', dt.items.length);
         
         const files = [];
         const scanPromises = [];
@@ -662,19 +660,19 @@ async function handleDrop(e) {
         let mainFolderEntry = null;
         for (let i = 0; i < dt.items.length; i++) {
             const item = dt.items[i];
-            console.log(`项目 ${i}:`, item.kind, item.type);
+            console.log(`Item ${i}:`, item.kind, item.type);
             
             if (item.kind === 'file') {
                 const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : item.getAsEntry();
                 if (entry) {
-                    console.log(`条目 ${i}:`, entry.name, entry.isDirectory ? '目录' : '文件');
+                    console.log(`Entry ${i}:`, entry.name, entry.isDirectory ? 'Directory' : 'File');
                     
                     if (entry.isDirectory) {
                         currentDropFolderMode = true;
                         currentDropFolderStructure.name = entry.name;
                         mainFolderEntry = entry;
-                        console.log(`📁 检测到文件夹模式: ${entry.name}`);
-                        console.log('主文件夹条目:', entry.name);
+                        console.log(`📁 Folder mode detected: ${entry.name}`);
+                        console.log('Main folder entry:', entry.name);
                         break; 
                     }
                 }
@@ -682,7 +680,7 @@ async function handleDrop(e) {
         }
         
         if (mainFolderEntry) {
-            console.log('开始扫描主文件夹:', mainFolderEntry.name);
+            console.log('Scanning main folder:', mainFolderEntry.name);
             scanPromises.push(scanEntryForCurrentDrop(mainFolderEntry, files, currentDropFolderStructure));
         } else {
             for (let i = 0; i < dt.items.length; i++) {
@@ -732,16 +730,16 @@ async function handleDrop(e) {
             
             updateScanInfo(totalFiles, files.length, nonFontFiles, currentDropFolderMode);
             
-            console.log(`📁 扫描完成，发现 ${totalFiles} 个文件 (${files.length} 个字体文件, ${nonFontFiles} 个其他文件)`);
+            console.log(`📁 Scan complete, found ${totalFiles} files (${files.length} font files, ${nonFontFiles} other files)`);
             
             if (currentDropFolderMode) {
-                console.log(`📁 文件夹模式启用: 将保持目录结构并复制所有文件`);
-                console.log(`🔍 调试: 目录数=${currentDropFolderStructure.directories.size}, 文件数=${currentDropFolderStructure.files.length}`);
+                console.log(`📁 Folder mode active: directory structure will be preserved`);
+                console.log(`🔍 Debug: Dirs=${currentDropFolderStructure.directories.size}, Files=${currentDropFolderStructure.files.length}`);
             }
             
             handleFiles(files);
         } else {
-            console.warn('未在拖拽的内容中找到任何文件');
+            console.warn('No files found in dropped content');
         }
     } else {
         const files = dt.files;
@@ -760,19 +758,19 @@ function initFileInput() {
                 fileInput.click();
             }
         });
-        console.log('上传区域点击事件已绑定');
+        console.log('Upload area click event bound');
     } else {
-        console.error('上传区域元素未找到！');
+        console.error('Upload area element not found!');
     }
 }
 
 function initPasteSupport() {
     document.addEventListener('paste', async function(e) {
-        console.log('检测到粘贴事件');
+        console.log('Paste event detected');
         
         const clipboardData = e.clipboardData || window.clipboardData;
         if (!clipboardData) {
-            console.log('无法访问剪贴板数据');
+            console.log('Cannot access clipboard data');
             return;
         }
         
@@ -789,19 +787,19 @@ function initPasteSupport() {
         let foundFolderStructure = false;
         
         if (clipboardData.items && clipboardData.items.length > 0) {
-            console.log(`剪贴板中发现 ${clipboardData.items.length} 个项目`);
+            console.log(`Found ${clipboardData.items.length} items in clipboard`);
             
             for (let i = 0; i < clipboardData.items.length; i++) {
                 const item = clipboardData.items[i];
-                console.log(`项目 ${i}:`, item.kind, item.type);
+                console.log(`Item ${i}:`, item.kind, item.type);
                 
                 if (item.kind === 'file') {
                     const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
                     if (entry) {
-                        console.log(`条目 ${i}:`, entry.name, entry.isDirectory ? '目录' : '文件');
+                        console.log(`Entry ${i}:`, entry.name, entry.isDirectory ? 'Directory' : 'File');
                         
                         if (entry.isDirectory) {
-                            console.log(`📁 检测到文件夹: ${entry.name}`);
+                            console.log(`📁 Folder detected: ${entry.name}`);
                             folderMode = true;
                             folderStructure.name = entry.name;
                             foundFolderStructure = true;
@@ -815,26 +813,26 @@ function initPasteSupport() {
                                     const totalFiles = folderStructure.files.length;
                                     const nonFontFiles = totalFiles - files.length;
                                     
-                                    console.log(`📁 文件夹扫描完成: ${totalFiles} 个文件 (${files.length} 个字体文件)`);
+                                    console.log(`📁 Folder scan complete: ${totalFiles} files (${files.length} font files)`);
                                     
                                     updateScanInfo(totalFiles, files.length, nonFontFiles, folderMode);
                                     
-                                    showTemporaryMessage(`${translateText('通过粘贴添加了文件夹')} "${entry.name}"${translateText('，包含')} ${files.length}${translateText('个字体文件')}`, 'success');
+                                    showTemporaryMessage(`Added folder via paste "${entry.name}", contains ${files.length} font files`, 'success');
                                     
                                     handleFiles(files);
                                 } else {
-                                    showTemporaryMessage(`${translateText('文件夹')} "${entry.name}"${translateText('中没有找到字体文件')}`, 'warning');
+                                    showTemporaryMessage(`No font files found in folder "${entry.name}"`, 'warning');
                                 }
                             } catch (error) {
-                                console.error('文件夹扫描失败:', error);
-                                showTemporaryMessage(translateText('文件夹处理失败，请尝试拖拽文件夹'), 'error');
+                                console.error('Folder scan failed:', error);
+                                showTemporaryMessage('Folder processing failed, please try dragging the folder', 'error');
                             }
                             return; 
                         } else if (entry.isFile) {
                             try {
                                 await scanEntry(entry, files);
                             } catch (error) {
-                                console.log('文件处理失败，将使用备用方法');
+                                console.log('File processing failed, trying fallback');
                             }
                         }
                     }
@@ -845,11 +843,11 @@ function initPasteSupport() {
         if (!foundFolderStructure) {
             const clipboardFiles = clipboardData.files;
             if (!clipboardFiles || clipboardFiles.length === 0) {
-                console.log('剪贴板中没有文件');
+                console.log('No files in clipboard');
                 return;
             }
             
-            console.log(`剪贴板中发现 ${clipboardFiles.length} 个文件`);
+            console.log(`Found ${clipboardFiles.length} files in clipboard`);
             
             const fontFiles = Array.from(clipboardFiles).filter(file => {
                 const extension = file.name.toLowerCase().split('.').pop();
@@ -857,108 +855,116 @@ function initPasteSupport() {
             });
             
             if (fontFiles.length > 0) {
-                console.log(`检测到 ${fontFiles.length} 个字体文件，开始处理`);
+                console.log(`Detected ${fontFiles.length} font files, starting processing`);
                 
                 e.preventDefault();
                 
-                showTemporaryMessage(`${translateText('通过粘贴添加了')} ${fontFiles.length}${translateText('个字体文件')}`, 'success');
+                showTemporaryMessage(`Added ${fontFiles.length} font files via paste`, 'success');
                 
                 handleFiles(fontFiles);
             } else {
-                console.log('剪贴板中没有字体文件');
+                console.log('No font files in clipboard');
                 if (clipboardFiles.length > 0) {
-                    showTemporaryMessage(translateText('剪贴板中的文件不是支持的字体格式'), 'warning');
+                    showTemporaryMessage('Files in clipboard are not supported font formats', 'warning');
                 }
             }
         }
     });
+
     
-    console.log('全局粘贴支持已初始化（包含文件夹支持）');
+    console.log('Global paste support initialized (with folder support)');
 }
 
 async function scanEntry(entry, files, basePath = '') {
-    console.log(`扫描条目: ${entry.name}, 类型: ${entry.isDirectory ? '目录' : '文件'}, 基础路径: ${basePath}`);
+    console.log(`Scanning entry: ${entry.name}, Type: ${entry.isDirectory ? 'Directory' : 'File'}, Base Path: ${basePath}`);
     
     if (entry.isFile) {
         return new Promise((resolve) => {
             entry.file((file) => {
-                const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
-                console.log(`处理文件: ${file.name}, 相对路径: ${relativePath}`);
-                
-                const fileInfo = {
-                    file: file,
-                    relativePath: relativePath,
-                    isFont: false
-                };
-                
                 const extension = file.name.toLowerCase().split('.').pop();
                 if (['ttf', 'otf', 'woff', 'woff2'].includes(extension)) {
-                    fileInfo.isFont = true;
-                    files.push(file); 
-                    folderStructure.fontFiles.push(fileInfo);
-                    console.log(`✅ 字体文件: ${relativePath}`);
+                    files.push(file);
+                    
+                    if (folderMode) {
+                        folderStructure.files.push(file);
+                        folderStructure.fontFiles.push(file);
+                        
+                        const fileFullPath = basePath ? `${basePath}/${file.name}` : file.name;
+                        console.log(`Found font file: ${fileFullPath}`);
+                        
+                        file.fullPath = fileFullPath;
+                        
+                        if (basePath) {
+                            folderStructure.directories.add(basePath);
+                        }
+                        
+                        if (!fileSourceTracking.fromFolders.some(f => f.name === file.name && f.size === file.size)) {
+                            fileSourceTracking.fromFolders.push(file);
+                        }
+                    }
                 } else {
-                    console.log(`📄 普通文件: ${relativePath}`);
+                    if (folderMode) {
+                        folderStructure.files.push(file);
+                        
+                        const fileFullPath = basePath ? `${basePath}/${file.name}` : file.name;
+                        file.fullPath = fileFullPath;
+                        
+                        if (basePath) {
+                            folderStructure.directories.add(basePath);
+                        }
+                    }
                 }
-                
-                folderStructure.files.push(fileInfo);
-                
-                if (basePath) {
-                    folderStructure.directories.add(basePath);
-                }
-                
                 resolve();
-            }, () => resolve()); 
+            }, (error) => {
+                console.error(`Failed to read file ${entry.name}:`, error);
+                resolve();
+            });
         });
     } else if (entry.isDirectory) {
-        const currentPath = basePath ? `${basePath}/${entry.name}` : entry.name;
-        console.log(`进入目录: ${entry.name}, 完整路径: ${currentPath}`);
-        folderStructure.directories.add(currentPath);
+        const dirReader = entry.createReader();
         
-        return new Promise((resolve) => {
-            const reader = entry.createReader();
-            const readEntries = async () => {
-                reader.readEntries(async (entries) => {
-                    if (entries.length === 0) {
-                        resolve();
-                        return;
-                    }
-                    
-                    console.log(`目录 ${entry.name} 包含 ${entries.length} 个条目`);
-                    const subPromises = entries.map(subEntry => scanEntry(subEntry, files, currentPath));
-                    await Promise.all(subPromises);
-                    
-                    await readEntries();
-                }, () => resolve()); 
-            };
-            readEntries();
-        });
+        const currentPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+        if (folderMode) {
+            folderStructure.directories.add(currentPath);
+        }
+        
+        const readEntries = async () => {
+            const entries = await new Promise((resolve) => {
+                dirReader.readEntries((results) => resolve(results), (error) => {
+                    console.error(`Failed to read directory ${entry.name}:`, error);
+                    resolve([]);
+                });
+            });
+            
+            if (entries.length > 0) {
+                await Promise.all(entries.map(e => scanEntry(e, files, currentPath)));
+                await readEntries(); 
+            }
+        };
+        
+        await readEntries();
     }
 }
 
 async function scanEntryForCurrentDrop(entry, files, targetFolderStructure, basePath = '') {
-    console.log(`扫描条目: ${entry.name}, 类型: ${entry.isDirectory ? '目录' : '文件'}, 基础路径: ${basePath}`);
+    console.log(`Scanning drop entry: ${entry.name}, Type: ${entry.isDirectory ? 'Directory' : 'File'}, Base Path: ${basePath}`);
     
     if (entry.isFile) {
         return new Promise((resolve) => {
             entry.file((file) => {
-                const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
-                console.log(`处理文件: ${file.name}, 相对路径: ${relativePath}`);
-                
-                const fileInfo = {
-                    file: file,
-                    relativePath: relativePath,
-                    isFont: false
-                };
-                
                 const extension = file.name.toLowerCase().split('.').pop();
+                
+                const relativePath = basePath ? `${basePath}/${file.name}` : file.name;
+                file.fullPath = relativePath; 
+                
+                const fileInfo = file; 
+                
                 if (['ttf', 'otf', 'woff', 'woff2'].includes(extension)) {
-                    fileInfo.isFont = true;
-                    files.push(file); 
+                    files.push(file);
                     targetFolderStructure.fontFiles.push(fileInfo);
-                    console.log(`✅ 字体文件: ${relativePath}`);
+                    console.log(`✅ Font file: ${relativePath}`);
                 } else {
-                    console.log(`📄 普通文件: ${relativePath}`);
+                    console.log(`📄 Normal file: ${relativePath}`);
                 }
                 
                 targetFolderStructure.files.push(fileInfo);
@@ -972,7 +978,7 @@ async function scanEntryForCurrentDrop(entry, files, targetFolderStructure, base
         });
     } else if (entry.isDirectory) {
         const currentPath = basePath ? `${basePath}/${entry.name}` : entry.name;
-        console.log(`进入目录: ${entry.name}, 完整路径: ${currentPath}`);
+        console.log(`Entering directory: ${entry.name}, Full path: ${currentPath}`);
         targetFolderStructure.directories.add(currentPath);
         
         return new Promise((resolve) => {
@@ -984,7 +990,7 @@ async function scanEntryForCurrentDrop(entry, files, targetFolderStructure, base
                         return;
                     }
                     
-                    console.log(`目录 ${entry.name} 包含 ${entries.length} 个条目`);
+                    console.log(`Directory ${entry.name} contains ${entries.length} items`);
                     const subPromises = entries.map(subEntry => scanEntryForCurrentDrop(subEntry, files, targetFolderStructure, currentPath));
                     await Promise.all(subPromises);
                     
@@ -1985,30 +1991,30 @@ async function downloadFolderAsZip() {
     console.log('================================');
 
     if (typeof JSZip === 'undefined') {
-        console.error('❌ JSZip库未加载，无法创建ZIP文件');
-        showTemporaryMessage(translateText('请刷新页面重试，或检查网络连接'), 'error');
+        console.error('❌ JSZip library not loaded, cannot create ZIP file');
+        showTemporaryMessage('Please refresh page and try again, or check network connection', 'error');
         return;
     }
 
     if (!folderStructure.files || folderStructure.files.length === 0) {
-        console.error('❌ 没有找到文件夹结构数据，无法创建ZIP');
-        console.error(`🔍 调试: folderStructure.files=${folderStructure.files ? folderStructure.files.length : 'null'}, folderMode=${folderMode}`);
-        showTemporaryMessage(translateText('请重新拖拽文件夹后再试'), 'warning');
+        console.error('❌ No folder structure data found, cannot create ZIP');
+        console.error(`🔍 Debug: folderStructure.files=${folderStructure.files ? folderStructure.files.length : 'null'}, folderMode=${folderMode}`);
+        showTemporaryMessage('Please drag folder again and retry', 'warning');
         return;
     }
 
-    console.log('📦 正在创建ZIP文件，保持目录结构...');
+    console.log('📦 Creating ZIP file, preserving directory structure...');
     
     try {
         const zip = new JSZip();
         const outputFolderName = folderStructure.folderNames.length > 1 
             ? folderStructure.folderNames.join('_') 
             : folderStructure.name;
-        console.log('输出文件夹名称:', outputFolderName);
-        console.log('文件夹列表:', folderStructure.folderNames);
+        console.log('Output folder name:', outputFolderName);
+        console.log('Folder list:', folderStructure.folderNames);
         
-        updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
-        console.log('开始创建目录，总数:', folderStructure.directories.size);
+        updateZipProgress(10, 'Creating directory structure...', `Creating ${folderStructure.directories.size} directories`);
+        console.log('Starting directory creation, total:', folderStructure.directories.size);
         let dirCount = 0;
         folderStructure.directories.forEach(dirPath => {
             let fullPath;
@@ -2023,20 +2029,20 @@ async function downloadFolderAsZip() {
                 }
             }
             zip.folder(fullPath);
-            console.log('创建目录:', fullPath);
+            console.log('Creating directory:', fullPath);
             dirCount++;
         });
-        console.log(`✅ 完成创建 ${dirCount} 个目录（${folderStructure.folderNames.length > 1 ? '多文件夹保持结构' : '单文件夹扁平化'}）`);
+        console.log(`✅ Created ${dirCount} directories (${folderStructure.folderNames.length > 1 ? 'Multi-folder structure' : 'Single-folder flattened'})`);
         
-        updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
+        updateZipProgress(20, 'Preparing font files...', `Mapping ${processedFonts.length} processed fonts`);
         const processedFontMap = new Map();
         processedFonts.forEach(font => {
             processedFontMap.set(font.name, font.data);
-            console.log(`映射字体: ${font.name} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
+            console.log(`Mapped font: ${font.name} -> ${font.data ? font.data.byteLength + ' bytes' : 'null'}`);
         });
-        console.log(`✅ 字体映射完成，共 ${processedFontMap.size} 个字体`);
+        console.log(`✅ Font mapping complete, total ${processedFontMap.size} fonts`);
         
-        console.log('开始添加文件到ZIP，总数:', folderStructure.files.length);
+        console.log('Adding files to ZIP, total:', folderStructure.files.length);
         let addedFiles = 0;
         let skippedFiles = 0;
         const totalFiles = folderStructure.files.length;
@@ -2054,37 +2060,37 @@ async function downloadFolderAsZip() {
             }
             
             const fileProgress = 20 + (i / totalFiles) * 60;
-            updateZipProgress(fileProgress, '正在添加文件...', `处理 ${finalPath} (${i + 1}/${totalFiles})`);
+            updateZipProgress(fileProgress, 'Adding files...', `Processing ${finalPath} (${i + 1}/${totalFiles})`);
             
             try {
                 if (isFont) {
                     const processedData = processedFontMap.get(file.name);
                     if (processedData) {
                         zip.file(finalPath, processedData);
-                        console.log(`✅ 添加处理后的字体: ${finalPath} (${processedData.byteLength}字节)`);
+                        console.log(`✅ Added processed font: ${finalPath} (${processedData.byteLength} bytes)`);
                         addedFiles++;
                     } else {
-                        console.log(`❌ 未找到处理后的字体数据: ${file.name}`);
+                        console.log(`❌ Processed font data not found: ${file.name}`);
                         skippedFiles++;
                     }
                 } else {
                     const fileData = await readFileAsArrayBuffer(file);
                     zip.file(finalPath, fileData);
-                    console.log(`✅ 复制原文件: ${finalPath} (${fileData.byteLength}字节)`);
+                    console.log(`✅ Copied original file: ${finalPath} (${fileData.byteLength} bytes)`);
                     addedFiles++;
                 }
             } catch (error) {
-                console.error(`❌ 处理文件失败 ${finalPath}:`, error);
+                console.error(`❌ Failed to process file ${finalPath}:`, error);
                 skippedFiles++;
             }
         }
         
-        console.log(`✅ 文件添加完成: 成功${addedFiles}个, 跳过${skippedFiles}个`);
-        console.log(`📦 已添加 ${addedFiles} 个文件到ZIP中`);
+        console.log(`✅ File addition complete: Success ${addedFiles}, Skipped ${skippedFiles}`);
+        console.log(`📦 Added ${addedFiles} files to ZIP`);
         
-        updateZipProgress(80, '正在生成ZIP文件...', '压缩数据，请稍候...');
-        console.log('📦 正在生成ZIP文件...');
-        console.log('开始生成ZIP文件...');
+        updateZipProgress(80, 'Generating ZIP file...', 'Compressing data, please wait...');
+        console.log('📦 Generating ZIP file...');
+        console.log('Starting ZIP generation...');
         
         const zipBlob = await zip.generateAsync({
             type: 'blob',
@@ -2094,25 +2100,25 @@ async function downloadFolderAsZip() {
             }
         });
         
-        console.log(`✅ ZIP文件生成完成，大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
-        console.log(`📦 ZIP文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`✅ ZIP file generated, size: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`📦 ZIP file size: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         
-        updateZipProgress(95, '正在准备下载...', `文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
-        console.log('开始下载ZIP文件...');
+        updateZipProgress(95, 'Preparing download...', `File size: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log('Starting ZIP download...');
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `${outputFolderName}.zip`;
         
-        console.log('下载链接:', url);
-        console.log('下载文件名:', `${outputFolderName}.zip`);
+        console.log('Download link:', url);
+        console.log('Download filename:', `${outputFolderName}.zip`);
         
-        updateZipProgress(100, '下载完成！', `${outputFolderName}.zip 已开始下载`);
+        updateZipProgress(100, 'Download Complete!', `${outputFolderName}.zip download started`);
         
         document.body.appendChild(a);
-        console.log('触发下载...');
+        console.log('Triggering download...');
         a.click();
-        console.log('下载已触发');
+        console.log('Download triggered');
         
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
@@ -2120,15 +2126,15 @@ async function downloadFolderAsZip() {
         const fontFiles = folderStructure.fontFiles.length;
         const nonFontFiles = totalFiles - fontFiles;
         
-        console.log(`🎉 ZIP文件下载完成！`);
-        console.log(`📊 包含: ${fontFiles} 个处理后的字体文件, ${nonFontFiles} 个原始文件`);
-        console.log(`📁 单独文件夹模式：扁平化结构，解压后直接可用，无需额外操作`);
-        console.log('ZIP下载过程完成');
+        console.log(`🎉 ZIP file download complete!`);
+        console.log(`📊 Includes: ${fontFiles} processed font files, ${nonFontFiles} original files`);
+        console.log(`📁 Single folder mode: Flattened structure, ready to use after unzip`);
+        console.log('ZIP download process finished');
         
         hideZipProgress();
         
     } catch (error) {
-        console.error(`❌创建ZIP文件失败: ${error.message}`);
+        console.error(`❌ Failed to create ZIP file: ${error.message}`);
         console.error('ZIP creation error:', error);
         
         hideZipProgress();
@@ -2136,20 +2142,20 @@ async function downloadFolderAsZip() {
 }
 
 async function downloadMixedModeAsZip() {
-    console.log('=== downloadMixedModeAsZip 调试信息 ===');
-    console.log('JSZip类型:', typeof JSZip);
+    console.log('=== downloadMixedModeAsZip Debug Info ===');
+    console.log('JSZip type:', typeof JSZip);
     console.log('fileSourceTracking:', fileSourceTracking);
     console.log('folderStructure:', folderStructure);
     console.log('processedFonts.length:', processedFonts.length);
     console.log('================================');
 
     if (typeof JSZip === 'undefined') {
-        console.error('❌ JSZip库未加载，无法创建ZIP文件');
-        showTemporaryMessage(translateText('请刷新页面重试，或检查网络连接'), 'error');
+        console.error('❌ JSZip library not loaded, cannot create ZIP file');
+        showTemporaryMessage('Please refresh page and try again, or check network connection', 'error');
         return;
     }
 
-    console.log('📦 正在创建混合模式ZIP文件...');
+    console.log('📦 Creating mixed mode ZIP file...');
     
     try {
         const zip = new JSZip();
@@ -2172,57 +2178,57 @@ async function downloadMixedModeAsZip() {
             ? nameComponents.join('_')
             : 'processed_fonts';
             
-        console.log('输出文件夹名称:', outputFolderName);
-        console.log('单独文件:', fileSourceTracking.standalone.map(f => f.name));
-        console.log('文件夹列表:', folderStructure.folderNames);
-        console.log('名称组件:', nameComponents);
+        console.log('Output folder name:', outputFolderName);
+        console.log('Standalone files:', fileSourceTracking.standalone.map(f => f.name));
+        console.log('Folder list:', folderStructure.folderNames);
+        console.log('Name components:', nameComponents);
         
-        updateZipProgress(10, '正在创建目录结构...', `创建 ${folderStructure.directories.size} 个目录`);
-        console.log('开始创建目录，总数:', folderStructure.directories.size);
+        updateZipProgress(10, 'Creating directory structure...', `Creating ${folderStructure.directories.size} directories`);
+        console.log('Starting directory creation, total:', folderStructure.directories.size);
         let dirCount = 0;
         folderStructure.directories.forEach(dirPath => {
             const fullPath = `${dirPath}/`;
             zip.folder(fullPath);
             dirCount++;
             if (dirCount <= 5) { 
-                console.log('创建目录:', fullPath);
+                console.log('Creating directory:', fullPath);
             }
         });
-        console.log(`✅ 完成创建 ${dirCount} 个目录`);
+        console.log(`✅ Created ${dirCount} directories`);
         
-        updateZipProgress(20, '正在准备字体文件...', `映射 ${processedFonts.length} 个处理后的字体`);
+        updateZipProgress(20, 'Preparing font files...', `Mapping ${processedFonts.length} processed fonts`);
         const processedFontMap = new Map();
         processedFonts.forEach(font => {
             processedFontMap.set(font.name, font.data);
-            console.log(`映射字体: ${font.name} -> ${font.data ? font.data.byteLength + '字节' : 'null'}`);
+            console.log(`Mapped font: ${font.name} -> ${font.data ? font.data.byteLength + ' bytes' : 'null'}`);
         });
-        console.log(`✅ 字体映射完成，共 ${processedFontMap.size} 个字体`);
+        console.log(`✅ Font mapping complete, total ${processedFontMap.size} fonts`);
 
-        console.log('开始添加单独文件到ZIP根目录，总数:', fileSourceTracking.standalone.length);
+        console.log('Adding standalone files to ZIP root, total:', fileSourceTracking.standalone.length);
         let addedStandaloneFiles = 0;
         
         for (let i = 0; i < fileSourceTracking.standalone.length; i++) {
             const file = fileSourceTracking.standalone[i];
             
             const fileProgress = 20 + (i / fileSourceTracking.standalone.length) * 20;
-            updateZipProgress(fileProgress, '正在添加单独文件...', `处理 ${file.name} (${i + 1}/${fileSourceTracking.standalone.length})`);
+            updateZipProgress(fileProgress, 'Adding standalone files...', `Processing ${file.name} (${i + 1}/${fileSourceTracking.standalone.length})`);
             
             try {
                 const processedData = processedFontMap.get(file.name);
                 if (processedData) {
                     zip.file(file.name, processedData);
-                    console.log(`✅ 添加单独文件到根目录: ${file.name} (${processedData.byteLength}字节)`);
+                    console.log(`✅ Added standalone file to root: ${file.name} (${processedData.byteLength} bytes)`);
                     addedStandaloneFiles++;
                 } else {
-                    console.log(`❌ 未找到单独文件的处理后数据: ${file.name}`);
+                    console.log(`❌ Processed data not found for standalone file: ${file.name}`);
                 }
             } catch (error) {
-                console.error(`❌ 处理单独文件失败 ${file.name}:`, error);
+                console.error(`❌ Failed to process standalone file ${file.name}:`, error);
             }
         }
-        console.log(`✅ 单独文件添加完成: 成功${addedStandaloneFiles}个`);
+        console.log(`✅ Standalone files added: Success ${addedStandaloneFiles}`);
         
-        console.log('开始添加文件夹文件到ZIP，总数:', folderStructure.files.length);
+        console.log('Adding folder files to ZIP, total:', folderStructure.files.length);
         let addedFolderFiles = 0;
         let skippedFiles = 0;
         const totalFolderFiles = folderStructure.files.length;
@@ -2232,36 +2238,35 @@ async function downloadMixedModeAsZip() {
             const { file, relativePath, isFont } = fileInfo;
             
             const fileProgress = 40 + (i / totalFolderFiles) * 40;
-            updateZipProgress(fileProgress, '正在添加文件夹文件...', `处理 ${relativePath} (${i + 1}/${totalFolderFiles})`);
+            updateZipProgress(fileProgress, 'Adding folder files...', `Processing ${relativePath} (${i + 1}/${totalFolderFiles})`);
             
             try {
                 if (isFont) {
                     const processedData = processedFontMap.get(file.name);
                     if (processedData) {
                         zip.file(relativePath, processedData);
-                        console.log(`✅ 添加文件夹字体: ${relativePath} (${processedData.byteLength}字节)`);
+                        console.log(`✅ Added processed font to folder: ${relativePath} (${processedData.byteLength} bytes)`);
                         addedFolderFiles++;
                     } else {
-                        console.log(`❌ 未找到文件夹字体的处理后数据: ${file.name}`);
+                        console.log(`❌ Processed data not found for folder file: ${file.name}`);
                         skippedFiles++;
                     }
                 } else {
                     const fileData = await readFileAsArrayBuffer(file);
                     zip.file(relativePath, fileData);
-                    console.log(`✅ 复制原文件: ${relativePath} (${fileData.byteLength}字节)`);
+                    console.log(`✅ Copied original file to folder: ${relativePath} (${fileData.byteLength} bytes)`);
                     addedFolderFiles++;
                 }
             } catch (error) {
-                console.error(`❌ 处理文件夹文件失败 ${relativePath}:`, error);
+                console.error(`❌ Failed to process file ${relativePath}:`, error);
                 skippedFiles++;
             }
         }
+        console.log(`✅ Folder files added: Success ${addedFolderFiles}, Skipped ${skippedFiles}`);
         
-        console.log(`✅ 文件夹文件添加完成: 成功${addedFolderFiles}个, 跳过${skippedFiles}个`);
-        console.log(`📦 混合模式ZIP: ${addedStandaloneFiles}个单独文件(根目录) + ${addedFolderFiles}个文件夹文件(目录结构)`);
-        
-        updateZipProgress(80, '正在生成ZIP文件...', '压缩数据，请稍候...');
-        console.log('📦 正在生成混合模式ZIP文件...');
+        updateZipProgress(80, 'Generating ZIP file...', 'Compressing data, please wait...');
+        console.log('📦 Generating ZIP file...');
+        console.log('Starting ZIP generation...');
         
         const zipBlob = await zip.generateAsync({
             type: 'blob',
@@ -2271,60 +2276,111 @@ async function downloadMixedModeAsZip() {
             }
         });
         
-        console.log(`✅ 混合模式ZIP文件生成完成，大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`✅ ZIP file generated, size: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log(`📦 ZIP file size: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
         
-        updateZipProgress(95, '正在准备下载...', `文件大小: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
-        console.log('开始下载混合模式ZIP文件...');
+        updateZipProgress(95, 'Preparing download...', `File size: ${(zipBlob.size / 1024 / 1024).toFixed(2)}MB`);
+        console.log('Starting ZIP download...');
         const url = URL.createObjectURL(zipBlob);
         const a = document.createElement('a');
         a.href = url;
         a.download = `${outputFolderName}.zip`;
         
-        console.log('下载链接:', url);
-        console.log('下载文件名:', `${outputFolderName}.zip`);
+        console.log('Download link:', url);
+        console.log('Download filename:', `${outputFolderName}.zip`);
         
-        updateZipProgress(100, '下载完成！', `${outputFolderName}.zip 已开始下载`);
+        updateZipProgress(100, 'Download Complete!', `${outputFolderName}.zip download started`);
         
         document.body.appendChild(a);
-        console.log('触发下载...');
+        console.log('Triggering download...');
         a.click();
-        console.log('下载已触发');
+        console.log('Download triggered');
         
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
-        const totalProcessedFiles = addedStandaloneFiles + addedFolderFiles;
-        
-        console.log(`🎉 混合模式ZIP文件下载完成！`);
-        console.log(`📊 包含: ${addedStandaloneFiles}个单独文件(根目录) + ${addedFolderFiles}个文件夹文件(目录结构)`);
-        console.log(`📁 混合模式处理完成`);
-        console.log('混合模式ZIP下载过程完成');
+        const totalAdded = addedStandaloneFiles + addedFolderFiles;
+        console.log(`🎉 Mixed mode ZIP download complete!`);
+        console.log(`📊 Includes: ${totalAdded} total files (${addedStandaloneFiles} standalone, ${addedFolderFiles} from folders)`);
+        console.log('ZIP download process finished');
         
         hideZipProgress();
         
     } catch (error) {
-        console.error(`❌创建混合模式ZIP文件失败: ${error.message}`);
-        console.error('Mixed mode ZIP creation error:', error);
+        console.error(`❌ Failed to create ZIP file: ${error.message}`);
+        console.error('ZIP creation error:', error);
         
         hideZipProgress();
     }
 }
 
-function readFileAsArrayBuffer(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('文件读取失败'));
-        reader.readAsArrayBuffer(file);
-    });
+function clearAllProcessedFiles() {
+    if (processedFonts.length === 0) {
+        return;
+    }
+    
+    if (confirm('Are you sure you want to clear all processed results? This cannot be undone.')) {
+        console.log('Clearing all processed files...');
+        processedFonts = [];
+        
+        fileSourceTracking.standalone = [];
+        fileSourceTracking.fromFolders = [];
+        
+        folderMode = false;
+        folderStructure = {
+            name: '',
+            folderNames: [],
+            files: [],
+            fontFiles: [],
+            directories: new Set()
+        };
+        
+        updateDownloadItemsDisplay();
+        
+        downloadControls.style.display = 'none';
+        downloadSection.style.display = 'none';
+        
+        console.log('📦 All data cleared');
+        showTemporaryMessage('All processed files cleared', 'success');
+        
+        scrollToUploadArea();
+    }
+}
+
+function updateScanInfo(total, fontCount, otherCount, isFolder = false) {
+    if (!scanInfo || !scanInfoText) return;
+    
+    scanInfo.style.display = 'flex';
+    
+    let message = '';
+    if (isFolder) {
+        message = `Folder scan: Found ${total} files (${fontCount} font files, ${otherCount} other files)`;
+    } else {
+        message = `Found ${total} files (${fontCount} font files, ${otherCount} other files)`;
+    }
+    
+    scanInfoText.textContent = message;
+    
+    scanInfo.classList.remove('fade-in');
+    void scanInfo.offsetWidth; 
+    scanInfo.classList.add('fade-in');
+}
+
+function updateZipProgress(percent, text, details) {
+    if (zipProgressContainer) {
+        zipProgressContainer.style.display = 'block';
+        zipProgressFill.style.width = `${percent}%`;
+        if (zipProgressText) zipProgressText.textContent = text;
+        if (zipProgressDetails) zipProgressDetails.textContent = details;
+    }
 }
 
 function showZipProgress() {
     if (zipProgressContainer) {
         zipProgressContainer.style.display = 'block';
         zipProgressFill.style.width = '0%';
-        zipProgressText.textContent = translateText('正在准备ZIP生成...');
-        zipProgressDetails.textContent = translateText('初始化中...');
+        if (zipProgressText) zipProgressText.textContent = 'Preparing...';
+        if (zipProgressDetails) zipProgressDetails.textContent = 'Initializing...';
     }
 }
 
@@ -2336,69 +2392,18 @@ function hideZipProgress() {
     }
 }
 
-function updateZipProgress(percentage, statusText, detailText) {
-    if (zipProgressFill && zipProgressText && zipProgressDetails) {
-        zipProgressFill.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
-        zipProgressText.textContent = statusText;
-        zipProgressDetails.textContent = detailText;
-        
-        if (percentage >= 100) {
-            zipProgressFill.style.background = 'linear-gradient(90deg, #4caf50, #8bc34a)';
-            zipProgressText.innerHTML = '<i class="fas fa-check"></i> ' + statusText;
-        }
-    }
+function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsArrayBuffer(file);
+    });
 }
 
-function clearAllProcessedFiles() {
-    console.log('🧹 开始清理全部文件和处理结果...');
-    
-    selectedFiles = [];
-    
-    processedFonts = [];
-    
-    folderMode = false;
-    folderStructure = {
-        name: '',
-        folderNames: [],
-        files: [],
-        fontFiles: [],
-        directories: new Set()
-    };
-    
-    fileSourceTracking = {
-        standalone: [],
-        fromFolders: []
-    };
-    
-    updateFileList();
-    hideScanInfo();
-    
-    downloadSection.style.display = 'none';
-    downloadItems.innerHTML = '';
-    downloadControls.style.display = 'none';
-    
-    resetProgressBar();
-    
-    resetTimingDisplay();
-    
-    processBtn.disabled = false;
-    processBtn.innerHTML = `<i class="fas fa-rocket"></i> ${translateText('开始处理字体')}`;
-    
-    processingStartTime = null;
-    
-    if (fileInput) {
-        fileInput.value = '';
-    }
-    
-    console.log('✅ 完全清理完成！已重置到初始状态');
-    
-    showTemporaryMessage(translateText('已清理全部文件和处理结果，界面已重置'), 'success');
-    
-    scrollToUploadArea();
-}
-
-function resetProgressBar() {
-    if (progressContainer) {
+function scrollToUploadArea() {
+    if (uploadSection) {
+        uploadSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         progressContainer.style.display = 'none';
         progressFill.style.width = '0%';
         progressText.textContent = '0%';
@@ -2449,11 +2454,9 @@ function showTemporaryMessage(message, type = 'info') {
     }, 100);
     
     setTimeout(() => {
-        messageDiv.classList.remove('show');
+        msgEl.classList.remove('show');
         setTimeout(() => {
-            if (messageDiv.parentNode) {
-                messageDiv.parentNode.removeChild(messageDiv);
-            }
+            msgEl.remove();
         }, 300);
     }, 3000);
 }
@@ -2490,262 +2493,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 window.addEventListener('error', function(e) {
-    console.error(`发生错误: ${e.message}`);
+    console.error(`Error occurred: ${e.message}`);
 });
 
 window.addEventListener('unhandledrejection', function(e) {
-    console.error(`Promise错误: ${e.reason}`);
+    console.error(`Promise error: ${e.reason}`);
     e.preventDefault();
 });
-
-function initFontToolI18n() {
-    setupTranslateFunction();
-    
-    const currentLang = localStorage.getItem('catime-language') || 'zh';
-    
-    const htmlRoot = document.getElementById('html-root');
-    if (htmlRoot) {
-        htmlRoot.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
-    }
-    
-    if (currentLang === 'en') {
-        applyFontToolTranslations();
-    }
-    
-    setTimeout(initLanguageToggleForFontTool, 100);
-}
-
-function setupTranslateFunction() {
-    const translations = {
-        'Catime - 字体简化工具': 'Catime - Font Simplifier',
-        'Catime 字体简化工具 - 批量处理字体文件，只保留指定字符的专业级 Web 版本': 'Catime Font Simplifier - Professional web tool for batch processing font files, keeping only specified characters',
-        
-        '字体简化工具': 'Font Simplifier',
-        
-        '拖拽字体文件或文件夹到这里': 'Drag font files or folders here',
-        '或者通过 Ctrl+V 粘贴': 'Or paste with Ctrl+V',
-        '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件': 'Support drag/paste folders, automatically scan all font files in subfolders',
-        '选择文件': 'Choose Files',
-        '拖拽字体文件到这里': 'Drag font files here',
-        '支持 .ttf, .otf, .woff, .woff2 格式': 'Support .ttf, .otf, .woff, .woff2 formats',
-        '可以拖拽/粘贴文件夹，自动扫描所有字体文件': 'Drag/paste folders to auto-scan all font files',
-        
-        '清除所有文件': 'Clear All Files',
-        
-        '要保留的字符': 'Characters to Keep',
-        '请输入要保留的字符，例如：0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz': 'Enter characters to keep, e.g.: 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-        '数字+:.': 'Numbers+:.',
-        '数字 0-9': 'Numbers 0-9',
-        '英文字母': 'Letters',
-        '字母+数字': 'Letters+Numbers',
-        
-        '开始处理字体': 'Start Processing',
-        
-        '正在准备字体处理引擎': 'Preparing Font Processing Engine',
-        '正在加载处理引擎...': 'Loading processing engine...',
-        '正在安装核心库...': 'Installing core libraries...',
-        '正在配置字体处理组件...': 'Configuring font processing components...',
-        '正在初始化字体处理引擎...': 'Initializing font processing engine...',
-        '字体处理引擎已就绪！': 'Font processing engine ready!',
-        '引擎加载失败，启用备用方案...': 'Engine loading failed, enabling fallback...',
-        '字体处理引擎正在初始化，请稍候...': 'Font processing engine is initializing, please wait...',
-        
-        '处理后的字体': 'Processed Fonts',
-        '下载字体文件': 'Download Fonts',
-        '清理全部': 'Clear All',
-        
-        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。': 'Fully local processing. All calculations are done in your browser. No data is uploaded to any server.',
-        
-        '正在生成ZIP文件...': 'Generating ZIP file...',
-        '准备中...': 'Preparing...',
-        
-        '处理中...': 'Processing...',
-        '处理完成': 'Processing Completed',
-        '下载': 'Download',
-        '下载字体文件': 'Download Fonts',
-        '下载所有字体文件': 'Download All Fonts',
-        '下载完整文件夹 (ZIP)': 'Download Complete Folder (ZIP)',
-        '扫描完成，发现': 'Scan completed, found',
-        '个文件': ' files',
-        '个字体文件': ' font files',
-        '个其他文件': ' other files',
-        '所有字体处理完成！成功处理': 'All fonts processed! Successfully processed',
-        '字体处理完成！成功处理': 'Font processing completed! Successfully processed',
-        '字体处理失败，没有成功处理任何文件': 'Font processing failed, no files were successfully processed',
-        '字体处理过程中发生错误，请重试': 'An error occurred during font processing, please try again',
-        '成功添加': 'Successfully added',
-        '个字体文件，总计': ' font files, total',
-        '个文件待处理。': ' files to process.',
-        '总耗时: ': 'Total time: ',
-        '秒': 's',
-        '分钟': 'm',
-        '小时': 'h',
-        '文件夹模式': 'Folder Mode',
-        '压缩了': 'compressed',
-        '处理完成，总耗时: ': 'Processing completed, total time: ',
-        '个文件': ' files',
-        '包含目录结构和所有非字体文件': 'Including directory structure and all non-font files',
-        '个单独文件': ' standalone files',
-        '个文件夹文件': ' folder files',
-        '已耗时: ': 'Elapsed: ',
-        '请先选择要处理的字体文件！': 'Please select font files to process first!',
-        '请输入要保留的字符！': 'Please enter characters to keep!',
-        '字体处理引擎尚未就绪，请稍候再试': 'Font processing engine not ready, please try again later',
-        '通过粘贴添加了文件夹': 'Added folder via paste',
-        '，包含': ', containing',
-        '中没有找到字体文件': ' contains no font files',
-        '文件夹处理失败，请尝试拖拽文件夹': 'Folder processing failed, please try dragging folder',
-        '通过粘贴添加了': 'Added via paste',
-        '剪贴板中的文件不是支持的字体格式': 'Files in clipboard are not supported font formats',
-        '已删除字体: ': 'Deleted font: ',
-        '请刷新页面重试，或检查网络连接': 'Please refresh the page or check network connection',
-        '请重新拖拽文件夹后再试': 'Please drag the folder again and try',
-        '已清理全部文件和处理结果，界面已重置': 'All files and processing results cleared, interface reset',
-        '文件夹': 'Folder',
-        '删除此处理后的字体': 'Delete this processed font',
-        '正在准备ZIP生成...': 'Preparing ZIP generation...',
-        '初始化中...': 'Initializing...',
-        '测试覆盖层': 'Test Overlay',
-    };
-    
-    window.translateText = function(text) {
-        if (localStorage.getItem('catime-language') !== 'en') return text;
-        return translations[text] || text;
-    };
-}
-
-function applyFontToolTranslations() {
-    
-    const pageTitle = document.querySelector('title');
-    if (pageTitle) {
-        const translatedTitle = translateText(pageTitle.textContent);
-        if (translatedTitle !== pageTitle.textContent) {
-            pageTitle.textContent = translatedTitle;
-        }
-    }
-    
-    const metaDescription = document.querySelector('meta[name="description"]');
-    if (metaDescription) {
-        const content = metaDescription.getAttribute('content');
-        const translatedContent = translateText(content);
-        if (translatedContent !== content) {
-            metaDescription.setAttribute('content', translatedContent);
-        }
-    }
-    
-    const staticTexts = [
-        '字体简化工具',
-        '拖拽字体文件或文件夹到这里',
-        '或者通过 Ctrl+V 粘贴',
-        '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件',
-        '选择文件',
-        '拖拽字体文件到这里',
-        '支持 .ttf, .otf, .woff, .woff2 格式',
-        '可以拖拽/粘贴文件夹，自动扫描所有字体文件',
-        '清除所有文件',
-        '要保留的字符',
-        '请输入要保留的字符，例如：0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-        '数字+:.',
-        '数字 0-9',
-        '英文字母',
-        '字母+数字',
-        '开始处理字体',
-        '处理后的字体',
-        '下载字体文件',
-        '清理全部',
-        '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。',
-        '正在准备字体处理引擎',
-        '字体处理引擎正在初始化，请稍候...'
-    ];
-    
-    staticTexts.forEach(chinese => {
-        const english = translateText(chinese);
-        if (english !== chinese) {
-            const elements = document.querySelectorAll('*:not(script):not(style)');
-            elements.forEach(element => {
-                if (element.childNodes.length > 0) {
-                    element.childNodes.forEach(node => {
-                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim() === chinese) {
-                            node.textContent = english;
-                            
-                            if (chinese === '完全本地处理，所有计算在浏览器中完成，数据不会上传到任何服务器。') {
-                                element.classList.add('english-notice');
-                            } else if (chinese === '支持拖拽/粘贴文件夹，会自动扫描所有子文件夹中的字体文件') {
-                                element.classList.add('english-folder-hint');
-                            }
-                        }
-                    });
-                }
-                
-                if (element.placeholder === chinese) {
-                    element.placeholder = english;
-                }
-                
-                if (element.title === chinese) {
-                    element.title = english;
-                }
-            });
-        }
-    });
-    
-    handleSpecialTranslations();
-    
-    updateButtonTexts();
-}
-
-function updateButtonTexts() {
-    if (processBtn && !processBtn.disabled) {
-        processBtn.innerHTML = `<i class="fas fa-rocket"></i> ${translateText('开始处理字体')}`;
-    }
-    
-    if (downloadAllBtn && typeof updateDownloadButtonText === 'function') {
-        updateDownloadButtonText();
-    }
-}
-
-function handleSpecialTranslations() {
-    const lang = localStorage.getItem('catime-language') || 'zh';
-    if (lang !== 'en') return;
-    
-    const heroTitle = document.querySelector('.guide-hero-title');
-    if (heroTitle) {
-        const catimeSpan = heroTitle.querySelector('.catime-text');
-        const accentSpan = heroTitle.querySelector('.guide-accent');
-        if (catimeSpan && accentSpan) {
-            accentSpan.textContent = 'Font Simplifier';
-        }
-    }
-}
-
-function initLanguageToggleForFontTool() {
-    const languageToggle = document.getElementById('language-toggle');
-    if (!languageToggle) return;
-    
-    const currentLang = localStorage.getItem('catime-language') || 'zh';
-    
-    updateToggleTextForFontTool(currentLang);
-    
-    if (!languageToggle.dataset.fontToolListener) {
-        languageToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const newLang = currentLang === 'zh' ? 'en' : 'zh';
-            localStorage.setItem('catime-language', newLang);
-            
-            window.location.reload();
-        });
-        
-        languageToggle.dataset.fontToolListener = 'true';
-    }
-}
-
-function updateToggleTextForFontTool(lang) {
-    const languageToggle = document.getElementById('language-toggle');
-    if (!languageToggle) return;
-    
-    if (lang === 'zh') {
-        languageToggle.innerHTML = '<i class="fas fa-language"></i> English';
-    } else {
-        languageToggle.innerHTML = '<i class="fas fa-language"></i> 中文';
-    }
-}

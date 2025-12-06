@@ -1,36 +1,30 @@
 let SUPPORT_METRICS = { total: 0, totalCNY: 0, count: 0, animated: false };
 
 const CURRENCY_STATE = {
-    target: 'CNY', 
-    symbol: '¥',
+    target: 'USD', 
+    symbol: '$',
     rateCnyToUsd: 0, 
     lastUpdated: 0
 };
 
 function initCurrency() {
-    const currentLang = localStorage.getItem('catime-language') || 'zh';
-    const isEnglish = currentLang === 'en';
-    CURRENCY_STATE.target = isEnglish ? 'USD' : 'CNY';
-    CURRENCY_STATE.symbol = isEnglish ? '$' : '¥';
-
-    if (isEnglish) {
-        const cached = getCachedRateSync();
-        if (cached > 0) {
-            CURRENCY_STATE.rateCnyToUsd = cached;
-        }
-        loadExchangeRateCnyToUsd()
-            .then((rate) => {
-                if (rate > 0) {
-                    CURRENCY_STATE.rateCnyToUsd = rate;
-                    CURRENCY_STATE.lastUpdated = Date.now();
-                    if (SUPPORT_METRICS.animated) {
-                        renderSupportTotalImmediate();
-                    }
-                }
-            })
-            .catch(() => {
-            });
+    // Default to USD/English
+    const cached = getCachedRateSync();
+    if (cached > 0) {
+        CURRENCY_STATE.rateCnyToUsd = cached;
     }
+    loadExchangeRateCnyToUsd()
+        .then((rate) => {
+            if (rate > 0) {
+                CURRENCY_STATE.rateCnyToUsd = rate;
+                CURRENCY_STATE.lastUpdated = Date.now();
+                if (SUPPORT_METRICS.animated) {
+                    renderSupportTotalImmediate();
+                }
+            }
+        })
+        .catch(() => {
+        });
 }
 
 function getCachedRateSync() {
@@ -88,16 +82,14 @@ function loadExchangeRateCnyToUsd() {
 }
 
 function getDisplayTotal(totalCNY) {
-    if (CURRENCY_STATE.target === 'USD') {
-        const rate = CURRENCY_STATE.rateCnyToUsd || getCachedRateSync();
-        if (rate > 0) return totalCNY * rate;
-        return totalCNY * 0.14;
-    }
-    return totalCNY;
+    // Always convert to USD as target is USD
+    const rate = CURRENCY_STATE.rateCnyToUsd || getCachedRateSync();
+    if (rate > 0) return totalCNY * rate;
+    return totalCNY * 0.14;
 }
 
 function formatCurrency(value) {
-    const lang = CURRENCY_STATE.target === 'USD' ? 'en-US' : 'zh-CN';
+    const lang = 'en-US';
     const amount = Number(value || 0);
     const formatted = amount.toLocaleString(lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return `${CURRENCY_STATE.symbol}${formatted}`;
@@ -225,8 +217,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initCoffeeParticles();
     
-    addSupportTranslations();
-
     initCurrency();
 
     updateSupportTotal();
@@ -234,26 +224,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initCapsuleSparkles();
     initCapsuleConfetti();
     initCapsuleNumberObserver();
-
-    const languageToggle = document.getElementById('language-toggle');
-    if (languageToggle) {
-        const currentLang = localStorage.getItem('catime-language') || 'zh';
-        
-        if (currentLang === 'zh') {
-            languageToggle.innerHTML = '<i class="fas fa-language"></i> English';
-        } else {
-            languageToggle.innerHTML = '<i class="fas fa-language"></i> 中文';
-        }
-        
-        languageToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const newLang = currentLang === 'zh' ? 'en' : 'zh';
-            localStorage.setItem('catime-language', newLang);
-            
-            window.location.reload();
-        });
-    }
 });
 
 function initCoffeeParticles() {

@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initHeaderScroll();
 
     document.addEventListener('allComponentsLoaded', function() {
-        console.log('📄 检测到组件加载完成');
+        console.log('📄 Components loaded');
     });
 
     handleWaveLetters();
@@ -192,7 +192,7 @@ function initHeroInteractions() {
 
 function setDownloadUrls() {
     if (typeof CATIME_CONFIG === 'undefined') {
-        console.error('全局配置未加载');
+        console.error('Global config not loaded');
         return;
     }
 
