@@ -128,6 +128,8 @@ function initHeroInteractions() {
         const relativeX = (x - centerX) / centerX;
         const relativeY = (y - centerY) / centerY;
 
+        /* 
+        // Disabled mouse tilt for video frame to keep it static/reclined
         if (heroVisual) {
             const rotateY = relativeX * 5;
             const rotateX = relativeY * -5;
@@ -139,6 +141,7 @@ function initHeroInteractions() {
                 scale(1.02)
             `;
         }
+        */
 
         parallaxElements.forEach(el => {
             const speed = parseFloat(el.getAttribute('data-parallax-speed')) || 0.05;
@@ -150,9 +153,11 @@ function initHeroInteractions() {
     });
 
     hero.addEventListener('mouseleave', () => {
+        /*
         if (heroVisual) {
             heroVisual.style.transform = 'perspective(1000px) rotateX(5deg) rotateY(0deg) scale(1)';
         }
+        */
         
         parallaxElements.forEach(el => {
             el.style.transform = 'translate3d(0, 0, 0)';
