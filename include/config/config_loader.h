@@ -51,6 +51,7 @@ typedef struct {
     int scaleStepFast;
     BOOL glowEffect;
     BOOL glassEffect;
+    BOOL neonEffect;
 
     /* Timer */
     int defaultStartTime;

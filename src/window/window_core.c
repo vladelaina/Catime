@@ -51,6 +51,7 @@ float PLUGIN_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
 BOOL CLOCK_GLOW_EFFECT = FALSE;
 BOOL CLOCK_GLASS_EFFECT = FALSE;
+BOOL CLOCK_NEON_EFFECT = FALSE;
 
 /* ============================================================================
  * Internal helpers

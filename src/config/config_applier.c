@@ -114,8 +114,10 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.scale_step_fast = snapshot->scaleStepFast;
     CLOCK_GLOW_EFFECT = snapshot->glowEffect;
     CLOCK_GLASS_EFFECT = snapshot->glassEffect;
+    CLOCK_NEON_EFFECT = snapshot->neonEffect;
     g_AppConfig.display.glow_effect = snapshot->glowEffect;
     g_AppConfig.display.glass_effect = snapshot->glassEffect;
+    g_AppConfig.display.neon_effect = snapshot->neonEffect;
 
     HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) {

@@ -73,7 +73,10 @@ static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CLOCK_GLOW_EFFECT = !CLOCK_GLOW_EFFECT;
-    if (CLOCK_GLOW_EFFECT) CLOCK_GLASS_EFFECT = FALSE; // Mutually exclusive
+    if (CLOCK_GLOW_EFFECT) {
+        CLOCK_GLASS_EFFECT = FALSE;
+        CLOCK_NEON_EFFECT = FALSE;
+    }
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -81,6 +84,8 @@ static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
                    CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
                    CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
+                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -88,7 +93,10 @@ static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdToggleGlassEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CLOCK_GLASS_EFFECT = !CLOCK_GLASS_EFFECT;
-    if (CLOCK_GLASS_EFFECT) CLOCK_GLOW_EFFECT = FALSE; // Mutually exclusive
+    if (CLOCK_GLASS_EFFECT) {
+        CLOCK_GLOW_EFFECT = FALSE;
+        CLOCK_NEON_EFFECT = FALSE;
+    }
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -96,6 +104,28 @@ static LRESULT CmdToggleGlassEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
                    CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
                    CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
+                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
+static LRESULT CmdToggleNeonEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    CLOCK_NEON_EFFECT = !CLOCK_NEON_EFFECT;
+    if (CLOCK_NEON_EFFECT) {
+        CLOCK_GLOW_EFFECT = FALSE;
+        CLOCK_GLASS_EFFECT = FALSE;
+    }
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
+                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
+                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
+                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -401,6 +431,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDM_TOPMOST, CmdToggleTopmost},
     {CLOCK_IDM_GLOW_EFFECT, CmdToggleGlowEffect},
     {CLOCK_IDM_GLASS_EFFECT, CmdToggleGlassEffect},
+    {CLOCK_IDM_NEON_EFFECT, CmdToggleNeonEffect},
     {CLOCK_IDM_BROWSE_FILE, CmdBrowseFile},
     {CLOCK_IDM_CHECK_UPDATE, CmdCheckUpdate},
     {CLOCK_IDM_OPEN_WEBSITE, CmdOpenWebsite},

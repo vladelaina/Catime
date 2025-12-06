@@ -200,6 +200,7 @@ BOOL InitFontSTB(const char* fontFilePath) {
 /* Glow effect global state */
 extern BOOL CLOCK_GLOW_EFFECT;
 extern BOOL CLOCK_GLASS_EFFECT;
+extern BOOL CLOCK_NEON_EFFECT;
 
 /**
  * @brief Blend a single character bitmap into the destination buffer
@@ -215,12 +216,11 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
         RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
     } else if (CLOCK_GLASS_EFFECT) {
         RenderGlassEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
-        /* 
-           CRITICAL: If Glass Effect is active, it handles the ENTIRE rendering of the character,
-           including the body, highlights, and shadow.
-           We MUST return here to prevent the standard solid text rendering loop below from
-           overwriting the transparent glass effect with an opaque flat color.
-        */
+        /* Critical: Return early */
+        return;
+    } else if (CLOCK_NEON_EFFECT) {
+        RenderNeonEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
+        /* Critical: Return early (Tube replaces solid text) */
         return;
     }
 
@@ -431,6 +431,16 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         /* 
            CRITICAL: Return early to prevent solid gradient overwriting the glass effect.
         */
+        return;
+    } else if (CLOCK_NEON_EFFECT && info) {
+        int neonR = GetRValue(info->startColor);
+        int neonG = GetGValue(info->startColor);
+        int neonB = GetBValue(info->startColor);
+        
+        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
+        RenderNeonEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+                         neonR, neonG, neonB, GetGlowGradientColor, &ctx);
+        /* Neon replaces solid text */
         return;
     }
 

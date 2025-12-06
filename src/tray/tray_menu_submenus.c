@@ -291,7 +291,11 @@ void BuildStyleSubmenu(HMENU hMenu) {
 
     AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_GLASS_EFFECT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_GLASS_EFFECT,
-                GetLocalizedString(NULL, L"Glass Effect"));
+                GetLocalizedString(NULL, L"Optical Prism"));
+
+    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_NEON_EFFECT ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_NEON_EFFECT,
+                GetLocalizedString(NULL, L"Neon Tube"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu, 
                 GetLocalizedString(NULL, L"Style"));
