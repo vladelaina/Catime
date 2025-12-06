@@ -45,8 +45,8 @@ class CatimeNavigation {
                         </ul>
                     </li>
                     <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-                    ${this.generateActionButtons(prefix)}
                 </ul>
+                ${this.generateActionButtons(prefix)}
             </nav>
         </header>`;
     }
@@ -54,12 +54,12 @@ class CatimeNavigation {
     generateActionButtons(prefix) {
         if (this.currentPage === 'support') {
             const url = (typeof CATIME_CONFIG !== 'undefined' && CATIME_CONFIG.DOWNLOAD_URL) ? CATIME_CONFIG.DOWNLOAD_URL : 'https://github.com/vladelaina/Catime/releases';
-            return `<li><a href="${url}" class="nav-button" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>Download</span></a></li>`;
+            return `<div class="nav-actions"><a href="${url}" class="nav-button" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>Download</span></a></div>`;
         } else {
-            return `<li class="action-buttons">
+            return `<div class="nav-actions action-buttons">
                         <a href="${prefix}support.html" class="nav-button support-btn"><i class="fas fa-mug-hot"></i> <span>Support</span></a>
                         <a href="${(typeof CATIME_CONFIG !== 'undefined' && CATIME_CONFIG.DOWNLOAD_URL) ? CATIME_CONFIG.DOWNLOAD_URL : 'https://github.com/vladelaina/Catime/releases'}" class="nav-button download-btn" target="_blank" rel="noopener noreferrer"><i class="fas fa-download"></i> <span>Download</span></a>
-                    </li>`;
+                    </div>`;
         }
     }
 
