@@ -5,6 +5,7 @@
 
 #include "drawing/drawing_text_stb.h"
 #include "drawing/drawing_effect.h"
+#include "menu_preview.h"
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -197,11 +198,6 @@ BOOL InitFontSTB(const char* fontFilePath) {
     return TRUE;
 }
 
-/* Glow effect global state */
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-
 /**
  * @brief Blend a single character bitmap into the destination buffer
  */
@@ -211,14 +207,17 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
                           int r, int g, int b) {
     DWORD* pixels = (DWORD*)destBits;
 
+    /* Determine active effect (supports live preview) */
+    EffectType effect = GetActiveEffect();
+
     /* Render glow or glass effect if enabled */
-    if (CLOCK_GLOW_EFFECT) {
+    if (effect == EFFECT_TYPE_GLOW) {
         RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
-    } else if (CLOCK_GLASS_EFFECT) {
+    } else if (effect == EFFECT_TYPE_GLASS) {
         RenderGlassEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
         /* Critical: Return early */
         return;
-    } else if (CLOCK_NEON_EFFECT) {
+    } else if (effect == EFFECT_TYPE_NEON) {
         RenderNeonEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
         /* Critical: Return early (Tube replaces solid text) */
         return;
@@ -412,7 +411,9 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
     }
 
     /* Render glow effect if enabled - use gradient start color as base but use callback for per-pixel color */
-    if (CLOCK_GLOW_EFFECT && info) {
+    EffectType effect = GetActiveEffect();
+
+    if (effect == EFFECT_TYPE_GLOW && info) {
         int glowR = GetRValue(info->startColor);
         int glowG = GetGValue(info->startColor);
         int glowB = GetBValue(info->startColor);
@@ -420,7 +421,7 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
         RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
                          glowR, glowG, glowB, GetGlowGradientColor, &ctx);
-    } else if (CLOCK_GLASS_EFFECT && info) {
+    } else if (effect == EFFECT_TYPE_GLASS && info) {
         int glassR = GetRValue(info->startColor);
         int glassG = GetGValue(info->startColor);
         int glassB = GetBValue(info->startColor);
@@ -432,7 +433,7 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
            CRITICAL: Return early to prevent solid gradient overwriting the glass effect.
         */
         return;
-    } else if (CLOCK_NEON_EFFECT && info) {
+    } else if (effect == EFFECT_TYPE_NEON && info) {
         int neonR = GetRValue(info->startColor);
         int neonG = GetGValue(info->startColor);
         int neonB = GetBValue(info->startColor);

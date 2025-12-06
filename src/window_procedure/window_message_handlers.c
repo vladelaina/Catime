@@ -475,7 +475,10 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         if (menuItem == CLOCK_IDM_TIME_FORMAT_DEFAULT ||
             menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
             menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
-            menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS) {
+            menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS ||
+            menuItem == CLOCK_IDM_GLOW_EFFECT ||
+            menuItem == CLOCK_IDM_GLASS_EFFECT ||
+            menuItem == CLOCK_IDM_NEON_EFFECT) {
             isColorOrFontPreview = TRUE;
         }
 

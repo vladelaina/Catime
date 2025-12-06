@@ -97,6 +97,24 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
+    if (menuId == CLOCK_IDM_GLOW_EFFECT) {
+        EffectType effect = EFFECT_TYPE_GLOW;
+        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_GLASS_EFFECT) {
+        EffectType effect = EFFECT_TYPE_GLASS;
+        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_NEON_EFFECT) {
+        EffectType effect = EFFECT_TYPE_NEON;
+        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
+        return TRUE;
+    }
+
     return FALSE;
 }
 

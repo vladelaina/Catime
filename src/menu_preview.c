@@ -29,11 +29,17 @@ extern BOOL IS_PREVIEWING;
 extern char PREVIEW_FONT_NAME[MAX_PATH];
 extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 
+/* Effect global flags */
+extern BOOL CLOCK_GLOW_EFFECT;
+extern BOOL CLOCK_GLASS_EFFECT;
+extern BOOL CLOCK_NEON_EFFECT;
+
 extern void ResetTimerWithInterval(HWND hwnd);
 extern void WriteConfigColor(const char* color);
 extern void WriteConfigFont(const char* fontName, BOOL isCustom);
 extern void WriteConfigTimeFormat(TimeFormatType format);
 extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
+extern void WriteConfigEffect(EffectType effect); /* To be implemented if needed, or use existing logic */
 
 /* ============================================================================
  * Preview State
@@ -53,6 +59,7 @@ typedef struct {
         TimeFormatType timeFormat;
         BOOL showMilliseconds;
         char animationPath[MAX_PATH];
+        EffectType effect;
         int monitorIndex;
     } data;
     BOOL needsTimerReset;
@@ -118,6 +125,9 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             break;
         }
         
+        case PREVIEW_TYPE_EFFECT:
+            g_previewState.data.effect = *(EffectType*)data;
+            break;
         
         default:
             g_previewState.type = PREVIEW_TYPE_NONE;
@@ -191,6 +201,10 @@ BOOL ApplyPreview(HWND hwnd) {
             /* Animation preview applies itself */
             break;
             
+        case PREVIEW_TYPE_EFFECT:
+            /* Effect changes are applied via WM_COMMAND handlers */
+            break;
+            
         default:
             return FALSE;
     }
@@ -236,6 +250,19 @@ TimeFormatType GetActiveTimeFormat(void) {
 BOOL GetActiveShowMilliseconds(void) {
     return (g_previewState.type == PREVIEW_TYPE_MILLISECONDS) ?
            g_previewState.data.showMilliseconds : g_AppConfig.display.time_format.show_milliseconds;
+}
+
+EffectType GetActiveEffect(void) {
+    if (g_previewState.type == PREVIEW_TYPE_EFFECT) {
+        return g_previewState.data.effect;
+    }
+    
+    /* Priority matches drawing_text_stb.c original logic */
+    if (CLOCK_GLOW_EFFECT) return EFFECT_TYPE_GLOW;
+    if (CLOCK_GLASS_EFFECT) return EFFECT_TYPE_GLASS;
+    if (CLOCK_NEON_EFFECT) return EFFECT_TYPE_NEON;
+    
+    return EFFECT_TYPE_NONE;
 }
 
 /* ============================================================================

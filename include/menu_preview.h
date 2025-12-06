@@ -29,6 +29,20 @@ typedef enum {
 #endif
 
 /* ============================================================================
+ * Effect Types
+ * ============================================================================ */
+
+/**
+ * @brief Visual effect type discriminator
+ */
+typedef enum {
+    EFFECT_TYPE_NONE = 0,
+    EFFECT_TYPE_GLOW,
+    EFFECT_TYPE_GLASS,
+    EFFECT_TYPE_NEON
+} EffectType;
+
+/* ============================================================================
  * Preview Types
  * ============================================================================ */
 
@@ -42,6 +56,7 @@ typedef enum {
     PREVIEW_TYPE_TIME_FORMAT,
     PREVIEW_TYPE_MILLISECONDS,
     PREVIEW_TYPE_ANIMATION,
+    PREVIEW_TYPE_EFFECT,
 } PreviewType;
 
 /* ============================================================================
@@ -60,6 +75,7 @@ typedef enum {
  * - PREVIEW_TYPE_TIME_FORMAT: data = TimeFormatType*
  * - PREVIEW_TYPE_MILLISECONDS: data = BOOL*
  * - PREVIEW_TYPE_ANIMATION: data = const char* (animation path)
+ * - PREVIEW_TYPE_EFFECT: data = EffectType*
  * 
  * @note Cancels any existing preview before starting new one
  */
@@ -126,6 +142,12 @@ TimeFormatType GetActiveTimeFormat(void);
  * @return Active milliseconds visibility setting
  */
 BOOL GetActiveShowMilliseconds(void);
+
+/**
+ * @brief Get active visual effect (preview takes precedence)
+ * @return Active effect type (NONE, GLOW, GLASS, NEON)
+ */
+EffectType GetActiveEffect(void);
 
 /**
  * @brief Temporarily show hidden window for menu preview
