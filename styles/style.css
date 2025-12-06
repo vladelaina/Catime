@@ -10575,3 +10575,633 @@ p:hover {
     border-bottom: 8px solid var(--surface-color);
     filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
 }
+
+/* --- The Seamless Fusion (Apple-Tier Editorial) --- */
+.manifesto-poster {
+    padding: 8rem 0 15rem;
+    background-color: #ffffff;
+    position: relative;
+    z-index: 5; /* Lower than video section */
+    overflow: hidden;
+    margin-top: 0; /* Reset spacing */
+    cursor: default;
+}
+
+/* The Paper Texture (Subtle Grain) */
+.manifesto-poster::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 2; /* Texture sits on top of background elements */
+    mix-blend-mode: multiply;
+}
+
+/* The Connector: A Physical Guide Line */
+.guide-line-connector {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 1px; height: 200px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.02) 100%);
+    z-index: 1;
+}
+
+/* Left: Swiss Chronograph (Precision Instrument) */
+.dial-wrapper {
+    position: relative;
+    width: 260px; height: 260px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* The Gauge Marks (CSS Trick for Ticks) */
+.dial-rings {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    /* Thicker, clearer ticks */
+    background: conic-gradient(
+        from 0deg, 
+        #333 0deg 2deg, 
+        transparent 2deg 10deg
+    );
+    border-radius: 50%;
+    -webkit-mask: radial-gradient(transparent 68%, black 68%);
+    mask: radial-gradient(transparent 68%, black 68%);
+    opacity: 0.2; /* Subtle but visible */
+}
+
+.ring-outer {
+    position: absolute;
+    top: -15px; left: -15px;
+    right: -15px; bottom: -15px;
+    border: 2px solid #eee; /* Structural ring */
+    border-top: 2px solid #111; /* Active segment */
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); /* Physical Depth */
+}
+
+.ring-inner {
+    position: absolute;
+    top: 15px; left: 15px;
+    right: 15px; bottom: 15px;
+    border: 2px solid #f0f0f0;
+    border-left: 2px solid #ff3b30; /* Red Tick */
+    border-radius: 50%;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.03); /* Inset Depth */
+}
+
+.dial-ticker {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 130%; height: 2px; /* Thicker needle */
+    background: linear-gradient(90deg, transparent 48%, #ff3b30 50%, transparent 52%);
+    transform: translate(-50%, -50%) rotate(0deg);
+    animation: tickScan 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    filter: drop-shadow(0 0 2px rgba(255, 59, 48, 0.5)); /* Needle Glow */
+}
+
+.dial-data {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.soul-num {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10rem; /* Massive to match 'Pure' */
+    font-weight: 600; /* Refined Weight */
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+    color: #111;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 10px 30px rgba(0,0,0,0.15); /* The Halo */
+}
+
+.soul-num small {
+    font-size: 3rem;
+    font-weight: 400;
+    color: #999;
+    vertical-align: super;
+    margin-left: 5px;
+}
+
+.meta-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 15px;
+    border-top: 2px solid #111; /* Solid line */
+    padding-top: 12px;
+}
+
+.data-key {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    font-weight: 600;
+    color: #333;
+}
+
+.red-dot-pulse {
+    width: 6px; height: 6px;
+    background-color: #ff3b30;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.8);
+    animation: pulseRed 2s infinite;
+}
+
+@keyframes tickScan {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(180deg); }
+}
+
+/* Right: The Kinetic Spindle (Material Version) */
+.spindle-wrapper {
+    position: relative;
+    width: 240px; height: 240px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    perspective: 1000px;
+}
+
+.kinetic-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid #e5e5e5; /* Visible steel ring */
+    transform-style: preserve-3d;
+    box-shadow: 0 0 15px rgba(0,0,0,0.03); /* Metallic Sheen */
+}
+
+.r1 {
+    width: 160px; height: 160px;
+    border-color: #ddd;
+    border-left-color: #111; /* Dark segment */
+    animation: gyroSpin1 12s linear infinite;
+}
+
+.r2 {
+    width: 120px; height: 120px;
+    border-color: #eee;
+    border-top-color: #999;
+    animation: gyroSpin2 15s linear infinite;
+}
+
+.kinetic-core {
+    width: 16px; height: 16px; /* Solid Core */
+    /* Jewel-like Gradient */
+    background: radial-gradient(circle at 35% 35%, #555 0%, #000 70%);
+    border-radius: 50%;
+    z-index: 10;
+    box-shadow: 
+        0 5px 20px rgba(0,0,0,0.3),
+        inset 0 0 2px rgba(255,255,255,0.2); /* Singularity Glow */
+}
+
+/* The Vertical Field (Solid Force) */
+.vertical-field {
+    position: absolute;
+    width: 40px; height: 80px;
+    border-left: 3px solid #ff3b30; /* Thick Laser */
+    border-right: 3px solid #ff3b30;
+    border-radius: 50%;
+    opacity: 1; /* Fully visible */
+    animation: fieldBreathe 4s ease-in-out infinite;
+    box-shadow: 0 0 25px rgba(255, 59, 48, 0.4); /* Energy Field Glow */
+}
+
+@keyframes gyroSpin1 {
+    0% { transform: rotateX(60deg) rotateY(0deg) rotateZ(0deg); }
+    100% { transform: rotateX(60deg) rotateY(360deg) rotateZ(360deg); }
+}
+
+@keyframes gyroSpin2 {
+    0% { transform: rotateX(-60deg) rotateY(0deg) rotateZ(0deg); }
+    100% { transform: rotateX(-60deg) rotateY(-360deg) rotateZ(180deg); }
+}
+
+@keyframes fieldBreathe {
+    0%, 100% { transform: scaleX(1) scaleY(1); border-color: #ff3b30; box-shadow: 0 0 25px rgba(255, 59, 48, 0.4); }
+    50% { transform: scaleX(0.5) scaleY(1.1); border-color: #ff3b30; box-shadow: 0 0 10px rgba(255, 59, 48, 0.8); } /* Tighten & Focus */
+}
+
+/* Reset Label - Tightened */
+.cell-label {
+    position: absolute;
+    bottom: -35px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    letter-spacing: 0.4em;
+    color: #999;
+    border: 1px solid #f0f0f0;
+    padding: 4px 12px;
+    border-radius: 50px;
+}
+
+/* Layer 1: Marquee (Subtle Texture) */
+.marquee-container {
+    position: absolute;
+    top: 50%; left: 0;
+    transform: translateY(-50%) rotate(-5deg);
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    z-index: 0;
+    pointer-events: none;
+    /* No blend mode, just color */
+}
+
+.marquee-track {
+    display: inline-block;
+    animation: marqueeScroll 30s linear infinite;
+}
+
+@keyframes marqueeScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+.marquee-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 20vw;
+    font-weight: 900;
+    color: #f7f7f7; /* Very light grey background texture */
+    -webkit-text-stroke: 1px #e0e0e0; /* Subtle definition */
+    margin-right: 10vw;
+}
+
+/* Layer 2: The Architectural Anchor (Structure) */
+.architectural-bg {
+    position: absolute;
+    top: 45%; left: 50%; /* Shifted up slightly */
+    transform: translate(-50%, -50%);
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.arch-c {
+    font-family: 'Playfair Display', serif;
+    font-size: 55rem; /* Larger, acting as a background landscape */
+    font-style: italic;
+    color: #f2f3f5;
+    line-height: 0;
+    margin-left: -50px;
+    transition: transform 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+    will-change: transform;
+}
+
+.manifesto-poster:hover .arch-c {
+    transform: translate(-40px, -50%) rotate(-2deg) scale(1.05);
+}
+
+/* Layer 3: The Content (Solid & Legible) */
+.poster-container {
+    width: 90%;
+    max-width: 1600px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 10;
+}
+
+.prism-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 600px;
+}
+
+.prism-col { flex: 1; position: relative; }
+
+/* Left: Data */
+.col-left { display: flex; justify-content: flex-start; }
+
+.data-block { 
+    text-align: left; 
+    color: #111; /* Solid Black */
+}
+
+.soul-num {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 10rem; /* Massive to match 'Pure' */
+    font-weight: 400; /* Intellectual Weight */
+    line-height: 0.9;
+    letter-spacing: -0.05em;
+    color: #111;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 10px 30px rgba(0,0,0,0.12); /* The Halo */
+}
+
+.soul-num small { font-size: 4rem; margin-left: 0.5rem; }
+
+.meta-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 1.5rem;
+    border-top: 2px solid #111;
+    padding-top: 1rem;
+    width: fit-content;
+}
+
+.data-key {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.3em;
+    font-weight: 600;
+    color: #333;
+}
+
+.red-dot {
+    width: 6px; height: 6px;
+    background-color: #ff3b30;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Center: The Statement */
+.col-center { display: flex; justify-content: center; }
+
+.floating-type-group {
+    text-align: center;
+    position: relative;
+    transition: transform 0.5s ease;
+}
+
+.floating-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 3rem;
+    margin-bottom: 1rem;
+}
+
+.bracket {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #999;
+    letter-spacing: 0.2em;
+}
+
+.handwritten-circle {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #111;
+    letter-spacing: 0.2em;
+    padding: 0.5rem 1rem;
+    border: 1px solid #111;
+    border-radius: 50% 40% 60% 30% / 40% 50% 30% 60%;
+}
+
+.title-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.floating-title {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 10rem;
+    color: #111; /* Solid Black */
+    line-height: 1;
+    margin: 0;
+    white-space: nowrap;
+    letter-spacing: -0.02em;
+    text-shadow: 0 10px 30px rgba(0,0,0,0.05); /* Subtle lift */
+}
+
+/* Annotations */
+.phonetic {
+    position: absolute;
+    top: -10px;
+    left: -40px;
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    color: #999;
+}
+
+.part-of-speech {
+    position: absolute;
+    bottom: 20px;
+    right: -30px;
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 1.2rem;
+    color: #999;
+}
+
+/* Red Line */
+.editorial-line {
+    width: 100%;
+    height: 40px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+.red-line {
+    width: 60px;
+    height: 2px;
+    background-color: #ff3b30;
+    transform: rotate(-15deg);
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.5);
+}
+
+.floating-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    color: #333;
+    letter-spacing: 0.6em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-top: 1rem;
+}
+
+/* The Code Tribute */
+.code-tribute {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+    margin: 1.5rem 0;
+    padding: 0.5rem 1rem;
+    background: rgba(0,0,0,0.02);
+    border-radius: 4px;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.code-tribute:hover {
+    background: rgba(0,0,0,0.05);
+    transform: translateY(-2px);
+}
+
+.code-bracket { color: #999; }
+.code-var { font-style: italic; color: #555; }
+.code-op { font-weight: 700; color: #111; margin: 0 4px; }
+.code-val { color: #ff3b30; font-weight: 600; }
+
+/* The Horizon Line (Frequency) */
+.horizon-line {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 2rem 0;
+    opacity: 0.5;
+}
+
+.horizon-line::before,
+.horizon-line::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #ddd 20%, #ddd 80%, transparent);
+    max-width: 100px;
+}
+
+.frequency-wave {
+    width: 40px;
+    height: 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+.frequency-wave::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 0;
+    width: 100%; height: 1px;
+    background: #ff3b30;
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.8);
+    transform: translateY(-50%);
+    animation: pulseWave 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseWave {
+    0%, 100% { transform: translateY(-50%) scaleY(1); opacity: 0.5; }
+    50% { transform: translateY(-50%) scaleY(4); opacity: 1; width: 60%; margin-left: 20%; } /* Simulation of a vertical blip */
+}
+
+.floating-footer {
+    margin-top: 1rem; /* Reduced further */
+    display: flex;
+    justify-content: center;
+}
+
+.serial-code {
+    font-family: 'Courier New', monospace;
+    font-size: 0.6rem;
+    color: #999;
+    border: 1px solid #eee;
+    padding: 4px 12px;
+    border-radius: 2px;
+}
+
+/* Right: Live */
+.col-right { 
+    display: flex; 
+    justify-content: flex-end; 
+    align-items: center; 
+}
+
+.circle-graphic {
+    position: relative;
+    width: 100px; height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.circle-ring {
+    position: absolute;
+    width: 100%; height: 100%;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    animation: ringPulse 3s infinite;
+}
+
+.circle-dot {
+    width: 8px; height: 8px;
+    background: #111;
+    border-radius: 50%;
+}
+
+.circle-label {
+    position: absolute;
+    bottom: -30px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: #999;
+}
+
+/* Footer - The Monumental Signature */
+.silver-footer { 
+    text-align: center; 
+    margin-top: 10rem;
+    position: relative;
+    z-index: 20;
+}
+
+.footer-line {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 3rem; /* Monumental Scale */
+    letter-spacing: 0.05em;
+    color: #1a1b1e;
+    font-weight: 900; /* Black Weight */
+    text-transform: uppercase;
+    display: block;
+    /* The Etched Stone Effect */
+    text-shadow: 
+        0 2px 0px rgba(255,255,255,1), 
+        0 -1px 1px rgba(0,0,0,0.1);
+    opacity: 0.9;
+}
+
+@media (max-width: 900px) {
+    .prism-content { flex-direction: column; gap: 4rem; text-align: center; }
+    .col-left, .col-right { justify-content: center; }
+    
+    /* Scale down instruments for mobile */
+    .dial-wrapper, .spindle-wrapper {
+        transform: scale(0.75);
+    }
+    
+    .data-block { text-align: center; }
+    .meta-group { justify-content: center; margin: 1rem auto 0; border-top: 1px solid #eee; }
+    
+    /* Adjust Architecture */
+    .arch-c { font-size: 20rem; margin-left: 0; top: 50%; }
+    
+    /* Typography Scaling */
+    .floating-title { font-size: 5rem; }
+    .soul-num { font-size: 6rem; }
+    .soul-num small { font-size: 2rem; }
+    
+    .phonetic { display: none; } 
+    .footer-line { font-size: 1.5rem; }
+    
+    .marquee-text { font-size: 30vw; }
+    
+    /* Fix Footer Spacing */
+    .silver-footer { margin-top: 6rem; }
+}
