@@ -213,18 +213,58 @@
             </div>
         </section>
 
-        <section class="github-stats" id="community-support">
-            <div class="container">
-                <h2 class="section-title" data-aos="fade-up" id="stats-title">Community Support ⭐</h2>
-                <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100" data-i18n-key="github-stars-desc">Over 3k GitHub Stars and growing</p>
-                
-                <div class="github-chart-container" data-aos="zoom-in" data-aos-delay="200">
-                    <div class="glow-border"></div>
-                    <div class="star-particles"></div>
-                    <div id="star-history-chart" style="width: 100%; height: 400px;"></div>
+        <section class="luminaries-section" id="community">
+            <div class="narrative-container">
+                <!-- HUD Overlay (The Precision Layer) -->
+                <div class="hud-overlay">
+                    <div class="hud-ruler-left"></div>
+                    <div class="hud-coords">COORDS: <span id="mouse-coords">0000.00, 0000.00</span></div>
+                    <div class="hud-status">
+                        <span class="status-dot"></span> SYSTEM: ONLINE
+                    </div>
+                    <div class="hud-scroll">SCROLL FOR INTEL &darr;</div>
+                    <div class="hud-version">VER 3.0 KINETIC</div>
+                </div>
+
+                <!-- Layer 0: The Ghost (Depth) -->
+                <div class="narrative-layer layer-deep">
+                    <span class="ghost-text">OPEN<br>SOURCE</span>
+                </div>
+
+                <!-- Layer 1: The Monolith -->
+                <div class="narrative-layer layer-mid">
+                    <span class="core-2k">3k</span>
+                </div>
+
+                <!-- Layer 2: The Inverted Story -->
+                <div class="narrative-layer layer-front">
+                    <div class="narrative-content">
+                        <div class="badge-top">[ REF. GITHUB ]</div>
+                        <h2 class="script-title">STARS</h2>
+                        <div class="phonetic">/stɑːrz/ <span class="red-dot"></span></div>
+                        <a href="https://github.com/vladelaina/Catime" target="_blank" class="narrative-cta">Star on GitHub ★</a>
+                    </div>
+                </div>
+
+                <!-- Layer 3: The Evidence -->
+                <div class="narrative-layer layer-detail">
+                    <div class="deco-id">NO. 003-2025 // VANTABLACK</div>
+                    <div class="stats-row">
+                        <div class="stat-pill">
+                            <span class="pill-label">FORKS</span>
+                            <span class="pill-val">142</span>
+                        </div>
+                        <div class="stat-pill">
+                            <span class="pill-label">CONTRIBUTORS</span>
+                            <span class="pill-val">25+</span>
+                        </div>
+                    </div>
+                    <!-- Red Accent Line -->
+                    <div class="red-line-deco"></div>
                 </div>
             </div>
         </section>
+
 
         <section class="usage-scenarios" id="use-cases">
             <div class="container">
@@ -551,6 +591,7 @@
         </div>
     </section>
 
+    <script src="scripts/galaxy.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
     

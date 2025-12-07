@@ -11205,3 +11205,529 @@ p:hover {
     /* Fix Footer Spacing */
     .silver-footer { margin-top: 6rem; }
 }
+
+/* =========================================
+   THE COMMUNITY (Luminaries - Bright & Human) 
+   ========================================= */
+
+.luminaries-section {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #fff; /* Return to Purity */
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Soft blend from top */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+}
+
+.luminaries-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    perspective: 1000px; /* For 3D parallax */
+}
+
+.luminary-orb {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.4));
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 
+        0 10px 30px rgba(0,0,0,0.05),
+        inset 0 0 20px rgba(255,255,255,0.8);
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity: 0; /* Fade in via JS */
+    animation: orbFloat 6s ease-in-out infinite;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    color: rgba(0,0,0,0.1);
+}
+
+/* Orb Variants */
+.orb-blue { box-shadow: 0 20px 50px rgba(0, 122, 255, 0.15), inset 0 0 20px rgba(255,255,255,0.8); }
+.orb-red { box-shadow: 0 20px 50px rgba(255, 59, 48, 0.15), inset 0 0 20px rgba(255,255,255,0.8); }
+.orb-purple { box-shadow: 0 20px 50px rgba(175, 82, 222, 0.15), inset 0 0 20px rgba(255,255,255,0.8); }
+
+/* Modern Minimalist Layout */
+.horizon-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 10;
+}
+
+.horizon-divider { display: none; } /* Remove the hard line */
+
+.horizon-col {
+    text-align: center;
+}
+
+.horizon-col.left { display: none; } /* Remove the Origin date, keep it simple */
+
+.horizon-big-text {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; /* Apple System Font */
+    font-size: 15vw; /* Responsive Massive */
+    font-weight: 800; /* Bold Modernism */
+    letter-spacing: -0.05em; /* Tight tracking */
+    line-height: 1;
+    color: #111;
+    display: block;
+    text-decoration: none;
+    position: relative;
+    z-index: 20;
+    transition: transform 0.3s ease;
+    /* Clean, no shadow, pure ink */
+}
+
+.horizon-big-text:hover {
+    transform: scale(1.02);
+}
+
+.horizon-star {
+    font-size: 4vw;
+    color: #ff3b30;
+    vertical-align: top;
+    margin-left: 0.5rem;
+    animation: starPulse 4s infinite;
+}
+
+.horizon-meta {
+    position: relative;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.meta-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.3em;
+    font-weight: 600;
+    color: #ff3b30;
+    text-transform: uppercase;
+    background: rgba(255, 59, 48, 0.08);
+    padding: 6px 16px;
+    border-radius: 100px;
+}
+
+.meta-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    color: #666;
+    font-weight: 400;
+}
+
+/* Hide the wall */
+.community-wall { display: none; }
+
+/* Dynamic Subtitle Animation */
+.meta-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    color: #666;
+    font-weight: 400;
+    height: 1.5rem; /* Fixed height for ticker */
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    text-align: center;
+}
+
+.meta-desc span {
+    display: block;
+    animation: tickerSlide 9s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes tickerSlide {
+    0%, 30% { transform: translateY(0); opacity: 1; }
+    33%, 63% { transform: translateY(-100%); opacity: 1; }
+    66%, 96% { transform: translateY(-200%); opacity: 1; }
+    100% { transform: translateY(-300%); opacity: 0; }
+}
+
+/* 
+ * =========================================
+ * THE EDITORIAL MASTERPIECE (Complex Minimalism)
+ * =========================================
+ */
+
+.luminaries-section {
+    position: relative;
+    background: #ffffff;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    color: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Texture: Architectural Grid */
+.luminaries-section::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    /* Subtle Grid */
+    background-image: 
+        linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 100px 100px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* --- TEMPORAL ARTIFACTS --- */
+/* Scanline removed by design decision */
+
+.hud-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 20;
+    mix-blend-mode: difference; /* Adaptive color */
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+}
+
+.hud-ruler-left {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 60vh;
+    background: repeating-linear-gradient(
+        to bottom,
+        #fff 0,
+        #fff 1px,
+        transparent 1px,
+        transparent 10px
+    );
+}
+
+.hud-ruler-left::before {
+    content: "";
+    position: absolute;
+    top: -10px; left: -4px; width: 10px; height: 1px; background: #fff;
+}
+.hud-ruler-left::after {
+    content: "";
+    position: absolute;
+    bottom: -10px; left: -4px; width: 10px; height: 1px; background: #fff;
+}
+
+.hud-coords {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+}
+
+.hud-status {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background: #0f0; /* Green = Online */
+    border-radius: 50%;
+    box-shadow: 0 0 5px #0f0;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.hud-scroll {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-5px);}
+    60% {transform: translateY(-3px);}
+}
+
+.hud-version {
+    position: absolute;
+    bottom: 30px;
+    left: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    opacity: 0.5;
+    transform: rotate(-90deg);
+    transform-origin: left bottom;
+}
+
+
+.narrative-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    max-width: 1600px;
+    margin: 0 auto;
+    border-left: 1px solid rgba(0,0,0,0.05); 
+    border-right: 1px solid rgba(0,0,0,0.05);
+}
+
+.narrative-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+}
+
+/* Layer 0: The Ghost (Depth) */
+.layer-deep {
+    z-index: 1;
+}
+
+.ghost-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 80vw;
+    line-height: 0.8;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(0,0,0,0.03); /* Ghostly outline */
+    white-space: nowrap;
+    opacity: 0.5;
+}
+
+/* Layer 1: The Monolith */
+.layer-mid {
+    z-index: 5;
+}
+
+.core-2k {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 58vw; 
+    line-height: 0.75;
+    letter-spacing: -0.09em;
+    color: #000;
+    z-index: 1;
+    white-space: nowrap;
+    /* Animation handled by Galaxy.js for physics-based blending */
+}
+
+/* Layer 2: The Inverted Script */
+.layer-front {
+    z-index: 10;
+    mix-blend-mode: exclusion;
+}
+
+.narrative-content {
+    width: 100%; height: 100%;
+    position: relative;
+}
+
+.script-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-5deg);
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 22vw;
+    line-height: 1;
+    white-space: nowrap;
+    color: #fff;
+    z-index: 2;
+}
+
+/* Micro Typography Details */
+.badge-top {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: #fff; /* Inverted */
+    opacity: 0.8;
+}
+
+.phonetic {
+    position: absolute;
+    bottom: 35%;
+    left: 60%; /* Offset */
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    will-change: transform; /* Force GPU Layer */
+}
+
+.red-dot {
+    width: 8px;
+    height: 8px;
+    background: #ff3b30; /* The Red Accent */
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.8);
+    animation: pulseRed 2s infinite;
+}
+
+@keyframes pulseRed {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.script-intro, .script-desc { display: none; }
+
+.narrative-cta {
+    position: absolute;
+    bottom: 18%; 
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    color: #fff; 
+    background: transparent; 
+    font-size: 0.9rem;
+    padding: 12px 40px;
+    border-radius: 50px; 
+    border: 1px solid #fff; 
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    z-index: 30;
+    mix-blend-mode: difference; 
+}
+
+.narrative-cta:hover {
+    background: #fff;
+    color: #000; 
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 0 20px rgba(255,255,255,0.5);
+}
+
+/* Layer 3: The Data (Adaptive Visibility) */
+.layer-detail {
+    z-index: 15;
+    pointer-events: none;
+}
+
+.stats-row {
+    position: absolute;
+    bottom: 5%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 0; 
+    align-items: center;
+    padding-bottom: 20px;
+    mix-blend-mode: difference;
+}
+
+.stats-row::after {
+    content: "";
+    display: block;
+    width: 1px;
+    height: 40px;
+    background: #fff; 
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.stat-pill {
+    position: relative;
+    background: transparent; 
+    padding: 0 40px;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.pill-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #fff; 
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.pill-val {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+}
+
+/* Decorative ID on left - also adaptive */
+.layer-detail .deco-id {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #fff; 
+    transform: rotate(-90deg);
+    transform-origin: left bottom;
+    mix-blend-mode: difference;
+}
+
+/* Red Line Decoration */
+.red-line-deco {
+    position: absolute;
+    bottom: 85px; /* Just above stats */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 2px;
+    background: #ff3b30;
+    z-index: 20;
+}
