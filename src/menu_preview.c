@@ -33,6 +33,7 @@ extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 extern BOOL CLOCK_GLOW_EFFECT;
 extern BOOL CLOCK_GLASS_EFFECT;
 extern BOOL CLOCK_NEON_EFFECT;
+extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
 
 extern void ResetTimerWithInterval(HWND hwnd);
 extern void WriteConfigColor(const char* color);
@@ -258,9 +259,10 @@ EffectType GetActiveEffect(void) {
     }
     
     /* Priority matches drawing_text_stb.c original logic */
-    if (CLOCK_GLOW_EFFECT) return EFFECT_TYPE_GLOW;
-    if (CLOCK_GLASS_EFFECT) return EFFECT_TYPE_GLASS;
+    if (CLOCK_HOLOGRAPHIC_EFFECT) return EFFECT_TYPE_HOLOGRAPHIC;
     if (CLOCK_NEON_EFFECT) return EFFECT_TYPE_NEON;
+    if (CLOCK_GLASS_EFFECT) return EFFECT_TYPE_GLASS;
+    if (CLOCK_GLOW_EFFECT) return EFFECT_TYPE_GLOW;
     
     return EFFECT_TYPE_NONE;
 }

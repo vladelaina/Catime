@@ -52,6 +52,7 @@ int CLOCK_BASE_FONT_SIZE = 24;
 BOOL CLOCK_GLOW_EFFECT = FALSE;
 BOOL CLOCK_GLASS_EFFECT = FALSE;
 BOOL CLOCK_NEON_EFFECT = FALSE;
+BOOL CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
 
 /* ============================================================================
  * Internal helpers

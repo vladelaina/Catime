@@ -19,6 +19,11 @@
 #include <string.h>
 #include <stdio.h>
 
+extern BOOL CLOCK_GLOW_EFFECT;
+extern BOOL CLOCK_GLASS_EFFECT;
+extern BOOL CLOCK_NEON_EFFECT;
+extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+
 /* Large limit for menu display to accommodate folder-based animations with many frames */
 #define MAX_SCAN_ENTRIES 4096
 
@@ -111,6 +116,12 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
 
     if (menuId == CLOCK_IDM_NEON_EFFECT) {
         EffectType effect = EFFECT_TYPE_NEON;
+        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
+        return TRUE;
+    }
+
+    if (menuId == CLOCK_IDM_HOLOGRAPHIC_EFFECT) {
+        EffectType effect = EFFECT_TYPE_HOLOGRAPHIC;
         StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
         return TRUE;
     }

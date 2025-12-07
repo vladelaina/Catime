@@ -264,6 +264,8 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                                        FALSE, config_path);
     snapshot->neonEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT",
                                        FALSE, config_path);
+    snapshot->holographicEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT",
+                                       FALSE, config_path);
     
     /* Read Timer section */
     snapshot->defaultStartTime = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 

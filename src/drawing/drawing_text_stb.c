@@ -209,6 +209,9 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
 
     /* Determine active effect (supports live preview) */
     EffectType effect = GetActiveEffect();
+    
+    /* Calculate time offset for animation (used by Holographic) */
+    int timeOffset = (int)(GetTickCount() % 10000); // 10s cycle
 
     /* Render glow or glass effect if enabled */
     if (effect == EFFECT_TYPE_GLOW) {
@@ -220,6 +223,10 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
     } else if (effect == EFFECT_TYPE_NEON) {
         RenderNeonEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL);
         /* Critical: Return early (Tube replaces solid text) */
+        return;
+    } else if (effect == EFFECT_TYPE_HOLOGRAPHIC) {
+        RenderHolographicEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL, timeOffset);
+        /* Critical: Return early */
         return;
     }
 
@@ -442,6 +449,16 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         RenderNeonEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
                          neonR, neonG, neonB, GetGlowGradientColor, &ctx);
         /* Neon replaces solid text */
+        return;
+    } else if (effect == EFFECT_TYPE_HOLOGRAPHIC && info) {
+        int holoR = GetRValue(info->startColor);
+        int holoG = GetGValue(info->startColor);
+        int holoB = GetBValue(info->startColor);
+        
+        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
+        RenderHolographicEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+                                holoR, holoG, holoB, GetGlowGradientColor, &ctx, timeOffset);
+        /* Critical: Return early */
         return;
     }
 

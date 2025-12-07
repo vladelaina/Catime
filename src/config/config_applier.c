@@ -19,6 +19,12 @@
 #include <time.h>
 #include <math.h>
 
+/* Global effect flags */
+extern BOOL CLOCK_GLOW_EFFECT;
+extern BOOL CLOCK_GLASS_EFFECT;
+extern BOOL CLOCK_NEON_EFFECT;
+extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+
 /* ============================================================================
  * Helper: Language enum mapping
  * ============================================================================ */
@@ -115,9 +121,11 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     CLOCK_GLOW_EFFECT = snapshot->glowEffect;
     CLOCK_GLASS_EFFECT = snapshot->glassEffect;
     CLOCK_NEON_EFFECT = snapshot->neonEffect;
+    CLOCK_HOLOGRAPHIC_EFFECT = snapshot->holographicEffect;
     g_AppConfig.display.glow_effect = snapshot->glowEffect;
     g_AppConfig.display.glass_effect = snapshot->glassEffect;
     g_AppConfig.display.neon_effect = snapshot->neonEffect;
+    g_AppConfig.display.holographic_effect = snapshot->holographicEffect;
 
     HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) {

@@ -52,6 +52,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", "FALSE", CONFIG_TYPE_BOOL, "Enable neon glow effect"},
     {INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", "FALSE", CONFIG_TYPE_BOOL, "Enable optical prism effect"},
     {INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", "FALSE", CONFIG_TYPE_BOOL, "Enable Hong Kong neon tube effect"},
+    {INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", "FALSE", CONFIG_TYPE_BOOL, "Enable holographic dispersion effect"},
 
     /* Timer settings */
     {INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "1500", CONFIG_TYPE_INT, "Default timer duration (seconds)"},

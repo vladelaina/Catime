@@ -152,6 +152,7 @@
 #define CLOCK_IDM_GLOW_EFFECT 189        /**< Neon glow effect toggle */
 #define CLOCK_IDM_GLASS_EFFECT 190       /**< Glass/Liquid crystal effect toggle */
 #define CLOCK_IDM_NEON_EFFECT 260        /**< Hong Kong Neon Tube effect toggle */
+#define CLOCK_IDM_HOLOGRAPHIC_EFFECT 261 /**< Holographic/Prism effect toggle */
 
 /** @brief Language selection menu identifiers */
 #define CLOCK_IDM_LANGUAGE_MENU 160      /**< Language submenu */

@@ -478,7 +478,8 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS ||
             menuItem == CLOCK_IDM_GLOW_EFFECT ||
             menuItem == CLOCK_IDM_GLASS_EFFECT ||
-            menuItem == CLOCK_IDM_NEON_EFFECT) {
+            menuItem == CLOCK_IDM_NEON_EFFECT ||
+            menuItem == CLOCK_IDM_HOLOGRAPHIC_EFFECT) {
             isColorOrFontPreview = TRUE;
         }
 

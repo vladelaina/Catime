@@ -52,6 +52,7 @@ typedef struct {
     BOOL glowEffect;
     BOOL glassEffect;
     BOOL neonEffect;
+    BOOL holographicEffect;
 
     /* Timer */
     int defaultStartTime;

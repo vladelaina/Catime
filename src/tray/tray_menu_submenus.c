@@ -38,6 +38,11 @@ extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 extern void GetConfigPath(char* path, size_t size);
 
+extern BOOL CLOCK_GLOW_EFFECT;
+extern BOOL CLOCK_GLASS_EFFECT;
+extern BOOL CLOCK_NEON_EFFECT;
+extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+
 /* Function to read timeout action (extracted from tray_menu.c) */
 void ReadTimeoutActionFromConfig() {
     /* Preserve one-time actions: don't override them from config */
@@ -296,6 +301,10 @@ void BuildStyleSubmenu(HMENU hMenu) {
     AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_NEON_EFFECT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_NEON_EFFECT,
                 GetLocalizedString(NULL, L"Neon Tube"));
+
+    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_HOLOGRAPHIC_EFFECT ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_HOLOGRAPHIC_EFFECT,
+                GetLocalizedString(NULL, L"Holographic Effect"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu, 
                 GetLocalizedString(NULL, L"Style"));

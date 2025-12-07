@@ -431,7 +431,8 @@ void WriteConfigKeyValue(const char* key, const char* value) {
            strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
            strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
            strncmp(key, "WINDOW_TOPMOST", 14) == 0 ||
-           strncmp(key, "WINDOW_OPACITY", 14) == 0) {
+           strncmp(key, "WINDOW_OPACITY", 14) == 0 ||
+           strncmp(key, "TEXT_", 5) == 0) {
         section = INI_SECTION_DISPLAY;
     }
     else if (strncmp(key, "CLOCK_DEFAULT_START_TIME", 24) == 0 ||

@@ -39,7 +39,8 @@ typedef enum {
     EFFECT_TYPE_NONE = 0,
     EFFECT_TYPE_GLOW,
     EFFECT_TYPE_GLASS,
-    EFFECT_TYPE_NEON
+    EFFECT_TYPE_NEON,
+    EFFECT_TYPE_HOLOGRAPHIC
 } EffectType;
 
 /* ============================================================================

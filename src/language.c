@@ -9,7 +9,7 @@
 #include "language.h"
 #include "../resource/resource.h"
 
-#define MAX_TRANSLATIONS 300
+#define MAX_TRANSLATIONS 600
 #define MAX_STRING_LENGTH 1536
 
 typedef struct {
