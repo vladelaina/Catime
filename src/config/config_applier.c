@@ -154,10 +154,17 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
 
-        /* Ensure animation timer is running if effects are active (V20 Temporal Decoupling) */
+        /* Ensure animation timer is running if effects are active */
+        /* Use adaptive interval based on window size to prevent mouse lag */
         if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
             CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
-            SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, 33, NULL); 
+            RECT rect;
+            GetClientRect(hwnd, &rect);
+            int pixels = rect.right * rect.bottom;
+            UINT interval = (pixels < 50000) ? 33 : 
+                           (pixels < 200000) ? 50 : 
+                           (pixels < 500000) ? 80 : 120;
+            SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL); 
         } else {
             KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
         }

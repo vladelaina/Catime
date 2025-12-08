@@ -25,6 +25,7 @@
 #include "markdown/markdown_image.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
+#include "../resource/resource.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -564,5 +565,24 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     SelectObject(memDC, oldBitmap);
     DeleteObject(memBitmap);
     DeleteDC(memDC);
+    
+    /* Dynamic timer interval adjustment based on current window size */
+    /* This ensures smooth animation for small windows, reduced lag for large windows */
+    extern BOOL CLOCK_GLOW_EFFECT, CLOCK_GLASS_EFFECT, CLOCK_NEON_EFFECT;
+    extern BOOL CLOCK_HOLOGRAPHIC_EFFECT, CLOCK_LIQUID_EFFECT;
+    
+    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
+        CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
+        static UINT s_lastInterval = 0;
+        int pixelCount = rect.right * rect.bottom;
+        UINT newInterval = (pixelCount < 50000) ? 33 : 
+                          (pixelCount < 200000) ? 50 : 
+                          (pixelCount < 500000) ? 80 : 120;
+        
+        if (newInterval != s_lastInterval) {
+            SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, newInterval, NULL);
+            s_lastInterval = newInterval;
+        }
+    }
 }
 

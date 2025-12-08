@@ -60,10 +60,17 @@ BOOL HandleWindowCreate(HWND hwnd) {
     LOG_INFO("OLE Drag and drop enabled (requires Edit Mode if Click-Through is active)");
 
     /* Start Animation Timer if effects are active (Fixes startup animation issue) */
+    /* Use adaptive interval based on window size to prevent mouse lag */
     if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
         CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
-        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, 33, NULL); 
-        LOG_INFO("Animation render timer started (30FPS)");
+        RECT rect;
+        GetClientRect(hwnd, &rect);
+        int pixels = rect.right * rect.bottom;
+        UINT interval = (pixels < 50000) ? 33 : 
+                       (pixels < 200000) ? 50 : 
+                       (pixels < 500000) ? 80 : 120;
+        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL); 
+        LOG_INFO("Animation render timer started (adaptive interval: %ums)", interval);
     }
 
     LOG_INFO("Window creation completed successfully");

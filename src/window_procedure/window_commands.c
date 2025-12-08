@@ -75,15 +75,37 @@ static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/* Adaptive frame interval based on window size to prevent mouse lag */
+static UINT GetAdaptiveAnimationInterval(HWND hwnd) {
+    RECT rect;
+    GetClientRect(hwnd, &rect);
+    int pixels = rect.right * rect.bottom;
+    
+    /* 
+     * Larger windows need longer intervals to avoid blocking DWM.
+     * UpdateLayeredWindow is synchronous and blocks until DWM composites.
+     * Thresholds based on typical bitmap sizes:
+     * - <50K pixels: 33ms (~30fps) - smooth for small text
+     * - 50K-200K: 50ms (~20fps) - balanced
+     * - 200K-500K: 80ms (~12fps) - safe for medium windows
+     * - >500K: 120ms (~8fps) - prevents system-wide mouse lag
+     */
+    if (pixels < 50000) return 33;
+    if (pixels < 200000) return 50;
+    if (pixels < 500000) return 80;
+    return 120;
+}
+
 static void UpdateAnimationTimer(HWND hwnd) {
     /* 
-     * V20: "Temporal Decoupling"
-     * If any animated effect is active, we start a dedicated 30FPS timer
-     * to drive the visual flow independently of the 1FPS logic clock.
+     * Temporal Decoupling: Animated effects use a dedicated timer
+     * to drive visual flow independently of the 1FPS logic clock.
+     * Interval is adaptive to window size to prevent mouse lag.
      */
     if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
         CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
-        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, 33, NULL); 
+        UINT interval = GetAdaptiveAnimationInterval(hwnd);
+        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL); 
     } else {
         KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
     }

@@ -1123,11 +1123,6 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
          */
         int yComp = (screenY * 222) >> 8; 
 
-        /* Cache row pointers to avoid multiplication in inner loop */
-        int rowOffset = j * gw;
-        int rowPrev = rowOffset - gw;
-        int rowNext = rowOffset + gw;
-
         for (int i = 2; i < gw - 2; i++) {
             int screenX = startX + i;
             if (screenX < 0 || screenX >= destWidth) continue;
