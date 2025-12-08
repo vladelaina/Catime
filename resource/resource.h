@@ -53,6 +53,7 @@
 #define TIMER_ID_FONT_VALIDATION 1006        /**< Font validation timer (every 2s) */
 #define TIMER_ID_VOLUME_PREVIEW 1007         /**< Volume preview auto-stop timer (3s limit) */
 #define TIMER_ID_EDIT_MODE_REFRESH 2001      /**< Edit mode refresh timer */
+#define TIMER_ID_RENDER_ANIMATION 2002       /**< Dedicated animation render timer (30-60 FPS) */
 #define TRAY_TIP_TIMER_ID 42421              /**< Tray tooltip update timer */
 
 /** @brief Timer interval constants */
@@ -153,6 +154,7 @@
 #define CLOCK_IDM_GLASS_EFFECT 190       /**< Glass/Liquid crystal effect toggle */
 #define CLOCK_IDM_NEON_EFFECT 260        /**< Hong Kong Neon Tube effect toggle */
 #define CLOCK_IDM_HOLOGRAPHIC_EFFECT 261 /**< Holographic/Prism effect toggle */
+#define CLOCK_IDM_LIQUID_EFFECT 262      /**< Liquid Flow/Caustics effect toggle */
 
 /** @brief Language selection menu identifiers */
 #define CLOCK_IDM_LANGUAGE_MENU 160      /**< Language submenu */

@@ -5,6 +5,7 @@
 
 #include "drawing/drawing_markdown_stb.h"
 #include "drawing/drawing_text_stb.h"
+#include "menu_preview.h"
 #include "markdown/markdown_parser.h"
 #include "markdown/markdown_interactive.h"
 #include "color/gradient.h"
@@ -247,8 +248,18 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
 
     /* Calculate global time offset for animated gradient once per frame */
     int timeOffset = 0;
-    if (IsGradientAnimated((GradientType)gradientMode)) {
+    
+    /* 
+     * FIX: Use continuous time for Liquid Effect to prevent "popping/shrinking" artifacts.
+     * Liquid simulation needs smooth monotonically increasing time (t), not a sawtooth wave.
+     * For normal animated gradients, we can use the modulo cycle.
+     */
+    if (GetActiveEffect() == EFFECT_TYPE_LIQUID) {
+        /* Raw continuous time for physics simulation */
+        timeOffset = (int)GetTickCount();
+    } else if (IsGradientAnimated((GradientType)gradientMode)) {
         DWORD now = GetTickCount();
+        /* Use a consistent cycle for gradients (2s loop for normal) */
         float progress = (float)(now % 2000) / 2000.0f;
         timeOffset = (int)(progress * GRADIENT_LUT_SIZE * 2);
     }

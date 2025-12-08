@@ -594,6 +594,11 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         case TIMER_ID_MAIN:
             return HandleMainTimer(hwnd);
 
+        case TIMER_ID_RENDER_ANIMATION:
+            /* Pure render tick - decouples visual flow from logic update */
+            InvalidateRect(hwnd, NULL, TRUE);
+            return TRUE;
+
         default:
             return FALSE;
     }

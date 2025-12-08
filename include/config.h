@@ -237,6 +237,7 @@ typedef struct {
     BOOL glass_effect;
     BOOL neon_effect;
     BOOL holographic_effect;
+    BOOL liquid_effect;
 } DisplayConfig;
 
 /**

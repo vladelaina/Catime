@@ -81,6 +81,17 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int timeOffset);
 
 /**
+ * @brief Render Liquid Flow/Caustics effect
+ * @param timeOffset Time-based offset for animation
+ */
+void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
+                       int x_pos, int y_pos,
+                       unsigned char* bitmap, int w, int h,
+                       int r, int g, int b,
+                       GlowColorCallback colorCb, void* userData,
+                       int timeOffset);
+
+/**
  * @brief Apply Gaussian blur approximation to a single-channel bitmap
  * 
  * @param src Source bitmap

@@ -126,6 +126,12 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
+    if (menuId == CLOCK_IDM_LIQUID_EFFECT) {
+        EffectType effect = EFFECT_TYPE_LIQUID;
+        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
+        return TRUE;
+    }
+
     return FALSE;
 }
 

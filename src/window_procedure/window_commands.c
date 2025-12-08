@@ -75,6 +75,20 @@ static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+static void UpdateAnimationTimer(HWND hwnd) {
+    /* 
+     * V20: "Temporal Decoupling"
+     * If any animated effect is active, we start a dedicated 30FPS timer
+     * to drive the visual flow independently of the 1FPS logic clock.
+     */
+    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
+        CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
+        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, 33, NULL); 
+    } else {
+        KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
+    }
+}
+
 static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CLOCK_GLOW_EFFECT = !CLOCK_GLOW_EFFECT;
@@ -82,6 +96,7 @@ static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
         CLOCK_GLASS_EFFECT = FALSE;
         CLOCK_NEON_EFFECT = FALSE;
         CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
+        CLOCK_LIQUID_EFFECT = FALSE;
     }
     
     char config_path[MAX_PATH];
@@ -94,6 +109,10 @@ static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
                    CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
                    CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
+                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    
+    UpdateAnimationTimer(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -105,6 +124,7 @@ static LRESULT CmdToggleGlassEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
         CLOCK_GLOW_EFFECT = FALSE;
         CLOCK_NEON_EFFECT = FALSE;
         CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
+        CLOCK_LIQUID_EFFECT = FALSE;
     }
     
     char config_path[MAX_PATH];
@@ -117,6 +137,10 @@ static LRESULT CmdToggleGlassEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
                    CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
                    CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
+                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    
+    UpdateAnimationTimer(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -128,6 +152,7 @@ static LRESULT CmdToggleNeonEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
         CLOCK_GLOW_EFFECT = FALSE;
         CLOCK_GLASS_EFFECT = FALSE;
         CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
+        CLOCK_LIQUID_EFFECT = FALSE;
     }
     
     char config_path[MAX_PATH];
@@ -140,6 +165,10 @@ static LRESULT CmdToggleNeonEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
                    CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
                    CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
+                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    
+    UpdateAnimationTimer(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -151,6 +180,7 @@ static LRESULT CmdToggleHolographicEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
         CLOCK_GLOW_EFFECT = FALSE;
         CLOCK_GLASS_EFFECT = FALSE;
         CLOCK_NEON_EFFECT = FALSE;
+        CLOCK_LIQUID_EFFECT = FALSE;
     }
     
     char config_path[MAX_PATH];
@@ -163,6 +193,38 @@ static LRESULT CmdToggleHolographicEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
                    CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
     WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
                    CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
+                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    
+    UpdateAnimationTimer(hwnd);
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
+static LRESULT CmdToggleLiquidEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    CLOCK_LIQUID_EFFECT = !CLOCK_LIQUID_EFFECT;
+    if (CLOCK_LIQUID_EFFECT) {
+        CLOCK_GLOW_EFFECT = FALSE;
+        CLOCK_GLASS_EFFECT = FALSE;
+        CLOCK_NEON_EFFECT = FALSE;
+        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
+    }
+    
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
+                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
+                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
+                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
+                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
+                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
+    
+    UpdateAnimationTimer(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -470,6 +532,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDM_GLASS_EFFECT, CmdToggleGlassEffect},
     {CLOCK_IDM_NEON_EFFECT, CmdToggleNeonEffect},
     {CLOCK_IDM_HOLOGRAPHIC_EFFECT, CmdToggleHolographicEffect},
+    {CLOCK_IDM_LIQUID_EFFECT, CmdToggleLiquidEffect},
     {CLOCK_IDM_BROWSE_FILE, CmdBrowseFile},
     {CLOCK_IDM_CHECK_UPDATE, CmdCheckUpdate},
     {CLOCK_IDM_OPEN_WEBSITE, CmdOpenWebsite},

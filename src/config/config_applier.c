@@ -122,10 +122,12 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     CLOCK_GLASS_EFFECT = snapshot->glassEffect;
     CLOCK_NEON_EFFECT = snapshot->neonEffect;
     CLOCK_HOLOGRAPHIC_EFFECT = snapshot->holographicEffect;
+    CLOCK_LIQUID_EFFECT = snapshot->liquidEffect;
     g_AppConfig.display.glow_effect = snapshot->glowEffect;
     g_AppConfig.display.glass_effect = snapshot->glassEffect;
     g_AppConfig.display.neon_effect = snapshot->neonEffect;
     g_AppConfig.display.holographic_effect = snapshot->holographicEffect;
+    g_AppConfig.display.liquid_effect = snapshot->liquidEffect;
 
     HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) {
@@ -151,6 +153,14 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
 
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+
+        /* Ensure animation timer is running if effects are active (V20 Temporal Decoupling) */
+        if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
+            CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
+            SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, 33, NULL); 
+        } else {
+            KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
+        }
 
         InvalidateRect(hwnd, NULL, TRUE);
     } else {

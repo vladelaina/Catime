@@ -15,6 +15,13 @@
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
 #include "async_update_checker.h"
+#include "../resource/resource.h"
+
+extern BOOL CLOCK_GLOW_EFFECT;
+extern BOOL CLOCK_GLASS_EFFECT;
+extern BOOL CLOCK_NEON_EFFECT;
+extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+extern BOOL CLOCK_LIQUID_EFFECT;
 
 /* ============================================================================
  * Window creation and initialization
@@ -51,6 +58,13 @@ BOOL HandleWindowCreate(HWND hwnd) {
     /* Enable OLE drag and drop for resource import with preview */
     InitializeOleDropTarget(hwnd);
     LOG_INFO("OLE Drag and drop enabled (requires Edit Mode if Click-Through is active)");
+
+    /* Start Animation Timer if effects are active (Fixes startup animation issue) */
+    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
+        CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
+        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, 33, NULL); 
+        LOG_INFO("Animation render timer started (30FPS)");
+    }
 
     LOG_INFO("Window creation completed successfully");
     return TRUE;

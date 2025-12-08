@@ -305,6 +305,10 @@ void BuildStyleSubmenu(HMENU hMenu) {
     AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_HOLOGRAPHIC_EFFECT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_HOLOGRAPHIC_EFFECT,
                 GetLocalizedString(NULL, L"Holographic Effect"));
+
+    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_LIQUID_EFFECT ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_LIQUID_EFFECT,
+                GetLocalizedString(NULL, L"Liquid Flow"));
     
     AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu, 
                 GetLocalizedString(NULL, L"Style"));

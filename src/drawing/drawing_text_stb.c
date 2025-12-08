@@ -210,8 +210,14 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
     /* Determine active effect (supports live preview) */
     EffectType effect = GetActiveEffect();
     
-    /* Calculate time offset for animation (used by Holographic) */
-    int timeOffset = (int)(GetTickCount() % 10000); // 10s cycle
+    /* 
+     * FIX: Use raw GetTickCount() instead of % 10000.
+     * The previous modulo 10000 caused a visual "jump" every 10 seconds because
+     * 9999 -> 0 is a discontinuity in the phase calculation.
+     * The internal effect functions use sin() or bitwise masking which handles
+     * large numbers naturally and continuously.
+     */
+    int timeOffset = (int)GetTickCount();
 
     /* Render glow or glass effect if enabled */
     if (effect == EFFECT_TYPE_GLOW) {
@@ -226,6 +232,10 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
         return;
     } else if (effect == EFFECT_TYPE_HOLOGRAPHIC) {
         RenderHolographicEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL, timeOffset);
+        /* Critical: Return early */
+        return;
+    } else if (effect == EFFECT_TYPE_LIQUID) {
+        RenderLiquidEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL, timeOffset);
         /* Critical: Return early */
         return;
     }
@@ -458,6 +468,16 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
         RenderHolographicEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
                                 holoR, holoG, holoB, GetGlowGradientColor, &ctx, timeOffset);
+        /* Critical: Return early */
+        return;
+    } else if (effect == EFFECT_TYPE_LIQUID && info) {
+        int liquidR = GetRValue(info->startColor);
+        int liquidG = GetGValue(info->startColor);
+        int liquidB = GetBValue(info->startColor);
+        
+        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
+        RenderLiquidEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+                           liquidR, liquidG, liquidB, GetGlowGradientColor, &ctx, timeOffset);
         /* Critical: Return early */
         return;
     }

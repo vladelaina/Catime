@@ -385,7 +385,7 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
 
 /**
  * @brief Render Hong Kong style Neon Tube effect (Physically-based)
- * V2.0: Multi-layer rendering (Atmosphere + Tube + Core)
+ * Multi-layer rendering (Atmosphere + Tube + Core)
  */
 void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
@@ -906,8 +906,10 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
 
             *pPixel = (finalA << 24) | (outR << 16) | (outG << 8) | outB;
         }
+
     }
 }
+
 
 /**
  * @brief Free static resources used by drawing effects
@@ -919,6 +921,364 @@ void CleanupDrawingEffects(void) {
     g_effectBufferSize = 0;
 }
 
-/* End of file */
+/* --- OPTIMIZATION HELPERS --- */
 
-/* End of file */
+/* Fast integer square root approximation for small numbers (0-255 range gradients) */
+/* "Octagonal" Approximation: max + 0.375 * min */
+/* Error < 3%, much rounder than max + 0.5 * min */
+static inline int FastIntDist(int dx, int dy) {
+    int ax = abs(dx);
+    int ay = abs(dy);
+    int mx = (ax > ay) ? ax : ay;
+    int mn = (ax > ay) ? ay : ax;
+    /* mx + (mn * 3/8) -> mx + 0.25mn + 0.125mn */
+    return mx + (mn >> 2) + (mn >> 3);
+}
+
+/* Static LUT for specular power curve (Power 4) */
+static unsigned char g_specularLUT[256];
+static BOOL g_lutInitialized = FALSE;
+
+/* Static LUT for slope-based color/alpha modifiers (Branchless Optimization) */
+typedef struct {
+    short dR;
+    short dG;
+    short dB;
+    unsigned char alpha;
+} SlopeProps;
+static SlopeProps g_slopeLUT[256];
+static BOOL g_slopeLUTInit = FALSE;
+
+static void InitSpecularLUT(void) {
+    if (g_lutInitialized) return;
+    for (int i = 0; i < 256; i++) {
+        float f = i / 255.0f;
+        f = f * f * f * f; /* Power 4 */
+        g_specularLUT[i] = (unsigned char)(f * 255.0f);
+    }
+    g_lutInitialized = TRUE;
+}
+
+static void InitSlopeLUT(void) {
+    if (g_slopeLUTInit) return;
+    
+    for (int i = 0; i < 256; i++) {
+        int slope_int = i;
+        int clearAmt = 0, darkAmt = 0;
+        
+        /* Match Logic */
+        if (slope_int < 102) {
+            clearAmt = ((102 - slope_int) * 200) >> 8;
+        } else {
+            darkAmt = ((slope_int - 102) * 150) >> 8;
+        }
+        
+        int fresnel = 0;
+        if (slope_int > 25) {
+            int f = ((slope_int - 25) * 120) >> 8;
+            if (f > 80) f = 80;
+            fresnel = f;
+        }
+        
+        int dispersion = (slope_int * 40) >> 8;
+        
+        g_slopeLUT[i].dR = (short)(clearAmt - darkAmt + fresnel + dispersion);
+        g_slopeLUT[i].dG = (short)(clearAmt - darkAmt + fresnel);
+        g_slopeLUT[i].dB = (short)(clearAmt - darkAmt + fresnel - dispersion);
+        
+        int alpha = 60 + ((slope_int * 210) >> 8);
+        if (alpha > 255) alpha = 255;
+        g_slopeLUT[i].alpha = (unsigned char)alpha;
+    }
+    g_slopeLUTInit = TRUE;
+}
+
+/**
+ * @brief Render Liquid Flow/Caustics Effect
+ * CPU Usage: True Zero (Branchless)
+ * Visuals: High-Bright Mercury
+ */
+void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
+                       int x_pos, int y_pos,
+                       unsigned char* bitmap, int w, int h,
+                       int r, int g, int b,
+                       GlowColorCallback colorCb, void* userData,
+                       int timeOffset) {
+    
+    if (!g_lutInitialized) InitSpecularLUT();
+    if (!g_slopeLUTInit) InitSlopeLUT();
+
+    /* 1. Dynamic Buffer Allocation (Extreme Memory Optimization) */
+    int padding = 12;
+    int gw = w + padding * 2;
+    int gh = h + padding * 2;
+    int neededSize = gw * gh;
+
+    /* Check if resize needed */
+    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
+        /* Revert to standard 3-buffer allocation to maintain compatibility with other effects */
+        /* Other effects assume if g_effectBufferSize is sufficient, ALL 3 buffers exist */
+        
+        int newSize = neededSize; 
+        
+        /* Use realloc for efficiency */
+        unsigned char* new1 = (unsigned char*)realloc(g_effectBuffer1, newSize);
+        unsigned char* new2 = (unsigned char*)realloc(g_effectBuffer2, newSize);
+        unsigned char* new3 = (unsigned char*)realloc(g_effectBuffer3, newSize);
+        
+        if (!new1 || !new2 || !new3) {
+            /* Allocation failed - emergency cleanup */
+            if (new1) free(new1); else if (g_effectBuffer1) free(g_effectBuffer1);
+            if (new2) free(new2); else if (g_effectBuffer2) free(g_effectBuffer2);
+            if (new3) free(new3); else if (g_effectBuffer3) free(g_effectBuffer3);
+            g_effectBuffer1 = NULL;
+            g_effectBuffer2 = NULL;
+            g_effectBuffer3 = NULL;
+            g_effectBufferSize = 0;
+            return;
+        }
+        
+        g_effectBuffer1 = new1;
+        g_effectBuffer2 = new2;
+        g_effectBuffer3 = new3;
+        g_effectBufferSize = newSize;
+    }
+
+    /* 
+     * 2-Buffer Strategy (still used for processing efficiency)
+     * Buffer1: Stores Bitmap initially, then stores the Final HeightMap
+     * Buffer2: Used as Temp buffer for Gaussian Blur
+     * Buffer3: Unused by Liquid, but kept alive for other effects
+     */
+    unsigned char* heightMap = g_effectBuffer1; 
+    unsigned char* tempMap = g_effectBuffer2;   
+    
+    /* 2. Prepare Alpha Map (directly into what will be HeightMap) */
+    memset(heightMap, 0, neededSize);
+    for (int j = 0; j < h; j++) {
+        memcpy(heightMap + (j + padding) * gw + padding, bitmap + j * w, w);
+    }
+
+    /* 3. Create Height Map (Thick Volume) */
+    /* In-Place Blur: src(heightMap) -> temp -> dest(heightMap) */
+    /* This works because ApplyGaussianBlur's passes are separated */
+    ApplyGaussianBlur(heightMap, heightMap, tempMap, gw, gh, 4);
+
+    /* 4. Precompute Flow/Warp LUT (Tri-Planar Waves) */
+    /* 
+     * OPTIMIZATION: Keep 't' as a wrapped integer index [0-2047]
+     * No float math in the frame logic needed if we map time correctly.
+     * 1 cycle = 2048 units.
+     * Speed factor 0.0025 * 2048 ~= 5 units per ms?
+     * Let's stick to float for 't' calculation ONCE per frame, but use INT for everything else.
+     */
+    #define FLOW_LUT_SIZE 2048
+    #define FLOW_LUT_MASK 2047
+    static int flowLUT[FLOW_LUT_SIZE];
+    static BOOL flowLUTInit = FALSE;
+    
+    /* Only compute the base sine wave ONCE ever, or if we want to animate frequency?
+       Actually, the phase changes, not the wave shape. So we compute the wave ONCE.
+    */
+    if (!flowLUTInit) {
+        for (int i = 0; i < FLOW_LUT_SIZE; i++) {
+            float angle = (i * 6.28318f) / FLOW_LUT_SIZE;
+            float val = sinf(angle) * 4.0f; /* Amplitude 4.0 */
+            flowLUT[i] = (int)(val); 
+        }
+        flowLUTInit = TRUE;
+    }
+    
+    /* Calculate Phase Offsets */
+    /* t scales 2*PI to roughly ~125.6 range in previous code.
+       Here we map it to LUT index [0-2047].
+       Previous: t = time * 0.0025. 
+       2PI ~ 6.28.
+       LUT covers 2PI.
+       So LUT_index = (time * 0.0025 / 2PI) * 2048
+                    = time * 0.0025 * 326
+                    = time * 0.815
+    */
+    int t_idx = (int)((double)timeOffset * 0.815) & FLOW_LUT_MASK;
+
+    int startX = x_pos - padding;
+    int startY = y_pos - padding;
+    
+    /* Precalc 60 degree vector constants (sin(60) ~= 0.866 ~= 222/256) */
+    /* t1, t2, t3 offsets */
+    int t1 = t_idx;
+    int t2 = (t_idx + 682) & FLOW_LUT_MASK; /* +1/3 cycle */
+    int t3 = (t_idx + 1365) & FLOW_LUT_MASK; /* +2/3 cycle */
+
+    /* 5. Main Optical Loop (INT OPTIMIZED) */
+    for (int j = 2; j < gh - 2; j++) {
+        int screenY = startY + j;
+        if (screenY < 0 || screenY >= destHeight) continue;
+
+        DWORD* pDestRow = pixels + screenY * destWidth;
+        
+        /* 
+         * Integer Tri-Planar Setup 
+         * Direction 2 Y-comp: Y * 0.87
+         */
+        int yComp = (screenY * 222) >> 8; 
+
+        /* Cache row pointers to avoid multiplication in inner loop */
+        int rowOffset = j * gw;
+        int rowPrev = rowOffset - gw;
+        int rowNext = rowOffset + gw;
+
+        for (int i = 2; i < gw - 2; i++) {
+            int screenX = startX + i;
+            if (screenX < 0 || screenX >= destWidth) continue;
+
+            /* --- FAST TRI-PLANAR INTERFERENCE --- */
+            /* Wave 1: X (0 deg) */
+            int idx1 = (screenX * 2 + t1) & FLOW_LUT_MASK;
+            
+            /* Wave 2: 0.5X + 0.87Y (60 deg) */
+            int xComp2 = i >> 1; /* i / 2 */
+            int idx2 = (xComp2 + yComp + t2) & FLOW_LUT_MASK;
+            
+            /* Wave 3: -0.5X + 0.87Y (120 deg) */
+            int idx3 = (-xComp2 + yComp + t3) & FLOW_LUT_MASK;
+
+            /* Sum the waves from LUT */
+            int w1 = flowLUT[idx1];
+            int w2 = flowLUT[idx2];
+            int w3 = flowLUT[idx3];
+            
+            /* Apply Warp */
+            int warpX = (w1 + w2 + w3) >> 1;
+            /* Y warp uses offset lookup for swirl */
+            int idx1_swirl = (idx1 + 500) & FLOW_LUT_MASK;
+            int warpY = (flowLUT[idx1_swirl] + w2 - w3) >> 1;
+            
+            /* Coordinate Displacement */
+            int srcX = i + warpX;
+            int srcY = j + warpY;
+            
+            /* Fast Clamp */
+            if (srcX < 1) srcX = 1; else if (srcX >= gw - 1) srcX = gw - 2;
+            if (srcY < 1) srcY = 1; else if (srcY >= gh - 1) srcY = gh - 2;
+
+            /* Read Mass */
+            int centerIdx = srcY * gw + srcX;
+            int mass = heightMap[centerIdx];
+            
+            /* Soft Edge Threshold (Antialiasing) */
+            /* Lower threshold to capture the fading edge */
+            if (mass < 24) continue; 
+            
+            int edgeAA = 256;
+            if (mass < 56) {
+                edgeAA = (mass - 24) << 3; /* * 8 */
+            }
+            
+            /* --- FAST TOPOLOGY --- */
+            /* Direct neighbor access */
+            int hL = heightMap[centerIdx - 1];
+            int hR = heightMap[centerIdx + 1];
+            int hU = heightMap[centerIdx - gw];
+            int hD = heightMap[centerIdx + gw];
+            
+            int dx = hR - hL;
+            int dy = hD - hU;
+            
+            /* Integer Slope Approximation */
+            /* Max slope is around 255+255=510. Scaled down. */
+            /* slope float = len / 100.0f. len = sqrt(dx*dx+dy*dy) */
+            /* We use FastIntDist. */
+            int len = FastIntDist(dx, dy);
+            
+            /* 'slope' as 0-255 fixed point */
+            /* float slope = len / 100.0f -> if len=100, slope=1.0 */
+            /* We want to map len 0..100 to slope_int 0..255 */
+            /* slope_int = len * 2.55 ~= len * 5 / 2 */
+            int slope_int = (len * 5) >> 1; 
+            if (slope_int > 255) slope_int = 255;
+
+            /* --- FAST LIGHTING --- */
+            /* lightDot = -(nx + ny) / 100.0f */
+            /* We need lightDot > 0 for specular */
+            /* So -(dx + dy) > 0  => dx + dy < 0 */
+            int sumNormal = dx + dy;
+            int specular = 0;
+            
+            if (sumNormal < 0) {
+                /* Normalize sumNormal to 0-255 range for LUT lookup */
+                /* Max negative sum is roughly -510. We map -100 to index 255 (max brightness) */
+                int idx = -sumNormal; 
+                /* Scale: if sum is -100, we want index 255 */
+                /* index = (-sum * 255) / 100 = -sum * 2.55 */
+                idx = (idx * 5) >> 1;
+                if (idx > 255) idx = 255;
+                
+                specular = g_specularLUT[idx];
+            }
+
+            /* Apply Edge AA to Specular to prevent sparkling artifacts at boundaries */
+            if (edgeAA < 256) {
+                specular = (specular * edgeAA) >> 8;
+            }
+
+            /* --- COLOR (BRANCHLESS LUT) --- */
+            int curR = r, curG = g, curB = b;
+            
+            if (colorCb) {
+                int sampleX = x_pos - padding + srcX;
+                int sampleY = y_pos - padding + srcY;
+                colorCb(sampleX, sampleY, &curR, &curG, &curB, userData);
+            }
+
+            /* Slope LUT Lookup: Replaces clear/dark/fresnel/dispersion logic */
+            SlopeProps p = g_slopeLUT[slope_int];
+            int fR = curR + p.dR;
+            int fG = curG + p.dG;
+            int fB = curB + p.dB;
+
+            /* Clamp before specular */
+            if (fR < 0) fR = 0; else if (fR > 255) fR = 255;
+            if (fG < 0) fG = 0; else if (fG > 255) fG = 255;
+            if (fB < 0) fB = 0; else if (fB > 255) fB = 255;
+
+            /* --- ALPHA (BRANCHLESS LUT) --- */
+            /* alpha = 60 + slope * 210 (Precomputed) */
+            int alpha = p.alpha;
+            if (edgeAA < 256) {
+                alpha = (alpha * edgeAA) >> 8;
+            }
+
+            /* BLEND */
+            DWORD* pPixel = pDestRow + screenX;
+            DWORD bgPixel = *pPixel;
+            int bgA = (bgPixel >> 24) & 0xFF;
+            int bgR = (bgPixel >> 16) & 0xFF;
+            int bgG = (bgPixel >> 8) & 0xFF;
+            int bgB = bgPixel & 0xFF;
+
+            /* Fast Blend: (bg * invA + fg * alpha) >> 8 */
+            int invA = 255 - alpha;
+            int finalR = (bgR * invA + fR * alpha) >> 8;
+            int finalG = (bgG * invA + fG * alpha) >> 8;
+            int finalB = (bgB * invA + fB * alpha) >> 8;
+            
+            /* Additive Specular */
+            finalR += specular;
+            finalG += specular;
+            finalB += specular;
+            
+            /* Re-clamp */
+            if (finalR > 255) finalR = 255;
+            if (finalG > 255) finalG = 255;
+            if (finalB > 255) finalB = 255;
+
+            int finalA = (bgA > alpha) ? bgA : alpha;
+            if (specular > finalA) finalA = specular;
+            if (finalA > 255) finalA = 255;
+
+            *pPixel = (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
+        }
+    }
+}
+

@@ -185,6 +185,8 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->glowEffect = FALSE;
     snapshot->glassEffect = FALSE;
     snapshot->neonEffect = FALSE;
+    snapshot->holographicEffect = FALSE;
+    snapshot->liquidEffect = FALSE;
     snapshot->defaultStartTime = DEFAULT_START_TIME_SECONDS;
     snapshot->notificationTimeoutMs = DEFAULT_NOTIFICATION_TIMEOUT_MS;
     snapshot->notificationMaxOpacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
@@ -265,6 +267,8 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
     snapshot->neonEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT",
                                        FALSE, config_path);
     snapshot->holographicEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT",
+                                       FALSE, config_path);
+    snapshot->liquidEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT",
                                        FALSE, config_path);
     
     /* Read Timer section */
