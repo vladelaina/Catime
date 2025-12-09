@@ -349,12 +349,94 @@ img {
     }
 }
 
+/* --- Hero Section Base --- */
 .hero {
     position: relative;
-    padding: 8rem 0 6rem;
-    background-color: #f8faff;
-    overflow: hidden;
-    perspective: 1000px;
+    padding-top: 12rem;
+    padding-bottom: 6rem;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* The Sonic Connector (Visual Wave) */
+.guide-line-connector {
+    position: absolute;
+    top: -150px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 300px;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, rgba(122, 162, 247, 0.3), #000);
+    z-index: 20;
+}
+
+.manifesto-poster {
+    position: relative;
+    z-index: 15;
+    background: transparent;
+}
+
+/* --- THE KEYSTONE (Bridge Capsule) --- */
+.bridge-capsule {
+    position: absolute;
+    top: auto; /* Reset top */
+    bottom: -25px; /* Hang off the bottom edge */
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 50px;
+    box-shadow: 
+        0 4px 20px rgba(0, 0, 0, 0.03),
+        0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+    z-index: 50; /* Super high to float above fog and masks */
+    animation: capsuleFloat 4s ease-in-out infinite;
+}
+
+.bridge-icon {
+    font-size: 1.2rem;
+    color: #7aa2f7; /* Accent color */
+    animation: spinSlow 10s linear infinite;
+}
+
+.bridge-text {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    font-weight: 700;
+    color: #2e3a59;
+}
+
+.bridge-loader {
+    width: 6px;
+    height: 6px;
+    background: #0f0;
+    border-radius: 50%;
+    box-shadow: 0 0 5px #0f0;
+    animation: blinkFast 1s infinite;
+}
+
+@keyframes capsuleFloat {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-10px); }
+}
+
+@keyframes spinSlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes blinkFast {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
 }
 
 .hero-spotlight {
@@ -11368,13 +11450,26 @@ p:hover {
 .luminaries-section {
     position: relative;
     background: #ffffff;
-    padding: 0;
-    height: 100vh;
+    padding: 15rem 0 10rem; /* Increased top padding for fade in */
     overflow: hidden;
-    color: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    /* Create a soft top edge */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+    margin-top: -10vh; /* Pull it up to overlap */
+    z-index: 2; /* Sit on top of previous footer area */
+}
+
+/* The Fog Layer (Transition) */
+.luminaries-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 400px; /* Deep fade */
+    background: linear-gradient(to bottom, #fff 0%, rgba(255,255,255,0) 100%);
+    z-index: 5; /* Above grid, below content */
+    pointer-events: none;
 }
 
 /* Texture: Architectural Grid */
