@@ -121,6 +121,10 @@ static void ProcessDirectoryChange(DirectoryWatcher* watcher) {
                 _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".bmp") == 0) {
                 isRelevant = TRUE;
             }
+        } else {
+            /* No extension - assume it's a directory change or a file without extension.
+             * Trigger refresh to be safe (refresh is debounced/async anyway). */
+            isRelevant = TRUE;
         }
         
         if (isRelevant) {
@@ -162,7 +166,7 @@ static BOOL InitWatchingDirectory(DirectoryWatcher* watcher) {
         watcher->buffer,
         WATCH_BUFFER_SIZE,
         TRUE, // Watch subtree
-        FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
+        FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
         NULL,
         &watcher->overlapped,
         NULL
@@ -192,7 +196,7 @@ static BOOL RestartWatchingDirectory(DirectoryWatcher* watcher) {
         watcher->buffer,
         WATCH_BUFFER_SIZE,
         TRUE,
-        FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
+        FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE,
         NULL,
         &watcher->overlapped,
         NULL
