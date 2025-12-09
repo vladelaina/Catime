@@ -484,22 +484,35 @@ img {
 }
 
 .hero-slogan {
-    font-size: 4.5rem;
+    font-size: 5rem;
     font-weight: 800;
     color: #2e3a59;
     margin-bottom: 2rem;
     letter-spacing: -0.03em;
     line-height: 1.1;
     position: relative;
+    /* Magazine Contrast */
+}
+
+/* Time Management - The Elegant Whisper (Corrected Visibility) */
+.hero-slogan::first-line {
+    font-weight: 300; /* Slightly more weight for legibility */
+    letter-spacing: 0.05em;
+    color: #2d3748; /* Deep, crisp charcoal (High Contrast) */
+    opacity: 1; /* Full opacity */
 }
 
 .highlight-text {
+    font-weight: 900; /* Ultra Heavy */
     background: linear-gradient(135deg, #7aa2f7 0%, #f77daa 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     display: inline-block;
     position: relative;
+    letter-spacing: -0.04em;
+    filter: drop-shadow(0 4px 0 rgba(122, 162, 247, 0.1)); /* 3D Lift */
+    transform: scale(1.05); /* Slight enlargement for emphasis */
 }
 
 .ciallo-container {
@@ -556,144 +569,243 @@ margin-bottom: 3rem;
 
 .editorial-meta {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 100%;
-    max-width: 95%;
-    min-width: 800px;
+    top: 55%; /* Adjusted for better visual balance */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    max-width: none;
     display: flex;
     justify-content: space-between;
     pointer-events: none;
     z-index: 0; 
 }
 
+/* --- THE TEMPORAL BRIDGE --- */
+.temporal-bridge {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    z-index: -1;
+    transform: translateY(-50%);
+}
+
+.bridge-line {
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(122, 162, 247, 0.3) 20%, 
+        rgba(247, 125, 170, 0.3) 80%, 
+        transparent 100%
+    );
+    /* The "Hole" in the middle to respect the Center Content */
+    mask-image: linear-gradient(to right, 
+        black 0%, black 35%, 
+        transparent 45%, transparent 55%, 
+        black 65%, black 100%
+    );
+    -webkit-mask-image: linear-gradient(to right, 
+        black 0%, black 35%, 
+        transparent 45%, transparent 55%, 
+        black 65%, black 100%
+    );
+}
+
+.bridge-pulse {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #f77daa, #fff);
+    filter: drop-shadow(0 0 5px #f77daa);
+    transform: translateY(-50%);
+    animation: pulseTravel 8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    opacity: 0;
+}
+
+@keyframes pulseTravel {
+    0% { left: 10%; opacity: 0; }
+    10% { opacity: 1; }
+    40% { opacity: 0; } /* Fade out before hitting center */
+    60% { opacity: 0; left: 60%; } /* Jump center */
+    70% { opacity: 1; }
+    90% { opacity: 0; }
+    100% { left: 90%; opacity: 0; }
+}
+
 .meta-group {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    opacity: 0.5;
+    gap: 1.5rem;
+    opacity: 0.8;
     transition: opacity 0.3s ease;
 }
 
-.meta-group:hover {
-    opacity: 1;
-}
-
 .meta-group.left {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    text-align: right;
-    border-right: 1px solid rgba(122, 162, 247, 0.3);
-    padding-right: 1rem;
+    writing-mode: horizontal-tb; /* Reset from vertical */
+    transform: none;
+    text-align: left;
+    border: none; /* Remove old border */
+    padding: 0;
 }
 
 .meta-group.right {
-    writing-mode: vertical-rl;
-    text-align: left;
-    border-left: 1px solid rgba(247, 125, 170, 0.3);
-    padding-left: 1rem;
+    writing-mode: horizontal-tb; /* Reset from vertical */
+    text-align: right;
+    border: none; /* Remove old border */
+    padding: 0;
+    flex-direction: row-reverse; /* Align text correctly */
 }
 
 .meta-label {
-    font-family: 'Oswald', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 700;
-    font-size: 0.75rem;
-    color: #9aa5ce;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-}
-
-.meta-value {
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
-    font-size: 0.65rem;
-    color: #b4c6ef;
-    letter-spacing: 0.1em;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.meta-value i {
-    transform: rotate(90deg);
-}
-
-.blink-dot {
+    font-size: 0.7rem;
     color: #f77daa;
-    animation: blink 1.5s infinite;
-    font-size: 0.8em;
-    margin-top: 5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(247, 125, 170, 0.1);
+    padding: 6px 16px;
+    border-radius: 50px;
+    border: 1px solid rgba(247, 125, 170, 0.2);
+    /* The "Node" Look */
+    box-shadow: 0 0 15px rgba(247, 125, 170, 0.05);
+}
+
+/* Add a technical label above the number */
+.stat-block::before {
+    content: "NET WEIGHT";
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: #9aa5ce;
+    margin-bottom: 0.5rem;
+    opacity: 0.8;
 }
 
 .stat-block {
     position: relative;
-    line-height: 0.8;
-    margin: 0.5rem 0;
+    line-height: 1;
+    margin: 1.5rem 0 2.5rem; /* Increased bottom margin for reflection space */
     animation: fadeInUp 1s ease-out;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: fit-content;
+    margin-left: auto;
+    margin-right: auto;
+    /* The Floor: Real-time Reflection */
+    -webkit-box-reflect: below -10px linear-gradient(to bottom, transparent 60%, rgba(255,255,255,0.8) 100%);
 }
 
 .stat-number {
-    font-family: 'Playfair Display', 'Didot', 'Bodoni MT', 'Noto Serif SC', serif;
-    font-size: 8rem;
+    font-family: 'Playfair Display', 'Didot', serif;
+    font-size: 9rem;
     font-style: italic;
     font-weight: 700;
-    background: linear-gradient(135deg, #7aa2f7 0%, #b4c6ef 50%, rgba(255,255,255,0.2) 100%);
+    /* Liquid Metal Gradient */
+    background: linear-gradient(110deg, #7aa2f7 0%, #b4c6ef 25%, #ffffff 50%, #b4c6ef 75%, #7aa2f7 100%);
+    background-size: 200% auto;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    opacity: 0.9;
-    letter-spacing: -0.02em;
-    filter: drop-shadow(0 10px 20px rgba(122, 162, 247, 0.15));
-    padding-right: 1rem;
+    opacity: 1;
+    letter-spacing: -0.04em;
+    padding: 0 1rem;
+    margin: 0;
+    position: relative;
+    /* Chromatic Aberration & Glow */
+    filter: 
+        drop-shadow(3px 3px 0px rgba(247, 125, 170, 0.2)) 
+        drop-shadow(-3px -3px 0px rgba(122, 162, 247, 0.2))
+        drop-shadow(0 0 20px rgba(255,255,255,0.5));
+    animation: shimmer 8s linear infinite; /* Living Surface */
+}
+
+@keyframes shimmer {
+    to { background-position: 200% center; }
 }
 
 .stat-unit {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 1.2rem;
+    font-family: 'JetBrains Mono', 'Consolas', monospace; /* Tech font */
+    font-size: 0.7rem;
     font-weight: 700;
-    color: #414868;
+    color: #f77daa; /* Accent color */
     position: absolute;
     top: 50%;
-    right: -1.5rem;
-    transform: translateY(-50%) rotate(90deg);
-    letter-spacing: 0.2em;
+    right: -2rem; /* Hanging off the side */
+    transform: translateY(-50%); /* Vertically centered */
+    letter-spacing: 0;
     text-transform: uppercase;
+    opacity: 1;
+    /* The Badge Look */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+    border-left: 1px solid rgba(122, 162, 247, 0.4);
+    padding-left: 0.5rem;
+    height: 60%; /* Match visual height of number partially */
+}
+
+.bg-noise {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
 }
 
 .tech-spec-line {
     font-family: 'Montserrat', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.3em;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.25em; /* Wider tracking */
     color: #414868;
     text-transform: uppercase;
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(5px);
-    padding: 0.5rem 1.5rem;
-    border-radius: 1px;
+    background: transparent; /* Remove blurry bg */
+    backdrop-filter: none;
+    padding: 0.8rem 0; /* Vertical spacing */
+    border-top: 1px solid rgba(46, 58, 89, 0.1); /* Technical Lines */
+    border-bottom: 1px solid rgba(46, 58, 89, 0.1);
+    border-radius: 0;
     z-index: 2;
     animation: fadeInUp 1s ease-out 0.2s backwards;
     position: relative;
+    width: 100%;
+    text-align: center;
+    max-width: 600px; /* Limit width for structure */
 }
 
 .tech-spec-line .divider {
     color: #f77daa;
-    margin: 0 1.5rem;
-    opacity: 0.6;
+    margin: 0 1rem;
+    opacity: 0.8;
     font-weight: 300;
-    font-style: italic;
+    font-style: normal; /* Straight lines */
+    font-size: 0.8em;
+    vertical-align: middle;
 }
 
-
 .narrative-line {
-    font-size: 1rem;
+    font-family: 'Playfair Display', serif; /* Contrast: Serif Italic */
+    font-style: italic;
+    font-size: 1.1rem;
     color: #626a87;
-    font-weight: 400;
-    letter-spacing: 0.05em;
-    margin-top: 0.5rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    margin-top: 1rem;
     animation: fadeInUp 1s ease-out 0.4s backwards;
     position: relative;
-    background: var(--surface-color);
+    background: transparent;
     padding: 0 1rem;
 }
 
@@ -11450,7 +11562,7 @@ p:hover {
 .luminaries-section {
     position: relative;
     background: #ffffff;
-    padding: 15rem 0 10rem; /* Increased top padding for fade in */
+    padding: 15rem 0 20rem; /* Deep luxury padding */
     overflow: hidden;
     /* Create a soft top edge */
     mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
@@ -11636,8 +11748,8 @@ p:hover {
     transform: translate(-50%, -50%);
     font-family: 'Inter', sans-serif;
     font-weight: 900;
-    font-size: 58vw; 
-    line-height: 0.75;
+    font-size: 53vw; /* Restoring Tension */
+    line-height: 0.7; /* Tight fit */
     letter-spacing: -0.09em;
     color: #000;
     z-index: 1;
