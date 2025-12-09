@@ -10,6 +10,7 @@
 #include "tray/tray.h"
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
+#include "tray/tray_animation_loader.h"
 #include "tray/tray_animation_percent.h"
 #include "system_monitor.h"
 #include "config.h"
@@ -125,6 +126,7 @@ typedef enum {
     ANIM_TYPE_LOGO,
     ANIM_TYPE_CPU,
     ANIM_TYPE_MEMORY,
+    ANIM_TYPE_BATTERY,
     ANIM_TYPE_NONE
 } AnimationType;
 
@@ -157,13 +159,14 @@ static AnimationType GetAnimationType(const char* animName) {
     if (_stricmp(animName, "__logo__") == 0) return ANIM_TYPE_LOGO;
     if (_stricmp(animName, "__cpu__") == 0) return ANIM_TYPE_CPU;
     if (_stricmp(animName, "__mem__") == 0) return ANIM_TYPE_MEMORY;
+    if (_stricmp(animName, "__battery__") == 0) return ANIM_TYPE_BATTERY;
     if (_stricmp(animName, "__none__") == 0) return ANIM_TYPE_NONE;
     return ANIM_TYPE_CUSTOM;
 }
 
-/** @brief Check if type is percent-based (CPU/Memory) */
+/** @brief Check if type is percent-based (CPU/Memory/Battery) */
 static inline BOOL IsPercentIcon(AnimationType type) {
-    return type == ANIM_TYPE_CPU || type == ANIM_TYPE_MEMORY;
+    return type == ANIM_TYPE_CPU || type == ANIM_TYPE_MEMORY || type == ANIM_TYPE_BATTERY;
 }
 
 /** @brief Check if type is builtin (not custom) */
@@ -235,8 +238,7 @@ static void BuildBasicTooltip(wchar_t* tip, size_t tipSize, float cpu, float mem
 static BOOL ShouldShowAnimationSpeed(const char* animName) {
     if (!animName) return FALSE;
     
-    AnimationType type = GetAnimationType(animName);
-    if (IsBuiltinIcon(type)) return FALSE;
+    if (IsBuiltinAnimationName(animName)) return FALSE;
     if (IsStaticImageFile(animName)) return FALSE;
     
     return TRUE;
@@ -345,14 +347,22 @@ void RegisterTaskbarCreatedMessage() {
 static HICON GetInitialPercentIcon(AnimationType type) {
     if (!IsPercentIcon(type)) return NULL;
     
-    float cpu = 0.0f, mem = 0.0f;
+    int percent = 0;
     
-    SystemMonitor_ForceRefresh();
-    Sleep(PERCENT_ICON_WARMUP_MS);
-    SystemMonitor_ForceRefresh();
-    SystemMonitor_GetUsage(&cpu, &mem);
+    if (type == ANIM_TYPE_BATTERY) {
+        int batteryPercent = 0;
+        if (SystemMonitor_GetBatteryPercent(&batteryPercent)) {
+            percent = batteryPercent;
+        }
+    } else {
+        float cpu = 0.0f, mem = 0.0f;
+        SystemMonitor_ForceRefresh();
+        Sleep(PERCENT_ICON_WARMUP_MS);
+        SystemMonitor_ForceRefresh();
+        SystemMonitor_GetUsage(&cpu, &mem);
+        percent = (type == ANIM_TYPE_CPU) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+    }
     
-    int percent = (type == ANIM_TYPE_CPU) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
     if (percent < 0) percent = 0;
     if (percent > 100) percent = 100;
     

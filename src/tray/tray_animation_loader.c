@@ -7,10 +7,58 @@
 #include "utils/natural_sort.h"
 #include "config.h"
 #include "../resource/resource.h"
+#include "system_monitor.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+/**
+ * @brief Get CPU usage for builtin animation
+ */
+static int GetCpuValue(void) {
+    float cpu = 0.0f, mem = 0.0f;
+    if (SystemMonitor_GetUsage(&cpu, &mem)) {
+        return (int)(cpu + 0.5f);
+    }
+    return 0;
+}
+
+/**
+ * @brief Get Memory usage for builtin animation
+ */
+static int GetMemValue(void) {
+    float cpu = 0.0f, mem = 0.0f;
+    if (SystemMonitor_GetUsage(&cpu, &mem)) {
+        return (int)(mem + 0.5f);
+    }
+    return 0;
+}
+
+/**
+ * @brief Get Battery percent for builtin animation
+ */
+static int GetBatteryValue(void) {
+    int percent = 0;
+    if (SystemMonitor_GetBatteryPercent(&percent)) {
+        return percent;
+    }
+    return 0;
+}
+
+/**
+ * @brief Builtin animation registry
+ * @note Centralized configuration for all builtin types
+ */
+static const BuiltinAnimDef g_builtinAnims[] = {
+    { "__logo__",    CLOCK_IDM_ANIMATIONS_USE_LOGO,    L"Logo",      ANIM_SOURCE_LOGO,    NULL },
+    { "__cpu__",     CLOCK_IDM_ANIMATIONS_USE_CPU,     L"CPU %",     ANIM_SOURCE_PERCENT, GetCpuValue },
+    { "__mem__",     CLOCK_IDM_ANIMATIONS_USE_MEM,     L"Memory %",  ANIM_SOURCE_PERCENT, GetMemValue },
+    { "__battery__", CLOCK_IDM_ANIMATIONS_USE_BATTERY, L"Battery %", ANIM_SOURCE_PERCENT, GetBatteryValue },
+    { "__none__",    CLOCK_IDM_ANIMATIONS_USE_NONE,    L"None",      ANIM_SOURCE_UNKNOWN, NULL }
+};
+
+static const int g_builtinAnimCount = sizeof(g_builtinAnims) / sizeof(g_builtinAnims[0]);
 
 /**
  * @brief Initialize loaded animation
@@ -53,16 +101,39 @@ static BOOL EndsWithIgnoreCase(const char* str, const char* suffix) {
     return _stricmp(str + (ls - lsuf), suffix) == 0;
 }
 
+const BuiltinAnimDef* GetBuiltinAnimDef(const char* name) {
+    if (!name) return NULL;
+    for (int i = 0; i < g_builtinAnimCount; i++) {
+        if (_stricmp(name, g_builtinAnims[i].name) == 0) {
+            return &g_builtinAnims[i];
+        }
+    }
+    return NULL;
+}
+
+const BuiltinAnimDef* GetBuiltinAnimDefById(UINT id) {
+    for (int i = 0; i < g_builtinAnimCount; i++) {
+        if (g_builtinAnims[i].menuId == id) {
+            return &g_builtinAnims[i];
+        }
+    }
+    return NULL;
+}
+
+const BuiltinAnimDef* GetBuiltinAnims(int* count) {
+    if (count) *count = g_builtinAnimCount;
+    return g_builtinAnims;
+}
+
 /**
  * @brief Detect animation source type
  */
 AnimationSourceType DetectAnimationSourceType(const char* name) {
     if (!name || !*name) return ANIM_SOURCE_UNKNOWN;
     
-    if (_stricmp(name, "__logo__") == 0) return ANIM_SOURCE_LOGO;
-    if (_stricmp(name, "__cpu__") == 0) return ANIM_SOURCE_PERCENT;
-    if (_stricmp(name, "__mem__") == 0) return ANIM_SOURCE_PERCENT;
-    if (_stricmp(name, "__none__") == 0) return ANIM_SOURCE_UNKNOWN; /* Transparent icon, handled specially */
+    const BuiltinAnimDef* def = GetBuiltinAnimDef(name);
+    if (def) return def->type;
+
     if (EndsWithIgnoreCase(name, ".gif")) return ANIM_SOURCE_GIF;
     if (EndsWithIgnoreCase(name, ".webp")) return ANIM_SOURCE_WEBP;
     if (EndsWithIgnoreCase(name, ".ico") || EndsWithIgnoreCase(name, ".png") ||
@@ -212,6 +283,13 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
     
     free(files);
     return (*count > 0);
+}
+
+/**
+ * @brief Check if name is a builtin animation
+ */
+BOOL IsBuiltinAnimationName(const char* name) {
+    return GetBuiltinAnimDef(name) != NULL;
 }
 
 /**

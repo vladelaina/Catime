@@ -271,3 +271,24 @@ BOOL SystemMonitor_GetNetSpeed(float* outUpBytesPerSec, float* outDownBytesPerSe
     *outDownBytesPerSec = g_state.network.cachedDownBps;
     return TRUE;
 }
+
+BOOL SystemMonitor_GetBatteryPercent(int* outPercent) {
+    if (!outPercent) return FALSE;
+    
+    SYSTEM_POWER_STATUS sps;
+    if (!GetSystemPowerStatus(&sps)) {
+        *outPercent = -1;
+        return FALSE;
+    }
+    
+    if (sps.BatteryFlag == 128 || sps.BatteryLifePercent == 255) {
+        *outPercent = -1;
+        return FALSE;
+    }
+    
+    *outPercent = (int)sps.BatteryLifePercent;
+    if (*outPercent > 100) *outPercent = 100;
+    if (*outPercent < 0) *outPercent = 0;
+    
+    return TRUE;
+}

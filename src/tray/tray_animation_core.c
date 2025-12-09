@@ -217,14 +217,18 @@ static void UpdateTrayIconToCurrentFrame(void) {
     
     /* Handle percent icons - both normal and preview mode */
     if (currentAnim->sourceType == ANIM_SOURCE_PERCENT) {
-        float cpu = 0.0f, mem = 0.0f;
-        SystemMonitor_GetUsage(&cpu, &mem);
-        int p = (_stricmp(targetName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+        int p = 0;
+        
+        const BuiltinAnimDef* def = GetBuiltinAnimDef(targetName);
+        if (def && def->getValue) {
+            p = def->getValue();
+        }
+        
         if (p < 0) p = 0;
         if (p > 100) p = 100;
 
-        WriteLog(LOG_LEVEL_DEBUG, "Percent icon update: type=%s target=%s cpu=%.1f%% mem=%.1f%% p=%d preview=%d",
-                 g_animationName, targetName, cpu, mem, p, g_isPreviewActive);
+        WriteLog(LOG_LEVEL_DEBUG, "Percent icon update: target=%s p=%d preview=%d",
+                 targetName, p, g_isPreviewActive);
 
         HICON hIcon = CreatePercentIcon16(p);
         if (hIcon) {
@@ -313,12 +317,8 @@ static void TrayAnimationTimerCallback(void* userData) {
     (void)userData;
     
     /* Skip logic for percent icons (updated separately) and __none__ (static) */
-    if (!g_isPreviewActive) {
-        if (_stricmp(g_animationName, "__cpu__") == 0 || 
-            _stricmp(g_animationName, "__mem__") == 0 ||
-            _stricmp(g_animationName, "__none__") == 0) {
-            return;
-        }
+    if (!g_isPreviewActive && IsBuiltinAnimationName(g_animationName)) {
+        return;
     }
     
     if (g_criticalSectionInitialized) {
@@ -391,8 +391,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     
     if (nameBuf[0] != '\0') {
         const char* prefix = ANIMATIONS_PATH_PREFIX;
-        if (_stricmp(nameBuf, "__logo__") == 0 || _stricmp(nameBuf, "__cpu__") == 0 || 
-            _stricmp(nameBuf, "__mem__") == 0 || _stricmp(nameBuf, "__none__") == 0) {
+        if (IsBuiltinAnimationName(nameBuf)) {
             strncpy(g_animationName, nameBuf, sizeof(g_animationName) - 1);
         } else if (_strnicmp(nameBuf, prefix, (int)strlen(prefix)) == 0) {
             const char* rel = nameBuf + strlen(prefix);
@@ -499,8 +498,7 @@ BOOL SetCurrentAnimationName(const char* name) {
         GetConfigPath(config_path, sizeof(config_path));
         char animPath[MAX_PATH];
         
-        if (_stricmp(name, "__logo__") == 0 || _stricmp(name, "__cpu__") == 0 || 
-            _stricmp(name, "__mem__") == 0 || _stricmp(name, "__none__") == 0) {
+        if (IsBuiltinAnimationName(name)) {
             snprintf(animPath, sizeof(animPath), "%s", name);
         } else {
             snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", name);
@@ -545,8 +543,7 @@ BOOL SetCurrentAnimationName(const char* name) {
     GetConfigPath(config_path, sizeof(config_path));
     char animPath[MAX_PATH];
     
-    if (_stricmp(name, "__logo__") == 0 || _stricmp(name, "__cpu__") == 0 || 
-        _stricmp(name, "__mem__") == 0 || _stricmp(name, "__none__") == 0) {
+    if (IsBuiltinAnimationName(name)) {
         snprintf(animPath, sizeof(animPath), "%s", name);
     } else {
         snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", name);
@@ -769,8 +766,7 @@ void PreloadAnimationFromConfig(void) {
     
     if (nameBuf[0] != '\0') {
         const char* prefix = ANIMATIONS_PATH_PREFIX;
-        if (_stricmp(nameBuf, "__logo__") == 0 || _stricmp(nameBuf, "__cpu__") == 0 || 
-            _stricmp(nameBuf, "__mem__") == 0 || _stricmp(nameBuf, "__none__") == 0) {
+        if (IsBuiltinAnimationName(nameBuf)) {
             strncpy(g_animationName, nameBuf, sizeof(g_animationName) - 1);
         } else if (_strnicmp(nameBuf, prefix, (int)strlen(prefix)) == 0) {
             const char* rel = nameBuf + strlen(prefix);
@@ -796,7 +792,8 @@ void PreloadAnimationFromConfig(void) {
  * @brief Get initial animation icon
  */
 HICON GetInitialAnimationHicon(void) {
-    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0) {
+    if (_stricmp(g_animationName, "__cpu__") == 0 || _stricmp(g_animationName, "__mem__") == 0 ||
+        _stricmp(g_animationName, "__battery__") == 0) {
         return NULL;
     }
     
@@ -829,8 +826,7 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
     char name[MAX_PATH] = {0};
     
-    if (_stricmp(value, "__logo__") == 0 || _stricmp(value, "__cpu__") == 0 || 
-        _stricmp(value, "__mem__") == 0 || _stricmp(value, "__none__") == 0) {
+    if (IsBuiltinAnimationName(value)) {
         strncpy(name, value, sizeof(name) - 1);
     } else if (_strnicmp(value, prefix, (int)strlen(prefix)) == 0) {
         const char* rel = value + strlen(prefix);
@@ -894,12 +890,18 @@ void TrayAnimation_RecomputeTimerDelay(void) {
 void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
     if (!g_animationName[0]) return;
-    if (_stricmp(g_animationName, "__cpu__") != 0 && _stricmp(g_animationName, "__mem__") != 0) return;
+    
+    /* Only update if it's a builtin percent type (e.g. __cpu__, __mem__, __battery__) */
+    const BuiltinAnimDef* def = GetBuiltinAnimDef(g_animationName);
+    if (!def || def->type != ANIM_SOURCE_PERCENT) return;
+    
     if (g_isPreviewActive) return;
     
-    float cpu = 0.0f, mem = 0.0f;
-    SystemMonitor_GetUsage(&cpu, &mem);
-    int p = (_stricmp(g_animationName, "__cpu__") == 0) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+    int p = 0;
+    if (def->getValue) {
+        p = def->getValue();
+    }
+    
     if (p < 0) p = 0;
     if (p > 100) p = 100;
     

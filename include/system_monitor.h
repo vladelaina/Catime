@@ -97,6 +97,16 @@ BOOL SystemMonitor_GetUsage(float* outCpuPercent, float* outMemPercent);
  */
 BOOL SystemMonitor_GetNetSpeed(float* outUpBytesPerSec, float* outDownBytesPerSec);
 
+/**
+ * @brief Get battery charge percentage
+ * @param outPercent Output (0-100, or -1 if no battery)
+ * @return TRUE if battery present, FALSE if no battery or error
+ * 
+ * @details
+ * Uses GetSystemPowerStatus API. Returns FALSE for desktop PCs without battery.
+ */
+BOOL SystemMonitor_GetBatteryPercent(int* outPercent);
+
 #endif
 
 

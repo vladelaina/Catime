@@ -126,15 +126,17 @@ HICON CreatePercentIcon16(int percent) {
     SetBkMode(mem, TRANSPARENT);
     SetTextColor(mem, textColor);
 
-    /* Create font: -12 size fits percentage text (0-100) within 16x16 tray icon */
-    HFONT hFont = CreateFontW(-12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+    /* Format text first to determine digit count */
+    wchar_t txt[8];
+    wsprintfW(txt, L"%d", percent);
+    
+    /* Dynamic font size: smaller for 3-digit numbers (100) */
+    int fontSize = (percent >= 100) ? -9 : -12;
+
+    HFONT hFont = CreateFontW(fontSize, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                               DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                               ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
     HFONT oldf = hFont ? (HFONT)SelectObject(mem, hFont) : NULL;
-
-    /* Format text */
-    wchar_t txt[8];
-    wsprintfW(txt, L"%d", percent);
 
     /* Center text */
     SIZE sz = {0};
@@ -174,7 +176,7 @@ HICON CreatePercentIcon16(int percent) {
         SetBkMode(memMask, TRANSPARENT);
         SetTextColor(memMask, RGB(0, 0, 0));
 
-        HFONT hMaskFont = CreateFontW(-12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+        HFONT hMaskFont = CreateFontW(fontSize, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
                                       DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                                       ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
         HFONT oldMaskFont = hMaskFont ? (HFONT)SelectObject(memMask, hMaskFont) : NULL;

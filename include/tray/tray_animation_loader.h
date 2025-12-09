@@ -41,6 +41,23 @@ typedef struct {
 } LoadedAnimation;
 
 /**
+ * @brief Callback to get percentage value (0-100) for percent-based icons
+ * @return Value 0-100, or -1 if invalid/error
+ */
+typedef int (*AnimValueCallback)(void);
+
+/**
+ * @brief Definition of a builtin animation type
+ */
+typedef struct {
+    const char* name;           /**< Internal name (e.g. "__cpu__") */
+    UINT menuId;                /**< Resource ID for menu */
+    const wchar_t* menuLabel;   /**< Display label in menu */
+    AnimationSourceType type;   /**< Animation source type */
+    AnimValueCallback getValue; /**< Value getter (optional, for PERCENT type) */
+} BuiltinAnimDef;
+
+/**
  * @brief Initialize loaded animation structure
  */
 void LoadedAnimation_Init(LoadedAnimation* anim);
@@ -56,6 +73,25 @@ void LoadedAnimation_Free(LoadedAnimation* anim);
  * @return Source type
  */
 AnimationSourceType DetectAnimationSourceType(const char* name);
+
+/**
+ * @brief Get builtin animation definition by name
+ * @return Pointer to definition or NULL if not found
+ */
+const BuiltinAnimDef* GetBuiltinAnimDef(const char* name);
+
+/**
+ * @brief Get builtin animation definition by menu ID
+ * @return Pointer to definition or NULL if not found
+ */
+const BuiltinAnimDef* GetBuiltinAnimDefById(UINT id);
+
+/**
+ * @brief Get all builtin animation definitions
+ * @param count Output count
+ * @return Pointer to array
+ */
+const BuiltinAnimDef* GetBuiltinAnims(int* count);
 
 /**
  * @brief Load animation frames by name
@@ -90,6 +126,15 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
  * @return TRUE if valid and exists
  */
 BOOL IsValidAnimationSource(const char* name);
+
+/**
+ * @brief Check if name is a builtin animation (not custom file/folder)
+ * @param name Animation identifier
+ * @return TRUE for __logo__, __cpu__, __mem__, __battery__, __none__
+ * 
+ * @note Add new builtin types here to avoid scattered checks
+ */
+BOOL IsBuiltinAnimationName(const char* name);
 
 #endif /* TRAY_ANIMATION_LOADER_H */
 

@@ -123,30 +123,17 @@ static void BuildAnimationMenuFromCache(HMENU hRootMenu, const AnimationCacheEnt
 void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
     if (!hMenu) return;
 
-    /* Builtin options */
-    UINT flags = MF_STRING;
-    if (currentAnimationName && _stricmp(currentAnimationName, "__logo__") == 0) {
-        flags |= MF_CHECKED;
+    /* Builtin options from registry */
+    int builtinCount = 0;
+    const BuiltinAnimDef* builtins = GetBuiltinAnims(&builtinCount);
+    
+    for (int i = 0; i < builtinCount; i++) {
+        UINT flags = MF_STRING;
+        if (currentAnimationName && _stricmp(currentAnimationName, builtins[i].name) == 0) {
+            flags |= MF_CHECKED;
+        }
+        AppendMenuW(hMenu, flags, builtins[i].menuId, builtins[i].menuLabel);
     }
-    AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_LOGO, L"Logo");
-
-    flags = MF_STRING;
-    if (currentAnimationName && _stricmp(currentAnimationName, "__cpu__") == 0) {
-        flags |= MF_CHECKED;
-    }
-    AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_CPU, L"CPU %");
-
-    flags = MF_STRING;
-    if (currentAnimationName && _stricmp(currentAnimationName, "__mem__") == 0) {
-        flags |= MF_CHECKED;
-    }
-    AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_MEM, L"Memory %");
-
-    flags = MF_STRING;
-    if (currentAnimationName && _stricmp(currentAnimationName, "__none__") == 0) {
-        flags |= MF_CHECKED;
-    }
-    AppendMenuW(hMenu, flags, CLOCK_IDM_ANIMATIONS_USE_NONE, L"None");
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
@@ -190,20 +177,10 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
         return TRUE;
     }
 
-    if (id == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
-        return SetCurrentAnimationName("__logo__");
-    }
-
-    if (id == CLOCK_IDM_ANIMATIONS_USE_CPU) {
-        return SetCurrentAnimationName("__cpu__");
-    }
-
-    if (id == CLOCK_IDM_ANIMATIONS_USE_MEM) {
-        return SetCurrentAnimationName("__mem__");
-    }
-
-    if (id == CLOCK_IDM_ANIMATIONS_USE_NONE) {
-        return SetCurrentAnimationName("__none__");
+    /* Check builtin animations first */
+    const BuiltinAnimDef* def = GetBuiltinAnimDefById(id);
+    if (def) {
+        return SetCurrentAnimationName(def->name);
     }
 
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_END) {
@@ -275,26 +252,10 @@ void OpenAnimationsFolder(void) {
 BOOL GetAnimationNameFromMenuId(UINT id, char* outPath, size_t outPathSize) {
     if (!outPath || outPathSize == 0) return FALSE;
     
-    if (id == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
-        strncpy(outPath, "__logo__", outPathSize - 1);
-        outPath[outPathSize - 1] = '\0';
-        return TRUE;
-    }
-    
-    if (id == CLOCK_IDM_ANIMATIONS_USE_CPU) {
-        strncpy(outPath, "__cpu__", outPathSize - 1);
-        outPath[outPathSize - 1] = '\0';
-        return TRUE;
-    }
-    
-    if (id == CLOCK_IDM_ANIMATIONS_USE_MEM) {
-        strncpy(outPath, "__mem__", outPathSize - 1);
-        outPath[outPathSize - 1] = '\0';
-        return TRUE;
-    }
-    
-    if (id == CLOCK_IDM_ANIMATIONS_USE_NONE) {
-        strncpy(outPath, "__none__", outPathSize - 1);
+    /* Check builtin animations */
+    const BuiltinAnimDef* def = GetBuiltinAnimDefById(id);
+    if (def) {
+        strncpy(outPath, def->name, outPathSize - 1);
         outPath[outPathSize - 1] = '\0';
         return TRUE;
     }
