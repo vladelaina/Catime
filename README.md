@@ -36,15 +36,19 @@
 
 
 <!-- GitHub Trending Area -->
-<div align="center">
-  <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank">
-    <div style="background-color: #f5f5f5; border-radius: 12px; padding: 15px; display: inline-block; margin-top: 20px; border: 1px solid #e1e4e8;">
-      <div style="display: flex; align-items: center; justify-content: center;">
-        <img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" />
-      </div>
-    </div>
+<p align="center">
+  <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank" style="display: inline-block; vertical-align: middle; background-color: #f5f5f5; border-radius: 12px; padding: 15px; border: 1px solid #e1e4e8; margin-right: 10px;">
+    <img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=00a7a32b7bc647e1a62747530bc16115&claim_uid=JBczix10rXqNblQ" alt="Featured｜HelloGitHub" style="width: 250px; height: 54px;" width="250" height="54" />
   </a>
-</div>
+
+  <a href="https://trendshift.io/repositories/15506" target="_blank" style="display: inline-block; vertical-align: middle;">
+    <img src="https://trendshift.io/api/badge/repositories/15506" 
+         alt="Catime | Trendshift" 
+         style="width: 250px; height: 55px;" 
+         width="250" height="55"/>
+  </a>
+</p>
+
 
 <!-- Demo Video -->
 <div align="center" style="margin-bottom: 30px;">
