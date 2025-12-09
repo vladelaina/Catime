@@ -8,6 +8,7 @@
 #include "utils/natural_sort.h"
 #include "config.h"
 #include "log.h"
+#include "language.h"
 #include "cache/animation_cache.h"
 #include "cache/resource_cache.h"
 #include <shlobj.h>
@@ -132,7 +133,10 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
         if (currentAnimationName && _stricmp(currentAnimationName, builtins[i].name) == 0) {
             flags |= MF_CHECKED;
         }
-        AppendMenuW(hMenu, flags, builtins[i].menuId, builtins[i].menuLabel);
+        
+        /* Use menuLabel as translation key */
+        const wchar_t* translatedLabel = GetLocalizedString(NULL, builtins[i].menuLabel);
+        AppendMenuW(hMenu, flags, builtins[i].menuId, translatedLabel);
     }
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);

@@ -51,11 +51,11 @@ static int GetBatteryValue(void) {
  * @note Centralized configuration for all builtin types
  */
 static const BuiltinAnimDef g_builtinAnims[] = {
-    { "__logo__",    CLOCK_IDM_ANIMATIONS_USE_LOGO,    L"Logo",      ANIM_SOURCE_LOGO,    NULL },
-    { "__cpu__",     CLOCK_IDM_ANIMATIONS_USE_CPU,     L"CPU %",     ANIM_SOURCE_PERCENT, GetCpuValue },
-    { "__mem__",     CLOCK_IDM_ANIMATIONS_USE_MEM,     L"Memory %",  ANIM_SOURCE_PERCENT, GetMemValue },
-    { "__battery__", CLOCK_IDM_ANIMATIONS_USE_BATTERY, L"Battery %", ANIM_SOURCE_PERCENT, GetBatteryValue },
-    { "__none__",    CLOCK_IDM_ANIMATIONS_USE_NONE,    L"None",      ANIM_SOURCE_UNKNOWN, NULL }
+    { "__logo__",    CLOCK_IDM_ANIMATIONS_USE_LOGO,    L"Use Logo",        ANIM_SOURCE_LOGO,    NULL },
+    { "__cpu__",     CLOCK_IDM_ANIMATIONS_USE_CPU,     L"CPU Percent",     ANIM_SOURCE_PERCENT, GetCpuValue },
+    { "__mem__",     CLOCK_IDM_ANIMATIONS_USE_MEM,     L"Memory Percent",  ANIM_SOURCE_PERCENT, GetMemValue },
+    { "__battery__", CLOCK_IDM_ANIMATIONS_USE_BATTERY, L"Battery Percent", ANIM_SOURCE_PERCENT, GetBatteryValue },
+    { "__none__",    CLOCK_IDM_ANIMATIONS_USE_NONE,    L"None",            ANIM_SOURCE_UNKNOWN, NULL }
 };
 
 static const int g_builtinAnimCount = sizeof(g_builtinAnims) / sizeof(g_builtinAnims[0]);
