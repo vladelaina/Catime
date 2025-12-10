@@ -34,5 +34,16 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost);
  */
 void ReattachToDesktop(HWND hwnd);
 
+/**
+ * @brief Enforce topmost when window overlaps taskbar
+ * @param hwnd Window handle
+ * @return TRUE if window overlaps taskbar area, FALSE otherwise
+ * 
+ * @details If window is in topmost mode and overlaps with taskbar area,
+ * re-apply topmost to ensure visibility. Called periodically by main timer.
+ * Uses standard SetWindowPos API - safe and game-compatible.
+ */
+BOOL EnforceTopmostOverTaskbar(HWND hwnd);
+
 #endif /* WINDOW_DESKTOP_INTEGRATION_H */
 

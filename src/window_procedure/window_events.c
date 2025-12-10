@@ -100,6 +100,7 @@ void HandleWindowDestroy(HWND hwnd) {
     CleanupUpdateThread();
 
     KillTimer(hwnd, TIMER_ID_MAIN);
+    KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
     extern UINT GetClickThroughTimerId(void);
     KillTimer(hwnd, GetClickThroughTimerId());
     LOG_INFO("Timers stopped");

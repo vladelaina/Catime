@@ -21,6 +21,7 @@
 #include "tray/tray_animation_core.h"
 #include "utils/string_convert.h"
 #include "log.h"
+#include "window/window_desktop_integration.h"
 
 /* Pomodoro and timer constants:
  * - 1500s = 25 min (standard Pomodoro work duration)
@@ -45,6 +46,7 @@ static int pomodoro_initial_loop_count = 0;
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
 static BOOL tail_fast_mode_active = FALSE;
+static BOOL topmost_fast_mode_active = FALSE;
 
 static inline void ForceWindowRedraw(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
@@ -477,6 +479,19 @@ static void HandleCountdownCompletion(HWND hwnd) {
 }
 
 static BOOL HandleMainTimer(HWND hwnd) {
+    /* Manage fast topmost enforcement based on taskbar overlap */
+    BOOL overlapsTaskbar = EnforceTopmostOverTaskbar(hwnd);
+    
+    if (overlapsTaskbar && !topmost_fast_mode_active) {
+        /* Window entered taskbar area - start fast timer (50ms) */
+        SetTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE, 50, NULL);
+        topmost_fast_mode_active = TRUE;
+    } else if (!overlapsTaskbar && topmost_fast_mode_active) {
+        /* Window left taskbar area - stop fast timer */
+        KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
+        topmost_fast_mode_active = FALSE;
+    }
+    
     if (CLOCK_SHOW_CURRENT_TIME) {
         extern int last_displayed_second;
         last_displayed_second = -1;
@@ -597,6 +612,11 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         case TIMER_ID_RENDER_ANIMATION:
             /* Pure render tick - decouples visual flow from logic update */
             InvalidateRect(hwnd, NULL, TRUE);
+            return TRUE;
+
+        case TIMER_ID_TOPMOST_ENFORCE:
+            /* Fast topmost enforcement when overlapping taskbar (50ms) */
+            EnforceTopmostOverTaskbar(hwnd);
             return TRUE;
 
         default:

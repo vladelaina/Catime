@@ -127,3 +127,33 @@ void ReattachToDesktop(HWND hwnd) {
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
+BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
+    /* Only enforce if topmost mode is enabled */
+    if (!CLOCK_WINDOW_TOPMOST) return FALSE;
+    
+    /* Get our window position */
+    RECT rcWindow;
+    if (!GetWindowRect(hwnd, &rcWindow)) return FALSE;
+    
+    /* Get taskbar position */
+    HWND hTaskbar = FindWindowW(L"Shell_TrayWnd", NULL);
+    if (!hTaskbar) return FALSE;
+    
+    RECT rcTaskbar;
+    if (!GetWindowRect(hTaskbar, &rcTaskbar)) return FALSE;
+    
+    /* Check if our window overlaps with taskbar area */
+    BOOL overlaps = !(rcWindow.right < rcTaskbar.left ||
+                      rcWindow.left > rcTaskbar.right ||
+                      rcWindow.bottom < rcTaskbar.top ||
+                      rcWindow.top > rcTaskbar.bottom);
+    
+    if (overlaps) {
+        /* Re-apply topmost to ensure we stay above taskbar */
+        SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+    
+    return overlaps;
+}
+
