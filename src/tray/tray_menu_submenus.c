@@ -184,6 +184,11 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
                 GetLocalizedString(NULL, L"Stopwatch"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
+                (strcmp(currentStartupMode, "POMODORO") == 0 ? MF_CHECKED : 0),
+                CLOCK_IDC_START_POMODORO,
+                GetLocalizedString(NULL, L"Pomodoro"));
+    
+    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
                 (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_SHOW_TIME,
                 GetLocalizedString(NULL, L"Show Current Time"));

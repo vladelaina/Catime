@@ -20,6 +20,7 @@
 static PluginInfo g_plugins[MAX_PLUGINS];
 static int g_pluginCount = 0;
 static CRITICAL_SECTION g_pluginCS;
+static BOOL g_pluginManagerInitialized = FALSE;
 
 /* Hot-reload monitoring */
 static HANDLE g_hHotReloadThread = NULL;
@@ -113,6 +114,7 @@ static void ExtractDisplayName(const wchar_t* filename, wchar_t* displayName, si
 
 void PluginManager_Init(void) {
     InitializeCriticalSection(&g_pluginCS);
+    g_pluginManagerInitialized = TRUE;
     memset(g_plugins, 0, sizeof(g_plugins));
     g_pluginCount = 0;
 
@@ -130,6 +132,8 @@ void PluginManager_Init(void) {
 }
 
 void PluginManager_Shutdown(void) {
+    if (!g_pluginManagerInitialized) return;
+    
     /* Stop hot-reload thread */
     if (g_hHotReloadThread) {
         g_hotReloadRunning = FALSE;
@@ -188,6 +192,7 @@ int PluginManager_ScanPlugins(void) {
 
     LOG_INFO("Scanning plugin directory: %s", pluginDirA);
 
+    if (!g_pluginManagerInitialized) return 0;
     EnterCriticalSection(&g_pluginCS);
 
     // Scan into temporary list to preserve state
@@ -334,6 +339,7 @@ void PluginManager_RequestScanAsync(void) {
 }
 
 int PluginManager_GetPluginCount(void) {
+    if (!g_pluginManagerInitialized) return 0;
     int count;
     EnterCriticalSection(&g_pluginCS);
     count = g_pluginCount;
@@ -379,6 +385,7 @@ static void StopPluginInternal(int index) {
 }
 
 BOOL PluginManager_StartPlugin(int index) {
+    if (!g_pluginManagerInitialized) return FALSE;
     if (index < 0 || index >= g_pluginCount) {
         return FALSE;
     }
@@ -501,6 +508,7 @@ static BOOL RestartPluginInternal(int index) {
 }
 
 BOOL PluginManager_StopPlugin(int index) {
+    if (!g_pluginManagerInitialized) return FALSE;
     if (index < 0 || index >= g_pluginCount) {
         return FALSE;
     }
@@ -529,6 +537,7 @@ BOOL PluginManager_StopPlugin(int index) {
 }
 
 BOOL PluginManager_TogglePlugin(int index) {
+    if (!g_pluginManagerInitialized) return FALSE;
     if (index < 0 || index >= g_pluginCount) {
         return FALSE;
     }
@@ -541,6 +550,7 @@ BOOL PluginManager_TogglePlugin(int index) {
 }
 
 BOOL PluginManager_IsPluginRunning(int index) {
+    if (!g_pluginManagerInitialized) return FALSE;
     if (index < 0 || index >= g_pluginCount) {
         return FALSE;
     }
@@ -562,6 +572,7 @@ BOOL PluginManager_IsPluginRunning(int index) {
 }
 
 void PluginManager_StopAllPlugins(void) {
+    if (!g_pluginManagerInitialized) return;
     EnterCriticalSection(&g_pluginCS);
     for (int i = 0; i < g_pluginCount; i++) {
         if (g_plugins[i].isRunning) {

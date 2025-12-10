@@ -130,7 +130,8 @@ BOOL ValidateTimerConfig(ConfigSnapshot* snapshot) {
         if (strcmp(snapshot->startupMode, "COUNTDOWN") != 0 &&
             strcmp(snapshot->startupMode, "COUNT_UP") != 0 &&
             strcmp(snapshot->startupMode, "SHOW_TIME") != 0 &&
-            strcmp(snapshot->startupMode, "NO_DISPLAY") != 0) {
+            strcmp(snapshot->startupMode, "NO_DISPLAY") != 0 &&
+            strcmp(snapshot->startupMode, "POMODORO") != 0) {
             LOG_WARNING("Invalid startup mode '%s', resetting to COUNTDOWN",
                        snapshot->startupMode);
             strncpy(snapshot->startupMode, "COUNTDOWN",

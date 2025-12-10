@@ -181,6 +181,7 @@
 #define CLOCK_IDC_START_NO_DISPLAY 174   /**< Start with no display */
 #define CLOCK_IDC_START_COUNT_UP 175     /**< Start in count-up mode */
 #define CLOCK_IDC_START_SHOW_TIME 176    /**< Start showing current time */
+#define CLOCK_IDC_START_POMODORO 177     /**< Start in pomodoro mode */
 
 /** @brief Quick time menu base identifier */
 #define CLOCK_IDM_QUICK_TIME_BASE 800    /**< Base ID for dynamic quick time menus */

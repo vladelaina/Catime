@@ -665,6 +665,7 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     if (cmd == CLOCK_IDC_START_SHOW_TIME) { CmdSetStartupMode(hwnd, "SHOW_TIME"); return TRUE; }
     if (cmd == CLOCK_IDC_START_COUNT_UP) { CmdSetStartupMode(hwnd, "COUNT_UP"); return TRUE; }
     if (cmd == CLOCK_IDC_START_NO_DISPLAY) { CmdSetStartupMode(hwnd, "NO_DISPLAY"); return TRUE; }
+    if (cmd == CLOCK_IDC_START_POMODORO) { CmdSetStartupMode(hwnd, "POMODORO"); return TRUE; }
 
     /* Plugin commands */
     if (HandlePluginCommand(hwnd, cmd)) return TRUE;

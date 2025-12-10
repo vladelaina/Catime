@@ -27,6 +27,7 @@ BOOL g_hasPluginData = FALSE;
 static BOOL g_pluginModeActive = FALSE;
 static volatile BOOL g_forceNextUpdate = FALSE;
 static CRITICAL_SECTION g_dataCS;
+static BOOL g_pluginDataInitialized = FALSE;
 
 /* Watcher thread */
 static HANDLE g_hWatchThread = NULL;
@@ -303,6 +304,7 @@ static DWORD WINAPI FileWatcherThread(LPVOID lpParam) {
 
 void PluginData_Init(HWND hwnd) {
     InitializeCriticalSection(&g_dataCS);
+    g_pluginDataInitialized = TRUE;
     g_hNotifyWnd = hwnd;
     g_hasPluginData = FALSE;
     g_pluginDisplayText = NULL;
@@ -329,6 +331,8 @@ void PluginData_Init(HWND hwnd) {
 }
 
 void PluginData_Shutdown(void) {
+    if (!g_pluginDataInitialized) return;
+    
     /* Stop watcher thread */
     if (g_hWatchThread) {
         g_isRunning = FALSE;
@@ -360,6 +364,7 @@ void PluginData_Shutdown(void) {
 
 BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
     if (!buffer || maxLen == 0) return FALSE;
+    if (!g_pluginDataInitialized) return FALSE;
 
     BOOL hasData = FALSE;
     EnterCriticalSection(&g_dataCS);
@@ -389,6 +394,7 @@ void PluginData_Clear(void) {
     /* Reset poll interval to default */
     g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
     
+    if (!g_pluginDataInitialized) return;
     EnterCriticalSection(&g_dataCS);
     g_pluginModeActive = FALSE;  // Deactivate plugin mode
     g_hasPluginData = FALSE;
@@ -400,6 +406,7 @@ void PluginData_Clear(void) {
 
 void PluginData_SetText(const wchar_t* text) {
     if (!text) return;
+    if (!g_pluginDataInitialized) return;
     
     EnterCriticalSection(&g_dataCS);
     
@@ -436,6 +443,7 @@ void PluginData_SetText(const wchar_t* text) {
 }
 
 void PluginData_SetActive(BOOL active) {
+    if (!g_pluginDataInitialized) return;
     EnterCriticalSection(&g_dataCS);
     g_pluginModeActive = active;
     if (active) {
@@ -481,6 +489,7 @@ void PluginData_SetActive(BOOL active) {
 }
 
 BOOL PluginData_IsActive(void) {
+    if (!g_pluginDataInitialized) return FALSE;
     BOOL active;
     EnterCriticalSection(&g_dataCS);
     active = g_pluginModeActive;
@@ -489,6 +498,7 @@ BOOL PluginData_IsActive(void) {
 }
 
 BOOL PluginData_HasCatimeTag(void) {
+    if (!g_pluginDataInitialized) return FALSE;
     BOOL hasTag = FALSE;
     EnterCriticalSection(&g_dataCS);
     if (g_pluginModeActive && g_hasPluginData && g_pluginDisplayText) {

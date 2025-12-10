@@ -25,6 +25,7 @@
 #include "plugin/plugin_manager.h"
 #include "drawing/drawing_image.h"
 #include "markdown/markdown_interactive.h"
+#include "../resource/resource.h"
 #include <tlhelp32.h>
 
 /* Helper to check if process is elevated */
@@ -136,7 +137,8 @@ typedef enum {
     STARTUP_MODE_DEFAULT,
     STARTUP_MODE_COUNT_UP,
     STARTUP_MODE_NO_DISPLAY,
-    STARTUP_MODE_SHOW_TIME
+    STARTUP_MODE_SHOW_TIME,
+    STARTUP_MODE_POMODORO
 } StartupMode;
 
 static StartupMode ParseStartupMode(const char* modeStr) {
@@ -145,6 +147,7 @@ static StartupMode ParseStartupMode(const char* modeStr) {
     if (strcmp(modeStr, "COUNT_UP") == 0) return STARTUP_MODE_COUNT_UP;
     if (strcmp(modeStr, "NO_DISPLAY") == 0) return STARTUP_MODE_NO_DISPLAY;
     if (strcmp(modeStr, "SHOW_TIME") == 0) return STARTUP_MODE_SHOW_TIME;
+    if (strcmp(modeStr, "POMODORO") == 0) return STARTUP_MODE_POMODORO;
     
     return STARTUP_MODE_DEFAULT;
 }
@@ -179,6 +182,11 @@ static void HandleStartupMode(HWND hwnd) {
             LOG_INFO("Setting to show current time mode");
             CLOCK_SHOW_CURRENT_TIME = TRUE;
             CLOCK_LAST_TIME_UPDATE = 0;
+            break;
+            
+        case STARTUP_MODE_POMODORO:
+            LOG_INFO("Setting to pomodoro mode");
+            PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
             break;
             
         case STARTUP_MODE_DEFAULT:
@@ -278,6 +286,10 @@ void InitializeDialogLanguages(void) {
 BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     (void)nCmdShow; // Unused parameter
     
+    // Initialize Plugin Data subsystem early - needed by CLI handlers and startup mode
+    PluginData_Init(hwnd);
+    PluginManager_SetNotifyWindow(hwnd);
+    
     LPWSTR lpCmdLineW = GetCommandLineW();
     while (*lpCmdLineW && *lpCmdLineW != L' ') lpCmdLineW++;
     while (*lpCmdLineW == L' ') lpCmdLineW++;
@@ -346,12 +358,6 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
             SetTimer(hwnd, TIMER_ID_VISIBILITY_RETRY, 2000, NULL);
         }
     }
-    
-    // Initialize Plugin Data subsystem (File Watcher)
-    PluginData_Init(hwnd);
-    
-    // Set notify window for plugin manager hot-reload
-    PluginManager_SetNotifyWindow(hwnd);
 
     return TRUE;
 }

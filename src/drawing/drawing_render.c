@@ -23,7 +23,6 @@
 #include "drawing/drawing_image.h"
 #include "markdown/markdown_parser.h"
 #include "markdown/markdown_image.h"
-#include "color/gradient.h"
 #include "color/color_parser.h"
 #include "../resource/resource.h"
 
