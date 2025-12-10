@@ -492,14 +492,46 @@ static BOOL HandleMainTimer(HWND hwnd) {
         topmost_fast_mode_active = FALSE;
     }
     
+    /* 
+     * Render throttling for heavy effects on large windows.
+     * When holographic effect is active and window is large, we skip some
+     * InvalidateRect calls to prevent mouse lag. The animation timer 
+     * (TIMER_ID_RENDER_ANIMATION) handles visual updates at appropriate rate.
+     */
+    static DWORD s_lastRenderTime = 0;
+    DWORD now = GetTickCount();
+    BOOL shouldRender = TRUE;
+    
+    extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+    if (CLOCK_HOLOGRAPHIC_EFFECT) {
+        RECT rect;
+        GetClientRect(hwnd, &rect);
+        int pixels = rect.right * rect.bottom;
+        
+        /* Minimum interval between renders based on window size */
+        DWORD minInterval = (pixels < 30000) ? 0 :
+                            (pixels < 100000) ? 50 :
+                            (pixels < 300000) ? 100 : 150;
+        
+        if (minInterval > 0 && (now - s_lastRenderTime) < minInterval) {
+            shouldRender = FALSE;
+        }
+    }
+    
     if (CLOCK_SHOW_CURRENT_TIME) {
         extern int last_displayed_second;
         last_displayed_second = -1;
-                InvalidateRect(hwnd, NULL, TRUE);
+        if (shouldRender) {
+            s_lastRenderTime = now;
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
         return TRUE;
     }
     
-    InvalidateRect(hwnd, NULL, TRUE);
+    if (shouldRender) {
+        s_lastRenderTime = now;
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
     
     if (CLOCK_IS_PAUSED) {
         return TRUE;

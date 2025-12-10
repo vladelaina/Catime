@@ -161,9 +161,18 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
             RECT rect;
             GetClientRect(hwnd, &rect);
             int pixels = rect.right * rect.bottom;
-            UINT interval = (pixels < 50000) ? 33 : 
+            
+            /* Holographic effect needs more aggressive throttling */
+            UINT interval;
+            if (CLOCK_HOLOGRAPHIC_EFFECT) {
+                interval = (pixels < 30000) ? 50 : 
+                           (pixels < 100000) ? 80 : 
+                           (pixels < 300000) ? 120 : 200;
+            } else {
+                interval = (pixels < 50000) ? 33 : 
                            (pixels < 200000) ? 50 : 
                            (pixels < 500000) ? 80 : 120;
+            }
             SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL); 
         } else {
             KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);

@@ -84,12 +84,18 @@ static UINT GetAdaptiveAnimationInterval(HWND hwnd) {
     /* 
      * Larger windows need longer intervals to avoid blocking DWM.
      * UpdateLayeredWindow is synchronous and blocks until DWM composites.
-     * Thresholds based on typical bitmap sizes:
-     * - <50K pixels: 33ms (~30fps) - smooth for small text
-     * - 50K-200K: 50ms (~20fps) - balanced
-     * - 200K-500K: 80ms (~12fps) - safe for medium windows
-     * - >500K: 120ms (~8fps) - prevents system-wide mouse lag
+     * 
+     * Holographic effect is significantly heavier (double Gaussian blur + 
+     * per-pixel HSV conversion) and needs more aggressive throttling.
      */
+    if (CLOCK_HOLOGRAPHIC_EFFECT) {
+        if (pixels < 30000) return 50;
+        if (pixels < 100000) return 80;
+        if (pixels < 300000) return 120;
+        return 200;
+    }
+    
+    /* Standard thresholds for other effects */
     if (pixels < 50000) return 33;
     if (pixels < 200000) return 50;
     if (pixels < 500000) return 80;

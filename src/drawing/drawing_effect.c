@@ -15,6 +15,8 @@ static int g_effectBufferSize = 0;
  * O(1) per pixel regardless of radius
  */
 void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* tempBuffer, int w, int h, int radius) {
+    if (w <= 0 || h <= 0) return;
+    
     if (radius < 1) {
         memcpy(dest, src, w * h);
         return;
@@ -28,7 +30,6 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
         unsigned char* rowDest = tempBuffer + rowOffset;
         
         int sum = 0;
-        int count = 0;
         
         /* Initialize window for x=0 */
         for (int k = -radius; k <= radius; k++) {
@@ -36,12 +37,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
             if (idx < 0) idx = 0;
             if (idx >= w) idx = w - 1;
             sum += rowSrc[idx];
-            count++;
         }
-        
-        /* The count is always 2*radius + 1 for inner pixels, but simplified here */
-        /* Actually, we can just use a fixed divisor 2*radius+1 and handle edges by clamping input */
-        /* To be precise and match "Average", we usually want sum / (2r+1) */
         
         int div = radius * 2 + 1;
         int reciprocal = (1 << 20) / div;
@@ -120,7 +116,7 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
     int gh = h + padding * 2;
     int neededSize = gw * gh;
 
-    if (neededSize > g_effectBufferSize) {
+    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
         int newSize = neededSize * 2;
         if (g_effectBuffer1) free(g_effectBuffer1);
         if (g_effectBuffer2) free(g_effectBuffer2);
@@ -225,7 +221,7 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
     int gh = h + padding * 2;
     int neededSize = gw * gh;
 
-    if (neededSize > g_effectBufferSize) {
+    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
         int newSize = neededSize * 2;
         if (g_effectBuffer1) free(g_effectBuffer1);
         if (g_effectBuffer2) free(g_effectBuffer2);
@@ -399,7 +395,7 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
     int neededSize = gw * gh;
 
     /* Ensure buffers are large enough */
-    if (neededSize > g_effectBufferSize) {
+    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
         int newSize = neededSize * 2;
         
         if (g_effectBuffer1) free(g_effectBuffer1);
@@ -594,77 +590,14 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
     }
 }
 
-/* Helper: HSV to RGB conversion */
-static void HSVtoRGB(float h, float s, float v, int* r, int* g, int* b) {
-    if (s <= 0.0f) {
-        *r = *g = *b = (int)(v * 255.0f);
-        return;
-    }
-    
-    h = h - floorf(h); /* 0..1 */
-    if (h < 0) h += 1.0f;
-    h *= 6.0f;
-    int i = (int)h;
-    float f = h - (float)i;
-    float p = v * (1.0f - s);
-    float q = v * (1.0f - s * f);
-    float t = v * (1.0f - s * (1.0f - f));
-    
-    float rf, gf, bf;
-    switch(i) {
-        case 0: rf = v; gf = t; bf = p; break;
-        case 1: rf = q; gf = v; bf = p; break;
-        case 2: rf = p; gf = v; bf = t; break;
-        case 3: rf = p; gf = q; bf = v; break;
-        case 4: rf = t; gf = p; bf = v; break;
-        default: rf = v; gf = p; bf = q; break;
-    }
-    
-    *r = (int)(rf * 255.0f);
-    *g = (int)(gf * 255.0f);
-    *b = (int)(bf * 255.0f);
-}
-
-/* Helper: RGB to HSV conversion */
-static void RGBtoHSV(int r, int g, int b, float* h, float* s, float* v) {
-    float rf = r / 255.0f;
-    float gf = g / 255.0f;
-    float bf = b / 255.0f;
-    
-    float cmax = max(rf, max(gf, bf));
-    float cmin = min(rf, min(gf, bf));
-    float delta = cmax - cmin;
-    
-    *v = cmax;
-    
-    if (cmax == 0) {
-        *s = 0;
-        *h = 0;
-        return;
-    } else {
-        *s = delta / cmax;
-    }
-    
-    if (delta == 0) {
-        *h = 0;
-    } else {
-        if (cmax == rf) {
-            *h = (gf - bf) / delta;
-            if (gf < bf) *h += 6.0f;
-        } else if (cmax == gf) {
-            *h = (bf - rf) / delta + 2.0f;
-        } else {
-            *h = (rf - gf) / delta + 4.0f;
-        }
-        *h /= 6.0f;
-    }
-}
-
 /**
- * @brief Render Holographic/Prism Dispersion effect
- * "Phantom Crystal" Style: Extremely transparent, high-quality glass with soft spectral dispersion.
- * Unlike previous versions, this does NOT fill the body with solid color.
- * It looks like a clear crystal casting a rainbow shadow/glow.
+ * @brief Render Holographic/Crystal effect
+ * "Phantom Crystal" Style: Transparent glass with soft colored glow.
+ * Uses user's selected color (supports gradients) for the atmospheric glow.
+ * 
+ * Features:
+ * 1. Double Gaussian Blur for smooth, wide dispersion.
+ * 2. User color respected - pure colors stay pure, gradients flow.
  */
 void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int x_pos, int y_pos,
@@ -672,13 +605,15 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int r, int g, int b,
                             GlowColorCallback colorCb, void* userData,
                             int timeOffset) {
+    (void)timeOffset;
+    
     /* 1. Dynamic Buffer Allocation */
-    int padding = 16; /* Generous padding for soft glow */
+    int padding = 16;
     int gw = w + padding * 2;
     int gh = h + padding * 2;
     int neededSize = gw * gh;
 
-    if (neededSize > g_effectBufferSize) {
+    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
         int newSize = neededSize * 2;
         if (g_effectBuffer1) free(g_effectBuffer1);
         if (g_effectBuffer2) free(g_effectBuffer2);
@@ -708,23 +643,13 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
         memcpy(alphaMap + (j + padding) * gw + padding, bitmap + j * w, w);
     }
     
-    /* Generate wide soft glow for the spectral dispersion */
-    /* Iteration 1: Initial Blur */
+    /* Generate wide soft glow */
+    /* Double Gaussian for smooth, wide dispersion - critical for visual quality */
     ApplyGaussianBlur(alphaMap, glowMap, tempMap, gw, gh, 10);
-    
-    /* Iteration 2: Smoothing Blur (Double Gaussian) */
-    /* FIX: Use glowMap as dest and tempMap as temp to avoid memory overlap hazard */
-    /* Previous bug: dest and temp were same buffer, causing V-pass corruption */
     ApplyGaussianBlur(glowMap, glowMap, tempMap, gw, gh, 10);
-    
-    /* No memcpy needed */
 
     int startX = x_pos - padding;
     int startY = y_pos - padding;
-
-    /* Get User Color in HSV (Base fallback) */
-    float baseH, baseS, baseV;
-    RGBtoHSV(r, g, b, &baseH, &baseS, &baseV);
 
     for (int j = 1; j < gh - 1; j++) {
         int screenY = startY + j;
@@ -733,51 +658,47 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
         DWORD* pDestRow = pixels + screenY * destWidth;
         unsigned char* pAlphaRow = alphaMap + j * gw;
         unsigned char* pGlowRow = glowMap + j * gw;
-
-        /* Neighbors for edge detection */
         unsigned char* pRowPrev = alphaMap + (j - 1) * gw;
         unsigned char* pRowNext = alphaMap + (j + 1) * gw;
 
-        for (int i = 1; i < gw - 1; i++) {
-            int screenX = startX + i;
-            if (screenX < 0 || screenX >= destWidth) continue;
+        /* Calculate Loop Bounds to remove per-pixel boundary checks */
+        /* Range of i is [1, gw - 1) normally */
+        int minI = 1;
+        int maxI = gw - 1;
+        
+        /* screenX = startX + i */
+        /* Constraint 1: screenX >= 0  =>  startX + i >= 0  =>  i >= -startX */
+        if (minI < -startX) minI = -startX;
+        
+        /* Constraint 2: screenX < destWidth  =>  startX + i < destWidth  =>  i < destWidth - startX */
+        if (maxI > destWidth - startX) maxI = destWidth - startX;
 
-            /* --- EARLY EXIT OPTIMIZATION --- */
-            /* If there is no content (Body) and no light (Glow) at this pixel, skip EVERYTHING */
-            /* This single check saves 90% of CPU cycles on empty space */
+        for (int i = minI; i < maxI; i++) {
+            int screenX = startX + i;
+            /* Removed per-pixel boundary check: if (screenX < 0 || screenX >= destWidth) continue; */
+
+            /* Early exit: skip completely empty regions */
             int alphaG = pAlphaRow[i];
             unsigned char glow = pGlowRow[i];
-
+            
             if (alphaG == 0 && glow == 0) {
-                /* Check neighbors for Chromatic Aberration before giving up completely */
-                /* If neighbors are also empty, we are truly in void space */
                 if (pAlphaRow[i-1] == 0 && pAlphaRow[i+1] == 0) continue;
             }
 
-            /* --- PHYSICAL OPTICS: Chromatic Aberration --- */
-            /* Simulate thick glass refraction by sampling channels at offsets */
-            /* R: -1px, G: 0px, B: +1px */
             int alphaR = pAlphaRow[i - 1];
             int alphaB = pAlphaRow[i + 1];
             
-            /* Re-verify visibility after fetching neighbors (redundant but safe) */
             if (alphaG == 0 && glow == 0 && alphaR == 0 && alphaB == 0) continue;
 
-            /* Resolve Pixel Color (Support Gradients/Flowing Colors) */
+            /* Resolve Pixel Color (Support Gradients) */
             int curR = r, curG = g, curB = b;
             
-            /* OPTIMIZATION: Only call color callback if we actually have visible content */
             if (colorCb) {
+                /* Get user's color at this position (supports gradients) */
                 colorCb(screenX, screenY, &curR, &curG, &curB, userData);
-                /* Recalculate HSV if color changes per pixel */
-                RGBtoHSV(curR, curG, curB, &baseH, &baseS, &baseV);
             }
 
             /* --- Layer 1: The "Prismatic" Glass Body --- */
-            /* Instead of a flat tint, we map the aberrated alphas to the user's color components */
-            /* This creates natural fringing at the edges */
-            
-            /* OPTIMIZATION: Use integer math for channel scaling */
             int bodyR_val = 0, bodyG_val = 0, bodyB_val = 0;
             int bodyA = 0;
 
@@ -786,80 +707,44 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                  bodyG_val = (curG * alphaG) >> 8;
                  bodyB_val = (curB * alphaB) >> 8;
                  
-                 /* Add Volumetric Scattering only if glow is present */
                  if (glow > 0) {
-                     int volume = glow >> 2; /* glow / 4 */
+                     int volume = glow >> 2;
                      bodyR_val += (curR * volume) >> 8;
                      bodyG_val += (curG * volume) >> 8;
                      bodyB_val += (curB * volume) >> 8;
                  }
                  
-                 /* Body Alpha is determined by the strongest channel (Max pooling) */
                  bodyA = max(alphaR, max(alphaG, alphaB));
-                 /* Make it highly transparent (Crystal) - Multiply by ~0.15 (38/256) */
                  bodyA = (bodyA * 38) >> 8; 
             }
 
             /* --- Layer 2: White Rim (Edge Highlight) --- */
             int rimA = 0;
-            /* Only calculate rim if we are on a potential edge (alphaG > 0 or neighbors > 0) */
             if (alphaG > 0 || alphaR > 0 || alphaB > 0) {
-                /* Calculate gradient magnitude on the center channel (Green) */
                 int dzdx = ((int)pAlphaRow[i+1] - (int)pAlphaRow[i-1]);
                 int dzdy = ((int)pRowNext[i] - (int)pRowPrev[i]);
-                
-                /* Directional Lighting (Top-Left Source) */
                 int lighting = -(dzdx + dzdy);
                 int mag = abs(dzdx) + abs(dzdy);
                 
-                /* Sculpted Rim */
                 if (mag > 0) {
-                    rimA = mag / 3; /* Softer base rim */
+                    rimA = (mag * 85) >> 8;
                     if (lighting > 0) {
-                        rimA += lighting; /* Strong specular */
+                        rimA += lighting;
                     }
                 }
                 if (rimA > 255) rimA = 255;
                 rimA = (rimA * rimA) >> 8; 
             }
 
-            /* --- Layer 3: Atmospheric Glow (Dispersion) --- */
+            /* --- Layer 3: Atmospheric Glow (User Color) --- */
             int specR = 0, specG = 0, specB = 0;
             
             if (glow > 0) {
-                float posFactor = (float)(i + j) / (float)(gw + gh);
-                
-                /* USER COLOR DOMINANCE LOGIC */
-                float finalH, finalS;
-                
-                if (baseS < 0.1f) {
-                    /* Diamond White Prism */
-                    finalH = posFactor; 
-                    finalS = 0.25f; /* Very subtle pastel */
-                } else {
-                    /* Color Dominant Dispersion */
-                    /* Use the dynamic baseH from the gradient */
-                    float shift = (posFactor - 0.5f) * 0.2f; /* Reduced shift range for realism */
-                    finalH = baseH + shift;
-                    if (finalH < 0) finalH += 1.0f;
-                    if (finalH > 1.0f) finalH -= 1.0f;
-                    
-                    finalS = baseS;
-                    if (finalS < 0.4f) finalS = 0.4f; 
-                }
-
-                int gr, gg, gb;
-                HSVtoRGB(finalH, finalS, 1.0f, &gr, &gg, &gb);
-                
-                /* Soft Atmospheric Light */
-                specR = (gr * glow) >> 8;
-                specG = (gg * glow) >> 8;
-                specB = (gb * glow) >> 8;
-                
-                /* Boost but keep smooth (Multiply by 1.4 -> ~358/256) */
-                specR = (specR * 358) >> 8;
-                specG = (specG * 358) >> 8;
-                specB = (specB * 358) >> 8;
+                /* Use user's selected color for the glow */
+                /* Apply glow intensity with boost for visibility */
+                specR = (curR * glow * 358) >> 16;
+                specG = (curG * glow * 358) >> 16;
+                specB = (curB * glow * 358) >> 16;
             }
 
             /* --- Composition --- */
@@ -870,35 +755,29 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
             int bgG = (bgPixel >> 8) & 0xFF;
             int bgB = bgPixel & 0xFF;
 
-            /* 1. Add Glow (Atmosphere) */
             int outR = bgR + specR;
             int outG = bgG + specG;
             int outB = bgB + specB;
 
-            /* 2. Composite Prismatic Body (Alpha Blend) */
             if (bodyA > 0) {
-                outR = (outR * (255 - bodyA) + bodyR_val * bodyA) / 255;
-                outG = (outG * (255 - bodyA) + bodyG_val * bodyA) / 255;
-                outB = (outB * (255 - bodyA) + bodyB_val * bodyA) / 255;
+                int invA = 255 - bodyA;
+                outR = ((outR * invA) + (bodyR_val * bodyA)) >> 8;
+                outG = ((outG * invA) + (bodyG_val * bodyA)) >> 8;
+                outB = ((outB * invA) + (bodyB_val * bodyA)) >> 8;
             }
 
-            /* 3. Add Rim (Specular) */
             if (rimA > 0) {
                 outR += rimA;
                 outG += rimA;
                 outB += rimA;
             }
 
-            /* Final Clamping */
             if (outR > 255) outR = 255;
             if (outG > 255) outG = 255;
             if (outB > 255) outB = 255;
 
-            /* Final Alpha Calculation */
-            /* FIX: Use max RGB brightness for glow alpha contribution to avoid clipping colors */
             int glowLum = max(specR, max(specG, specB));
-            /* Ensure glowLum doesn't dominate if it's just atmosphere */
-            glowLum = (glowLum * 200) / 255; 
+            glowLum = (glowLum * 200) >> 8; 
             
             int finalA = max(bgA, max(bodyA, max(rimA, glowLum)));
             
@@ -906,7 +785,6 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
 
             *pPixel = (finalA << 24) | (outR << 16) | (outG << 8) | outB;
         }
-
     }
 }
 
