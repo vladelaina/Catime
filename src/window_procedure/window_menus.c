@@ -34,33 +34,11 @@ extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
  * ============================================================================ */
 
 BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
-        StartAnimationPreview("__logo__");
+    /* Handle all animations (builtin + custom) via unified lookup */
+    char animName[MAX_PATH];
+    if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
+        StartAnimationPreview(animName);
         return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_CPU) {
-        StartAnimationPreview("__cpu__");
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_MEM) {
-        StartAnimationPreview("__mem__");
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_NONE) {
-        StartAnimationPreview("__none__");
-        return TRUE;
-    }
-
-    if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_END) {
-        char animName[MAX_PATH];
-        if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
-            StartAnimationPreview(animName);
-            return TRUE;
-        }
-        return FALSE;
     }
 
     if (menuId >= CMD_FONT_SELECTION_BASE && menuId < CMD_FONT_SELECTION_END) {
