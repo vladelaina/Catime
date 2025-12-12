@@ -18,9 +18,9 @@ void GetLogFilePath(wchar_t* logPath, size_t size);
 
 /**
  * Get log file handle (for crash handler)
- * @return File pointer or NULL
+ * @return HANDLE or INVALID_HANDLE_VALUE
  */
-FILE* GetLogFileHandle(void);
+HANDLE GetLogFileHandle(void);
 
 /**
  * Get log critical section (for crash handler)
