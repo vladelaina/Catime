@@ -335,35 +335,43 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
 static BOOL HandlePomodoroCompletion(HWND hwnd) {
     wchar_t completionMsg[256];
     wchar_t timeStr[32];
-    
+
     int completedIndex = current_pomodoro_time_index;
-    
-    int times_count = (pomodoro_initial_times_count > 0) 
+
+    int times_count = (pomodoro_initial_times_count > 0)
         ? pomodoro_initial_times_count : g_AppConfig.pomodoro.times_count;
-    int loop_count = (pomodoro_initial_loop_count > 0) 
+    int loop_count = (pomodoro_initial_loop_count > 0)
         ? pomodoro_initial_loop_count : g_AppConfig.pomodoro.loop_count;
-    
+
     if (times_count <= 0) times_count = 1;
     if (loop_count <= 0) loop_count = 1;
-    
-    int currentStep = complete_pomodoro_cycles * times_count + completedIndex + 1;
-    int totalSteps = times_count * loop_count;
-    
+
+    /* Current step within this cycle (1-based) */
+    int stepInCycle = completedIndex + 1;
+    /* Current cycle number (1-based) */
+    int currentCycle = complete_pomodoro_cycles + 1;
+
     if (completedIndex < g_AppConfig.pomodoro.times_count) {
         FormatPomodoroTime(g_AppConfig.pomodoro.times[completedIndex], timeStr, sizeof(timeStr)/sizeof(wchar_t));
     } else {
         wcscpy_s(timeStr, 32, L"?");
     }
-    
+
     if (!AdvancePomodoroState()) {
         const wchar_t* completed_text = GetLocalizedString(NULL, L"Pomodoro completed");
-        if (totalSteps > 1) {
+        const wchar_t* cycle_text = GetLocalizedString(NULL, L"Cycle");
+        const wchar_t* round_text = GetLocalizedString(NULL, L"Round");
+        if (times_count > 1 || loop_count > 1) {
             _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
-                    L"%ls %ls (%d/%d)",
+                    L"%ls %ls (%ls%d/%d%ls %d/%d)",
                     timeStr,
                     completed_text,
-                    currentStep,
-                    totalSteps);
+                    cycle_text,
+                    currentCycle,
+                    loop_count,
+                    round_text,
+                    stepInCycle,
+                    times_count);
         } else {
             _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
                     L"%ls %ls",
@@ -371,23 +379,15 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
                     completed_text);
         }
         ShowNotification(hwnd, completionMsg);
-        
+
         ResetTimerState(0);
         ResetPomodoroState();
-        
+
         const wchar_t* cycle_complete_text = GetLocalizedString(NULL, L"All Pomodoro cycles completed!");
-        wchar_t finalMsg[MESSAGE_BUFFER_SIZE];
-        _snwprintf_s(finalMsg, sizeof(finalMsg)/sizeof(wchar_t), _TRUNCATE,
-                    L"%ls (%d/%d)",
-                    cycle_complete_text,
-                    totalSteps,
-                    totalSteps);
-        ShowNotification(hwnd, finalMsg);
-        if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
-            ReadNotificationSoundConfig();
-            PlayNotificationSound(hwnd);
-        }
-        
+        ShowNotification(hwnd, cycle_complete_text);
+        ReadNotificationSoundConfig();
+        PlayNotificationSound(hwnd);
+
         CLOCK_COUNT_UP = FALSE;
         CLOCK_SHOW_CURRENT_TIME = FALSE;
         message_shown = TRUE;
@@ -395,15 +395,21 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         KillTimer(hwnd, TIMER_ID_MAIN);
         return FALSE;
     }
-    
+
     const wchar_t* completed_text = GetLocalizedString(NULL, L"Pomodoro completed");
-    if (totalSteps > 1) {
+    const wchar_t* cycle_text = GetLocalizedString(NULL, L"Cycle");
+    const wchar_t* round_text = GetLocalizedString(NULL, L"Round");
+    if (times_count > 1 || loop_count > 1) {
         _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
-                L"%ls %ls (%d/%d)",
+                L"%ls %ls (%ls%d/%d%ls %d/%d)",
                 timeStr,
                 completed_text,
-                currentStep,
-                totalSteps);
+                cycle_text,
+                currentCycle,
+                loop_count,
+                round_text,
+                stepInCycle,
+                times_count);
     } else {
         _snwprintf_s(completionMsg, sizeof(completionMsg)/sizeof(wchar_t), _TRUNCATE,
                 L"%ls %ls",
@@ -412,10 +418,8 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     }
     ShowNotification(hwnd, completionMsg);
 
-    if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
-        ReadNotificationSoundConfig();
-        PlayNotificationSound(hwnd);
-    }
+    ReadNotificationSoundConfig();
+    PlayNotificationSound(hwnd);
 
     if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
         ResetPomodoroState();

@@ -223,19 +223,16 @@ LRESULT CmdSetCountdownTime(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CleanupBeforeTimerAction();
-    
+
     if (!IsWindowVisible(hwnd)) ShowWindow(hwnd, SW_SHOW);
-    
+
     extern void InitializePomodoro(void);
     InitializePomodoro();
-    
+
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     CLOCK_COUNT_UP = FALSE;
     CLOCK_IS_PAUSED = FALSE;
-    
-    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    
+
     KillTimer(hwnd, 1);
     ResetTimerWithInterval(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
