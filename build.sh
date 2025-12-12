@@ -144,7 +144,7 @@ if [[ "$BUILD_TYPE" != "Release" && "$BUILD_TYPE" != "Debug" ]]; then
 fi
 
 # Handle output directory
-OUTPUT_DIR=${2:-build}
+OUTPUT_DIR=${2:-~/dev/Catime/build}
 BUILD_DIR="build"
 
 # Convert relative path to absolute if needed and validate
