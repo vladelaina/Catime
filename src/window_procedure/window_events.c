@@ -17,12 +17,6 @@
 #include "async_update_checker.h"
 #include "../resource/resource.h"
 
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
-extern BOOL CLOCK_LIQUID_EFFECT;
-
 /* ============================================================================
  * Window creation and initialization
  * ============================================================================ */

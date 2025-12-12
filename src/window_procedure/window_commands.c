@@ -40,10 +40,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+extern TextEffectType CLOCK_TEXT_EFFECT;
 
 extern wchar_t inputText[256];
 extern int time_options[];
@@ -103,157 +100,75 @@ static UINT GetAdaptiveAnimationInterval(HWND hwnd) {
 }
 
 static void UpdateAnimationTimer(HWND hwnd) {
-    /* 
+    /*
      * Temporal Decoupling: Animated effects use a dedicated timer
      * to drive visual flow independently of the 1FPS logic clock.
      * Interval is adaptive to window size to prevent mouse lag.
      */
-    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
-        CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
+    if (CLOCK_TEXT_EFFECT != TEXT_EFFECT_NONE) {
         UINT interval = GetAdaptiveAnimationInterval(hwnd);
-        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL); 
+        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL);
     } else {
         KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
     }
 }
 
-static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CLOCK_GLOW_EFFECT = !CLOCK_GLOW_EFFECT;
-    if (CLOCK_GLOW_EFFECT) {
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
+/* Convert TextEffectType to config string */
+static const char* TextEffectToString(TextEffectType effect) {
+    switch (effect) {
+        case TEXT_EFFECT_GLOW:        return "GLOW";
+        case TEXT_EFFECT_GLASS:       return "GLASS";
+        case TEXT_EFFECT_NEON:        return "NEON";
+        case TEXT_EFFECT_HOLOGRAPHIC: return "HOLOGRAPHIC";
+        case TEXT_EFFECT_LIQUID:      return "LIQUID";
+        default:                      return "NONE";
     }
-    
+}
+
+/* Toggle effect: if already active, turn off; otherwise switch to it */
+static void ToggleTextEffect(HWND hwnd, TextEffectType effect) {
+    if (CLOCK_TEXT_EFFECT == effect) {
+        CLOCK_TEXT_EFFECT = TEXT_EFFECT_NONE;
+    } else {
+        CLOCK_TEXT_EFFECT = effect;
+    }
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_EFFECT",
+                   TextEffectToString(CLOCK_TEXT_EFFECT), config_path);
+
     UpdateAnimationTimer(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
+}
+
+static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    ToggleTextEffect(hwnd, TEXT_EFFECT_GLOW);
     return 0;
 }
 
 static LRESULT CmdToggleGlassEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_GLASS_EFFECT = !CLOCK_GLASS_EFFECT;
-    if (CLOCK_GLASS_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_GLASS);
     return 0;
 }
 
 static LRESULT CmdToggleNeonEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_NEON_EFFECT = !CLOCK_NEON_EFFECT;
-    if (CLOCK_NEON_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_NEON);
     return 0;
 }
 
 static LRESULT CmdToggleHolographicEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_HOLOGRAPHIC_EFFECT = !CLOCK_HOLOGRAPHIC_EFFECT;
-    if (CLOCK_HOLOGRAPHIC_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_HOLOGRAPHIC);
     return 0;
 }
 
 static LRESULT CmdToggleLiquidEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_LIQUID_EFFECT = !CLOCK_LIQUID_EFFECT;
-    if (CLOCK_LIQUID_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_LIQUID);
     return 0;
 }
 

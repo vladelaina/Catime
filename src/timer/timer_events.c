@@ -506,7 +506,6 @@ static BOOL HandleMainTimer(HWND hwnd) {
     DWORD now = GetTickCount();
     BOOL shouldRender = TRUE;
     
-    extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
     if (CLOCK_HOLOGRAPHIC_EFFECT) {
         RECT rect;
         GetClientRect(hwnd, &rect);

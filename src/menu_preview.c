@@ -13,6 +13,7 @@
 #include "color/color_parser.h"
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
+#include "window/window_core.h"
 #include "log.h"
 
 /* ============================================================================
@@ -28,13 +29,6 @@ extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern BOOL IS_PREVIEWING;
 extern char PREVIEW_FONT_NAME[MAX_PATH];
 extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
-
-/* Effect global flags */
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
-extern BOOL CLOCK_LIQUID_EFFECT;
 
 extern void ResetTimerWithInterval(HWND hwnd);
 extern void WriteConfigColor(const char* color);

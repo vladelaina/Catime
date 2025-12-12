@@ -38,11 +38,6 @@ extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 extern void GetConfigPath(char* path, size_t size);
 
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
-
 /* Function to read timeout action (extracted from tray_menu.c) */
 void ReadTimeoutActionFromConfig() {
     /* Preserve one-time actions: don't override them from config */

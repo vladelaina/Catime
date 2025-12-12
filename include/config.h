@@ -233,11 +233,7 @@ typedef struct {
     int opacity_step_fast;
     int scale_step_normal;
     int scale_step_fast;
-    BOOL glow_effect;
-    BOOL glass_effect;
-    BOOL neon_effect;
-    BOOL holographic_effect;
-    BOOL liquid_effect;
+    int text_effect;  /* TextEffectType enum value */
 } DisplayConfig;
 
 /**

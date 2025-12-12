@@ -19,11 +19,6 @@
 #include <string.h>
 #include <stdio.h>
 
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
-
 /* Large limit for menu display to accommodate folder-based animations with many frames */
 #define MAX_SCAN_ENTRIES 4096
 

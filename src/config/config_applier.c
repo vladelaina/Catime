@@ -19,11 +19,8 @@
 #include <time.h>
 #include <math.h>
 
-/* Global effect flags */
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+/* Global text effect */
+extern TextEffectType CLOCK_TEXT_EFFECT;
 
 /* ============================================================================
  * Helper: Language enum mapping
@@ -118,16 +115,8 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.opacity_step_fast = snapshot->opacityStepFast;
     g_AppConfig.display.scale_step_normal = snapshot->scaleStepNormal;
     g_AppConfig.display.scale_step_fast = snapshot->scaleStepFast;
-    CLOCK_GLOW_EFFECT = snapshot->glowEffect;
-    CLOCK_GLASS_EFFECT = snapshot->glassEffect;
-    CLOCK_NEON_EFFECT = snapshot->neonEffect;
-    CLOCK_HOLOGRAPHIC_EFFECT = snapshot->holographicEffect;
-    CLOCK_LIQUID_EFFECT = snapshot->liquidEffect;
-    g_AppConfig.display.glow_effect = snapshot->glowEffect;
-    g_AppConfig.display.glass_effect = snapshot->glassEffect;
-    g_AppConfig.display.neon_effect = snapshot->neonEffect;
-    g_AppConfig.display.holographic_effect = snapshot->holographicEffect;
-    g_AppConfig.display.liquid_effect = snapshot->liquidEffect;
+    CLOCK_TEXT_EFFECT = (TextEffectType)snapshot->textEffect;
+    g_AppConfig.display.text_effect = snapshot->textEffect;
 
     HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) {

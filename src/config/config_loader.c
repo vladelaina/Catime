@@ -7,6 +7,7 @@
 #include "config/config_recovery.h"
 #include "config/config_defaults.h"
 #include "config.h"
+#include "window/window_core.h"
 #include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
@@ -182,11 +183,7 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->opacityStepFast = 5;
     snapshot->scaleStepNormal = DEFAULT_SCALE_STEP_NORMAL;
     snapshot->scaleStepFast = DEFAULT_SCALE_STEP_FAST;
-    snapshot->glowEffect = FALSE;
-    snapshot->glassEffect = FALSE;
-    snapshot->neonEffect = FALSE;
-    snapshot->holographicEffect = FALSE;
-    snapshot->liquidEffect = FALSE;
+    snapshot->textEffect = TEXT_EFFECT_NONE;
     snapshot->defaultStartTime = DEFAULT_START_TIME_SECONDS;
     snapshot->notificationTimeoutMs = DEFAULT_NOTIFICATION_TIMEOUT_MS;
     snapshot->notificationMaxOpacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
@@ -260,17 +257,25 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
                                           DEFAULT_SCALE_STEP_NORMAL, config_path);
     snapshot->scaleStepFast = ReadIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_FAST",
                                         DEFAULT_SCALE_STEP_FAST, config_path);
-    snapshot->glowEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT",
-                                       FALSE, config_path);
-    snapshot->glassEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT",
-                                       FALSE, config_path);
-    snapshot->neonEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT",
-                                       FALSE, config_path);
-    snapshot->holographicEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT",
-                                       FALSE, config_path);
-    snapshot->liquidEffect = ReadIniBool(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT",
-                                       FALSE, config_path);
-    
+
+    /* Read text effect as enum */
+    char textEffectStr[32] = {0};
+    ReadIniString(INI_SECTION_DISPLAY, "TEXT_EFFECT", "NONE",
+                 textEffectStr, sizeof(textEffectStr), config_path);
+    if (_stricmp(textEffectStr, "GLOW") == 0) {
+        snapshot->textEffect = TEXT_EFFECT_GLOW;
+    } else if (_stricmp(textEffectStr, "GLASS") == 0) {
+        snapshot->textEffect = TEXT_EFFECT_GLASS;
+    } else if (_stricmp(textEffectStr, "NEON") == 0) {
+        snapshot->textEffect = TEXT_EFFECT_NEON;
+    } else if (_stricmp(textEffectStr, "HOLOGRAPHIC") == 0) {
+        snapshot->textEffect = TEXT_EFFECT_HOLOGRAPHIC;
+    } else if (_stricmp(textEffectStr, "LIQUID") == 0) {
+        snapshot->textEffect = TEXT_EFFECT_LIQUID;
+    } else {
+        snapshot->textEffect = TEXT_EFFECT_NONE;
+    }
+
     /* Read Timer section */
     snapshot->defaultStartTime = ReadIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", 
                                            1500, config_path);
