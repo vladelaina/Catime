@@ -39,6 +39,42 @@ extern BOOL PREVIOUS_TOPMOST_STATE;
 #define OPACITY_FULL 255
 
 /* ============================================================================
+ * Power Management Handler
+ * ============================================================================ */
+
+static LRESULT HandlePowerBroadcast(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    static volatile LONG s_handling = 0;
+
+    /* Handle system resume from sleep/hibernate */
+    if (wp == PBT_APMRESUMEAUTOMATIC || wp == PBT_APMRESUMESUSPEND) {
+        /* Prevent re-entry if called multiple times in quick succession */
+        if (InterlockedCompareExchange(&s_handling, 1, 0) != 0) {
+            return TRUE;
+        }
+
+        LOG_INFO("System resumed from sleep/hibernate, reinitializing tray icon animation");
+
+        /* Step 1: Clear animation name to force reload
+         * This bypasses the "same name" check in ApplyAnimationPathValueNoPersist */
+        extern void TrayAnimation_ClearCurrentName(void);
+        TrayAnimation_ClearCurrentName();
+
+        /* Step 2: Reload animation from config */
+        extern LRESULT HandleAppAnimPathChanged(HWND);
+        HandleAppAnimPathChanged(hwnd);
+
+        /* Step 3: Recreate tray icon with newly loaded animation */
+        extern void RecreateTaskbarIcon(HWND, HINSTANCE);
+        RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
+
+        InterlockedExchange(&s_handling, 0);
+    }
+
+    return TRUE;
+}
+
+/* ============================================================================
  * Application Message Dispatch Table
  * ============================================================================ */
 
@@ -117,6 +153,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_KEYDOWN, HandleKeyDown, "Key down"},
     {WM_HOTKEY, HandleHotkey, "Global hotkey"},
     {WM_COPYDATA, HandleCopyData, "Inter-process communication"},
+    {WM_POWERBROADCAST, HandlePowerBroadcast, "Power management events"},
     {WM_APP_QUICK_COUNTDOWN_INDEX, HandleQuickCountdownIndex, "Quick countdown by index"},
     {WM_APP_SHOW_CLI_HELP, HandleShowCliHelp, "Show CLI help"},
     {WM_USER + 100, HandleTrayUpdateIcon, "Tray icon update"},

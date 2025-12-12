@@ -885,6 +885,19 @@ void TrayAnimation_RecomputeTimerDelay(void) {
 }
 
 /**
+ * @brief Clear current animation name to force reload
+ */
+void TrayAnimation_ClearCurrentName(void) {
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+    g_animationName[0] = '\0';
+    if (g_criticalSectionInitialized) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+}
+
+/**
  * @brief Update percent icon if needed
  */
 void TrayAnimation_UpdatePercentIconIfNeeded(void) {
