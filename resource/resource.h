@@ -371,6 +371,7 @@
 #define CLOCK_IDM_ANIMATIONS_USE_CPU 2203    /**< Use CPU animation */
 #define CLOCK_IDM_ANIMATIONS_USE_MEM 2204    /**< Use memory animation */
 #define CLOCK_IDM_ANIMATIONS_USE_BATTERY 2205 /**< Use battery percent icon */
+#define CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK 2207 /**< Use Caps Lock indicator */
 #define CLOCK_IDM_ANIMATIONS_USE_NONE 2206   /**< Use transparent/hidden icon */
 #define CLOCK_IDM_ANIM_SPEED_MEMORY 2210     /**< Memory-based animation speed */
 #define CLOCK_IDM_ANIM_SPEED_CPU 2211        /**< CPU-based animation speed */
