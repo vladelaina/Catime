@@ -265,12 +265,10 @@ void StartDefaultCountDown(HWND hwnd) {
     CleanupBeforeTimerAction();
     
     extern BOOL countdown_message_shown;
-    extern void ReadNotificationTypeConfig(void);
     extern POMODORO_PHASE current_pomodoro_phase;
     extern int current_pomodoro_time_index, complete_pomodoro_cycles;
     
     countdown_message_shown = FALSE;
-    ReadNotificationTypeConfig();
     
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         current_pomodoro_phase = POMODORO_PHASE_IDLE;
@@ -396,9 +394,7 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
     CleanupBeforeTimerAction();
 
     extern BOOL countdown_message_shown;
-    extern void ReadNotificationTypeConfig(void);
     countdown_message_shown = FALSE;
-    ReadNotificationTypeConfig();
 
     int zeroBased = index - 1;
     if (zeroBased >= 0 && zeroBased < time_options_count) {

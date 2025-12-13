@@ -57,10 +57,7 @@ static void FallbackToTrayNotification(HWND hwnd, const wchar_t* message) {
 }
 
 static void LoadNotificationConfigs(void) {
-    ReadNotificationTypeConfig();
-    ReadNotificationDisabledConfig();
-    ReadNotificationTimeoutConfig();
-    ReadNotificationOpacityConfig();
+    /* Config is already loaded via ReadConfig() into g_AppConfig */
 }
 
 static HFONT CreateNotificationFont(int size, int weight) {
@@ -255,8 +252,6 @@ void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) 
     notifData->windowWidth = notificationWidth;
     
     int x, y, width, height;
-    
-    ReadNotificationWindowConfig();
     
     /* Use saved position if valid (>= 0), otherwise auto-calculate */
     if (g_AppConfig.notification.display.window_x >= 0 && 

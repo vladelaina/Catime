@@ -49,18 +49,30 @@ typedef enum {
     CONFIG_TYPE_STRING,
     CONFIG_TYPE_INT,
     CONFIG_TYPE_BOOL,
-    CONFIG_TYPE_ENUM
+    CONFIG_TYPE_FLOAT,
+    CONFIG_TYPE_ENUM,
+    CONFIG_TYPE_HOTKEY,
+    CONFIG_TYPE_CUSTOM       /* Requires special handling (arrays, wchar_t, etc.) */
 } ConfigValueType;
 
 /* ============================================================================
  * Configuration metadata structure
  * ============================================================================ */
 
+/**
+ * @brief Metadata for a single configuration item
+ * 
+ * @details
+ * When offset is SIZE_MAX, the item requires custom handling.
+ * Otherwise, offset points to the field in ConfigSnapshot.
+ */
 typedef struct {
     const char* section;
     const char* key;
     const char* defaultValue;
     ConfigValueType type;
+    size_t offset;           /* offsetof(ConfigSnapshot, field), SIZE_MAX for custom */
+    size_t size;             /* sizeof(field) for strings, 0 for fixed-size types */
     const char* description;
 } ConfigItemMeta;
 

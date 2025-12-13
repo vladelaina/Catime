@@ -66,7 +66,6 @@ static void HotkeyCustomCountdown(HWND hwnd) {
     }
     
     countdown_message_shown = FALSE;
-    ReadNotificationTypeConfig();
     ClearInputBuffer(inputText, sizeof(inputText));
     
     DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), 

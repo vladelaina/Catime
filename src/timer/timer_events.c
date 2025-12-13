@@ -74,7 +74,6 @@ static void ShowTimeoutNotification(HWND hwnd, const char* messageUtf8, BOOL pla
     }
     
     if (playSound && CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE) {
-        ReadNotificationSoundConfig();
         PlayNotificationSound(hwnd);
     }
 }
@@ -385,7 +384,6 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
 
         const wchar_t* cycle_complete_text = GetLocalizedString(NULL, L"All Pomodoro cycles completed!");
         ShowNotification(hwnd, cycle_complete_text);
-        ReadNotificationSoundConfig();
         PlayNotificationSound(hwnd);
 
         CLOCK_COUNT_UP = FALSE;
@@ -417,8 +415,6 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
                 completed_text);
     }
     ShowNotification(hwnd, completionMsg);
-
-    ReadNotificationSoundConfig();
     PlayNotificationSound(hwnd);
 
     if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
@@ -572,9 +568,6 @@ static BOOL HandleMainTimer(HWND hwnd) {
                     countdown_message_shown = TRUE;
                     
                     TrayAnimation_RecomputeTimerDelay();
-                    
-                    ReadNotificationMessagesConfig();
-                    ReadNotificationTypeConfig();
                     
                     BOOL pomodoro_advanced = FALSE;
                     if (IsActivePomodoroTimer()) {

@@ -17,6 +17,7 @@
 #include "tray/tray_animation_core.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
@@ -265,14 +266,68 @@ LRESULT HandleAppPomodoroChanged(HWND hwnd) {
 LRESULT HandleAppNotificationChanged(HWND hwnd) {
     (void)hwnd;
     
-    ReadNotificationMessagesConfig();
-    ReadNotificationTimeoutConfig();
-    ReadNotificationOpacityConfig();
-    ReadNotificationTypeConfig();
-    ReadNotificationSoundConfig();
-    ReadNotificationVolumeConfig();
-    ReadNotificationDisabledConfig();
-    ReadNotificationWindowConfig();
+    /* Reload notification settings from INI file for hot-reload support */
+    g_AppConfig.notification.display.timeout_ms = ReadConfigInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000);
+    
+    int opacity = ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 95);
+    if (opacity >= 1 && opacity <= 100) {
+        g_AppConfig.notification.display.max_opacity = opacity;
+    }
+    
+    char typeBuf[32];
+    ReadConfigStr(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", typeBuf, sizeof(typeBuf));
+    if (strcmp(typeBuf, "SYSTEM_MODAL") == 0) {
+        g_AppConfig.notification.display.type = NOTIFICATION_TYPE_SYSTEM_MODAL;
+    } else if (strcmp(typeBuf, "OS") == 0) {
+        g_AppConfig.notification.display.type = NOTIFICATION_TYPE_OS;
+    } else {
+        g_AppConfig.notification.display.type = NOTIFICATION_TYPE_CATIME;
+    }
+    
+    g_AppConfig.notification.display.disabled = ReadConfigBool(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE);
+    
+    g_AppConfig.notification.display.window_x = ReadConfigInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_X", -1);
+    g_AppConfig.notification.display.window_y = ReadConfigInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_Y", -1);
+    g_AppConfig.notification.display.window_width = ReadConfigInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_WIDTH", 0);
+    g_AppConfig.notification.display.window_height = ReadConfigInt(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_HEIGHT", 0);
+    
+    ReadConfigStr(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", DEFAULT_TIMEOUT_MESSAGE,
+                  g_AppConfig.notification.messages.timeout_message,
+                  sizeof(g_AppConfig.notification.messages.timeout_message));
+    
+    char soundBuf[MAX_PATH];
+    ReadConfigStr(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", soundBuf, sizeof(soundBuf));
+    /* Expand %LOCALAPPDATA% placeholder */
+    if (soundBuf[0] != '\0') {
+        const char* varToken = "%LOCALAPPDATA%";
+        size_t tokenLen = strlen(varToken);
+        if (_strnicmp(soundBuf, varToken, tokenLen) == 0) {
+            const char* localAppData = getenv("LOCALAPPDATA");
+            if (localAppData && localAppData[0] != '\0') {
+                char resolved[MAX_PATH] = {0};
+                snprintf(resolved, sizeof(resolved), "%s%s", localAppData, soundBuf + tokenLen);
+                strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
+            } else {
+                strncpy(g_AppConfig.notification.sound.sound_file, soundBuf, MAX_PATH - 1);
+            }
+        } else {
+            strncpy(g_AppConfig.notification.sound.sound_file, soundBuf, MAX_PATH - 1);
+        }
+        g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
+    } else {
+        g_AppConfig.notification.sound.sound_file[0] = '\0';
+    }
+    
+    int volume = ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100);
+    if (volume >= 0 && volume <= 100) {
+        g_AppConfig.notification.sound.volume = volume;
+    }
     
     return 0;
 }

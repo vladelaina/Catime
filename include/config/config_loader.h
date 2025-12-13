@@ -103,6 +103,7 @@ typedef struct {
     WORD hotkeyPauseResume;
     WORD hotkeyRestartTimer;
     WORD hotkeyCustomCountdown;
+    WORD hotkeyToggleMilliseconds;
     
     /* Recent files */
     RecentFile recentFiles[MAX_RECENT_FILES];

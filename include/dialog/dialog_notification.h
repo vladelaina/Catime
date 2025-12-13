@@ -81,24 +81,17 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
  * ============================================================================ */
 
 /**
- * @note All notification configuration functions are now declared in config.h
- *       and implemented in config_notification.c:
+ * @note Notification configuration is loaded once at startup via ReadConfig()
+ *       into g_AppConfig. Write functions are in config_notification.c:
  *       
- *       Read functions:
- *       - ReadNotificationMessagesConfig()
- *       - ReadNotificationTimeoutConfig()
- *       - ReadNotificationOpacityConfig()
- *       - ReadNotificationTypeConfig()
- *       - ReadNotificationSoundConfig()
- *       - ReadNotificationVolumeConfig()
- *       
- *       Write functions:
  *       - WriteConfigNotificationMessages(timeout_msg)
  *       - WriteConfigNotificationTimeout(timeout_ms)
  *       - WriteConfigNotificationOpacity(opacity)
  *       - WriteConfigNotificationType(NotificationType type)
  *       - WriteConfigNotificationSound(sound_file)
  *       - WriteConfigNotificationVolume(volume)
+ *       - WriteConfigNotificationWindow(x, y, width, height)
+ *       - WriteConfigNotificationDisabled(disabled)
  */
 
 #endif /* DIALOG_NOTIFICATION_H */

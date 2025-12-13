@@ -23,9 +23,6 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
         return;
     }
 
-    ReadNotificationTimeoutConfig();
-    ReadNotificationOpacityConfig();
-
     DialogBoxW(GetModuleHandle(NULL),
               MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG),
               hwndParent,
@@ -45,9 +42,6 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 
             Dialog_ApplyTopmost(hwndDlg);
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-
-            ReadNotificationTimeoutConfig();
-            ReadNotificationOpacityConfig();
 
             wchar_t wbuffer[32];
 

@@ -40,14 +40,6 @@ static int LanguageNameToEnum(const char* langName) {
     if (strcmp(langName, "Japanese") == 0) return APP_LANG_JAPANESE;
     if (strcmp(langName, "Korean") == 0) return APP_LANG_KOREAN;
     
-    /* Legacy numeric format support */
-    if (isdigit(langName[0])) {
-        int langValue = atoi(langName);
-        if (langValue >= 0 && langValue < APP_LANG_COUNT) {
-            return langValue;
-        }
-    }
-    
     return APP_LANG_ENGLISH;
 }
 
@@ -244,8 +236,26 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.notification.display.window_width = snapshot->notificationWindowWidth;
     g_AppConfig.notification.display.window_height = snapshot->notificationWindowHeight;
     
+    /* Copy sound file path and expand %LOCALAPPDATA% placeholder if needed */
     strncpy(g_AppConfig.notification.sound.sound_file, snapshot->notificationSoundFile, MAX_PATH - 1);
     g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
+    
+    /* Normalize %LOCALAPPDATA% placeholder to absolute path */
+    if (g_AppConfig.notification.sound.sound_file[0] != '\0') {
+        const char* varToken = "%LOCALAPPDATA%";
+        size_t tokenLen = strlen(varToken);
+        if (_strnicmp(g_AppConfig.notification.sound.sound_file, varToken, tokenLen) == 0) {
+            const char* localAppData = getenv("LOCALAPPDATA");
+            if (localAppData && localAppData[0] != '\0') {
+                char resolved[MAX_PATH] = {0};
+                snprintf(resolved, sizeof(resolved), "%s%s",
+                         localAppData,
+                         g_AppConfig.notification.sound.sound_file + tokenLen);
+                strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
+                g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
+            }
+        }
+    }
     
     g_AppConfig.notification.sound.volume = snapshot->notificationSoundVolume;
 }

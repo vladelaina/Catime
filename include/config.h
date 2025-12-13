@@ -509,25 +509,10 @@ void WriteConfigPomodoroTimeOptions(int* times, int count);
  * ============================================================================ */
 
 /**
- * @brief Read notification message texts (with fallbacks)
- */
-void ReadNotificationMessagesConfig(void);
-
-/**
  * @brief Write notification timeout
  * @param timeout_ms Duration (recommended: 3000-10000)
  */
 void WriteConfigNotificationTimeout(int timeout_ms);
-
-/**
- * @brief Read notification timeout (default: 5000ms)
- */
-void ReadNotificationTimeoutConfig(void);
-
-/**
- * @brief Read notification opacity (default: 100, range: 0-100)
- */
-void ReadNotificationOpacityConfig(void);
 
 /**
  * @brief Write notification opacity (auto-clamped to 1-100)
@@ -542,20 +527,10 @@ void WriteConfigNotificationOpacity(int opacity);
 void WriteConfigNotificationMessages(const char* timeout_msg);
 
 /**
- * @brief Read notification type (default: CATIME)
- */
-void ReadNotificationTypeConfig(void);
-
-/**
  * @brief Write notification type (enum to string)
  * @param type Notification type
  */
 void WriteConfigNotificationType(NotificationType type);
-
-/**
- * @brief Read notification disabled flag (default: FALSE)
- */
-void ReadNotificationDisabledConfig(void);
 
 /**
  * @brief Write notification disabled setting
@@ -577,34 +552,16 @@ void WriteConfigLanguage(int language);
 void GetAudioFolderPath(char* path, size_t size);
 
 /**
- * @brief Read notification sound path
- * 
- * @details
- * Supports absolute/relative paths, "SYSTEM_BEEP", or empty (no sound).
- */
-void ReadNotificationSoundConfig(void);
-
-/**
  * @brief Write notification sound path (no validation)
  * @param sound_file Path, "SYSTEM_BEEP", or empty (UTF-8)
  */
 void WriteConfigNotificationSound(const char* sound_file);
 
 /**
- * @brief Read notification volume (default: 50, range: 0-100)
- */
-void ReadNotificationVolumeConfig(void);
-
-/**
  * @brief Write notification volume (auto-clamped to 0-100)
  * @param volume Volume (0=mute, 100=max)
  */
 void WriteConfigNotificationVolume(int volume);
-
-/**
- * @brief Read notification window position and size
- */
-void ReadNotificationWindowConfig(void);
 
 /**
  * @brief Write notification window position and size
