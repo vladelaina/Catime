@@ -136,6 +136,18 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
     int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
 
+    /* Auto-position logic */
+    if (CLOCK_WINDOW_POS_X == -2) {
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        CLOCK_WINDOW_POS_X = (int)(screenWidth * 0.618f) - (initialWidth / 2);
+        if (CLOCK_WINDOW_POS_X + initialWidth > screenWidth) {
+            CLOCK_WINDOW_POS_X = screenWidth - initialWidth - 20;
+        }
+    } else if (CLOCK_WINDOW_POS_X == -1) {
+        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+        CLOCK_WINDOW_POS_X = (screenWidth - initialWidth) / 2;
+    }
+
     HWND hwnd = CreateWindowExW(
         exStyle,
         WINDOW_CLASS_NAME,

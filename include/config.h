@@ -48,16 +48,16 @@
 #define DEFAULT_BLACK_COLOR            "#000000"
 
 /** @brief Default font settings */
-#define DEFAULT_FONT_NAME              "Wallpoet Essence.ttf"
+#define DEFAULT_FONT_NAME              "Rubik Glitch Essence.ttf"
 #define DEFAULT_FONT_SIZE              20
 
 /** @brief Default window settings
- * - Position 960: Horizontal center on common 1920px wide displays
- * - Position -1: Near top of screen (right-upper area)
+ * - Position -2: Golden ratio (0.618 from left)
+ * - Position -1: Near top of screen
  */
 #define DEFAULT_WINDOW_SCALE           "1.62"
 #define DEFAULT_PLUGIN_SCALE           "1.0"
-#define DEFAULT_WINDOW_POS_X           960
+#define DEFAULT_WINDOW_POS_X           -2
 #define DEFAULT_WINDOW_POS_Y           -1
 #define DEFAULT_MOVE_STEP_SMALL        10
 #define DEFAULT_MOVE_STEP_LARGE        50
