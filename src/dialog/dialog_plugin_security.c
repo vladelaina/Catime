@@ -106,8 +106,8 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             /* Button layout parameters */
             int btnSpacing = 5;
             int btnPaddingX = 24;
-            int btnHeight = 32;  /* Increased height for better appearance */
-            int btnY = dialogHeight - btnHeight - 13;  /* 13px from bottom */
+            int btnHeight = 23;  /* Standard height */
+            int btnY = dialogHeight - btnHeight - 10;  /* 10px from bottom */
             int rightMargin = 10;
             
             /* Measure each button text */
@@ -149,15 +149,15 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             wchar_t messageWide[4096];
             int written = swprintf(messageWide, 4096,
                 L"<md>\n"
-                L"# %s\n\n"
-                L"## %s\n\n"
-                L"`%hs`\n\n\n"
-                L"### %s\n\n"
+                L"%s\n\n"
+                L"%s\n"
+                L"`%hs`\n\n"
+                L"%s\n"
                 L"- %s\n"
-                L"- **%s** (%s)\n"
+                L"- %s (%s)\n"
                 L"- %s\n"
-                L"- **%s**\n\n\n"
-                L"### %s\n\n"
+                L"- %s\n\n"
+                L"%s\n"
                 L"- %s\n"
                 L"- %s\n"
                 L"- %s\n"
@@ -255,10 +255,10 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                     
                     /* Add margins for content */
                     RECT drawRect = rect;
-                    drawRect.left += 20;
-                    drawRect.top += 20;
-                    drawRect.right -= 20;
-                    drawRect.bottom -= 20;
+                    drawRect.left += 10;
+                    drawRect.top += 10;
+                    drawRect.right -= 10;
+                    drawRect.bottom -= 10;
                     
                     RenderMarkdownText(hdc, g_displayText, g_links, g_linkCount,
                                      g_headings, g_headingCount,
