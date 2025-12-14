@@ -312,7 +312,7 @@ static StartupMode ParseStartupMode(const char* modeStr) {
     return STARTUP_MODE_DEFAULT;
 }
 
-static void HandleStartupMode(HWND hwnd) {
+void HandleStartupMode(HWND hwnd) {
     StartupMode mode = ParseStartupMode(CLOCK_STARTUP_MODE);
     
     LOG_INFO("Setting startup mode: %s", CLOCK_STARTUP_MODE);

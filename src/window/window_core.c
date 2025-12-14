@@ -136,16 +136,24 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
     int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
 
-    /* Auto-position logic */
-    if (CLOCK_WINDOW_POS_X == -2) {
-        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-        CLOCK_WINDOW_POS_X = (int)(screenWidth * 0.618f) - (initialWidth / 2);
-        if (CLOCK_WINDOW_POS_X + initialWidth > screenWidth) {
-            CLOCK_WINDOW_POS_X = screenWidth - initialWidth - 20;
+    /* Auto-position logic - use primary monitor dimensions */
+    if (CLOCK_WINDOW_POS_X == -2 || CLOCK_WINDOW_POS_X == -1) {
+        POINT pt = {0, 0};
+        HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFO mi = {sizeof(mi)};
+        GetMonitorInfo(hMon, &mi);
+        int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
+        
+        if (CLOCK_WINDOW_POS_X == -2) {
+            /* Golden ratio: 0.618 from left of primary monitor */
+            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (initialWidth / 2);
+            if (CLOCK_WINDOW_POS_X + initialWidth > mi.rcMonitor.right) {
+                CLOCK_WINDOW_POS_X = mi.rcMonitor.right - initialWidth - 20;
+            }
+        } else {
+            /* Center on primary monitor */
+            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (screenWidth - initialWidth) / 2;
         }
-    } else if (CLOCK_WINDOW_POS_X == -1) {
-        int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-        CLOCK_WINDOW_POS_X = (screenWidth - initialWidth) / 2;
     }
 
     HWND hwnd = CreateWindowExW(

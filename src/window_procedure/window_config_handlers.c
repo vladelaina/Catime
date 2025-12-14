@@ -89,8 +89,17 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
     
     /* Window settings (only if not in edit mode) */
     if (!CLOCK_EDIT_MODE) {
-        int posX = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_X, CLOCK_WINDOW_POS_X);
+        int configPosX = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_X, CLOCK_WINDOW_POS_X);
         int posY = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_Y, CLOCK_WINDOW_POS_Y);
+        int posX = configPosX;
+        
+        /* Skip position handling for special values (-2, -1) during hot-reload.
+         * These values require window size to be finalized first. */
+        BOOL skipPositionUpdate = (configPosX == -2 || configPosX == -1);
+        if (skipPositionUpdate) {
+            CLOCK_WINDOW_POS_Y = posY;
+            posX = CLOCK_WINDOW_POS_X;
+        }
         
         char scaleStr[16];
         ReadConfigStr(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_SCALE, "1.62", scaleStr, sizeof(scaleStr));
@@ -103,7 +112,7 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         BOOL newTopmost = ReadConfigBool(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_TOPMOST, CLOCK_WINDOW_TOPMOST);
         int newOpacity = ReadConfigInt(CFG_SECTION_DISPLAY, "WINDOW_OPACITY", CLOCK_WINDOW_OPACITY);
         
-        BOOL posChanged = (posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y);
+        BOOL posChanged = !skipPositionUpdate && ((posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y));
         BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
         
         extern float CLOCK_FONT_SCALE_FACTOR;

@@ -234,7 +234,8 @@ BOOL GetFontsFolderWideFromConfig(wchar_t* out, size_t size) {
  * ============================================================================ */
 
 void ResetTimerStateToDefaults(void) {
-    CLOCK_TOTAL_TIME = 25 * 60;
+    /* Reset timer values - actual mode will be set by HandleStartupMode */
+    CLOCK_TOTAL_TIME = 0;
     elapsed_time = 0;
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
@@ -259,7 +260,11 @@ void ResetConfigurationFile(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    /* Simply delete the config file - ReadConfig will recreate it */
+    /* Clear in-memory INI cache first - critical for reset to work */
+    extern void InvalidateIniCache(void);
+    InvalidateIniCache();
+    
+    /* Delete the config file - ReadConfig will recreate it */
     wchar_t wconfig_path[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
     DeleteFileW(wconfig_path);
@@ -318,9 +323,31 @@ void RecalculateWindowSize(HWND hwnd) {
     CLOCK_WINDOW_SCALE = defaultScale;
     CLOCK_FONT_SCALE_FACTOR = defaultScale;
     
+    int newWidth = (int)(textSize.cx * defaultScale);
+    int newHeight = (int)(textSize.cy * defaultScale);
+    
+    /* Recalculate position based on new window size for special values */
+    int configPosX = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_X, CLOCK_WINDOW_POS_X);
+    if (configPosX == -2 || configPosX == -1) {
+        POINT pt = {0, 0};
+        HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFO mi = {sizeof(mi)};
+        GetMonitorInfo(hMon, &mi);
+        int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
+        
+        if (configPosX == -2) {
+            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (newWidth / 2);
+            if (CLOCK_WINDOW_POS_X + newWidth > mi.rcMonitor.right) {
+                CLOCK_WINDOW_POS_X = mi.rcMonitor.right - newWidth - 20;
+            }
+        } else {
+            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (screenWidth - newWidth) / 2;
+        }
+    }
+    
     SetWindowPos(hwnd, NULL, 
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-        (int)(textSize.cx * defaultScale), (int)(textSize.cy * defaultScale),
+        newWidth, newHeight,
         SWP_NOZORDER | SWP_NOACTIVATE
     );
 }

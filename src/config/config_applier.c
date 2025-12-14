@@ -22,6 +22,9 @@
 /* Global text effect */
 extern TextEffectType CLOCK_TEXT_EFFECT;
 
+/* Force apply flag - used during reset to bypass position preservation */
+BOOL g_ForceApplyConfig = FALSE;
+
 /* ============================================================================
  * Helper: Language enum mapping
  * ============================================================================ */
@@ -112,24 +115,33 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
 
     HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) {
-        /* Get current window position before updating globals */
-        RECT currentRect;
-        GetWindowRect(hwnd, &currentRect);
-        
-        /* Compare current position with config snapshot */
-        int deltaX = abs(currentRect.left - snapshot->windowPosX);
-        int deltaY = abs(currentRect.top - snapshot->windowPosY);
-        
-        if (deltaX > 10 || deltaY > 10) {
-            /* Significant difference: preserve current position (likely just saved) */
-            CLOCK_WINDOW_POS_X = currentRect.left;
-            CLOCK_WINDOW_POS_Y = currentRect.top;
-        } else {
-            /* Minor difference: apply config position */
-            CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+        /* Force apply mode: always use config values (used during reset) */
+        if (g_ForceApplyConfig) {
             CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
-            SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-                        0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            
+            /* For special position values (-2, -1), don't set position here.
+             * RecalculateWindowSize will handle it with correct window dimensions. */
+            if (snapshot->windowPosX != -2 && snapshot->windowPosX != -1) {
+                CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+                SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+                            0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            }
+        } else {
+            /* Normal mode: preserve position if significantly different */
+            RECT currentRect;
+            GetWindowRect(hwnd, &currentRect);
+            int deltaX = abs(currentRect.left - snapshot->windowPosX);
+            int deltaY = abs(currentRect.top - snapshot->windowPosY);
+            
+            if (deltaX > 10 || deltaY > 10) {
+                CLOCK_WINDOW_POS_X = currentRect.left;
+                CLOCK_WINDOW_POS_Y = currentRect.top;
+            } else {
+                CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+                CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
+                SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+                            0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            }
         }
 
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);

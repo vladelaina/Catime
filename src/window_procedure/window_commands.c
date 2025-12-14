@@ -14,6 +14,7 @@
 #include "timer/timer.h"
 #include "window.h"
 #include "config.h"
+#include "config/config_applier.h"
 #include "log.h"
 #include "language.h"
 #include "startup.h"
@@ -22,6 +23,8 @@
 #include "color/color.h"
 #include "pomodoro.h"
 #include "tray/tray.h"
+
+extern void HandleStartupMode(HWND hwnd);
 #include "dialog/dialog_procedure.h"
 #include "hotkey.h"
 #include "update_checker.h"
@@ -336,17 +339,55 @@ static LRESULT CmdBrowseFile(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)hwnd; (void)wp; (void)lp;
+    (void)wp; (void)lp;
     
-    /* Use default values from config.h */
-    char posX[32], posY[32];
-    snprintf(posX, sizeof(posX), "%d", DEFAULT_WINDOW_POS_X);
-    snprintf(posY, sizeof(posY), "%d", DEFAULT_WINDOW_POS_Y);
+    /* Write default values to config */
+    char posXStr[32], posYStr[32];
+    snprintf(posXStr, sizeof(posXStr), "%d", DEFAULT_WINDOW_POS_X);
+    snprintf(posYStr, sizeof(posYStr), "%d", DEFAULT_WINDOW_POS_Y);
     
-    WriteConfigKeyValue("CLOCK_WINDOW_POS_X", posX);
-    WriteConfigKeyValue("CLOCK_WINDOW_POS_Y", posY);
+    WriteConfigKeyValue("CLOCK_WINDOW_POS_X", posXStr);
+    WriteConfigKeyValue("CLOCK_WINDOW_POS_Y", posYStr);
     WriteConfigKeyValue("WINDOW_SCALE", DEFAULT_WINDOW_SCALE);
     WriteConfigKeyValue("PLUGIN_SCALE", DEFAULT_PLUGIN_SCALE);
+    
+    /* Directly apply position (don't rely on hot-reload for special values) */
+    RECT windowRect;
+    GetWindowRect(hwnd, &windowRect);
+    int windowWidth = windowRect.right - windowRect.left;
+    
+    POINT pt = {0, 0};
+    HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+    MONITORINFO mi = {sizeof(mi)};
+    GetMonitorInfo(hMon, &mi);
+    int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
+    
+    int posX, posY;
+    
+    /* Handle special X position values */
+    if (DEFAULT_WINDOW_POS_X == -2) {
+        posX = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (windowWidth / 2);
+        if (posX + windowWidth > mi.rcMonitor.right) {
+            posX = mi.rcMonitor.right - windowWidth - 20;
+        }
+    } else if (DEFAULT_WINDOW_POS_X == -1) {
+        posX = mi.rcMonitor.left + (screenWidth - windowWidth) / 2;
+    } else {
+        posX = mi.rcMonitor.left + DEFAULT_WINDOW_POS_X;
+    }
+    
+    /* Handle special Y position value (-1 = top of monitor) */
+    if (DEFAULT_WINDOW_POS_Y == -1) {
+        posY = mi.rcMonitor.top;
+    } else if (DEFAULT_WINDOW_POS_Y < 0) {
+        posY = mi.rcMonitor.top;
+    } else {
+        posY = mi.rcMonitor.top + DEFAULT_WINDOW_POS_Y;
+    }
+    
+    CLOCK_WINDOW_POS_X = posX;
+    CLOCK_WINDOW_POS_Y = posY;
+    SetWindowPos(hwnd, NULL, posX, posY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
     
     return 0;
 }
@@ -375,18 +416,22 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     /* Step 5: Reload all configuration (same as startup) */
     LOG_INFO("Reset: Reloading default configuration...");
+    g_ForceApplyConfig = TRUE;  /* Force apply all config values */
     ReadConfig();
+    g_ForceApplyConfig = FALSE;
     LOG_INFO("Reset: Configuration reloaded successfully");
     
-    /* Step 5.5: Reset UI runtime state (not in config file) */
+    /* Step 6: Apply startup mode from config */
+    HandleStartupMode(hwnd);
+    LOG_INFO("Reset: Startup mode applied: %s", CLOCK_STARTUP_MODE);
+    
+    /* Step 7: Reset UI runtime state */
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     LOG_INFO("Reset: UI runtime state reset");
     
-    /* Force timeout action to default (override config's preserve logic) */
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    
-    /* Step 5.6: Reload font (config sets FONT_FILE_NAME, but font needs to be loaded) */
+    /* Step 8: Reload font */
     if (IsFontsFolderPath(FONT_FILE_NAME)) {
         const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
         if (relativePath) {
@@ -401,16 +446,16 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
     }
     
-    /* Step 6: Refresh UI to match new config */
+    /* Step 9: Refresh UI to match new config */
     RecalculateWindowSize(hwnd);
     ShowWindow(hwnd, SW_SHOW);
     ResetTimerWithInterval(hwnd);
     
-    /* Step 7: Re-enable redraw and refresh display */
+    /* Step 10: Re-enable redraw and refresh display */
     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
     RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
     
-    /* Step 8: Re-register hotkeys with new config */
+    /* Step 11: Re-register hotkeys with new config */
     RegisterGlobalHotkeys(hwnd);
     
     LOG_INFO("========== Reset All Settings operation completed ==========\n");

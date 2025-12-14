@@ -164,8 +164,8 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     
-    char currentStartupMode[20] = "COUNTDOWN";
-    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN",
+    char currentStartupMode[20] = "SHOW_TIME";
+    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "SHOW_TIME",
                   currentStartupMode, sizeof(currentStartupMode), configPath);
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
