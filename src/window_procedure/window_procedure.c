@@ -26,6 +26,7 @@
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
 #include "markdown/markdown_interactive.h"
+#include "drag_scale.h" // Added this line
 
 /* ============================================================================
  * External Declarations
@@ -297,53 +298,11 @@ void StartPomodoroTimer(HWND hwnd) {
 extern BOOL g_IsTransitioning;
 
 void ToggleEditMode(HWND hwnd) {
-    CLOCK_EDIT_MODE = !CLOCK_EDIT_MODE;
-    
-    // Start transition period to hide rendering artifacts
-    g_IsTransitioning = TRUE;
-    SetTimer(hwnd, TIMER_ID_TRANSITION_END, 50, NULL);
-    
     if (CLOCK_EDIT_MODE) {
-        PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
-        
-        // 1. Enable interaction first (modifies WS_EX_TRANSPARENT)
-        SetClickThrough(hwnd, FALSE);
-        
-        // 2. Enable visual effect (Acrylic Blur)
-        SetBlurBehind(hwnd, TRUE);
-        
-        // 3. Change Z-order last (triggers heavy window pos changes)
-        if (!CLOCK_WINDOW_TOPMOST) {
-            SetWindowTopmost(hwnd, TRUE);
-        }
-        
-        ShowWindow(hwnd, SW_SHOW);
-        SetForegroundWindow(hwnd);
+        EndEditMode(hwnd);
     } else {
-        extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
-        extern int CLOCK_WINDOW_OPACITY;
-        
-        // 1. Disable visual effect
-        SetBlurBehind(hwnd, FALSE);
-
-        // 2. Disable interaction
-        SetClickThrough(hwnd, TRUE);
-        
-        SaveWindowSettings(hwnd);
-        WriteConfigColor(CLOCK_TEXT_COLOR);
-        
-        if (!PREVIOUS_TOPMOST_STATE) {
-            SetWindowTopmost(hwnd, FALSE);
-            
-            // Force a delayed redraw to clean up any artifacts
-            KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
-            SetTimer(hwnd, TIMER_ID_FORCE_REDRAW, 150, NULL);
-        }
+        StartEditMode(hwnd);
     }
-    
-    // Force immediate update
-    InvalidateRect(hwnd, NULL, TRUE);
-    UpdateWindow(hwnd);
 }
 
 void TogglePauseResume(HWND hwnd) {
