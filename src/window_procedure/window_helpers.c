@@ -42,18 +42,12 @@ BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
     CLOCK_COUNT_UP = (mode == TIMER_MODE_COUNTUP);
     CLOCK_IS_PAUSED = FALSE;
     
-    if (params->resetElapsed) {
-        elapsed_time = 0;
-        countdown_elapsed_time = 0;
-        countup_elapsed_time = 0;
-        message_shown = FALSE;
-        countdown_message_shown = FALSE;
-        countup_message_shown = FALSE;
-        ResetMillisecondAccumulator();
-    }
-    
     if (mode == TIMER_MODE_COUNTDOWN || mode == TIMER_MODE_POMODORO) {
         CLOCK_TOTAL_TIME = params->totalSeconds;
+    }
+    
+    if (params->resetElapsed) {
+        ResetTimer();
     }
     
     if (params->showWindow) {
