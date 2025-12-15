@@ -36,27 +36,15 @@ extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
 typedef void (*HotkeyAction)(HWND);
 
 static void HotkeyToggleVisibility(HWND hwnd) {
-    if (IsWindowVisible(hwnd)) {
-        ShowWindow(hwnd, SW_HIDE);
-    } else {
-        ShowWindow(hwnd, SW_SHOW);
-        SetForegroundWindow(hwnd);
-    }
+    ToggleWindowVisibility(hwnd);
 }
 
 static void HotkeyRestartTimer(HWND hwnd) {
-    CloseAllNotifications();
     RestartCurrentTimer(hwnd);
 }
 
 static void HotkeyToggleMilliseconds(HWND hwnd) {
-    WriteConfigShowMilliseconds(!g_AppConfig.display.time_format.show_milliseconds);
-    
-    /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
-    extern void ResetTimerWithInterval(HWND hwnd);
-    ResetTimerWithInterval(hwnd);
-    
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleMilliseconds(hwnd);
 }
 
 static void HotkeyCustomCountdown(HWND hwnd) {

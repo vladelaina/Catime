@@ -157,6 +157,21 @@ void CleanupBeforeTimerAction(void);
  */
 BOOL StartCountdownWithTime(HWND hwnd, int seconds);
 
+/**
+ * @brief Toggle window visibility (show/hide)
+ */
+void ToggleWindowVisibility(HWND hwnd);
+
+/**
+ * @brief Toggle window topmost status
+ */
+void ToggleTopmost(HWND hwnd);
+
+/**
+ * @brief Toggle millisecond display
+ */
+void ToggleMilliseconds(HWND hwnd);
+
 /* ============================================================================
  * Configuration Handlers
  * ============================================================================ */

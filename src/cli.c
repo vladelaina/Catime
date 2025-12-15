@@ -209,12 +209,7 @@ static BOOL HandleQuickCountdown(HWND hwnd, const char* input) {
 
 static BOOL HandleVisibility(HWND hwnd, const char* input) {
     (void)input;
-    if (IsWindowVisible(hwnd)) {
-        ShowWindow(hwnd, SW_HIDE);
-    } else {
-        ShowWindow(hwnd, SW_SHOW);
-        SetForegroundWindow(hwnd);
-    }
+    ToggleWindowVisibility(hwnd);
     return TRUE;
 }
 
@@ -234,7 +229,6 @@ static BOOL HandlePauseResume(HWND hwnd, const char* input) {
 
 static BOOL HandleRestart(HWND hwnd, const char* input) {
     (void)input;
-    CloseAllNotifications();
     RestartCurrentTimer(hwnd);
     return TRUE;
 }

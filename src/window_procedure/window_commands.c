@@ -71,7 +71,7 @@ static LRESULT CmdAbout(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
-    WriteConfigTopmost(!CLOCK_WINDOW_TOPMOST ? STR_TRUE : STR_FALSE);
+    ToggleTopmost(hwnd);
     return 0;
 }
 
@@ -185,7 +185,7 @@ static LRESULT CmdEditMode(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdToggleVisibility(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0);
+    ToggleWindowVisibility(hwnd);
     return 0;
 }
 

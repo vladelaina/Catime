@@ -291,7 +291,19 @@ void StartDefaultCountDown(HWND hwnd) {
 
 void StartPomodoroTimer(HWND hwnd) {
     CleanupBeforeTimerAction();
-    PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
+    
+    if (!IsWindowVisible(hwnd)) ShowWindow(hwnd, SW_SHOW);
+
+    extern void InitializePomodoro(void);
+    InitializePomodoro();
+
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_IS_PAUSED = FALSE;
+
+    KillTimer(hwnd, 1);
+    ResetTimerWithInterval(hwnd);
+    InvalidateRect(hwnd, NULL, TRUE);
 }
 
 #define TIMER_ID_TRANSITION_END 100
@@ -316,6 +328,7 @@ void RestartCurrentTimer(HWND hwnd) {
     extern int countdown_elapsed_time, countup_elapsed_time;
     extern void ResetMillisecondAccumulator(void);
     
+    CloseAllNotifications(); // Centralized cleanup
     StopNotificationSound();
     
     CleanupBeforeTimerAction();
@@ -398,5 +411,33 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     ResetTimerWithInterval(hwnd);
     
     return result;
+}
+
+void ToggleMilliseconds(HWND hwnd) {
+    extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
+    extern void ResetTimerWithInterval(HWND hwnd);
+    
+    BOOL newState = !g_AppConfig.display.time_format.show_milliseconds;
+    WriteConfigShowMilliseconds(newState);
+    
+    /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
+    ResetTimerWithInterval(hwnd);
+    
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+void ToggleTopmost(HWND hwnd) {
+    extern void WriteConfigTopmost(const char* value);
+    // Use "true"/"false" literals to avoid dependency on specific header macros if not present
+    WriteConfigTopmost(!CLOCK_WINDOW_TOPMOST ? "true" : "false");
+}
+
+void ToggleWindowVisibility(HWND hwnd) {
+    if (IsWindowVisible(hwnd)) {
+        ShowWindow(hwnd, SW_HIDE);
+    } else {
+        ShowWindow(hwnd, SW_SHOW);
+        SetForegroundWindow(hwnd);
+    }
 }
 
