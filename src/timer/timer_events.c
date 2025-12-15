@@ -422,7 +422,13 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         return FALSE;
     }
     
-    ResetTimerState(g_AppConfig.pomodoro.times[current_pomodoro_time_index]);
+    // Seamless transition: Add new duration to the existing target end time
+    // This ensures no time is lost during notification processing
+    int next_duration_sec = g_AppConfig.pomodoro.times[current_pomodoro_time_index];
+    ResetTimerState(next_duration_sec);
+    
+    g_target_end_time += ((int64_t)next_duration_sec * 1000);
+    
     countdown_message_shown = FALSE;
     
     extern BOOL InitializeHighPrecisionTimer(void);
@@ -483,52 +489,37 @@ static BOOL HandleMainTimer(HWND hwnd) {
     BOOL overlapsTaskbar = EnforceTopmostOverTaskbar(hwnd);
     
     if (overlapsTaskbar && !topmost_fast_mode_active) {
-        /* Window entered taskbar area - start fast timer (50ms) */
         SetTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE, 50, NULL);
         topmost_fast_mode_active = TRUE;
     } else if (!overlapsTaskbar && topmost_fast_mode_active) {
-        /* Window left taskbar area - stop fast timer */
         KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
         topmost_fast_mode_active = FALSE;
     }
     
-    /* 
-     * Render throttling for heavy effects on large windows.
-     * When holographic effect is active and window is large, we skip some
-     * InvalidateRect calls to prevent mouse lag. The animation timer 
-     * (TIMER_ID_RENDER_ANIMATION) handles visual updates at appropriate rate.
-     */
     static DWORD s_lastRenderTime = 0;
-    DWORD now = GetTickCount();
+    DWORD now_tick = GetTickCount();
     BOOL shouldRender = TRUE;
     
     if (CLOCK_HOLOGRAPHIC_EFFECT) {
         RECT rect;
         GetClientRect(hwnd, &rect);
         int pixels = rect.right * rect.bottom;
-        
-        /* Minimum interval between renders based on window size */
-        DWORD minInterval = (pixels < 30000) ? 0 :
-                            (pixels < 100000) ? 50 :
-                            (pixels < 300000) ? 100 : 150;
-        
-        if (minInterval > 0 && (now - s_lastRenderTime) < minInterval) {
-            shouldRender = FALSE;
-        }
+        DWORD minInterval = (pixels < 30000) ? 0 : (pixels < 100000) ? 50 : (pixels < 300000) ? 100 : 150;
+        if (minInterval > 0 && (now_tick - s_lastRenderTime) < minInterval) shouldRender = FALSE;
     }
     
     if (CLOCK_SHOW_CURRENT_TIME) {
         extern int last_displayed_second;
         last_displayed_second = -1;
         if (shouldRender) {
-            s_lastRenderTime = now;
+            s_lastRenderTime = now_tick;
             InvalidateRect(hwnd, NULL, TRUE);
         }
         return TRUE;
     }
     
     if (shouldRender) {
-        s_lastRenderTime = now;
+        s_lastRenderTime = now_tick;
         InvalidateRect(hwnd, NULL, TRUE);
     }
     
@@ -536,56 +527,51 @@ static BOOL HandleMainTimer(HWND hwnd) {
         return TRUE;
     }
     
-    DWORD current_tick = GetTickCount();
-    if (last_timer_tick == 0) {
-        last_timer_tick = current_tick;
-        return TRUE;
+    /* ABSOLUTE TIME CALCULATION (MILLISECONDS) */
+    extern int64_t GetAbsoluteTimeMs(void);
+    int64_t current_time_ms = GetAbsoluteTimeMs();
+    int current_elapsed_sec = 0;
+
+    if (CLOCK_COUNT_UP) {
+        int64_t elapsed_ms = current_time_ms - g_start_time;
+        if (elapsed_ms < 0) elapsed_ms = 0;
+        current_elapsed_sec = (int)(elapsed_ms / 1000);
+        countup_elapsed_time = current_elapsed_sec;
+    } else {
+        int64_t remaining_ms = g_target_end_time - current_time_ms;
+        if (remaining_ms < 0) remaining_ms = 0;
+        
+        /* Use ceiling division to prevent "00:00" display while time remains (e.g. 0.9s -> 1s) */
+        int remaining_sec_rounded = (int)((remaining_ms + 999) / 1000);
+        
+        current_elapsed_sec = CLOCK_TOTAL_TIME - remaining_sec_rounded;
+        if (current_elapsed_sec > CLOCK_TOTAL_TIME) current_elapsed_sec = CLOCK_TOTAL_TIME;
+        if (current_elapsed_sec < 0) current_elapsed_sec = 0;
+        
+        countdown_elapsed_time = current_elapsed_sec;
     }
     
-    DWORD elapsed_ms = current_tick - last_timer_tick;
-    last_timer_tick = current_tick;
-    ms_accumulator += elapsed_ms;
-    
-    AdjustTimerIntervalForTail(hwnd);
-    
-    if (ms_accumulator >= 1000) {
-        int seconds_to_add = ms_accumulator / 1000;
-        ms_accumulator %= 1000;
-        
-        if (!g_AppConfig.display.time_format.show_milliseconds && seconds_to_add > 1) {
-            seconds_to_add = 1;
-        }
-        
-        if (CLOCK_COUNT_UP) {
-            countup_elapsed_time += seconds_to_add;
+    if (!CLOCK_COUNT_UP && countdown_elapsed_time >= CLOCK_TOTAL_TIME) {
+        if (!countdown_message_shown) {
+            countdown_message_shown = TRUE;
+            
+            TrayAnimation_RecomputeTimerDelay();
+            
+            BOOL pomodoro_advanced = FALSE;
+            if (IsActivePomodoroTimer()) {
+                pomodoro_advanced = HandlePomodoroCompletion(hwnd);
             } else {
-            if (countdown_elapsed_time < CLOCK_TOTAL_TIME) {
-                countdown_elapsed_time += seconds_to_add;
+                HandleCountdownCompletion(hwnd);
             }
             
-            if (countdown_elapsed_time >= CLOCK_TOTAL_TIME) {
-                if (!countdown_message_shown) {
-                    countdown_message_shown = TRUE;
-                    
-                    TrayAnimation_RecomputeTimerDelay();
-                    
-                    BOOL pomodoro_advanced = FALSE;
-                    if (IsActivePomodoroTimer()) {
-                        pomodoro_advanced = HandlePomodoroCompletion(hwnd);
-                    } else {
-                        HandleCountdownCompletion(hwnd);
-                    }
-                    
-                    if (pomodoro_advanced) {
-                        return TRUE;
-                    }
-                }
-                countdown_elapsed_time = CLOCK_TOTAL_TIME;
+            if (pomodoro_advanced) {
+                return TRUE;
             }
         }
-        
-        InvalidateRect(hwnd, NULL, TRUE);
+        countdown_elapsed_time = CLOCK_TOTAL_TIME;
     }
+    
+    InvalidateRect(hwnd, NULL, TRUE);
     
     return TRUE;
 }

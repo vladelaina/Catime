@@ -16,6 +16,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <windows.h>
+#include <time.h>
+#include <stdint.h>
 
 #define SECONDS_PER_MINUTE 60
 #define SECONDS_PER_HOUR 3600
@@ -51,6 +53,22 @@ char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";
 int time_options[MAX_TIME_OPTIONS] = {0};
 int time_options_count = 0;
 
+/* Absolute Time State Definitions (Milliseconds) */
+int64_t g_target_end_time = 0;
+int64_t g_start_time = 0;
+int64_t g_pause_start_time = 0;
+
+/* Helper for millisecond precision */
+int64_t GetAbsoluteTimeMs(void) {
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+    ULARGE_INTEGER uli;
+    uli.LowPart = ft.dwLowDateTime;
+    uli.HighPart = ft.dwHighDateTime;
+    /* Convert 100-nanosecond intervals (since Jan 1, 1601) to milliseconds */
+    return (int64_t)(uli.QuadPart / 10000ULL);
+}
+
 /** Reset QPC baseline to prevent time jumps after pause/resume */
 BOOL InitializeHighPrecisionTimer(void) {
     if (!QueryPerformanceFrequency(&timer_frequency)) {
@@ -61,45 +79,6 @@ BOOL InitializeHighPrecisionTimer(void) {
     }
     high_precision_timer_initialized = TRUE;
     return TRUE;
-}
-
-/** Delta-based measurement, auto-updates baseline to avoid accumulation errors */
-static double GetElapsedMilliseconds(void) {
-    if (!high_precision_timer_initialized) {
-        if (!InitializeHighPrecisionTimer()) {
-            return 0.0;
-        }
-    }
-    
-    LARGE_INTEGER current_count;
-    if (!QueryPerformanceCounter(&current_count)) {
-        return 0.0;
-    }
-    
-    double elapsed = (double)(current_count.QuadPart - timer_last_count.QuadPart) 
-                     * MILLISECONDS_PER_SECOND / (double)timer_frequency.QuadPart;
-    timer_last_count = current_count;
-    
-    return elapsed;
-}
-
-/** Accumulate elapsed time, clamp countdown to prevent negative display */
-static void UpdateElapsedTime(void) {
-    if (CLOCK_IS_PAUSED) {
-        return;
-    }
-    
-    double elapsed_ms = GetElapsedMilliseconds();
-    int elapsed_sec = (int)(elapsed_ms / MILLISECONDS_PER_SECOND);
-    
-    if (CLOCK_COUNT_UP) {
-        countup_elapsed_time += elapsed_sec;
-    } else {
-        countdown_elapsed_time += elapsed_sec;
-        if (countdown_elapsed_time > CLOCK_TOTAL_TIME) {
-            countdown_elapsed_time = CLOCK_TOTAL_TIME;
-        }
-    }
 }
 
 /** Leading spaces stabilize width when hours/minutes disappear during countdown */
@@ -153,7 +132,7 @@ static void FormatSystemClock(char* time_text) {
 }
 
 static void FormatCountUpTime(char* time_text) {
-    UpdateElapsedTime();
+    // Elapsed time is now updated by HandleMainTimer in timer_events.c
     
     int hours = countup_elapsed_time / SECONDS_PER_HOUR;
     int minutes = (countup_elapsed_time % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE;
@@ -163,7 +142,7 @@ static void FormatCountUpTime(char* time_text) {
 }
 
 static void FormatCountdownTime(char* time_text) {
-    UpdateElapsedTime();
+    // Elapsed time is now updated by HandleMainTimer in timer_events.c
     
     int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
     if (remaining <= 0) {
@@ -272,18 +251,23 @@ void WriteConfigDefaultStartTime(int seconds) {
 
 /** Fallback to DEFAULT_FALLBACK_TIME if countdown has invalid total time */
 void ResetTimer(void) {
+    int64_t now = GetAbsoluteTimeMs();
+
     if (CLOCK_COUNT_UP) {
         countup_elapsed_time = 0;
+        g_start_time = now;
     } else {
         countdown_elapsed_time = 0;
         if (CLOCK_TOTAL_TIME <= 0) {
             CLOCK_TOTAL_TIME = DEFAULT_FALLBACK_TIME;
         }
+        g_target_end_time = now + ((int64_t)CLOCK_TOTAL_TIME * 1000);
     }
     
     CLOCK_IS_PAUSED = FALSE;
     countdown_message_shown = FALSE;
     countup_message_shown = FALSE;
+    g_pause_start_time = 0;
     
     InitializeHighPrecisionTimer();
     ResetMillisecondAccumulator();
@@ -294,9 +278,18 @@ void TogglePauseTimer(void) {
     BOOL was_paused = CLOCK_IS_PAUSED;
     CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
     
+    int64_t now = GetAbsoluteTimeMs();
+
     if (CLOCK_IS_PAUSED && !was_paused) {
+        g_pause_start_time = now;
         PauseTimerMilliseconds();
     } else if (!CLOCK_IS_PAUSED && was_paused) {
+        if (g_pause_start_time > 0) {
+            int64_t pause_duration = now - g_pause_start_time;
+            g_target_end_time += pause_duration;
+            g_start_time += pause_duration;
+            g_pause_start_time = 0;
+        }
         InitializeHighPrecisionTimer();
         ResetMillisecondAccumulator();
     }
