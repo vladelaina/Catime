@@ -39,25 +39,49 @@ TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
 }
 
 TimeComponents GetCountUpComponents(void) {
+    extern BOOL CLOCK_IS_PAUSED;
+    extern int64_t g_start_time;
+    extern int64_t g_pause_start_time;
+    extern int64_t GetAbsoluteTimeMs(void);
+    
+    /* Single time sample for both seconds and centiseconds */
+    int64_t now = CLOCK_IS_PAUSED ? g_pause_start_time : GetAbsoluteTimeMs();
+    int64_t elapsed_ms = now - g_start_time;
+    if (elapsed_ms < 0) elapsed_ms = 0;
+    
+    int total_seconds = (int)(elapsed_ms / 1000);
+    int centis = (int)((elapsed_ms % 1000) / 10);
+    
     TimeComponents tc;
-    tc.hours = countup_elapsed_time / 3600;
-    tc.minutes = (countup_elapsed_time % 3600) / 60;
-    tc.seconds = countup_elapsed_time % 60;
-    tc.centiseconds = GetElapsedCentiseconds();
+    tc.hours = total_seconds / 3600;
+    tc.minutes = (total_seconds % 3600) / 60;
+    tc.seconds = total_seconds % 60;
+    tc.centiseconds = centis;
     return tc;
 }
 
 TimeComponents GetCountDownComponents(void) {
-    int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
-    if (remaining < 0) remaining = 0;
+    extern BOOL CLOCK_IS_PAUSED;
+    extern int64_t g_target_end_time;
+    extern int64_t g_pause_start_time;
+    extern int64_t GetAbsoluteTimeMs(void);
+    
+    /* Single time sample for both seconds and centiseconds */
+    int64_t now = CLOCK_IS_PAUSED ? g_pause_start_time : GetAbsoluteTimeMs();
+    int64_t remaining_ms = g_target_end_time - now;
+    if (remaining_ms < 0) remaining_ms = 0;
+    
+    int total_seconds = (int)(remaining_ms / 1000);
+    int centis = (int)((remaining_ms % 1000) / 10);
     
     TimeComponents tc;
-    tc.hours = remaining / 3600;
-    tc.minutes = (remaining % 3600) / 60;
-    tc.seconds = remaining % 60;
-    tc.centiseconds = GetElapsedCentiseconds();
+    tc.hours = total_seconds / 3600;
+    tc.minutes = (total_seconds % 3600) / 60;
+    tc.seconds = total_seconds % 60;
+    tc.centiseconds = centis;
     return tc;
 }
+
 
 void FormatTimeComponentsForDisplay(
     const TimeComponents* tc,
