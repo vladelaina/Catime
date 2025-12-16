@@ -164,7 +164,9 @@ TimeComponents GetCountDownComponents(void) {
     int64_t remaining_ms = g_target_end_time - now;
     if (remaining_ms < 0) remaining_ms = 0;
     
-    int total_seconds = (int)(remaining_ms / 1000);
+    /* Round up seconds display so user sees full set value (e.g. 10:00 not 9:59)
+     * This only affects display - actual timer end time remains precise */
+    int total_seconds = (int)((remaining_ms + 999) / 1000);
     
     /* Use smoothed centiseconds for visual fluidity, real value when paused */
     int centis = GetSmoothedCentiseconds(remaining_ms, TRUE);  /* TRUE = countdown, decreasing */
