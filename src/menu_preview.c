@@ -249,6 +249,14 @@ BOOL GetActiveShowMilliseconds(void) {
 }
 
 EffectType GetActiveEffect(void) {
+    /* Performance optimization: Disable visual effects in milliseconds mode.
+     * Effects require expensive per-frame rendering (blur, lighting, etc.)
+     * At 50 FPS (20ms interval for milliseconds), this causes high CPU usage.
+     * Silently disable effects when milliseconds are shown, auto-restore when disabled. */
+    if (GetActiveShowMilliseconds()) {
+        return EFFECT_TYPE_NONE;
+    }
+    
     if (g_previewState.type == PREVIEW_TYPE_EFFECT) {
         return g_previewState.data.effect;
     }
