@@ -20,7 +20,6 @@
 #include "dialog/dialog_language.h"
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
-#include "cache/resource_cache.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "drawing/drawing_image.h"
@@ -379,13 +378,6 @@ BOOL InitializeSubsystems(void) {
         return FALSE;
     }
     LOG_INFO("COM initialization successful");
-    
-    // Initialize resource cache system with background scanning
-    if (!ResourceCache_Initialize(TRUE)) {
-        LOG_WARNING("Resource cache initialization failed, menu building will use fallback mode");
-    } else {
-        LOG_INFO("Resource cache initialized with background scanning");
-    }
 
     // Initialize GDI+ for image rendering
     InitDrawingImage();

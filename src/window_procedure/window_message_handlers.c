@@ -20,7 +20,6 @@
 #include "drawing.h"
 #include "menu_preview.h"
 #include "window/window_visual_effects.h"
-#include "cache/resource_cache.h"
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
 #include "plugin/plugin_data.h"
@@ -192,9 +191,6 @@ LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     HandleWindowDestroy(hwnd);
     extern void ConfigWatcher_Stop(void);
     ConfigWatcher_Stop();
-    
-    // Shutdown resource cache system
-    ResourceCache_Shutdown();
     
     return 0;
 }

@@ -81,22 +81,6 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     LOG_INFO("ApplyDisplaySettings:   FONT_INTERNAL_NAME = '%s'", FONT_INTERNAL_NAME);
     
-    /* Update font cache to mark correct current font */
-    extern void FontCache_UpdateCurrent(const char* fontRelativePath);
-    char relativePath[MAX_PATH];
-    const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-    size_t prefixLen = strlen(prefix);
-    if (_strnicmp(FONT_FILE_NAME, prefix, prefixLen) == 0) {
-        strncpy(relativePath, FONT_FILE_NAME + prefixLen, sizeof(relativePath) - 1);
-        relativePath[sizeof(relativePath) - 1] = '\0';
-        FontCache_UpdateCurrent(relativePath);
-        LOG_INFO("ApplyDisplaySettings:   Updated font cache with relative path: '%s'", relativePath);
-    } else {
-        /* System font - clear current font marker in cache */
-        FontCache_UpdateCurrent("");
-        LOG_INFO("ApplyDisplaySettings:   Cleared font cache marker (system font)");
-    }
-    
     /* Apply non-position settings first */
     CLOCK_WINDOW_SCALE = snapshot->windowScale;
     CLOCK_FONT_SCALE_FACTOR = snapshot->windowScale;
