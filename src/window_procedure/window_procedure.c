@@ -302,6 +302,9 @@ void StartPomodoroTimer(HWND hwnd) {
     CLOCK_COUNT_UP = FALSE;
     CLOCK_IS_PAUSED = FALSE;
 
+    /* Reset timer to set g_target_end_time for countdown display */
+    ResetTimer();
+
     KillTimer(hwnd, 1);
     ResetTimerWithInterval(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
