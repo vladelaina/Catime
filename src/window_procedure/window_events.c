@@ -76,6 +76,15 @@ BOOL HandleWindowCreate(HWND hwnd) {
         LOG_INFO("Animation render timer started (adaptive interval: %ums)", interval);
     }
 
+    /* Initialize high-precision multimedia timer for smooth milliseconds display */
+    extern BOOL MainTimer_Init(HWND hwnd, UINT intervalMs);
+    extern UINT GetTimerInterval(void);
+    if (MainTimer_Init(hwnd, GetTimerInterval())) {
+        LOG_INFO("High-precision timer initialized");
+    } else {
+        LOG_WARNING("Failed to initialize high-precision timer, falling back to SetTimer");
+    }
+
     LOG_INFO("Window creation completed successfully");
     return TRUE;
 }
@@ -102,6 +111,10 @@ void HandleWindowDestroy(HWND hwnd) {
     /* Stop update check if running */
     CleanupUpdateThread();
 
+    /* Cleanup high-precision timer */
+    extern void MainTimer_Cleanup(void);
+    MainTimer_Cleanup();
+    
     KillTimer(hwnd, TIMER_ID_MAIN);
     KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
     extern UINT GetClickThroughTimerId(void);

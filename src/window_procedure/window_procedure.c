@@ -161,6 +161,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_APP + 1, HandleAppReregisterHotkeys, "Hotkey re-registration"},
     {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded, "Animation preview loaded"},
     {CLOCK_WM_PLUGIN_EXIT, HandlePluginExitMessage, "Plugin exit via <exit> tag"},
+    {CLOCK_WM_MAIN_TIMER_TICK, HandleMainTimerTick, "High-precision timer tick"},
     {0, NULL, NULL}
 };
 

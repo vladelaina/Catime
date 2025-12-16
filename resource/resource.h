@@ -36,6 +36,7 @@
 #define CLOCK_WM_TRAYICON (WM_USER + 2)  /**< Custom tray icon message */
 #define CLOCK_WM_ANIMATION_PREVIEW_LOADED (WM_USER + 3)  /**< Animation preview loaded message */
 #define CLOCK_WM_PLUGIN_EXIT (WM_USER + 4)  /**< Plugin requested exit via <exit> tag */
+#define CLOCK_WM_MAIN_TIMER_TICK (WM_USER + 5)  /**< High-precision main timer tick for smooth milliseconds */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
 #define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 

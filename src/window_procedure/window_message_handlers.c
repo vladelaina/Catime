@@ -173,6 +173,19 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/**
+ * @brief Handle high-precision multimedia timer tick
+ * Called from worker thread via PostMessage for smooth milliseconds display
+ */
+LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    /* Delegate to main timer event handler */
+    HandleTimerEvent(hwnd, TIMER_ID_MAIN);
+    /* Force immediate repaint to bypass WM_PAINT queue delay */
+    UpdateWindow(hwnd);
+    return 0;
+}
+
 LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     UnregisterGlobalHotkeys(hwnd);
