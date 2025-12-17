@@ -235,7 +235,6 @@ void ResetTimerStateToDefaults(void) {
     countup_elapsed_time = 0;
     message_shown = FALSE;
     countdown_message_shown = FALSE;
-    countup_message_shown = FALSE;
     
     CLOCK_COUNT_UP = FALSE;
     CLOCK_SHOW_CURRENT_TIME = FALSE;

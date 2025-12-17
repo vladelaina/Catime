@@ -67,7 +67,6 @@ extern int last_displayed_second;
 
 /* Notification state (prevent duplicates) */
 extern BOOL countdown_message_shown;
-extern BOOL countup_message_shown;
 extern int pomodoro_work_cycles;
 extern int message_shown;
 extern int elapsed_time;

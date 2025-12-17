@@ -288,7 +288,6 @@ static void DropPrivileges(void) {
 extern int elapsed_time;
 extern int message_shown;
 extern int countdown_message_shown;
-extern int countup_message_shown;
 extern int countdown_elapsed_time;
 extern int countup_elapsed_time;
 
@@ -332,7 +331,6 @@ void HandleStartupMode(HWND hwnd) {
             
             message_shown = TRUE;
             countdown_message_shown = TRUE;
-            countup_message_shown = TRUE;
             countdown_elapsed_time = 0;
             countup_elapsed_time = 0;
             break;

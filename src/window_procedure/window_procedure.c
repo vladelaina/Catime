@@ -337,7 +337,7 @@ void TogglePauseResume(HWND hwnd) {
 
 void RestartCurrentTimer(HWND hwnd) {
     extern void StopNotificationSound(void);
-    extern int message_shown, countdown_message_shown, countup_message_shown;
+    extern int message_shown, countdown_message_shown;
     extern int countdown_elapsed_time, countup_elapsed_time;
     extern void ResetMillisecondAccumulator(void);
     
@@ -349,7 +349,6 @@ void RestartCurrentTimer(HWND hwnd) {
     if (!CLOCK_SHOW_CURRENT_TIME) {
         message_shown = FALSE;
         countdown_message_shown = FALSE;
-        countup_message_shown = FALSE;
         
         if (CLOCK_COUNT_UP) {
             countdown_elapsed_time = 0;

@@ -297,7 +297,6 @@ static void HandleTimeoutActions(HWND hwnd) {
                                 elapsed_time = 0;
                                 message_shown = FALSE;
                                 countdown_message_shown = FALSE;
-                                countup_message_shown = FALSE;
                                 CLOCK_IS_PAUSED = FALSE;
                                 ResetMillisecondAccumulator();
             KillTimer(hwnd, TIMER_ID_MAIN);

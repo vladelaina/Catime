@@ -43,7 +43,6 @@ static LARGE_INTEGER timer_last_count = {0};
 static BOOL high_precision_timer_initialized = FALSE;
 
 BOOL countdown_message_shown = FALSE;
-BOOL countup_message_shown = FALSE;
 int pomodoro_work_cycles = 0;
 
 TimeoutActionType CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
@@ -266,7 +265,6 @@ void ResetTimer(void) {
     
     CLOCK_IS_PAUSED = FALSE;
     countdown_message_shown = FALSE;
-    countup_message_shown = FALSE;
     g_pause_start_time = 0;
     
     InitializeHighPrecisionTimer();

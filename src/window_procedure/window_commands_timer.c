@@ -73,7 +73,7 @@ LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
     } else {
-        TogglePauseTimer();
+        TogglePauseResumeTimer(hwnd);
     }
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
