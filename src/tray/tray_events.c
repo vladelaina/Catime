@@ -98,15 +98,14 @@ void TogglePauseResumeTimer(HWND hwnd) {
         return;
     }
     
-    if (!CLOCK_IS_PAUSED) {
-        PauseTimerMilliseconds();
-        CLOCK_IS_PAUSED = TRUE;
+    /* Use TogglePauseTimer() to properly handle g_target_end_time and g_pause_start_time */
+    TogglePauseTimer();
+    
+    if (CLOCK_IS_PAUSED) {
         CLOCK_LAST_TIME_UPDATE = time(NULL);
         KillTimer(hwnd, 1);
         PauseNotificationSound();
     } else {
-        CLOCK_IS_PAUSED = FALSE;
-        ResetMillisecondAccumulator();
         RestartTimerWithInterval(hwnd, 1, GetTimerInterval());
         ResumeNotificationSound();
     }
