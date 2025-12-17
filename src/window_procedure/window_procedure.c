@@ -351,7 +351,9 @@ void RestartCurrentTimer(HWND hwnd) {
             elapsed_time = 0;
         }
         CLOCK_IS_PAUSED = FALSE;
-        ResetMillisecondAccumulator();
+        
+        /* Call ResetTimer() to properly reset g_target_end_time for countdown mode */
+        ResetTimer();
         
         // Restart the timer after resetting pause state
         KillTimer(hwnd, 1);
