@@ -224,22 +224,37 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
     
+    extern POMODORO_PHASE current_pomodoro_phase;
+    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+    
+    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+        current_pomodoro_phase = POMODORO_PHASE_IDLE;
+        current_pomodoro_time_index = 0;
+        complete_pomodoro_cycles = 0;
+    }
+    
     if (!CLOCK_SHOW_CURRENT_TIME) {
-        extern POMODORO_PHASE current_pomodoro_phase;
-        extern int current_pomodoro_time_index, complete_pomodoro_cycles;
-        
-        if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-            current_pomodoro_phase = POMODORO_PHASE_IDLE;
-            current_pomodoro_time_index = 0;
-            complete_pomodoro_cycles = 0;
-        }
-        
+        /* Turn on: switch to show current time mode */
         TimerModeParams params = {0, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
         
-        // Ensure timer is running
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
+    } else {
+        /* Turn off: switch to idle state (no display, no timer) */
+        CLOCK_SHOW_CURRENT_TIME = FALSE;
+        CLOCK_COUNT_UP = FALSE;
+        CLOCK_IS_PAUSED = FALSE;
+        CLOCK_TOTAL_TIME = 0;
+        countdown_elapsed_time = 0;
+        countup_elapsed_time = 0;
+        
+        /* Mark as shown to prevent notification when entering idle state */
+        extern BOOL countdown_message_shown;
+        countdown_message_shown = TRUE;
+        
+        KillTimer(hwnd, 1);
+        InvalidateRect(hwnd, NULL, TRUE);
     }
 }
 
