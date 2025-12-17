@@ -225,12 +225,10 @@ void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
     
     extern POMODORO_PHASE current_pomodoro_phase;
-    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+    extern void ResetPomodoroState(void);
     
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-        current_pomodoro_time_index = 0;
-        complete_pomodoro_cycles = 0;
+        ResetPomodoroState();
     }
     
     if (!CLOCK_SHOW_CURRENT_TIME) {
@@ -262,12 +260,10 @@ void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
     
     extern POMODORO_PHASE current_pomodoro_phase;
-    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+    extern void ResetPomodoroState(void);
     
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-        current_pomodoro_time_index = 0;
-        complete_pomodoro_cycles = 0;
+        ResetPomodoroState();
     }
     
     TimerModeParams params = {0, TRUE, FALSE, TRUE};
@@ -283,14 +279,12 @@ void StartDefaultCountDown(HWND hwnd) {
     
     extern BOOL countdown_message_shown;
     extern POMODORO_PHASE current_pomodoro_phase;
-    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
+    extern void ResetPomodoroState(void);
     
     countdown_message_shown = FALSE;
     
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-        current_pomodoro_time_index = 0;
-        complete_pomodoro_cycles = 0;
+        ResetPomodoroState();
     }
     
     if (g_AppConfig.timer.default_start_time > 0) {
@@ -416,12 +410,11 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
     
     extern BOOL countdown_message_shown;
+    extern void ResetPomodoroState(void);
     countdown_message_shown = FALSE;
     
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-        current_pomodoro_time_index = 0;
-        complete_pomodoro_cycles = 0;
+        ResetPomodoroState();
     }
     
     TimerModeParams params = {seconds, TRUE, TRUE, TRUE};

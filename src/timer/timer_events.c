@@ -43,6 +43,7 @@ POMODORO_PHASE current_pomodoro_phase = POMODORO_PHASE_IDLE;
 int complete_pomodoro_cycles = 0;
 static int pomodoro_initial_times_count = 0;
 static int pomodoro_initial_loop_count = 0;
+static int pomodoro_initial_times[MAX_POMODORO_TIMES] = {0};
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
 static BOOL tail_fast_mode_active = FALSE;
@@ -163,17 +164,17 @@ static void SetupVisibilityWindow(HWND hwnd) {
 }
 
 static BOOL AdvancePomodoroState(void) {
-    if (g_AppConfig.pomodoro.times_count == 0) {
+    if (pomodoro_initial_times_count == 0) {
         return FALSE;
     }
     
     current_pomodoro_time_index++;
     
-    if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
+    if (current_pomodoro_time_index >= pomodoro_initial_times_count) {
         current_pomodoro_time_index = 0;
         complete_pomodoro_cycles++;
         
-        if (complete_pomodoro_cycles >= g_AppConfig.pomodoro.loop_count) {
+        if (complete_pomodoro_cycles >= pomodoro_initial_loop_count) {
             return FALSE;
         }
     }
@@ -181,12 +182,13 @@ static BOOL AdvancePomodoroState(void) {
     return TRUE;
 }
 
-static void ResetPomodoroState(void) {
+void ResetPomodoroState(void) {
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
     pomodoro_initial_times_count = 0;
     pomodoro_initial_loop_count = 0;
+    memset(pomodoro_initial_times, 0, sizeof(pomodoro_initial_times));
 }
 
 static BOOL IsActivePomodoroTimer(void) {
@@ -194,15 +196,15 @@ static BOOL IsActivePomodoroTimer(void) {
         return FALSE;
     }
     
-    if (g_AppConfig.pomodoro.times_count == 0) {
+    if (pomodoro_initial_times_count == 0) {
         return FALSE;
     }
     
-    if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
+    if (current_pomodoro_time_index >= pomodoro_initial_times_count) {
         return FALSE;
     }
     
-    if (CLOCK_TOTAL_TIME != g_AppConfig.pomodoro.times[current_pomodoro_time_index]) {
+    if (CLOCK_TOTAL_TIME != pomodoro_initial_times[current_pomodoro_time_index]) {
         return FALSE;
     }
     
@@ -336,11 +338,8 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     wchar_t timeStr[32];
 
     int completedIndex = current_pomodoro_time_index;
-
-    int times_count = (pomodoro_initial_times_count > 0)
-        ? pomodoro_initial_times_count : g_AppConfig.pomodoro.times_count;
-    int loop_count = (pomodoro_initial_loop_count > 0)
-        ? pomodoro_initial_loop_count : g_AppConfig.pomodoro.loop_count;
+    int times_count = pomodoro_initial_times_count;
+    int loop_count = pomodoro_initial_loop_count;
 
     if (times_count <= 0) times_count = 1;
     if (loop_count <= 0) loop_count = 1;
@@ -350,8 +349,8 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     /* Current cycle number (1-based) */
     int currentCycle = complete_pomodoro_cycles + 1;
 
-    if (completedIndex < g_AppConfig.pomodoro.times_count) {
-        FormatPomodoroTime(g_AppConfig.pomodoro.times[completedIndex], timeStr, sizeof(timeStr)/sizeof(wchar_t));
+    if (completedIndex < pomodoro_initial_times_count) {
+        FormatPomodoroTime(pomodoro_initial_times[completedIndex], timeStr, sizeof(timeStr)/sizeof(wchar_t));
     } else {
         wcscpy_s(timeStr, 32, L"?");
     }
@@ -417,14 +416,9 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     ShowNotification(hwnd, completionMsg);
     PlayNotificationSound(hwnd);
 
-    if (current_pomodoro_time_index >= g_AppConfig.pomodoro.times_count) {
-        ResetPomodoroState();
-        return FALSE;
-    }
-    
     // Seamless transition: Add new duration to the existing target end time
     // This ensures no time is lost during notification processing
-    int next_duration_sec = g_AppConfig.pomodoro.times[current_pomodoro_time_index];
+    int next_duration_sec = pomodoro_initial_times[current_pomodoro_time_index];
     ResetTimerState(next_duration_sec);
     
     g_target_end_time += ((int64_t)next_duration_sec * 1000);
@@ -591,8 +585,16 @@ void InitializePomodoro(void) {
     pomodoro_initial_loop_count = (g_AppConfig.pomodoro.loop_count > 0) 
         ? g_AppConfig.pomodoro.loop_count : 1;
     
-    if (g_AppConfig.pomodoro.times_count > 0) {
-        CLOCK_TOTAL_TIME = g_AppConfig.pomodoro.times[0];
+    // Copy the entire times array to protect against config changes during run
+    memset(pomodoro_initial_times, 0, sizeof(pomodoro_initial_times));
+    int copy_count = (pomodoro_initial_times_count < MAX_POMODORO_TIMES) 
+        ? pomodoro_initial_times_count : MAX_POMODORO_TIMES;
+    for (int i = 0; i < copy_count; i++) {
+        pomodoro_initial_times[i] = g_AppConfig.pomodoro.times[i];
+    }
+    
+    if (pomodoro_initial_times_count > 0) {
+        CLOCK_TOTAL_TIME = pomodoro_initial_times[0];
     } else {
         CLOCK_TOTAL_TIME = DEFAULT_POMODORO_DURATION;
     }
