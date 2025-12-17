@@ -23,18 +23,11 @@
 #include "log.h"
 #include "window/window_desktop_integration.h"
 
-/* Pomodoro and timer constants:
- * - 1500s = 25 min (standard Pomodoro work duration)
- * - 1500ms retry: Balance between responsiveness and avoiding spam on persistent failures
- * - 2000ms font check: Periodic validation without excessive overhead
- * - 250ms tail mode: Fast updates for final 2 seconds of countdown (visual precision)
- */
+/* Pomodoro and timer constants */
 #define DEFAULT_POMODORO_DURATION 1500
 #define MAX_RETRY_ATTEMPTS 3
 #define RETRY_INTERVAL_MS 1500
 #define FONT_CHECK_INTERVAL_MS 2000
-#define TAIL_SEGMENT_THRESHOLD_SECONDS 2
-#define TAIL_FAST_INTERVAL_MS 250
 #define MAX_POMODORO_TIMES 10
 #define MESSAGE_BUFFER_SIZE 256
 
@@ -46,7 +39,6 @@ static int pomodoro_initial_loop_count = 0;
 static int pomodoro_initial_times[MAX_POMODORO_TIMES] = {0};
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
-static BOOL tail_fast_mode_active = FALSE;
 static BOOL topmost_fast_mode_active = FALSE;
 
 static inline void ForceWindowRedraw(HWND hwnd) {
@@ -231,91 +223,65 @@ static BOOL HandleForceRedraw(HWND hwnd) {
         RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
         return TRUE;
     }
-    
-/** Faster updates in last 2 seconds for smoother UX */
-static void AdjustTimerIntervalForTail(HWND hwnd) {
-    if (g_AppConfig.display.time_format.show_milliseconds || CLOCK_COUNT_UP || CLOCK_SHOW_CURRENT_TIME || CLOCK_TOTAL_TIME == 0) {
-        if (tail_fast_mode_active) {
-            SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
-            tail_fast_mode_active = FALSE;
-        }
-        return;
-    }
-    
-    int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
-    
-    if (remaining <= TAIL_SEGMENT_THRESHOLD_SECONDS && remaining > 0) {
-        if (!tail_fast_mode_active) {
-            SetTimer(hwnd, TIMER_ID_MAIN, TAIL_FAST_INTERVAL_MS, NULL);
-            tail_fast_mode_active = TRUE;
-                }
-            } else {
-        if (tail_fast_mode_active) {
-            SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
-            tail_fast_mode_active = FALSE;
-        }
-    }
-}
 
 static void HandleTimeoutActions(HWND hwnd) {
-                        switch (CLOCK_TIMEOUT_ACTION) {
-                            case TIMEOUT_ACTION_MESSAGE:
-                                break;
-            
-                            case TIMEOUT_ACTION_LOCK:
-                                LockWorkStation();
-                                break;
-            
+    switch (CLOCK_TIMEOUT_ACTION) {
+        case TIMEOUT_ACTION_MESSAGE:
+            break;
+
+        case TIMEOUT_ACTION_LOCK:
+            LockWorkStation();
+            break;
+
         case TIMEOUT_ACTION_OPEN_FILE:
-                                if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
-                                    wchar_t wPath[MAX_PATH];
-                                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
-                                    
-                                    HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
-                                    if ((INT_PTR)result <= 32) {
-                                        LOG_WARNING("Failed to open timeout file: %s (ShellExecute error code: %d)", 
-                                                   CLOCK_TIMEOUT_FILE_PATH, (int)(INT_PTR)result);
-                                    }
-                                }
-                                break;
-            
-                            case TIMEOUT_ACTION_SHOW_TIME:
-                                StopNotificationSound();
-                                CLOCK_SHOW_CURRENT_TIME = TRUE;
-                                CLOCK_COUNT_UP = FALSE;
-                                ResetMillisecondAccumulator();
-        KillTimer(hwnd, TIMER_ID_MAIN);
-        SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
-                                InvalidateRect(hwnd, NULL, TRUE);
-                                break;
-            
-                            case TIMEOUT_ACTION_COUNT_UP:
-                                StopNotificationSound();
-                                CLOCK_COUNT_UP = TRUE;
-                                CLOCK_SHOW_CURRENT_TIME = FALSE;
-                                countup_elapsed_time = 0;
-                                elapsed_time = 0;
-                                message_shown = FALSE;
-                                countdown_message_shown = FALSE;
-                                CLOCK_IS_PAUSED = FALSE;
-                                ResetMillisecondAccumulator();
+            if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
+                wchar_t wPath[MAX_PATH];
+                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
+                HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
+                if ((INT_PTR)result <= 32) {
+                    LOG_WARNING("Failed to open timeout file: %s (error: %d)", 
+                               CLOCK_TIMEOUT_FILE_PATH, (int)(INT_PTR)result);
+                }
+            }
+            break;
+
+        case TIMEOUT_ACTION_SHOW_TIME:
+            StopNotificationSound();
+            CLOCK_SHOW_CURRENT_TIME = TRUE;
+            CLOCK_COUNT_UP = FALSE;
+            ResetMillisecondAccumulator();
             KillTimer(hwnd, TIMER_ID_MAIN);
             SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
-                                InvalidateRect(hwnd, NULL, TRUE);
-                                break;
-            
-                            case TIMEOUT_ACTION_OPEN_WEBSITE:
-                                if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-                                    HINSTANCE result = ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
-                                    if ((INT_PTR)result <= 32) {
-                                        char urlUtf8[MAX_PATH];
-                                        WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, urlUtf8, MAX_PATH, NULL, NULL);
-                                        LOG_WARNING("Failed to open timeout website: %s (ShellExecute error code: %d)", 
-                                                   urlUtf8, (int)(INT_PTR)result);
-                                    }
-                                }
-                                break;
-                        }
+            InvalidateRect(hwnd, NULL, TRUE);
+            break;
+
+        case TIMEOUT_ACTION_COUNT_UP:
+            StopNotificationSound();
+            CLOCK_COUNT_UP = TRUE;
+            CLOCK_SHOW_CURRENT_TIME = FALSE;
+            countup_elapsed_time = 0;
+            elapsed_time = 0;
+            message_shown = FALSE;
+            countdown_message_shown = FALSE;
+            CLOCK_IS_PAUSED = FALSE;
+            ResetMillisecondAccumulator();
+            KillTimer(hwnd, TIMER_ID_MAIN);
+            SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
+            InvalidateRect(hwnd, NULL, TRUE);
+            break;
+
+        case TIMEOUT_ACTION_OPEN_WEBSITE:
+            if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                HINSTANCE result = ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
+                if ((INT_PTR)result <= 32) {
+                    char urlUtf8[MAX_PATH];
+                    WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, urlUtf8, MAX_PATH, NULL, NULL);
+                    LOG_WARNING("Failed to open timeout website: %s (error: %d)", 
+                               urlUtf8, (int)(INT_PTR)result);
+                }
+            }
+            break;
+    }
 }
 
 static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
