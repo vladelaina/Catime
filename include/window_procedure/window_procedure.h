@@ -127,10 +127,7 @@ void StartPomodoroTimer(HWND hwnd);
  */
 void ToggleEditMode(HWND hwnd);
 
-/**
- * @brief Pause/resume active timer (preserves millisecond precision)
- */
-void TogglePauseResume(HWND hwnd);
+
 
 /**
  * @brief Restart current timer (stops sounds/notifications)

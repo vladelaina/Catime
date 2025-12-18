@@ -177,9 +177,7 @@ static LRESULT CmdToggleLiquidEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdEditMode(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    if (CLOCK_EDIT_MODE) EndEditMode(hwnd);
-    else StartEditMode(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleEditMode(hwnd);
     return 0;
 }
 

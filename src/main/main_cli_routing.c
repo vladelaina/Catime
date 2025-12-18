@@ -13,6 +13,7 @@
 #include "timer/timer.h"
 #include "window_procedure/window_procedure.h"
 #include "utils/string_convert.h"
+#include "../resource/resource.h"
 
 typedef struct {
     const wchar_t* command;
@@ -22,14 +23,15 @@ typedef struct {
 } CliCommandMapping;
 
 /** Adding new commands only requires table entries */
+
 static const CliCommandMapping SINGLE_CHAR_COMMANDS[] = {
     {L"s", WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0},
     {L"u", WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0},
     {L"p", WM_HOTKEY, HOTKEY_ID_POMODORO, 0},
-    {L"v", WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0},
-    {L"e", WM_HOTKEY, HOTKEY_ID_EDIT_MODE, 0},
     {L"r", WM_HOTKEY, HOTKEY_ID_RESTART_TIMER, 0},
     {L"h", WM_APP_SHOW_CLI_HELP, 0, 0},
+    {L"e", WM_COMMAND, CLOCK_IDC_EDIT_MODE, 0},
+    {L"v", WM_COMMAND, CLOCK_IDC_TOGGLE_VISIBILITY, 0},
 };
 
 static const CliCommandMapping QUICK_COUNTDOWN_COMMANDS[] = {
@@ -57,7 +59,8 @@ static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
     
     for (size_t i = 0; i < sizeof(SINGLE_CHAR_COMMANDS) / sizeof(SINGLE_CHAR_COMMANDS[0]); i++) {
         if (wcscmp(cmdStr, SINGLE_CHAR_COMMANDS[i].command) == 0) {
-            PostMessage(hwnd, SINGLE_CHAR_COMMANDS[i].message, 
+            /* All commands use SendMessage for consistent behavior */
+            SendMessage(hwnd, SINGLE_CHAR_COMMANDS[i].message, 
                        SINGLE_CHAR_COMMANDS[i].wParam, 
                        SINGLE_CHAR_COMMANDS[i].lParam);
             return TRUE;
@@ -69,13 +72,13 @@ static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
 
 static BOOL RouteTwoCharCommand(HWND hwnd, const wchar_t* cmdStr) {
     if (towlower(cmdStr[0]) == L'p' && towlower(cmdStr[1]) == L'r') {
-        PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
+        SendMessage(hwnd, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
         return TRUE;
     }
     
     for (size_t i = 0; i < sizeof(QUICK_COUNTDOWN_COMMANDS) / sizeof(QUICK_COUNTDOWN_COMMANDS[0]); i++) {
         if (_wcsicmp(cmdStr, QUICK_COUNTDOWN_COMMANDS[i].command) == 0) {
-            PostMessage(hwnd, QUICK_COUNTDOWN_COMMANDS[i].message,
+            SendMessage(hwnd, QUICK_COUNTDOWN_COMMANDS[i].message,
                        QUICK_COUNTDOWN_COMMANDS[i].wParam,
                        QUICK_COUNTDOWN_COMMANDS[i].lParam);
             return TRUE;
@@ -94,9 +97,9 @@ static BOOL RoutePomodoroCommand(HWND hwnd, const wchar_t* cmdStr) {
     long idx = wcstol(cmdStr + 1, &endp, 10);
     
     if (idx > 0 && (endp == NULL || *endp == L'\0')) {
-        PostMessage(hwnd, WM_APP_QUICK_COUNTDOWN_INDEX, 0, (LPARAM)idx);
+        SendMessage(hwnd, WM_APP_QUICK_COUNTDOWN_INDEX, 0, (LPARAM)idx);
     } else {
-        PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_COUNTDOWN, 0);
+        SendMessage(hwnd, WM_HOTKEY, HOTKEY_ID_COUNTDOWN, 0);
     }
     
     return TRUE;
@@ -130,23 +133,29 @@ BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) 
     size_t len = wcslen(cmd);
     
     if (len == 1) {
-        return RouteSingleCharCommand(hwndExisting, towlower(cmd[0]));
+        if (RouteSingleCharCommand(hwndExisting, towlower(cmd[0]))) {
+            return TRUE;
+        }
+        /* Unknown single char - forward to existing instance for handling */
+        return ForwardTimerInput(hwndExisting, cmd);
     }
     
     if (len == 2) {
-        return RouteTwoCharCommand(hwndExisting, cmd);
+        if (RouteTwoCharCommand(hwndExisting, cmd)) {
+            return TRUE;
+        }
+        /* Unknown two char - check if it's a pomodoro command or forward */
     }
     
     if (RoutePomodoroCommand(hwndExisting, cmd)) {
         return TRUE;
     }
     
-    for (size_t i = 0; i < len; i++) {
-        if (iswdigit(cmd[i])) {
-            return ForwardTimerInput(hwndExisting, cmd);
-        }
-    }
-    
-    return FALSE;
+    /* Forward all other commands (including time input and unknown commands)
+     * to the existing instance via WM_COPYDATA. This ensures:
+     * 1. Time inputs like "25m", "1h30m" are handled
+     * 2. Unknown commands are handled by cli.c (shows default countdown dialog)
+     * 3. Only one instance is ever running */
+    return ForwardTimerInput(hwndExisting, cmd);
 }
 

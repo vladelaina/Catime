@@ -330,10 +330,7 @@ void ToggleEditMode(HWND hwnd) {
     }
 }
 
-void TogglePauseResume(HWND hwnd) {
-    CleanupBeforeTimerAction();
-    TogglePauseResumeTimer(hwnd);
-}
+
 
 void RestartCurrentTimer(HWND hwnd) {
     extern void StopNotificationSound(void);

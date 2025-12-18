@@ -26,32 +26,9 @@
 extern BOOL CLOCK_WINDOW_TOPMOST;
 extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
 
-#define CMD_QUICK_1       "q1"
-#define CMD_QUICK_2       "q2"
-#define CMD_QUICK_3       "q3"
-#define CMD_VISIBILITY    "v"
-#define CMD_EDIT_MODE     "e"
-#define CMD_PAUSE_RESUME  "pr"
-#define CMD_RESTART       "r"
-#define CMD_SHOW_TIME     's'
-#define CMD_COUNT_UP      'u'
-#define CMD_POMODORO      'p'
-#define CMD_HELP          'h'
-
 #define INPUT_BUFFER_SIZE 256
-#define EXPAND_BUFFER_SIZE 64
 
-typedef BOOL (*CommandHandler)(HWND hwnd, const char* input);
 
-typedef struct {
-    const char* command;
-    CommandHandler handler;
-} CommandEntry;
-
-typedef struct {
-    char command;
-    UINT messageId;
-} SingleCharCommand;
 
 static HWND g_cliHelpDialog = NULL;
 
@@ -198,129 +175,15 @@ static void NormalizeWhitespace(char* input) {
     input[INPUT_BUFFER_SIZE - 1] = '\0';
 }
 
-static BOOL HandleQuickCountdown(HWND hwnd, const char* input) {
-    int index = atoi(input + 1);
-    if (index > 0 && index <= 3) {
-        StartQuickCountdownByIndex(hwnd, index);
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static BOOL HandleVisibility(HWND hwnd, const char* input) {
-    (void)input;
-    ToggleWindowVisibility(hwnd);
-    return TRUE;
-}
-
-static BOOL HandleEditMode(HWND hwnd, const char* input) {
-    (void)input;
-    /* Use PostMessage to defer execution until message loop is running.
-     * Direct call during startup can cause segfault due to uninitialized resources. */
-    PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_EDIT_MODE, 0);
-    return TRUE;
-}
-
-static BOOL HandlePauseResume(HWND hwnd, const char* input) {
-    (void)input;
-    TogglePauseResume(hwnd);
-    return TRUE;
-}
-
-static BOOL HandleRestart(HWND hwnd, const char* input) {
-    (void)input;
-    RestartCurrentTimer(hwnd);
-    return TRUE;
-}
-
-static BOOL HandlePomodoroIndex(HWND hwnd, const char* input) {
-    if (strlen(input) < 2 || (input[0] != 'p' && input[0] != 'P')) {
-        return FALSE;
-    }
-    
-    if (!isdigit((unsigned char)input[1])) {
-        return FALSE;
-    }
-    
-    char* endPtr = NULL;
-    long index = strtol(input + 1, &endPtr, 10);
-    
-    if (index > 0 && (endPtr == NULL || *endPtr == '\0')) {
-        StartQuickCountdownByIndex(hwnd, (int)index);
-        return TRUE;
-    }
-    
-    StartDefaultCountDown(hwnd);
-    return TRUE;
-}
-
-static const CommandEntry g_commandTable[] = {
-    {CMD_QUICK_1,      HandleQuickCountdown},
-    {CMD_QUICK_2,      HandleQuickCountdown},
-    {CMD_QUICK_3,      HandleQuickCountdown},
-    {CMD_VISIBILITY,   HandleVisibility},
-    {CMD_EDIT_MODE,    HandleEditMode},
-    {CMD_PAUSE_RESUME, HandlePauseResume},
-    {CMD_RESTART,      HandleRestart},
-    {NULL,             NULL}
-};
-
-static const SingleCharCommand g_singleCharCommands[] = {
-    {CMD_SHOW_TIME, HOTKEY_ID_SHOW_TIME},
-    {CMD_COUNT_UP,  HOTKEY_ID_COUNT_UP},
-    {CMD_POMODORO,  HOTKEY_ID_POMODORO},
-    {CMD_HELP,      WM_APP_SHOW_CLI_HELP},
-    {'\0',          0}
-};
-
-static BOOL ProcessShortcutCommands(HWND hwnd, const char* input) {
-    /* Ignore command-line flags (double-dash options) to prevent parsing as time */
-    if (input[0] == '-' && input[1] == '-') {
-        LOG_INFO("Ignoring command-line flag: %s", input);
-        return TRUE;  /* Return TRUE to prevent further processing */
-    }
-    
-    if ((input[0] == 'p' || input[0] == 'P') && isdigit((unsigned char)input[1])) {
-        return HandlePomodoroIndex(hwnd, input);
-    }
-    
-    for (const CommandEntry* cmd = g_commandTable; cmd->command; cmd++) {
-        if (_stricmp(input, cmd->command) == 0) {
-            return cmd->handler(hwnd, input);
-        }
-    }
-    
-    return FALSE;
-}
-
-static BOOL ProcessSingleCharCommands(HWND hwnd, const char* input) {
-    if (input[0] == '\0' || input[1] != '\0') {
-        return FALSE;
-    }
-    
-    char c = (char)tolower((unsigned char)input[0]);
-    
-    for (const SingleCharCommand* cmd = g_singleCharCommands; cmd->command; cmd++) {
-        if (c == cmd->command) {
-            PostMessage(hwnd, WM_HOTKEY, cmd->messageId, 0);
-            return TRUE;
-        }
-    }
-    
-    return FALSE;
-}
-
-static BOOL ParseAndStartTimer(HWND hwnd, char* input) {
-    int totalSeconds = 0;
-    if (!ParseInput(input, &totalSeconds)) {
-        StartDefaultCountDown(hwnd);
-        return TRUE;
-    }
-
-    CleanupBeforeTimerAction();
-    StartCountdownWithTime(hwnd, totalSeconds);
-    return TRUE;
-}
+/**
+ * @brief Parse time input and start countdown
+ * 
+ * This is the only command processing needed in cli.c because:
+ * - Simple commands (s, u, p, r, h, e, v, pr, q1-q3) are handled by main_cli_routing.c
+ *   which sends WM_HOTKEY or WM_COMMAND messages directly to the existing instance
+ * - Only time inputs (like "25m", "1h30m") and unknown commands are forwarded here
+ *   via WM_COPYDATA
+ */
 
 BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     if (!cmdLine || !*cmdLine) {
@@ -336,14 +199,23 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
         return FALSE;
     }
     
-    if (ProcessShortcutCommands(hwnd, input)) {
-        return TRUE;
-    }
-    
-    if (ProcessSingleCharCommands(hwnd, input)) {
+    /* Ignore command-line flags (double-dash options) */
+    if (input[0] == '-' && input[1] == '-') {
+        LOG_INFO("Ignoring command-line flag: %s", input);
         return TRUE;
     }
     
     NormalizeWhitespace(input);
-    return ParseAndStartTimer(hwnd, input);
+    
+    /* Parse time input and start countdown */
+    int totalSeconds = 0;
+    if (ParseInput(input, &totalSeconds)) {
+        CleanupBeforeTimerAction();
+        StartCountdownWithTime(hwnd, totalSeconds);
+    } else {
+        /* Unknown input - show default countdown dialog */
+        StartDefaultCountDown(hwnd);
+    }
+    
+    return TRUE;
 }

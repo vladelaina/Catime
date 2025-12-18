@@ -231,12 +231,7 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (GetKeyState(VK_CONTROL) & 0x8000) {
-        if (CLOCK_EDIT_MODE) {
-            EndEditMode(hwnd);
-        } else {
-            StartEditMode(hwnd);
-        }
-        InvalidateRect(hwnd, NULL, TRUE);
+        ToggleEditMode(hwnd);
         return 0;
     }
     return DefWindowProc(hwnd, WM_RBUTTONDOWN, wp, lp);

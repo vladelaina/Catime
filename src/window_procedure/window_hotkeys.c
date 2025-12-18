@@ -8,6 +8,7 @@
 #include "config.h"
 #include "hotkey.h"
 #include "timer/timer_events.h"
+#include "tray/tray_events.h"
 #include "window.h"
 #include "dialog/dialog_procedure.h"
 #include "notification.h"
@@ -84,6 +85,11 @@ typedef struct {
     HotkeyAction action;
 } HotkeyDescriptor;
 
+static void HotkeyPauseResume(HWND hwnd) {
+    /* Match tray menu behavior: call TogglePauseResumeTimer directly */
+    TogglePauseResumeTimer(hwnd);
+}
+
 static const HotkeyDescriptor HOTKEY_DISPATCH_TABLE[] = {
     {HOTKEY_ID_SHOW_TIME, ToggleShowTimeMode},
     {HOTKEY_ID_COUNT_UP, StartCountUp},
@@ -94,7 +100,7 @@ static const HotkeyDescriptor HOTKEY_DISPATCH_TABLE[] = {
     {HOTKEY_ID_POMODORO, StartPomodoroTimer},
     {HOTKEY_ID_TOGGLE_VISIBILITY, HotkeyToggleVisibility},
     {HOTKEY_ID_EDIT_MODE, ToggleEditMode},
-    {HOTKEY_ID_PAUSE_RESUME, TogglePauseResume},
+    {HOTKEY_ID_PAUSE_RESUME, HotkeyPauseResume},
     {HOTKEY_ID_RESTART_TIMER, HotkeyRestartTimer},
     {HOTKEY_ID_CUSTOM_COUNTDOWN, HotkeyCustomCountdown},
     {HOTKEY_ID_TOGGLE_MILLISECONDS, HotkeyToggleMilliseconds}
