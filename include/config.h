@@ -48,16 +48,16 @@
 #define DEFAULT_BLACK_COLOR            "#000000"
 
 /** @brief Default font settings */
-#define DEFAULT_FONT_NAME              "Wallpoet Essence.ttf"
+#define DEFAULT_FONT_NAME              "Rubik Glitch Essence.ttf"
 #define DEFAULT_FONT_SIZE              20
 
 /** @brief Default window settings
- * - Position 960: Horizontal center on common 1920px wide displays
- * - Position -1: Near top of screen (right-upper area)
+ * - Position -2: Golden ratio (0.618 from left)
+ * - Position -1: Near top of screen
  */
 #define DEFAULT_WINDOW_SCALE           "1.62"
 #define DEFAULT_PLUGIN_SCALE           "1.0"
-#define DEFAULT_WINDOW_POS_X           960
+#define DEFAULT_WINDOW_POS_X           -2
 #define DEFAULT_WINDOW_POS_Y           -1
 #define DEFAULT_MOVE_STEP_SMALL        10
 #define DEFAULT_MOVE_STEP_LARGE        50
@@ -233,11 +233,7 @@ typedef struct {
     int opacity_step_fast;
     int scale_step_normal;
     int scale_step_fast;
-    BOOL glow_effect;
-    BOOL glass_effect;
-    BOOL neon_effect;
-    BOOL holographic_effect;
-    BOOL liquid_effect;
+    int text_effect;  /* TextEffectType enum value */
 } DisplayConfig;
 
 /**
@@ -513,25 +509,10 @@ void WriteConfigPomodoroTimeOptions(int* times, int count);
  * ============================================================================ */
 
 /**
- * @brief Read notification message texts (with fallbacks)
- */
-void ReadNotificationMessagesConfig(void);
-
-/**
  * @brief Write notification timeout
  * @param timeout_ms Duration (recommended: 3000-10000)
  */
 void WriteConfigNotificationTimeout(int timeout_ms);
-
-/**
- * @brief Read notification timeout (default: 5000ms)
- */
-void ReadNotificationTimeoutConfig(void);
-
-/**
- * @brief Read notification opacity (default: 100, range: 0-100)
- */
-void ReadNotificationOpacityConfig(void);
 
 /**
  * @brief Write notification opacity (auto-clamped to 1-100)
@@ -546,20 +527,10 @@ void WriteConfigNotificationOpacity(int opacity);
 void WriteConfigNotificationMessages(const char* timeout_msg);
 
 /**
- * @brief Read notification type (default: CATIME)
- */
-void ReadNotificationTypeConfig(void);
-
-/**
  * @brief Write notification type (enum to string)
  * @param type Notification type
  */
 void WriteConfigNotificationType(NotificationType type);
-
-/**
- * @brief Read notification disabled flag (default: FALSE)
- */
-void ReadNotificationDisabledConfig(void);
 
 /**
  * @brief Write notification disabled setting
@@ -581,34 +552,16 @@ void WriteConfigLanguage(int language);
 void GetAudioFolderPath(char* path, size_t size);
 
 /**
- * @brief Read notification sound path
- * 
- * @details
- * Supports absolute/relative paths, "SYSTEM_BEEP", or empty (no sound).
- */
-void ReadNotificationSoundConfig(void);
-
-/**
  * @brief Write notification sound path (no validation)
  * @param sound_file Path, "SYSTEM_BEEP", or empty (UTF-8)
  */
 void WriteConfigNotificationSound(const char* sound_file);
 
 /**
- * @brief Read notification volume (default: 50, range: 0-100)
- */
-void ReadNotificationVolumeConfig(void);
-
-/**
  * @brief Write notification volume (auto-clamped to 0-100)
  * @param volume Volume (0=mute, 100=max)
  */
 void WriteConfigNotificationVolume(int volume);
-
-/**
- * @brief Read notification window position and size
- */
-void ReadNotificationWindowConfig(void);
 
 /**
  * @brief Write notification window position and size

@@ -127,10 +127,7 @@ void StartPomodoroTimer(HWND hwnd);
  */
 void ToggleEditMode(HWND hwnd);
 
-/**
- * @brief Pause/resume active timer (preserves millisecond precision)
- */
-void TogglePauseResume(HWND hwnd);
+
 
 /**
  * @brief Restart current timer (stops sounds/notifications)
@@ -156,6 +153,21 @@ void CleanupBeforeTimerAction(void);
  * @return TRUE if started, FALSE if seconds <= 0
  */
 BOOL StartCountdownWithTime(HWND hwnd, int seconds);
+
+/**
+ * @brief Toggle window visibility (show/hide)
+ */
+void ToggleWindowVisibility(HWND hwnd);
+
+/**
+ * @brief Toggle window topmost status
+ */
+void ToggleTopmost(HWND hwnd);
+
+/**
+ * @brief Toggle millisecond display
+ */
+void ToggleMilliseconds(HWND hwnd);
 
 /* ============================================================================
  * Configuration Handlers

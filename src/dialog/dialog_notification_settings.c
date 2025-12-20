@@ -140,13 +140,6 @@ void UpdateNotificationOpacityControls(int opacity) {
 
 void ShowNotificationSettingsDialog(HWND hwndParent) {
     if (!g_hwndNotificationSettingsDialog) {
-        ReadNotificationMessagesConfig();
-        ReadNotificationTimeoutConfig();
-        ReadNotificationOpacityConfig();
-        ReadNotificationTypeConfig();
-        ReadNotificationSoundConfig();
-        ReadNotificationVolumeConfig();
-        
         DialogBoxW(GetModuleHandle(NULL), 
                   MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 
                   hwndParent, 
@@ -166,13 +159,6 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         case WM_INITDIALOG: {
             g_hwndNotificationSettingsDialog = hwndDlg;
             
-            ReadNotificationMessagesConfig();
-            ReadNotificationTimeoutConfig();
-            ReadNotificationOpacityConfig();
-            ReadNotificationTypeConfig();
-            ReadNotificationSoundConfig();
-            ReadNotificationVolumeConfig();
-            
             originalVolume = g_AppConfig.notification.sound.volume;
             
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG);
@@ -185,8 +171,6 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             
             SYSTEMTIME st = {0};
             GetLocalTime(&st);
-            
-            ReadNotificationDisabledConfig();
             
             CheckDlgButton(hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK, 
                           g_AppConfig.notification.display.disabled ? BST_CHECKED : BST_UNCHECKED);

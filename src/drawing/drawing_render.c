@@ -16,6 +16,7 @@
 #include "timer/timer.h"
 #include "config.h"
 #include "window_procedure/window_procedure.h"
+#include "window/window_core.h"
 #include "menu_preview.h"
 #include "font/font_path_manager.h"
 #include "log.h"
@@ -567,10 +568,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     /* Dynamic timer interval adjustment based on current window size */
     /* This ensures smooth animation for small windows, reduced lag for large windows */
-    extern BOOL CLOCK_GLOW_EFFECT, CLOCK_GLASS_EFFECT, CLOCK_NEON_EFFECT;
-    extern BOOL CLOCK_HOLOGRAPHIC_EFFECT, CLOCK_LIQUID_EFFECT;
-    
-    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
+    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT ||
         CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
         static UINT s_lastInterval = 0;
         int pixelCount = rect.right * rect.bottom;

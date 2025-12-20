@@ -385,10 +385,21 @@ UINT GetTimerInterval(void) {
 
 /**
  * @brief Reset timer with appropriate interval
+ * Uses high-precision multimedia timer for smooth milliseconds display
  */
 void ResetTimerWithInterval(HWND hwnd) {
-    KillTimer(hwnd, 1);
-    SetTimer(hwnd, 1, GetTimerInterval(), NULL);
+    extern void MainTimer_SetInterval(UINT intervalMs);
+    extern BOOL MainTimer_IsHighPrecision(void);
+    
+    UINT interval = GetTimerInterval();
+    
+    /* Use multimedia timer for high precision, fallback to SetTimer */
+    if (MainTimer_IsHighPrecision()) {
+        MainTimer_SetInterval(interval);
+    } else {
+        KillTimer(hwnd, 1);
+        SetTimer(hwnd, 1, interval, NULL);
+    }
     
     extern void ResetTimerMilliseconds(void);
     ResetTimerMilliseconds();

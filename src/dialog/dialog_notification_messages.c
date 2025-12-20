@@ -21,8 +21,6 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
         return;
     }
 
-    ReadNotificationMessagesConfig();
-
     DialogBoxW(GetModuleHandle(NULL),
               MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_MESSAGES_DIALOG),
               hwndParent,
@@ -42,8 +40,6 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             Dialog_ApplyTopmost(hwndDlg);
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-
-            ReadNotificationMessagesConfig();
 
             wchar_t wideText[100];
 

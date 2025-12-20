@@ -49,11 +49,7 @@ BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 float PLUGIN_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
-BOOL CLOCK_GLOW_EFFECT = FALSE;
-BOOL CLOCK_GLASS_EFFECT = FALSE;
-BOOL CLOCK_NEON_EFFECT = FALSE;
-BOOL CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-BOOL CLOCK_LIQUID_EFFECT = FALSE;
+TextEffectType CLOCK_TEXT_EFFECT = TEXT_EFFECT_NONE;
 
 /* ============================================================================
  * Internal helpers
@@ -139,6 +135,26 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     
     int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
     int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
+
+    /* Auto-position logic - use primary monitor dimensions */
+    if (CLOCK_WINDOW_POS_X == -2 || CLOCK_WINDOW_POS_X == -1) {
+        POINT pt = {0, 0};
+        HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+        MONITORINFO mi = {sizeof(mi)};
+        GetMonitorInfo(hMon, &mi);
+        int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
+        
+        if (CLOCK_WINDOW_POS_X == -2) {
+            /* Golden ratio: 0.618 from left of primary monitor */
+            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (initialWidth / 2);
+            if (CLOCK_WINDOW_POS_X + initialWidth > mi.rcMonitor.right) {
+                CLOCK_WINDOW_POS_X = mi.rcMonitor.right - initialWidth - 20;
+            }
+        } else {
+            /* Center on primary monitor */
+            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (screenWidth - initialWidth) / 2;
+        }
+    }
 
     HWND hwnd = CreateWindowExW(
         exStyle,

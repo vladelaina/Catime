@@ -38,11 +38,6 @@ extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 extern void GetConfigPath(char* path, size_t size);
 
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
-
 /* Function to read timeout action (extracted from tray_menu.c) */
 void ReadTimeoutActionFromConfig() {
     /* Preserve one-time actions: don't override them from config */
@@ -169,8 +164,8 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
     
-    char currentStartupMode[20] = "COUNTDOWN";
-    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "COUNTDOWN",
+    char currentStartupMode[20] = "SHOW_TIME";
+    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "SHOW_TIME",
                   currentStartupMode, sizeof(currentStartupMode), configPath);
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 

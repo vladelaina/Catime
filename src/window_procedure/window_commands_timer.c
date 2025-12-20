@@ -53,31 +53,13 @@ LRESULT CmdCustomCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdShowCurrentTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    
-    TimerMode mode = CLOCK_SHOW_CURRENT_TIME ? TIMER_MODE_COUNTDOWN : TIMER_MODE_SHOW_TIME;
-    TimerModeParams params = {0, TRUE, FALSE, TRUE};
-    SwitchTimerMode(hwnd, mode, &params);
-    
-    KillTimer(hwnd, 1);
-    ResetTimerWithInterval(hwnd);
+    ToggleShowTimeMode(hwnd);
     return 0;
 }
 
 LRESULT CmdCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    
-    if (!CLOCK_COUNT_UP) {
-        TimerModeParams params = {0, TRUE, FALSE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
-    } else {
-        CLOCK_COUNT_UP = FALSE;
-    }
-    
-    KillTimer(hwnd, 1);
-    ResetTimerWithInterval(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    StartCountUp(hwnd);
     return 0;
 }
 
@@ -91,7 +73,7 @@ LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
     } else {
-        TogglePauseTimer();
+        TogglePauseResumeTimer(hwnd);
     }
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
@@ -125,8 +107,6 @@ LRESULT CmdPauseResume(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdRestartTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    CloseAllNotifications();
     RestartCurrentTimer(hwnd);
     return 0;
 }
@@ -143,13 +123,7 @@ LRESULT CmdTimeFormat(HWND hwnd, TimeFormatType format) {
 
 LRESULT CmdToggleMilliseconds(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    WriteConfigShowMilliseconds(!g_AppConfig.display.time_format.show_milliseconds);
-    
-    /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
-    extern void ResetTimerWithInterval(HWND hwnd);
-    ResetTimerWithInterval(hwnd);
-    
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleMilliseconds(hwnd);
     return 0;
 }
 
@@ -222,23 +196,7 @@ LRESULT CmdSetCountdownTime(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
-    
-    if (!IsWindowVisible(hwnd)) ShowWindow(hwnd, SW_SHOW);
-    
-    extern void InitializePomodoro(void);
-    InitializePomodoro();
-    
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_IS_PAUSED = FALSE;
-    
-    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    
-    KillTimer(hwnd, 1);
-    ResetTimerWithInterval(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    StartPomodoroTimer(hwnd);
     return 0;
 }
 

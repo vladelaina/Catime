@@ -49,11 +49,7 @@ typedef struct {
     int opacityStepFast;
     int scaleStepNormal;
     int scaleStepFast;
-    BOOL glowEffect;
-    BOOL glassEffect;
-    BOOL neonEffect;
-    BOOL holographicEffect;
-    BOOL liquidEffect;
+    int textEffect;  /* TextEffectType enum value */
 
     /* Timer */
     int defaultStartTime;
@@ -107,6 +103,7 @@ typedef struct {
     WORD hotkeyPauseResume;
     WORD hotkeyRestartTimer;
     WORD hotkeyCustomCountdown;
+    WORD hotkeyToggleMilliseconds;
     
     /* Recent files */
     RecentFile recentFiles[MAX_RECENT_FILES];

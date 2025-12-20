@@ -101,6 +101,11 @@ void TrayAnimation_SetMinIntervalMs(UINT ms);
 void TrayAnimation_RecomputeTimerDelay(void);
 
 /**
+ * @brief Clear current animation name to force reload on next apply
+ */
+void TrayAnimation_ClearCurrentName(void);
+
+/**
  * @brief Update percent icon if in CPU/Memory mode
  * 
  * @details

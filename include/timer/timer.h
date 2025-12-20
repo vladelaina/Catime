@@ -42,7 +42,10 @@ typedef enum {
  * Global State Variables
  * ============================================================================ */
 
-/* Timer control */
+#include <time.h>
+#include <stdint.h>
+
+/* Global Timer State */
 extern BOOL CLOCK_IS_PAUSED;
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
@@ -50,16 +53,20 @@ extern BOOL CLOCK_SHOW_SECONDS;
 extern BOOL CLOCK_COUNT_UP;
 extern char CLOCK_STARTUP_MODE[20];
 
-/* Timer data */
 extern int CLOCK_TOTAL_TIME;
 extern int countdown_elapsed_time;
 extern int countup_elapsed_time;
+
+/* Absolute Time State for Drift-Free Timing (Milliseconds) */
+extern int64_t g_target_end_time;  /* For Countdown: When the timer should end */
+extern int64_t g_start_time;       /* For CountUp: When the timer started */
+extern int64_t g_pause_start_time; /* Timestamp when pause began */
+
 extern time_t CLOCK_LAST_TIME_UPDATE;
 extern int last_displayed_second;
 
 /* Notification state (prevent duplicates) */
 extern BOOL countdown_message_shown;
-extern BOOL countup_message_shown;
 extern int pomodoro_work_cycles;
 extern int message_shown;
 extern int elapsed_time;

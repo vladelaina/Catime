@@ -14,6 +14,7 @@
 #include "timer/timer.h"
 #include "window.h"
 #include "config.h"
+#include "config/config_applier.h"
 #include "log.h"
 #include "language.h"
 #include "startup.h"
@@ -22,6 +23,8 @@
 #include "color/color.h"
 #include "pomodoro.h"
 #include "tray/tray.h"
+
+extern void HandleStartupMode(HWND hwnd);
 #include "dialog/dialog_procedure.h"
 #include "hotkey.h"
 #include "update_checker.h"
@@ -40,10 +43,7 @@
 #include <stdio.h>
 #include <string.h>
 
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+extern TextEffectType CLOCK_TEXT_EFFECT;
 
 extern wchar_t inputText[256];
 extern int time_options[];
@@ -71,7 +71,7 @@ static LRESULT CmdAbout(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
-    WriteConfigTopmost(!CLOCK_WINDOW_TOPMOST ? STR_TRUE : STR_FALSE);
+    ToggleTopmost(hwnd);
     return 0;
 }
 
@@ -103,171 +103,87 @@ static UINT GetAdaptiveAnimationInterval(HWND hwnd) {
 }
 
 static void UpdateAnimationTimer(HWND hwnd) {
-    /* 
+    /*
      * Temporal Decoupling: Animated effects use a dedicated timer
      * to drive visual flow independently of the 1FPS logic clock.
      * Interval is adaptive to window size to prevent mouse lag.
      */
-    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
-        CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
+    if (CLOCK_TEXT_EFFECT != TEXT_EFFECT_NONE) {
         UINT interval = GetAdaptiveAnimationInterval(hwnd);
-        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL); 
+        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL);
     } else {
         KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
     }
 }
 
-static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    CLOCK_GLOW_EFFECT = !CLOCK_GLOW_EFFECT;
-    if (CLOCK_GLOW_EFFECT) {
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
+/* Convert TextEffectType to config string */
+static const char* TextEffectToString(TextEffectType effect) {
+    switch (effect) {
+        case TEXT_EFFECT_GLOW:        return "GLOW";
+        case TEXT_EFFECT_GLASS:       return "GLASS";
+        case TEXT_EFFECT_NEON:        return "NEON";
+        case TEXT_EFFECT_HOLOGRAPHIC: return "HOLOGRAPHIC";
+        case TEXT_EFFECT_LIQUID:      return "LIQUID";
+        default:                      return "NONE";
     }
-    
+}
+
+/* Toggle effect: if already active, turn off; otherwise switch to it */
+static void ToggleTextEffect(HWND hwnd, TextEffectType effect) {
+    if (CLOCK_TEXT_EFFECT == effect) {
+        CLOCK_TEXT_EFFECT = TEXT_EFFECT_NONE;
+    } else {
+        CLOCK_TEXT_EFFECT = effect;
+    }
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
+    WriteIniString(INI_SECTION_DISPLAY, "TEXT_EFFECT",
+                   TextEffectToString(CLOCK_TEXT_EFFECT), config_path);
+
     UpdateAnimationTimer(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
+}
+
+static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    ToggleTextEffect(hwnd, TEXT_EFFECT_GLOW);
     return 0;
 }
 
 static LRESULT CmdToggleGlassEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_GLASS_EFFECT = !CLOCK_GLASS_EFFECT;
-    if (CLOCK_GLASS_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_GLASS);
     return 0;
 }
 
 static LRESULT CmdToggleNeonEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_NEON_EFFECT = !CLOCK_NEON_EFFECT;
-    if (CLOCK_NEON_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_NEON);
     return 0;
 }
 
 static LRESULT CmdToggleHolographicEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_HOLOGRAPHIC_EFFECT = !CLOCK_HOLOGRAPHIC_EFFECT;
-    if (CLOCK_HOLOGRAPHIC_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_LIQUID_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_HOLOGRAPHIC);
     return 0;
 }
 
 static LRESULT CmdToggleLiquidEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CLOCK_LIQUID_EFFECT = !CLOCK_LIQUID_EFFECT;
-    if (CLOCK_LIQUID_EFFECT) {
-        CLOCK_GLOW_EFFECT = FALSE;
-        CLOCK_GLASS_EFFECT = FALSE;
-        CLOCK_NEON_EFFECT = FALSE;
-        CLOCK_HOLOGRAPHIC_EFFECT = FALSE;
-    }
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_LIQUID_EFFECT", 
-                   CLOCK_LIQUID_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_HOLOGRAPHIC_EFFECT", 
-                   CLOCK_HOLOGRAPHIC_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_NEON_EFFECT", 
-                   CLOCK_NEON_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLOW_EFFECT", 
-                   CLOCK_GLOW_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_GLASS_EFFECT", 
-                   CLOCK_GLASS_EFFECT ? STR_TRUE : STR_FALSE, config_path);
-    
-    UpdateAnimationTimer(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleTextEffect(hwnd, TEXT_EFFECT_LIQUID);
     return 0;
 }
 
 static LRESULT CmdEditMode(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    if (CLOCK_EDIT_MODE) EndEditMode(hwnd);
-    else StartEditMode(hwnd);
-    InvalidateRect(hwnd, NULL, TRUE);
+    ToggleEditMode(hwnd);
     return 0;
 }
 
 static LRESULT CmdToggleVisibility(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    PostMessage(hwnd, WM_HOTKEY, HOTKEY_ID_TOGGLE_VISIBILITY, 0);
+    ToggleWindowVisibility(hwnd);
     return 0;
 }
 
@@ -421,17 +337,55 @@ static LRESULT CmdBrowseFile(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)hwnd; (void)wp; (void)lp;
+    (void)wp; (void)lp;
     
-    /* Use default values from config.h */
-    char posX[32], posY[32];
-    snprintf(posX, sizeof(posX), "%d", DEFAULT_WINDOW_POS_X);
-    snprintf(posY, sizeof(posY), "%d", DEFAULT_WINDOW_POS_Y);
+    /* Write default values to config */
+    char posXStr[32], posYStr[32];
+    snprintf(posXStr, sizeof(posXStr), "%d", DEFAULT_WINDOW_POS_X);
+    snprintf(posYStr, sizeof(posYStr), "%d", DEFAULT_WINDOW_POS_Y);
     
-    WriteConfigKeyValue("CLOCK_WINDOW_POS_X", posX);
-    WriteConfigKeyValue("CLOCK_WINDOW_POS_Y", posY);
+    WriteConfigKeyValue("CLOCK_WINDOW_POS_X", posXStr);
+    WriteConfigKeyValue("CLOCK_WINDOW_POS_Y", posYStr);
     WriteConfigKeyValue("WINDOW_SCALE", DEFAULT_WINDOW_SCALE);
     WriteConfigKeyValue("PLUGIN_SCALE", DEFAULT_PLUGIN_SCALE);
+    
+    /* Directly apply position (don't rely on hot-reload for special values) */
+    RECT windowRect;
+    GetWindowRect(hwnd, &windowRect);
+    int windowWidth = windowRect.right - windowRect.left;
+    
+    POINT pt = {0, 0};
+    HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+    MONITORINFO mi = {sizeof(mi)};
+    GetMonitorInfo(hMon, &mi);
+    int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
+    
+    int posX, posY;
+    
+    /* Handle special X position values */
+    if (DEFAULT_WINDOW_POS_X == -2) {
+        posX = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (windowWidth / 2);
+        if (posX + windowWidth > mi.rcMonitor.right) {
+            posX = mi.rcMonitor.right - windowWidth - 20;
+        }
+    } else if (DEFAULT_WINDOW_POS_X == -1) {
+        posX = mi.rcMonitor.left + (screenWidth - windowWidth) / 2;
+    } else {
+        posX = mi.rcMonitor.left + DEFAULT_WINDOW_POS_X;
+    }
+    
+    /* Handle special Y position value (-1 = top of monitor) */
+    if (DEFAULT_WINDOW_POS_Y == -1) {
+        posY = mi.rcMonitor.top;
+    } else if (DEFAULT_WINDOW_POS_Y < 0) {
+        posY = mi.rcMonitor.top;
+    } else {
+        posY = mi.rcMonitor.top + DEFAULT_WINDOW_POS_Y;
+    }
+    
+    CLOCK_WINDOW_POS_X = posX;
+    CLOCK_WINDOW_POS_Y = posY;
+    SetWindowPos(hwnd, NULL, posX, posY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
     
     return 0;
 }
@@ -460,18 +414,22 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     /* Step 5: Reload all configuration (same as startup) */
     LOG_INFO("Reset: Reloading default configuration...");
+    g_ForceApplyConfig = TRUE;  /* Force apply all config values */
     ReadConfig();
+    g_ForceApplyConfig = FALSE;
     LOG_INFO("Reset: Configuration reloaded successfully");
     
-    /* Step 5.5: Reset UI runtime state (not in config file) */
+    /* Step 6: Apply startup mode from config */
+    HandleStartupMode(hwnd);
+    LOG_INFO("Reset: Startup mode applied: %s", CLOCK_STARTUP_MODE);
+    
+    /* Step 7: Reset UI runtime state */
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     LOG_INFO("Reset: UI runtime state reset");
     
-    /* Force timeout action to default (override config's preserve logic) */
-    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    
-    /* Step 5.6: Reload font (config sets FONT_FILE_NAME, but font needs to be loaded) */
+    /* Step 8: Reload font */
     if (IsFontsFolderPath(FONT_FILE_NAME)) {
         const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
         if (relativePath) {
@@ -486,16 +444,16 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
     }
     
-    /* Step 6: Refresh UI to match new config */
+    /* Step 9: Refresh UI to match new config */
     RecalculateWindowSize(hwnd);
     ShowWindow(hwnd, SW_SHOW);
     ResetTimerWithInterval(hwnd);
     
-    /* Step 7: Re-enable redraw and refresh display */
+    /* Step 10: Re-enable redraw and refresh display */
     SendMessage(hwnd, WM_SETREDRAW, TRUE, 0);
     RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
     
-    /* Step 8: Re-register hotkeys with new config */
+    /* Step 11: Re-register hotkeys with new config */
     RegisterGlobalHotkeys(hwnd);
     
     LOG_INFO("========== Reset All Settings operation completed ==========\n");

@@ -20,7 +20,6 @@
 #include "drawing.h"
 #include "menu_preview.h"
 #include "window/window_visual_effects.h"
-#include "cache/resource_cache.h"
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
 #include "plugin/plugin_data.h"
@@ -173,15 +172,25 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/**
+ * @brief Handle high-precision multimedia timer tick
+ * Called from worker thread via PostMessage for smooth milliseconds display
+ */
+LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    /* Delegate to main timer event handler */
+    HandleTimerEvent(hwnd, TIMER_ID_MAIN);
+    /* Force immediate repaint to bypass WM_PAINT queue delay */
+    UpdateWindow(hwnd);
+    return 0;
+}
+
 LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     UnregisterGlobalHotkeys(hwnd);
     HandleWindowDestroy(hwnd);
     extern void ConfigWatcher_Stop(void);
     ConfigWatcher_Stop();
-    
-    // Shutdown resource cache system
-    ResourceCache_Shutdown();
     
     return 0;
 }
@@ -222,12 +231,7 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (GetKeyState(VK_CONTROL) & 0x8000) {
-        if (CLOCK_EDIT_MODE) {
-            EndEditMode(hwnd);
-        } else {
-            StartEditMode(hwnd);
-        }
-        InvalidateRect(hwnd, NULL, TRUE);
+        ToggleEditMode(hwnd);
         return 0;
     }
     return DefWindowProc(hwnd, WM_RBUTTONDOWN, wp, lp);

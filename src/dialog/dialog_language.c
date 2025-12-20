@@ -51,6 +51,7 @@ static DialogTitleEntry g_dialogTitles[] = {
     {CLOCK_IDD_SHORTCUT_DIALOG, L"Countdown Presets"},
     {CLOCK_IDD_WEBSITE_DIALOG, L"Open Website"},
     {CLOCK_IDD_DIALOG1, L"Set Countdown"},
+    {CLOCK_IDD_STARTUP_DIALOG, L"Startup Settings"},
     {IDD_NO_UPDATE_DIALOG, L"Update Check"},
     {IDD_UPDATE_DIALOG, L"Update Available"}
 };
@@ -119,6 +120,7 @@ static SpecialControlEntry g_specialButtons[] = {
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
+    {CLOCK_IDD_STARTUP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
 };
 
@@ -141,6 +143,7 @@ static BOOL NeedsNewlineConversion(int dialogID, int controlID) {
             dialogID == CLOCK_IDD_POMODORO_TIME_DIALOG ||
             dialogID == CLOCK_IDD_WEBSITE_DIALOG ||
             dialogID == CLOCK_IDD_SHORTCUT_DIALOG ||
+            dialogID == CLOCK_IDD_STARTUP_DIALOG ||
             dialogID == CLOCK_IDD_DIALOG1) &&
            controlID == CLOCK_IDC_STATIC;
 }
@@ -184,8 +187,12 @@ static BOOL IsLocalizableControlType(const wchar_t* className) {
 }
 
 static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
+    /* Startup dialog reuses countdown dialog's static text */
+    int searchID = (dialogID == CLOCK_IDD_STARTUP_DIALOG && controlID == CLOCK_IDC_STATIC)
+                   ? CLOCK_IDD_DIALOG1 : dialogID;
+
     for (size_t i = 0; i < ARRAY_SIZE(g_specialControls); i++) {
-        if (g_specialControls[i].dialogID == dialogID &&
+        if (g_specialControls[i].dialogID == searchID &&
             g_specialControls[i].controlID == controlID) {
             const wchar_t* localizedText = GetLocalizedString(NULL, g_specialControls[i].textKey);
             return localizedText ? localizedText : g_specialControls[i].fallbackText;

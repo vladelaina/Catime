@@ -19,11 +19,11 @@
 #include <time.h>
 #include <math.h>
 
-/* Global effect flags */
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
+/* Global text effect */
+extern TextEffectType CLOCK_TEXT_EFFECT;
+
+/* Force apply flag - used during reset to bypass position preservation */
+BOOL g_ForceApplyConfig = FALSE;
 
 /* ============================================================================
  * Helper: Language enum mapping
@@ -42,14 +42,6 @@ static int LanguageNameToEnum(const char* langName) {
     if (strcmp(langName, "Portuguese") == 0) return APP_LANG_PORTUGUESE;
     if (strcmp(langName, "Japanese") == 0) return APP_LANG_JAPANESE;
     if (strcmp(langName, "Korean") == 0) return APP_LANG_KOREAN;
-    
-    /* Legacy numeric format support */
-    if (isdigit(langName[0])) {
-        int langValue = atoi(langName);
-        if (langValue >= 0 && langValue < APP_LANG_COUNT) {
-            return langValue;
-        }
-    }
     
     return APP_LANG_ENGLISH;
 }
@@ -89,22 +81,6 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     LOG_INFO("ApplyDisplaySettings:   FONT_INTERNAL_NAME = '%s'", FONT_INTERNAL_NAME);
     
-    /* Update font cache to mark correct current font */
-    extern void FontCache_UpdateCurrent(const char* fontRelativePath);
-    char relativePath[MAX_PATH];
-    const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\fonts\\";
-    size_t prefixLen = strlen(prefix);
-    if (_strnicmp(FONT_FILE_NAME, prefix, prefixLen) == 0) {
-        strncpy(relativePath, FONT_FILE_NAME + prefixLen, sizeof(relativePath) - 1);
-        relativePath[sizeof(relativePath) - 1] = '\0';
-        FontCache_UpdateCurrent(relativePath);
-        LOG_INFO("ApplyDisplaySettings:   Updated font cache with relative path: '%s'", relativePath);
-    } else {
-        /* System font - clear current font marker in cache */
-        FontCache_UpdateCurrent("");
-        LOG_INFO("ApplyDisplaySettings:   Cleared font cache marker (system font)");
-    }
-    
     /* Apply non-position settings first */
     CLOCK_WINDOW_SCALE = snapshot->windowScale;
     CLOCK_FONT_SCALE_FACTOR = snapshot->windowScale;
@@ -118,37 +94,38 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.opacity_step_fast = snapshot->opacityStepFast;
     g_AppConfig.display.scale_step_normal = snapshot->scaleStepNormal;
     g_AppConfig.display.scale_step_fast = snapshot->scaleStepFast;
-    CLOCK_GLOW_EFFECT = snapshot->glowEffect;
-    CLOCK_GLASS_EFFECT = snapshot->glassEffect;
-    CLOCK_NEON_EFFECT = snapshot->neonEffect;
-    CLOCK_HOLOGRAPHIC_EFFECT = snapshot->holographicEffect;
-    CLOCK_LIQUID_EFFECT = snapshot->liquidEffect;
-    g_AppConfig.display.glow_effect = snapshot->glowEffect;
-    g_AppConfig.display.glass_effect = snapshot->glassEffect;
-    g_AppConfig.display.neon_effect = snapshot->neonEffect;
-    g_AppConfig.display.holographic_effect = snapshot->holographicEffect;
-    g_AppConfig.display.liquid_effect = snapshot->liquidEffect;
+    CLOCK_TEXT_EFFECT = (TextEffectType)snapshot->textEffect;
+    g_AppConfig.display.text_effect = snapshot->textEffect;
 
     HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
     if (hwnd) {
-        /* Get current window position before updating globals */
-        RECT currentRect;
-        GetWindowRect(hwnd, &currentRect);
-        
-        /* Compare current position with config snapshot */
-        int deltaX = abs(currentRect.left - snapshot->windowPosX);
-        int deltaY = abs(currentRect.top - snapshot->windowPosY);
-        
-        if (deltaX > 10 || deltaY > 10) {
-            /* Significant difference: preserve current position (likely just saved) */
-            CLOCK_WINDOW_POS_X = currentRect.left;
-            CLOCK_WINDOW_POS_Y = currentRect.top;
-        } else {
-            /* Minor difference: apply config position */
-            CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+        /* Force apply mode: always use config values (used during reset) */
+        if (g_ForceApplyConfig) {
             CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
-            SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-                        0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            
+            /* For special position values (-2, -1), don't set position here.
+             * RecalculateWindowSize will handle it with correct window dimensions. */
+            if (snapshot->windowPosX != -2 && snapshot->windowPosX != -1) {
+                CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+                SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+                            0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            }
+        } else {
+            /* Normal mode: preserve position if significantly different */
+            RECT currentRect;
+            GetWindowRect(hwnd, &currentRect);
+            int deltaX = abs(currentRect.left - snapshot->windowPosX);
+            int deltaY = abs(currentRect.top - snapshot->windowPosY);
+            
+            if (deltaX > 10 || deltaY > 10) {
+                CLOCK_WINDOW_POS_X = currentRect.left;
+                CLOCK_WINDOW_POS_Y = currentRect.top;
+            } else {
+                CLOCK_WINDOW_POS_X = snapshot->windowPosX;
+                CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
+                SetWindowPos(hwnd, NULL, CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
+                            0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            }
         }
 
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
@@ -255,8 +232,26 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.notification.display.window_width = snapshot->notificationWindowWidth;
     g_AppConfig.notification.display.window_height = snapshot->notificationWindowHeight;
     
+    /* Copy sound file path and expand %LOCALAPPDATA% placeholder if needed */
     strncpy(g_AppConfig.notification.sound.sound_file, snapshot->notificationSoundFile, MAX_PATH - 1);
     g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
+    
+    /* Normalize %LOCALAPPDATA% placeholder to absolute path */
+    if (g_AppConfig.notification.sound.sound_file[0] != '\0') {
+        const char* varToken = "%LOCALAPPDATA%";
+        size_t tokenLen = strlen(varToken);
+        if (_strnicmp(g_AppConfig.notification.sound.sound_file, varToken, tokenLen) == 0) {
+            const char* localAppData = getenv("LOCALAPPDATA");
+            if (localAppData && localAppData[0] != '\0') {
+                char resolved[MAX_PATH] = {0};
+                snprintf(resolved, sizeof(resolved), "%s%s",
+                         localAppData,
+                         g_AppConfig.notification.sound.sound_file + tokenLen);
+                strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
+                g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
+            }
+        }
+    }
     
     g_AppConfig.notification.sound.volume = snapshot->notificationSoundVolume;
 }

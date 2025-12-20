@@ -20,7 +20,6 @@
 #include "dialog/dialog_language.h"
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
-#include "cache/resource_cache.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "drawing/drawing_image.h"
@@ -46,16 +45,27 @@ static BOOL IsElevated(void) {
 /* Attempt to relaunch self as standard user using Explorer's token */
 static BOOL RelaunchAsStandardUser(void) {
     HWND hShellWnd = GetShellWindow();
-    if (!hShellWnd) return FALSE;
+    if (!hShellWnd) {
+        LOG_WARNING("GetShellWindow() returned NULL, Explorer may not be running.");
+        return FALSE;
+    }
 
-    DWORD dwShellPID;
+    DWORD dwShellPID = 0;
     GetWindowThreadProcessId(hShellWnd, &dwShellPID);
+    if (dwShellPID == 0) {
+        LOG_WARNING("Failed to get Explorer PID.");
+        return FALSE;
+    }
 
     HANDLE hShellProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwShellPID);
-    if (!hShellProcess) return FALSE;
+    if (!hShellProcess) {
+        LOG_WARNING("Failed to open Explorer process, error: %lu", GetLastError());
+        return FALSE;
+    }
 
     HANDLE hShellToken = NULL;
     if (!OpenProcessToken(hShellProcess, TOKEN_DUPLICATE, &hShellToken)) {
+        LOG_WARNING("Failed to open Explorer token, error: %lu", GetLastError());
         CloseHandle(hShellProcess);
         return FALSE;
     }
@@ -63,6 +73,7 @@ static BOOL RelaunchAsStandardUser(void) {
     HANDLE hNewToken = NULL;
     /* Duplicate the shell's token (which is medium integrity/standard user) */
     if (!DuplicateTokenEx(hShellToken, MAXIMUM_ALLOWED, NULL, SecurityImpersonation, TokenPrimary, &hNewToken)) {
+        LOG_WARNING("Failed to duplicate token, error: %lu", GetLastError());
         CloseHandle(hShellToken);
         CloseHandle(hShellProcess);
         return FALSE;
@@ -70,66 +81,213 @@ static BOOL RelaunchAsStandardUser(void) {
 
     wchar_t szPath[MAX_PATH];
     GetModuleFileNameW(NULL, szPath, MAX_PATH);
-    
+
     /* Reconstruct command line safely - CreateProcess might modify the buffer */
     wchar_t* pszOriginalCmdLine = GetCommandLineW();
     size_t cmdLen = wcslen(pszOriginalCmdLine) + 1;
     wchar_t* pszCmdLineCopy = (wchar_t*)malloc(cmdLen * sizeof(wchar_t));
-    
+
     if (!pszCmdLineCopy) {
+        LOG_WARNING("Failed to allocate command line buffer.");
         CloseHandle(hNewToken);
         CloseHandle(hShellToken);
         CloseHandle(hShellProcess);
         return FALSE;
     }
-    
+
     wcscpy_s(pszCmdLineCopy, cmdLen, pszOriginalCmdLine);
-    
+
     STARTUPINFOW si = {sizeof(STARTUPINFOW)};
     PROCESS_INFORMATION pi = {0};
-    
+
     BOOL bResult = CreateProcessWithTokenW(hNewToken, LOGON_WITH_PROFILE, NULL, pszCmdLineCopy, 0, NULL, NULL, &si, &pi);
 
     free(pszCmdLineCopy);
 
     if (bResult) {
-        LOG_INFO("Relaunched self as standard user (PID: %lu)", pi.dwProcessId);
+        /* Verify the new process is actually running */
+        DWORD exitCode = 0;
+        if (WaitForSingleObject(pi.hProcess, 100) == WAIT_TIMEOUT) {
+            /* Process is still running after 100ms - success */
+            LOG_INFO("Relaunched self as standard user (PID: %lu)", pi.dwProcessId);
+        } else if (GetExitCodeProcess(pi.hProcess, &exitCode) && exitCode != STILL_ACTIVE) {
+            /* Process exited immediately - something went wrong */
+            LOG_WARNING("New process exited immediately with code: %lu", exitCode);
+            bResult = FALSE;
+        }
         CloseHandle(pi.hProcess);
         CloseHandle(pi.hThread);
     } else {
-        LOG_ERROR("Failed to relaunch as standard user, error: %lu", GetLastError());
+        LOG_WARNING("CreateProcessWithTokenW failed, error: %lu", GetLastError());
     }
 
     CloseHandle(hNewToken);
     CloseHandle(hShellToken);
     CloseHandle(hShellProcess);
-    
+
     return bResult;
+}
+
+/* Check if UAC is enabled - returns FALSE if disabled or uncertain */
+static BOOL IsUACEnabled(void) {
+    HKEY hKey;
+    DWORD dwValue = 0;  /* Default to DISABLED for safety - skip privilege drop if uncertain */
+    DWORD dwSize = sizeof(DWORD);
+
+    LSTATUS status = RegOpenKeyExW(HKEY_LOCAL_MACHINE,
+        L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System",
+        0, KEY_READ, &hKey);
+
+    if (status != ERROR_SUCCESS) {
+        LOG_WARNING("Cannot read UAC registry key (error: %ld), assuming UAC disabled for safety", status);
+        return FALSE;
+    }
+
+    status = RegQueryValueExW(hKey, L"EnableLUA", NULL, NULL, (LPBYTE)&dwValue, &dwSize);
+    RegCloseKey(hKey);
+
+    if (status != ERROR_SUCCESS) {
+        LOG_WARNING("Cannot read EnableLUA value (error: %ld), assuming UAC disabled for safety", status);
+        return FALSE;
+    }
+
+    LOG_INFO("UAC EnableLUA registry value: %lu", dwValue);
+    return dwValue != 0;
+}
+
+/* Check if Secondary Logon service is running - required for CreateProcessWithTokenW */
+static BOOL IsSecondaryLogonServiceRunning(void) {
+    SC_HANDLE hSCManager = OpenSCManagerW(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager) {
+        LOG_WARNING("Cannot open SCManager (error: %lu), assuming service unavailable", GetLastError());
+        return FALSE;
+    }
+
+    SC_HANDLE hService = OpenServiceW(hSCManager, L"seclogon", SERVICE_QUERY_STATUS);
+    if (!hService) {
+        DWORD err = GetLastError();
+        CloseServiceHandle(hSCManager);
+        if (err == ERROR_SERVICE_DOES_NOT_EXIST) {
+            LOG_WARNING("Secondary Logon service does not exist on this system");
+        } else {
+            LOG_WARNING("Cannot open Secondary Logon service (error: %lu)", err);
+        }
+        return FALSE;
+    }
+
+    SERVICE_STATUS status;
+    BOOL bRunning = FALSE;
+    if (QueryServiceStatus(hService, &status)) {
+        bRunning = (status.dwCurrentState == SERVICE_RUNNING);
+        LOG_INFO("Secondary Logon service state: %lu (running=%s)",
+                 status.dwCurrentState, bRunning ? "yes" : "no");
+    } else {
+        LOG_WARNING("Cannot query Secondary Logon service status (error: %lu)", GetLastError());
+    }
+
+    CloseServiceHandle(hService);
+    CloseServiceHandle(hSCManager);
+    return bRunning;
+}
+
+/* Check if running on Windows Server edition */
+static BOOL IsWindowsServer(void) {
+    OSVERSIONINFOEXW osvi = {sizeof(OSVERSIONINFOEXW)};
+    DWORDLONG dwlConditionMask = 0;
+
+    VER_SET_CONDITION(dwlConditionMask, VER_PRODUCT_TYPE, VER_EQUAL);
+    osvi.wProductType = VER_NT_WORKSTATION;
+
+    /* If this is NOT a workstation, it's a server */
+    BOOL bIsWorkstation = VerifyVersionInfoW(&osvi, VER_PRODUCT_TYPE, dwlConditionMask);
+
+    if (!bIsWorkstation) {
+        LOG_INFO("Detected Windows Server edition");
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/* Check if Explorer (shell) is running as elevated */
+static BOOL IsShellElevated(void) {
+    HWND hShellWnd = GetShellWindow();
+    if (!hShellWnd) return TRUE;  /* Assume elevated if no shell */
+
+    DWORD dwShellPID = 0;
+    GetWindowThreadProcessId(hShellWnd, &dwShellPID);
+    if (dwShellPID == 0) return TRUE;
+
+    HANDLE hShellProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwShellPID);
+    if (!hShellProcess) return TRUE;
+
+    HANDLE hShellToken = NULL;
+    BOOL bShellElevated = TRUE;  /* Default to TRUE (skip privilege drop) */
+
+    if (OpenProcessToken(hShellProcess, TOKEN_QUERY, &hShellToken)) {
+        TOKEN_ELEVATION elevation;
+        DWORD cbSize = sizeof(TOKEN_ELEVATION);
+        if (GetTokenInformation(hShellToken, TokenElevation, &elevation, sizeof(elevation), &cbSize)) {
+            bShellElevated = elevation.TokenIsElevated;
+        }
+        CloseHandle(hShellToken);
+    }
+
+    CloseHandle(hShellProcess);
+    return bShellElevated;
 }
 
 /* Drop Administrator privileges if present to ensure Drag & Drop works from Explorer */
 static void DropPrivileges(void) {
-    if (IsElevated()) {
-        LOG_INFO("Elevated privileges detected. Attempting to switch to standard user...");
-        
-        /* Prevent infinite loop if relaunch fails or we are genuinely the admin user (e.g. built-in Admin) */
-        /* But here we just try once. If it succeeds, we exit. */
-        
-        if (RelaunchAsStandardUser()) {
-            /* Exit this elevated instance */
-            ExitProcess(0);
-        } else {
-            LOG_WARNING("Failed to switch to standard user. Drag & Drop may be restricted.");
-        }
-    } else {
+    /* CRITICAL: This function must NEVER prevent the application from running.
+     * All checks are designed to fail-safe (skip privilege drop on any uncertainty).
+     */
+
+    if (!IsElevated()) {
         LOG_INFO("Running as standard user (optimal for Drag & Drop).");
+        return;
+    }
+
+    LOG_INFO("Elevated privileges detected. Checking if privilege drop is safe...");
+
+    /* Check 1: Windows Server - often has different security policies */
+    if (IsWindowsServer()) {
+        LOG_INFO("Running on Windows Server, skipping privilege drop for compatibility.");
+        return;
+    }
+
+    /* Check 2: UAC disabled - privilege drop is meaningless and may cause issues */
+    if (!IsUACEnabled()) {
+        LOG_INFO("UAC is disabled, skipping privilege drop (Drag & Drop may be restricted).");
+        return;
+    }
+
+    /* Check 3: Secondary Logon service - required for CreateProcessWithTokenW */
+    if (!IsSecondaryLogonServiceRunning()) {
+        LOG_INFO("Secondary Logon service not running, skipping privilege drop.");
+        return;
+    }
+
+    /* Check 4: Explorer itself is elevated - privilege drop would be pointless */
+    if (IsShellElevated()) {
+        LOG_INFO("Explorer is also elevated, skipping privilege drop.");
+        return;
+    }
+
+    LOG_INFO("All preconditions met. Attempting to switch to standard user...");
+
+    if (RelaunchAsStandardUser()) {
+        LOG_INFO("Relaunch successful, exiting elevated instance.");
+        /* Exit this elevated instance */
+        ExitProcess(0);
+    } else {
+        LOG_WARNING("Failed to switch to standard user. Continuing with elevated privileges.");
+        LOG_WARNING("Drag & Drop from Explorer may be restricted.");
     }
 }
 
 extern int elapsed_time;
 extern int message_shown;
 extern int countdown_message_shown;
-extern int countup_message_shown;
 extern int countdown_elapsed_time;
 extern int countup_elapsed_time;
 
@@ -152,7 +310,7 @@ static StartupMode ParseStartupMode(const char* modeStr) {
     return STARTUP_MODE_DEFAULT;
 }
 
-static void HandleStartupMode(HWND hwnd) {
+void HandleStartupMode(HWND hwnd) {
     StartupMode mode = ParseStartupMode(CLOCK_STARTUP_MODE);
     
     LOG_INFO("Setting startup mode: %s", CLOCK_STARTUP_MODE);
@@ -173,7 +331,6 @@ static void HandleStartupMode(HWND hwnd) {
             
             message_shown = TRUE;
             countdown_message_shown = TRUE;
-            countup_message_shown = TRUE;
             countdown_elapsed_time = 0;
             countup_elapsed_time = 0;
             break;
@@ -219,13 +376,6 @@ BOOL InitializeSubsystems(void) {
         return FALSE;
     }
     LOG_INFO("COM initialization successful");
-    
-    // Initialize resource cache system with background scanning
-    if (!ResourceCache_Initialize(TRUE)) {
-        LOG_WARNING("Resource cache initialization failed, menu building will use fallback mode");
-    } else {
-        LOG_INFO("Resource cache initialized with background scanning");
-    }
 
     // Initialize GDI+ for image rendering
     InitDrawingImage();

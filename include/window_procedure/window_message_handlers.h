@@ -20,6 +20,7 @@ LRESULT HandleMouseWheel(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleMouseMove(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandlePaint(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp);

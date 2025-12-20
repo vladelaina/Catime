@@ -55,6 +55,7 @@ static const BuiltinAnimDef g_builtinAnims[] = {
     { "__cpu__",     CLOCK_IDM_ANIMATIONS_USE_CPU,     L"CPU Percent",     ANIM_SOURCE_PERCENT, GetCpuValue },
     { "__mem__",     CLOCK_IDM_ANIMATIONS_USE_MEM,     L"Memory Percent",  ANIM_SOURCE_PERCENT, GetMemValue },
     { "__battery__", CLOCK_IDM_ANIMATIONS_USE_BATTERY, L"Battery Percent", ANIM_SOURCE_PERCENT, GetBatteryValue },
+    { "__capslock__", CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK, L"Caps Lock",     ANIM_SOURCE_CAPSLOCK, NULL },
     { "__none__",    CLOCK_IDM_ANIMATIONS_USE_NONE,    L"None",            ANIM_SOURCE_UNKNOWN, NULL }
 };
 
@@ -300,7 +301,7 @@ BOOL IsValidAnimationSource(const char* name) {
     
     AnimationSourceType type = DetectAnimationSourceType(name);
     
-    if (type == ANIM_SOURCE_LOGO || type == ANIM_SOURCE_PERCENT) {
+    if (type == ANIM_SOURCE_LOGO || type == ANIM_SOURCE_PERCENT || type == ANIM_SOURCE_CAPSLOCK) {
         return TRUE;
     }
     
@@ -375,6 +376,13 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
     
     if (type == ANIM_SOURCE_PERCENT) {
         /* Percent icons are generated dynamically, not pre-loaded */
+        anim->count = 0;
+        anim->isAnimated = FALSE;
+        return TRUE;
+    }
+    
+    if (type == ANIM_SOURCE_CAPSLOCK) {
+        /* Caps Lock icons are generated dynamically, not pre-loaded */
         anim->count = 0;
         anim->isAnimated = FALSE;
         return TRUE;

@@ -10,7 +10,7 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.4.0-alpha6"    /**< Version string */
+#define CATIME_VERSION "1.4.0-alpha8"    /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
 #define CATIME_VERSION_MINOR 4           /**< Minor version number */
 #define CATIME_VERSION_PATCH 0           /**< Patch version number */
@@ -36,6 +36,7 @@
 #define CLOCK_WM_TRAYICON (WM_USER + 2)  /**< Custom tray icon message */
 #define CLOCK_WM_ANIMATION_PREVIEW_LOADED (WM_USER + 3)  /**< Animation preview loaded message */
 #define CLOCK_WM_PLUGIN_EXIT (WM_USER + 4)  /**< Plugin requested exit via <exit> tag */
+#define CLOCK_WM_MAIN_TIMER_TICK (WM_USER + 5)  /**< High-precision main timer tick for smooth milliseconds */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
 #define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 
@@ -207,7 +208,7 @@
 /** @brief Timer management menu identifiers */
 #define CLOCK_IDM_TIMER_MANAGEMENT 159       /**< Timer management submenu */
 #define CLOCK_IDM_TIMER_PAUSE_RESUME 158     /**< Pause/resume timer menu item */
-#define CLOCK_IDM_TIMER_RESTART 177          /**< Restart timer menu item */
+#define CLOCK_IDM_TIMER_RESTART 178          /**< Restart timer menu item */
 #define CLOCK_IDM_SLEEP 125                  /**< Sleep timeout action */
 
 /** @brief Time format menu identifiers */
@@ -371,6 +372,7 @@
 #define CLOCK_IDM_ANIMATIONS_USE_CPU 2203    /**< Use CPU animation */
 #define CLOCK_IDM_ANIMATIONS_USE_MEM 2204    /**< Use memory animation */
 #define CLOCK_IDM_ANIMATIONS_USE_BATTERY 2205 /**< Use battery percent icon */
+#define CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK 2207 /**< Use Caps Lock indicator */
 #define CLOCK_IDM_ANIMATIONS_USE_NONE 2206   /**< Use transparent/hidden icon */
 #define CLOCK_IDM_ANIM_SPEED_MEMORY 2210     /**< Memory-based animation speed */
 #define CLOCK_IDM_ANIM_SPEED_CPU 2211        /**< CPU-based animation speed */

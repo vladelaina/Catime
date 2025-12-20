@@ -26,7 +26,6 @@
 #include "utils/natural_sort.h"
 #include "utils/string_format.h"
 #include "tray/tray_menu_pomodoro.h"
-#include "cache/resource_cache.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
 #include "color/color_parser.h"
