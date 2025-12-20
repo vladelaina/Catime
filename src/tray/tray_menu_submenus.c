@@ -33,7 +33,8 @@
 extern BOOL CLOCK_SHOW_CURRENT_TIME;
 extern BOOL CLOCK_USE_24HOUR;
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
-extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
+extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
+extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 extern void GetConfigPath(char* path, size_t size);
@@ -69,6 +70,12 @@ void ReadTimeoutActionFromConfig() {
     } else {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
     }
+    
+    /* Hot-reload file path and website URL */
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", 
+                  CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, configPath);
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", 
+                  CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, configPath);
 }
 
 /**

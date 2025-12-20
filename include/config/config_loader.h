@@ -63,7 +63,7 @@ typedef struct {
     TimeoutActionType timeoutAction;
     char timeoutText[50];
     char timeoutFilePath[MAX_PATH];
-    wchar_t timeoutWebsiteUrl[MAX_PATH];
+    char timeoutWebsiteUrl[MAX_PATH];
     
     /* Quick countdown presets */
     int timeOptions[MAX_TIME_OPTIONS];

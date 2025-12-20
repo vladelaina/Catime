@@ -23,7 +23,6 @@ int default_countdown_time = 0;
 int elapsed_time = 0;
 wchar_t inputText[256] = {0};
 int message_shown = 0;
-wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = L"";
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     (void)hPrevInstance;

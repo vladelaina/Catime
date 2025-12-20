@@ -235,8 +235,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     
     safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_WEBSITE", sizeof(items[idx].key));
-    WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, 
-                       items[idx].value, sizeof(items[idx].value), NULL, NULL);
+    safe_strncpy(items[idx].value, CLOCK_TIMEOUT_WEBSITE_URL, sizeof(items[idx].value));
     idx++;
     
     /* Time options */

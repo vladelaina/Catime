@@ -23,6 +23,9 @@
 #include "log.h"
 #include "window/window_desktop_integration.h"
 
+/* External function from timer.c */
+extern int64_t GetAbsoluteTimeMs(void);
+
 /* Pomodoro and timer constants */
 #define DEFAULT_POMODORO_DURATION 1500
 #define MAX_RETRY_ATTEMPTS 3
@@ -230,7 +233,9 @@ static void HandleTimeoutActions(HWND hwnd) {
             break;
 
         case TIMEOUT_ACTION_LOCK:
-            LockWorkStation();
+            if (!LockWorkStation()) {
+                LOG_WARNING("Failed to lock workstation (error: %lu)", GetLastError());
+            }
             break;
 
         case TIMEOUT_ACTION_OPEN_FILE:
@@ -261,6 +266,7 @@ static void HandleTimeoutActions(HWND hwnd) {
             CLOCK_SHOW_CURRENT_TIME = FALSE;
             countup_elapsed_time = 0;
             elapsed_time = 0;
+            g_start_time = GetAbsoluteTimeMs();
             message_shown = FALSE;
             countdown_message_shown = FALSE;
             CLOCK_IS_PAUSED = FALSE;
@@ -271,13 +277,13 @@ static void HandleTimeoutActions(HWND hwnd) {
             break;
 
         case TIMEOUT_ACTION_OPEN_WEBSITE:
-            if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-                HINSTANCE result = ShellExecuteW(NULL, L"open", CLOCK_TIMEOUT_WEBSITE_URL, NULL, NULL, SW_NORMAL);
+            if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                wchar_t wUrl[MAX_PATH];
+                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH);
+                HINSTANCE result = ShellExecuteW(NULL, L"open", wUrl, NULL, NULL, SW_NORMAL);
                 if ((INT_PTR)result <= 32) {
-                    char urlUtf8[MAX_PATH];
-                    WideCharToMultiByte(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, urlUtf8, MAX_PATH, NULL, NULL);
                     LOG_WARNING("Failed to open timeout website: %s (error: %d)", 
-                               urlUtf8, (int)(INT_PTR)result);
+                               CLOCK_TIMEOUT_WEBSITE_URL, (int)(INT_PTR)result);
                 }
             }
             break;
@@ -487,7 +493,6 @@ static BOOL HandleMainTimer(HWND hwnd) {
     }
     
     /* ABSOLUTE TIME CALCULATION (MILLISECONDS) */
-    extern int64_t GetAbsoluteTimeMs(void);
     int64_t current_time_ms = GetAbsoluteTimeMs();
     int current_elapsed_sec = 0;
 

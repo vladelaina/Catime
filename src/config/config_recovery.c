@@ -320,7 +320,7 @@ BOOL ValidateTimeoutAction(ConfigSnapshot* snapshot) {
 
     /* Validate website URL only for OPEN_WEBSITE action */
     if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_WEBSITE) {
-        if (wcslen(snapshot->timeoutWebsiteUrl) == 0) {
+        if (strlen(snapshot->timeoutWebsiteUrl) == 0) {
             LOG_WARNING("Timeout website URL empty, resetting action to MESSAGE");
             snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
             modified = TRUE;

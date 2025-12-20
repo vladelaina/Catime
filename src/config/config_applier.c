@@ -185,8 +185,8 @@ void ApplyTimerSettings(const ConfigSnapshot* snapshot) {
     strncpy(CLOCK_TIMEOUT_FILE_PATH, snapshot->timeoutFilePath, MAX_PATH - 1);
     CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
     
-    wcsncpy(CLOCK_TIMEOUT_WEBSITE_URL, snapshot->timeoutWebsiteUrl, MAX_PATH - 1);
-    CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = L'\0';
+    strncpy(CLOCK_TIMEOUT_WEBSITE_URL, snapshot->timeoutWebsiteUrl, MAX_PATH - 1);
+    CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
     
     /* Quick countdown presets */
     time_options_count = snapshot->timeOptionsCount;

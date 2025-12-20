@@ -21,7 +21,7 @@
 #include <math.h>
 
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
-extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
+extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 extern int time_options[];
 extern int time_options_count;
 
@@ -209,12 +209,8 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
     LoadAndCompareString(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_FILE, 
                          CLOCK_TIMEOUT_FILE_PATH, sizeof(CLOCK_TIMEOUT_FILE_PATH), "");
     
-    char websiteBuf[MAX_PATH];
-    ReadConfigStr(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_WEBSITE, "", websiteBuf, sizeof(websiteBuf));
-    WideString ws = ToWide(websiteBuf);
-    if (ws.valid && wcscmp(ws.buf, CLOCK_TIMEOUT_WEBSITE_URL) != 0) {
-        wcsncpy_s(CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, ws.buf, _TRUNCATE);
-    }
+    LoadAndCompareString(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_WEBSITE, 
+                         CLOCK_TIMEOUT_WEBSITE_URL, sizeof(CLOCK_TIMEOUT_WEBSITE_URL), "");
     
     /* Default start time */
     LoadAndCompareInt(CFG_SECTION_TIMER, CFG_KEY_DEFAULT_START_TIME, 

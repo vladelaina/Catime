@@ -79,7 +79,7 @@ extern HWND g_hwndInputDialog;
 extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
 extern char CLOCK_TIMEOUT_TEXT[50];
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
-extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
+extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 
 /* Pomodoro settings - now in g_AppConfig.pomodoro */
 

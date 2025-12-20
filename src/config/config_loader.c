@@ -303,16 +303,9 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
     ProcessFontPath(snapshot, config_path);
     LOG_INFO("ConfigLoader: After ProcessFontPath, fontFileName = '%s'", snapshot->fontFileName);
     
-    /* Website URL needs UTF-8 to wchar_t conversion */
-    char tempWebsiteUrl[MAX_PATH] = {0};
+    /* Website URL - now stored as UTF-8 char */
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "",
-                 tempWebsiteUrl, MAX_PATH, config_path);
-    if (tempWebsiteUrl[0] != '\0') {
-        MultiByteToWideChar(CP_UTF8, 0, tempWebsiteUrl, -1, 
-                          snapshot->timeoutWebsiteUrl, MAX_PATH);
-    } else {
-        snapshot->timeoutWebsiteUrl[0] = L'\0';
-    }
+                 snapshot->timeoutWebsiteUrl, MAX_PATH, config_path);
     
     /* Parse time options (comma-separated array) */
     char timeOptionsStr[256] = {0};

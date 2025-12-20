@@ -48,6 +48,7 @@ int pomodoro_work_cycles = 0;
 TimeoutActionType CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
 char CLOCK_TIMEOUT_TEXT[50] = "";
 char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";
+char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = "";
 
 int time_options[MAX_TIME_OPTIONS] = {0};
 int time_options_count = 0;

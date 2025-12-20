@@ -269,9 +269,11 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             Dialog_SubclassEdit(hwndEdit, ctx);
 
-            extern wchar_t CLOCK_TIMEOUT_WEBSITE_URL[];
-            if (wcslen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
-                SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, CLOCK_TIMEOUT_WEBSITE_URL);
+            extern char CLOCK_TIMEOUT_WEBSITE_URL[];
+            if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
+                wchar_t wUrl[MAX_PATH];
+                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH);
+                SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wUrl);
             }
 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_WEBSITE_DIALOG);
