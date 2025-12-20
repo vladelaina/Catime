@@ -39,11 +39,8 @@ LRESULT CmdCustomCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
         KillTimer(hwnd, 1);
     }
     
-    int total_seconds = 0;
-    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_DIALOG1, &total_seconds)) {
-        CleanupBeforeTimerAction();
-        StartCountdownWithTime(hwnd, total_seconds);
-    }
+    /* Use modeless dialog - result handled via WM_DIALOG_COUNTDOWN */
+    ShowCountdownInputDialog(hwnd);
     return 0;
 }
 
@@ -183,11 +180,8 @@ LRESULT CmdSetStartupMode(HWND hwnd, const char* mode) {
 
 LRESULT CmdSetCountdownTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    int total_seconds = 0;
-    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_STARTUP_DIALOG, &total_seconds)) {
-        WriteConfigDefaultStartTime(total_seconds);
-        return CmdSetStartupMode(hwnd, "COUNTDOWN");
-    }
+    /* Use modeless dialog - config saved directly by dialog */
+    ShowStartupTimeDialog(hwnd);
     return 0;
 }
 
@@ -244,57 +238,15 @@ LRESULT CmdPomodoroCombo(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdModifyTimeOptions(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-
-    while (1) {
-        ClearInputBuffer(inputText, sizeof(inputText));
-        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG),
-                       hwnd, DlgProc, (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG);
-        
-        if (isAllSpacesOnly(inputText)) break;
-        
-        Utf8String us = ToUtf8(inputText);
-        char inputTextA[MAX_PATH];
-        strcpy_s(inputTextA, sizeof(inputTextA), us.buf);
-        
-        char* token = strtok(inputTextA, " ");
-        char options[256] = {0};
-        int valid = 1, count = 0;
-        
-        while (token && count < MAX_TIME_OPTIONS) {
-            int seconds = 0;
-            if (!TimeParser_ParseBasic(token, &seconds) || seconds <= 0) {
-                valid = 0;
-                break;
-            }
-            
-            if (count > 0) strcat_s(options, sizeof(options), ",");
-            
-            char secondsStr[32];
-            snprintf(secondsStr, sizeof(secondsStr), "%d", seconds);
-            strcat_s(options, sizeof(options), secondsStr);
-            count++;
-            token = strtok(NULL, " ");
-        }
-        
-        if (valid && count > 0) {
-            CleanupBeforeTimerAction();
-            WriteConfigTimeOptions(options);
-            break;
-        } else {
-            ShowErrorDialog(hwnd);
-        }
-    }
+    /* Use modeless dialog - result handled via WM_DIALOG_SHORTCUT */
+    ShowShortcutTimeDialog(hwnd);
     return 0;
 }
 
 LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    int total_seconds = 0;
-    if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_STARTUP_DIALOG, &total_seconds)) {
-        CleanupBeforeTimerAction();
-        WriteConfigDefaultStartTime(total_seconds);
-        WriteConfigStartupMode("COUNTDOWN");
-    }
+    /* Use modeless dialog - config saved directly by dialog */
+    ShowStartupTimeDialog(hwnd);
     return 0;
 }
 
@@ -326,34 +278,7 @@ BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
         return FALSE;
     }
 
-    extern int g_pomodoroSelectedIndex;
-    g_pomodoroSelectedIndex = selectedIndex;
-
-    memset(inputText, 0, sizeof(inputText));
-    DialogBoxParamW(GetModuleHandle(NULL),
-             MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
-             hwnd, DlgProc, (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG);
-    
-    if (inputText[0] && !isAllSpacesOnly(inputText)) {
-        int total_seconds = 0;
-
-        char inputTextA[256];
-        WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputTextA, sizeof(inputTextA), NULL, NULL);
-        extern int ParseInput(const char*, int*);
-        if (ParseInput(inputTextA, &total_seconds)) {
-            g_AppConfig.pomodoro.times[selectedIndex] = total_seconds;
-            
-            WriteConfigPomodoroTimeOptions(g_AppConfig.pomodoro.times, g_AppConfig.pomodoro.times_count);
-            
-            if (selectedIndex == 0) g_AppConfig.pomodoro.work_time = total_seconds;
-            else if (selectedIndex == 1) g_AppConfig.pomodoro.short_break = total_seconds;
-            else if (selectedIndex == 2) g_AppConfig.pomodoro.long_break = total_seconds;
-
-            g_pomodoroSelectedIndex = -1;
-            return TRUE;
-        }
-    }
-
-    g_pomodoroSelectedIndex = -1;
-    return FALSE;
+    /* Use modeless dialog - config saved directly by dialog */
+    ShowPomodoroTimeEditDialog(hwnd, selectedIndex);
+    return TRUE;
 }

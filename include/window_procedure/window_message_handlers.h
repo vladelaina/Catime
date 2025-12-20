@@ -44,4 +44,10 @@ LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp);
 
+// Modeless dialog result handlers
+LRESULT HandleDialogCountdown(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleDialogShortcut(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleDialogColor(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp);
+
 #endif /* WINDOW_MESSAGE_HANDLERS_H */

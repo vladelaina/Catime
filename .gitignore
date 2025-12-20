@@ -17,6 +17,7 @@ build/*
 .idea/
 .vscode/
 .cursorrules
+.kiro
 
 # Project documentation
 CLAUDE.md

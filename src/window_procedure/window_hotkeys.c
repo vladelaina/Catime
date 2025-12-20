@@ -50,24 +50,15 @@ static void HotkeyToggleMilliseconds(HWND hwnd) {
 
 static void HotkeyCustomCountdown(HWND hwnd) {
     if (g_hwndInputDialog != NULL && IsWindow(g_hwndInputDialog)) {
-        SendMessage(g_hwndInputDialog, WM_CLOSE, 0, 0);
+        SetForegroundWindow(g_hwndInputDialog);
         return;
     }
     
     countdown_message_shown = FALSE;
     ClearInputBuffer(inputText, sizeof(inputText));
     
-    DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1), 
-                   hwnd, DlgProc, (LPARAM)CLOCK_IDD_DIALOG1);
-    
-    if (inputText[0] != L'\0') {
-        int total_seconds = 0;
-        Utf8String us = ToUtf8(inputText);
-        if (ParseInput(us.buf, &total_seconds)) {
-            CleanupBeforeTimerAction();
-            StartCountdownWithTime(hwnd, total_seconds);
-        }
-    }
+    /* Use modeless dialog */
+    ShowCountdownInputDialog(hwnd);
 }
 
 static void HotkeyQuickCountdown(HWND hwnd, int index) {

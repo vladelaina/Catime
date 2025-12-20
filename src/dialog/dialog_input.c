@@ -1,6 +1,6 @@
 /**
  * @file dialog_input.c
- * @brief Generic input dialog and time parsing implementation
+ * @brief Generic input dialog and time parsing implementation (modeless version)
  */
 
 #include "dialog/dialog_input.h"
@@ -31,6 +31,134 @@ HWND g_hwndInputDialog = NULL;
 /* Global variable to pass the selected pomodoro time index */
 int g_pomodoroSelectedIndex = -1;
 
+/* Parent window handle for posting results */
+static HWND g_hwndParent = NULL;
+
+/* ============================================================================
+ * Modeless Dialog API
+ * ============================================================================ */
+
+/**
+ * @brief Show countdown input dialog (modeless)
+ * @param hwndParent Parent window handle
+ */
+void ShowCountdownInputDialog(HWND hwndParent) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_INPUT)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_INPUT);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    g_hwndParent = hwndParent;
+
+    HWND hwndDlg = CreateDialogParamW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCEW(CLOCK_IDD_DIALOG1),
+        hwndParent,
+        DlgProc,
+        (LPARAM)CLOCK_IDD_DIALOG1
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+}
+
+/**
+ * @brief Show shortcut time settings dialog (modeless)
+ * @param hwndParent Parent window handle
+ */
+void ShowShortcutTimeDialog(HWND hwndParent) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_SHORTCUT)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_SHORTCUT);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    g_hwndParent = hwndParent;
+
+    HWND hwndDlg = CreateDialogParamW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCEW(CLOCK_IDD_SHORTCUT_DIALOG),
+        hwndParent,
+        DlgProc,
+        (LPARAM)CLOCK_IDD_SHORTCUT_DIALOG
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+}
+
+/**
+ * @brief Show startup time settings dialog (modeless)
+ * @param hwndParent Parent window handle
+ */
+void ShowStartupTimeDialog(HWND hwndParent) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_INPUT)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_INPUT);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    g_hwndParent = hwndParent;
+
+    HWND hwndDlg = CreateDialogParamW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCEW(CLOCK_IDD_STARTUP_DIALOG),
+        hwndParent,
+        DlgProc,
+        (LPARAM)CLOCK_IDD_STARTUP_DIALOG
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+}
+
+/**
+ * @brief Show pomodoro time edit dialog (modeless)
+ * @param hwndParent Parent window handle
+ * @param timeIndex Index of pomodoro time to edit
+ */
+void ShowPomodoroTimeEditDialog(HWND hwndParent, int timeIndex) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_POMODORO_TIME)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_POMODORO_TIME);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    g_hwndParent = hwndParent;
+    g_pomodoroSelectedIndex = timeIndex;
+
+    HWND hwndDlg = CreateDialogParamW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCEW(CLOCK_IDD_POMODORO_TIME_DIALOG),
+        hwndParent,
+        DlgProc,
+        (LPARAM)CLOCK_IDD_POMODORO_TIME_DIALOG
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+}
+
+/* ============================================================================
+ * Helper: Get dialog instance type from dialog ID
+ * ============================================================================ */
+
+static DialogInstanceType GetInstanceTypeFromDialogId(DWORD dlgId) {
+    switch (dlgId) {
+        case CLOCK_IDD_SHORTCUT_DIALOG:
+            return DIALOG_INSTANCE_SHORTCUT;
+        case CLOCK_IDD_POMODORO_TIME_DIALOG:
+            return DIALOG_INSTANCE_POMODORO_TIME;
+        default:
+            return DIALOG_INSTANCE_INPUT;
+    }
+}
+
 /* ============================================================================
  * Dialog Procedure
  * ============================================================================ */
@@ -46,12 +174,14 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             ctx->userData = (void*)lParam;
             Dialog_SetContext(hwndDlg, ctx);
 
+            DWORD dlgId = (DWORD)(LONG_PTR)ctx->userData;
+            DialogInstanceType instanceType = GetInstanceTypeFromDialogId(dlgId);
+            Dialog_RegisterInstance(instanceType, hwndDlg);
+
             g_hwndInputDialog = hwndDlg;
 
             Dialog_ApplyTopmost(hwndDlg);
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-
-            DWORD dlgId = (DWORD)(LONG_PTR)ctx->userData;
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             Dialog_SubclassEdit(hwndEdit, ctx);
@@ -136,8 +266,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
 
         case WM_CLOSE: {
-            g_hwndInputDialog = NULL;
-            EndDialog(hwndDlg, 0);
+            DestroyWindow(hwndDlg);
             return TRUE;
         }
 
@@ -157,8 +286,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText)/sizeof(wchar_t));
 
                 if (Dialog_IsEmptyOrWhitespace(inputText)) {
-                    g_hwndInputDialog = NULL;
-                    EndDialog(hwndDlg, 0);
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
@@ -207,8 +335,11 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                             time_options[time_options_count++] = atoi(tok);
                             tok = strtok(NULL, ",");
                         }
-                        g_hwndInputDialog = NULL;
-                        EndDialog(hwndDlg, IDOK);
+                        /* Notify parent that shortcut config was saved */
+                        if (g_hwndParent) {
+                            PostMessage(g_hwndParent, WM_DIALOG_SHORTCUT, 0, 0);
+                        }
+                        DestroyWindow(hwndDlg);
                     } else {
                         Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                         return TRUE;
@@ -220,27 +351,41 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     int total_seconds;
                     if (ParseInput(inputUtf8, &total_seconds)) {
                         if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-                            g_hwndInputDialog = NULL;
-                            EndDialog(hwndDlg, IDOK);
+                            /* Save pomodoro time directly */
+                            if (g_pomodoroSelectedIndex >= 0 && g_pomodoroSelectedIndex < g_AppConfig.pomodoro.times_count) {
+                                g_AppConfig.pomodoro.times[g_pomodoroSelectedIndex] = total_seconds;
+                                extern void WriteConfigPomodoroTimeOptions(int* times, int count);
+                                WriteConfigPomodoroTimeOptions(g_AppConfig.pomodoro.times, g_AppConfig.pomodoro.times_count);
+                                
+                                if (g_pomodoroSelectedIndex == 0) g_AppConfig.pomodoro.work_time = total_seconds;
+                                else if (g_pomodoroSelectedIndex == 1) g_AppConfig.pomodoro.short_break = total_seconds;
+                                else if (g_pomodoroSelectedIndex == 2) g_AppConfig.pomodoro.long_break = total_seconds;
+                            }
+                            g_pomodoroSelectedIndex = -1;
+                            DestroyWindow(hwndDlg);
                         } else if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG) {
                             extern void WriteConfigPomodoroLoopCount(int loop_count);
                             WriteConfigPomodoroLoopCount(total_seconds);
-                            g_hwndInputDialog = NULL;
-                            EndDialog(hwndDlg, IDOK);
+                            DestroyWindow(hwndDlg);
                         } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
                             extern void WriteConfigDefaultStartTime(int seconds);
                             WriteConfigDefaultStartTime(total_seconds);
-                            g_hwndInputDialog = NULL;
-                            EndDialog(hwndDlg, IDOK);
+                            DestroyWindow(hwndDlg);
                         } else {
-                            g_hwndInputDialog = NULL;
-                            EndDialog(hwndDlg, IDOK);
+                            /* Countdown input - notify parent with time value */
+                            if (g_hwndParent) {
+                                PostMessage(g_hwndParent, WM_DIALOG_COUNTDOWN, (WPARAM)total_seconds, 0);
+                            }
+                            DestroyWindow(hwndDlg);
                         }
                     } else {
                         Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                         return TRUE;
                     }
                 }
+                return TRUE;
+            } else if (LOWORD(wParam) == IDCANCEL) {
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
@@ -261,6 +406,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_KEYDOWN:
             if (wParam == VK_RETURN) {
                 SendMessage(hwndDlg, WM_COMMAND, CLOCK_IDC_BUTTON_OK, 0);
+                return TRUE;
+            } else if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
@@ -327,17 +475,23 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             return TRUE;
         }
 
-        case WM_DESTROY:
+        case WM_DESTROY: {
             if (ctx) {
                 HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
                 if (hwndEdit) {
                     Dialog_UnsubclassEdit(hwndEdit, ctx);
                 }
+                
+                DWORD dlgId = (DWORD)(LONG_PTR)ctx->userData;
+                DialogInstanceType instanceType = GetInstanceTypeFromDialogId(dlgId);
+                Dialog_UnregisterInstance(instanceType);
+                
                 Dialog_FreeContext(ctx);
             }
             g_hwndInputDialog = NULL;
+            g_pomodoroSelectedIndex = -1;
             break;
+        }
     }
     return FALSE;
 }
-

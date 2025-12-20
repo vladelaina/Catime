@@ -1,6 +1,6 @@
 /**
  * @file hotkey.c
- * @brief Data-driven hotkey management system
+ * @brief Data-driven hotkey management system (modeless dialog version)
  */
 
 #include <windows.h>
@@ -26,6 +26,7 @@
 #include "log.h"
 #include "window_procedure/window_procedure.h"
 #include "dialog/dialog_procedure.h"
+#include "dialog/dialog_common.h"
 #include "../resource/resource.h"
 
 #ifndef HOTKEYF_SHIFT
@@ -47,6 +48,7 @@ typedef struct {
 static WORD g_dialogHotkeys[HOTKEY_COUNT] = {0};
 
 static WNDPROC g_OldHotkeyDlgProc = NULL;
+static HWND g_hwndParent = NULL;
 
 static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
     {IDC_HOTKEY_EDIT1,  IDC_HOTKEY_LABEL1,  NULL, L"Show Current Time:"},
@@ -296,20 +298,26 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
 }
 
 void ShowHotkeySettingsDialog(HWND hwndParent) {
-    HINSTANCE hInstance = GetModuleHandle(NULL);
-    if (!hInstance) {
-        LOG_ERROR("Failed to get module handle for hotkey dialog");
+    if (Dialog_IsOpen(DIALOG_INSTANCE_HOTKEY)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_HOTKEY);
+        SetForegroundWindow(existing);
         return;
     }
-    
-    INT_PTR result = DialogBoxW(hInstance,
-                                MAKEINTRESOURCE(CLOCK_IDD_HOTKEY_DIALOG),
-                                hwndParent,
-                                HotkeySettingsDlgProc);
-    
-    if (result == -1) {
+
+    g_hwndParent = hwndParent;
+
+    HWND hwndDlg = CreateDialogW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCEW(CLOCK_IDD_HOTKEY_DIALOG),
+        hwndParent,
+        HotkeySettingsDlgProc
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    } else {
         DWORD error = GetLastError();
-        LOG_ERROR("Failed to create hotkey dialog. Error code: %lu. Please check log file for details.", error);
+        LOG_ERROR("Failed to create hotkey dialog. Error code: %lu", error);
     }
 }
 
@@ -319,6 +327,8 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 
     switch (msg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_HOTKEY, hwndDlg);
+
             SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             MoveDialogToPrimaryScreen(hwndDlg);
 
@@ -330,7 +340,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             LoadHotkeyConfiguration();
             SetHotkeyControlValues(hwndDlg);
 
-            UnregisterGlobalHotkeys(GetParent(hwndDlg));
+            /* Unregister hotkeys while dialog is open */
+            if (g_hwndParent) {
+                UnregisterGlobalHotkeys(g_hwndParent);
+            }
             SetupHotkeyControlSubclassing(hwndDlg);
 
             g_OldHotkeyDlgProc = (WNDPROC)SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, 
@@ -397,18 +410,41 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     ValidateAllHotkeys();
                     SaveHotkeyConfiguration();
 
-                    PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
-                    EndDialog(hwndDlg, IDOK);
+                    /* Re-register hotkeys */
+                    if (g_hwndParent) {
+                        PostMessage(g_hwndParent, WM_APP+1, 0, 0);
+                    }
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
                 case IDCANCEL:
-                    PostMessage(GetParent(hwndDlg), WM_APP+1, 0, 0);
-                    EndDialog(hwndDlg, IDCANCEL);
+                    /* Re-register hotkeys */
+                    if (g_hwndParent) {
+                        PostMessage(g_hwndParent, WM_APP+1, 0, 0);
+                    }
+                    DestroyWindow(hwndDlg);
                     return TRUE;
             }
             break;
         }
+
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                if (g_hwndParent) {
+                    PostMessage(g_hwndParent, WM_APP+1, 0, 0);
+                }
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+
+        case WM_CLOSE:
+            if (g_hwndParent) {
+                PostMessage(g_hwndParent, WM_APP+1, 0, 0);
+            }
+            DestroyWindow(hwndDlg);
+            return TRUE;
         
         case WM_DESTROY:
             if (hBackgroundBrush) {
@@ -426,6 +462,8 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             }
 
             RemoveHotkeyControlSubclassing(hwndDlg);
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_HOTKEY);
+            g_hwndParent = NULL;
             break;
     }
 

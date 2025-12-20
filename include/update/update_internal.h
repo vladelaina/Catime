@@ -70,5 +70,7 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* la
 void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg);
 void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion);
 void ShowExitMessageDialog(HWND hwnd);
+const char* GetPendingUpdateDownloadUrl(void);
+void TriggerUpdateDownload(HWND hwnd);
 
 #endif // UPDATE_INTERNAL_H

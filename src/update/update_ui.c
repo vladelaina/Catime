@@ -6,12 +6,24 @@
 #include "markdown/markdown_parser.h"
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_language.h"
+#include "dialog/dialog_common.h"
 #include "language.h"
 #include "log.h"
 #include "utils/string_convert.h"
 #include "../../resource/resource.h"
 #include <strsafe.h>
 #include <commctrl.h>
+
+/* Global dialog handles for modeless dialogs */
+static HWND g_hwndUpdateDialog = NULL;
+static HWND g_hwndNoUpdateDialog = NULL;
+static HWND g_hwndExitMsgDialog = NULL;
+
+/* Store version info for modeless update dialog */
+static VersionInfo g_updateVersionInfo = {0};
+
+/* Store download URL copy for async update */
+static char g_downloadUrlCopy[512] = {0};
 
 /* Thin wrappers using utils/string_convert.h */
 static inline wchar_t* LocalUtf8ToWideAlloc(const char* utf8Str) {
@@ -28,6 +40,10 @@ static void InitializeDialog(HWND hwndDlg, int dialogId) {
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_EXIT_MSG, hwndDlg);
+            g_hwndExitMsgDialog = hwndDlg;
+            
+            Dialog_ApplyTopmost(hwndDlg);
             InitializeDialog(hwndDlg, IDD_EXIT_DIALOG);
             
             SetDlgItemTextW(hwndDlg, IDC_EXIT_TEXT, 
@@ -39,23 +55,34 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             return TRUE;
         }
         
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+            
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                EndDialog(hwndDlg, IDOK);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
             
         case WM_CLOSE:
-            EndDialog(hwndDlg, IDCANCEL);
+            DestroyWindow(hwndDlg);
             return TRUE;
+            
+        case WM_DESTROY:
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_EXIT_MSG);
+            g_hwndExitMsgDialog = NULL;
+            break;
     }
     return FALSE;
 }
 
 /** @brief Update available dialog */
 INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static VersionInfo* versionInfo = NULL;
     static wchar_t* g_notesDisplayText = NULL;
     static MarkdownLink* g_notesLinks = NULL;
     static int g_notesLinkCount = 0;
@@ -71,11 +98,15 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
     switch (msg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_UPDATE, hwndDlg);
+            g_hwndUpdateDialog = hwndDlg;
+            
+            Dialog_ApplyTopmost(hwndDlg);
             InitializeDialog(hwndDlg, IDD_UPDATE_DIALOG);
-            versionInfo = (VersionInfo*)lParam;
             g_textHeight = 0;
 
-            if (versionInfo) {
+            VersionInfo* versionInfo = &g_updateVersionInfo;
+            if (versionInfo->currentVersion) {
                 wchar_t* currentVerW = LocalUtf8ToWideAlloc(versionInfo->currentVersion);
                 wchar_t* latestVerW = LocalUtf8ToWideAlloc(versionInfo->latestVersion);
 
@@ -194,7 +225,16 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     g_notesDisplayText = NULL;
                 }
                 g_textHeight = 0;
-                EndDialog(hwndDlg, LOWORD(wParam));
+                
+                /* Store the result and notify parent before destroying */
+                HWND hwndParent = GetParent(hwndDlg);
+                int result = LOWORD(wParam);
+                DestroyWindow(hwndDlg);
+                
+                /* If user chose to update, trigger the update process */
+                if (result == IDYES && hwndParent) {
+                    PostMessage(hwndParent, WM_DIALOG_UPDATE, IDYES, 0);
+                }
                 return TRUE;
             }
             break;
@@ -271,6 +311,41 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             break;
         }
 
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
+                g_notesLinks = NULL;
+                g_notesLinkCount = 0;
+                if (g_notesHeadings) {
+                    free(g_notesHeadings);
+                    g_notesHeadings = NULL;
+                }
+                g_notesHeadingCount = 0;
+                if (g_notesStyles) {
+                    free(g_notesStyles);
+                    g_notesStyles = NULL;
+                }
+                g_notesStyleCount = 0;
+                if (g_notesListItems) {
+                    free(g_notesListItems);
+                    g_notesListItems = NULL;
+                }
+                g_notesListItemCount = 0;
+                if (g_notesBlockquotes) {
+                    free(g_notesBlockquotes);
+                    g_notesBlockquotes = NULL;
+                }
+                g_notesBlockquoteCount = 0;
+                if (g_notesDisplayText) {
+                    free(g_notesDisplayText);
+                    g_notesDisplayText = NULL;
+                }
+                g_textHeight = 0;
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+
         case WM_CLOSE:
             FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
             g_notesLinks = NULL;
@@ -300,8 +375,13 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 g_notesDisplayText = NULL;
             }
             g_textHeight = 0;
-            EndDialog(hwndDlg, IDNO);
+            DestroyWindow(hwndDlg);
             return TRUE;
+            
+        case WM_DESTROY:
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_UPDATE);
+            g_hwndUpdateDialog = NULL;
+            break;
     }
     return FALSE;
 }
@@ -331,13 +411,18 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
 }
 
 /** @brief No update dialog */
+static char g_noUpdateVersion[64] = {0};
+
 INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_NO_UPDATE, hwndDlg);
+            g_hwndNoUpdateDialog = hwndDlg;
+            
+            Dialog_ApplyTopmost(hwndDlg);
             InitializeDialog(hwndDlg, IDD_NO_UPDATE_DIALOG);
             
-            const char* currentVersion = (const char*)lParam;
-            if (currentVersion) {
+            if (g_noUpdateVersion[0]) {
                 const wchar_t* baseText = GetDialogLocalizedString(IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT);
                 if (!baseText) baseText = L"You are already using the latest version!";
                 
@@ -345,35 +430,79 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
                 StringCbPrintfW(fullMessage, sizeof(fullMessage), L"%s\n%s %hs",
                     baseText,
                     GetLocalizedString(NULL, L"Current version:"),
-                    currentVersion);
+                    g_noUpdateVersion);
                 SetDlgItemTextW(hwndDlg, IDC_NO_UPDATE_TEXT, fullMessage);
             }
             return TRUE;
         }
         
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+        
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                EndDialog(hwndDlg, IDOK);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
             
         case WM_CLOSE:
-            EndDialog(hwndDlg, IDCANCEL);
+            DestroyWindow(hwndDlg);
             return TRUE;
+            
+        case WM_DESTROY:
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_NO_UPDATE);
+            g_hwndNoUpdateDialog = NULL;
+            break;
     }
     return FALSE;
 }
 
 void ShowExitMessageDialog(HWND hwnd) {
-    DialogBoxW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_EXIT_DIALOG), hwnd, ExitMsgDlgProc);
+    if (Dialog_IsOpen(DIALOG_INSTANCE_EXIT_MSG)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_EXIT_MSG);
+        SetForegroundWindow(existing);
+        return;
+    }
+    
+    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_EXIT_DIALOG), hwnd, ExitMsgDlgProc);
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
 }
 
 int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion,
                                   const char* downloadUrl, const char* releaseNotes) {
-    VersionInfo info = {currentVersion, latestVersion, downloadUrl, releaseNotes};
-    return DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
-                          hwnd, UpdateDlgProc, (LPARAM)&info);
+    if (Dialog_IsOpen(DIALOG_INSTANCE_UPDATE)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_UPDATE);
+        SetForegroundWindow(existing);
+        return IDNO;
+    }
+    
+    /* Store version info for modeless dialog */
+    g_updateVersionInfo.currentVersion = currentVersion;
+    g_updateVersionInfo.latestVersion = latestVersion;
+    g_updateVersionInfo.downloadUrl = downloadUrl;
+    g_updateVersionInfo.releaseNotes = releaseNotes;
+    
+    /* Store download URL copy for async update handling */
+    if (downloadUrl) {
+        strncpy(g_downloadUrlCopy, downloadUrl, sizeof(g_downloadUrlCopy) - 1);
+        g_downloadUrlCopy[sizeof(g_downloadUrlCopy) - 1] = '\0';
+    }
+    
+    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
+                          hwnd, UpdateDlgProc);
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+    
+    /* Return IDNO since we can't block for result in modeless mode */
+    return IDNO;
 }
 
 void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
@@ -396,6 +525,54 @@ void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
 }
 
 void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
-    DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_NO_UPDATE_DIALOG), 
-                   hwnd, NoUpdateDlgProc, (LPARAM)currentVersion);
+    if (Dialog_IsOpen(DIALOG_INSTANCE_NO_UPDATE)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_NO_UPDATE);
+        SetForegroundWindow(existing);
+        return;
+    }
+    
+    /* Store version for modeless dialog */
+    if (currentVersion) {
+        strncpy(g_noUpdateVersion, currentVersion, sizeof(g_noUpdateVersion) - 1);
+        g_noUpdateVersion[sizeof(g_noUpdateVersion) - 1] = '\0';
+    }
+    
+    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_NO_UPDATE_DIALOG), 
+                   hwnd, NoUpdateDlgProc);
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+}
+
+/**
+ * @brief Get the pending update download URL
+ * @return Pointer to stored download URL, or NULL if none
+ */
+const char* GetPendingUpdateDownloadUrl(void) {
+    if (g_downloadUrlCopy[0] != '\0') {
+        return g_downloadUrlCopy;
+    }
+    return NULL;
+}
+
+/**
+ * @brief Trigger update download and exit
+ * @param hwnd Parent window handle
+ */
+void TriggerUpdateDownload(HWND hwnd) {
+    const char* url = GetPendingUpdateDownloadUrl();
+    if (url && url[0] != '\0') {
+        LOG_INFO("User chose to update now (from modeless dialog)");
+        
+        /* Open browser with download URL */
+        wchar_t* urlW = Utf8ToWideAlloc(url);
+        if (urlW) {
+            ShellExecuteW(NULL, L"open", urlW, NULL, NULL, SW_SHOWNORMAL);
+            free(urlW);
+        }
+        
+        /* Show exit message and quit */
+        ShowExitMessageDialog(hwnd);
+        PostQuitMessage(0);
+    }
 }

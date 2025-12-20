@@ -265,6 +265,14 @@ typedef enum {
     DIALOG_INSTANCE_NOTIFICATION_MSG,
     DIALOG_INSTANCE_NOTIFICATION_DISP,
     DIALOG_INSTANCE_NOTIFICATION_FULL,
+    /* New modeless dialog types */
+    DIALOG_INSTANCE_SHORTCUT,        /**< Quick countdown time settings */
+    DIALOG_INSTANCE_POMODORO_TIME,   /**< Pomodoro time edit */
+    DIALOG_INSTANCE_COLOR,           /**< Color picker */
+    DIALOG_INSTANCE_HOTKEY,          /**< Hotkey settings */
+    DIALOG_INSTANCE_UPDATE,          /**< Update available dialog */
+    DIALOG_INSTANCE_NO_UPDATE,       /**< No update dialog */
+    DIALOG_INSTANCE_EXIT_MSG,        /**< Exit message dialog */
     DIALOG_INSTANCE_COUNT
 } DialogInstanceType;
 

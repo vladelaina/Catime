@@ -60,7 +60,8 @@ char g_websiteInput[512] = {0};
 void ShowAboutDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_ABOUT)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_ABOUT);
-        EndDialog(existing, 0);
+        SetForegroundWindow(existing);
+        return;
     }
 
     /* DPI awareness for high-DPI displays */
@@ -81,10 +82,16 @@ void ShowAboutDialog(HWND hwndParent) {
         }
     }
 
-    DialogBoxW(GetModuleHandle(NULL),
-              MAKEINTRESOURCE(IDD_ABOUT_DIALOG),
-              hwndParent,
-              AboutDlgProc);
+    HWND hwndDlg = CreateDialogW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCEW(IDD_ABOUT_DIALOG),
+        hwndParent,
+        AboutDlgProc
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
 
     if (hOldDpiContext && hUser32) {
         typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
@@ -177,6 +184,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
+            Dialog_ApplyTopmost(hwndDlg);
 
             return TRUE;
         }
@@ -191,7 +199,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, LOWORD(wParam));
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
 
@@ -235,8 +243,15 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             break;
         }
 
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+
         case WM_CLOSE:
-            EndDialog(hwndDlg, 0);
+            DestroyWindow(hwndDlg);
             return TRUE;
     }
     return FALSE;
@@ -247,10 +262,22 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  * ============================================================================ */
 
 void ShowWebsiteDialog(HWND hwndParent) {
-    DialogBoxW(GetModuleHandle(NULL),
-              MAKEINTRESOURCE(CLOCK_IDD_WEBSITE_DIALOG),
-              hwndParent,
-              WebsiteDialogProc);
+    if (Dialog_IsOpen(DIALOG_INSTANCE_WEBSITE)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_WEBSITE);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    HWND hwndDlg = CreateDialogW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCEW(CLOCK_IDD_WEBSITE_DIALOG),
+        hwndParent,
+        WebsiteDialogProc
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
 }
 
 INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -279,6 +306,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_WEBSITE_DIALOG);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
+            Dialog_ApplyTopmost(hwndDlg);
 
             SetFocus(hwndEdit);
             Dialog_SelectAllText(hwndEdit);
@@ -303,7 +331,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url)/sizeof(wchar_t));
 
                 if (Dialog_IsEmptyOrWhitespace(url)) {
-                    EndDialog(hwndDlg, IDCANCEL);
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
@@ -318,10 +346,17 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 char urlUtf8[MAX_PATH * 3];
                 WideCharToMultiByte(CP_UTF8, 0, url, -1, urlUtf8, sizeof(urlUtf8), NULL, NULL);
                 WriteConfigTimeoutWebsite(urlUtf8);
-                EndDialog(hwndDlg, IDOK);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, IDCANCEL);
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
@@ -338,7 +373,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             break;
 
         case WM_CLOSE:
-            EndDialog(hwndDlg, IDCANCEL);
+            DestroyWindow(hwndDlg);
             return TRUE;
     }
 

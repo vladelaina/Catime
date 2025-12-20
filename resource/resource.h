@@ -37,6 +37,13 @@
 #define CLOCK_WM_ANIMATION_PREVIEW_LOADED (WM_USER + 3)  /**< Animation preview loaded message */
 #define CLOCK_WM_PLUGIN_EXIT (WM_USER + 4)  /**< Plugin requested exit via <exit> tag */
 #define CLOCK_WM_MAIN_TIMER_TICK (WM_USER + 5)  /**< High-precision main timer tick for smooth milliseconds */
+
+/** @brief Modeless dialog result notification messages */
+#define WM_DIALOG_COUNTDOWN     (WM_USER + 10)  /**< Countdown dialog result: wParam=seconds, lParam=0 */
+#define WM_DIALOG_SHORTCUT      (WM_USER + 11)  /**< Shortcut time dialog result: config saved */
+#define WM_DIALOG_COLOR         (WM_USER + 12)  /**< Color dialog result: wParam=0(cancel)/1(ok) */
+#define WM_DIALOG_CLOSED        (WM_USER + 13)  /**< Generic dialog closed notification */
+#define WM_DIALOG_UPDATE        (WM_USER + 14)  /**< Update dialog result: wParam=IDYES(update)/IDNO(later) */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
 #define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 

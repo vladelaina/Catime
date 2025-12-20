@@ -23,10 +23,14 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
         return;
     }
 
-    DialogBoxW(GetModuleHandle(NULL),
+    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL),
               MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG),
               hwndParent,
               NotificationDisplayDlgProc);
+    
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
 }
 
 INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -112,16 +116,23 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 WriteConfigNotificationTimeout(timeInMs);
                 WriteConfigNotificationOpacity(opacity);
 
-                EndDialog(hwndDlg, IDOK);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
-                EndDialog(hwndDlg, IDCANCEL);
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
 
         case WM_CLOSE:
-            EndDialog(hwndDlg, IDCANCEL);
+            DestroyWindow(hwndDlg);
             return TRUE;
 
         case WM_DESTROY:

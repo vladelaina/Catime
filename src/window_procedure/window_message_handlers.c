@@ -436,6 +436,68 @@ UINT GetPendingAnimationPreviewItem(void) {
     return g_pendingAnimationPreviewItem;
 }
 
+/* ============================================================================
+ * Modeless Dialog Result Handlers
+ * ============================================================================ */
+
+/**
+ * @brief Handle countdown dialog result
+ * @param wp Countdown time in seconds (0 = cancelled)
+ * @param lp Reserved
+ */
+LRESULT HandleDialogCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    int seconds = (int)wp;
+    if (seconds > 0) {
+        extern BOOL StartCountdownWithTime(HWND hwnd, int seconds);
+        StartCountdownWithTime(hwnd, seconds);
+    }
+    return 0;
+}
+
+/**
+ * @brief Handle shortcut time dialog result
+ * @param wp Reserved
+ * @param lp Reserved
+ * @note Config is saved by dialog, just need to acknowledge
+ */
+LRESULT HandleDialogShortcut(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)hwnd; (void)wp; (void)lp;
+    /* Shortcut time options already saved by dialog */
+    return 0;
+}
+
+/**
+ * @brief Handle color dialog result
+ * @param wp 0 = cancelled, 1 = color applied
+ * @param lp Reserved
+ */
+LRESULT HandleDialogColor(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (wp == 0) {
+        /* Color cancelled - restore preview if needed */
+        extern void CancelPreview(HWND hwnd);
+        CancelPreview(hwnd);
+    }
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
+/**
+ * @brief Handle update dialog result
+ * @param wp IDYES = update now, IDNO = later
+ * @param lp Reserved
+ */
+LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (wp == IDYES) {
+        /* User chose to update - trigger download and exit */
+        extern void TriggerUpdateDownload(HWND hwnd);
+        TriggerUpdateDownload(hwnd);
+    }
+    return 0;
+}
+
 LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     UINT menuItem = LOWORD(wp);
     UINT flags = HIWORD(wp);

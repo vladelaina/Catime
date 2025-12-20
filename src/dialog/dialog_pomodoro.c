@@ -131,6 +131,13 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
             }
             break;
 
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+
         case WM_DESTROY:
             if (ctx) {
                 HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
@@ -233,7 +240,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 WideCharToMultiByte(CP_UTF8, 0, winput, -1, input, sizeof(input), NULL, NULL);
 
                 if (Dialog_IsEmptyOrWhitespaceA(input)) {
-                    EndDialog(hwndDlg, IDCANCEL);
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
@@ -277,6 +284,13 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 DestroyWindow(hwndDlg);
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
                 DestroyWindow(hwndDlg);
                 return TRUE;
             }

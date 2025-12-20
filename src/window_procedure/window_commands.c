@@ -250,8 +250,8 @@ static LRESULT CmdAutoStart(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdColorDialog(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    DialogBoxW(GetModuleHandle(NULL), MAKEINTRESOURCEW(CLOCK_IDD_COLOR_DIALOG), 
-              hwnd, (DLGPROC)ColorDlgProc);
+    /* Use modeless dialog - result handled via WM_DIALOG_COLOR */
+    ShowColorInputDialog(hwnd);
     return 0;
 }
 

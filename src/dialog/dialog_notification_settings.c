@@ -7,6 +7,7 @@
 #include "dialog/dialog_notification_audio.h"
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_language.h"
+#include "dialog/dialog_common.h"
 #include "config.h"
 #include "audio_player.h"
 #include "notification.h"
@@ -147,13 +148,19 @@ void UpdateNotificationOpacityControls(int opacity) {
  * ============================================================================ */
 
 void ShowNotificationSettingsDialog(HWND hwndParent) {
-    if (!g_hwndNotificationSettingsDialog) {
-        DialogBoxW(GetModuleHandle(NULL), 
-                  MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 
-                  hwndParent, 
-                  NotificationSettingsDlgProc);
-    } else {
-        SetForegroundWindow(g_hwndNotificationSettingsDialog);
+    if (Dialog_IsOpen(DIALOG_INSTANCE_NOTIFICATION_FULL)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_NOTIFICATION_FULL);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), 
+              MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG), 
+              hwndParent, 
+              NotificationSettingsDlgProc);
+    
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
     }
 }
 
@@ -165,7 +172,10 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
     
     switch (msg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_NOTIFICATION_FULL, hwndDlg);
             g_hwndNotificationSettingsDialog = hwndDlg;
+            
+            Dialog_ApplyTopmost(hwndDlg);
             
             originalVolume = g_AppConfig.notification.sound.volume;
             
@@ -438,8 +448,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
                 isInitializing = TRUE;
 
-                EndDialog(hwndDlg, IDOK);
-                g_hwndNotificationSettingsDialog = NULL;
+                DestroyWindow(hwndDlg);
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {
                 ClosePreviewNotification();
@@ -457,8 +466,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 
                 isInitializing = TRUE;
                 
-                EndDialog(hwndDlg, IDCANCEL);
-                g_hwndNotificationSettingsDialog = NULL;
+                DestroyWindow(hwndDlg);
                 return TRUE;
             } else if (LOWORD(wParam) == IDC_TEST_SOUND_BUTTON) {
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
@@ -491,6 +499,23 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             isPlaying = FALSE;
             return TRUE;
             
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                KillTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW);
+                if (isVolumePreviewPlaying) {
+                    StopNotificationSound();
+                    isVolumePreviewPlaying = FALSE;
+                }
+                ClosePreviewNotification();
+                SetAudioVolume(originalVolume);
+                CleanupAudioPlayback(isPlaying);
+                isPlaying = FALSE;
+                isInitializing = TRUE;
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+            
         case WM_CLOSE:
             KillTimer(hwndDlg, TIMER_ID_VOLUME_PREVIEW);
             if (isVolumePreviewPlaying) {
@@ -502,8 +527,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             isInitializing = TRUE;
 
-            EndDialog(hwndDlg, IDCANCEL);
-            g_hwndNotificationSettingsDialog = NULL;
+            DestroyWindow(hwndDlg);
             return TRUE;
 
         case WM_DESTROY:
@@ -514,6 +538,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             }
             ClosePreviewNotification();
             SetAudioPlaybackCompleteCallback(NULL, NULL);
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_NOTIFICATION_FULL);
             g_hwndNotificationSettingsDialog = NULL;
             isInitializing = TRUE;
             break;

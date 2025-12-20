@@ -162,6 +162,11 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded, "Animation preview loaded"},
     {CLOCK_WM_PLUGIN_EXIT, HandlePluginExitMessage, "Plugin exit via <exit> tag"},
     {CLOCK_WM_MAIN_TIMER_TICK, HandleMainTimerTick, "High-precision timer tick"},
+    /* Modeless dialog result handlers */
+    {WM_DIALOG_COUNTDOWN, HandleDialogCountdown, "Countdown dialog result"},
+    {WM_DIALOG_SHORTCUT, HandleDialogShortcut, "Shortcut time dialog result"},
+    {WM_DIALOG_COLOR, HandleDialogColor, "Color dialog result"},
+    {WM_DIALOG_UPDATE, HandleDialogUpdate, "Update dialog result"},
     {0, NULL, NULL}
 };
 
