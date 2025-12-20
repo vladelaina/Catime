@@ -43,7 +43,15 @@ static void UpdatePreviewOpacity(int opacity) {
 static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, const wchar_t* message) {
     extern void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview);
     
+    /* Ensure any existing preview window is properly closed first */
     if (g_hwndPreviewNotification && IsWindow(g_hwndPreviewNotification)) {
+        return;
+    }
+    
+    /* Also check by finding window in case handle became stale */
+    HWND existingPreview = FindPreviewNotificationWindow();
+    if (existingPreview && IsWindow(existingPreview)) {
+        g_hwndPreviewNotification = existingPreview;
         return;
     }
     

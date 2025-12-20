@@ -437,9 +437,8 @@ void ToggleMilliseconds(HWND hwnd) {
 }
 
 void ToggleTopmost(HWND hwnd) {
-    extern void WriteConfigTopmost(const char* value);
-    // Use "true"/"false" literals to avoid dependency on specific header macros if not present
-    WriteConfigTopmost(!CLOCK_WINDOW_TOPMOST ? "true" : "false");
+    extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
+    SetWindowTopmost(hwnd, !CLOCK_WINDOW_TOPMOST);
 }
 
 void ToggleWindowVisibility(HWND hwnd) {

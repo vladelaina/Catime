@@ -186,8 +186,9 @@ LRESULT CmdSetCountdownTime(HWND hwnd, WPARAM wp, LPARAM lp) {
     int total_seconds = 0;
     if (ValidatedTimeInputLoop(hwnd, CLOCK_IDD_STARTUP_DIALOG, &total_seconds)) {
         WriteConfigDefaultStartTime(total_seconds);
+        return CmdSetStartupMode(hwnd, "COUNTDOWN");
     }
-    return CmdSetStartupMode(hwnd, "COUNTDOWN");
+    return 0;
 }
 
 /* ============================================================================

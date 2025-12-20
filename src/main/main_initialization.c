@@ -320,6 +320,11 @@ void HandleStartupMode(HWND hwnd) {
             LOG_INFO("Setting to count-up mode");
             CLOCK_COUNT_UP = TRUE;
             elapsed_time = 0;
+            countup_elapsed_time = 0;
+            /* Initialize g_start_time for count-up time calculation */
+            extern int64_t g_start_time;
+            extern int64_t GetAbsoluteTimeMs(void);
+            g_start_time = GetAbsoluteTimeMs();
             break;
             
         case STARTUP_MODE_NO_DISPLAY:

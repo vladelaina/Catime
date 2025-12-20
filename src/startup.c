@@ -202,6 +202,18 @@ static void ApplyModeConfig(HWND hwnd, const StartupModeConfig* config) {
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
     
+    /* Initialize absolute time references for timer calculation */
+    extern int64_t g_start_time;
+    extern int64_t g_target_end_time;
+    extern int64_t GetAbsoluteTimeMs(void);
+    int64_t now = GetAbsoluteTimeMs();
+    
+    if (config->countUp) {
+        g_start_time = now;
+    } else if (CLOCK_TOTAL_TIME > 0) {
+        g_target_end_time = now + ((int64_t)CLOCK_TOTAL_TIME * 1000);
+    }
+    
     extern void ResetMillisecondAccumulator(void);
     ResetMillisecondAccumulator();
     

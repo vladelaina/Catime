@@ -410,6 +410,13 @@ void ResetTimerWithInterval(HWND hwnd) {
  * @brief Update startup mode configuration
  */
 void WriteConfigStartupMode(const char* mode) {
+    extern char CLOCK_STARTUP_MODE[20];
+    
+    /* Update in-memory variable */
+    strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
+    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+    
+    /* Persist to config file */
     UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "STARTUP_MODE", mode);
 }
 

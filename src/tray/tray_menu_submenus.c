@@ -162,41 +162,37 @@ void BuildTimeoutActionSubmenu(HMENU hMenu) {
  * @param hMenu Parent menu handle
  */
 void BuildPresetManagementSubmenu(HMENU hMenu) {
+    extern char CLOCK_STARTUP_MODE[20];
+    
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(NULL, L"Modify Quick Countdown Options"));
     
     HMENU hStartupSettingsMenu = CreatePopupMenu();
-
-    char configPath[MAX_PATH];
-    GetConfigPath(configPath, MAX_PATH);
     
-    char currentStartupMode[20] = "SHOW_TIME";
-    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "SHOW_TIME",
-                  currentStartupMode, sizeof(currentStartupMode), configPath);
-    
+    /* Use in-memory variable instead of reading config file each time */
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(currentStartupMode, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
+                (strcmp(CLOCK_STARTUP_MODE, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_SET_COUNTDOWN_TIME,
                 GetLocalizedString(NULL, L"Countdown"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(currentStartupMode, "COUNT_UP") == 0 ? MF_CHECKED : 0),
+                (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_COUNT_UP,
                 GetLocalizedString(NULL, L"Stopwatch"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(currentStartupMode, "POMODORO") == 0 ? MF_CHECKED : 0),
+                (strcmp(CLOCK_STARTUP_MODE, "POMODORO") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_POMODORO,
                 GetLocalizedString(NULL, L"Pomodoro"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(currentStartupMode, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
+                (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_SHOW_TIME,
                 GetLocalizedString(NULL, L"Show Current Time"));
     
     AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(currentStartupMode, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
+                (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_START_NO_DISPLAY,
                 GetLocalizedString(NULL, L"No Display"));
     
