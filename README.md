@@ -1,18 +1,10 @@
 <div align="center">
 
-# v1.3.1 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 803KB`
+# v1.3.1 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 803KB`!
 
 
-<h3>Special thanks to our sponsors:</h3>
-</a>
-  
-<a href="https://skywork.ai/p/xfncS3" target="_blank">
-  <img width="1960" height="240" alt="skywork" 
-       src="https://github.com/user-attachments/assets/57506de0-128d-4653-9a14-ee2f416d6831" />
-</a>
 </div>
 
-# 
 
 <!-- Project Title + Logo -->
 <div align="center">

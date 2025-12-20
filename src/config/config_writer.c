@@ -503,15 +503,3 @@ void WriteConfigScaleSteps(int normal_step, int fast_step) {
     WriteIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_FAST", fast_step, config_path);
 }
 
-void FlushConfigToDisk(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    /* Write all config items to disk */
-    ConfigWriteItem items[150];
-    int count = 0;
-    if (CollectCurrentConfig(items, &count)) {
-        WriteConfigItems(config_path, items, count);
-    }
-}
-

@@ -45,18 +45,6 @@ static int StringToEnum(const EnumStrMap* map, const char* str, int defaultVal) 
 }
 
 /**
- * @brief Read notification message texts from config
- */
-void ReadNotificationMessagesConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-
-    ReadIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", DEFAULT_TIMEOUT_MESSAGE, 
-                 g_AppConfig.notification.messages.timeout_message, sizeof(g_AppConfig.notification.messages.timeout_message), config_path);
-}
-
-
-/**
  * @brief Update notification message texts in config
  */
 void WriteConfigNotificationMessages(const char* timeout_msg) {
@@ -71,16 +59,6 @@ void WriteConfigNotificationMessages(const char* timeout_msg) {
 
 
 /**
- * @brief Read notification timeout setting from config file
- */
-void ReadNotificationTimeoutConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    g_AppConfig.notification.display.timeout_ms = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000, config_path);
-}
-
-
-/**
  * @brief Write notification timeout setting to config file
  */
 void WriteConfigNotificationTimeout(int timeout_ms) {
@@ -90,43 +68,11 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
 
 
 /**
- * @brief Read notification opacity setting from config file
- */
-void ReadNotificationOpacityConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    int opacity = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", 
-                            DEFAULT_NOTIFICATION_MAX_OPACITY, config_path);
-    /** Validate opacity range (1-100) */
-    if (opacity >= MIN_OPACITY && opacity <= MAX_OPACITY) {
-        g_AppConfig.notification.display.max_opacity = opacity;
-    } else {
-        g_AppConfig.notification.display.max_opacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
-    }
-}
-
-
-/**
  * @brief Write notification opacity setting to config file
  */
 void WriteConfigNotificationOpacity(int opacity) {
     g_AppConfig.notification.display.max_opacity = opacity;
     UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", opacity);
-}
-
-
-/**
- * @brief Read notification type setting from config file
- */
-void ReadNotificationTypeConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    char typeStr[32];
-    ReadIniString(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", 
-                 typeStr, sizeof(typeStr), config_path);
-    
-    g_AppConfig.notification.display.type = StringToEnum(NOTIFICATION_TYPE_MAP, typeStr, NOTIFICATION_TYPE_CATIME);
 }
 
 
@@ -146,54 +92,11 @@ void WriteConfigNotificationType(NotificationType type) {
 
 
 /**
- * @brief Read notification disabled setting from config
- */
-void ReadNotificationDisabledConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    g_AppConfig.notification.display.disabled = ReadIniBool(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", FALSE, config_path);
-}
-
-
-/**
  * @brief Write notification disabled setting to config file
  */
 void WriteConfigNotificationDisabled(BOOL disabled) {
     g_AppConfig.notification.display.disabled = disabled;
     UpdateConfigBoolAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", disabled);
-}
-
-
-/**
- * @brief Read notification sound file path from config
- */
-void ReadNotificationSoundConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    ReadIniString(INI_SECTION_NOTIFICATION,
-                 "NOTIFICATION_SOUND_FILE",
-                 "",
-                 g_AppConfig.notification.sound.sound_file,
-                 MAX_PATH,
-                 config_path);
-
-    /** Normalize %LOCALAPPDATA% placeholder to absolute path */
-    if (g_AppConfig.notification.sound.sound_file[0] != '\0') {
-        const char* varToken = "%LOCALAPPDATA%";
-        size_t tokenLen = strlen(varToken);
-        if (_strnicmp(g_AppConfig.notification.sound.sound_file, varToken, (int)tokenLen) == 0) {
-            const char* localAppData = getenv("LOCALAPPDATA");
-            if (localAppData && localAppData[0] != '\0') {
-                char resolved[MAX_PATH] = {0};
-                snprintf(resolved, sizeof(resolved), "%s%s",
-                         localAppData,
-                         g_AppConfig.notification.sound.sound_file + tokenLen);
-                strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
-                g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
-            }
-        }
-    }
 }
 
 
@@ -234,40 +137,12 @@ void WriteConfigNotificationSound(const char* sound_file) {
 }
 
 
-void ReadNotificationVolumeConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    int volume = ReadIniInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", 100, config_path);
-    /** Validate volume range (0-100) */
-    if (volume >= 0 && volume <= 100) {
-        g_AppConfig.notification.sound.volume = volume;
-    } else {
-        g_AppConfig.notification.sound.volume = 100;
-    }
-}
-
-
 void WriteConfigNotificationVolume(int volume) {
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
     
     g_AppConfig.notification.sound.volume = volume;
     UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", volume);
-}
-
-void ReadNotificationWindowConfig(void) {
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    
-    g_AppConfig.notification.display.window_x = ReadIniInt(
-        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_X", -1, config_path);
-    g_AppConfig.notification.display.window_y = ReadIniInt(
-        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_Y", -1, config_path);
-    g_AppConfig.notification.display.window_width = ReadIniInt(
-        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_WIDTH", 0, config_path);
-    g_AppConfig.notification.display.window_height = ReadIniInt(
-        INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_HEIGHT", 0, config_path);
 }
 
 void WriteConfigNotificationWindow(int x, int y, int width, int height) {

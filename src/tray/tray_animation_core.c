@@ -247,6 +247,25 @@ static void UpdateTrayIconToCurrentFrame(void) {
         return;
     }
     
+    /* Handle Caps Lock indicator */
+    if (currentAnim->sourceType == ANIM_SOURCE_CAPSLOCK) {
+        BOOL capsOn = IsCapsLockOn();
+        
+        HICON hIcon = CreateCapsLockIcon(capsOn);
+        if (hIcon) {
+            NOTIFYICONDATAW nid = {0};
+            nid.cbSize = sizeof(nid);
+            nid.hWnd = g_trayHwnd;
+            nid.uID = CLOCK_ID_TRAY_APP_ICON;
+            nid.uFlags = NIF_ICON;
+            nid.hIcon = hIcon;
+            Shell_NotifyIconW(NIM_MODIFY, &nid);
+            DestroyIcon(hIcon);
+            RecordSuccessfulUpdate();
+        }
+        return;
+    }
+    
     if (currentAnim->count <= 0) {
         if (g_isPreviewActive) {
             g_isPreviewActive = FALSE;
@@ -469,7 +488,9 @@ BOOL SetCurrentAnimationName(const char* name) {
     
     /* Seamless preview promotion */
     if (g_isPreviewActive && g_previewAnimationName[0] != '\0' &&
-        _stricmp(g_previewAnimationName, name) == 0 && g_previewAnimation.count > 0) {
+        _stricmp(g_previewAnimationName, name) == 0 && 
+        (g_previewAnimation.count > 0 || g_previewAnimation.sourceType == ANIM_SOURCE_PERCENT ||
+         g_previewAnimation.sourceType == ANIM_SOURCE_CAPSLOCK)) {
         
         if (g_criticalSectionInitialized) {
             EnterCriticalSection(&g_animCriticalSection);
@@ -639,9 +660,9 @@ static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
         g_previewIndex = 0;
         g_frameRateCtrl.framePosition = 0.0;
 
-        /* For percent icons (count=0), __none__ (transparent), or regular animations (count>0), activate preview */
+        /* For percent icons, capslock icons (count=0), __none__ (transparent), or regular animations (count>0), activate preview */
         if (tempAnim.count > 0 || tempAnim.sourceType == ANIM_SOURCE_PERCENT ||
-            _stricmp(name, "__none__") == 0) {
+            tempAnim.sourceType == ANIM_SOURCE_CAPSLOCK || _stricmp(name, "__none__") == 0) {
             strncpy(g_previewAnimationName, name, sizeof(g_previewAnimationName) - 1);
             g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
             g_isPreviewActive = TRUE;
@@ -885,27 +906,49 @@ void TrayAnimation_RecomputeTimerDelay(void) {
 }
 
 /**
+ * @brief Clear current animation name to force reload
+ */
+void TrayAnimation_ClearCurrentName(void) {
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+    g_animationName[0] = '\0';
+    if (g_criticalSectionInitialized) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+}
+
+/**
  * @brief Update percent icon if needed
  */
 void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
     if (!g_animationName[0]) return;
-    
-    /* Only update if it's a builtin percent type (e.g. __cpu__, __mem__, __battery__) */
-    const BuiltinAnimDef* def = GetBuiltinAnimDef(g_animationName);
-    if (!def || def->type != ANIM_SOURCE_PERCENT) return;
-    
     if (g_isPreviewActive) return;
     
-    int p = 0;
-    if (def->getValue) {
-        p = def->getValue();
+    const BuiltinAnimDef* def = GetBuiltinAnimDef(g_animationName);
+    if (!def) return;
+    
+    HICON hIcon = NULL;
+    
+    /* Handle percent type (CPU, Memory, Battery) */
+    if (def->type == ANIM_SOURCE_PERCENT) {
+        int p = 0;
+        if (def->getValue) {
+            p = def->getValue();
+        }
+        if (p < 0) p = 0;
+        if (p > 100) p = 100;
+        hIcon = CreatePercentIcon16(p);
+    }
+    /* Handle Caps Lock indicator */
+    else if (def->type == ANIM_SOURCE_CAPSLOCK) {
+        hIcon = CreateCapsLockIcon(IsCapsLockOn());
+    }
+    else {
+        return;
     }
     
-    if (p < 0) p = 0;
-    if (p > 100) p = 100;
-    
-    HICON hIcon = CreatePercentIcon16(p);
     if (!hIcon) return;
     
     NOTIFYICONDATAW nid = {0};

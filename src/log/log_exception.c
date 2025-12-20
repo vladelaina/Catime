@@ -45,25 +45,31 @@ static void SignalHandler(int signal) {
     if (InterlockedExchange(&inCrashHandler, 1) != 0) {
         exit(signal);
     }
-    
+
     const char* signalDesc = GetSignalDescription(signal);
-    
-    /** No critical section to avoid deadlock */
-    FILE* logFile = GetLogFileHandle();
-    if (logFile) {
-        fprintf(logFile, "[FATAL] Fatal signal occurred: %s (signal number: %d)\n", 
-                signalDesc, signal);
-        fflush(logFile);
-        fclose(logFile);
+
+    /* No critical section to avoid deadlock */
+    HANDLE hLogFile = GetLogFileHandle();
+    if (hLogFile != INVALID_HANDLE_VALUE) {
+        char buffer[256];
+        int len = snprintf(buffer, sizeof(buffer),
+            "[FATAL] Fatal signal occurred: %s (signal number: %d)\n",
+            signalDesc, signal);
+        if (len > 0) {
+            DWORD written;
+            WriteFile(hLogFile, buffer, len, &written, NULL);
+            FlushFileBuffers(hLogFile);
+        }
+        CloseHandle(hLogFile);
     }
-    
+
     /* Release global mutex before crash exit to prevent zombie mutex */
     HANDLE hMutex = GetGlobalMutexHandle();
     if (hMutex) {
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
     }
-    
+
     /* Don't show MessageBox - just log to file and exit silently
      * This provides better user experience and prevents blocking on error dialogs
      * Users can check the log file for crash details */

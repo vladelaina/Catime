@@ -164,11 +164,6 @@ WORD StringToHotkey(const char* str) {
         return 0;
     }
     
-    /** Handle legacy numeric format */
-    if (isdigit(str[0])) {
-        return (WORD)atoi(str);
-    }
-    
     BYTE vk = 0;
     BYTE mod = 0;
     
@@ -313,7 +308,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         WriteIniString(INI_SECTION_HOTKEYS, entries[i].key, hotkeyStr, config_path);
     }
     
-    /** Also write HOTKEY_CUSTOM_COUNTDOWN for backward compatibility */
+    /** Write HOTKEY_CUSTOM_COUNTDOWN */
     WORD customCountdownHotkey = 0;
     ReadCustomCountdownHotkey(&customCountdownHotkey);
     char customCountdownStr[64];

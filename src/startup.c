@@ -135,14 +135,30 @@ static void CleanupComShellLink(ComShellLink* link) {
     link->initialized = FALSE;
 }
 
-/** Centralizes timer reset to avoid repetition */
+/** Centralizes timer reset to avoid repetition - uses high-precision timer */
 static void RestartTimer(HWND hwnd, UINT interval) {
-    KillTimer(hwnd, TIMER_ID_MAIN);
-    SetTimer(hwnd, TIMER_ID_MAIN, interval, NULL);
+    extern void MainTimer_SetInterval(UINT intervalMs);
+    extern BOOL MainTimer_IsHighPrecision(void);
+    
+    if (MainTimer_IsHighPrecision()) {
+        MainTimer_SetInterval(interval);
+    } else {
+        KillTimer(hwnd, TIMER_ID_MAIN);
+        SetTimer(hwnd, TIMER_ID_MAIN, interval, NULL);
+    }
 }
 
 static void StopTimer(HWND hwnd) {
-    KillTimer(hwnd, TIMER_ID_MAIN);
+    extern void MainTimer_Cleanup(void);
+    extern BOOL MainTimer_IsHighPrecision(void);
+    
+    if (MainTimer_IsHighPrecision()) {
+        /* Don't cleanup entirely, just set very long interval */
+        extern void MainTimer_SetInterval(UINT intervalMs);
+        MainTimer_SetInterval(60000);  /* 1 minute */
+    } else {
+        KillTimer(hwnd, TIMER_ID_MAIN);
+    }
 }
 
 static BOOL ReadStartupModeConfig(char* modeName, size_t modeNameSize) {

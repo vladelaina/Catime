@@ -23,7 +23,7 @@ static const char* const LOG_LEVEL_STRINGS[] = {
 };
 
 static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
-static FILE* logFile = NULL;
+static HANDLE hLogFile = INVALID_HANDLE_VALUE;
 static CRITICAL_SECTION logCS;
 static volatile LONG csInitialized = 0;
 static LogLevel minLogLevel = LOG_LEVEL_DEBUG;
@@ -45,8 +45,8 @@ void GetLogFilePath(wchar_t* logPath, size_t size) {
     }
 }
 
-FILE* GetLogFileHandle(void) {
-    return logFile;
+HANDLE GetLogFileHandle(void) {
+    return hLogFile;
 }
 
 CRITICAL_SECTION* GetLogCriticalSection(void) {
@@ -69,6 +69,51 @@ static ULONGLONG GetLogFileSize(void) {
     return 0;
 }
 
+/** Open log file with shared delete permission */
+static BOOL OpenLogFile(void) {
+    if (hLogFile != INVALID_HANDLE_VALUE) {
+        return TRUE;
+    }
+
+    hLogFile = CreateFileW(
+        LOG_FILE_PATH,
+        GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        CREATE_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hLogFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    /* Write UTF-8 BOM */
+    DWORD written;
+    WriteFile(hLogFile, UTF8_BOM, 3, &written, NULL);
+
+    return TRUE;
+}
+
+/** Check if log file still exists and reopen if deleted */
+static BOOL EnsureLogFileOpen(void) {
+    if (hLogFile == INVALID_HANDLE_VALUE) {
+        return OpenLogFile();
+    }
+
+    /* Check if file was deleted by verifying the file path still exists */
+    DWORD attrs = GetFileAttributesW(LOG_FILE_PATH);
+    if (attrs == INVALID_FILE_ATTRIBUTES) {
+        /* File was deleted, close handle and reopen */
+        CloseHandle(hLogFile);
+        hLogFile = INVALID_HANDLE_VALUE;
+        return OpenLogFile();
+    }
+
+    return TRUE;
+}
+
 /** Rotation: .log → .log.1 → .log.2 → .log.3 (oldest deleted) */
 static void RotateLogFiles(void) {
     wchar_t oldPath[MAX_PATH];
@@ -89,21 +134,18 @@ static void RotateLogFiles(void) {
 
 static void CheckAndRotateLog(void) {
     ULONGLONG fileSize = GetLogFileSize();
-    
+
     if (fileSize >= LOG_MAX_FILE_SIZE) {
-        if (logFile) {
-            fclose(logFile);
-            logFile = NULL;
+        if (hLogFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(hLogFile);
+            hLogFile = INVALID_HANDLE_VALUE;
         }
-        
+
         RotateLogFiles();
-        
-        logFile = _wfopen(LOG_FILE_PATH, L"wb");
-        if (logFile) {
-            fwrite(UTF8_BOM, 1, 3, logFile);
-            fflush(logFile);
-            
-            WriteLog(LOG_LEVEL_INFO, "Log file rotated (size exceeded %d MB)", 
+
+        OpenLogFile();
+        if (hLogFile != INVALID_HANDLE_VALUE) {
+            WriteLog(LOG_LEVEL_INFO, "Log file rotated (size exceeded %d MB)",
                      LOG_MAX_FILE_SIZE / (1024 * 1024));
         }
     }
@@ -113,9 +155,9 @@ BOOL InitializeLogSystem(void) {
     if (InterlockedCompareExchange(&csInitialized, 1, 0) == 0) {
         InitializeCriticalSection(&logCS);
     }
-    
+
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
-    
+
     wchar_t dirPath[MAX_PATH] = {0};
     wcsncpy(dirPath, LOG_FILE_PATH, MAX_PATH - 1);
     wchar_t* lastSep = wcsrchr(dirPath, L'\\');
@@ -126,84 +168,92 @@ BOOL InitializeLogSystem(void) {
             CreateDirectoryW(dirPath, NULL);
         }
     }
-    
-    logFile = _wfopen(LOG_FILE_PATH, L"wb");
-    if (!logFile) {
+
+    if (!OpenLogFile()) {
         return FALSE;
     }
-    
-    fwrite(UTF8_BOM, 1, 3, logFile);
-    fflush(logFile);
-    
+
     WriteLog(LOG_LEVEL_INFO, "==================================================");
     WriteLog(LOG_LEVEL_INFO, "Catime Version: %s", CATIME_VERSION);
     WriteLog(LOG_LEVEL_INFO, "----------------- System Information -----------------");
-    
+
     LogOSVersion();
     LogCPUArchitecture();
     LogMemoryInfo();
     LogUACStatus();
     LogAdminPrivileges();
-    
+
     WriteLog(LOG_LEVEL_INFO, "----------------- Application Start -----------------");
     WriteLog(LOG_LEVEL_INFO, "Log system initialized successfully");
-    
+
     return TRUE;
 }
 
 void WriteLog(LogLevel level, const char* format, ...) {
-    if (!logFile) {
+    if (hLogFile == INVALID_HANDLE_VALUE) {
         return;
     }
-    
+
     if (level < minLogLevel) {
         return;
     }
-    
+
     EnterCriticalSection(&logCS);
-    
-    /** Check rotation every 100 entries to reduce overhead */
+
+    /* Check rotation every 100 entries to reduce overhead */
     static int logCounter = 0;
     if (++logCounter >= 100) {
         logCounter = 0;
         CheckAndRotateLog();
-        if (!logFile) {
+        if (hLogFile == INVALID_HANDLE_VALUE) {
             LeaveCriticalSection(&logCS);
             return;
         }
     }
-    
+
+    /* Check if file was deleted and reopen if needed */
+    if (!EnsureLogFileOpen()) {
+        LeaveCriticalSection(&logCS);
+        return;
+    }
+
     time_t now;
     struct tm local_time;
     char timeStr[32] = {0};
-    
+
     time(&now);
     localtime_s(&local_time, &now);
     strftime(timeStr, sizeof(timeStr), LOG_TIMESTAMP_FORMAT, &local_time);
-    
-    fprintf(logFile, "[%s] [%s] ", timeStr, LOG_LEVEL_STRINGS[level]);
-    
+
+    /* Format log message */
+    char logBuffer[4096];
+    int offset = snprintf(logBuffer, sizeof(logBuffer), "[%s] [%s] ", timeStr, LOG_LEVEL_STRINGS[level]);
+
     va_list args;
     va_start(args, format);
-    vfprintf(logFile, format, args);
+    offset += vsnprintf(logBuffer + offset, sizeof(logBuffer) - offset, format, args);
     va_end(args);
-    
-    fprintf(logFile, "\n");
-    
-    /** fflush ensures crashes don't lose recent logs */
-    fflush(logFile);
-    
+
+    if (offset < (int)sizeof(logBuffer) - 1) {
+        logBuffer[offset++] = '\n';
+    }
+
+    /* Write to file */
+    DWORD written;
+    WriteFile(hLogFile, logBuffer, offset, &written, NULL);
+    FlushFileBuffers(hLogFile);
+
     LeaveCriticalSection(&logCS);
 }
 
 void CleanupLogSystem(void) {
-    if (logFile) {
+    if (hLogFile != INVALID_HANDLE_VALUE) {
         WriteLog(LOG_LEVEL_INFO, "Catime exited normally");
         WriteLog(LOG_LEVEL_INFO, "==================================================");
-        fclose(logFile);
-        logFile = NULL;
+        CloseHandle(hLogFile);
+        hLogFile = INVALID_HANDLE_VALUE;
     }
-    
+
     if (InterlockedCompareExchange(&csInitialized, 0, 1) == 1) {
         DeleteCriticalSection(&logCS);
     }

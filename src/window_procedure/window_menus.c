@@ -19,11 +19,6 @@
 #include <string.h>
 #include <stdio.h>
 
-extern BOOL CLOCK_GLOW_EFFECT;
-extern BOOL CLOCK_GLASS_EFFECT;
-extern BOOL CLOCK_NEON_EFFECT;
-extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
-
 /* Large limit for menu display to accommodate folder-based animations with many frames */
 #define MAX_SCAN_ENTRIES 4096
 
@@ -34,33 +29,11 @@ extern BOOL CLOCK_HOLOGRAPHIC_EFFECT;
  * ============================================================================ */
 
 BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_LOGO) {
-        StartAnimationPreview("__logo__");
+    /* Handle all animations (builtin + custom) via unified lookup */
+    char animName[MAX_PATH];
+    if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
+        StartAnimationPreview(animName);
         return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_CPU) {
-        StartAnimationPreview("__cpu__");
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_MEM) {
-        StartAnimationPreview("__mem__");
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_ANIMATIONS_USE_NONE) {
-        StartAnimationPreview("__none__");
-        return TRUE;
-    }
-
-    if (menuId >= CLOCK_IDM_ANIMATIONS_BASE && menuId < CLOCK_IDM_ANIMATIONS_END) {
-        char animName[MAX_PATH];
-        if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
-            StartAnimationPreview(animName);
-            return TRUE;
-        }
-        return FALSE;
     }
 
     if (menuId >= CMD_FONT_SELECTION_BASE && menuId < CMD_FONT_SELECTION_END) {

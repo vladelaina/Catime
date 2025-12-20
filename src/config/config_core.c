@@ -7,8 +7,6 @@
  * - config_loader: Reading and parsing INI files
  * - config_applier: Applying config to global variables
  * - config_writer: Collecting and writing config
- * 
- * This file maintains backward compatibility with the original API.
  */
 #include "config.h"
 #include "config/config_defaults.h"
@@ -144,26 +142,8 @@ void ReadConfig() {
     LOG_INFO("Configuration loading completed successfully");
 }
 
-/**
- * @brief Write complete configuration to file (Coordinator)
- * 
- * @details
- * Delegates to config_writer module.
- */
-/* WriteConfig is now in config_writer module */
-/* Re-exported here for backward compatibility */
-
-/**
- * @brief Create default configuration (Re-exported)
- * 
- * @details
- * Implemented in config_defaults module.
- * Re-exported here for backward compatibility.
- */
-/* CreateDefaultConfig is in config_defaults module */
-
 /* ============================================================================
- * Utility functions kept for backward compatibility
+ * Utility functions
  * ============================================================================ */
 
 /**

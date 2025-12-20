@@ -13,6 +13,20 @@
 #include "config_loader.h"
 
 /* ============================================================================
+ * Global flags
+ * ============================================================================ */
+
+/**
+ * @brief Force apply all config values, bypassing position preservation logic
+ * 
+ * When TRUE, ApplyDisplaySettings will apply window position from config
+ * even if current window position differs significantly.
+ * Used during reset operations to ensure defaults are applied.
+ * Automatically reset to FALSE after ApplyConfigSnapshot completes.
+ */
+extern BOOL g_ForceApplyConfig;
+
+/* ============================================================================
  * Public API
  * ============================================================================ */
 

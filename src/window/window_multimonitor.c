@@ -97,12 +97,25 @@ static void MoveWindowToDefaultPosition(HWND hwnd, HMONITOR hMonitor) {
     
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
+    int screenWidth = mi.rcWork.right - mi.rcWork.left;
     
-    /* Use default position from config.h (right-upper area) */
+    /* Use default position from config.h */
     int newX = DEFAULT_WINDOW_POS_X;
     int newY = DEFAULT_WINDOW_POS_Y;
     
-    /* Handle sentinel value -1: use top of screen */
+    /* Handle special X position values */
+    if (newX == -2) {
+        /* Golden ratio: 0.618 from left of monitor */
+        newX = mi.rcWork.left + (int)(screenWidth * 0.618f) - (width / 2);
+        if (newX + width > mi.rcWork.right) {
+            newX = mi.rcWork.right - width - 20;
+        }
+    } else if (newX == -1) {
+        /* Center on monitor */
+        newX = mi.rcWork.left + (screenWidth - width) / 2;
+    }
+    
+    /* Handle sentinel value -1 for Y: use top of screen */
     if (newY < 0) {
         newY = mi.rcWork.top;
     }

@@ -50,5 +50,22 @@ COLORREF GetPercentIconBgColor(void);
  */
 HICON CreatePercentIcon16(int percent);
 
+/**
+ * @brief Create Caps Lock indicator icon
+ * @param capsOn TRUE if Caps Lock is on, FALSE otherwise
+ * @return HICON or NULL on failure
+ * 
+ * @details
+ * Renders "A" when Caps Lock is on, "a" when off.
+ * Uses same color scheme as percent icons.
+ */
+HICON CreateCapsLockIcon(BOOL capsOn);
+
+/**
+ * @brief Check current Caps Lock state
+ * @return TRUE if Caps Lock is on
+ */
+BOOL IsCapsLockOn(void);
+
 #endif /* TRAY_ANIMATION_PERCENT_H */
 
