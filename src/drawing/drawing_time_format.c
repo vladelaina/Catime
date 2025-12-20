@@ -172,10 +172,19 @@ TimeComponents GetCountDownComponents(void) {
     int centis = GetSmoothedCentiseconds(remaining_ms, TRUE);  /* TRUE = countdown, decreasing */
     
     TimeComponents tc;
-    tc.hours = total_seconds / 3600;
-    tc.minutes = (total_seconds % 3600) / 60;
-    tc.seconds = total_seconds % 60;
-    tc.centiseconds = centis;
+    tc.hours = remaining / 3600;
+    tc.minutes = (remaining % 3600) / 60;
+    tc.seconds = remaining % 60;
+    // Fix: Countdown centiseconds should count down, not up
+    // Only show countdown centiseconds within the current second
+    int elapsed_cs = GetElapsedCentiseconds();
+    if (elapsed_cs == 0 || remaining == CLOCK_TOTAL_TIME) {
+        // Timer just started or at second boundary - show .00
+        tc.centiseconds = 0;
+    } else {
+        // Within current second - count down centiseconds
+        tc.centiseconds = (100 - elapsed_cs) % 100;
+    }
     return tc;
 }
 
