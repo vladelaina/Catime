@@ -329,7 +329,6 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_HOTKEY, hwndDlg);
 
-            SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
             MoveDialogToPrimaryScreen(hwndDlg);
 
             InitializeDialogLabels(hwndDlg);

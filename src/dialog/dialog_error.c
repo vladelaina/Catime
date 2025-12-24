@@ -30,8 +30,11 @@ void ShowErrorDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    (void)lParam;
+    
     switch (msg) {
         case WM_INITDIALOG:
+            Dialog_RegisterInstance(DIALOG_INSTANCE_ERROR, hwndDlg);
             SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT,
                 GetLocalizedString(NULL, 
                                  L"Invalid input format, please try again."));
@@ -41,6 +44,13 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             Dialog_CenterOnPrimaryScreen(hwndDlg);
             
             return TRUE;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                EndDialog(hwndDlg, IDCANCEL);
+                return TRUE;
+            }
+            break;
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
@@ -52,6 +62,10 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_CLOSE:
             EndDialog(hwndDlg, IDCANCEL);
             return TRUE;
+            
+        case WM_DESTROY:
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_ERROR);
+            break;
     }
     return FALSE;
 }

@@ -164,7 +164,6 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-            Dialog_ApplyTopmost(hwndDlg);
             return TRUE;
         }
 

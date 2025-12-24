@@ -5,6 +5,7 @@
 
 #include "dialog/dialog_font_picker.h"
 #include "dialog/dialog_procedure.h"
+#include "dialog/dialog_common.h"
 #include "../../resource/resource.h"
 #include "config.h"
 #include "font.h"
@@ -415,6 +416,11 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
             return TRUE;
         }
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_PICKER, hdlg);
+            
+            /* Start timer to maintain TOPMOST state across virtual desktop switches */
+            SetTimer(hdlg, 9998, 500, NULL);
+            
             /* Initialize checkmark index at dialog start */
             g_currentFontIndex = -1;
             
@@ -569,6 +575,21 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
             return TRUE;
         }
 
+        case WM_KEYDOWN:
+            if (wp == VK_ESCAPE) {
+                SendMessageW(hdlg, WM_COMMAND, IDCANCEL, 0);
+                return TRUE;
+            }
+            break;
+
+        case WM_TIMER:
+            if (wp == 9998) {
+                /* Re-apply TOPMOST to maintain visibility across virtual desktops */
+                Dialog_ApplyTopmost(hdlg);
+                return TRUE;
+            }
+            break;
+
         case WM_COMMAND: {
             LOG_INFO("FontPicker: WM_COMMAND received (wParam: 0x%X)", wp);
             
@@ -576,12 +597,14 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                 LOG_INFO("FontPicker: User clicked OK button - confirming selection");
                 /* Just close dialog, font already applied during preview */
                 LOG_INFO("FontPicker: Closing dialog with OK");
+                KillTimer(hdlg, 9998);
                 EndDialog(hdlg, IDOK);
                 return TRUE;
             } else if (LOWORD(wp) == IDCANCEL) {
                 LOG_INFO("FontPicker: User clicked Cancel button");
                 RestoreOriginalFont();
                 LOG_INFO("FontPicker: Closing dialog with Cancel");
+                KillTimer(hdlg, 9998);
                 EndDialog(hdlg, IDCANCEL);
                 return TRUE;
             } else if (LOWORD(wp) == IDC_FONT_LIST_SIMPLE) {
@@ -628,11 +651,14 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
         
         case WM_CLOSE:
             LOG_INFO("FontPicker: WM_CLOSE received");
+            KillTimer(hdlg, 9998);
             SendMessageW(hdlg, WM_COMMAND, IDCANCEL, 0);
             return TRUE;
             
         case WM_DESTROY:
             LOG_INFO("FontPicker: WM_DESTROY - Cleaning up resources");
+            KillTimer(hdlg, 9998);
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_FONT_PICKER);
             
             /* Clear checkmark index */
             g_currentFontIndex = -1;

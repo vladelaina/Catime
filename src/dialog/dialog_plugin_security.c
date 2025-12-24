@@ -81,11 +81,19 @@ static void CleanupMarkdownResources(void) {
 /**
  * @brief Plugin security dialog procedure
  */
+/* Timer ID for maintaining TOPMOST state */
+#define TOPMOST_TIMER_ID 9998
+
 static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     (void)lParam;
     
     switch (uMsg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_PLUGIN_SECURITY, hwndDlg);
+            
+            /* Start timer to maintain TOPMOST state across virtual desktop switches */
+            SetTimer(hwndDlg, TOPMOST_TIMER_ID, 500, NULL);
+            
             /* Set dialog title and button texts */
             SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"PluginSecDialogTitle"));
             SetDlgItemTextW(hwndDlg, IDC_PLUGIN_SECURITY_CANCEL_BTN, GetLocalizedString(NULL, L"PluginSecBtnCancel"));
@@ -202,6 +210,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 case IDC_PLUGIN_SECURITY_TRUST_BTN: {
                     /* "Trust & Run" button always adds to trust list */
                     CleanupMarkdownResources();
+                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
                     EndDialog(hwndDlg, IDYES);
                     return TRUE;
                 }
@@ -209,6 +218,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 case IDC_PLUGIN_SECURITY_RUN_ONCE_BTN: {
                     /* "Run Once" button does not add to trust list */
                     CleanupMarkdownResources();
+                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
                 }
@@ -216,6 +226,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 case IDC_PLUGIN_SECURITY_CANCEL_BTN:
                 case IDCANCEL: {
                     CleanupMarkdownResources();
+                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
                     EndDialog(hwndDlg, IDCANCEL);
                     return TRUE;
                 }
@@ -231,6 +242,23 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                         }
                     }
                     return TRUE;
+            }
+            break;
+        
+        case WM_TIMER:
+            if (wParam == TOPMOST_TIMER_ID) {
+                /* Re-apply TOPMOST to maintain visibility across virtual desktops */
+                Dialog_ApplyTopmost(hwndDlg);
+                return TRUE;
+            }
+            break;
+        
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                CleanupMarkdownResources();
+                KillTimer(hwndDlg, TOPMOST_TIMER_ID);
+                EndDialog(hwndDlg, IDCANCEL);
+                return TRUE;
             }
             break;
         
@@ -275,8 +303,14 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             break;
         }
         
+        case WM_DESTROY:
+            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_PLUGIN_SECURITY);
+            break;
+        
         case WM_CLOSE:
             CleanupMarkdownResources();
+            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
             EndDialog(hwndDlg, IDCANCEL);
             return TRUE;
     }

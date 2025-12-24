@@ -20,6 +20,7 @@
 #include "notification.h"
 #include "audio_player.h"
 #include "dialog/dialog_procedure.h"
+#include "dialog/dialog_common.h"
 #include "drag_scale.h"
 #include "log.h"
 
@@ -63,11 +64,6 @@ static void ForceForegroundAndFocus(HWND hwndDialog) {
     SetForegroundWindow(hwndDialog);
     SetActiveWindow(hwndDialog);
     
-    if (GetForegroundWindow() != hwndDialog) {
-        SetWindowPos(hwndDialog, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-        SetWindowPos(hwndDialog, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-    }
-    
     HWND hOk = GetDlgItem(hwndDialog, IDOK);
     if (hOk) SetFocus(hOk);
     
@@ -81,6 +77,7 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     
     switch (msg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_CLI_HELP, hwndDlg);
             SendMessage(hwndDlg, DM_SETDEFID, (WPARAM)IDOK, 0);
             HWND hOk = GetDlgItem(hwndDlg, IDOK);
             if (hOk) SetFocus(hOk);
@@ -88,7 +85,19 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             return FALSE;
         }
         
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            break;
+        
+        case WM_CLOSE:
+            DestroyWindow(hwndDlg);
+            return TRUE;
+        
         case WM_DESTROY:
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_CLI_HELP);
             if (hwndDlg == g_cliHelpDialog) {
                 g_cliHelpDialog = NULL;
                 HWND hMainWnd = GetParent(hwndDlg);

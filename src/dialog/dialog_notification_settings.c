@@ -175,8 +175,6 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             Dialog_RegisterInstance(DIALOG_INSTANCE_NOTIFICATION_FULL, hwndDlg);
             g_hwndNotificationSettingsDialog = hwndDlg;
             
-            Dialog_ApplyTopmost(hwndDlg);
-            
             originalVolume = g_AppConfig.notification.sound.volume;
             
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG);

@@ -184,7 +184,6 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-            Dialog_ApplyTopmost(hwndDlg);
 
             return TRUE;
         }
@@ -306,7 +305,6 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_WEBSITE_DIALOG);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-            Dialog_ApplyTopmost(hwndDlg);
 
             SetFocus(hwndEdit);
             Dialog_SelectAllText(hwndEdit);
@@ -396,9 +394,32 @@ static int g_listItemCount = 0;
 static MarkdownBlockquote* g_blockquotes = NULL;
 static int g_blockquoteCount = 0;
 
+static void CleanupFontLicenseResources(void) {
+    FreeMarkdownLinks(g_links, g_linkCount);
+    g_links = NULL;
+    g_linkCount = 0;
+    if (g_headings) { free(g_headings); g_headings = NULL; }
+    g_headingCount = 0;
+    if (g_styles) { free(g_styles); g_styles = NULL; }
+    g_styleCount = 0;
+    if (g_listItems) { free(g_listItems); g_listItems = NULL; }
+    g_listItemCount = 0;
+    if (g_blockquotes) { free(g_blockquotes); g_blockquotes = NULL; }
+    g_blockquoteCount = 0;
+    if (g_displayText) { free(g_displayText); g_displayText = NULL; }
+}
+
+/* Timer ID for maintaining TOPMOST state */
+#define TOPMOST_TIMER_ID 9998
+
 INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
+            
+            /* Start timer to maintain TOPMOST state across virtual desktop switches */
+            SetTimer(hwndDlg, TOPMOST_TIMER_ID, 500, NULL);
+            
             const wchar_t* title = GetLocalizedString(
                 NULL,
                 L"Custom Font Feature License Agreement"
@@ -446,63 +467,14 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDC_FONT_LICENSE_AGREE_BTN:
-                    FreeMarkdownLinks(g_links, g_linkCount);
-                    g_links = NULL;
-                    g_linkCount = 0;
-                    if (g_headings) {
-                        free(g_headings);
-                        g_headings = NULL;
-                    }
-                    g_headingCount = 0;
-                    if (g_styles) {
-                        free(g_styles);
-                        g_styles = NULL;
-                    }
-                    g_styleCount = 0;
-                    if (g_listItems) {
-                        free(g_listItems);
-                        g_listItems = NULL;
-                    }
-                    g_listItemCount = 0;
-                    if (g_blockquotes) {
-                        free(g_blockquotes);
-                        g_blockquotes = NULL;
-                    }
-                    g_blockquoteCount = 0;
-                    if (g_displayText) {
-                        free(g_displayText);
-                        g_displayText = NULL;
-                    }
+                    CleanupFontLicenseResources();
+                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
                     EndDialog(hwndDlg, IDOK);
                     return TRUE;
                 case IDC_FONT_LICENSE_CANCEL_BTN:
-                    FreeMarkdownLinks(g_links, g_linkCount);
-                    g_links = NULL;
-                    g_linkCount = 0;
-                    if (g_headings) {
-                        free(g_headings);
-                        g_headings = NULL;
-                    }
-                    g_headingCount = 0;
-                    if (g_styles) {
-                        free(g_styles);
-                        g_styles = NULL;
-                    }
-                    g_styleCount = 0;
-                    if (g_listItems) {
-                        free(g_listItems);
-                        g_listItems = NULL;
-                    }
-                    g_listItemCount = 0;
-                    if (g_blockquotes) {
-                        free(g_blockquotes);
-                        g_blockquotes = NULL;
-                    }
-                    g_blockquoteCount = 0;
-                    if (g_displayText) {
-                        free(g_displayText);
-                        g_displayText = NULL;
-                    }
+                case IDCANCEL:
+                    CleanupFontLicenseResources();
+                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
                     EndDialog(hwndDlg, IDCANCEL);
                     return TRUE;
                 case IDC_FONT_LICENSE_TEXT:
@@ -516,6 +488,23 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                         }
                     }
                     return TRUE;
+            }
+            break;
+
+        case WM_TIMER:
+            if (wParam == TOPMOST_TIMER_ID) {
+                /* Re-apply TOPMOST to maintain visibility across virtual desktops */
+                Dialog_ApplyTopmost(hwndDlg);
+                return TRUE;
+            }
+            break;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                CleanupFontLicenseResources();
+                KillTimer(hwndDlg, TOPMOST_TIMER_ID);
+                EndDialog(hwndDlg, IDCANCEL);
+                return TRUE;
             }
             break;
 
@@ -557,34 +546,14 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             break;
         }
 
+        case WM_DESTROY:
+            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_FONT_LICENSE);
+            break;
+
         case WM_CLOSE:
-            FreeMarkdownLinks(g_links, g_linkCount);
-            g_links = NULL;
-            g_linkCount = 0;
-            if (g_headings) {
-                free(g_headings);
-                g_headings = NULL;
-            }
-            g_headingCount = 0;
-            if (g_styles) {
-                free(g_styles);
-                g_styles = NULL;
-            }
-            g_styleCount = 0;
-            if (g_listItems) {
-                free(g_listItems);
-                g_listItems = NULL;
-            }
-            g_listItemCount = 0;
-            if (g_blockquotes) {
-                free(g_blockquotes);
-                g_blockquotes = NULL;
-            }
-            g_blockquoteCount = 0;
-            if (g_displayText) {
-                free(g_displayText);
-                g_displayText = NULL;
-            }
+            CleanupFontLicenseResources();
+            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
             EndDialog(hwndDlg, IDCANCEL);
             return TRUE;
     }

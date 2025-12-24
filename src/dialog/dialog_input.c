@@ -180,7 +180,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             g_hwndInputDialog = hwndDlg;
 
-            Dialog_ApplyTopmost(hwndDlg);
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);

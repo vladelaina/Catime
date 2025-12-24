@@ -273,6 +273,11 @@ typedef enum {
     DIALOG_INSTANCE_UPDATE,          /**< Update available dialog */
     DIALOG_INSTANCE_NO_UPDATE,       /**< No update dialog */
     DIALOG_INSTANCE_EXIT_MSG,        /**< Exit message dialog */
+    DIALOG_INSTANCE_PLUGIN_SECURITY, /**< Plugin security confirmation */
+    DIALOG_INSTANCE_FONT_LICENSE,    /**< Font license agreement */
+    DIALOG_INSTANCE_FONT_PICKER,     /**< System font picker */
+    DIALOG_INSTANCE_UPDATE_ERROR,    /**< Update error dialog */
+    DIALOG_INSTANCE_CLI_HELP,        /**< CLI help dialog */
     DIALOG_INSTANCE_COUNT
 } DialogInstanceType;
 
@@ -281,7 +286,8 @@ typedef enum {
  * @param type Dialog type
  * @param hwnd Dialog handle
  * 
- * @details Call in WM_INITDIALOG
+ * @details Call in WM_INITDIALOG. Automatically applies HWND_TOPMOST
+ * to ensure dialog stays visible across virtual desktops.
  */
 void Dialog_RegisterInstance(DialogInstanceType type, HWND hwnd);
 

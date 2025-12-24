@@ -117,6 +117,7 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
     
     switch (uMsg) {
         case WM_INITDIALOG: {
+            Dialog_RegisterInstance(DIALOG_INSTANCE_INPUT, hwndDlg);
             InputBoxParams* params = (InputBoxParams*)lParam;
             result = params->result;
             maxLen = params->maxLen;
@@ -133,6 +134,13 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             return FALSE;
         }
         
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                EndDialog(hwndDlg, FALSE);
+                return TRUE;
+            }
+            break;
+        
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDOK:
@@ -144,6 +152,14 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
                     EndDialog(hwndDlg, FALSE);
                     return TRUE;
             }
+            break;
+        
+        case WM_CLOSE:
+            EndDialog(hwndDlg, FALSE);
+            return TRUE;
+            
+        case WM_DESTROY:
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_INPUT);
             break;
     }
     

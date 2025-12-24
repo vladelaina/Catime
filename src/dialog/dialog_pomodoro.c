@@ -73,7 +73,6 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
             }
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-            Dialog_ApplyTopmost(hwndDlg);
 
             SetFocus(hwndEdit);
             Dialog_SelectAllText(hwndEdit);
@@ -212,7 +211,6 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-            Dialog_ApplyTopmost(hwndDlg);
 
             SetFocus(hwndEdit);
             Dialog_SelectAllText(hwndEdit);

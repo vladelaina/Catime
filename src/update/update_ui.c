@@ -43,7 +43,6 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             Dialog_RegisterInstance(DIALOG_INSTANCE_EXIT_MSG, hwndDlg);
             g_hwndExitMsgDialog = hwndDlg;
             
-            Dialog_ApplyTopmost(hwndDlg);
             InitializeDialog(hwndDlg, IDD_EXIT_DIALOG);
             
             SetDlgItemTextW(hwndDlg, IDC_EXIT_TEXT, 
@@ -101,7 +100,6 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             Dialog_RegisterInstance(DIALOG_INSTANCE_UPDATE, hwndDlg);
             g_hwndUpdateDialog = hwndDlg;
             
-            Dialog_ApplyTopmost(hwndDlg);
             InitializeDialog(hwndDlg, IDD_UPDATE_DIALOG);
             g_textHeight = 0;
 
@@ -390,11 +388,19 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
+            Dialog_RegisterInstance(DIALOG_INSTANCE_UPDATE_ERROR, hwndDlg);
             InitializeDialog(hwndDlg, IDD_UPDATE_ERROR_DIALOG);
             if (lParam) {
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_ERROR_TEXT, (const wchar_t*)lParam);
             }
             return TRUE;
+            
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                EndDialog(hwndDlg, IDCANCEL);
+                return TRUE;
+            }
+            break;
             
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
@@ -406,6 +412,10 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
         case WM_CLOSE:
             EndDialog(hwndDlg, IDCANCEL);
             return TRUE;
+            
+        case WM_DESTROY:
+            Dialog_UnregisterInstance(DIALOG_INSTANCE_UPDATE_ERROR);
+            break;
     }
     return FALSE;
 }
@@ -419,7 +429,6 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
             Dialog_RegisterInstance(DIALOG_INSTANCE_NO_UPDATE, hwndDlg);
             g_hwndNoUpdateDialog = hwndDlg;
             
-            Dialog_ApplyTopmost(hwndDlg);
             InitializeDialog(hwndDlg, IDD_NO_UPDATE_DIALOG);
             
             if (g_noUpdateVersion[0]) {

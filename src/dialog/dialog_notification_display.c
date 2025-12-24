@@ -44,7 +44,6 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             if (!ctx) return FALSE;
             Dialog_SetContext(hwndDlg, ctx);
 
-            Dialog_ApplyTopmost(hwndDlg);
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
             wchar_t wbuffer[32];

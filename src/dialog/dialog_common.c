@@ -270,7 +270,8 @@ void Dialog_CenterOnPrimaryScreen(HWND hwndDlg) {
     int newX = mi.rcMonitor.left + (primaryWidth - dialogWidth) / 2;
     int newY = mi.rcMonitor.top + (primaryHeight - dialogHeight) / 2;
     
-    SetWindowPos(hwndDlg, HWND_TOPMOST, newX, newY, 0, 0, 
+    /* Move dialog to center position (TOPMOST is applied separately by Dialog_RegisterInstance) */
+    SetWindowPos(hwndDlg, NULL, newX, newY, 0, 0, 
                  SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
@@ -353,6 +354,11 @@ BOOL Dialog_IsValidNumberInput(const wchar_t* str) {
 void Dialog_RegisterInstance(DialogInstanceType type, HWND hwnd) {
     if (type < 0 || type >= DIALOG_INSTANCE_COUNT) return;
     g_dialogInstances[type] = hwnd;
+    
+    /* Auto-apply topmost to ensure dialog stays visible across virtual desktops */
+    if (hwnd && IsWindow(hwnd)) {
+        Dialog_ApplyTopmost(hwnd);
+    }
 }
 
 void Dialog_UnregisterInstance(DialogInstanceType type) {
