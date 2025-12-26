@@ -9,6 +9,7 @@
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_exit.h"
+#include "dialog/dialog_common.h"
 #include "timer/timer.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
@@ -38,15 +39,27 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         PluginManager_StopPlugin(pluginIndex);
         PluginData_Clear();
         
-        /* Switch to idle state */
-        TimerModeParams params = {0, TRUE, TRUE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+        /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
+        CLOCK_SHOW_CURRENT_TIME = FALSE;
+        CLOCK_COUNT_UP = FALSE;
+        CLOCK_IS_PAUSED = TRUE;
+        CLOCK_TOTAL_TIME = 0;
+        countdown_elapsed_time = 0;
         KillTimer(hwnd, 1);
         InvalidateRect(hwnd, NULL, TRUE);
         return TRUE;
     }
 
-    /* Plugin not running - start it */
+    /* Plugin not running - check if it needs security confirmation first */
+    /* If security dialog is needed, don't change any state yet */
+    if (PluginManager_NeedsSecurityCheck(pluginIndex)) {
+        /* Show security dialog without changing current state */
+        PluginManager_StartPlugin(pluginIndex);
+        /* State will be changed in HandleDialogPluginSecurity when user confirms */
+        return TRUE;
+    }
+
+    /* Plugin is trusted - proceed with state change and launch */
     
     /* Stop notification sound */
     extern void StopNotificationSound(void);
@@ -74,26 +87,29 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
 
-    /* Clear output.txt BEFORE starting plugin to prevent stale content */
+    /* Show loading message */
     const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
     if (pluginInfo) {
         wchar_t loadingText[256];
         _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo->displayName);
-        PluginData_SetText(loadingText);  /* This clears output.txt */
+        PluginData_SetText(loadingText);
     }
     
-    /* Start plugin (after output.txt is cleared) */
-    BOOL startSuccess = PluginManager_StartPlugin(pluginIndex);
+    /* Start plugin */
+    BOOL startResult = PluginManager_StartPlugin(pluginIndex);
     
-    if (!startSuccess) {
-        /* Plugin failed to start (e.g., requires admin privileges) */
-        /* Restore to idle state */
-        LOG_WARNING("Plugin failed to start, restoring idle state");
-        PluginData_Clear();
-        TimerModeParams params = {0, TRUE, TRUE, TRUE};
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-        InvalidateRect(hwnd, NULL, TRUE);
-        return TRUE;
+    if (!startResult) {
+        /* Launch failed - show error */
+        LOG_ERROR("Plugin failed to start: %ls", pluginInfo ? pluginInfo->displayName : L"unknown");
+        
+        extern const wchar_t* PluginProcess_GetLastError(void);
+        const wchar_t* errorMsg = PluginProcess_GetLastError();
+        if (errorMsg && errorMsg[0] != L'\0') {
+            PluginData_SetText(errorMsg);
+        } else {
+            PluginData_SetText(L"FAIL");
+        }
+        PluginData_SetActive(TRUE);
     }
     
     /* Check if animated gradient needs timer for smooth animation */
@@ -137,9 +153,12 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
             /* Had <catime> tag - restore time display, keep timer */
             InvalidateRect(hwnd, NULL, TRUE);
         } else {
-            /* No <catime> tag - switch to idle */
-            TimerModeParams params = {0, TRUE, TRUE, TRUE};
-            SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+            /* No <catime> tag - switch to idle, don't reset timer to avoid 1-minute fallback */
+            CLOCK_SHOW_CURRENT_TIME = FALSE;
+            CLOCK_COUNT_UP = FALSE;
+            CLOCK_IS_PAUSED = TRUE;
+            CLOCK_TOTAL_TIME = 0;
+            countdown_elapsed_time = 0;
             KillTimer(hwnd, 1);
             InvalidateRect(hwnd, NULL, TRUE);
         }
@@ -191,9 +210,12 @@ void HandlePluginExit(HWND hwnd) {
     /* Clear plugin data */
     PluginData_Clear();
     
-    /* Switch to idle state (same as HandlePluginToggle stop logic) */
-    TimerModeParams params = {0, TRUE, TRUE, TRUE};
-    SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
+    /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_IS_PAUSED = TRUE;
+    CLOCK_TOTAL_TIME = 0;
+    countdown_elapsed_time = 0;
     KillTimer(hwnd, 1);
     InvalidateRect(hwnd, NULL, TRUE);
     

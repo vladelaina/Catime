@@ -32,15 +32,14 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  * ============================================================================ */
 
 /**
- * @brief Show font license agreement dialog
+ * @brief Show font license agreement dialog (modeless)
  * @param hwndParent Parent window
- * @return IDOK if accepted, IDCANCEL if rejected
  * 
  * @details
  * Required on first run or when [FONT_LICENSE]shown=0.
- * Blocks timer until accepted.
+ * Results are sent via WM_DIALOG_FONT_LICENSE message.
  */
-INT_PTR ShowFontLicenseDialog(HWND hwndParent);
+void ShowFontLicenseDialog(HWND hwndParent);
 
 /**
  * @brief Font license dialog procedure

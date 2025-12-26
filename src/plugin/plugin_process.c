@@ -20,6 +20,7 @@ typedef struct {
     PluginInfo* plugin;
     HANDLE hReadyEvent;
     BOOL success;
+    wchar_t errorMsg[128];  /* Error message for display */
 } PluginLauncherArgs;
 
 /**
@@ -79,11 +80,35 @@ static const wchar_t* GetInterpreter(const wchar_t* path) {
 }
 
 /**
+ * @brief Get interpreter name only (without arguments) for error messages
+ */
+static const wchar_t* GetInterpreterName(const wchar_t* path) {
+    const wchar_t* ext = wcsrchr(path, L'.');
+    if (!ext) return NULL;
+    
+    if (_wcsicmp(ext, L".py") == 0 || _wcsicmp(ext, L".pyw") == 0) return L"pythonw.exe";
+    if (_wcsicmp(ext, L".ps1") == 0) return L"powershell.exe";
+    if (_wcsicmp(ext, L".bat") == 0 || _wcsicmp(ext, L".cmd") == 0) return L"cmd.exe";
+    if (_wcsicmp(ext, L".vbs") == 0 || _wcsicmp(ext, L".vbe") == 0) return L"wscript.exe";
+    if (_wcsicmp(ext, L".js") == 0 || _wcsicmp(ext, L".mjs") == 0 || _wcsicmp(ext, L".cjs") == 0) return L"node.exe";
+    if (_wcsicmp(ext, L".lua") == 0) return L"lua.exe";
+    if (_wcsicmp(ext, L".rbw") == 0) return L"rubyw.exe";
+    if (_wcsicmp(ext, L".rb") == 0) return L"ruby.exe";
+    if (_wcsicmp(ext, L".pl") == 0 || _wcsicmp(ext, L".pm") == 0) return L"perl.exe";
+    if (_wcsicmp(ext, L".php") == 0) return L"php.exe";
+    if (_wcsicmp(ext, L".sh") == 0) return L"bash.exe";
+    
+    return NULL;
+}
+
+/**
  * @brief Thread function to launch and monitor the plugin process
  */
 static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     PluginLauncherArgs* args = (PluginLauncherArgs*)lpParam;
     PluginInfo* plugin = args->plugin;
+    
+    args->errorMsg[0] = L'\0';  /* Clear error message */
     
     LOG_INFO("[Thread] ========== LAUNCH START ==========");
     LOG_INFO("[Thread] Plugin name: %ls", plugin->displayName);
@@ -120,6 +145,15 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             DWORD error = GetLastError();
             LOG_ERROR("[Thread] CreateProcess FAILED! Error: %lu", error);
             LOG_ERROR("[Thread] Tip: Make sure '%ls' is installed and in PATH", interpreter);
+            
+            /* Set error message for display */
+            const wchar_t* interpreterName = GetInterpreterName(plugin->path);
+            if (interpreterName) {
+                _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"%s not found", interpreterName);
+            } else {
+                _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Launch failed");
+            }
+            
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
@@ -144,6 +178,7 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         if (!ShellExecuteExW(&sei)) {
             DWORD error = GetLastError();
             LOG_ERROR("[Thread] ShellExecuteEx FAILED! Error: %lu", error);
+            _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Launch failed");
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
@@ -151,6 +186,7 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         
         if (!sei.hProcess) {
             LOG_WARNING("[Thread] ShellExecute succeeded but no process handle");
+            _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"No process");
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
@@ -217,9 +253,8 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
                 }
                 memset(&plugin->pi, 0, sizeof(plugin->pi));
                 
-                if (runDuration >= 5000) {
-                    PluginData_Clear();
-                }
+                /* Clear display when plugin exits normally */
+                PluginData_Clear();
                 
                 if (g_hNotifyWnd) {
                     InvalidateRect(g_hNotifyWnd, NULL, TRUE);
@@ -276,8 +311,20 @@ void PluginProcess_Shutdown(void) {
     LOG_INFO("[Process] Process management shutdown");
 }
 
+/* Last error message from plugin launch */
+static wchar_t g_lastLaunchError[128] = {0};
+
+/**
+ * @brief Get last launch error message
+ */
+const wchar_t* PluginProcess_GetLastError(void) {
+    return g_lastLaunchError;
+}
+
 BOOL PluginProcess_Launch(PluginInfo* plugin) {
     if (!plugin) return FALSE;
+    
+    g_lastLaunchError[0] = L'\0';  /* Clear last error */
     
     LOG_INFO("[Process] Launching plugin: %ls", plugin->displayName);
     
@@ -286,9 +333,11 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     args.plugin = plugin;
     args.hReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     args.success = FALSE;
+    args.errorMsg[0] = L'\0';
     
     if (!args.hReadyEvent) {
         LOG_ERROR("[Process] Failed to create sync event");
+        wcscpy_s(g_lastLaunchError, 128, L"Internal error");
         return FALSE;
     }
     
@@ -297,6 +346,7 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     if (!hThread) {
         LOG_ERROR("[Process] Failed to create launcher thread");
         CloseHandle(args.hReadyEvent);
+        wcscpy_s(g_lastLaunchError, 128, L"Internal error");
         return FALSE;
     }
     
@@ -304,6 +354,11 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     WaitForSingleObject(args.hReadyEvent, INFINITE);
     CloseHandle(args.hReadyEvent);
     CloseHandle(hThread);
+    
+    /* Copy error message if failed */
+    if (!args.success && args.errorMsg[0] != L'\0') {
+        wcscpy_s(g_lastLaunchError, 128, args.errorMsg);
+    }
     
     return args.success;
 }

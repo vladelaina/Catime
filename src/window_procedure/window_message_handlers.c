@@ -23,8 +23,10 @@
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
 #include "plugin/plugin_data.h"
+#include "plugin/plugin_manager.h"
 #include "color/gradient.h"
 #include "markdown/markdown_interactive.h"
+#include "pomodoro.h"
 #include <stdio.h>
 #include <windowsx.h>
 
@@ -495,6 +497,122 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
         extern void TriggerUpdateDownload(HWND hwnd);
         TriggerUpdateDownload(hwnd);
     }
+    return 0;
+}
+
+/**
+ * @brief Handle font license dialog result
+ * @param wp IDOK = accepted, IDCANCEL = rejected
+ * @param lp Reserved
+ */
+LRESULT HandleDialogFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (wp == IDOK) {
+        extern void SetFontLicenseAccepted(BOOL);
+        extern void SetFontLicenseVersionAccepted(const char*);
+        extern const char* GetCurrentFontLicenseVersion(void);
+        SetFontLicenseAccepted(TRUE);
+        SetFontLicenseVersionAccepted(GetCurrentFontLicenseVersion());
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
+    return 0;
+}
+
+/**
+ * @brief Handle plugin security dialog result
+ * @param wp IDYES = trust and run, IDOK = run once, IDCANCEL = cancelled
+ * @param lp Reserved
+ */
+LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    
+    extern int GetPendingPluginIndex(void);
+    extern void ClearPendingPluginInfo(void);
+    extern BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin);
+    extern const PluginInfo* PluginManager_GetPlugin(int index);
+    extern void PluginData_SetText(const wchar_t* text);
+    extern void PluginData_SetActive(BOOL active);
+    extern const wchar_t* PluginProcess_GetLastError(void);
+    extern void StopNotificationSound(void);
+    extern void GetActiveColor(char* outColor, size_t bufferSize);
+    extern BOOL CLOCK_SHOW_CURRENT_TIME;
+    extern BOOL CLOCK_COUNT_UP;
+    extern BOOL CLOCK_IS_PAUSED;
+    extern int CLOCK_TOTAL_TIME;
+    extern int countdown_elapsed_time;
+    extern int countup_elapsed_time;
+    extern POMODORO_PHASE current_pomodoro_phase;
+    
+    int pluginIndex = GetPendingPluginIndex();
+    
+    if (wp == IDCANCEL) {
+        /* User cancelled - just clear pending info, don't change display state */
+        ClearPendingPluginInfo();
+        return 0;
+    }
+    
+    /* User confirmed - now change state and start plugin */
+    
+    /* Stop notification sound */
+    StopNotificationSound();
+    
+    /* Reset timer flags */
+    CLOCK_SHOW_CURRENT_TIME = FALSE;
+    CLOCK_COUNT_UP = FALSE;
+    CLOCK_IS_PAUSED = TRUE;
+    
+    /* Stop internal timer */
+    KillTimer(hwnd, 1);
+    
+    /* Reset Pomodoro if active */
+    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+        current_pomodoro_phase = POMODORO_PHASE_IDLE;
+    }
+
+    /* Reset timer values */
+    CLOCK_TOTAL_TIME = 0;
+    countdown_elapsed_time = 0;
+    countup_elapsed_time = 0;
+
+    /* Show loading message */
+    const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
+    if (pluginInfo) {
+        wchar_t loadingText[256];
+        _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo->displayName);
+        PluginData_SetText(loadingText);
+        PluginData_SetActive(TRUE);
+    }
+    
+    /* IDYES = Trust & Run, IDOK = Run Once */
+    BOOL trustPlugin = (wp == IDYES);
+    BOOL startResult = PluginManager_StartPluginAfterSecurityCheck(pluginIndex, trustPlugin);
+    
+    if (!startResult) {
+        /* Failed to start after security check - show specific error */
+        const wchar_t* errorMsg = PluginProcess_GetLastError();
+        if (errorMsg && errorMsg[0] != L'\0') {
+            PluginData_SetText(errorMsg);
+        } else {
+            PluginData_SetText(L"FAIL");
+        }
+        PluginData_SetActive(TRUE);
+    }
+    
+    /* Check if animated gradient needs timer for smooth animation */
+    char activeColor[COLOR_HEX_BUFFER];
+    GetActiveColor(activeColor, sizeof(activeColor));
+    if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+        SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
+    }
+    
+    /* Ensure window visible and redraw */
+    if (!IsWindowVisible(hwnd)) {
+        ShowWindow(hwnd, SW_SHOW);
+    }
+    InvalidateRect(hwnd, NULL, TRUE);
+    
+    ClearPendingPluginInfo();
+    
     return 0;
 }
 

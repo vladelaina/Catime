@@ -201,14 +201,10 @@ static LRESULT CmdCustomizeColor(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    extern INT_PTR ShowFontLicenseDialog(HWND);
-    extern void SetFontLicenseAccepted(BOOL);
+    extern void ShowFontLicenseDialog(HWND);
     
-    if (ShowFontLicenseDialog(hwnd) == IDOK) {
-        SetFontLicenseAccepted(TRUE);
-        SetFontLicenseVersionAccepted(GetCurrentFontLicenseVersion());
-        InvalidateRect(hwnd, NULL, TRUE);
-    }
+    /* Show modeless dialog - result will be handled via WM_DIALOG_FONT_LICENSE */
+    ShowFontLicenseDialog(hwnd);
     return 0;
 }
 

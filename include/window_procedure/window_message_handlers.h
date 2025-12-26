@@ -49,5 +49,7 @@ LRESULT HandleDialogCountdown(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDialogShortcut(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDialogColor(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleDialogFontLicense(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp);
 
 #endif /* WINDOW_MESSAGE_HANDLERS_H */

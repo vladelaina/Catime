@@ -1,6 +1,6 @@
 /**
  * @file dialog_plugin_security.c
- * @brief Plugin security confirmation dialog
+ * @brief Plugin security confirmation dialog (modeless)
  */
 
 #include <windows.h>
@@ -27,32 +27,59 @@ static int g_listItemCount = 0;
 static MarkdownBlockquote* g_blockquotes = NULL;
 static int g_blockquoteCount = 0;
 
-/* Plugin info passed to dialog */
+/* Plugin info passed to dialog - accessible for result handling */
 static char g_pluginPath[MAX_PATH] = {0};
 static char g_pluginName[128] = {0};
+static int g_pluginIndex = -1;
 
-/* Reentrancy guard - use atomic for thread safety */
-static volatile LONG g_dialogActive = 0;
+/* Parent window handle for posting results */
+static HWND g_pluginSecurityParent = NULL;
 
 /**
  * @brief Set plugin info for dialog
  * @param pluginPath Full path to plugin file
  * @param pluginName Display name of plugin
+ * @param pluginIndex Index of plugin in plugin list
  */
-static void SetPluginSecurityDialogInfo(const char* pluginPath, const char* pluginName) {
+static void SetPluginSecurityDialogInfo(const char* pluginPath, const char* pluginName, int pluginIndex) {
     if (pluginPath) {
         strncpy(g_pluginPath, pluginPath, sizeof(g_pluginPath) - 1);
         g_pluginPath[sizeof(g_pluginPath) - 1] = '\0';
     } else {
-        g_pluginPath[0] = '\0';  /* Clear if NULL */
+        g_pluginPath[0] = '\0';
     }
     
     if (pluginName) {
         strncpy(g_pluginName, pluginName, sizeof(g_pluginName) - 1);
         g_pluginName[sizeof(g_pluginName) - 1] = '\0';
     } else {
-        g_pluginName[0] = '\0';  /* Clear if NULL */
+        g_pluginName[0] = '\0';
     }
+    
+    g_pluginIndex = pluginIndex;
+}
+
+/**
+ * @brief Get pending plugin path (for result handling)
+ */
+const char* GetPendingPluginPath(void) {
+    return g_pluginPath;
+}
+
+/**
+ * @brief Get pending plugin index (for result handling)
+ */
+int GetPendingPluginIndex(void) {
+    return g_pluginIndex;
+}
+
+/**
+ * @brief Clear pending plugin info
+ */
+void ClearPendingPluginInfo(void) {
+    g_pluginPath[0] = '\0';
+    g_pluginName[0] = '\0';
+    g_pluginIndex = -1;
 }
 
 /**
@@ -81,18 +108,12 @@ static void CleanupMarkdownResources(void) {
 /**
  * @brief Plugin security dialog procedure
  */
-/* Timer ID for maintaining TOPMOST state */
-#define TOPMOST_TIMER_ID 9998
-
 static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     (void)lParam;
     
     switch (uMsg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_PLUGIN_SECURITY, hwndDlg);
-            
-            /* Start timer to maintain TOPMOST state across virtual desktop switches */
-            SetTimer(hwndDlg, TOPMOST_TIMER_ID, 500, NULL);
             
             /* Set dialog title and button texts */
             SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"PluginSecDialogTitle"));
@@ -114,8 +135,8 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             /* Button layout parameters */
             int btnSpacing = 5;
             int btnPaddingX = 24;
-            int btnHeight = 23;  /* Standard height */
-            int btnY = dialogHeight - btnHeight - 10;  /* 10px from bottom */
+            int btnHeight = 23;
+            int btnY = dialogHeight - btnHeight - 10;
             int rightMargin = 10;
             
             /* Measure each button text */
@@ -187,7 +208,6 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 GetLocalizedString(NULL, L"PluginSecTip4")
             );
             
-            /* Check for truncation */
             if (written < 0 || written >= 4096) {
                 LOG_WARNING("Plugin security message truncated (length: %d)", written);
             }
@@ -208,26 +228,30 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDC_PLUGIN_SECURITY_TRUST_BTN: {
-                    /* "Trust & Run" button always adds to trust list */
                     CleanupMarkdownResources();
-                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-                    EndDialog(hwndDlg, IDYES);
+                    if (g_pluginSecurityParent) {
+                        PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDYES, 0);
+                    }
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
                 
                 case IDC_PLUGIN_SECURITY_RUN_ONCE_BTN: {
-                    /* "Run Once" button does not add to trust list */
                     CleanupMarkdownResources();
-                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-                    EndDialog(hwndDlg, IDOK);
+                    if (g_pluginSecurityParent) {
+                        PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDOK, 0);
+                    }
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
                 
                 case IDC_PLUGIN_SECURITY_CANCEL_BTN:
                 case IDCANCEL: {
                     CleanupMarkdownResources();
-                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-                    EndDialog(hwndDlg, IDCANCEL);
+                    if (g_pluginSecurityParent) {
+                        PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDCANCEL, 0);
+                    }
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 }
                 
@@ -245,19 +269,13 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             }
             break;
         
-        case WM_TIMER:
-            if (wParam == TOPMOST_TIMER_ID) {
-                /* Re-apply TOPMOST to maintain visibility across virtual desktops */
-                Dialog_ApplyTopmost(hwndDlg);
-                return TRUE;
-            }
-            break;
-        
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
                 CleanupMarkdownResources();
-                KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-                EndDialog(hwndDlg, IDCANCEL);
+                if (g_pluginSecurityParent) {
+                    PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDCANCEL, 0);
+                }
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
@@ -268,7 +286,6 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 HDC hdc = lpDrawItem->hDC;
                 RECT rect = lpDrawItem->rcItem;
                 
-                /* Fill with dialog background color (same as font license dialog) */
                 HBRUSH hBrush = GetSysColorBrush(COLOR_BTNFACE);
                 FillRect(hdc, &rect, hBrush);
                 
@@ -281,7 +298,6 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                     }
                     HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
                     
-                    /* Add margins for content */
                     RECT drawRect = rect;
                     drawRect.left += 10;
                     drawRect.top += 10;
@@ -304,14 +320,16 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
         }
         
         case WM_DESTROY:
-            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
+            CleanupMarkdownResources();
             Dialog_UnregisterInstance(DIALOG_INSTANCE_PLUGIN_SECURITY);
             break;
         
         case WM_CLOSE:
             CleanupMarkdownResources();
-            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-            EndDialog(hwndDlg, IDCANCEL);
+            if (g_pluginSecurityParent) {
+                PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDCANCEL, 0);
+            }
+            DestroyWindow(hwndDlg);
             return TRUE;
     }
     
@@ -319,34 +337,38 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
 }
 
 /**
- * @brief Show plugin security confirmation dialog
+ * @brief Show plugin security confirmation dialog (modeless)
  * @param hwndParent Parent window handle
  * @param pluginPath Full path to plugin file
  * @param pluginName Display name of plugin
- * @return IDYES (trust and remember), IDOK (run once), or IDCANCEL
+ * @param pluginIndex Index of plugin in plugin list
+ * 
+ * Results are sent via WM_DIALOG_PLUGIN_SECURITY message:
+ * - wParam = IDYES (trust and remember)
+ * - wParam = IDOK (run once)
+ * - wParam = IDCANCEL (cancelled)
  */
-INT_PTR ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const char* pluginName) {
-    /* Prevent reentrancy - only one dialog can be active at a time */
-    /* Use atomic compare-exchange to prevent race condition */
-    if (InterlockedCompareExchange(&g_dialogActive, 1, 0) != 0) {
-        LOG_WARNING("Plugin security dialog already active, rejecting request");
-        return IDCANCEL;
+void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const char* pluginName, int pluginIndex) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_PLUGIN_SECURITY)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_PLUGIN_SECURITY);
+        SetForegroundWindow(existing);
+        return;
     }
     
-    SetPluginSecurityDialogInfo(pluginPath, pluginName);
+    g_pluginSecurityParent = hwndParent;
+    SetPluginSecurityDialogInfo(pluginPath, pluginName, pluginIndex);
     
-    INT_PTR result = DialogBoxW(GetModuleHandle(NULL),
-                                MAKEINTRESOURCE(IDD_PLUGIN_SECURITY_DIALOG),
-                                hwndParent,
-                                PluginSecurityDlgProc);
+    HWND hwndDlg = CreateDialogW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCE(IDD_PLUGIN_SECURITY_DIALOG),
+        hwndParent,
+        PluginSecurityDlgProc
+    );
     
-    InterlockedExchange(&g_dialogActive, 0);
-    
-    /* Check for dialog creation failure */
-    if (result == -1) {
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    } else {
         LOG_ERROR("Failed to create plugin security dialog (error: %lu)", GetLastError());
-        return IDCANCEL;  /* Treat dialog failure as cancellation for safety */
+        ClearPendingPluginInfo();
     }
-    
-    return result;
 }

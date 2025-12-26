@@ -384,6 +384,34 @@ static void StopPluginInternal(int index) {
     LOG_INFO("Stopped plugin (internal): %ls", plugin->displayName);
 }
 
+/**
+ * @brief Internal function to actually launch a plugin (after security check passed)
+ * @param index Plugin index
+ * @return TRUE if plugin started successfully
+ */
+static BOOL LaunchPluginInternal(int index) {
+    /* Caller must hold g_pluginCS lock */
+    if (index < 0 || index >= g_pluginCount) {
+        return FALSE;
+    }
+    
+    PluginInfo* plugin = &g_plugins[index];
+    LOG_INFO("Starting plugin: %ls", plugin->displayName);
+
+    /* Launch via process module */
+    if (!PluginProcess_Launch(plugin)) {
+        LOG_ERROR("Failed to launch plugin: %ls", plugin->displayName);
+        return FALSE;
+    }
+
+    /* Record file modification time for hot-reload */
+    GetFileModTime(plugin->path, &plugin->lastModTime);
+    g_activePluginIndex = index;
+
+    LOG_INFO("Plugin started: %ls (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
+    return TRUE;
+}
+
 BOOL PluginManager_StartPlugin(int index) {
     if (!g_pluginManagerInitialized) return FALSE;
     if (index < 0 || index >= g_pluginCount) {
@@ -425,58 +453,65 @@ BOOL PluginManager_StartPlugin(int index) {
         LOG_INFO("Plugin not trusted, showing security dialog: %ls", pluginDisplayName);
         LeaveCriticalSection(&g_pluginCS);
         
-        /* Show security confirmation dialog (critical section released during dialog) */
+        /* Show modeless security confirmation dialog */
         HWND hwnd = PluginProcess_GetNotifyWindow();
         
         char displayNameUtf8[128];
         WideCharToMultiByte(CP_UTF8, 0, pluginDisplayName, -1, displayNameUtf8, 128, NULL, NULL);
-        INT_PTR result = ShowPluginSecurityDialog(hwnd, pluginPathUtf8, displayNameUtf8);
+        ShowPluginSecurityDialog(hwnd, pluginPathUtf8, displayNameUtf8, index);
         
-        if (result == IDCANCEL) {
-            /* User cancelled, don't run plugin */
-            LOG_INFO("User cancelled plugin execution: %ls", pluginDisplayName);
-            /* Note: Critical section was already released at line 370, no need to re-acquire */
-            return FALSE;
-        } else if (result == IDYES) {
-            /* User chose "Trust & Run" - add to trust list */
-            if (TrustPlugin(pluginPathUtf8)) {
-                LOG_INFO("Plugin added to trust list: %ls", pluginDisplayName);
-            } else {
-                LOG_ERROR("Failed to add plugin to trust list: %ls (will still run once)", pluginDisplayName);
-                /* Note: We continue to run the plugin even if trust list update failed,
-                 * because user explicitly chose to run it. Next time will ask again. */
-            }
-        }
-        /* For IDOK (Run Once), we just continue without adding to trust list */
-        
-        EnterCriticalSection(&g_pluginCS);
-        
-        /* Revalidate index after dialog (array might have changed) */
-        if (index < 0 || index >= g_pluginCount) {
-            LOG_ERROR("Plugin index invalid after security dialog");
-            LeaveCriticalSection(&g_pluginCS);
-            return FALSE;
-        }
+        /* Return FALSE - plugin will be started via WM_DIALOG_PLUGIN_SECURITY message handler */
+        return FALSE;
     }
     
-    PluginInfo* plugin = &g_plugins[index];
-    LOG_INFO("Starting plugin: %ls", plugin->displayName);
+    /* Plugin is trusted, launch directly */
+    BOOL result = LaunchPluginInternal(index);
+    LeaveCriticalSection(&g_pluginCS);
+    return result;
+}
 
-    /* Launch via process module */
-    if (!PluginProcess_Launch(plugin)) {
-        LOG_ERROR("Failed to launch plugin: %ls", plugin->displayName);
-        LeaveCriticalSection(&g_pluginCS);
+/**
+ * @brief Start plugin after security dialog confirmation
+ * @param index Plugin index
+ * @param trustPlugin TRUE if user chose "Trust & Run", FALSE for "Run Once"
+ * @return TRUE if plugin started successfully
+ */
+BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
+    if (!g_pluginManagerInitialized) return FALSE;
+    if (index < 0 || index >= g_pluginCount) {
+        LOG_ERROR("Invalid plugin index after security check: %d", index);
         return FALSE;
     }
 
-    /* Record file modification time for hot-reload */
-    GetFileModTime(plugin->path, &plugin->lastModTime);
-    g_activePluginIndex = index;
-
-    LOG_INFO("Plugin started: %ls (PID: %lu)", plugin->displayName, plugin->pi.dwProcessId);
-
+    EnterCriticalSection(&g_pluginCS);
+    
+    /* Revalidate index (array might have changed during dialog) */
+    if (index < 0 || index >= g_pluginCount) {
+        LOG_ERROR("Plugin index invalid after security dialog");
+        LeaveCriticalSection(&g_pluginCS);
+        return FALSE;
+    }
+    
+    /* Get plugin path for trust operation */
+    wchar_t pluginPath[MAX_PATH];
+    wcsncpy(pluginPath, g_plugins[index].path, MAX_PATH - 1);
+    pluginPath[MAX_PATH - 1] = L'\0';
+    
+    char pluginPathUtf8[MAX_PATH];
+    WideCharToMultiByte(CP_UTF8, 0, pluginPath, -1, pluginPathUtf8, MAX_PATH, NULL, NULL);
+    
+    if (trustPlugin) {
+        /* User chose "Trust & Run" - add to trust list */
+        if (TrustPlugin(pluginPathUtf8)) {
+            LOG_INFO("Plugin added to trust list: %ls", g_plugins[index].displayName);
+        } else {
+            LOG_ERROR("Failed to add plugin to trust list: %ls (will still run once)", g_plugins[index].displayName);
+        }
+    }
+    
+    BOOL result = LaunchPluginInternal(index);
     LeaveCriticalSection(&g_pluginCS);
-    return TRUE;
+    return result;
 }
 
 /**
@@ -569,6 +604,29 @@ BOOL PluginManager_IsPluginRunning(int index) {
     LeaveCriticalSection(&g_pluginCS);
 
     return isRunning;
+}
+
+BOOL PluginManager_NeedsSecurityCheck(int index) {
+    if (!g_pluginManagerInitialized) return FALSE;
+    if (index < 0 || index >= g_pluginCount) {
+        return FALSE;
+    }
+
+    EnterCriticalSection(&g_pluginCS);
+    
+    /* Get plugin path */
+    wchar_t pluginPath[MAX_PATH];
+    wcsncpy(pluginPath, g_plugins[index].path, MAX_PATH - 1);
+    pluginPath[MAX_PATH - 1] = L'\0';
+    
+    LeaveCriticalSection(&g_pluginCS);
+    
+    /* Convert to UTF-8 for security check */
+    char pluginPathUtf8[MAX_PATH];
+    WideCharToMultiByte(CP_UTF8, 0, pluginPath, -1, pluginPathUtf8, MAX_PATH, NULL, NULL);
+    
+    /* Return TRUE if NOT trusted (needs security check) */
+    return !IsPluginTrusted(pluginPathUtf8);
 }
 
 void PluginManager_StopAllPlugins(void) {

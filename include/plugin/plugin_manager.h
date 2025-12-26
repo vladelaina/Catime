@@ -62,9 +62,19 @@ const PluginInfo* PluginManager_GetPlugin(int index);
 /**
  * @brief Start a plugin
  * @param index Plugin index
- * @return TRUE if started successfully
+ * @return TRUE if started successfully, FALSE if security dialog shown or failed
+ * @note If plugin is not trusted, a modeless security dialog is shown and
+ *       the actual start happens via WM_DIALOG_PLUGIN_SECURITY message handler
  */
 BOOL PluginManager_StartPlugin(int index);
+
+/**
+ * @brief Start plugin after security dialog confirmation
+ * @param index Plugin index
+ * @param trustPlugin TRUE if user chose "Trust & Run", FALSE for "Run Once"
+ * @return TRUE if plugin started successfully
+ */
+BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin);
 
 /**
  * @brief Stop a plugin
@@ -86,6 +96,13 @@ BOOL PluginManager_TogglePlugin(int index);
  * @return TRUE if running
  */
 BOOL PluginManager_IsPluginRunning(int index);
+
+/**
+ * @brief Check if plugin needs security confirmation before starting
+ * @param index Plugin index
+ * @return TRUE if security dialog should be shown, FALSE if plugin is trusted
+ */
+BOOL PluginManager_NeedsSecurityCheck(int index);
 
 /**
  * @brief Get currently active plugin index

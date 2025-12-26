@@ -394,6 +394,9 @@ static int g_listItemCount = 0;
 static MarkdownBlockquote* g_blockquotes = NULL;
 static int g_blockquoteCount = 0;
 
+/* Parent window handle for posting results */
+static HWND g_fontLicenseParent = NULL;
+
 static void CleanupFontLicenseResources(void) {
     FreeMarkdownLinks(g_links, g_linkCount);
     g_links = NULL;
@@ -409,16 +412,10 @@ static void CleanupFontLicenseResources(void) {
     if (g_displayText) { free(g_displayText); g_displayText = NULL; }
 }
 
-/* Timer ID for maintaining TOPMOST state */
-#define TOPMOST_TIMER_ID 9998
-
 INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
-            
-            /* Start timer to maintain TOPMOST state across virtual desktop switches */
-            SetTimer(hwndDlg, TOPMOST_TIMER_ID, 500, NULL);
             
             const wchar_t* title = GetLocalizedString(
                 NULL,
@@ -468,14 +465,18 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             switch (LOWORD(wParam)) {
                 case IDC_FONT_LICENSE_AGREE_BTN:
                     CleanupFontLicenseResources();
-                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-                    EndDialog(hwndDlg, IDOK);
+                    if (g_fontLicenseParent) {
+                        PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDOK, 0);
+                    }
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 case IDC_FONT_LICENSE_CANCEL_BTN:
                 case IDCANCEL:
                     CleanupFontLicenseResources();
-                    KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-                    EndDialog(hwndDlg, IDCANCEL);
+                    if (g_fontLicenseParent) {
+                        PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDCANCEL, 0);
+                    }
+                    DestroyWindow(hwndDlg);
                     return TRUE;
                 case IDC_FONT_LICENSE_TEXT:
                     if (HIWORD(wParam) == STN_CLICKED) {
@@ -491,19 +492,13 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
             }
             break;
 
-        case WM_TIMER:
-            if (wParam == TOPMOST_TIMER_ID) {
-                /* Re-apply TOPMOST to maintain visibility across virtual desktops */
-                Dialog_ApplyTopmost(hwndDlg);
-                return TRUE;
-            }
-            break;
-
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
                 CleanupFontLicenseResources();
-                KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-                EndDialog(hwndDlg, IDCANCEL);
+                if (g_fontLicenseParent) {
+                    PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDCANCEL, 0);
+                }
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
@@ -547,24 +542,40 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
         }
 
         case WM_DESTROY:
-            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
+            CleanupFontLicenseResources();
             Dialog_UnregisterInstance(DIALOG_INSTANCE_FONT_LICENSE);
             break;
 
         case WM_CLOSE:
             CleanupFontLicenseResources();
-            KillTimer(hwndDlg, TOPMOST_TIMER_ID);
-            EndDialog(hwndDlg, IDCANCEL);
+            if (g_fontLicenseParent) {
+                PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDCANCEL, 0);
+            }
+            DestroyWindow(hwndDlg);
             return TRUE;
     }
     return FALSE;
 }
 
-INT_PTR ShowFontLicenseDialog(HWND hwndParent) {
-    return DialogBoxW(GetModuleHandle(NULL),
-                     MAKEINTRESOURCE(IDD_FONT_LICENSE_DIALOG),
-                     hwndParent,
-                     FontLicenseDlgProc);
+void ShowFontLicenseDialog(HWND hwndParent) {
+    if (Dialog_IsOpen(DIALOG_INSTANCE_FONT_LICENSE)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_FONT_LICENSE);
+        SetForegroundWindow(existing);
+        return;
+    }
+
+    g_fontLicenseParent = hwndParent;
+
+    HWND hwndDlg = CreateDialogW(
+        GetModuleHandle(NULL),
+        MAKEINTRESOURCE(IDD_FONT_LICENSE_DIALOG),
+        hwndParent,
+        FontLicenseDlgProc
+    );
+
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
 }
 
 

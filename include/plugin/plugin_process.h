@@ -28,6 +28,12 @@ void PluginProcess_Shutdown(void);
 BOOL PluginProcess_Launch(PluginInfo* plugin);
 
 /**
+ * @brief Get last launch error message
+ * @return Error message (empty string if no error)
+ */
+const wchar_t* PluginProcess_GetLastError(void);
+
+/**
  * @brief Terminate a running plugin
  * @param plugin Plugin info to terminate
  * @return TRUE if terminated successfully

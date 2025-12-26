@@ -44,6 +44,8 @@
 #define WM_DIALOG_COLOR         (WM_USER + 12)  /**< Color dialog result: wParam=0(cancel)/1(ok) */
 #define WM_DIALOG_CLOSED        (WM_USER + 13)  /**< Generic dialog closed notification */
 #define WM_DIALOG_UPDATE        (WM_USER + 14)  /**< Update dialog result: wParam=IDYES(update)/IDNO(later) */
+#define WM_DIALOG_FONT_LICENSE  (WM_USER + 15)  /**< Font license dialog result: wParam=IDOK(agree)/IDCANCEL */
+#define WM_DIALOG_PLUGIN_SECURITY (WM_USER + 16) /**< Plugin security dialog result: wParam=IDYES(trust)/IDOK(once)/IDCANCEL */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
 #define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 
