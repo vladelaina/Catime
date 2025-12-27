@@ -297,8 +297,9 @@ static LRESULT CmdCheckUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdHotkeySettings(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    /* ShowHotkeySettingsDialog is modeless - hotkeys are unregistered inside dialog's WM_INITDIALOG
+     * and re-registered when dialog closes (via WM_APP+1 message). Don't call RegisterGlobalHotkeys here. */
     ShowHotkeySettingsDialog(hwnd);
-    RegisterGlobalHotkeys(hwnd);
     return 0;
 }
 
