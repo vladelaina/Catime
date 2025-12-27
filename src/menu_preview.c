@@ -381,50 +381,41 @@ BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
         return FALSE;
     }
 
-    int previewTime = (g_AppConfig.timer.default_start_time > 0) ?
-                      g_AppConfig.timer.default_start_time : 1500;
-
-    int hours = previewTime / 3600;
-    int minutes = (previewTime % 3600) / 60;
-    int seconds = previewTime % 60;
+    /* Show current time in edit mode when no active content */
+    extern BOOL CLOCK_USE_24HOUR;
+    extern BOOL CLOCK_SHOW_SECONDS;
+    
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    
+    int hours = CLOCK_USE_24HOUR ? st.wHour : (st.wHour % 12 == 0 ? 12 : st.wHour % 12);
+    int minutes = st.wMinute;
+    int seconds = st.wSecond;
 
     TimeFormatType format = GetActiveTimeFormat();
     BOOL showMs = GetActiveShowMilliseconds();
 
     if (showMs) {
-        if (format == TIME_FORMAT_FULL_PADDED) {
-            _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.00", hours, minutes, seconds);
-        } else if (format == TIME_FORMAT_ZERO_PADDED) {
-            if (hours > 0) {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.00", hours, minutes, seconds);
-            } else {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d.00", minutes, seconds);
-            }
+        int centiseconds = st.wMilliseconds / 10;
+        if (format == TIME_FORMAT_FULL_PADDED || format == TIME_FORMAT_ZERO_PADDED) {
+            _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
+                        hours, minutes, seconds, centiseconds);
         } else {
-            if (hours > 0) {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d.00", hours, minutes, seconds);
-            } else if (minutes > 0) {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d.00", minutes, seconds);
-            } else {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d.00", seconds);
-            }
+            _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d", 
+                        hours, minutes, seconds, centiseconds);
         }
     } else {
-        if (format == TIME_FORMAT_FULL_PADDED) {
-            _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", hours, minutes, seconds);
-        } else if (format == TIME_FORMAT_ZERO_PADDED) {
-            if (hours > 0) {
+        if (CLOCK_SHOW_SECONDS) {
+            if (format == TIME_FORMAT_FULL_PADDED || format == TIME_FORMAT_ZERO_PADDED) {
                 _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", hours, minutes, seconds);
             } else {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d", minutes, seconds);
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, seconds);
             }
         } else {
-            if (hours > 0) {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, seconds);
-            } else if (minutes > 0) {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d", minutes, seconds);
+            if (format == TIME_FORMAT_FULL_PADDED || format == TIME_FORMAT_ZERO_PADDED) {
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d", hours, minutes);
             } else {
-                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d", seconds);
+                _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%d:%02d", hours, minutes);
             }
         }
     }
