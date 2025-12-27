@@ -335,7 +335,7 @@
 #define HOTKEY_ID_PAUSE_RESUME    109            /**< Pause/resume hotkey ID */
 #define HOTKEY_ID_RESTART_TIMER   110            /**< Restart timer hotkey ID */
 #define HOTKEY_ID_CUSTOM_COUNTDOWN 111           /**< Custom countdown hotkey ID */
-#define HOTKEY_ID_TOGGLE_MILLISECONDS 116        /**< Toggle milliseconds display hotkey ID */
+#define HOTKEY_ID_TOGGLE_MILLISECONDS 112        /**< Toggle milliseconds display hotkey ID */
 
 /** @brief Hotkey configuration dialog identifiers */
 #define CLOCK_IDD_HOTKEY_DIALOG 2100     /**< Hotkey configuration dialog */
