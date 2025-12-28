@@ -8,6 +8,7 @@
 #include "../resource/resource.h"
 #include "log.h"
 #include <windows.h>
+#include <shlobj.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -171,7 +172,7 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
         /* Remove <fps:N> tag from display */
         RemoveFpsTagW(g_pluginDisplayText);
         
-        /* Process <exit> tag (releases CS if countdown starts) */
+        /* Process <exit> tag - if countdown starts, set data flag and return */
         if (PluginExit_ParseTag(g_pluginDisplayText, &len, g_pluginDisplayTextLen)) {
             g_hasPluginData = TRUE;
             LeaveCriticalSection(&g_dataCS);
@@ -204,6 +205,21 @@ static BOOL GetPluginOutputPath(char* buffer, size_t bufferSize) {
  * @note Always clears file content on startup to prevent stale <exit> tags
  */
 static void EnsureOutputFileExists(const char* filePath) {
+    /* First ensure the directory exists */
+    char dirPath[MAX_PATH];
+    strncpy(dirPath, filePath, MAX_PATH - 1);
+    dirPath[MAX_PATH - 1] = '\0';
+    
+    /* Find last backslash to get directory path */
+    char* lastSlash = strrchr(dirPath, '\\');
+    if (lastSlash) {
+        *lastSlash = '\0';
+        /* Create directory (and parent directories if needed) */
+        /* SHCreateDirectoryExA creates all intermediate directories */
+        SHCreateDirectoryExA(NULL, dirPath, NULL);
+    }
+    
+    /* Now create/truncate the output file */
     HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL,
                                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile != INVALID_HANDLE_VALUE) {

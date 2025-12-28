@@ -179,6 +179,8 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
         if (g_exitPrefix) {
             wcsncpy(g_exitPrefix, text, prefixLen);
             g_exitPrefix[prefixLen] = L'\0';
+        } else {
+            LOG_WARNING("PluginExit: Failed to allocate prefix buffer (%zu bytes)", (prefixLen + 1) * sizeof(wchar_t));
         }
     }
     
@@ -194,6 +196,8 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
         if (g_exitSuffix) {
             wcsncpy(g_exitSuffix, suffixStart, suffixLen);
             g_exitSuffix[suffixLen] = L'\0';
+        } else {
+            LOG_WARNING("PluginExit: Failed to allocate suffix buffer (%zu bytes)", (suffixLen + 1) * sizeof(wchar_t));
         }
     }
     
