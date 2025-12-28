@@ -288,13 +288,13 @@ void StartDefaultCountDown(HWND hwnd) {
     extern POMODORO_PHASE current_pomodoro_phase;
     extern void ResetPomodoroState(void);
     
-    countdown_message_shown = FALSE;
-    
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
     
     if (g_AppConfig.timer.default_start_time > 0) {
+        /* Only reset countdown_message_shown when actually starting countdown */
+        countdown_message_shown = FALSE;
         TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, FALSE, TRUE};
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
         
@@ -302,6 +302,7 @@ void StartDefaultCountDown(HWND hwnd) {
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
     } else {
+        /* Don't change timer state - just open dialog */
         PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_CUSTOM_COUNTDOWN, 0);
     }
 }
@@ -383,9 +384,7 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 
     CleanupBeforeTimerAction();
 
-    extern BOOL countdown_message_shown;
-    countdown_message_shown = FALSE;
-
+    /* countdown_message_shown is reset inside StartCountdownWithTime/StartDefaultCountDown */
     int zeroBased = index - 1;
     if (zeroBased >= 0 && zeroBased < time_options_count) {
         StartCountdownWithTime(hwnd, time_options[zeroBased]);

@@ -598,14 +598,14 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                 /* Just close dialog, font already applied during preview */
                 LOG_INFO("FontPicker: Closing dialog with OK");
                 KillTimer(hdlg, 9998);
-                EndDialog(hdlg, IDOK);
+                DestroyWindow(hdlg);
                 return TRUE;
             } else if (LOWORD(wp) == IDCANCEL) {
                 LOG_INFO("FontPicker: User clicked Cancel button");
                 RestoreOriginalFont();
                 LOG_INFO("FontPicker: Closing dialog with Cancel");
                 KillTimer(hdlg, 9998);
-                EndDialog(hdlg, IDCANCEL);
+                DestroyWindow(hdlg);
                 return TRUE;
             } else if (LOWORD(wp) == IDC_FONT_LIST_SIMPLE) {
                 if (HIWORD(wp) == LBN_SELCHANGE) {
@@ -679,11 +679,24 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
 }
 
 BOOL ShowSystemFontDialog(HWND hwndParent) {
-    INT_PTR result = DialogBoxW(
+    /* Check if dialog is already open */
+    if (Dialog_IsOpen(DIALOG_INSTANCE_FONT_PICKER)) {
+        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_FONT_PICKER);
+        SetForegroundWindow(existing);
+        return TRUE;
+    }
+    
+    /* Create modeless dialog */
+    HWND hwndDlg = CreateDialogW(
         GetModuleHandle(NULL),
         MAKEINTRESOURCEW(IDD_FONT_PICKER_SIMPLE),
         hwndParent,
         SimpleFontPickerProc
     );
-    return (result == IDOK || result == IDCANCEL);
+    
+    if (hwndDlg) {
+        ShowWindow(hwndDlg, SW_SHOW);
+        return TRUE;
+    }
+    return FALSE;
 }

@@ -281,7 +281,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
         }
 
         case WM_COMMAND:
-            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, inputText, sizeof(inputText)/sizeof(wchar_t));
 
                 if (Dialog_IsEmptyOrWhitespace(inputText)) {

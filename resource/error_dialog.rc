@@ -1,6 +1,6 @@
 /**
  * @file error_dialog.rc
- * @brief Simple error message display dialog
+ * @brief Simple error message display dialog (modeless)
  */
 #include <windows.h>
 #include "resource.h"
@@ -8,12 +8,14 @@
 #pragma code_page(65001)
 
 
-/** @brief Minimal error message dialog with centered text */
-IDD_ERROR_DIALOG DIALOGEX 0, 0, 160, 40
-STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+/** @brief Minimal error message dialog with centered text and OK button */
+IDD_ERROR_DIALOG DIALOGEX 0, 0, 180, 60
+STYLE DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Error"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     /** Error message text populated at runtime */
-    CTEXT           "Invalid input format, please try again.", IDC_ERROR_TEXT, 0, 10, 160, 20
+    CTEXT           "Invalid input format, please try again.", IDC_ERROR_TEXT, 0, 10, 180, 20
+    /** OK button to dismiss dialog */
+    DEFPUSHBUTTON   "OK", IDOK, 65, 35, 50, 14
 END 

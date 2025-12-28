@@ -54,7 +54,6 @@ static void HotkeyCustomCountdown(HWND hwnd) {
         return;
     }
     
-    countdown_message_shown = FALSE;
     ClearInputBuffer(inputText, sizeof(inputText));
     
     /* Use modeless dialog */

@@ -324,7 +324,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
         }
 
         case WM_COMMAND:
-            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || HIWORD(wParam) == BN_CLICKED) {
+            if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
                 wchar_t url[MAX_PATH] = {0};
                 GetDlgItemText(hwndDlg, CLOCK_IDC_EDIT, url, sizeof(url)/sizeof(wchar_t));
 

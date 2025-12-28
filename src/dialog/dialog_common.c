@@ -311,15 +311,10 @@ BOOL Dialog_IsEmptyOrWhitespaceA(const char* str) {
 }
 
 void Dialog_ShowErrorAndRefocus(HWND hwndDlg, int editControlId) {
-    extern void ShowErrorDialog(HWND hwndParent);
+    extern void ShowErrorDialogWithRefocus(HWND hwndParent, int editControlId);
     
-    ShowErrorDialog(hwndDlg);
-    
-    HWND hwndEdit = GetDlgItem(hwndDlg, editControlId);
-    if (hwndEdit) {
-        SetFocus(hwndEdit);
-        SendMessage(hwndEdit, EM_SETSEL, 0, -1);
-    }
+    /* Use modeless error dialog with automatic refocus on close */
+    ShowErrorDialogWithRefocus(hwndDlg, editControlId);
 }
 
 void Dialog_FormatSecondsToString(int totalSeconds, char* buffer, size_t bufferSize) {

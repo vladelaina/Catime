@@ -254,6 +254,9 @@ static void HandleTimeoutActions(HWND hwnd) {
             StopNotificationSound();
             CLOCK_SHOW_CURRENT_TIME = TRUE;
             CLOCK_COUNT_UP = FALSE;
+            /* Reset countdown state to prevent accidental completion trigger */
+            CLOCK_TOTAL_TIME = 0;
+            countdown_elapsed_time = 0;
             ResetMillisecondAccumulator();
             KillTimer(hwnd, TIMER_ID_MAIN);
             SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
@@ -515,7 +518,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
         countdown_elapsed_time = current_elapsed_sec;
     }
     
-    if (!CLOCK_COUNT_UP && countdown_elapsed_time >= CLOCK_TOTAL_TIME) {
+    if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time >= CLOCK_TOTAL_TIME) {
         if (!countdown_message_shown) {
             countdown_message_shown = TRUE;
             

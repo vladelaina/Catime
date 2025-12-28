@@ -32,12 +32,8 @@ extern int time_options_count;
 
 LRESULT CmdCustomCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    if (CLOCK_SHOW_CURRENT_TIME) {
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
-        extern time_t CLOCK_LAST_TIME_UPDATE;
-        CLOCK_LAST_TIME_UPDATE = 0;
-        KillTimer(hwnd, 1);
-    }
+    /* Don't change timer state here - wait until user confirms input
+     * State will be changed in StartCountdownWithTime when dialog returns result */
     
     /* Use modeless dialog - result handled via WM_DIALOG_COUNTDOWN */
     ShowCountdownInputDialog(hwnd);
