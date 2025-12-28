@@ -492,6 +492,15 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
         return FALSE;
     }
     
+    /* Stop any plugins that may have started while security dialog was open */
+    /* This ensures single-instance even if user started another plugin during dialog */
+    for (int i = 0; i < g_pluginCount; i++) {
+        if (g_plugins[i].isRunning && i != index) {
+            LOG_INFO("Stopping plugin %ls (started during security dialog)", g_plugins[i].displayName);
+            TerminatePluginInternal(i);
+        }
+    }
+    
     /* Get plugin path for trust operation */
     wchar_t pluginPath[MAX_PATH];
     wcsncpy(pluginPath, g_plugins[index].path, MAX_PATH - 1);
