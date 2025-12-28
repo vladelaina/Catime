@@ -122,8 +122,9 @@ void WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric) {
     g_animSpeedMetric = metric;
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    const char* metricStr = (metric == ANIMATION_SPEED_CPU ? "CPU" :
-                          (metric == ANIMATION_SPEED_TIMER ? "TIMER" : "MEMORY"));
+    const char* metricStr = (metric == ANIMATION_SPEED_ORIGINAL ? "ORIGINAL" :
+                            (metric == ANIMATION_SPEED_CPU ? "CPU" :
+                            (metric == ANIMATION_SPEED_TIMER ? "TIMER" : "MEMORY")));
     WriteIniString("Animation", "ANIMATION_SPEED_METRIC", metricStr, config_path);
 }
 
@@ -168,7 +169,9 @@ void ReloadAnimationSpeedFromConfig(void) {
     GetConfigPath(config_path, MAX_PATH);
     char metric[32] = {0};
     ReadIniString("Animation", "ANIMATION_SPEED_METRIC", "MEMORY", metric, sizeof(metric), config_path);
-    if (_stricmp(metric, "CPU") == 0) {
+    if (_stricmp(metric, "ORIGINAL") == 0) {
+        g_animSpeedMetric = ANIMATION_SPEED_ORIGINAL;
+    } else if (_stricmp(metric, "CPU") == 0) {
         g_animSpeedMetric = ANIMATION_SPEED_CPU;
     } else if (_stricmp(metric, "TIMER") == 0 || _stricmp(metric, "COUNTDOWN") == 0) {
         g_animSpeedMetric = ANIMATION_SPEED_TIMER;
@@ -249,7 +252,8 @@ void WriteAnimationSpeedToConfig(const char* config_path) {
     if (!config_path) return;
     
     const char* metricStr = "MEMORY";
-    if (g_animSpeedMetric == ANIMATION_SPEED_CPU) metricStr = "CPU";
+    if (g_animSpeedMetric == ANIMATION_SPEED_ORIGINAL) metricStr = "ORIGINAL";
+    else if (g_animSpeedMetric == ANIMATION_SPEED_CPU) metricStr = "CPU";
     else if (g_animSpeedMetric == ANIMATION_SPEED_TIMER) metricStr = "TIMER";
     WriteIniString("Animation", "ANIMATION_SPEED_METRIC", metricStr, config_path);
     

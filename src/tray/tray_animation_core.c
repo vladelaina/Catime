@@ -132,8 +132,14 @@ static void FallbackToLogoIcon(void) {
 static UINT ComputeScaledDelay(UINT baseDelay) {
     if (baseDelay == 0) baseDelay = g_baseFolderInterval;
 
-    double percent = 0.0;
     AnimationSpeedMetric metric = GetAnimationSpeedMetric();
+    
+    /* Original speed mode: return baseDelay unchanged */
+    if (metric == ANIMATION_SPEED_ORIGINAL) {
+        return baseDelay;
+    }
+
+    double percent = 0.0;
     
     if (metric == ANIMATION_SPEED_CPU) {
         float cpu = 0.0f, mem = 0.0f;

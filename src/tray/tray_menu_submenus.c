@@ -335,6 +335,8 @@ void BuildAnimationSubmenu(HMENU hMenu) {
 
         HMENU hAnimSpeedMenu = CreatePopupMenu();
         AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
+        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_ORIGINAL ? MF_CHECKED : MF_UNCHECKED),
+                    CLOCK_IDM_ANIM_SPEED_ORIGINAL, GetLocalizedString(NULL, L"Original Speed"));
         AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
                     CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(NULL, L"By Memory Usage"));
         AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),

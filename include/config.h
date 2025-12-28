@@ -110,9 +110,10 @@ typedef enum {
  * @brief Tray animation speed metric
  */
 typedef enum {
-    ANIMATION_SPEED_MEMORY = 0,
-    ANIMATION_SPEED_CPU = 1,
-    ANIMATION_SPEED_TIMER = 2
+    ANIMATION_SPEED_ORIGINAL = 0,
+    ANIMATION_SPEED_MEMORY = 1,
+    ANIMATION_SPEED_CPU = 2,
+    ANIMATION_SPEED_TIMER = 3
 } AnimationSpeedMetric;
 
 /**

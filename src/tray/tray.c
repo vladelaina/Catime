@@ -269,6 +269,11 @@ static double CalculateSpeedMetricPercent(AnimationSpeedMetric metric, float cpu
 /** @brief Append "Speed · [Metric] X%" line to tooltip */
 static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric metric,
                            float cpu, float mem) {
+    /* Original speed mode: don't show speed line (always 100%, no useful info) */
+    if (metric == ANIMATION_SPEED_ORIGINAL) {
+        return;
+    }
+    
     double percent = CalculateSpeedMetricPercent(metric, cpu, mem);
     
     BOOL applyScaling = TRUE;

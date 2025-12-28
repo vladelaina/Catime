@@ -604,6 +604,7 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     if (HandleAnimationMenuCommand(hwnd, cmd)) return TRUE;
 
     /* Animation speed commands */
+    if (cmd == CLOCK_IDM_ANIM_SPEED_ORIGINAL) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_ORIGINAL); return TRUE; }
     if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_MEMORY); return TRUE; }
     if (cmd == CLOCK_IDM_ANIM_SPEED_CPU) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_CPU); return TRUE; }
     if (cmd == CLOCK_IDM_ANIM_SPEED_TIMER) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_TIMER); return TRUE; }
