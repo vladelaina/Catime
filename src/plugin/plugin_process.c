@@ -415,7 +415,15 @@ BOOL PluginProcess_IsAlive(PluginInfo* plugin) {
     }
     
     if (exitCode != STILL_ACTIVE) {
-        LOG_INFO("[Process] IsAlive: process has exited");
+        LOG_INFO("[Process] IsAlive: process has exited, updating state");
+        /* Update state to reflect actual process status */
+        if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
+            HANDLE hProcToClose = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
+            if (hProcToClose) {
+                CloseHandle(hProcToClose);
+            }
+            memset(&plugin->pi, 0, sizeof(plugin->pi));
+        }
         return FALSE;
     }
     return TRUE;
