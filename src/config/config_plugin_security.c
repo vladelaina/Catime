@@ -464,3 +464,13 @@ void LoadPluginTrustFromConfig(void) {
     LOG_INFO("Loaded %d trusted plugins from config", g_AppConfig.plugin_trust.count);
     LeaveCriticalSection(&g_pluginTrustCS);
 }
+
+/**
+ * @brief Calculate SHA256 hash of a plugin file (public interface)
+ * @param pluginPath Path to plugin file
+ * @param hashHex Output buffer for hex string (must be 65 bytes)
+ * @return TRUE if successful
+ */
+BOOL CalculatePluginHash(const char* pluginPath, char* hashHex) {
+    return CalculateFileSHA256(pluginPath, hashHex);
+}

@@ -451,6 +451,16 @@ BOOL PluginManager_StartPlugin(int index) {
     /* Security check: verify plugin trust before launching */
     if (!IsPluginTrusted(pluginPathUtf8)) {
         LOG_INFO("Plugin not trusted, showing security dialog: %ls", pluginDisplayName);
+        
+        /* Calculate and save hash at dialog show time for later verification */
+        char pluginHash[65];
+        if (CalculatePluginHash(pluginPathUtf8, pluginHash)) {
+            SetPendingPluginHash(pluginHash);
+        } else {
+            LOG_ERROR("Failed to calculate plugin hash for security dialog");
+            SetPendingPluginHash("");
+        }
+        
         LeaveCriticalSection(&g_pluginCS);
         
         /* Show modeless security confirmation dialog */
@@ -508,6 +518,32 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
     
     char pluginPathUtf8[MAX_PATH];
     WideCharToMultiByte(CP_UTF8, 0, pluginPath, -1, pluginPathUtf8, MAX_PATH, NULL, NULL);
+    
+    /* Security: Verify plugin file hasn't changed since dialog was shown */
+    const char* savedHash = GetPendingPluginHash();
+    if (savedHash && savedHash[0] != '\0') {
+        char currentHash[65];
+        if (CalculatePluginHash(pluginPathUtf8, currentHash)) {
+            if (strcmp(savedHash, currentHash) != 0) {
+                LOG_ERROR("Plugin file changed during security dialog! Aborting launch for security.");
+                LOG_ERROR("  Saved hash: %s", savedHash);
+                LOG_ERROR("  Current hash: %s", currentHash);
+                PluginProcess_SetLastError(L"File changed");
+                ClearPendingPluginInfo();
+                LeaveCriticalSection(&g_pluginCS);
+                return FALSE;
+            }
+            LOG_INFO("Plugin hash verified: file unchanged since dialog shown");
+        } else {
+            LOG_ERROR("Failed to calculate current plugin hash, aborting launch for security");
+            PluginProcess_SetLastError(L"Hash error");
+            ClearPendingPluginInfo();
+            LeaveCriticalSection(&g_pluginCS);
+            return FALSE;
+        }
+    } else {
+        LOG_WARNING("No saved hash available for verification (proceeding anyway)");
+    }
     
     if (trustPlugin) {
         /* User chose "Trust & Run" - add to trust list */

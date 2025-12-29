@@ -321,6 +321,18 @@ const wchar_t* PluginProcess_GetLastError(void) {
     return g_lastLaunchError;
 }
 
+/**
+ * @brief Set last launch error message
+ */
+void PluginProcess_SetLastError(const wchar_t* errorMsg) {
+    if (errorMsg) {
+        wcsncpy(g_lastLaunchError, errorMsg, 127);
+        g_lastLaunchError[127] = L'\0';
+    } else {
+        g_lastLaunchError[0] = L'\0';
+    }
+}
+
 BOOL PluginProcess_Launch(PluginInfo* plugin) {
     if (!plugin) return FALSE;
     

@@ -34,6 +34,12 @@ BOOL PluginProcess_Launch(PluginInfo* plugin);
 const wchar_t* PluginProcess_GetLastError(void);
 
 /**
+ * @brief Set last launch error message
+ * @param errorMsg Error message to set
+ */
+void PluginProcess_SetLastError(const wchar_t* errorMsg);
+
+/**
  * @brief Terminate a running plugin
  * @param plugin Plugin info to terminate
  * @return TRUE if terminated successfully

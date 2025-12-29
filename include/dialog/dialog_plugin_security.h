@@ -37,4 +37,16 @@ int GetPendingPluginIndex(void);
  */
 void ClearPendingPluginInfo(void);
 
+/**
+ * @brief Set the hash of plugin file at dialog show time
+ * @param hash SHA256 hash string (64 chars + null terminator)
+ */
+void SetPendingPluginHash(const char* hash);
+
+/**
+ * @brief Get the hash of plugin file at dialog show time
+ * @return Hash string, or empty string if not set
+ */
+const char* GetPendingPluginHash(void);
+
 #endif /* DIALOG_PLUGIN_SECURITY_H */

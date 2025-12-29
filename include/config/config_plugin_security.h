@@ -39,4 +39,12 @@ void LoadPluginTrustFromConfig(void);
  */
 void CleanupPluginTrustCS(void);
 
+/**
+ * @brief Calculate SHA256 hash of a plugin file
+ * @param pluginPath Path to plugin file
+ * @param hashHex Output buffer for hex string (must be 65 bytes)
+ * @return TRUE if successful
+ */
+BOOL CalculatePluginHash(const char* pluginPath, char* hashHex);
+
 #endif /* CONFIG_PLUGIN_SECURITY_H */
