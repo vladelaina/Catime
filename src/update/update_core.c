@@ -189,18 +189,16 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     int versionCompare = CompareVersions(latestVersion, currentVersion);
     if (versionCompare > 0) {
         LOG_INFO("New version found! Current: %s, Latest: %s", currentVersion, latestVersion);
-        int response = ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl, releaseNotes);
         
-        if (response == IDYES) {
-            LOG_INFO("User chose to update now");
-            OpenBrowserAndExit(downloadUrl, hwnd);
-        } else {
-            LOG_INFO("User chose to update later");
-        }
+        /* Store update info and notify main thread to show dialog */
+        StoreUpdateResult(TRUE, currentVersion, latestVersion, downloadUrl, releaseNotes);
+        PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 1, 0);
     } else {
         LOG_INFO("Already using latest version: %s", currentVersion);
         if (!silentCheck) {
-            ShowNoUpdateDialog(hwnd, currentVersion);
+            /* Store version info and notify main thread to show dialog */
+            StoreUpdateResult(FALSE, currentVersion, NULL, NULL, NULL);
+            PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 0, 0);
         }
     }
     

@@ -501,6 +501,25 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 /**
+ * @brief Handle update check result from background thread
+ * @param wp 1 = update available, 0 = no update
+ * @param lp Reserved
+ */
+LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (wp == 1) {
+        /* Update available - show update dialog */
+        extern void ShowStoredUpdateDialog(HWND hwnd);
+        ShowStoredUpdateDialog(hwnd);
+    } else {
+        /* No update - show no update dialog */
+        extern void ShowStoredNoUpdateDialog(HWND hwnd);
+        ShowStoredNoUpdateDialog(hwnd);
+    }
+    return 0;
+}
+
+/**
  * @brief Handle font license dialog result
  * @param wp IDOK = accepted, IDCANCEL = rejected
  * @param lp Reserved

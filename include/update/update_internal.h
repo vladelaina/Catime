@@ -73,4 +73,10 @@ void ShowExitMessageDialog(HWND hwnd);
 const char* GetPendingUpdateDownloadUrl(void);
 void TriggerUpdateDownload(HWND hwnd);
 
+/* Thread-safe update result storage */
+void StoreUpdateResult(BOOL hasUpdate, const char* currentVersion, const char* latestVersion,
+                       const char* downloadUrl, const char* releaseNotes);
+void ShowStoredUpdateDialog(HWND hwnd);
+void ShowStoredNoUpdateDialog(HWND hwnd);
+
 #endif // UPDATE_INTERNAL_H

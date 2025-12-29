@@ -585,3 +585,47 @@ void TriggerUpdateDownload(HWND hwnd) {
         PostQuitMessage(0);
     }
 }
+
+/* ============================================================================
+ * Thread-safe update result storage
+ * ============================================================================ */
+
+static char g_storedCurrentVersion[64] = {0};
+static char g_storedLatestVersion[64] = {0};
+static char g_storedDownloadUrl[512] = {0};
+static char g_storedReleaseNotes[16384] = {0};
+static BOOL g_storedHasUpdate = FALSE;
+
+void StoreUpdateResult(BOOL hasUpdate, const char* currentVersion, const char* latestVersion,
+                       const char* downloadUrl, const char* releaseNotes) {
+    g_storedHasUpdate = hasUpdate;
+    
+    if (currentVersion) {
+        strncpy(g_storedCurrentVersion, currentVersion, sizeof(g_storedCurrentVersion) - 1);
+        g_storedCurrentVersion[sizeof(g_storedCurrentVersion) - 1] = '\0';
+    }
+    
+    if (latestVersion) {
+        strncpy(g_storedLatestVersion, latestVersion, sizeof(g_storedLatestVersion) - 1);
+        g_storedLatestVersion[sizeof(g_storedLatestVersion) - 1] = '\0';
+    }
+    
+    if (downloadUrl) {
+        strncpy(g_storedDownloadUrl, downloadUrl, sizeof(g_storedDownloadUrl) - 1);
+        g_storedDownloadUrl[sizeof(g_storedDownloadUrl) - 1] = '\0';
+    }
+    
+    if (releaseNotes) {
+        strncpy(g_storedReleaseNotes, releaseNotes, sizeof(g_storedReleaseNotes) - 1);
+        g_storedReleaseNotes[sizeof(g_storedReleaseNotes) - 1] = '\0';
+    }
+}
+
+void ShowStoredUpdateDialog(HWND hwnd) {
+    ShowUpdateNotification(hwnd, g_storedCurrentVersion, g_storedLatestVersion,
+                          g_storedDownloadUrl, g_storedReleaseNotes);
+}
+
+void ShowStoredNoUpdateDialog(HWND hwnd) {
+    ShowNoUpdateDialog(hwnd, g_storedCurrentVersion);
+}

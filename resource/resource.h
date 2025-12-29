@@ -10,7 +10,7 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.4.0-alpha8"    /**< Version string */
+#define CATIME_VERSION "1.2.0-alpha8"    /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
 #define CATIME_VERSION_MINOR 4           /**< Minor version number */
 #define CATIME_VERSION_PATCH 0           /**< Patch version number */
@@ -46,6 +46,7 @@
 #define WM_DIALOG_UPDATE        (WM_USER + 14)  /**< Update dialog result: wParam=IDYES(update)/IDNO(later) */
 #define WM_DIALOG_FONT_LICENSE  (WM_USER + 15)  /**< Font license dialog result: wParam=IDOK(agree)/IDCANCEL */
 #define WM_DIALOG_PLUGIN_SECURITY (WM_USER + 16) /**< Plugin security dialog result: wParam=IDYES(trust)/IDOK(once)/IDCANCEL */
+#define WM_UPDATE_CHECK_RESULT (WM_USER + 17)   /**< Update check result: wParam=1(update available)/0(no update), lParam=0 */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
 #define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 
