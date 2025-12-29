@@ -36,6 +36,6 @@ BEGIN
                                                                           125,  65,  32, 12
     CONTROL     "Copyright Notice",          IDC_COPYRIGHT_LINK,  "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           165,  65,  50, 12
-    CONTROL     "Support",                   IDC_SUPPORT,         "Static", SS_OWNERDRAW | SS_NOTIFY,
+    CONTROL     "Discord",                   IDC_SUPPORT,         "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           215,  65,  50, 12
 END 

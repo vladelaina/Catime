@@ -414,7 +414,7 @@ void BuildHelpSubmenu(HMENU hMenu) {
 
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
 
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(NULL, L"Support"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(NULL, L"Sponsor"));
     
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     
