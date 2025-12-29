@@ -143,7 +143,7 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
     }
     
     wchar_t searchPath[MAX_PATH];
-    int written = _snwprintf(searchPath, MAX_PATH, L"%s\\*", folderPath);
+    int written = _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE, L"%s\\*", folderPath);
     if (written < 0 || written >= MAX_PATH) return;
     
     WIN32_FIND_DATAW findData;
@@ -158,7 +158,7 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
         }
         
         wchar_t fullPath[MAX_PATH];
-        int len1 = _snwprintf(fullPath, MAX_PATH, L"%s\\%s", folderPath, findData.cFileName);
+        int len1 = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPath, findData.cFileName);
         if (len1 < 0 || len1 >= MAX_PATH) continue;
         
         wchar_t newRelativePath[MAX_PATH];
@@ -166,7 +166,7 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
             wcsncpy(newRelativePath, findData.cFileName, MAX_PATH - 1);
             newRelativePath[MAX_PATH - 1] = L'\0';
         } else {
-            int len2 = _snwprintf(newRelativePath, MAX_PATH, L"%s\\%s", relativePath, findData.cFileName);
+            int len2 = _snwprintf_s(newRelativePath, MAX_PATH, _TRUNCATE, L"%s\\%s", relativePath, findData.cFileName);
             if (len2 < 0 || len2 >= MAX_PATH) continue;
         }
         
@@ -293,8 +293,8 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, FontEntry* entries, int co
                     size_t tokenLen = wcslen(token);
                     
                     if (currentLen + tokenLen + 2 < MAX_PATH) {
-                        if (currentLen > 0) wcscat(currentPath, L"\\");
-                        wcscat(currentPath, token);
+                        if (currentLen > 0) wcsncat_s(currentPath, MAX_PATH, L"\\", 1);
+                        wcsncat_s(currentPath, MAX_PATH, token, tokenLen);
                     }
                     
                     BOOL found = FALSE;
@@ -337,8 +337,8 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, FontEntry* entries, int co
                 size_t tokenLen = wcslen(token);
                 
                 if (currentLen + tokenLen + 2 < MAX_PATH) {
-                    if (currentLen > 0) wcscat(currentPath, L"\\");
-                    wcscat(currentPath, token);
+                    if (currentLen > 0) wcsncat_s(currentPath, MAX_PATH, L"\\", 1);
+                    wcsncat_s(currentPath, MAX_PATH, token, tokenLen);
                 }
                 
                 BOOL shouldCheck = FALSE;

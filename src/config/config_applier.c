@@ -278,10 +278,14 @@ void ApplyColorSettings(const ConfigSnapshot* snapshot) {
     
     char* token = strtok(colorOptionsCopy, ",");
     while (token) {
-        COLOR_OPTIONS = realloc(COLOR_OPTIONS, sizeof(PredefinedColor) * (COLOR_OPTIONS_COUNT + 1));
-        if (COLOR_OPTIONS) {
-            COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = strdup(token);
-            COLOR_OPTIONS_COUNT++;
+        PredefinedColor* newOptions = realloc(COLOR_OPTIONS, sizeof(PredefinedColor) * (COLOR_OPTIONS_COUNT + 1));
+        if (newOptions) {
+            COLOR_OPTIONS = newOptions;
+            char* hexCopy = strdup(token);
+            if (hexCopy) {
+                COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = hexCopy;
+                COLOR_OPTIONS_COUNT++;
+            }
         }
         token = strtok(NULL, ",");
     }

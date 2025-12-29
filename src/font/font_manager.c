@@ -346,6 +346,7 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
 
 void ListAvailableFonts(void) {
     HDC hdc = GetDC(NULL);
+    if (!hdc) return;
     LOGFONT lf;
     memset(&lf, 0, sizeof(LOGFONT));
     lf.lfCharSet = DEFAULT_CHARSET;

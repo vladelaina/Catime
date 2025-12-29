@@ -523,6 +523,12 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     }
     
     HDC hdcScreen = GetDC(NULL);
+    if (!hdcScreen) {
+        SelectObject(memDC, oldBitmap);
+        DeleteObject(memBitmap);
+        DeleteDC(memDC);
+        return;
+    }
     POINT ptSrc = {0, 0};
     SIZE sizeWnd = {rect.right, rect.bottom};
     POINT ptDst = {0, 0};

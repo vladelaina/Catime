@@ -899,26 +899,24 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
         
         int newSize = neededSize; 
         
-        /* Use realloc for efficiency */
-        unsigned char* new1 = (unsigned char*)realloc(g_effectBuffer1, newSize);
-        unsigned char* new2 = (unsigned char*)realloc(g_effectBuffer2, newSize);
-        unsigned char* new3 = (unsigned char*)realloc(g_effectBuffer3, newSize);
+        /* Free old buffers first, then allocate new ones to avoid realloc complexity */
+        if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
+        if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
+        if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
         
-        if (!new1 || !new2 || !new3) {
-            /* Allocation failed - emergency cleanup */
-            if (new1) free(new1); else if (g_effectBuffer1) free(g_effectBuffer1);
-            if (new2) free(new2); else if (g_effectBuffer2) free(g_effectBuffer2);
-            if (new3) free(new3); else if (g_effectBuffer3) free(g_effectBuffer3);
-            g_effectBuffer1 = NULL;
-            g_effectBuffer2 = NULL;
-            g_effectBuffer3 = NULL;
+        g_effectBuffer1 = (unsigned char*)malloc(newSize);
+        g_effectBuffer2 = (unsigned char*)malloc(newSize);
+        g_effectBuffer3 = (unsigned char*)malloc(newSize);
+        
+        if (!g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
+            /* Allocation failed - cleanup */
+            if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
+            if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
+            if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
             g_effectBufferSize = 0;
             return;
         }
         
-        g_effectBuffer1 = new1;
-        g_effectBuffer2 = new2;
-        g_effectBuffer3 = new3;
         g_effectBufferSize = newSize;
     }
 

@@ -677,7 +677,7 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
         int w, h;
         MeasureTextSTB(text, (int)(fontSize * fontScale), &w, &h);
         totalTextHeight = h;
-        numLines = h / lineHeight;
+        numLines = (lineHeight > 0) ? (h / lineHeight) : 1;
     }
     
     int startY = (height - totalTextHeight) / 2;

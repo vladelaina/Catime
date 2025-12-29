@@ -170,7 +170,7 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
         }
         p += 2;  // Skip ". "
         advanceSrc = (int)(p - *src);
-        swprintf(replacement, 16, L"%d. ", num);
+        _snwprintf_s(replacement, 16, _TRUNCATE, L"%d. ", num);
     } else if (*p == L'-' && p[1] == L' ' && p[2] == L'[' && p[3] == L' ' && p[4] == L']' && p[5] == L' ') {
         // Unchecked task: "- [ ] "
         wcscpy_s(replacement, 16, L"\x25A1 ");

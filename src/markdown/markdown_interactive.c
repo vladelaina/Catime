@@ -67,13 +67,16 @@ void AddLinkRegion(const RECT* rect, const wchar_t* url) {
     EnterCriticalSection(&g_interactiveCS);
     
     if (g_regionCount < MAX_CLICKABLE_REGIONS) {
-        ClickableRegion* r = &g_regions[g_regionCount];
-        r->type = CLICK_TYPE_LINK;
-        r->rect = *rect;
-        r->url = _wcsdup(url);
-        r->checkboxIndex = -1;
-        r->isChecked = FALSE;
-        g_regionCount++;
+        wchar_t* urlCopy = _wcsdup(url);
+        if (urlCopy) {
+            ClickableRegion* r = &g_regions[g_regionCount];
+            r->type = CLICK_TYPE_LINK;
+            r->rect = *rect;
+            r->url = urlCopy;
+            r->checkboxIndex = -1;
+            r->isChecked = FALSE;
+            g_regionCount++;
+        }
     }
     
     LeaveCriticalSection(&g_interactiveCS);

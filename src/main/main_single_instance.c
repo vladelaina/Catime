@@ -78,7 +78,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
             
             /* Use unique mutex name to avoid conflict with zombie */
             wchar_t uniqueMutexName[128];
-            swprintf(uniqueMutexName, 128, L"CatimeMutex_%lu", GetTickCount());
+            _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
             *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
             g_GlobalMutex = *outMutex;
             LOG_WARNING("Created unique mutex due to zombie process: %ls", uniqueMutexName);
@@ -91,7 +91,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
             
             /* Use unique mutex name */
             wchar_t uniqueMutexName[128];
-            swprintf(uniqueMutexName, 128, L"CatimeMutex_%lu", GetTickCount());
+            _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
             *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
             g_GlobalMutex = *outMutex;
             LOG_WARNING("Created unique mutex due to wait failure: %ls", uniqueMutexName);
@@ -170,7 +170,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
         
         /* Use unique mutex name to avoid conflict */
         wchar_t uniqueMutexName[128];
-        swprintf(uniqueMutexName, 128, L"CatimeMutex_%lu", GetTickCount());
+        _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
         *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
         g_GlobalMutex = *outMutex;
         LOG_WARNING("Created unique mutex after force close failed: %ls", uniqueMutexName);
@@ -183,7 +183,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
         
         /* Use unique mutex name */
         wchar_t uniqueMutexName[128];
-        swprintf(uniqueMutexName, 128, L"CatimeMutex_%lu", GetTickCount());
+        _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
         *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
         g_GlobalMutex = *outMutex;
         LOG_WARNING("Created unique mutex due to wait failure: %ls", uniqueMutexName);

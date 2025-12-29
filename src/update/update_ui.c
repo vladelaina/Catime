@@ -156,30 +156,32 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     SetProp(hwndNotes, L"LinkCount", (HANDLE)(INT_PTR)g_notesLinkCount);
 
                     HDC hdc = GetDC(hwndNotes);
-                    HFONT hFont = (HFONT)SendMessage(hwndNotes, WM_GETFONT, 0, 0);
-                    if (!hFont) hFont = GetStockObject(DEFAULT_GUI_FONT);
-                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                    if (hdc) {
+                        HFONT hFont = (HFONT)SendMessage(hwndNotes, WM_GETFONT, 0, 0);
+                        if (!hFont) hFont = GetStockObject(DEFAULT_GUI_FONT);
+                        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
 
-                    RECT rect;
-                    GetClientRect(hwndNotes, &rect);
-                    rect.left += 5;
-                    rect.top += 5;
-                    rect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
+                        RECT rect;
+                        GetClientRect(hwndNotes, &rect);
+                        rect.left += 5;
+                        rect.top += 5;
+                        rect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
 
-                    RECT drawRect = rect;
-                    g_textHeight = CalculateMarkdownTextHeight(hdc, g_notesDisplayText,
-                                                                g_notesHeadings, g_notesHeadingCount,
-                                                                g_notesStyles, g_notesStyleCount,
-                                                                g_notesListItems, g_notesListItemCount,
-                                                                g_notesBlockquotes, g_notesBlockquoteCount,
-                                                                drawRect);
+                        RECT drawRect = rect;
+                        g_textHeight = CalculateMarkdownTextHeight(hdc, g_notesDisplayText,
+                                                                    g_notesHeadings, g_notesHeadingCount,
+                                                                    g_notesStyles, g_notesStyleCount,
+                                                                    g_notesListItems, g_notesListItemCount,
+                                                                    g_notesBlockquotes, g_notesBlockquoteCount,
+                                                                    drawRect);
 
-                    SelectObject(hdc, hOldFont);
-                    ReleaseDC(hwndNotes, hdc);
+                        SelectObject(hdc, hOldFont);
+                        ReleaseDC(hwndNotes, hdc);
 
-                    int clientHeight = rect.bottom - rect.top;
-                    SetProp(hwndNotes, L"ScrollMax", (HANDLE)(INT_PTR)g_textHeight);
-                    SetProp(hwndNotes, L"ScrollPage", (HANDLE)(INT_PTR)clientHeight);
+                        int clientHeight = rect.bottom - rect.top;
+                        SetProp(hwndNotes, L"ScrollMax", (HANDLE)(INT_PTR)g_textHeight);
+                        SetProp(hwndNotes, L"ScrollPage", (HANDLE)(INT_PTR)clientHeight);
+                    }
                 }
 
                 SetDlgItemTextW(hwndDlg, IDYES, GetLocalizedString(NULL, L"Update Now"));

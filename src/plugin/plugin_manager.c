@@ -11,6 +11,7 @@
 #include "dialog/dialog_plugin_security.h"
 #include "utils/natural_sort.h"
 #include "log.h"
+#include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -91,7 +92,18 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
                     g_plugins[indexToMonitor].lastModTime = currentModTime;
                     int idx = indexToMonitor;
                     LeaveCriticalSection(&g_pluginCS);
-                    RestartPluginInternal(idx);
+                    
+                    /* Post message to main thread instead of calling directly */
+                    /* This avoids deadlock when security dialog needs to be shown */
+                    HWND hwnd = PluginProcess_GetNotifyWindow();
+                    if (hwnd) {
+                        PostMessage(hwnd, WM_PLUGIN_HOT_RELOAD, (WPARAM)idx, 0);
+                    } else {
+                        /* No window available - skip hot-reload this cycle */
+                        /* Window should be set during initialization */
+                        LOG_WARNING("[HotReload] No notify window, skipping reload");
+                    }
+                    
                     EnterCriticalSection(&g_pluginCS);
                 }
             }
@@ -709,4 +721,8 @@ void PluginManager_SetNotifyWindow(HWND hwnd) {
 
 int PluginManager_GetActivePluginIndex(void) {
     return g_activePluginIndex;
+}
+
+BOOL PluginManager_RestartPlugin(int index) {
+    return RestartPluginInternal(index);
 }

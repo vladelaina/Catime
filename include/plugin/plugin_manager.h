@@ -135,4 +135,12 @@ BOOL PluginManager_OpenPluginFolder(void);
  */
 void PluginManager_SetNotifyWindow(HWND hwnd);
 
+/**
+ * @brief Restart a plugin (for hot-reload from main thread)
+ * @param index Plugin index
+ * @return TRUE if restart initiated successfully
+ * @note This function should be called from the main UI thread
+ */
+BOOL PluginManager_RestartPlugin(int index);
+
 #endif /* PLUGIN_MANAGER_H */

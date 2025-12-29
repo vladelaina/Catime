@@ -48,8 +48,11 @@ void AddColorOption(const char* hexColor) {
         }
         PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
         if (newArray) {
-            COLOR_OPTIONS = newArray;
-            COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = _strdup(info->name);
+            char* hexCopy = _strdup(info->name);
+            if (hexCopy) {
+                COLOR_OPTIONS = newArray;
+                COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = hexCopy;
+            }
         }
         return;
     }
@@ -61,8 +64,11 @@ void AddColorOption(const char* hexColor) {
         }
         PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
         if (newArray) {
-            COLOR_OPTIONS = newArray;
-            COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = _strdup(hexColor);
+            char* hexCopy = _strdup(hexColor);
+            if (hexCopy) {
+                COLOR_OPTIONS = newArray;
+                COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = hexCopy;
+            }
         }
         return;
     }
@@ -83,8 +89,11 @@ void AddColorOption(const char* hexColor) {
     }
     PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
     if (newArray) {
-        COLOR_OPTIONS = newArray;
-        COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = _strdup(normalized);
+        char* hexCopy = _strdup(normalized);
+        if (hexCopy) {
+            COLOR_OPTIONS = newArray;
+            COLOR_OPTIONS[COLOR_OPTIONS_COUNT++].hexColor = hexCopy;
+        }
     }
 }
 

@@ -52,5 +52,6 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDialogFontLicense(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandlePluginHotReload(HWND hwnd, WPARAM wp, LPARAM lp);
 
 #endif /* WINDOW_MESSAGE_HANDLERS_H */

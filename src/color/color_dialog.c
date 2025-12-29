@@ -41,6 +41,7 @@ static BOOL SampleColorAtCursor(HWND hdlg, COLORREF* outColor) {
     ScreenToClient(hdlg, &pt);
     
     HDC hdc = GetDC(hdlg);
+    if (!hdc) return FALSE;
     COLORREF color = GetPixel(hdc, pt.x, pt.y);
     ReleaseDC(hdlg, hdc);
     

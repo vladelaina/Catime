@@ -4,6 +4,7 @@
  */
 
 #include "tray/tray_animation_percent.h"
+#include <stdio.h>
 
 /* Default colors: auto-theme detection with black text */
 static COLORREF g_percentTextColor = RGB(0, 0, 0);
@@ -105,7 +106,16 @@ HICON CreatePercentIcon16(int percent) {
 
     /* Draw on color bitmap */
     HDC hdc = GetDC(NULL);
+    if (!hdc) {
+        DeleteObject(hbmColor);
+        return NULL;
+    }
     HDC mem = CreateCompatibleDC(hdc);
+    if (!mem) {
+        ReleaseDC(NULL, hdc);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
     HGDIOBJ old = SelectObject(mem, hbmColor);
 
     if (useTransparentBg) {
@@ -128,7 +138,7 @@ HICON CreatePercentIcon16(int percent) {
 
     /* Format text first to determine digit count */
     wchar_t txt[8];
-    wsprintfW(txt, L"%d", percent);
+    _snwprintf_s(txt, 8, _TRUNCATE, L"%d", percent);
     
     /* Dynamic font size: smaller for 3-digit numbers (100) */
     int fontSize = (percent >= 100) ? -9 : -12;
@@ -253,7 +263,16 @@ HICON CreateCapsLockIcon(BOOL capsOn) {
 
     /* Draw on color bitmap */
     HDC hdc = GetDC(NULL);
+    if (!hdc) {
+        DeleteObject(hbmColor);
+        return NULL;
+    }
     HDC mem = CreateCompatibleDC(hdc);
+    if (!mem) {
+        ReleaseDC(NULL, hdc);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
     HGDIOBJ old = SelectObject(mem, hbmColor);
 
     if (useTransparentBg) {

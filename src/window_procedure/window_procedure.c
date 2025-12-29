@@ -170,6 +170,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_UPDATE_CHECK_RESULT, HandleUpdateCheckResult, "Update check result from background thread"},
     {WM_DIALOG_FONT_LICENSE, HandleDialogFontLicense, "Font license dialog result"},
     {WM_DIALOG_PLUGIN_SECURITY, HandleDialogPluginSecurity, "Plugin security dialog result"},
+    {WM_PLUGIN_HOT_RELOAD, HandlePluginHotReload, "Plugin hot-reload from background thread"},
     {0, NULL, NULL}
 };
 

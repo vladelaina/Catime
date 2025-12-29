@@ -127,7 +127,7 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
     }
     
     wchar_t searchPath[MAX_PATH];
-    int written = _snwprintf(searchPath, MAX_PATH, L"%s\\*", folderPath);
+    int written = _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE, L"%s\\*", folderPath);
     if (written < 0 || written >= MAX_PATH) return;
     
     WIN32_FIND_DATAW findData;
@@ -142,7 +142,7 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
         }
         
         wchar_t fullPath[MAX_PATH];
-        int len1 = _snwprintf(fullPath, MAX_PATH, L"%s\\%s", folderPath, findData.cFileName);
+        int len1 = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPath, findData.cFileName);
         if (len1 < 0 || len1 >= MAX_PATH) continue;
         
         char fileNameUtf8[MAX_ANIM_NAME_LENGTH];
@@ -153,7 +153,7 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
         if (relativePathUtf8[0] == '\0') {
             strncpy(newRelativePath, fileNameUtf8, MAX_PATH - 1);
         } else {
-            _snprintf(newRelativePath, MAX_PATH, "%s\\%s", relativePathUtf8, fileNameUtf8);
+            snprintf(newRelativePath, MAX_PATH, "%s\\%s", relativePathUtf8, fileNameUtf8);
         }
         newRelativePath[MAX_PATH - 1] = '\0';
         

@@ -236,6 +236,12 @@ void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) 
     wcscpy_s(notifData->messageText, messageLen, message);
     
     HDC hdc = GetDC(hwnd);
+    if (!hdc) {
+        free(notifData->messageText);
+        free(notifData);
+        FallbackToTrayNotification(hwnd, message);
+        return;
+    }
     HFONT contentFont = CreateNotificationFont(NOTIFICATION_CONTENT_FONT_SIZE, FW_NORMAL);
     
     int textWidth = CalculateTextWidth(hdc, message, contentFont);

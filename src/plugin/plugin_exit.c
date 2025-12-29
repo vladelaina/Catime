@@ -65,9 +65,9 @@ static DWORD WINAPI ExitCountdownThread(LPVOID lpParam) {
             
             if (g_pluginDisplayText) {
                 g_pluginDisplayText[0] = L'\0';
-                if (g_exitPrefix) wcscat(g_pluginDisplayText, g_exitPrefix);
-                wcscat(g_pluginDisplayText, countdownNum);
-                if (g_exitSuffix) wcscat(g_pluginDisplayText, g_exitSuffix);
+                if (g_exitPrefix) wcsncat_s(g_pluginDisplayText, totalLen, g_exitPrefix, prefixLen);
+                wcsncat_s(g_pluginDisplayText, totalLen, countdownNum, numLen);
+                if (g_exitSuffix) wcsncat_s(g_pluginDisplayText, totalLen, g_exitSuffix, suffixLen);
                 g_hasPluginData = TRUE;
             }
             

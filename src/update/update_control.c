@@ -26,7 +26,8 @@ void CalculateScrollbarThumbRect(RECT clientRect, int scrollPos, int scrollMax,
     }
 
     int maxThumbTop = trackHeight - thumbHeight;
-    int thumbTop = (int)((float)scrollPos / (contentHeight - scrollPage) * maxThumbTop);
+    int scrollRange = contentHeight - scrollPage;
+    int thumbTop = (scrollRange > 0 && maxThumbTop > 0) ? (int)((float)scrollPos / scrollRange * maxThumbTop) : 0;
 
     outThumbRect->left = clientRect.right - MODERN_SCROLLBAR_WIDTH - MODERN_SCROLLBAR_MARGIN;
     outThumbRect->top = clientRect.top + thumbTop;
@@ -75,7 +76,7 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                     return 0;
                 } else if (pt.x >= clientRect.right - MODERN_SCROLLBAR_WIDTH - MODERN_SCROLLBAR_MARGIN) {
                     int trackHeight = clientRect.bottom - clientRect.top;
-                    int thumbHeight = (int)((float)scrollPage / scrollMax * trackHeight);
+                    int thumbHeight = (scrollMax > 0) ? (int)((float)scrollPage / scrollMax * trackHeight) : trackHeight;
                     if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
 
                     if (pt.y < thumbRect.top) {
@@ -131,12 +132,12 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                 GetClientRect(hwnd, &clientRect);
                 int trackHeight = clientRect.bottom - clientRect.top;
 
-                int thumbHeight = (int)((float)scrollPage / scrollMax * trackHeight);
+                int thumbHeight = (scrollMax > 0) ? (int)((float)scrollPage / scrollMax * trackHeight) : trackHeight;
                 if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
 
                 int maxThumbTop = trackHeight - thumbHeight;
                 int deltaY = pt.y - dragStartY;
-                int deltaScroll = (int)((float)deltaY / maxThumbTop * (scrollMax - scrollPage));
+                int deltaScroll = (maxThumbTop > 0) ? (int)((float)deltaY / maxThumbTop * (scrollMax - scrollPage)) : 0;
 
                 int newScrollPos = dragStartScrollPos + deltaScroll;
                 if (newScrollPos < 0) newScrollPos = 0;

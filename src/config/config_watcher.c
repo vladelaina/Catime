@@ -15,6 +15,7 @@
 #include "config.h"
 #include "window_procedure/window_procedure.h"
 #include "tray/tray_animation_core.h"
+#include "log.h"
 
 /* 200ms debounce batches rapid editor writes (mentioned in file header) */
 #define WATCH_BUFFER_SIZE 8192
@@ -111,11 +112,15 @@ static HANDLE SetupDirectoryWatch(const char* iniPath, wchar_t* outDir, size_t o
                       NULL);
 }
 
-static void InitializeWatchEvents(HANDLE* hEvents, OVERLAPPED* pOv) {
+static BOOL InitializeWatchEvents(HANDLE* hEvents, OVERLAPPED* pOv) {
     hEvents[0] = g_stopEvent;
     hEvents[1] = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!hEvents[1]) {
+        return FALSE;
+    }
     memset(pOv, 0, sizeof(OVERLAPPED));
     pOv->hEvent = hEvents[1];
+    return TRUE;
 }
 
 static void CleanupWatchEvents(HANDLE* hEvents) {
@@ -142,7 +147,10 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
     DWORD bytesReturned = 0;
     OVERLAPPED ov = {0};
     HANDLE hEvents[WATCH_EVENT_COUNT];
-    InitializeWatchEvents(hEvents, &ov);
+    if (!InitializeWatchEvents(hEvents, &ov)) {
+        CloseHandle(hDir);
+        return 0;
+    }
     
     wchar_t wIni[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, iniPath, -1, wIni, MAX_PATH);
@@ -185,7 +193,16 @@ void ConfigWatcher_Start(HWND hwnd) {
     
     g_targetHwnd = hwnd;
     g_stopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!g_stopEvent) {
+        LOG_ERROR("ConfigWatcher: Failed to create stop event");
+        return;
+    }
     g_watcherThread = CreateThread(NULL, 0, WatcherThreadProc, NULL, 0, NULL);
+    if (!g_watcherThread) {
+        LOG_ERROR("ConfigWatcher: Failed to create watcher thread");
+        CloseHandle(g_stopEvent);
+        g_stopEvent = NULL;
+    }
 }
 
 void ConfigWatcher_Stop(void) {

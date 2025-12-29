@@ -302,6 +302,7 @@ void RecalculateWindowSize(HWND hwnd) {
     PLUGIN_FONT_SCALE_FACTOR = 1.0f;
     
     HDC hdc = GetDC(hwnd);
+    if (!hdc) return;
     
     wchar_t fontNameW[256];
     MultiByteToWideChar(CP_UTF8, 0, FONT_INTERNAL_NAME, -1, fontNameW, 256);

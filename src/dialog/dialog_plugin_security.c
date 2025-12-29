@@ -144,6 +144,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             
             /* Auto-resize buttons based on text width */
             HDC hdc = GetDC(hwndDlg);
+            if (!hdc) return TRUE;
             HFONT hFont = (HFONT)SendMessage(hwndDlg, WM_GETFONT, 0, 0);
             HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
             
@@ -197,7 +198,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             
             /* Build security message with localized strings */
             wchar_t messageWide[4096];
-            int written = swprintf(messageWide, 4096,
+            int written = _snwprintf_s(messageWide, 4096, _TRUNCATE,
                 L"<md>\n"
                 L"%s\n\n"
                 L"%s\n"

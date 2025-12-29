@@ -200,19 +200,22 @@ HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                         
                         if (ii.hbmMask) {
                             HDC hdcMem = GetDC(NULL);
-                            HDC hdcColor = CreateCompatibleDC(hdcMem);
-                            HDC hdcMask = CreateCompatibleDC(hdcMem);
-                            SelectObject(hdcColor, hbmColor);
-                            SelectObject(hdcMask, ii.hbmMask);
+                            if (hdcMem) {
+                                HDC hdcColor = CreateCompatibleDC(hdcMem);
+                                HDC hdcMask = CreateCompatibleDC(hdcMem);
+                                if (hdcColor && hdcMask) {
+                                    SelectObject(hdcColor, hbmColor);
+                                    SelectObject(hdcMask, ii.hbmMask);
 
-                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
-                            SetBkColor(hdcColor, RGB(0, 0, 0));
-                            BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
-                            BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
-
-                            DeleteDC(hdcColor);
-                            DeleteDC(hdcMask);
-                            ReleaseDC(NULL, hdcMem);
+                                    BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
+                                    SetBkColor(hdcColor, RGB(0, 0, 0));
+                                    BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
+                                    BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
+                                }
+                                if (hdcColor) DeleteDC(hdcColor);
+                                if (hdcMask) DeleteDC(hdcMask);
+                                ReleaseDC(NULL, hdcMem);
+                            }
                         }
 
                         hIcon = CreateIconIndirect(&ii);
