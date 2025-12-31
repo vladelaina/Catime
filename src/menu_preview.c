@@ -305,8 +305,9 @@ void ShowWindowForPreview(HWND hwnd) {
         g_previewState.didShowForPreview = TRUE;
 
         if (!hasActiveContent) {
-            WriteLog(LOG_LEVEL_INFO, "No active content, creating preview timer: %d",
-                     g_AppConfig.timer.default_start_time > 0 ? g_AppConfig.timer.default_start_time : 300);
+            /* Use 25 minutes (1500 seconds) as preview time for better visual */
+            int previewTime = 1500;
+            WriteLog(LOG_LEVEL_INFO, "No active content, creating preview timer: %d", previewTime);
 
             g_previewState.createdPreviewTimer = TRUE;
 
@@ -314,13 +315,16 @@ void ShowWindowForPreview(HWND hwnd) {
             CLOCK_COUNT_UP = FALSE;
             CLOCK_IS_PAUSED = TRUE;
 
-            if (g_AppConfig.timer.default_start_time > 0) {
-                CLOCK_TOTAL_TIME = g_AppConfig.timer.default_start_time;
-                countdown_elapsed_time = 0;
-            } else {
-                CLOCK_TOTAL_TIME = 300;
-                countdown_elapsed_time = 0;
-            }
+            CLOCK_TOTAL_TIME = previewTime;
+            countdown_elapsed_time = 0;
+            
+            /* CRITICAL: Also set g_target_end_time for GetCountDownComponents() */
+            extern int64_t g_target_end_time;
+            extern int64_t g_pause_start_time;
+            extern int64_t GetAbsoluteTimeMs(void);
+            int64_t now = GetAbsoluteTimeMs();
+            g_pause_start_time = now;
+            g_target_end_time = now + ((int64_t)previewTime * 1000);
         } else {
             WriteLog(LOG_LEVEL_INFO, "Window hidden but has active timer, just showing it");
             g_previewState.createdPreviewTimer = FALSE;
@@ -354,6 +358,10 @@ void RestoreWindowVisibility(HWND hwnd) {
         countdown_elapsed_time = 0;
         CLOCK_SHOW_CURRENT_TIME = FALSE;
         CLOCK_COUNT_UP = FALSE;
+        
+        /* Also clear g_target_end_time to avoid stale values */
+        extern int64_t g_target_end_time;
+        g_target_end_time = 0;
     } else {
         WriteLog(LOG_LEVEL_INFO, "Not clearing timer - was showing existing active timer");
     }
