@@ -36,6 +36,9 @@ static void InitializeDialog(HWND hwndDlg, int dialogId) {
     MoveDialogToPrimaryScreen(hwndDlg);
 }
 
+/* Flag to indicate program should exit after exit dialog closes */
+static BOOL g_shouldExitAfterDialog = FALSE;
+
 /** @brief Exit notification dialog */
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -75,6 +78,11 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
         case WM_DESTROY:
             Dialog_UnregisterInstance(DIALOG_INSTANCE_EXIT_MSG);
             g_hwndExitMsgDialog = NULL;
+            /* Exit program after dialog is destroyed */
+            if (g_shouldExitAfterDialog) {
+                g_shouldExitAfterDialog = FALSE;
+                PostQuitMessage(0);
+            }
             break;
     }
     return FALSE;
@@ -610,9 +618,11 @@ void TriggerUpdateDownload(HWND hwnd) {
             free(urlW);
         }
         
-        /* Show exit message and quit */
+        /* Set flag to exit after dialog closes, then show exit message */
+        extern BOOL g_shouldExitAfterDialog;
+        g_shouldExitAfterDialog = TRUE;
         ShowExitMessageDialog(hwnd);
-        PostQuitMessage(0);
+        /* PostQuitMessage will be called in WM_DESTROY of exit dialog */
     }
 }
 
