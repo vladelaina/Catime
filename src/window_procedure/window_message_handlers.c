@@ -452,7 +452,9 @@ LRESULT HandleDialogCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     int seconds = (int)wp;
     if (seconds > 0) {
+        extern void CleanupBeforeTimerAction(void);
         extern BOOL StartCountdownWithTime(HWND hwnd, int seconds);
+        CleanupBeforeTimerAction();
         StartCountdownWithTime(hwnd, seconds);
     }
     return 0;
