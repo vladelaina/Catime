@@ -39,6 +39,10 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         PluginManager_StopPlugin(pluginIndex);
         PluginData_Clear();
         
+        /* Prevent countdown completion notification from triggering */
+        extern BOOL countdown_message_shown;
+        countdown_message_shown = TRUE;
+        
         /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
         CLOCK_SHOW_CURRENT_TIME = FALSE;
         CLOCK_COUNT_UP = FALSE;
@@ -64,6 +68,10 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     /* Stop notification sound */
     extern void StopNotificationSound(void);
     StopNotificationSound();
+    
+    /* Prevent countdown completion notification from triggering */
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = TRUE;
     
     /* Reset timer flags */
     CLOCK_SHOW_CURRENT_TIME = FALSE;
@@ -149,6 +157,10 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         BOOL hadCatimeTag = PluginData_HasCatimeTag();
         PluginData_Clear();
         
+        /* Prevent countdown completion notification from triggering */
+        extern BOOL countdown_message_shown;
+        countdown_message_shown = TRUE;
+        
         if (hadCatimeTag) {
             /* Had <catime> tag - restore time display, keep timer */
             InvalidateRect(hwnd, NULL, TRUE);
@@ -168,6 +180,10 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     /* Toggle on - activate show file mode */
     PluginManager_StopAllPlugins();
     PluginData_SetActive(TRUE);
+    
+    /* Prevent countdown completion notification from triggering */
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = TRUE;
     
     /* Check for <catime> tag */
     if (!PluginData_HasCatimeTag()) {
@@ -209,6 +225,10 @@ void HandlePluginExit(HWND hwnd) {
     
     /* Clear plugin data */
     PluginData_Clear();
+    
+    /* Prevent countdown completion notification from triggering */
+    extern BOOL countdown_message_shown;
+    countdown_message_shown = TRUE;
     
     /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
     CLOCK_SHOW_CURRENT_TIME = FALSE;

@@ -201,10 +201,11 @@ static BOOL GetPluginOutputPath(char* buffer, size_t bufferSize) {
 }
 
 /**
- * @brief Ensure plugin output file exists and is empty
- * @note Always clears file content on startup to prevent stale <exit> tags
+ * @brief Ensure plugin output directory exists
+ * @note Only creates directory, does NOT clear or modify output.txt
+ *       User may have pre-defined content in output.txt
  */
-static void EnsureOutputFileExists(const char* filePath) {
+static void EnsureOutputDirExists(const char* filePath) {
     /* First ensure the directory exists */
     char dirPath[MAX_PATH];
     strncpy(dirPath, filePath, MAX_PATH - 1);
@@ -217,16 +218,6 @@ static void EnsureOutputFileExists(const char* filePath) {
         /* Create directory (and parent directories if needed) */
         /* SHCreateDirectoryExA creates all intermediate directories */
         SHCreateDirectoryExA(NULL, dirPath, NULL);
-    }
-    
-    /* Now create/truncate the output file */
-    HANDLE hFile = CreateFileA(filePath, GENERIC_WRITE, 0, NULL,
-                               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile != INVALID_HANDLE_VALUE) {
-        CloseHandle(hFile);
-        LOG_INFO("PluginData: Cleared output file %s", filePath);
-    } else {
-        LOG_WARNING("PluginData: Failed to clear output file, error: %lu", GetLastError());
     }
 }
 
@@ -332,10 +323,10 @@ void PluginData_Init(HWND hwnd) {
     /* Initialize exit subsystem */
     PluginExit_Init(hwnd, &g_dataCS);
 
-    /* Ensure output file exists */
+    /* Ensure output directory exists (don't clear user's output.txt) */
     char outputPath[MAX_PATH];
     if (GetPluginOutputPath(outputPath, sizeof(outputPath))) {
-        EnsureOutputFileExists(outputPath);
+        EnsureOutputDirExists(outputPath);
     }
 
     g_hWatchThread = CreateThread(NULL, 0, FileWatcherThread, NULL, 0, NULL);
