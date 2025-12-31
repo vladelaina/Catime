@@ -432,6 +432,11 @@ BOOL PluginManager_StartPlugin(int index) {
 
     EnterCriticalSection(&g_pluginCS);
 
+    /* CRITICAL: First, terminate ALL orphaned processes in Job Object
+     * This catches child processes that outlived their parent script
+     * (e.g., .bat script exited but child process started via 'start' is still running) */
+    PluginProcess_TerminateAllOrphans();
+
     /* Exclusive execution: Stop ALL other plugins first */
     /* Use internal terminate to avoid clearing "Loading..." message set by caller */
     for (int i = 0; i < g_pluginCount; i++) {
@@ -513,6 +518,10 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;
     }
+    
+    /* CRITICAL: First, terminate ALL orphaned processes in Job Object
+     * This catches child processes that outlived their parent script */
+    PluginProcess_TerminateAllOrphans();
     
     /* Stop any plugins that may have started while security dialog was open */
     /* This ensures single-instance even if user started another plugin during dialog */

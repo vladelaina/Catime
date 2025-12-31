@@ -47,6 +47,13 @@ void PluginProcess_SetLastError(const wchar_t* errorMsg);
 BOOL PluginProcess_Terminate(PluginInfo* plugin);
 
 /**
+ * @brief Terminate all orphaned processes in Job Object
+ * @note Call this before starting a new plugin to ensure single-instance
+ *       This catches child processes that outlived their parent script
+ */
+void PluginProcess_TerminateAllOrphans(void);
+
+/**
  * @brief Check if process is still running
  * @param plugin Plugin info to check
  * @return TRUE if running

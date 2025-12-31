@@ -375,6 +375,57 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     return args.success;
 }
 
+/**
+ * @brief Terminate all processes in Job Object except Catime itself
+ * This ensures orphaned child processes are cleaned up even if main process already exited
+ */
+static void TerminateAllJobProcesses(void) {
+    if (!g_hJob) return;
+    
+    JOBOBJECT_BASIC_PROCESS_ID_LIST pidList;
+    pidList.NumberOfAssignedProcesses = 0;
+    pidList.NumberOfProcessIdsInList = 0;
+    
+    /* First call to get count */
+    DWORD returnLength = 0;
+    QueryInformationJobObject(g_hJob, JobObjectBasicProcessIdList, 
+                              &pidList, sizeof(pidList), &returnLength);
+    
+    if (pidList.NumberOfAssignedProcesses <= 1) {
+        /* Only Catime itself (or empty), nothing to terminate */
+        return;
+    }
+    
+    /* Allocate buffer for all PIDs */
+    size_t bufSize = sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) + 
+                     (pidList.NumberOfAssignedProcesses * sizeof(ULONG_PTR));
+    JOBOBJECT_BASIC_PROCESS_ID_LIST* fullList = 
+        (JOBOBJECT_BASIC_PROCESS_ID_LIST*)malloc(bufSize);
+    
+    if (!fullList) return;
+    
+    fullList->NumberOfAssignedProcesses = pidList.NumberOfAssignedProcesses;
+    fullList->NumberOfProcessIdsInList = 0;
+    
+    if (QueryInformationJobObject(g_hJob, JobObjectBasicProcessIdList,
+                                  fullList, (DWORD)bufSize, &returnLength)) {
+        /* Terminate all processes except Catime itself */
+        DWORD catimePid = GetCurrentProcessId();
+        for (DWORD i = 0; i < fullList->NumberOfProcessIdsInList; i++) {
+            DWORD childPid = (DWORD)fullList->ProcessIdList[i];
+            if (childPid != catimePid && childPid != 0) {
+                HANDLE hChild = OpenProcess(PROCESS_TERMINATE, FALSE, childPid);
+                if (hChild) {
+                    LOG_INFO("[Process] Terminating orphan process PID: %lu", childPid);
+                    TerminateProcess(hChild, 0);
+                    CloseHandle(hChild);
+                }
+            }
+        }
+    }
+    free(fullList);
+}
+
 BOOL PluginProcess_Terminate(PluginInfo* plugin) {
     if (!plugin || !plugin->isRunning) return FALSE;
     
@@ -393,14 +444,15 @@ BOOL PluginProcess_Terminate(PluginInfo* plugin) {
     plugin->pi.hThread = NULL;
     memset(&plugin->pi, 0, sizeof(plugin->pi));
     
+    /* Always terminate all processes in Job Object to catch orphaned children */
+    TerminateAllJobProcesses();
+    
     if (hProc) {
-        LOG_INFO("[Process] Terminating process PID: %lu", pid);
+        LOG_INFO("[Process] Terminating main process PID: %lu", pid);
         TerminateProcess(hProc, 0);
         WaitForSingleObject(hProc, 2000);
         CloseHandle(hProc);
         LOG_INFO("[Process] Process terminated");
-    } else {
-        LOG_WARNING("[Process] No process handle available");
     }
     
     if (hThread) {
@@ -408,6 +460,11 @@ BOOL PluginProcess_Terminate(PluginInfo* plugin) {
     }
     
     return TRUE;
+}
+
+void PluginProcess_TerminateAllOrphans(void) {
+    LOG_INFO("[Process] Cleaning up orphaned processes before new plugin start");
+    TerminateAllJobProcesses();
 }
 
 BOOL PluginProcess_IsAlive(PluginInfo* plugin) {
