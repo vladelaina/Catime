@@ -242,7 +242,7 @@ void ToggleShowTimeMode(HWND hwnd) {
     
     if (!CLOCK_SHOW_CURRENT_TIME) {
         /* Turn on: switch to show current time mode */
-        TimerModeParams params = {0, TRUE, FALSE, TRUE};
+        TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
         
         KillTimer(hwnd, 1);
@@ -275,7 +275,7 @@ void StartCountUp(HWND hwnd) {
         ResetPomodoroState();
     }
     
-    TimerModeParams params = {0, TRUE, FALSE, TRUE};
+    TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
     
     // Ensure timer is running
@@ -297,7 +297,7 @@ void StartDefaultCountDown(HWND hwnd) {
     if (g_AppConfig.timer.default_start_time > 0) {
         /* Only reset countdown_message_shown when actually starting countdown */
         countdown_message_shown = FALSE;
-        TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, FALSE, TRUE};
+        TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
         
         // Ensure timer is running

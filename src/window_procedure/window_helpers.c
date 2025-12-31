@@ -35,7 +35,7 @@ extern char FONT_INTERNAL_NAME[MAX_PATH];
 BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
     BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
     
-    TimerModeParams defaultParams = {0, TRUE, FALSE, TRUE};
+    TimerModeParams defaultParams = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE by default */
     if (!params) params = &defaultParams;
     
     CLOCK_SHOW_CURRENT_TIME = (mode == TIMER_MODE_SHOW_TIME);

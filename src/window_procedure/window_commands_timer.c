@@ -61,7 +61,7 @@ LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     CleanupBeforeTimerAction();
     
     if (!CLOCK_COUNT_UP) {
-        TimerModeParams params = {0, TRUE, FALSE, TRUE};
+        TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
         KillTimer(hwnd, 1);
         ResetTimerWithInterval(hwnd);
