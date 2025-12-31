@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <shlobj.h>  /* For SHGetFolderPathW */
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../../libs/stb/stb_truetype.h"
@@ -32,6 +33,14 @@ static HANDLE g_hFontMapping = NULL;
 /* Fallback memory mapping handles */
 static HANDLE g_hFallbackFontFile = INVALID_HANDLE_VALUE;
 static HANDLE g_hFallbackFontMapping = NULL;
+
+/* Font cache for <font:> tags */
+static CachedFont g_fontCache[MAX_CACHED_FONTS] = {0};
+static int g_fontCacheLRU[MAX_CACHED_FONTS] = {0};  /* LRU counter for eviction */
+static int g_fontCacheAccessCounter = 0;
+
+/* Forward declaration for font cache cleanup */
+void ClearFontCacheSTB(void);
 
 /* Accessors for external modules */
 BOOL IsFontLoadedSTB(void) { return g_fontLoaded; }
@@ -105,6 +114,9 @@ void CleanupFontSTB(void) {
         CloseHandle(g_hFallbackFontFile);
         g_hFallbackFontFile = INVALID_HANDLE_VALUE;
     }
+    
+    /* Cleanup font cache */
+    ClearFontCacheSTB();
     
     g_fontLoaded = FALSE;
     g_fallbackFontLoaded = FALSE;
@@ -727,4 +739,199 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
             currentLineStart = i + 1;
         }
     }
+}
+
+/* ============================================================================
+ * Font Cache Implementation for <font:> Tags
+ * ============================================================================ */
+
+/**
+ * @brief Resolve font path from tag value
+ * 
+ * Supports:
+ * - Absolute paths: C:\Fonts\my.ttf, \\server\share\font.ttf
+ * - Environment variables: %WINDIR%\Fonts\arial.ttf
+ * - Relative paths: fonts/custom.ttf (resolved relative to plugins directory)
+ * 
+ * @param fontPath Font path from <font:> tag (wide string)
+ * @param outPath Output buffer for resolved path (narrow string)
+ * @param pathSize Buffer size
+ * @return TRUE if path resolved and file exists
+ */
+static BOOL ResolveFontTagPath(const wchar_t* fontPath, char* outPath, size_t pathSize) {
+    if (!fontPath || !outPath || pathSize == 0) return FALSE;
+    
+    wchar_t expandedPath[MAX_PATH];
+    wchar_t resolvedPath[MAX_PATH];
+    
+    /* Step 1: Expand environment variables if present */
+    if (wcschr(fontPath, L'%') != NULL) {
+        DWORD result = ExpandEnvironmentStringsW(fontPath, expandedPath, MAX_PATH);
+        if (result == 0 || result > MAX_PATH) {
+            LOG_WARNING("Failed to expand environment variables in font path: %ls", fontPath);
+            wcsncpy(expandedPath, fontPath, MAX_PATH - 1);
+            expandedPath[MAX_PATH - 1] = L'\0';
+        }
+    } else {
+        wcsncpy(expandedPath, fontPath, MAX_PATH - 1);
+        expandedPath[MAX_PATH - 1] = L'\0';
+    }
+    
+    /* Step 2: Check if absolute path (has drive letter or UNC path) */
+    BOOL isAbsolute = FALSE;
+    if (wcslen(expandedPath) >= 2) {
+        /* Check for drive letter (e.g., C:\) */
+        if (expandedPath[1] == L':') {
+            isAbsolute = TRUE;
+        }
+        /* Check for UNC path (e.g., \\server\share) */
+        else if (expandedPath[0] == L'\\' && expandedPath[1] == L'\\') {
+            isAbsolute = TRUE;
+        }
+    }
+    
+    if (isAbsolute) {
+        wcsncpy(resolvedPath, expandedPath, MAX_PATH - 1);
+        resolvedPath[MAX_PATH - 1] = L'\0';
+    } else {
+        /* Step 3: Resolve relative path against plugins directory */
+        wchar_t pluginsDir[MAX_PATH];
+        if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, pluginsDir))) {
+            _snwprintf_s(resolvedPath, MAX_PATH, _TRUNCATE, 
+                        L"%ls\\Catime\\resources\\plugins\\%ls", pluginsDir, expandedPath);
+        } else {
+            /* Fallback: try current directory */
+            wcsncpy(resolvedPath, expandedPath, MAX_PATH - 1);
+            resolvedPath[MAX_PATH - 1] = L'\0';
+        }
+    }
+    
+    /* Step 4: Check if file exists */
+    DWORD attrs = GetFileAttributesW(resolvedPath);
+    if (attrs == INVALID_FILE_ATTRIBUTES || (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+        LOG_WARNING("Font file not found: %ls", resolvedPath);
+        return FALSE;
+    }
+    
+    /* Step 5: Convert to narrow string for STB */
+    if (WideCharToMultiByte(CP_UTF8, 0, resolvedPath, -1, outPath, (int)pathSize, NULL, NULL) == 0) {
+        LOG_WARNING("Failed to convert font path to UTF-8: %ls", resolvedPath);
+        return FALSE;
+    }
+    
+    return TRUE;
+}
+
+void ClearFontCacheSTB(void) {
+    for (int i = 0; i < MAX_CACHED_FONTS; i++) {
+        if (g_fontCache[i].isLoaded) {
+            if (g_fontCache[i].fontBuffer) {
+                UnmapViewOfFile(g_fontCache[i].fontBuffer);
+            }
+            if (g_fontCache[i].hMapping) {
+                CloseHandle(g_fontCache[i].hMapping);
+            }
+            if (g_fontCache[i].hFile != INVALID_HANDLE_VALUE) {
+                CloseHandle(g_fontCache[i].hFile);
+            }
+        }
+        ZeroMemory(&g_fontCache[i], sizeof(CachedFont));
+        g_fontCacheLRU[i] = 0;
+    }
+    g_fontCacheAccessCounter = 0;
+}
+
+/**
+ * @brief Get cached font by file path
+ * 
+ * The fontPath parameter should be a file path, not a font name.
+ * Supports:
+ * - Absolute paths: C:\Fonts\my.ttf
+ * - Environment variables: %WINDIR%\Fonts\arial.ttf
+ * - Relative paths: fonts/custom.ttf (resolved relative to plugins directory)
+ * 
+ * @param fontPath Font file path from <font:> tag
+ * @return Font info pointer, or NULL if font cannot be loaded
+ */
+stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath) {
+    if (!fontPath || fontPath[0] == L'\0') return NULL;
+    
+    /* Search cache for existing font (by original path for cache key) */
+    for (int i = 0; i < MAX_CACHED_FONTS; i++) {
+        if (g_fontCache[i].isLoaded && wcscmp(g_fontCache[i].fontName, fontPath) == 0) {
+            /* Update LRU counter */
+            g_fontCacheLRU[i] = ++g_fontCacheAccessCounter;
+            return &g_fontCache[i].fontInfo;
+        }
+    }
+    
+    /* Font not in cache, resolve path and load it */
+    char resolvedPath[MAX_PATH];
+    if (!ResolveFontTagPath(fontPath, resolvedPath, sizeof(resolvedPath))) {
+        LOG_WARNING("Font path resolution failed: %ls", fontPath);
+        return NULL;
+    }
+    
+    /* Find slot: empty or LRU */
+    int targetSlot = -1;
+    int minLRU = INT_MAX;
+    
+    for (int i = 0; i < MAX_CACHED_FONTS; i++) {
+        if (!g_fontCache[i].isLoaded) {
+            targetSlot = i;
+            break;
+        }
+        if (g_fontCacheLRU[i] < minLRU) {
+            minLRU = g_fontCacheLRU[i];
+            targetSlot = i;
+        }
+    }
+    
+    if (targetSlot < 0) targetSlot = 0;
+    
+    /* Evict if necessary */
+    if (g_fontCache[targetSlot].isLoaded) {
+        if (g_fontCache[targetSlot].fontBuffer) {
+            UnmapViewOfFile(g_fontCache[targetSlot].fontBuffer);
+        }
+        if (g_fontCache[targetSlot].hMapping) {
+            CloseHandle(g_fontCache[targetSlot].hMapping);
+        }
+        if (g_fontCache[targetSlot].hFile != INVALID_HANDLE_VALUE) {
+            CloseHandle(g_fontCache[targetSlot].hFile);
+        }
+        ZeroMemory(&g_fontCache[targetSlot], sizeof(CachedFont));
+    }
+    
+    /* Load new font */
+    HANDLE hFile = INVALID_HANDLE_VALUE;
+    HANDLE hMapping = NULL;
+    unsigned char* buffer = LoadFontMapping(resolvedPath, &hFile, &hMapping);
+    
+    if (!buffer) {
+        LOG_WARNING("Failed to load font file: %s", resolvedPath);
+        return NULL;
+    }
+    
+    if (!stbtt_InitFont(&g_fontCache[targetSlot].fontInfo, buffer, 
+                        stbtt_GetFontOffsetForIndex(buffer, 0))) {
+        UnmapViewOfFile(buffer);
+        CloseHandle(hMapping);
+        CloseHandle(hFile);
+        LOG_WARNING("Failed to init STB font: %s", resolvedPath);
+        return NULL;
+    }
+    
+    /* Store in cache (use original path as cache key) */
+    wcsncpy(g_fontCache[targetSlot].fontName, fontPath, 63);
+    g_fontCache[targetSlot].fontName[63] = L'\0';
+    g_fontCache[targetSlot].fontBuffer = buffer;
+    g_fontCache[targetSlot].hFile = hFile;
+    g_fontCache[targetSlot].hMapping = hMapping;
+    g_fontCache[targetSlot].isLoaded = TRUE;
+    g_fontCacheLRU[targetSlot] = ++g_fontCacheAccessCounter;
+    
+    LOG_INFO("Cached font loaded: %ls -> %s", fontPath, resolvedPath);
+    
+    return &g_fontCache[targetSlot].fontInfo;
 }

@@ -85,6 +85,35 @@ typedef struct {
 } MarkdownBlockquote;
 
 /**
+ * @brief Maximum colors in a gradient color tag
+ */
+#define MAX_COLOR_TAG_COLORS 8
+
+/**
+ * @brief Parsed color tag <color:#RRGGBB>text</color> or <color:#c1_#c2_#c3>text</color>
+ */
+typedef struct {
+    int startPos;
+    int endPos;
+    COLORREF colors[MAX_COLOR_TAG_COLORS];
+    int colorCount;
+} MarkdownColorTag;
+
+/**
+ * @brief Maximum font name length
+ */
+#define MAX_FONT_NAME_LENGTH 64
+
+/**
+ * @brief Parsed font tag <font:FontName>text</font>
+ */
+typedef struct {
+    int startPos;
+    int endPos;
+    wchar_t fontName[MAX_FONT_NAME_LENGTH];
+} MarkdownFontTag;
+
+/**
  * @brief Internal parser state (used by parsing logic)
  */
 typedef struct {
@@ -104,6 +133,12 @@ typedef struct {
     MarkdownBlockquote* blockquotes;
     int blockquoteCount;
     int blockquoteCapacity;
+    MarkdownColorTag* colorTags;
+    int colorTagCount;
+    int colorTagCapacity;
+    MarkdownFontTag* fontTags;
+    int fontTagCount;
+    int fontTagCapacity;
     int currentPos;
 } ParseState;
 
@@ -151,7 +186,9 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         MarkdownHeading** headings, int* headingCount,
                         MarkdownStyle** styles, int* styleCount,
                         MarkdownListItem** listItems, int* listItemCount,
-                        MarkdownBlockquote** blockquotes, int* blockquoteCount);
+                        MarkdownBlockquote** blockquotes, int* blockquoteCount,
+                        MarkdownColorTag** colorTags, int* colorTagCount,
+                        MarkdownFontTag** fontTags, int* fontTagCount);
 
 /**
  * @brief Free parsed links (text, URLs, array)
@@ -218,6 +255,34 @@ BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int p
  * @return TRUE if in blockquote
  */
 BOOL IsCharacterInBlockquote(MarkdownBlockquote* blockquotes, int blockquoteCount, int position, int* blockquoteIndex);
+
+/**
+ * @brief Check if character position is in color tag (for rendering)
+ * @param colorTags Color tag array
+ * @param colorTagCount Color tag count
+ * @param position Character position
+ * @param colorTagIndex Output color tag index (optional)
+ * @return TRUE if in color tag
+ */
+BOOL IsCharacterInColorTag(MarkdownColorTag* colorTags, int colorTagCount, int position, int* colorTagIndex);
+
+/**
+ * @brief Check if character position is in font tag (for rendering)
+ * @param fontTags Font tag array
+ * @param fontTagCount Font tag count
+ * @param position Character position
+ * @param fontTagIndex Output font tag index (optional)
+ * @return TRUE if in font tag
+ */
+BOOL IsCharacterInFontTag(MarkdownFontTag* fontTags, int fontTagCount, int position, int* fontTagIndex);
+
+/**
+ * @brief Interpolate color for gradient at given position
+ * @param colorTag Color tag with gradient colors
+ * @param position Current character position
+ * @return Interpolated COLORREF
+ */
+COLORREF InterpolateGradientColor(const MarkdownColorTag* colorTag, int position);
 
 /**
  * @brief Render text with links, headings, inline styles, list items, and blockquotes (single-pass: O(n))
@@ -300,12 +365,16 @@ BOOL EnsureHeadingCapacity(ParseState* state);
 BOOL EnsureStyleCapacity(ParseState* state);
 BOOL EnsureListItemCapacity(ParseState* state);
 BOOL EnsureBlockquoteCapacity(ParseState* state);
+BOOL EnsureColorTagCapacity(ParseState* state);
+BOOL EnsureFontTagCapacity(ParseState* state);
 void CleanupParseState(ParseState* state);
 int GetInitialLinkCapacity(int estimatedCount);
 int GetInitialHeadingCapacity(int estimatedCount);
 int GetInitialStyleCapacity(int estimatedCount);
 int GetInitialListItemCapacity(int estimatedCount);
 int GetInitialBlockquoteCapacity(int estimatedCount);
+int GetInitialColorTagCapacity(int estimatedCount);
+int GetInitialFontTagCapacity(int estimatedCount);
 
 /* Internal API (inline elements - markdown_inline.c) */
 
@@ -315,10 +384,14 @@ int CountMarkdownHeadings(const wchar_t* input);
 int CountMarkdownStyles(const wchar_t* input);
 int CountMarkdownListItems(const wchar_t* input);
 int CountMarkdownBlockquotes(const wchar_t* input);
+int CountMarkdownColorTags(const wchar_t* input);
+int CountMarkdownFontTags(const wchar_t* input);
 BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state);
 BOOL ExtractMarkdownStyle(const wchar_t** src, ParseState* state);
 BOOL ExtractMarkdownCode(const wchar_t** src, ParseState* state);
 BOOL ExtractMarkdownStrikethrough(const wchar_t** src, ParseState* state);
+BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state);
+BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state);
 BOOL ProcessInlineElements(const wchar_t** src, ParseState* state, wchar_t** dest);
 
 /* Internal API (block elements - markdown_block.c) */

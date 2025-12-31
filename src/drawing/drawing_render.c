@@ -131,7 +131,9 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                               MarkdownLink* links, int linkCount,
                               MarkdownHeading* headings, int headingCount,
                               MarkdownStyle* styles, int styleCount,
-                              MarkdownBlockquote* blockquotes, int blockquoteCount) {
+                              MarkdownBlockquote* blockquotes, int blockquoteCount,
+                              MarkdownColorTag* colorTags, int colorTagCount,
+                              MarkdownFontTag* fontTags, int fontTagCount) {
     // Use STB Truetype for high-quality rendering
     char absoluteFontPath[MAX_PATH];
     
@@ -143,6 +145,8 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                              headings, headingCount,
                              styles, styleCount,
                              blockquotes, blockquoteCount,
+                             colorTags, colorTagCount,
+                             fontTags, fontTagCount,
                              ctx->textColor, 
                              (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
                              1.0f,
@@ -341,13 +345,17 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     MarkdownStyle* styles = NULL; int styleCount = 0;
     MarkdownListItem* listItems = NULL; int listItemCount = 0;
     MarkdownBlockquote* blockquotes = NULL; int blockquoteCount = 0;
+    MarkdownColorTag* colorTags = NULL; int colorTagCount = 0;
+    MarkdownFontTag* fontTags = NULL; int fontTagCount = 0;
 
     BOOL isMarkdown = ParseMarkdownLinks(timeText, &mdText, 
                                          &links, &linkCount, 
                                          &headings, &headingCount, 
                                          &styles, &styleCount,
                                          &listItems, &listItemCount,
-                                         &blockquotes, &blockquoteCount);
+                                         &blockquotes, &blockquoteCount,
+                                         &colorTags, &colorTagCount,
+                                         &fontTags, &fontTagCount);
                                          
     const wchar_t* textToRender = isMarkdown ? mdText : timeText;
 
@@ -406,6 +414,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         if (isMarkdown) {
             FreeMarkdownLinks(links, linkCount);
             free(headings); free(styles); free(listItems); free(blockquotes);
+            free(colorTags); free(fontTags);
             free(mdText);
         }
         if (images) {
@@ -448,10 +457,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             if (isMarkdown) {
                 RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
                                   links, linkCount, headings, headingCount, styles, styleCount,
-                                  blockquotes, blockquoteCount);
+                                  blockquotes, blockquoteCount, colorTags, colorTagCount,
+                                  fontTags, fontTagCount);
             } else {
                 RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                  NULL, 0, NULL, 0, NULL, 0, NULL, 0);
+                                  NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0);
             }
         }
         
@@ -510,10 +520,22 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         FixAlphaChannel(pBits, rect.right, rect.bottom);
     }
     
+    /* Check if any color tag has gradient (multiple colors) before freeing */
+    BOOL hasColorTagGradient = FALSE;
+    if (colorTags && colorTagCount > 0) {
+        for (int i = 0; i < colorTagCount; i++) {
+            if (colorTags[i].colorCount > 1) {
+                hasColorTagGradient = TRUE;
+                break;
+            }
+        }
+    }
+    
     // Free markdown resources
     if (isMarkdown) {
         FreeMarkdownLinks(links, linkCount);
         free(headings); free(styles); free(listItems); free(blockquotes);
+        free(colorTags); free(fontTags);
         free(mdText);
     }
     
@@ -574,8 +596,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     /* Dynamic timer interval adjustment based on current window size */
     /* This ensures smooth animation for small windows, reduced lag for large windows */
-    if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT ||
-        CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
+    BOOL needsAnimationTimer = CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT ||
+                               CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT ||
+                               hasColorTagGradient;
+    
+    /* Track if color tag gradient timer was set by us (not by effect settings) */
+    static BOOL s_colorTagTimerActive = FALSE;
+    
+    if (needsAnimationTimer) {
         static UINT s_lastInterval = 0;
         int pixelCount = rect.right * rect.bottom;
         
@@ -586,6 +614,10 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             newInterval = (pixelCount < 30000) ? 50 : 
                           (pixelCount < 100000) ? 80 : 
                           (pixelCount < 300000) ? 120 : 200;
+        } else if (hasColorTagGradient) {
+            /* Color tag gradient animation - use moderate interval */
+            newInterval = (pixelCount < 50000) ? 33 : 
+                          (pixelCount < 200000) ? 50 : 80;
         } else {
             newInterval = (pixelCount < 50000) ? 33 : 
                           (pixelCount < 200000) ? 50 : 
@@ -596,6 +628,18 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, newInterval, NULL);
             s_lastInterval = newInterval;
         }
+        
+        if (hasColorTagGradient) {
+            s_colorTagTimerActive = TRUE;
+        }
+    } else if (s_colorTagTimerActive) {
+        /* Color tag gradient is gone, but we set the timer for it - kill it
+         * Only if no other effects need the timer */
+        if (!CLOCK_LIQUID_EFFECT && !CLOCK_HOLOGRAPHIC_EFFECT &&
+            !CLOCK_NEON_EFFECT && !CLOCK_GLOW_EFFECT && !CLOCK_GLASS_EFFECT) {
+            KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
+        }
+        s_colorTagTimerActive = FALSE;
     }
 }
 

@@ -26,9 +26,12 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                         MarkdownHeading** headings, int* headingCount,
                         MarkdownStyle** styles, int* styleCount,
                         MarkdownListItem** listItems, int* listItemCount,
-                        MarkdownBlockquote** blockquotes, int* blockquoteCount) {
+                        MarkdownBlockquote** blockquotes, int* blockquoteCount,
+                        MarkdownColorTag** colorTags, int* colorTagCount,
+                        MarkdownFontTag** fontTags, int* fontTagCount) {
     if (!input || !displayText || !links || !linkCount || !headings || !headingCount ||
-        !styles || !styleCount || !listItems || !listItemCount || !blockquotes || !blockquoteCount) return FALSE;
+        !styles || !styleCount || !listItems || !listItemCount || !blockquotes || !blockquoteCount ||
+        !colorTags || !colorTagCount || !fontTags || !fontTagCount) return FALSE;
 
     *displayText = NULL;
     *links = NULL;
@@ -41,6 +44,10 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *listItemCount = 0;
     *blockquotes = NULL;
     *blockquoteCount = 0;
+    *colorTags = NULL;
+    *colorTagCount = 0;
+    *fontTags = NULL;
+    *fontTagCount = 0;
 
     if (!input || wcslen(input) == 0) return FALSE;
 
@@ -54,13 +61,81 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     const wchar_t* mdTagStart = wcsstr(input, L"<md>");
     const wchar_t* mdTagEnd = wcsstr(input, L"</md>");
     
-    // If no <md> tags, return plain text without any markdown parsing
+    // Check if we have <color> or <font> tags (these work without <md>)
+    BOOL hasColorTags = (wcsstr(input, L"<color:") != NULL);
+    BOOL hasFontTags = (wcsstr(input, L"<font:") != NULL);
+    BOOL hasRichTextTags = hasColorTags || hasFontTags;
+    
+    // If no <md> tags and no rich text tags, return plain text
     if (!mdTagStart || !mdTagEnd || mdTagEnd <= mdTagStart) {
-        size_t len = wcslen(input);
-        *displayText = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
-        if (!*displayText) return FALSE;
-        wcscpy_s(*displayText, len + 1, input);
-        return TRUE;  // Success but no markdown elements
+        if (!hasRichTextTags) {
+            size_t len = wcslen(input);
+            *displayText = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
+            if (!*displayText) return FALSE;
+            wcscpy_s(*displayText, len + 1, input);
+            return TRUE;  // Success but no markdown elements
+        }
+        
+        // Has rich text tags but no <md> - parse only color/font tags
+        size_t inputLen = wcslen(input);
+        
+        ParseState state = {0};
+        state.currentPos = 0;
+        
+        state.displayText = (wchar_t*)malloc((inputLen + 1) * sizeof(wchar_t));
+        if (!state.displayText) return FALSE;
+        
+        int estimatedColorTags = CountMarkdownColorTags(input);
+        state.colorTagCapacity = GetInitialColorTagCapacity(estimatedColorTags);
+        state.colorTags = (MarkdownColorTag*)malloc(state.colorTagCapacity * sizeof(MarkdownColorTag));
+        if (!state.colorTags) { CleanupParseState(&state); return FALSE; }
+        
+        int estimatedFontTags = CountMarkdownFontTags(input);
+        state.fontTagCapacity = GetInitialFontTagCapacity(estimatedFontTags);
+        state.fontTags = (MarkdownFontTag*)malloc(state.fontTagCapacity * sizeof(MarkdownFontTag));
+        if (!state.fontTags) { CleanupParseState(&state); return FALSE; }
+        
+        // Simple parsing loop for color/font tags only
+        const wchar_t* src = input;
+        wchar_t* dest = state.displayText;
+        
+        while (*src) {
+            // Try color tag
+            if (*src == L'<' && wcsncmp(src, L"<color:", 7) == 0) {
+                if (ExtractMarkdownColorTag(&src, &state)) {
+                    dest = state.displayText + state.currentPos;
+                    continue;
+                }
+            }
+            
+            // Try font tag
+            if (*src == L'<' && wcsncmp(src, L"<font:", 6) == 0) {
+                if (ExtractMarkdownFontTag(&src, &state)) {
+                    dest = state.displayText + state.currentPos;
+                    continue;
+                }
+            }
+            
+            // Regular character
+            *dest++ = *src++;
+            state.currentPos++;
+        }
+        *dest = L'\0';
+        
+        *displayText = state.displayText;
+        *colorTags = state.colorTags;
+        *colorTagCount = state.colorTagCount;
+        *fontTags = state.fontTags;
+        *fontTagCount = state.fontTagCount;
+        
+        // Allocate empty arrays for other elements
+        *links = NULL; *linkCount = 0;
+        *headings = NULL; *headingCount = 0;
+        *styles = NULL; *styleCount = 0;
+        *listItems = NULL; *listItemCount = 0;
+        *blockquotes = NULL; *blockquoteCount = 0;
+        
+        return TRUE;
     }
     
     // Build text with tags removed:
@@ -99,14 +174,55 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
 
     size_t totalLen = beforeLen + contentLen + afterLen;
     ParseState state = {0};
-    state.currentPos = (int)beforeLen;  // Start position offset for markdown content
+    state.currentPos = 0;  // Start from 0, will be updated after parsing before section
 
     state.displayText = (wchar_t*)malloc((totalLen + wcslen(BULLET_POINT) * 200 + 1) * sizeof(wchar_t));
     if (!state.displayText) { free(mdContent); return FALSE; }
     
-    // Copy text before tag first (plain text, no markdown parsing)
+    // Pre-allocate color/font tag arrays early (needed for before section parsing)
+    int estimatedColorTags = CountMarkdownColorTags(input);  // Count from full input
+    state.colorTagCapacity = GetInitialColorTagCapacity(estimatedColorTags);
+    state.colorTags = (MarkdownColorTag*)malloc(state.colorTagCapacity * sizeof(MarkdownColorTag));
+    if (!state.colorTags) { CleanupParseState(&state); free(mdContent); return FALSE; }
+    
+    int estimatedFontTags = CountMarkdownFontTags(input);  // Count from full input
+    state.fontTagCapacity = GetInitialFontTagCapacity(estimatedFontTags);
+    state.fontTags = (MarkdownFontTag*)malloc(state.fontTagCapacity * sizeof(MarkdownFontTag));
+    if (!state.fontTags) { CleanupParseState(&state); free(mdContent); return FALSE; }
+    
+    // Parse text before <md> tag (only color/font tags, no full markdown)
     if (beforeLen > 0) {
-        wcsncpy(state.displayText, input, beforeLen);
+        const wchar_t* beforeSrc = input;
+        const wchar_t* beforeEnd = mdTagStart;
+        wchar_t* dest = state.displayText;
+        
+        while (beforeSrc < beforeEnd) {
+            // Try color tag - but only if closing tag is also before <md>
+            if (*beforeSrc == L'<' && wcsncmp(beforeSrc, L"<color:", 7) == 0) {
+                const wchar_t* closeTag = wcsstr(beforeSrc, L"</color>");
+                if (closeTag && closeTag < beforeEnd) {
+                    if (ExtractMarkdownColorTag(&beforeSrc, &state)) {
+                        dest = state.displayText + state.currentPos;
+                        continue;
+                    }
+                }
+            }
+            
+            // Try font tag - but only if closing tag is also before <md>
+            if (*beforeSrc == L'<' && wcsncmp(beforeSrc, L"<font:", 6) == 0) {
+                const wchar_t* closeTag = wcsstr(beforeSrc, L"</font>");
+                if (closeTag && closeTag < beforeEnd) {
+                    if (ExtractMarkdownFontTag(&beforeSrc, &state)) {
+                        dest = state.displayText + state.currentPos;
+                        continue;
+                    }
+                }
+            }
+            
+            // Regular character
+            *dest++ = *beforeSrc++;
+            state.currentPos++;
+        }
     }
 
     int estimatedLinks = CountMarkdownLinks(mdContent);
@@ -158,12 +274,14 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         free(mdContent);
         return FALSE;
     }
+    
+    // Note: colorTags and fontTags already allocated above (before parsing before section)
 
     /* ========================================================================
      * Main Parsing Loop
      * ======================================================================== */
     const wchar_t* src = mdContent;
-    wchar_t* dest = state.displayText + beforeLen;
+    wchar_t* dest = state.displayText + state.currentPos;  // Use currentPos (after parsing before section)
     BOOL atLineStart = TRUE;
     BOOL inListItem = FALSE;
     int currentListItemIndex = -1;
@@ -264,10 +382,31 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         state.currentPos++;
     }
 
-    // Append text after closing tag (plain text, no markdown parsing)
+    // Parse text after closing tag (only color/font tags, no full markdown)
     if (afterLen > 0) {
-        wcsncpy(dest, afterStart, afterLen);
-        dest += afterLen;
+        const wchar_t* afterSrc = afterStart;
+        
+        while (*afterSrc) {
+            // Try color tag
+            if (*afterSrc == L'<' && wcsncmp(afterSrc, L"<color:", 7) == 0) {
+                if (ExtractMarkdownColorTag(&afterSrc, &state)) {
+                    dest = state.displayText + state.currentPos;
+                    continue;
+                }
+            }
+            
+            // Try font tag
+            if (*afterSrc == L'<' && wcsncmp(afterSrc, L"<font:", 6) == 0) {
+                if (ExtractMarkdownFontTag(&afterSrc, &state)) {
+                    dest = state.displayText + state.currentPos;
+                    continue;
+                }
+            }
+            
+            // Regular character
+            *dest++ = *afterSrc++;
+            state.currentPos++;
+        }
     }
     *dest = L'\0';
 
@@ -289,9 +428,14 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *listItemCount = state.listItemCount;
     *blockquotes = state.blockquotes;
     *blockquoteCount = state.blockquoteCount;
+    *colorTags = state.colorTags;
+    *colorTagCount = state.colorTagCount;
+    *fontTags = state.fontTags;
+    *fontTagCount = state.fontTagCount;
 
-    LOG_INFO("MD Parse Done: DisplayText len %d, Links %d, Headings %d, Styles %d", 
-             wcslen(state.displayText), state.linkCount, state.headingCount, state.styleCount);
+    LOG_INFO("MD Parse Done: DisplayText len %d, Links %d, Headings %d, Styles %d, ColorTags %d, FontTags %d", 
+             wcslen(state.displayText), state.linkCount, state.headingCount, state.styleCount,
+             state.colorTagCount, state.fontTagCount);
 
     free(mdContent);  // Free temporary markdown content buffer
     return TRUE;

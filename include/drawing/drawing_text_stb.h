@@ -24,6 +24,38 @@ BOOL InitFontSTB(const char* fontFilePath);
  */
 void CleanupFontSTB(void);
 
+/* ============================================================================
+ * Font Cache for <font:> Tags (Max 4 cached fonts)
+ * ============================================================================ */
+
+#define MAX_CACHED_FONTS 4
+
+/**
+ * @brief Cached font entry
+ */
+typedef struct {
+    wchar_t fontName[64];
+    stbtt_fontinfo fontInfo;
+    unsigned char* fontBuffer;
+    HANDLE hFile;
+    HANDLE hMapping;
+    BOOL isLoaded;
+} CachedFont;
+
+/**
+ * @brief Get cached font by name, loading if necessary
+ * @param fontName Font name (from <font:FontName> tag)
+ * @return Pointer to stbtt_fontinfo or NULL if not found
+ * 
+ * @note Uses LRU eviction when cache is full
+ */
+stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontName);
+
+/**
+ * @brief Clear all cached fonts
+ */
+void ClearFontCacheSTB(void);
+
 /**
  * @brief Measure single-line text dimensions
  */

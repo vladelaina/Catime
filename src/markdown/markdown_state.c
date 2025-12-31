@@ -12,6 +12,8 @@
 #define INITIAL_STYLE_CAPACITY 20
 #define INITIAL_LIST_ITEM_CAPACITY 10
 #define INITIAL_BLOCKQUOTE_CAPACITY 5
+#define INITIAL_COLOR_TAG_CAPACITY 10
+#define INITIAL_FONT_TAG_CAPACITY 10
 
 /** Unified capacity management macro to eliminate code duplication */
 #define ENSURE_CAPACITY(state, type, field, count_field, capacity_field) \
@@ -46,6 +48,14 @@ BOOL EnsureBlockquoteCapacity(ParseState* state) {
     ENSURE_CAPACITY(state, MarkdownBlockquote, blockquotes, blockquoteCount, blockquoteCapacity);
 }
 
+BOOL EnsureColorTagCapacity(ParseState* state) {
+    ENSURE_CAPACITY(state, MarkdownColorTag, colorTags, colorTagCount, colorTagCapacity);
+}
+
+BOOL EnsureFontTagCapacity(ParseState* state) {
+    ENSURE_CAPACITY(state, MarkdownFontTag, fontTags, fontTagCount, fontTagCapacity);
+}
+
 void CleanupParseState(ParseState* state) {
     if (!state) return;
 
@@ -74,6 +84,16 @@ void CleanupParseState(ParseState* state) {
         state->blockquotes = NULL;
     }
 
+    if (state->colorTags) {
+        free(state->colorTags);
+        state->colorTags = NULL;
+    }
+
+    if (state->fontTags) {
+        free(state->fontTags);
+        state->fontTags = NULL;
+    }
+
     if (state->displayText) {
         free(state->displayText);
         state->displayText = NULL;
@@ -89,6 +109,10 @@ void CleanupParseState(ParseState* state) {
     state->listItemCapacity = 0;
     state->blockquoteCount = 0;
     state->blockquoteCapacity = 0;
+    state->colorTagCount = 0;
+    state->colorTagCapacity = 0;
+    state->fontTagCount = 0;
+    state->fontTagCapacity = 0;
     state->currentPos = 0;
 }
 
@@ -141,6 +165,47 @@ BOOL IsCharacterInBlockquote(MarkdownBlockquote* blockquotes, int blockquoteCoun
     IS_CHARACTER_IN_RANGE(blockquotes, blockquoteCount, position, blockquoteIndex);
 }
 
+BOOL IsCharacterInColorTag(MarkdownColorTag* colorTags, int colorTagCount, int position, int* colorTagIndex) {
+    IS_CHARACTER_IN_RANGE(colorTags, colorTagCount, position, colorTagIndex);
+}
+
+BOOL IsCharacterInFontTag(MarkdownFontTag* fontTags, int fontTagCount, int position, int* fontTagIndex) {
+    IS_CHARACTER_IN_RANGE(fontTags, fontTagCount, position, fontTagIndex);
+}
+
+COLORREF InterpolateGradientColor(const MarkdownColorTag* colorTag, int position) {
+    if (!colorTag || colorTag->colorCount == 0) return RGB(0, 0, 0);
+    if (colorTag->colorCount == 1) return colorTag->colors[0];
+    
+    int range = colorTag->endPos - colorTag->startPos;
+    if (range <= 0) return colorTag->colors[0];
+    
+    int relPos = position - colorTag->startPos;
+    if (relPos < 0) relPos = 0;
+    if (relPos >= range) relPos = range - 1;
+    
+    /* Map position to color segment using integer math */
+    int segments = colorTag->colorCount - 1;
+    int scaledPos = relPos * segments;
+    int segmentIndex = scaledPos / range;
+    int segmentFrac = (scaledPos % range) * 256 / range;  /* 0-255 fixed point */
+    
+    if (segmentIndex >= segments) {
+        segmentIndex = segments - 1;
+        segmentFrac = 255;
+    }
+    
+    COLORREF c1 = colorTag->colors[segmentIndex];
+    COLORREF c2 = colorTag->colors[segmentIndex + 1];
+    
+    /* Integer interpolation: result = c1 + (c2 - c1) * frac / 256 */
+    int r = GetRValue(c1) + ((GetRValue(c2) - GetRValue(c1)) * segmentFrac >> 8);
+    int g = GetGValue(c1) + ((GetGValue(c2) - GetGValue(c1)) * segmentFrac >> 8);
+    int b = GetBValue(c1) + ((GetBValue(c2) - GetBValue(c1)) * segmentFrac >> 8);
+    
+    return RGB(r, g, b);
+}
+
 const wchar_t* GetClickedLinkUrl(MarkdownLink* links, int linkCount, POINT point) {
     if (!links) return NULL;
 
@@ -179,4 +244,12 @@ int GetInitialListItemCapacity(int estimatedCount) {
 
 int GetInitialBlockquoteCapacity(int estimatedCount) {
     return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_BLOCKQUOTE_CAPACITY;
+}
+
+int GetInitialColorTagCapacity(int estimatedCount) {
+    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_COLOR_TAG_CAPACITY;
+}
+
+int GetInitialFontTagCapacity(int estimatedCount) {
+    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_FONT_TAG_CAPACITY;
 }

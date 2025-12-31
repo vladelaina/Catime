@@ -116,6 +116,131 @@ static void BlendCharBitmapItalicGradientSTB(void* destBits, int destWidth, int 
     }
 }
 
+/**
+ * @brief Blend character bitmap with color tag gradient animation
+ * 
+ * This function renders text with animated gradient using colors from <color:> tag.
+ * The gradient flows horizontally across the text, similar to global gradient animation.
+ * 
+ * @param destBits Destination bitmap buffer
+ * @param destWidth Destination width
+ * @param destHeight Destination height
+ * @param x_pos X position
+ * @param y_pos Y position
+ * @param bitmap Glyph bitmap
+ * @param w Glyph width
+ * @param h Glyph height
+ * @param colorTag Color tag with gradient colors
+ * @param timeOffset Time offset for animation (from GetTickCount)
+ * @param totalWidth Total width for gradient calculation
+ */
+static void BlendCharBitmapColorTagGradientSTB(void* destBits, int destWidth, int destHeight,
+                                                int x_pos, int y_pos,
+                                                unsigned char* bitmap, int w, int h,
+                                                const MarkdownColorTag* colorTag, int timeOffset, int totalWidth) {
+    if (!colorTag || colorTag->colorCount < 2) return;
+    
+    DWORD* pixels = (DWORD*)destBits;
+    int colorCount = colorTag->colorCount;
+    
+    for (int j = 0; j < h; ++j) {
+        for (int i = 0; i < w; ++i) {
+            int screen_x = x_pos + i;
+            int screen_y = y_pos + j;
+            if (screen_x < 0 || screen_x >= destWidth || screen_y < 0 || screen_y >= destHeight) continue;
+            unsigned char alpha = bitmap[j * w + i];
+            if (alpha == 0) continue;
+            
+            /* Calculate animated gradient position */
+            float t = (totalWidth > 0) ? (float)screen_x / (float)totalWidth : 0.0f;
+            
+            /* Apply animation offset (2 second cycle) */
+            float animOffset = (float)(timeOffset % 2000) / 2000.0f;
+            t = t - animOffset;
+            while (t < 0.0f) t += 1.0f;
+            while (t >= 1.0f) t -= 1.0f;
+            
+            /* Interpolate between colors */
+            float scaledT = t * (colorCount - 1);
+            int idx1 = (int)scaledT;
+            int idx2 = idx1 + 1;
+            if (idx1 >= colorCount - 1) {
+                idx1 = colorCount - 2;
+                idx2 = colorCount - 1;
+            }
+            float localT = scaledT - idx1;
+            
+            COLORREF c1 = colorTag->colors[idx1];
+            COLORREF c2 = colorTag->colors[idx2];
+            int r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * localT);
+            int g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * localT);
+            int b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * localT);
+            
+            DWORD* dest = &pixels[screen_y * destWidth + screen_x];
+            DWORD finalR = (r * alpha) / 255;
+            DWORD finalG = (g * alpha) / 255;
+            DWORD finalB = (b * alpha) / 255;
+            *dest = (alpha << 24) | (finalR << 16) | (finalG << 8) | finalB;
+        }
+    }
+}
+
+/**
+ * @brief Blend character bitmap with color tag gradient animation (italic version)
+ */
+static void BlendCharBitmapColorTagGradientItalicSTB(void* destBits, int destWidth, int destHeight,
+                                                      int x_pos, int y_pos,
+                                                      unsigned char* bitmap, int w, int h,
+                                                      const MarkdownColorTag* colorTag, int timeOffset, int totalWidth,
+                                                      float slant) {
+    if (!colorTag || colorTag->colorCount < 2) return;
+    
+    DWORD* pixels = (DWORD*)destBits;
+    int colorCount = colorTag->colorCount;
+    
+    for (int j = 0; j < h; ++j) {
+        int shear = (int)((h - j) * slant);
+        for (int i = 0; i < w; ++i) {
+            int screen_x = x_pos + i + shear;
+            int screen_y = y_pos + j;
+            if (screen_x < 0 || screen_x >= destWidth || screen_y < 0 || screen_y >= destHeight) continue;
+            unsigned char alpha = bitmap[j * w + i];
+            if (alpha == 0) continue;
+            
+            /* Calculate animated gradient position */
+            float t = (totalWidth > 0) ? (float)screen_x / (float)totalWidth : 0.0f;
+            
+            /* Apply animation offset (2 second cycle) */
+            float animOffset = (float)(timeOffset % 2000) / 2000.0f;
+            t = t - animOffset;
+            while (t < 0.0f) t += 1.0f;
+            while (t >= 1.0f) t -= 1.0f;
+            
+            /* Interpolate between colors */
+            float scaledT = t * (colorCount - 1);
+            int idx1 = (int)scaledT;
+            int idx2 = idx1 + 1;
+            if (idx1 >= colorCount - 1) {
+                idx1 = colorCount - 2;
+                idx2 = colorCount - 1;
+            }
+            float localT = scaledT - idx1;
+            
+            COLORREF c1 = colorTag->colors[idx1];
+            COLORREF c2 = colorTag->colors[idx2];
+            int r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * localT);
+            int g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * localT);
+            int b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * localT);
+            
+            DWORD* dest = &pixels[screen_y * destWidth + screen_x];
+            DWORD finalR = (r * alpha) / 255;
+            DWORD finalG = (g * alpha) / 255;
+            DWORD finalB = (b * alpha) / 255;
+            *dest = (alpha << 24) | (finalR << 16) | (finalG << 8) | finalB;
+        }
+    }
+}
+
 /* Public API */
 
 BOOL MeasureMarkdownSTB(const wchar_t* text,
@@ -210,6 +335,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
                        MarkdownBlockquote* blockquotes, int blockquoteCount,
+                       MarkdownColorTag* colorTags, int colorTagCount,
+                       MarkdownFontTag* fontTags, int fontTagCount,
                        COLORREF color, int fontSize, float fontScale, int gradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
 
@@ -245,6 +372,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
     int curLinkIdx = 0;
     int curStyleIdx = 0;
     int curBlockquoteIdx = 0;
+    int curColorTagIdx = 0;
+    int curFontTagIdx = 0;
 
     /* Calculate global time offset for animated gradient once per frame */
     int timeOffset = 0;
@@ -262,6 +391,9 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
         /* Use a consistent cycle for gradients (2s loop for normal) */
         float progress = (float)(now % 2000) / 2000.0f;
         timeOffset = (int)(progress * GRADIENT_LUT_SIZE * 2);
+    } else if (colorTagCount > 0) {
+        /* Color tag gradients also need time offset for animation */
+        timeOffset = (int)GetTickCount();
     }
 
     for (size_t i = 0; i <= len; i++) {
@@ -477,14 +609,63 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     }
                 }
 
+                /* Color tag handling - override drawColor with tag color or gradient */
+                BOOL useColorTagGradient = FALSE;
+                MarkdownColorTag* activeColorTag = NULL;
+                while (curColorTagIdx < colorTagCount && (int)j >= colorTags[curColorTagIdx].endPos) curColorTagIdx++;
+                if (curColorTagIdx < colorTagCount && (int)j >= colorTags[curColorTagIdx].startPos) {
+                    MarkdownColorTag* tag = &colorTags[curColorTagIdx];
+                    if (tag->colorCount == 1) {
+                        /* Single color */
+                        drawColor = tag->colors[0];
+                    } else if (tag->colorCount > 1) {
+                        /* Gradient - will use animated rendering */
+                        useColorTagGradient = TRUE;
+                        activeColorTag = tag;
+                    }
+                }
+
+                /* Font tag handling - use cached font if specified */
+                stbtt_fontinfo* charFontInfo = fontInfo;
+                float charScale = scale;
+                while (curFontTagIdx < fontTagCount && (int)j >= fontTags[curFontTagIdx].endPos) curFontTagIdx++;
+                if (curFontTagIdx < fontTagCount && (int)j >= fontTags[curFontTagIdx].startPos) {
+                    stbtt_fontinfo* cachedFont = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
+                    if (cachedFont) {
+                        charFontInfo = cachedFont;
+                        charScale = stbtt_ScaleForPixelHeight(cachedFont, (float)(fontSize * fontScale));
+                    }
+                }
+
                 GlyphMetrics gm;
-                GetCharMetricsSTB(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
+                /* Use custom font if in font tag, otherwise use default */
+                if (charFontInfo != fontInfo) {
+                    /* Custom font - get metrics directly */
+                    gm.index = stbtt_FindGlyphIndex(charFontInfo, (int)text[j]);
+                    gm.isFallback = FALSE;
+                    gm.kern = 0;
+                    if (gm.index != 0) {
+                        int adv, lsb;
+                        stbtt_GetGlyphHMetrics(charFontInfo, gm.index, &adv, &lsb);
+                        gm.advance = (int)(adv * charScale);
+                    } else {
+                        /* Fallback to main font if glyph not found */
+                        GetCharMetricsSTB(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
+                        charFontInfo = fontInfo;
+                        charScale = scale;
+                    }
+                } else {
+                    GetCharMetricsSTB(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
+                }
                 
                 if (gm.index != 0 && text[j] != L' ' && text[j] != L'\t') {
                     int w, h, xoff, yoff;
                     unsigned char* bitmap = NULL;
                     
-                    if (gm.isFallback) {
+                    if (charFontInfo != fontInfo && !gm.isFallback) {
+                        /* Use custom font from font tag */
+                        bitmap = stbtt_GetGlyphBitmap(charFontInfo, charScale, charScale, gm.index, &w, &h, &xoff, &yoff);
+                    } else if (gm.isFallback) {
                         bitmap = stbtt_GetGlyphBitmap(fallbackFontInfo, fallbackScale, fallbackScale, gm.index, &w, &h, &xoff, &yoff);
                     } else {
                         bitmap = stbtt_GetGlyphBitmap(fontInfo, scale, scale, gm.index, &w, &h, &xoff, &yoff);
@@ -493,7 +674,10 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     if (bitmap) {
                         float slant = isItalic ? 0.35f : 0.0f;
                         
-                        if (gradientMode != GRADIENT_NONE && drawColor == color) {
+                        /* Use global gradient only if no color tag gradient is active */
+                        BOOL useGlobalGradient = (gradientMode != GRADIENT_NONE && drawColor == color && !useColorTagGradient);
+                        
+                        if (useGlobalGradient) {
                             if (isItalic) {
                                 // Use proper per-row shear for italic with gradient
                                 BlendCharBitmapItalicGradientSTB(bits, width, height, 
@@ -515,6 +699,30 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                                     BlendCharBitmapGradientSTB(bits, width, height, 
                                         currentX + xoff, baselineY + yoff + 1, 
                                         bitmap, w, h, 0, width, gradientMode, timeOffset);
+                                }
+                            }
+                        } else if (useColorTagGradient && activeColorTag) {
+                            /* Color tag gradient with animation */
+                            if (isItalic) {
+                                BlendCharBitmapColorTagGradientItalicSTB(bits, width, height,
+                                    currentX + xoff, baselineY + yoff,
+                                    bitmap, w, h, activeColorTag, timeOffset, width, slant);
+                                if (isBold) {
+                                    BlendCharBitmapColorTagGradientItalicSTB(bits, width, height,
+                                        currentX + xoff + 1, baselineY + yoff,
+                                        bitmap, w, h, activeColorTag, timeOffset, width, slant);
+                                }
+                            } else {
+                                BlendCharBitmapColorTagGradientSTB(bits, width, height,
+                                    currentX + xoff, baselineY + yoff,
+                                    bitmap, w, h, activeColorTag, timeOffset, width);
+                                if (isBold) {
+                                    BlendCharBitmapColorTagGradientSTB(bits, width, height,
+                                        currentX + xoff + 1, baselineY + yoff,
+                                        bitmap, w, h, activeColorTag, timeOffset, width);
+                                    BlendCharBitmapColorTagGradientSTB(bits, width, height,
+                                        currentX + xoff, baselineY + yoff + 1,
+                                        bitmap, w, h, activeColorTag, timeOffset, width);
                                 }
                             }
                         } else if (isItalic) {

@@ -393,6 +393,10 @@ static MarkdownListItem* g_listItems = NULL;
 static int g_listItemCount = 0;
 static MarkdownBlockquote* g_blockquotes = NULL;
 static int g_blockquoteCount = 0;
+static MarkdownColorTag* g_colorTags = NULL;
+static int g_colorTagCount = 0;
+static MarkdownFontTag* g_fontTags = NULL;
+static int g_fontTagCount = 0;
 
 /* Parent window handle for posting results */
 static HWND g_fontLicenseParent = NULL;
@@ -409,6 +413,10 @@ static void CleanupFontLicenseResources(void) {
     g_listItemCount = 0;
     if (g_blockquotes) { free(g_blockquotes); g_blockquotes = NULL; }
     g_blockquoteCount = 0;
+    if (g_colorTags) { free(g_colorTags); g_colorTags = NULL; }
+    g_colorTagCount = 0;
+    if (g_fontTags) { free(g_fontTags); g_fontTags = NULL; }
+    g_fontTagCount = 0;
     if (g_displayText) { free(g_displayText); g_displayText = NULL; }
 }
 
@@ -440,14 +448,18 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, L
                                    &g_headings, &g_headingCount,
                                    &g_styles, &g_styleCount,
                                    &g_listItems, &g_listItemCount,
-                                   &g_blockquotes, &g_blockquoteCount);
+                                   &g_blockquotes, &g_blockquoteCount,
+                                   &g_colorTags, &g_colorTagCount,
+                                   &g_fontTags, &g_fontTagCount);
                 free(wrappedText);
             } else {
                 ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount,
                                    &g_headings, &g_headingCount,
                                    &g_styles, &g_styleCount,
                                    &g_listItems, &g_listItemCount,
-                                   &g_blockquotes, &g_blockquoteCount);
+                                   &g_blockquotes, &g_blockquoteCount,
+                                   &g_colorTags, &g_colorTagCount,
+                                   &g_fontTags, &g_fontTagCount);
             }
 
             const wchar_t* agreeText = GetLocalizedString(NULL, L"Agree");

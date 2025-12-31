@@ -93,6 +93,10 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
     static int g_notesListItemCount = 0;
     static MarkdownBlockquote* g_notesBlockquotes = NULL;
     static int g_notesBlockquoteCount = 0;
+    static MarkdownColorTag* g_notesColorTags = NULL;
+    static int g_notesColorTagCount = 0;
+    static MarkdownFontTag* g_notesFontTags = NULL;
+    static int g_notesFontTagCount = 0;
     static int g_textHeight = 0;
 
     switch (msg) {
@@ -133,7 +137,9 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                            &g_notesHeadings, &g_notesHeadingCount,
                                            &g_notesStyles, &g_notesStyleCount,
                                            &g_notesListItems, &g_notesListItemCount,
-                                           &g_notesBlockquotes, &g_notesBlockquoteCount);
+                                           &g_notesBlockquotes, &g_notesBlockquoteCount,
+                                           &g_notesColorTags, &g_notesColorTagCount,
+                                           &g_notesFontTags, &g_notesFontTagCount);
                         free(wrappedNotes);
                     }
                     free(notesW);
@@ -144,7 +150,9 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                        &g_notesHeadings, &g_notesHeadingCount,
                                        &g_notesStyles, &g_notesStyleCount,
                                        &g_notesListItems, &g_notesListItemCount,
-                                       &g_notesBlockquotes, &g_notesBlockquoteCount);
+                                       &g_notesBlockquotes, &g_notesBlockquoteCount,
+                                       &g_notesColorTags, &g_notesColorTagCount,
+                                       &g_notesFontTags, &g_notesFontTagCount);
                 }
 
                 HWND hwndNotes = GetDlgItem(hwndDlg, IDC_UPDATE_NOTES);
@@ -336,6 +344,16 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     g_notesBlockquotes = NULL;
                 }
                 g_notesBlockquoteCount = 0;
+                if (g_notesColorTags) {
+                    free(g_notesColorTags);
+                    g_notesColorTags = NULL;
+                }
+                g_notesColorTagCount = 0;
+                if (g_notesFontTags) {
+                    free(g_notesFontTags);
+                    g_notesFontTags = NULL;
+                }
+                g_notesFontTagCount = 0;
                 if (g_notesDisplayText) {
                     free(g_notesDisplayText);
                     g_notesDisplayText = NULL;
@@ -370,6 +388,16 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 g_notesBlockquotes = NULL;
             }
             g_notesBlockquoteCount = 0;
+            if (g_notesColorTags) {
+                free(g_notesColorTags);
+                g_notesColorTags = NULL;
+            }
+            g_notesColorTagCount = 0;
+            if (g_notesFontTags) {
+                free(g_notesFontTags);
+                g_notesFontTags = NULL;
+            }
+            g_notesFontTagCount = 0;
             if (g_notesDisplayText) {
                 free(g_notesDisplayText);
                 g_notesDisplayText = NULL;

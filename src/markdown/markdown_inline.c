@@ -6,6 +6,8 @@
 #include "markdown/markdown_parser.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <wchar.h>
 
 /* ============================================================================
  * Helper Functions
@@ -164,6 +166,48 @@ int CountMarkdownBlockquotes(const wchar_t* input) {
             count++;
         }
         atLineStart = (*p == L'\n' || *p == L'\r');
+        p++;
+    }
+
+    return count;
+}
+
+int CountMarkdownColorTags(const wchar_t* input) {
+    if (!input) return 0;
+
+    int count = 0;
+    const wchar_t* p = input;
+
+    while (*p) {
+        if (wcsncmp(p, L"<color:", 7) == 0) {
+            const wchar_t* end = wcsstr(p, L"</color>");
+            if (end) {
+                count++;
+                p = end + 8;
+                continue;
+            }
+        }
+        p++;
+    }
+
+    return count;
+}
+
+int CountMarkdownFontTags(const wchar_t* input) {
+    if (!input) return 0;
+
+    int count = 0;
+    const wchar_t* p = input;
+
+    while (*p) {
+        if (wcsncmp(p, L"<font:", 6) == 0) {
+            const wchar_t* end = wcsstr(p, L"</font>");
+            if (end) {
+                count++;
+                p = end + 7;
+                continue;
+            }
+        }
         p++;
     }
 
@@ -470,8 +514,211 @@ BOOL ExtractMarkdownStrikethrough(const wchar_t** src, ParseState* state) {
     return FALSE;
 }
 
+/* Parse hex color from wide string: #RRGGBB -> COLORREF */
+static COLORREF ParseWideHexColor(const wchar_t* hex) {
+    if (!hex || *hex != L'#') return RGB(0, 0, 0);
+    
+    int r = 0, g = 0, b = 0;
+    if (swscanf(hex + 1, L"%02x%02x%02x", &r, &g, &b) == 3) {
+        return RGB(r, g, b);
+    }
+    return RGB(0, 0, 0);
+}
+
+BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
+    if (!src || !*src || !state) return FALSE;
+    
+    /* Check for <color: prefix */
+    if (wcsncmp(*src, L"<color:", 7) != 0) return FALSE;
+    
+    const wchar_t* colorStart = *src + 7;
+    
+    /* Find closing > of opening tag */
+    const wchar_t* tagEnd = wcschr(colorStart, L'>');
+    if (!tagEnd) return FALSE;
+    
+    /* Find </color> closing tag */
+    const wchar_t* closeTag = wcsstr(tagEnd, L"</color>");
+    if (!closeTag) return FALSE;
+    
+    /* Extract color specification (between : and >) */
+    int colorSpecLen = (int)(tagEnd - colorStart);
+    if (colorSpecLen <= 0 || colorSpecLen >= 128) return FALSE;
+    
+    wchar_t colorSpec[128];
+    wcsncpy(colorSpec, colorStart, colorSpecLen);
+    colorSpec[colorSpecLen] = L'\0';
+    
+    if (!EnsureColorTagCapacity(state)) return FALSE;
+    
+    MarkdownColorTag* tag = &state->colorTags[state->colorTagCount];
+    tag->startPos = state->currentPos;
+    tag->colorCount = 0;
+    
+    /* Parse colors (single or gradient separated by _) */
+    wchar_t* ctx = NULL;
+    wchar_t* token = wcstok_s(colorSpec, L"_", &ctx);
+    
+    while (token && tag->colorCount < MAX_COLOR_TAG_COLORS) {
+        /* Skip leading whitespace */
+        while (*token == L' ') token++;
+        
+        if (*token == L'#') {
+            tag->colors[tag->colorCount++] = ParseWideHexColor(token);
+        }
+        token = wcstok_s(NULL, L"_", &ctx);
+    }
+    
+    if (tag->colorCount == 0) return FALSE;
+    
+    /* Parse content (between > and </color>) - supports nested tags and styles */
+    const wchar_t* contentSrc = tagEnd + 1;
+    wchar_t* dest = state->displayText + state->currentPos;
+    
+    while (contentSrc < closeTag) {
+        /* Try nested font tag */
+        if (*contentSrc == L'<' && wcsncmp(contentSrc, L"<font:", 6) == 0) {
+            /* Check if closing tag is before </color> */
+            const wchar_t* nestedClose = wcsstr(contentSrc, L"</font>");
+            if (nestedClose && nestedClose < closeTag) {
+                if (ExtractMarkdownFontTag(&contentSrc, state)) {
+                    dest = state->displayText + state->currentPos;
+                    continue;
+                }
+            }
+        }
+        
+        /* Try Markdown styles (bold, italic, strikethrough) */
+        if ((*contentSrc == L'*' || *contentSrc == L'_') && contentSrc + 1 < closeTag) {
+            if (ExtractMarkdownStyle(&contentSrc, state)) {
+                dest = state->displayText + state->currentPos;
+                continue;
+            }
+        }
+        
+        /* Try strikethrough ~~text~~ */
+        if (*contentSrc == L'~' && contentSrc + 1 < closeTag && *(contentSrc + 1) == L'~') {
+            if (ExtractMarkdownStrikethrough(&contentSrc, state)) {
+                dest = state->displayText + state->currentPos;
+                continue;
+            }
+        }
+        
+        /* Regular character */
+        *dest++ = *contentSrc++;
+        state->currentPos++;
+    }
+    
+    tag->endPos = state->currentPos;
+    state->colorTagCount++;
+    
+    *src = closeTag + 8;  /* Skip </color> */
+    return TRUE;
+}
+
+BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
+    if (!src || !*src || !state) return FALSE;
+    
+    /* Check for <font: prefix */
+    if (wcsncmp(*src, L"<font:", 6) != 0) return FALSE;
+    
+    const wchar_t* fontStart = *src + 6;
+    
+    /* Find closing > of opening tag */
+    const wchar_t* tagEnd = wcschr(fontStart, L'>');
+    if (!tagEnd) return FALSE;
+    
+    /* Find </font> closing tag */
+    const wchar_t* closeTag = wcsstr(tagEnd, L"</font>");
+    if (!closeTag) return FALSE;
+    
+    /* Extract font name (between : and >) */
+    int fontNameLen = (int)(tagEnd - fontStart);
+    if (fontNameLen <= 0 || fontNameLen >= MAX_FONT_NAME_LENGTH) return FALSE;
+    
+    if (!EnsureFontTagCapacity(state)) return FALSE;
+    
+    MarkdownFontTag* tag = &state->fontTags[state->fontTagCount];
+    tag->startPos = state->currentPos;
+    
+    /* Copy font name */
+    wcsncpy(tag->fontName, fontStart, fontNameLen);
+    tag->fontName[fontNameLen] = L'\0';
+    
+    /* Trim whitespace from font name */
+    wchar_t* p = tag->fontName;
+    while (*p == L' ') p++;
+    if (p != tag->fontName) {
+        memmove(tag->fontName, p, (wcslen(p) + 1) * sizeof(wchar_t));
+    }
+    int len = (int)wcslen(tag->fontName);
+    while (len > 0 && tag->fontName[len - 1] == L' ') {
+        tag->fontName[--len] = L'\0';
+    }
+    
+    /* Parse content (between > and </font>) - supports nested tags and styles */
+    const wchar_t* contentSrc = tagEnd + 1;
+    wchar_t* dest = state->displayText + state->currentPos;
+    
+    while (contentSrc < closeTag) {
+        /* Try nested color tag */
+        if (*contentSrc == L'<' && wcsncmp(contentSrc, L"<color:", 7) == 0) {
+            /* Check if closing tag is before </font> */
+            const wchar_t* nestedClose = wcsstr(contentSrc, L"</color>");
+            if (nestedClose && nestedClose < closeTag) {
+                if (ExtractMarkdownColorTag(&contentSrc, state)) {
+                    dest = state->displayText + state->currentPos;
+                    continue;
+                }
+            }
+        }
+        
+        /* Try Markdown styles (bold, italic, strikethrough) */
+        if ((*contentSrc == L'*' || *contentSrc == L'_') && contentSrc + 1 < closeTag) {
+            if (ExtractMarkdownStyle(&contentSrc, state)) {
+                dest = state->displayText + state->currentPos;
+                continue;
+            }
+        }
+        
+        /* Try strikethrough ~~text~~ */
+        if (*contentSrc == L'~' && contentSrc + 1 < closeTag && *(contentSrc + 1) == L'~') {
+            if (ExtractMarkdownStrikethrough(&contentSrc, state)) {
+                dest = state->displayText + state->currentPos;
+                continue;
+            }
+        }
+        
+        /* Regular character */
+        *dest++ = *contentSrc++;
+        state->currentPos++;
+    }
+    
+    tag->endPos = state->currentPos;
+    state->fontTagCount++;
+    
+    *src = closeTag + 7;  /* Skip </font> */
+    return TRUE;
+}
+
 /* Process all inline elements at current position */
 BOOL ProcessInlineElements(const wchar_t** src, ParseState* state, wchar_t** dest) {
+    /* Color tag: <color:#RRGGBB>text</color> */
+    if (*src[0] == L'<' && wcsncmp(*src, L"<color:", 7) == 0) {
+        if (ExtractMarkdownColorTag(src, state)) {
+            *dest = state->displayText + state->currentPos;
+            return TRUE;
+        }
+    }
+    
+    /* Font tag: <font:FontName>text</font> */
+    if (*src[0] == L'<' && wcsncmp(*src, L"<font:", 6) == 0) {
+        if (ExtractMarkdownFontTag(src, state)) {
+            *dest = state->displayText + state->currentPos;
+            return TRUE;
+        }
+    }
+
     if (*src[0] == L'[' && ExtractMarkdownLink(src, state)) {
         *dest = state->displayText + state->currentPos;
         return TRUE;
