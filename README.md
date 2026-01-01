@@ -393,7 +393,7 @@ Wallpaper:
 
 <div align="center">
 
-Copyright © 2025 - **Catime**\
+Copyright © 2025-2026 - **Catime**\
 By vladelaina\
 Made with ❤️ & ⌨️
 

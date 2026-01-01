@@ -417,7 +417,7 @@
 #define IDC_ABOUT_TITLE_TEXT L"About Catime"             /**< About dialog title text */
 #define IDC_ABOUT_VERSION L"Version: %hs"                /**< Version format string */
 #define IDC_BUILD_DATE_TEXT L"Build date: %hs"           /**< Build date format string */
-#define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025 By vladelaina"  /**< Copyright text */
+#define IDC_COPYRIGHT_TEXT L"Copyright (C) 2025-2026 By vladelaina"  /**< Copyright text */
 
 /** @brief About dialog link control identifiers */
 #define IDC_CREDITS 1015                 /**< Credits control */

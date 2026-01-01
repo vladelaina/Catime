@@ -37,7 +37,7 @@ typedef struct {
 
 static AboutLinkInfo g_aboutLinkInfos[] = {
     {IDC_CREDIT_LINK, NULL, L"Special thanks to 猫屋敷梨梨Official for the icon", L"https://space.bilibili.com/26087398"},
-    {IDC_COPYRIGHT, NULL, L"Copyright © 2025 vladelaina", L"https://vladelaina.com/"},
+    {IDC_COPYRIGHT, NULL, L"Copyright © 2025-2026 vladelaina", L"https://vladelaina.com/"},
     {IDC_CREDITS, NULL, L"Credits", L"https://vladelaina.github.io/Catime/#thanks"},
     {IDC_BILIBILI_LINK, NULL, L"BiliBili", L"https://space.bilibili.com/1862395225"},
     {IDC_GITHUB_LINK, NULL, L"GitHub", L"https://github.com/vladelaina/Catime"},

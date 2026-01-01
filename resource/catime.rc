@@ -29,7 +29,7 @@ BEGIN
             VALUE "FileDescription",  "Catime"
             VALUE "FileVersion",      CATIME_VERSION
             VALUE "InternalName",     "Catime"
-            VALUE "LegalCopyright",   "Copyright (C) 2025 vladelaina. Apache License 2.0"
+            VALUE "LegalCopyright",   "Copyright (C) 2025-2026 vladelaina. Apache License 2.0"
             VALUE "OriginalFilename", "Catime.exe"
             VALUE "ProductName",      "Catime"
             VALUE "ProductVersion",   CATIME_VERSION
