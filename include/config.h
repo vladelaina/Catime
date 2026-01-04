@@ -269,6 +269,13 @@ typedef struct {
 /** @brief Global application configuration instance */
 extern AppConfig g_AppConfig;
 
+/** 
+ * @brief Flag to trigger factory reset after window creation
+ * Set by ReadConfig when version mismatch and forced reset is active.
+ * Handled by SetupMainWindow.
+ */
+extern BOOL g_PerformFactoryReset;
+
 /* ============================================================================
  * Animation speed functions
  * ============================================================================ */

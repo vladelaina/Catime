@@ -514,6 +514,16 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         }
     }
 
+    /* Check if a factory reset was requested during config loading */
+    if (g_PerformFactoryReset) {
+        LOG_WARNING("SetupMainWindow: Factory reset flag detected. Triggering full reset...");
+        /* Post message to ensure it runs after window is fully initialized and visible */
+        PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_RESET_ALL, 0);
+        
+        /* Reset flag */
+        g_PerformFactoryReset = FALSE;
+    }
+
     return TRUE;
 }
 

@@ -76,6 +76,9 @@ AppConfig g_AppConfig = {
     .last_config_time = 0
 };
 
+/** @brief Global flag to trigger factory reset after window creation */
+BOOL g_PerformFactoryReset = FALSE;
+
 /* ============================================================================
  * Public API Implementation - delegates to specialized modules
  * ============================================================================ */
@@ -107,17 +110,117 @@ void ReadConfig() {
 
     /* Version check - migrate if version mismatch */
     char version[32] = {0};
+    
+    LOG_DEBUG("DEBUG_TRACE: Attempting to read CONFIG_VERSION from file: %s", config_path);
     ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "",
                  version, sizeof(version), config_path);
 
-    if (strcmp(version, CATIME_VERSION) != 0) {
-        LOG_INFO("Configuration version mismatch (Config: '%s', Current: '%s'), starting migration",
-                 version[0] ? version : "<empty>", CATIME_VERSION);
-        MigrateConfig(config_path);
-        needsWriteBack = TRUE;
+    LOG_INFO("DEBUG_TRACE: Version Check Start --------------------------------");
+    LOG_INFO("DEBUG_TRACE: Config Path: '%s'", config_path);
+    LOG_INFO("DEBUG_TRACE: Config Version in File: '%s'", version[0] ? version : "<empty/missing>");
+    LOG_INFO("DEBUG_TRACE: App Current Version:    '%s'", CATIME_VERSION);
+    
+    int versionMatch = strcmp(version, CATIME_VERSION);
+    LOG_INFO("DEBUG_TRACE: strcmp result: %d (0 means match)", versionMatch);
+
+    if (versionMatch != 0) {
+        LOG_INFO("DEBUG_TRACE: >> Version MISMATCH detected. Entering logic block.");
+        
+        LOG_INFO("DEBUG_TRACE: Checking FORCE_CONFIG_RESET_ON_UPDATE macro value...");
+        int forceResetValue = FORCE_CONFIG_RESET_ON_UPDATE;
+        LOG_INFO("DEBUG_TRACE: FORCE_CONFIG_RESET_ON_UPDATE evaluates to: %d", forceResetValue);
+
+        if (forceResetValue) {
+            LOG_WARNING("DEBUG_TRACE: >> DECISION: FORCE RESET (Switch is ON)");
+            LOG_INFO("DEBUG_TRACE: Preparing to delete old configuration file...");
+            
+            /* Delete the old configuration file */
+            wchar_t wConfigPath[MAX_PATH] = {0};
+            int conversionResult = MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
+            
+            if (conversionResult == 0) {
+                 LOG_ERROR("DEBUG_TRACE: Failed to convert config path to WideChar. Win32 Error: %lu", GetLastError());
+            }
+
+            // Check if file exists before deleting
+            DWORD fileAttr = GetFileAttributesW(wConfigPath);
+            if (fileAttr == INVALID_FILE_ATTRIBUTES) {
+                 LOG_INFO("DEBUG_TRACE: GetFileAttributesW says file does not exist or cannot be accessed before deletion.");
+            } else {
+                 LOG_INFO("DEBUG_TRACE: File exists. Proceeding to DeleteFileW...");
+            }
+
+            if (DeleteFileW(wConfigPath)) {
+                LOG_INFO("DEBUG_TRACE: SUCCESS: Old configuration file deleted.");
+            } else {
+                DWORD err = GetLastError();
+                if (err == ERROR_FILE_NOT_FOUND) {
+                    LOG_INFO("DEBUG_TRACE: DeleteFileW result: File not found (already gone).");
+                } else {
+                    LOG_ERROR("DEBUG_TRACE: ERROR: Failed to delete file. Win32 Error Code: %lu", err);
+                }
+            }
+
+            /* Create a fresh default configuration */
+            LOG_INFO("DEBUG_TRACE: Calling CreateDefaultConfig to generate a fresh INI...");
+            CreateDefaultConfig(config_path);
+            
+            LOG_INFO("DEBUG_TRACE: >> RESET PHASE 1 COMPLETE. Scheduling UI reset.");
+            
+            /* Mark for full factory reset after window creation */
+            g_PerformFactoryReset = TRUE;
+            
+            /* DIRECTLY initialize and apply default snapshot */
+            /* This bypasses LoadConfigFromFile to ensure we use pure default values in memory */
+            ConfigSnapshot snapshot;
+            InitializeDefaultSnapshot(&snapshot);
+            
+            /* Apply detected language if possible, matching CreateDefaultConfig logic */
+            extern int DetectSystemLanguage(void);
+            int detectedLang = DetectSystemLanguage();
+            
+            const char* langNames[] = {
+                "Chinese_Simplified",
+                "Chinese_Traditional",
+                "English",
+                "Spanish",
+                "French",
+                "German",
+                "Russian",
+                "Portuguese",
+                "Japanese",
+                "Korean"
+            };
+            
+            /* Assuming enum values correspond to array indices 0-9 */
+            if (detectedLang >= 0 && detectedLang < (int)(sizeof(langNames)/sizeof(langNames[0]))) {
+                strncpy(snapshot.language, langNames[detectedLang], sizeof(snapshot.language) - 1);
+                snapshot.language[sizeof(snapshot.language) - 1] = '\0';
+            } else {
+                strncpy(snapshot.language, "English", sizeof(snapshot.language) - 1);
+                snapshot.language[sizeof(snapshot.language) - 1] = '\0';
+            }
+            
+            LOG_INFO("DEBUG_TRACE: Applying pure default snapshot directly to memory...");
+            ApplyConfigSnapshot(&snapshot);
+            
+            LOG_INFO("DEBUG_TRACE: Configuration reset and applied successfully.");
+            return; /* EXIT FUNCTION HERE - Do not proceed to LoadConfigFromFile */
+        } else {
+            LOG_INFO("DEBUG_TRACE: >> DECISION: STANDARD MIGRATION (Switch is OFF)");
+            LOG_INFO("DEBUG_TRACE: Calling MigrateConfig...");
+            MigrateConfig(config_path);
+            needsWriteBack = TRUE;
+            LOG_INFO("DEBUG_TRACE: >> MIGRATION COMPLETE. needsWriteBack set to TRUE.");
+        }
+    } else {
+        LOG_INFO("DEBUG_TRACE: >> Version MATCH detected. Skipping all migration/reset logic.");
+        LOG_INFO("DEBUG_TRACE: Logic skipped because config version matches app version.");
     }
+    LOG_INFO("DEBUG_TRACE: Version Check End ----------------------------------");
 
     /* Load configuration into snapshot */
+    /* NOTE: If we performed a FORCE RESET, we have already returned from the function above. */
     ConfigSnapshot snapshot;
     if (!LoadConfigFromFile(config_path, &snapshot)) {
         /* Fallback to defaults on load failure */

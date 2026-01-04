@@ -16,6 +16,14 @@
 #define CATIME_VERSION_PATCH 0           /**< Patch version number */
 #define CATIME_VERSION_BUILD 0           /**< Build number */
 
+/** 
+ * @brief Configuration Reset Switch
+ * Set to 1 to force a clean configuration reset on version mismatch.
+ * Useful for major updates with breaking changes in config structure.
+ * WARNING: This will delete the user's config.ini without backup!
+ */
+#define FORCE_CONFIG_RESET_ON_UPDATE 1
+
 /** @brief Font license version information */
 #define FONT_LICENSE_VERSION "1.0"       /**< Font license version string */
 
