@@ -22,7 +22,7 @@
  * Useful for major updates with breaking changes in config structure.
  * WARNING: This will delete the user's config.ini without backup!
  */
-#define FORCE_CONFIG_RESET_ON_UPDATE 1
+#define FORCE_CONFIG_RESET_ON_UPDATE 0
 
 /** @brief Font license version information */
 #define FONT_LICENSE_VERSION "1.0"       /**< Font license version string */
