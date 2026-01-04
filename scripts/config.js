@@ -1,5 +1,5 @@
 window.CATIME_CONFIG = {
-    DOWNLOAD_URL: 'https://github.com/vladelaina/Catime/releases/download/v1.3.1/catime_1.3.1.exe',
+    DOWNLOAD_URL: 'https://github.com/vladelaina/Catime/releases/download/v1.4.0/catime_1.4.0.exe',
     
     GITHUB_URL: 'https://github.com/vladelaina/Catime',
     
