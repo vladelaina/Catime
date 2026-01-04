@@ -415,6 +415,28 @@ static BOOL IsConfigItemInMetadata(const char* section, const char* key) {
     return FALSE;
 }
 
+/* Helper to detect if a string is valid UTF-8 */
+static BOOL IsUtf8String(const char* str) {
+    const unsigned char* bytes = (const unsigned char*)str;
+    while (*bytes) {
+        if ((*bytes & 0x80) == 0) { /* ASCII */
+            bytes++;
+        } else if ((*bytes & 0xE0) == 0xC0) { /* 2-byte sequence */
+            if ((bytes[1] & 0xC0) != 0x80) return FALSE;
+            bytes += 2;
+        } else if ((*bytes & 0xF0) == 0xE0) { /* 3-byte sequence */
+            if ((bytes[1] & 0xC0) != 0x80 || (bytes[2] & 0xC0) != 0x80) return FALSE;
+            bytes += 3;
+        } else if ((*bytes & 0xF8) == 0xF0) { /* 4-byte sequence */
+            if ((bytes[1] & 0xC0) != 0x80 || (bytes[2] & 0xC0) != 0x80 || (bytes[3] & 0xC0) != 0x80) return FALSE;
+            bytes += 4;
+        } else {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
     /* Open file for reading (UTF-8) */
     wchar_t wConfigPath[MAX_PATH] = {0};
@@ -440,6 +462,24 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
     }
 
     while (fgets(line, sizeof(line), f)) {
+        /* Detect encoding: if not UTF-8, assume ANSI and convert */
+        /* This handles migration from old ANSI config files to new UTF-8 ones */
+        if (!IsUtf8String(line)) {
+            wchar_t wLine[4096];
+            char utf8Line[4096];
+            
+            /* ANSI -> Wide */
+            int wLen = MultiByteToWideChar(CP_ACP, 0, line, -1, wLine, 4096);
+            if (wLen > 0) {
+                /* Wide -> UTF-8 */
+                int uLen = WideCharToMultiByte(CP_UTF8, 0, wLine, -1, utf8Line, 4096, NULL, NULL);
+                if (uLen > 0) {
+                    strncpy(line, utf8Line, sizeof(line) - 1);
+                    line[sizeof(line) - 1] = '\0';
+                }
+            }
+        }
+
         /* Remove newline */
         size_t len = strlen(line);
         while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
