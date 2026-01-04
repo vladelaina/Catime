@@ -44,8 +44,17 @@
 
 <!-- Demo Video -->
 <div align="center" style="margin-bottom: 30px;">
-  <video src="https://github.com/user-attachments/assets/99793950-3a07-452b-85ee-c26711d2d9a1" autoplay loop style="border-radius: 8px; max-width: 800px;"></video>
+  <video src="https://github.com/user-attachments/assets/a59a85af-c522-4081-9a84-e0d3a71be236
+" autoplay loop style="border-radius: 8px; max-width: 800px;"></video>
 </div>
+
+
+
+
+
+
+
+
 
 <!-- Community Links -->
 <div align="center" style="margin-bottom: 30px;">
