@@ -361,6 +361,35 @@ With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.co
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/imxhe"><img src="https://vladelaina.github.io/Catime/assets/Contributors/iweek.webp" width="100px;" alt="imxhe"/><br /><sub><b>imxhe</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/haeob"><img src="https://vladelaina.github.io/Catime/assets/Contributors/mua.webp" width="100px;" alt="mua"/><br /><sub><b>mua</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://b23.tv/iRKb7Ua"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%9E%90%E6%9C%A8.webp" width="100px;" alt="析木"/><br /><sub><b>析木</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href=""><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%BA%9C%E6%BA%9C%E5%A4%A7%E7%A5%9E%E6%A0%A1%E9%95%BF%E6%9D%A5%E4%BA%86.webp" width="100px;" alt="溜溜大神校长来了"/><br /><sub><b>溜溜大神校长来了</b></sub></a><br />
+      </td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/Seredo"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Seredo.webp" width="100px;" alt="Seredo"/><br /><sub><b>Seredo</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://b23.tv/HVVVykm"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E7%BA%A2%E6%A0%91%E6%9E%97.webp" width="100px;" alt="红树林"/><br /><sub><b>红树林</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/Snow-kal"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Snow-kal.webp" width="100px;" alt="Snow-kal"/><br /><sub><b>Snow-kal</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/mayjay-wei"><img src="https://vladelaina.github.io/Catime/assets/Contributors/TCWei.webp" width="100px;" alt="TCWei"/><br /><sub><b>TCWei</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/YuYinLC"><img src="https://vladelaina.github.io/Catime/assets/Contributors/YuYinLC.webp" width="100px;" alt="YuYinLC"/><br /><sub><b>YuYinLC</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://meta.appinn.net/u/fireman"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Fireman.webp" width="100px;" alt="Fireman"/><br /><sub><b>Fireman</b></sub></a><br />
+      </td>
     </tr>
   </tbody>
 </table>
