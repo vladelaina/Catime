@@ -10,10 +10,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <tlhelp32.h>
 
 /* Job Object for automatic cleanup when Catime exits */
 static HANDLE g_hJob = NULL;
 static HWND g_hNotifyWnd = NULL;
+
+/* Forward declarations */
+static void TerminateProcessTree(DWORD pid, int depth);
 
 /* Structure to pass data to the launcher thread */
 typedef struct {
@@ -247,6 +251,12 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
                 LOG_INFO("[Thread] Plugin exited: %ls", plugin->displayName);
                 
+                /* Clean up any child processes that may still be running */
+                /* This handles cases like: cmd.exe exits but PowerShell child is still running */
+                if (dwProcessId != 0) {
+                    TerminateProcessTree(dwProcessId, 0);
+                }
+                
                 HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
                 if (hProc) {
                     CloseHandle(hProc);
@@ -376,6 +386,45 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
 }
 
 /**
+ * @brief Recursively terminate a process and all its descendants
+ * @param pid Process ID to terminate
+ * @param depth Current recursion depth (for logging and safety)
+ */
+static void TerminateProcessTree(DWORD pid, int depth) {
+    /* Safety: prevent infinite recursion and skip invalid PIDs */
+    if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
+    
+    /* First, find and terminate all child processes */
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot != INVALID_HANDLE_VALUE) {
+        PROCESSENTRY32W pe = {0};
+        pe.dwSize = sizeof(pe);
+        
+        if (Process32FirstW(hSnapshot, &pe)) {
+            do {
+                if (pe.th32ParentProcessID == pid && pe.th32ProcessID != pid) {
+                    /* Found a child process - recurse first (depth-first termination) */
+                    LOG_INFO("[Process] %*sFound child PID: %lu (%ls)", 
+                             depth * 2, "", pe.th32ProcessID, pe.szExeFile);
+                    TerminateProcessTree(pe.th32ProcessID, depth + 1);
+                }
+            } while (Process32NextW(hSnapshot, &pe));
+        }
+        CloseHandle(hSnapshot);
+    }
+    
+    /* Now terminate this process */
+    HANDLE hProc = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
+    if (hProc) {
+        LOG_INFO("[Process] %*sTerminating PID: %lu", depth * 2, "", pid);
+        TerminateProcess(hProc, 0);
+        /* Brief wait to ensure termination */
+        WaitForSingleObject(hProc, 500);
+        CloseHandle(hProc);
+    }
+}
+
+/**
  * @brief Terminate all processes in Job Object except Catime itself
  * This ensures orphaned child processes are cleaned up even if main process already exited
  */
@@ -444,15 +493,21 @@ BOOL PluginProcess_Terminate(PluginInfo* plugin) {
     plugin->pi.hThread = NULL;
     memset(&plugin->pi, 0, sizeof(plugin->pi));
     
-    /* Always terminate all processes in Job Object to catch orphaned children */
+    /* First: Terminate the entire process tree (catches child processes like PowerShell from .bat) */
+    if (pid != 0) {
+        LOG_INFO("[Process] Terminating process tree starting from PID: %lu", pid);
+        TerminateProcessTree(pid, 0);
+    }
+    
+    /* Second: Terminate all processes in Job Object to catch any remaining orphans */
     TerminateAllJobProcesses();
     
     if (hProc) {
-        LOG_INFO("[Process] Terminating main process PID: %lu", pid);
+        /* Ensure main process is terminated and wait for cleanup */
         TerminateProcess(hProc, 0);
         WaitForSingleObject(hProc, 2000);
         CloseHandle(hProc);
-        LOG_INFO("[Process] Process terminated");
+        LOG_INFO("[Process] Main process handle closed");
     }
     
     if (hThread) {
