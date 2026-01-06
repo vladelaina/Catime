@@ -76,9 +76,25 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
   <img src="https://github.com/user-attachments/assets/0354b85b-0f96-4978-98e8-df4c0a7ec740" width="600" height="200" alt="tray_animation" />
 </div>
 
-
+> [!TIP]
 > Looking for more fun animations? Check out our companion project, [MemeTray](https://github.com/MemeTray/MemeTray)!
 <img width="1478" height="758" alt="image" src="https://github.com/user-attachments/assets/df1edd50-a60f-45f0-a40c-d2a2a6751d57" />
+
+
+
+## 💫[Plugins](https://github.com/vladelaina/Catime-Plugins)
+
+> Plugins write to output.txt, Catime displays it — that simple.
+
+<img width="1105" height="481" alt="image" src="https://github.com/user-attachments/assets/734037a7-997c-48dd-b93f-513d1696ac54" />
+
+
+
+<img width="1920" height="899" alt="image" src="https://github.com/user-attachments/assets/1ca3e4a4-c6b0-4c42-ac40-152330cec07a" />
+
+> [!TIP]
+> Looking for more useful Plugins? Check out our companion project, [Catime-Plugins](https://github.com/vladelaina/Catime-Plugins)!
+
 
 
 
