@@ -9,7 +9,7 @@
 <!-- Project Title + Logo -->
 <div align="center">
   <a href="https://vladelaina.github.io/Catime" target="_blank">
-    <img src="Images/catime_resize.png" alt="Catime" width="300">
+    <img src="Images/catime_resize.png" alt="Catime" width="249">
   </a>
   <h1>Catime</h1>
 </div>
