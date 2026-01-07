@@ -78,12 +78,7 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 > [!TIP]
 > Looking for more fun animations? Check out our companion project, [MemeTray](https://github.com/MemeTray/MemeTray)!
-<p align="center">
-  <img
-    src="https://github.com/user-attachments/assets/ab00ef2e-8f0b-4a34-ba1f-50077b41e211"
-    style="width:1000px;"
-  />
-</p>
+
 
 
 
