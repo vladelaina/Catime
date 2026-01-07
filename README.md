@@ -49,13 +49,6 @@
 </div>
 
 
-
-
-
-
-
-
-
 <!-- Community Links -->
 <div align="center" style="margin-bottom: 30px;">
   👋 Join us on 
@@ -81,13 +74,9 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 
 
-
-
-
-
 ## 💫[Plugins](https://github.com/vladelaina/Catime-Plugins)
 
-> Plugins write to output.txt, Catime displays it — that simple.
+> Plugins write to **output.txt**, Catime displays it — that simple.
 
 <img width="1105" height="481" alt="image" src="https://github.com/user-attachments/assets/734037a7-997c-48dd-b93f-513d1696ac54" />
 
