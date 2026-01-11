@@ -117,6 +117,13 @@ static LRESULT HandlePluginExitMessage(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+/* Plugin notification message handler (for <notify> tag) */
+static LRESULT HandlePluginNotifyMessage(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    PluginData_ProcessPendingNotification(hwnd);
+    return 0;
+}
+
 /* ============================================================================
  * Message Dispatch Table
  * ============================================================================ */
@@ -171,6 +178,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_DIALOG_FONT_LICENSE, HandleDialogFontLicense, "Font license dialog result"},
     {WM_DIALOG_PLUGIN_SECURITY, HandleDialogPluginSecurity, "Plugin security dialog result"},
     {WM_PLUGIN_HOT_RELOAD, HandlePluginHotReload, "Plugin hot-reload from background thread"},
+    {WM_PLUGIN_NOTIFY, HandlePluginNotifyMessage, "Plugin notification from <notify> tag"},
     {0, NULL, NULL}
 };
 

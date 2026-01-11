@@ -5,6 +5,7 @@
 
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_exit.h"
+#include "notification.h"
 #include "../resource/resource.h"
 #include "log.h"
 #include <windows.h>
@@ -44,6 +45,20 @@ static size_t g_lastContentSize = 0;
 #define MIN_POLL_INTERVAL_MS 10
 #define MAX_POLL_INTERVAL_MS 5000
 static volatile DWORD g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
+
+/* Notification throttling */
+#define NOTIFY_MIN_INTERVAL_MS 1000
+static DWORD g_lastNotifyTime = 0;
+
+/* Pending notification for main thread */
+typedef struct {
+    wchar_t message[1025];
+    int type;           /* -1 = default, 0/1/2 = specific type */
+    int timeout;        /* 0 = default, >0 = custom timeout ms */
+    BOOL pending;
+} PendingNotification;
+
+static PendingNotification g_pendingNotify = {0};
 
 /**
  * @brief Parse and remove <fps:N> tag from content, update poll interval
@@ -112,6 +127,129 @@ static void RemoveFpsTagW(wchar_t* text) {
 }
 
 /**
+ * @brief Parse and process <notify> tags from wide string
+ * 
+ * Supported formats:
+ * - <notify>message</notify>             - Use default notification type and timeout
+ * - <notify:catime>message</notify>      - Force Catime notification window
+ * - <notify:os>message</notify>          - Force OS system notification
+ * - <notify:modal>message</notify>       - Force system modal dialog
+ * - <notify:catime:5000>message</notify> - Catime notification with custom timeout (ms)
+ * 
+ * @param text The text to parse (will be modified to remove tags)
+ * @param hwnd Window handle for notification display
+ * 
+ * @note This function posts a message to the main thread to show the notification,
+ *       avoiding UI operations from the background watcher thread.
+ */
+static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
+    if (!text || !hwnd) return;
+    
+    /* Only process notifications when plugin mode is active */
+    if (!g_pluginModeActive) return;
+    
+    wchar_t* searchStart = text;
+    
+    while (1) {
+        /* Find <notify tag start */
+        wchar_t* notifyStart = wcsstr(searchStart, L"<notify");
+        if (!notifyStart) break;
+        
+        /* Find closing > of opening tag */
+        wchar_t* tagEnd = wcschr(notifyStart, L'>');
+        if (!tagEnd) break;
+        
+        /* Find </notify> closing tag */
+        wchar_t* closeTag = wcsstr(tagEnd, L"</notify>");
+        if (!closeTag) break;
+        
+        /* Extract message content (between > and </notify>) */
+        size_t msgLen = closeTag - (tagEnd + 1);
+        if (msgLen == 0 || msgLen > 1024) {
+            /* Empty or too long message, skip this tag */
+            searchStart = closeTag + 9;
+            continue;
+        }
+        
+        wchar_t message[1025] = {0};
+        wcsncpy(message, tagEnd + 1, msgLen);
+        message[msgLen] = L'\0';
+        
+        /* Parse notification type and timeout from tag attributes */
+        /* Format: <notify> or <notify:type> or <notify:type:timeout> */
+        int notifyType = -1;  /* -1 = use default */
+        int customTimeout = 0;  /* 0 = use default */
+        
+        wchar_t* colonPos = wcschr(notifyStart + 7, L':');
+        if (colonPos && colonPos < tagEnd) {
+            /* Has type parameter */
+            wchar_t* typeStart = colonPos + 1;
+            wchar_t* typeEnd = wcschr(typeStart, L':');
+            if (!typeEnd || typeEnd > tagEnd) {
+                typeEnd = tagEnd;
+            }
+            
+            size_t typeLen = typeEnd - typeStart;
+            if (typeLen > 0 && typeLen < 16) {
+                wchar_t typeStr[16] = {0};
+                wcsncpy(typeStr, typeStart, typeLen);
+                typeStr[typeLen] = L'\0';
+                
+                if (_wcsicmp(typeStr, L"catime") == 0) {
+                    notifyType = NOTIFICATION_TYPE_CATIME;
+                } else if (_wcsicmp(typeStr, L"os") == 0) {
+                    notifyType = NOTIFICATION_TYPE_OS;
+                } else if (_wcsicmp(typeStr, L"modal") == 0) {
+                    notifyType = NOTIFICATION_TYPE_SYSTEM_MODAL;
+                }
+            }
+            
+            /* Check for timeout parameter (only for toast) */
+            if (typeEnd < tagEnd && *typeEnd == L':') {
+                wchar_t* timeoutStart = typeEnd + 1;
+                customTimeout = _wtoi(timeoutStart);
+                if (customTimeout < 0) customTimeout = 0;
+                if (customTimeout > 60000) customTimeout = 60000;  /* Max 60 seconds */
+            }
+        }
+        
+        /* Throttle: check if enough time has passed since last notification */
+        /* Note: GetTickCount wraps around after ~49.7 days, but the subtraction
+         * still works correctly due to unsigned arithmetic */
+        DWORD now = GetTickCount();
+        DWORD elapsed = now - g_lastNotifyTime;
+        if (elapsed >= NOTIFY_MIN_INTERVAL_MS) {
+            g_lastNotifyTime = now;
+            
+            /* Store pending notification for main thread to process
+             * Note: This is called from ParseContent which already holds g_dataCS,
+             * so we don't need to acquire the lock here. The main thread will
+             * acquire the lock in PluginData_ProcessPendingNotification. */
+            wcsncpy(g_pendingNotify.message, message, 1024);
+            g_pendingNotify.message[1024] = L'\0';
+            g_pendingNotify.type = notifyType;
+            g_pendingNotify.timeout = customTimeout;
+            g_pendingNotify.pending = TRUE;
+            
+            /* Post message to main thread to show notification */
+            PostMessage(hwnd, WM_PLUGIN_NOTIFY, 0, 0);
+            
+            LOG_INFO("PluginData: Notification queued (type=%d, timeout=%d): %ls", 
+                     notifyType, customTimeout, message);
+        } else {
+            LOG_INFO("PluginData: Notification throttled (elapsed=%lu ms)", elapsed);
+        }
+        
+        /* Remove the entire <notify>...</notify> tag from text */
+        wchar_t* afterClose = closeTag + 9;  /* Skip "</notify>" */
+        memmove(notifyStart, afterClose, (wcslen(afterClose) + 1) * sizeof(wchar_t));
+        
+        /* Continue searching from same position (text shifted) */
+        searchStart = notifyStart;
+    }
+}
+
+/**
  * @brief Parse plain text content and update display text
  * 
  * The file content is displayed as-is, supporting:
@@ -171,6 +309,12 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
         
         /* Remove <fps:N> tag from display */
         RemoveFpsTagW(g_pluginDisplayText);
+        
+        /* Process <notify> tags - show notifications and remove from display */
+        ParseAndShowNotifyTagW(g_pluginDisplayText, g_hNotifyWnd);
+        
+        /* Recalculate length after tag removal */
+        len = (int)wcslen(g_pluginDisplayText);
         
         /* Process <exit> tag - if countdown starts, set data flag and return */
         if (PluginExit_ParseTag(g_pluginDisplayText, &len, g_pluginDisplayTextLen)) {
@@ -401,6 +545,9 @@ void PluginData_Clear(void) {
     /* Reset poll interval to default */
     g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
     
+    /* Reset notification throttle */
+    g_lastNotifyTime = 0;
+    
     if (!g_pluginDataInitialized) return;
     EnterCriticalSection(&g_dataCS);
     g_pluginModeActive = FALSE;  // Deactivate plugin mode
@@ -408,6 +555,8 @@ void PluginData_Clear(void) {
     if (g_pluginDisplayText) {
         g_pluginDisplayText[0] = L'\0';
     }
+    /* Clear any pending notification to prevent stale notifications */
+    g_pendingNotify.pending = FALSE;
     LeaveCriticalSection(&g_dataCS);
 }
 
@@ -466,6 +615,8 @@ void PluginData_SetActive(BOOL active) {
         if (g_pluginDisplayText) {
             g_pluginDisplayText[0] = L'\0';
         }
+        // Clear any pending notification
+        g_pendingNotify.pending = FALSE;
     }
     LeaveCriticalSection(&g_dataCS);
     LOG_INFO("PluginData: Mode %s", active ? "ACTIVE" : "INACTIVE");
@@ -518,5 +669,56 @@ BOOL PluginData_HasCatimeTag(void) {
     }
     LeaveCriticalSection(&g_dataCS);
     return hasTag;
+}
+
+void PluginData_ProcessPendingNotification(HWND hwnd) {
+    if (!g_pluginDataInitialized) return;
+    
+    /* Copy pending notification data under lock, then process outside lock */
+    PendingNotification localNotify;
+    
+    EnterCriticalSection(&g_dataCS);
+    if (!g_pendingNotify.pending) {
+        LeaveCriticalSection(&g_dataCS);
+        return;
+    }
+    
+    /* Copy to local and clear pending flag */
+    memcpy(&localNotify, &g_pendingNotify, sizeof(PendingNotification));
+    g_pendingNotify.pending = FALSE;
+    LeaveCriticalSection(&g_dataCS);
+    
+    int notifyType = localNotify.type;
+    int customTimeout = localNotify.timeout;
+    
+    /* Save and restore timeout if custom timeout specified */
+    int savedTimeout = 0;
+    if (customTimeout > 0 && (notifyType == -1 || notifyType == NOTIFICATION_TYPE_CATIME)) {
+        savedTimeout = g_AppConfig.notification.display.timeout_ms;
+        g_AppConfig.notification.display.timeout_ms = customTimeout;
+    }
+    
+    /* Show notification based on type */
+    if (notifyType == -1) {
+        /* Use default configured type */
+        ShowNotification(hwnd, localNotify.message);
+    } else if (notifyType == NOTIFICATION_TYPE_CATIME) {
+        ShowToastNotification(hwnd, localNotify.message);
+    } else if (notifyType == NOTIFICATION_TYPE_SYSTEM_MODAL) {
+        ShowModalNotification(hwnd, localNotify.message);
+    } else if (notifyType == NOTIFICATION_TYPE_OS) {
+        /* Convert to UTF-8 for tray notification */
+        char msgUtf8[2048] = {0};
+        WideCharToMultiByte(CP_UTF8, 0, localNotify.message, -1, msgUtf8, sizeof(msgUtf8) - 1, NULL, NULL);
+        extern void ShowTrayNotification(HWND hwnd, const char* message);
+        ShowTrayNotification(hwnd, msgUtf8);
+    }
+    
+    /* Restore timeout */
+    if (savedTimeout > 0) {
+        g_AppConfig.notification.display.timeout_ms = savedTimeout;
+    }
+    
+    LOG_INFO("PluginData: Notification displayed (type=%d, timeout=%d)", notifyType, customTimeout);
 }
 

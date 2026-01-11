@@ -63,4 +63,16 @@ BOOL PluginData_IsActive(void);
  */
 BOOL PluginData_HasCatimeTag(void);
 
+/**
+ * @brief Process pending notification from plugin
+ * @param hwnd Window handle for notification display
+ * 
+ * Called from main thread in response to WM_PLUGIN_NOTIFY message.
+ * This ensures UI operations happen on the main thread.
+ */
+void PluginData_ProcessPendingNotification(HWND hwnd);
+
+/** @brief Custom message ID for plugin notifications */
+#define WM_PLUGIN_NOTIFY (WM_APP + 200)
+
 #endif /* PLUGIN_DATA_H */
