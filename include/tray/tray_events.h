@@ -28,6 +28,12 @@
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg);
 
+/**
+ * @brief Stop tray hover detection timer
+ * @note Called when tray icon is removed for cleanup
+ */
+void StopTrayHoverDetection(void);
+
 /* ============================================================================
  * Timer Control Operations
  * ============================================================================ */

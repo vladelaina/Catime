@@ -17,6 +17,7 @@
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
 #define PERCENT_ICON_WARMUP_MS 120  /* Allow CPU/memory sampling to stabilize (first read often returns 0%) */
+#define ICON_RECT_CACHE_TIMEOUT_MS 100  /* Cache tray icon position for 100ms to reduce Shell API calls */
 
 /** @brief Global tray icon data for Shell_NotifyIcon */
 NOTIFYICONDATAW nid;
@@ -24,62 +25,55 @@ NOTIFYICONDATAW nid;
 /** @brief Taskbar recreation message ID */
 UINT WM_TASKBARCREATED = 0;
 
-/** @brief Mouse hook for tray icon wheel events */
+/** @brief Mouse hook for tray icon wheel events (installed on-demand) */
 static HHOOK g_mouseHook = NULL;
 static HWND g_mainHwnd = NULL;
+static HINSTANCE g_hInstance = NULL;
 
 /** @brief Opacity tooltip mode flag */
 BOOL g_showingOpacityTip = FALSE;
-static BOOL g_mouseWasOverIcon = FALSE;
+
+/** @brief Cached tray icon rectangle for performance */
+static RECT g_cachedIconRect = {0};
+static DWORD g_lastRectUpdateTime = 0;
 
 extern void ReadPercentIconColorsConfig(void);
 
 /**
- * @brief Check if mouse is over tray icon
+ * @brief Check if mouse is over tray icon (with caching)
+ * @note Uses cached position to reduce Shell API calls, refreshes every 100ms
  */
-static BOOL IsMouseOverTrayIcon(POINT pt) {
-    NOTIFYICONIDENTIFIER iconId = {0};
-    iconId.cbSize = sizeof(iconId);
-    iconId.hWnd = nid.hWnd;
-    iconId.uID = nid.uID;
-
-    RECT iconRect = {0};
-    HRESULT hr = Shell_NotifyIconGetRect(&iconId, &iconRect);
-
-    if (SUCCEEDED(hr)) {
-        return PtInRect(&iconRect, pt);
+static BOOL IsMouseOverTrayIconCached(POINT pt) {
+    DWORD now = GetTickCount();
+    
+    /* Refresh cache if expired */
+    if (now - g_lastRectUpdateTime > ICON_RECT_CACHE_TIMEOUT_MS) {
+        NOTIFYICONIDENTIFIER iconId = {0};
+        iconId.cbSize = sizeof(iconId);
+        iconId.hWnd = nid.hWnd;
+        iconId.uID = nid.uID;
+        
+        HRESULT hr = Shell_NotifyIconGetRect(&iconId, &g_cachedIconRect);
+        if (FAILED(hr)) {
+            /* If API fails, invalidate cache */
+            SetRectEmpty(&g_cachedIconRect);
+        }
+        g_lastRectUpdateTime = now;
     }
-    return FALSE;
+    
+    return PtInRect(&g_cachedIconRect, pt);
 }
 
 /**
- * @brief Mouse hook callback for tray icon wheel events and hover detection
+ * @brief Mouse hook callback for tray icon wheel events
+ * @note Only handles wheel events, installed on-demand when mouse enters tray icon
  */
 static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    if (nCode >= 0) {
+    if (nCode >= 0 && wParam == WM_MOUSEWHEEL) {
         MSLLHOOKSTRUCT* pMouseStruct = (MSLLHOOKSTRUCT*)lParam;
-        BOOL isOverIcon = IsMouseOverTrayIcon(pMouseStruct->pt);
-
-        /* Detect mouse leave and re-enter to reset opacity tip mode */
-        if (wParam == WM_MOUSEMOVE) {
-            if (!isOverIcon && g_mouseWasOverIcon) {
-                /* Mouse left icon */
-                g_mouseWasOverIcon = FALSE;
-            } else if (isOverIcon && !g_mouseWasOverIcon) {
-                /* Mouse entered icon - reset to normal tooltip */
-                g_mouseWasOverIcon = TRUE;
-                if (g_showingOpacityTip) {
-                    g_showingOpacityTip = FALSE;
-                    /* Trigger normal tooltip update */
-                    if (g_mainHwnd) {
-                        TrayTipTimerProc(g_mainHwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
-                    }
-                }
-            }
-        }
-
-        /* Handle wheel events */
-        if (wParam == WM_MOUSEWHEEL && isOverIcon) {
+        
+        /* Only process if mouse is over tray icon */
+        if (IsMouseOverTrayIconCached(pMouseStruct->pt)) {
             extern int CLOCK_WINDOW_OPACITY;
             extern void WriteConfigWindowOpacity(int opacity);
             extern int ReadConfigOpacityStepNormal(void);
@@ -381,6 +375,7 @@ static HICON GetInitialPercentIcon(AnimationType type) {
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     g_mainHwnd = hwnd;
+    g_hInstance = hInstance;
 
     ReadPercentIconColorsConfig();
     SystemMonitor_Init();
@@ -403,6 +398,10 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
 
     Shell_NotifyIconW(NIM_ADD, &nid);
+    
+    /* Note: We don't use NOTIFYICON_VERSION_4 because it changes message format
+     * and doesn't reliably send WM_MOUSEMOVE. Instead, we use a timer-based
+     * approach to detect mouse hover over tray icon. */
 
     if (WM_TASKBARCREATED == 0) {
         RegisterTaskbarCreatedMessage();
@@ -410,10 +409,7 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     
     SetTimer(hwnd, TRAY_TIP_TIMER_ID, TOOLTIP_UPDATE_INTERVAL_MS, (TIMERPROC)TrayTipTimerProc);
 
-    /* Install mouse hook for tray wheel events */
-    if (!g_mouseHook) {
-        g_mouseHook = SetWindowsHookExW(WH_MOUSE_LL, MouseHookProc, hInstance, 0);
-    }
+    /* Mouse hook is now installed on-demand when mouse hovers over tray icon */
 }
 
 /** @brief Remove tray icon and cleanup */
@@ -421,6 +417,10 @@ void RemoveTrayIcon(void) {
     if (nid.hWnd) {
         KillTimer(nid.hWnd, TRAY_TIP_TIMER_ID);
     }
+
+    /* Stop hover detection timer */
+    extern void StopTrayHoverDetection(void);
+    StopTrayHoverDetection();
 
     /* Uninstall mouse hook */
     if (g_mouseHook) {
@@ -463,4 +463,51 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
 void UpdateTrayIcon(HWND hwnd) {
     HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
     RecreateTaskbarIcon(hwnd, hInstance);
+}
+
+/**
+ * @brief Install mouse hook for tray wheel events
+ * @note Called when mouse enters tray icon area (NIN_POPUPOPEN)
+ */
+void InstallTrayMouseHook(void) {
+    if (!g_mouseHook && g_hInstance) {
+        g_mouseHook = SetWindowsHookExW(WH_MOUSE_LL, MouseHookProc, g_hInstance, 0);
+        /* Invalidate position cache to get fresh coordinates */
+        g_lastRectUpdateTime = 0;
+    }
+}
+
+/**
+ * @brief Check if mouse hook is currently installed
+ * @return TRUE if hook is installed
+ */
+BOOL IsTrayMouseHookInstalled(void) {
+    return g_mouseHook != NULL;
+}
+
+/**
+ * @brief Check if mouse is over tray icon area
+ * @param pt Mouse position in screen coordinates
+ * @return TRUE if mouse is over tray icon
+ */
+BOOL IsMouseOverTrayIconArea(POINT pt) {
+    return IsMouseOverTrayIconCached(pt);
+}
+
+/**
+ * @brief Uninstall mouse hook for tray wheel events
+ * @note Called when mouse leaves tray icon area (NIN_POPUPCLOSE)
+ */
+void UninstallTrayMouseHook(void) {
+    if (g_mouseHook) {
+        UnhookWindowsHookEx(g_mouseHook);
+        g_mouseHook = NULL;
+    }
+    /* Reset opacity tip mode when mouse leaves */
+    if (g_showingOpacityTip) {
+        g_showingOpacityTip = FALSE;
+        if (g_mainHwnd) {
+            TrayTipTimerProc(g_mainHwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
+        }
+    }
 }

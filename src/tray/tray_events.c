@@ -6,6 +6,7 @@
 #include <shellapi.h>
 #include "tray/tray_events.h"
 #include "tray/tray_menu.h"
+#include "tray/tray.h"
 #include "color/color.h"
 #include "timer/timer.h"
 #include "language.h"
@@ -15,6 +16,66 @@
 #include "audio_player.h"
 #include "config.h"
 #include "../resource/resource.h"
+
+/* NIN_* messages - kept for potential future use */
+#ifndef NIN_SELECT
+#define NIN_SELECT (WM_USER + 0)
+#endif
+
+/* Timer for detecting mouse hover over tray icon */
+#define TRAY_HOVER_CHECK_TIMER_ID 42422
+#define TRAY_HOVER_CHECK_INTERVAL_MS 100
+
+static UINT_PTR g_hoverCheckTimer = 0;
+static HWND g_trayEventHwnd = NULL;
+
+/**
+ * @brief Timer callback to check if mouse is over tray icon
+ * @note Installs hook when mouse enters, uninstalls when mouse leaves
+ */
+static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+    (void)hwnd; (void)msg; (void)id; (void)time;
+    
+    POINT pt;
+    GetCursorPos(&pt);
+    
+    BOOL isOverIcon = IsMouseOverTrayIconArea(pt);
+    BOOL hookInstalled = IsTrayMouseHookInstalled();
+    
+    if (isOverIcon && !hookInstalled) {
+        /* Mouse entered tray icon - install hook */
+        InstallTrayMouseHook();
+    } else if (!isOverIcon && hookInstalled) {
+        /* Mouse left tray icon - uninstall hook */
+        UninstallTrayMouseHook();
+    }
+}
+
+/**
+ * @brief Start tray hover detection timer
+ */
+static void StartTrayHoverDetection(HWND hwnd) {
+    if (!g_hoverCheckTimer) {
+        g_trayEventHwnd = hwnd;
+        g_hoverCheckTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID, 
+                                     TRAY_HOVER_CHECK_INTERVAL_MS, TrayHoverCheckTimerProc);
+    }
+}
+
+/**
+ * @brief Stop tray hover detection timer
+ * @note Called when tray icon is removed
+ */
+void StopTrayHoverDetection(void) {
+    if (g_hoverCheckTimer && g_trayEventHwnd) {
+        KillTimer(g_trayEventHwnd, TRAY_HOVER_CHECK_TIMER_ID);
+        g_hoverCheckTimer = 0;
+    }
+    /* Also uninstall hook if still active */
+    if (IsTrayMouseHookInstalled()) {
+        UninstallTrayMouseHook();
+    }
+}
 
 /**
  * @brief Open URL in default browser
@@ -55,8 +116,11 @@ static inline BOOL IsTimerActive(void) {
 /**
  * @brief Reset timer state and clear pause flag
  * @param isCountUp TRUE for count-up mode, FALSE for countdown
+ * @note Currently unused but kept for potential future use
  */
 static void ResetTimerState(BOOL isCountUp) {
+    (void)isCountUp; /* Suppress unused parameter warning */
+    /* Implementation kept for reference:
     if (isCountUp) {
         countup_elapsed_time = 0;
     } else {
@@ -66,25 +130,36 @@ static void ResetTimerState(BOOL isCountUp) {
         }
     }
     CLOCK_IS_PAUSED = FALSE;
+    */
 }
 
 /**
  * @brief Handle tray icon mouse events
  * @param hwnd Main window handle
  * @param uID Tray icon identifier
- * @param uMouseMsg Mouse message (WM_LBUTTONUP, WM_RBUTTONUP, WM_MOUSEWHEEL, etc.)
- * @note Right-click: color menu; Left-click: main context menu; Mouse wheel: adjust window opacity
+ * @param uMouseMsg Mouse message (WM_LBUTTONUP, WM_RBUTTONUP, WM_MOUSEMOVE, etc.)
+ * @note Right-click: color menu; Left-click: main context menu
+ * @note Hover detection is done via timer polling, not message-based
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
     (void)uID;
 
-    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+    /* Start hover detection timer on first tray message */
+    StartTrayHoverDetection(hwnd);
 
-    if (uMouseMsg == WM_RBUTTONUP) {
-        ShowColorMenu(hwnd);
-    }
-    else if (uMouseMsg == WM_LBUTTONUP) {
-        ShowContextMenu(hwnd);
+    switch (uMouseMsg) {
+        case WM_RBUTTONUP:
+            SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+            ShowColorMenu(hwnd);
+            break;
+            
+        case WM_LBUTTONUP:
+            SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+            ShowContextMenu(hwnd);
+            break;
+            
+        default:
+            break;
     }
 }
 

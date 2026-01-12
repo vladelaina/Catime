@@ -82,4 +82,29 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
  */
 void UpdateTrayTooltip(const wchar_t* tip);
 
+/**
+ * @brief Install mouse hook for tray wheel events
+ * @note Called when mouse enters tray icon area (NIN_POPUPOPEN)
+ */
+void InstallTrayMouseHook(void);
+
+/**
+ * @brief Uninstall mouse hook for tray wheel events
+ * @note Called when mouse leaves tray icon area (NIN_POPUPCLOSE)
+ */
+void UninstallTrayMouseHook(void);
+
+/**
+ * @brief Check if mouse hook is currently installed
+ * @return TRUE if hook is installed
+ */
+BOOL IsTrayMouseHookInstalled(void);
+
+/**
+ * @brief Check if mouse is over tray icon area
+ * @param pt Mouse position in screen coordinates
+ * @return TRUE if mouse is over tray icon
+ */
+BOOL IsMouseOverTrayIconArea(POINT pt);
+
 #endif
