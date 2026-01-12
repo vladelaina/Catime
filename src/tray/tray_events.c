@@ -17,11 +17,6 @@
 #include "config.h"
 #include "../resource/resource.h"
 
-/* NIN_* messages - kept for potential future use */
-#ifndef NIN_SELECT
-#define NIN_SELECT (WM_USER + 0)
-#endif
-
 /* Timer for detecting mouse hover over tray icon */
 #define TRAY_HOVER_CHECK_TIMER_ID 42422
 #define TRAY_HOVER_CHECK_INTERVAL_MS 100
@@ -111,26 +106,6 @@ static inline void RestartTimerWithInterval(HWND hwnd, UINT timerId, UINT interv
  */
 static inline BOOL IsTimerActive(void) {
     return !CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0);
-}
-
-/**
- * @brief Reset timer state and clear pause flag
- * @param isCountUp TRUE for count-up mode, FALSE for countdown
- * @note Currently unused but kept for potential future use
- */
-static void ResetTimerState(BOOL isCountUp) {
-    (void)isCountUp; /* Suppress unused parameter warning */
-    /* Implementation kept for reference:
-    if (isCountUp) {
-        countup_elapsed_time = 0;
-    } else {
-        if (CLOCK_TOTAL_TIME > 0) {
-            countdown_elapsed_time = 0;
-            countdown_message_shown = FALSE;
-        }
-    }
-    CLOCK_IS_PAUSED = FALSE;
-    */
 }
 
 /**

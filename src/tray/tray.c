@@ -163,11 +163,6 @@ static inline BOOL IsPercentIcon(AnimationType type) {
     return type == ANIM_TYPE_CPU || type == ANIM_TYPE_MEMORY || type == ANIM_TYPE_BATTERY;
 }
 
-/** @brief Check if type is builtin (not custom) */
-static inline BOOL IsBuiltinIcon(AnimationType type) {
-    return type != ANIM_TYPE_CUSTOM;
-}
-
 /**
  * @brief Check if filename is static image
  * @return TRUE for .ico, .png, .bmp, .jpg, .tif extensions
