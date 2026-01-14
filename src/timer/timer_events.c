@@ -589,7 +589,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
             return HandleRetryTimer(hwnd, TIMER_ID_VISIBILITY_RETRY, &visibility_retry, SetupVisibilityWindow);
 
         case TIMER_ID_FORCE_REDRAW:
+            return HandleForceRedraw(hwnd);
+
         case TIMER_ID_EDIT_MODE_REFRESH:
+            KillTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH);
             return HandleForceRedraw(hwnd);
 
         case TIMER_ID_FONT_VALIDATION:

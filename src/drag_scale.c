@@ -101,7 +101,6 @@ void EndEditMode(HWND hwnd) {
         RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
         
         KillTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH);
-        SetTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH, TIMER_REFRESH_INTERVAL_MS, NULL);
     } else {
         RefreshWindow(hwnd, TRUE);
     }
