@@ -140,7 +140,7 @@ BOOL HandleDragWindow(HWND hwnd) {
     CLOCK_WINDOW_POS_X = newX;
     CLOCK_WINDOW_POS_Y = newY;
     
-    UpdateWindow(hwnd);
+    InvalidateRect(hwnd, NULL, FALSE);
     return TRUE;
 }
 
