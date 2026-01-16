@@ -112,7 +112,6 @@ void EndDragWindow(HWND hwnd) {
     CLOCK_IS_DRAGGING = FALSE;
     ReleaseCapture();
     
-    AdjustWindowPosition(hwnd, FALSE);
     RefreshWindow(hwnd, TRUE);
 }
 

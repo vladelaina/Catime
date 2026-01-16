@@ -5,7 +5,6 @@
  * This file aggregates all window-related functionality:
  * - Core window creation and lifecycle
  * - Visual effects (blur, click-through)
- * - Multi-monitor support
  * - Application initialization
  * - Desktop integration and Z-order
  */
@@ -16,7 +15,6 @@
 /* Include all window module headers */
 #include "window/window_core.h"
 #include "window/window_visual_effects.h"
-#include "window/window_multimonitor.h"
 #include "window/window_initialization.h"
 #include "window/window_desktop_integration.h"
 

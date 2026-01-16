@@ -4,7 +4,6 @@
  */
 #include <windows.h>
 #include "window.h"
-#include "window/window_multimonitor.h"
 #include "tray/tray.h"
 #include "config.h"
 #include "drag_scale.h"
@@ -22,13 +21,10 @@
  * ============================================================================ */
 
 /**
- * Handle WM_CREATE initialization: position, click-through, and topmost mode.
+ * Handle WM_CREATE initialization: click-through and topmost mode.
  *
  * @param hwnd Window handle of newly created window
  * @return TRUE if initialization succeeded
- *
- * @note Position validation is skipped during startup to avoid false positives
- *       when display information may not be fully initialized yet.
  */
 BOOL HandleWindowCreate(HWND hwnd) {
     LOG_INFO("Window creation started");
@@ -38,10 +34,6 @@ BOOL HandleWindowCreate(HWND hwnd) {
         EnableWindow(hwndParent, TRUE);
         LOG_INFO("Parent window enabled");
     }
-
-    /* Validate window position after creation - move to default if off-screen */
-    LOG_INFO("Validating window position after creation");
-    AdjustWindowPosition(hwnd, TRUE);
 
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     LOG_INFO("Click-through mode set: %s", CLOCK_EDIT_MODE ? "disabled" : "enabled");

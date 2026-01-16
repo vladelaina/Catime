@@ -60,10 +60,10 @@ void EndEditMode(HWND hwnd);
 void StartDragWindow(HWND hwnd);
 
 /**
- * @brief End dragging and validate position
+ * @brief End dragging
  * @param hwnd Window handle
  * 
- * @details Releases capture, validates position within screen bounds
+ * @details Releases capture and refreshes window
  */
 void EndDragWindow(HWND hwnd);
 

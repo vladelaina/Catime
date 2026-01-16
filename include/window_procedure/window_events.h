@@ -3,7 +3,6 @@
  * @brief Window lifecycle event handlers
  * 
  * Ordered cleanup prevents resource leaks and access violations.
- * Reset operation recovers from inaccessible window states (off-screen, topmost conflicts).
  */
 
 #ifndef WINDOW_EVENTS_H
@@ -16,7 +15,7 @@
  * @return TRUE (always)
  * 
  * @details
- * Setup: parent enablement, position/size, click-through, topmost.
+ * Setup: parent enablement, click-through, topmost.
  * Logs all steps for diagnostics.
  */
 BOOL HandleWindowCreate(HWND hwnd);
@@ -42,7 +41,6 @@ void HandleWindowDestroy(HWND hwnd);
  * 
  * @details
  * Forces topmost enabled, persists to config, ensures visible.
- * Recovers from: multi-monitor changes, off-screen, topmost conflicts.
  * 
  * @warning Destructive (overwrites user preference)
  */

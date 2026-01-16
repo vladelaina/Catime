@@ -5,7 +5,6 @@
 
 #include "window/window_desktop_integration.h"
 #include "window/window_core.h"
-#include "window/window_multimonitor.h"
 #include "config.h"
 #include "log.h"
 
@@ -99,7 +98,6 @@ void SetWindowTopmost(HWND hwnd, BOOL topmost) {
         SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
         ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-        AdjustWindowPosition(hwnd, TRUE);
     }
     
     SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
