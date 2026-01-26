@@ -98,16 +98,27 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 
 ## Sponsors
-<table>
-  <tr>
-    <td>
-      <img alt="SignPath" src="https://signpath.org/assets/favicon-50x50.png" />
-    </td>
-    <td>
-    Free code signing on Windows provided by <a href="https://signpath.io">SignPath.io</a>, certficate by <a href="https://signpath.org/">SignPath Foundation</a>
-    </td>
-  </tr> 
-</table>
+
+<div align="center">
+  <img width="732" height="246" alt="dk" src="https://github.com/user-attachments/assets/6d06ac2a-ae1d-4b3f-b828-65b653f6e189" />
+  <br><br>
+
+  <table align="center">
+    <tr>
+      <td>
+        <img alt="SignPath" src="https://signpath.org/assets/favicon-50x50.png" />
+      </td>
+      <td>
+        Free code signing on Windows provided by
+        <a href="https://signpath.io">SignPath.io</a>, certificate by
+        <a href="https://signpath.org/">SignPath Foundation</a>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+
 
 ## 📥 Download
 
