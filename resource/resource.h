@@ -189,6 +189,7 @@
 #define CLOCK_IDM_LANG_PORTUGUESE 168    /**< Portuguese language */
 #define CLOCK_IDM_LANG_JAPANESE 169      /**< Japanese language */
 #define CLOCK_IDM_LANG_KOREAN 170        /**< Korean language */
+#define CLOCK_IDM_LANG_ITALIAN 208        /**< Italian language */
 
 /** @brief Timer control menu identifiers */
 #define CLOCK_IDM_COUNT_UP 153           /**< Count-up timer menu item */
