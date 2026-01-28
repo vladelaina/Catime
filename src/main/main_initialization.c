@@ -302,6 +302,7 @@ typedef enum {
 static StartupMode ParseStartupMode(const char* modeStr) {
     if (!modeStr) return STARTUP_MODE_DEFAULT;
     
+    if (strcmp(modeStr, "COUNTDOWN") == 0) return STARTUP_MODE_DEFAULT;
     if (strcmp(modeStr, "COUNT_UP") == 0) return STARTUP_MODE_COUNT_UP;
     if (strcmp(modeStr, "NO_DISPLAY") == 0) return STARTUP_MODE_NO_DISPLAY;
     if (strcmp(modeStr, "SHOW_TIME") == 0) return STARTUP_MODE_SHOW_TIME;
@@ -317,18 +318,16 @@ void HandleStartupMode(HWND hwnd) {
     
     switch (mode) {
         case STARTUP_MODE_COUNT_UP:
-            LOG_INFO("Setting to count-up mode");
             CLOCK_COUNT_UP = TRUE;
             elapsed_time = 0;
             countup_elapsed_time = 0;
-            /* Initialize g_start_time for count-up time calculation */
+            
             extern int64_t g_start_time;
             extern int64_t GetAbsoluteTimeMs(void);
             g_start_time = GetAbsoluteTimeMs();
             break;
             
         case STARTUP_MODE_NO_DISPLAY:
-            LOG_INFO("Setting to hidden mode, window will be hidden");
             ShowWindow(hwnd, SW_HIDE);
             KillTimer(hwnd, 1);
             elapsed_time = CLOCK_TOTAL_TIME;
@@ -341,19 +340,28 @@ void HandleStartupMode(HWND hwnd) {
             break;
             
         case STARTUP_MODE_SHOW_TIME:
-            LOG_INFO("Setting to show current time mode");
             CLOCK_SHOW_CURRENT_TIME = TRUE;
             CLOCK_LAST_TIME_UPDATE = 0;
             break;
             
         case STARTUP_MODE_POMODORO:
-            LOG_INFO("Setting to pomodoro mode");
             PostMessage(hwnd, WM_COMMAND, CLOCK_IDM_POMODORO_START, 0);
             break;
             
         case STARTUP_MODE_DEFAULT:
         default:
-            LOG_INFO("Using default countdown mode");
+            CLOCK_SHOW_CURRENT_TIME = FALSE;
+            CLOCK_COUNT_UP = FALSE;
+            countdown_elapsed_time = 0;
+            
+            if (CLOCK_TOTAL_TIME <= 0) {
+                CLOCK_TOTAL_TIME = g_AppConfig.timer.default_start_time;
+            }
+            if (CLOCK_TOTAL_TIME <= 0) {
+                CLOCK_TOTAL_TIME = 60;
+            }
+            
+            ResetTimer();
             break;
     }
 }

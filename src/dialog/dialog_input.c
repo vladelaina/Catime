@@ -214,7 +214,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wtimeStr);
                 }
             } else if (dlgId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-                /* Display current pomodoro time value */
                 if (g_pomodoroSelectedIndex >= 0 && g_pomodoroSelectedIndex < g_AppConfig.pomodoro.times_count) {
                     char timeStr[64];
                     Dialog_FormatSecondsToString(g_AppConfig.pomodoro.times[g_pomodoroSelectedIndex],
@@ -334,7 +333,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                             time_options[time_options_count++] = atoi(tok);
                             tok = strtok(NULL, ",");
                         }
-                        /* Notify parent that shortcut config was saved */
+                        
                         if (g_hwndParent) {
                             PostMessage(g_hwndParent, WM_DIALOG_SHORTCUT, 0, 0);
                         }
@@ -350,7 +349,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     int total_seconds;
                     if (ParseInput(inputUtf8, &total_seconds)) {
                         if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-                            /* Save pomodoro time directly */
                             if (g_pomodoroSelectedIndex >= 0 && g_pomodoroSelectedIndex < g_AppConfig.pomodoro.times_count) {
                                 g_AppConfig.pomodoro.times[g_pomodoroSelectedIndex] = total_seconds;
                                 extern void WriteConfigPomodoroTimeOptions(int* times, int count);
@@ -368,10 +366,11 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                             DestroyWindow(hwndDlg);
                         } else if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
                             extern void WriteConfigDefaultStartTime(int seconds);
+                            extern void WriteConfigStartupMode(const char* mode);
                             WriteConfigDefaultStartTime(total_seconds);
+                            WriteConfigStartupMode("COUNTDOWN");
                             DestroyWindow(hwndDlg);
                         } else {
-                            /* Countdown input - notify parent with time value */
                             if (g_hwndParent) {
                                 PostMessage(g_hwndParent, WM_DIALOG_COUNTDOWN, (WPARAM)total_seconds, 0);
                             }
