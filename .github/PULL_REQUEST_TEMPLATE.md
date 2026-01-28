@@ -1,8 +1,8 @@
-## ciallo～(∠・ω<)⌒★
+## Ciallo～(∠・ω<)⌒★
 
 ### 🎉 You are awesome!
 
-Thank you for taking the time to make this project better! We truly value your contribution.
+Thank you for taking the time to make this project better! We truly value your contribution.💕
 
 ---
 
