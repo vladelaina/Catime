@@ -303,6 +303,7 @@ static StartupMode ParseStartupMode(const char* modeStr) {
     if (!modeStr) return STARTUP_MODE_DEFAULT;
     
     if (strcmp(modeStr, "COUNTDOWN") == 0) return STARTUP_MODE_DEFAULT;
+    if (strcmp(modeStr, "DEFAULT") == 0) return STARTUP_MODE_DEFAULT;
     if (strcmp(modeStr, "COUNT_UP") == 0) return STARTUP_MODE_COUNT_UP;
     if (strcmp(modeStr, "NO_DISPLAY") == 0) return STARTUP_MODE_NO_DISPLAY;
     if (strcmp(modeStr, "SHOW_TIME") == 0) return STARTUP_MODE_SHOW_TIME;

@@ -72,6 +72,7 @@ static const EnumStrMap LANGUAGE_MAP[] = {
     {APP_LANG_PORTUGUESE,   "Portuguese"},
     {APP_LANG_JAPANESE,     "Japanese"},
     {APP_LANG_KOREAN,       "Korean"},
+    {APP_LANG_ITALIAN,      "Italian"},
     {-1, NULL}
 };
 

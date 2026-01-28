@@ -109,6 +109,7 @@
 #define LANG_PT_INI       1008           /**< Portuguese language pack */
 #define LANG_JA_INI       1009           /**< Japanese language pack */
 #define LANG_KO_INI       1010           /**< Korean language pack */
+#define LANG_IT_INI       1011           /**< Italian language pack */
 
 /** @brief Dialog resource identifiers */
 #define CLOCK_ID_TRAY_APP_ICON 1001      /**< Tray icon identifier */
@@ -187,9 +188,9 @@
 #define CLOCK_IDM_LANG_GERMAN 166        /**< German language */
 #define CLOCK_IDM_LANG_RUSSIAN 167       /**< Russian language */
 #define CLOCK_IDM_LANG_PORTUGUESE 168    /**< Portuguese language */
-#define CLOCK_IDM_LANG_JAPANESE 169      /**< Japanese language */
-#define CLOCK_IDM_LANG_KOREAN 170        /**< Korean language */
-#define CLOCK_IDM_LANG_ITALIAN 208        /**< Italian language */
+#define CLOCK_IDM_LANG_JAPANESE    40110
+#define CLOCK_IDM_LANG_KOREAN      40111
+#define CLOCK_IDM_LANG_ITALIAN     40112
 
 /** @brief Timer control menu identifiers */
 #define CLOCK_IDM_COUNT_UP 153           /**< Count-up timer menu item */

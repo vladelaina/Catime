@@ -30,6 +30,7 @@ typedef enum {
     APP_LANG_PORTUGUESE,
     APP_LANG_JAPANESE,
     APP_LANG_KOREAN,
+    APP_LANG_ITALIAN,
     APP_LANG_COUNT
 } AppLanguage;
 

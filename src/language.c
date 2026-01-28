@@ -45,6 +45,7 @@ static const LanguageMetadata g_languageMetadata[APP_LANG_COUNT] = {
     {APP_LANG_PORTUGUESE,   LANG_PT_INI,     LANG_PORTUGUESE, 0,                        L"pt",      FALSE, APP_LANG_ENGLISH},
     {APP_LANG_JAPANESE,     LANG_JA_INI,     LANG_JAPANESE, 0,                          L"ja",      FALSE, APP_LANG_ENGLISH},
     {APP_LANG_KOREAN,       LANG_KO_INI,     LANG_KOREAN,  0,                           L"ko",      FALSE, APP_LANG_ENGLISH},
+    {APP_LANG_ITALIAN,      LANG_IT_INI,     LANG_ITALIAN, 0,                           L"it",      FALSE, APP_LANG_ENGLISH},
 };
 
 /** @return Position after closing quote, or NULL */

@@ -36,7 +36,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     /* General settings */
     /* CONFIG_VERSION and FIRST_RUN are not mapped to ConfigSnapshot - handled separately */
     {INI_SECTION_GENERAL, "CONFIG_VERSION", CATIME_VERSION, CONFIG_TYPE_STRING, CFG_NO_OFFSET, CFG_NO_SIZE, "Configuration version"},
-    {INI_SECTION_GENERAL, "LANGUAGE", "English", CONFIG_TYPE_STRING, CFG_OFFSET(language), CFG_SIZE(language), "UI language"},
+    {INI_SECTION_GENERAL, "LANGUAGE", "English", CONFIG_TYPE_ENUM, SIZE_MAX, 0, "Language"},
     {INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", "FALSE", CONFIG_TYPE_BOOL, CFG_NO_OFFSET, CFG_NO_SIZE, "Desktop shortcut check completed"},
     {INI_SECTION_GENERAL, "FIRST_RUN", "TRUE", CONFIG_TYPE_BOOL, CFG_NO_OFFSET, CFG_NO_SIZE, "First run flag"},
     {INI_SECTION_GENERAL, "FONT_LICENSE_ACCEPTED", "FALSE", CONFIG_TYPE_BOOL, CFG_OFFSET(fontLicenseAccepted), CFG_NO_SIZE, "Font license accepted"},
@@ -175,6 +175,7 @@ int DetectSystemLanguage(void) {
         case LANG_PORTUGUESE: defaultLanguage = APP_LANG_PORTUGUESE; break;
         case LANG_JAPANESE:   defaultLanguage = APP_LANG_JAPANESE;   break;
         case LANG_KOREAN:     defaultLanguage = APP_LANG_KOREAN;     break;
+        case LANG_ITALIAN:    defaultLanguage = APP_LANG_ITALIAN;    break;
         case LANG_ENGLISH:
         default:
             defaultLanguage = APP_LANG_ENGLISH;
@@ -373,7 +374,8 @@ void CreateDefaultConfig(const char* config_path) {
         "Russian",
         "Portuguese",
         "Japanese",
-        "Korean"
+        "Korean",
+        "Italian"
     };
     
     const char* detectedLangName = (detectedLang >= 0 && detectedLang < APP_LANG_COUNT) 

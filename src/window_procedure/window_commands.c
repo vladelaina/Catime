@@ -651,7 +651,7 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     }
 
     /* Language selection */
-    if (cmd >= CLOCK_IDM_LANG_CHINESE && cmd <= CLOCK_IDM_LANG_KOREAN) {
+    if (cmd >= CLOCK_IDM_LANG_CHINESE && cmd <= CLOCK_IDM_LANG_ITALIAN) {
         return HandleLanguageSelection(hwnd, cmd);
     }
 
@@ -713,7 +713,8 @@ static const struct {
     {CLOCK_IDM_LANG_RUSSIAN, APP_LANG_RUSSIAN},
     {CLOCK_IDM_LANG_PORTUGUESE, APP_LANG_PORTUGUESE},
     {CLOCK_IDM_LANG_JAPANESE, APP_LANG_JAPANESE},
-    {CLOCK_IDM_LANG_KOREAN, APP_LANG_KOREAN}
+    {CLOCK_IDM_LANG_KOREAN, APP_LANG_KOREAN},
+    {CLOCK_IDM_LANG_ITALIAN, APP_LANG_ITALIAN}
 };
 
 BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
