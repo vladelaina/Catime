@@ -225,6 +225,17 @@ build.bat                         # Windows
 </div>
 
 
+
+<a href="https://vladelaina.github.io/Catime/support.html">
+  <img
+    src="https://github.com/user-attachments/assets/49035b18-e803-4ee8-9ea5-2e3f32f099de"
+    width="1889"
+    height="872"
+    alt="image"
+  />
+</a>
+
+
 ## Project Status
 ![Catime](https://repobeats.axiom.co/api/embed/f56dabe2c1b84ded2408ffb7d800f5c23bddb708.svg "Repobeats analytics image")
 
