@@ -61,20 +61,7 @@ static const EnumStrMap TIMEOUT_ACTION_MAP[] = {
     {-1, NULL}
 };
 
-static const EnumStrMap LANGUAGE_MAP[] = {
-    {APP_LANG_CHINESE_SIMP, "Chinese_Simplified"},
-    {APP_LANG_CHINESE_TRAD, "Chinese_Traditional"},
-    {APP_LANG_ENGLISH,      "English"},
-    {APP_LANG_SPANISH,      "Spanish"},
-    {APP_LANG_FRENCH,       "French"},
-    {APP_LANG_GERMAN,       "German"},
-    {APP_LANG_RUSSIAN,      "Russian"},
-    {APP_LANG_PORTUGUESE,   "Portuguese"},
-    {APP_LANG_JAPANESE,     "Japanese"},
-    {APP_LANG_KOREAN,       "Korean"},
-    {APP_LANG_ITALIAN,      "Italian"},
-    {-1, NULL}
-};
+/* LANGUAGE_MAP definition removed - logic moved to language.c */
 
 static const char* EnumToString(const EnumStrMap* map, int value, const char* defaultVal) {
     if (!map) return defaultVal;
@@ -104,6 +91,8 @@ void WriteConfigPomodoroTimes(int work, int short_break, int long_break) {
     snprintf(timesStr, sizeof(timesStr), "%d,%d,%d", work, short_break, long_break);
     UpdateConfigKeyValueAtomic(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", timesStr);
 }
+
+
 
 
 /**
@@ -335,7 +324,7 @@ const char* GetCurrentFontLicenseVersion(void) {
  * @brief Write language setting to config file
  */
 void WriteConfigLanguage(int language) {
-    const char* langName = EnumToString(LANGUAGE_MAP, language, "English");
+    const char* langName = GetLanguageConfigKey(language);
     WriteConfigKeyValue("LANGUAGE", langName);
 }
 

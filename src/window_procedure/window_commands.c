@@ -650,10 +650,8 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         }
     }
 
-    /* Language selection */
-    if (cmd >= CLOCK_IDM_LANG_CHINESE && cmd <= CLOCK_IDM_LANG_ITALIAN) {
-        return HandleLanguageSelection(hwnd, cmd);
-    }
+    /* Language selection - Check against generated map */
+    if (HandleLanguageSelection(hwnd, cmd)) return TRUE;
 
     /* Pomodoro phase commands */
     if (cmd == CLOCK_IDM_POMODORO_WORK || cmd == CLOCK_IDM_POMODORO_BREAK ||
@@ -704,17 +702,10 @@ static const struct {
     UINT menuId;
     AppLanguage language;
 } LANGUAGE_MAP[] = {
-    {CLOCK_IDM_LANG_CHINESE, APP_LANG_CHINESE_SIMP},
-    {CLOCK_IDM_LANG_CHINESE_TRAD, APP_LANG_CHINESE_TRAD},
-    {CLOCK_IDM_LANG_ENGLISH, APP_LANG_ENGLISH},
-    {CLOCK_IDM_LANG_SPANISH, APP_LANG_SPANISH},
-    {CLOCK_IDM_LANG_FRENCH, APP_LANG_FRENCH},
-    {CLOCK_IDM_LANG_GERMAN, APP_LANG_GERMAN},
-    {CLOCK_IDM_LANG_RUSSIAN, APP_LANG_RUSSIAN},
-    {CLOCK_IDM_LANG_PORTUGUESE, APP_LANG_PORTUGUESE},
-    {CLOCK_IDM_LANG_JAPANESE, APP_LANG_JAPANESE},
-    {CLOCK_IDM_LANG_KOREAN, APP_LANG_KOREAN},
-    {CLOCK_IDM_LANG_ITALIAN, APP_LANG_ITALIAN}
+#define X(Enum, Code, Native, Eng, ConfigKey, ResId, MenuId, ...) {MenuId, Enum},
+#include "language_def.h"
+    LANGUAGE_LIST
+#undef X
 };
 
 BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {

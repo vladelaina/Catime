@@ -426,29 +426,13 @@ void BuildHelpSubmenu(HMENU hMenu) {
                GetLocalizedString(NULL, L"Check for Updates"));
 
     HMENU hLangMenu = CreatePopupMenu();
-    /* Languages sorted alphabetically by English name */
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_CHINESE, L"简体中文");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_CHINESE_TRAD ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_CHINESE_TRAD, L"繁體中文");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_ENGLISH ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_ENGLISH, L"English");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_FRENCH ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_FRENCH, L"Français");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_GERMAN ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_GERMAN, L"Deutsch");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_ITALIAN ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_ITALIAN, L"Italiano");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_JAPANESE ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_JAPANESE, L"日本語");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_KOREAN ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_KOREAN, L"한국어");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_PORTUGUESE ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_PORTUGUESE, L"Português");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_RUSSIAN ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_RUSSIAN, L"Русский");
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == APP_LANG_SPANISH ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LANG_SPANISH, L"Español");
+    
+#define X(Enum, Code, Native, Eng, ConfigKey, ResId, MenuId, ...) \
+    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == Enum ? MF_CHECKED : MF_UNCHECKED), \
+                MenuId, Native);
+#include "language_def.h"
+    LANGUAGE_LIST
+#undef X
 
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, L"Language");
 

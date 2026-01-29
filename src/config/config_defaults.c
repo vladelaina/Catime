@@ -157,32 +157,7 @@ const char* GetDefaultValue(const char* section, const char* key) {
 }
 
 int DetectSystemLanguage(void) {
-    LANGID systemLangID = GetUserDefaultUILanguage();
-    int defaultLanguage = APP_LANG_ENGLISH;
-    
-    switch (PRIMARYLANGID(systemLangID)) {
-        case LANG_CHINESE:
-            if (SUBLANGID(systemLangID) == SUBLANG_CHINESE_SIMPLIFIED) {
-                defaultLanguage = APP_LANG_CHINESE_SIMP;
-            } else {
-                defaultLanguage = APP_LANG_CHINESE_TRAD;
-            }
-            break;
-        case LANG_SPANISH:    defaultLanguage = APP_LANG_SPANISH;    break;
-        case LANG_FRENCH:     defaultLanguage = APP_LANG_FRENCH;     break;
-        case LANG_GERMAN:     defaultLanguage = APP_LANG_GERMAN;     break;
-        case LANG_RUSSIAN:    defaultLanguage = APP_LANG_RUSSIAN;    break;
-        case LANG_PORTUGUESE: defaultLanguage = APP_LANG_PORTUGUESE; break;
-        case LANG_JAPANESE:   defaultLanguage = APP_LANG_JAPANESE;   break;
-        case LANG_KOREAN:     defaultLanguage = APP_LANG_KOREAN;     break;
-        case LANG_ITALIAN:    defaultLanguage = APP_LANG_ITALIAN;    break;
-        case LANG_ENGLISH:
-        default:
-            defaultLanguage = APP_LANG_ENGLISH;
-            break;
-    }
-    
-    return defaultLanguage;
+    return (int)GetSystemDefaultLanguage();
 }
 
 void WriteDefaultsToConfig(const char* config_path) {

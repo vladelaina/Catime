@@ -23,6 +23,7 @@ typedef struct {
     WORD primaryLangId;
     WORD subLangId;
     const wchar_t* localeCode;
+    const char* configKey;
     BOOL useDirectChinese;
     AppLanguage fallbackLanguage;
 } LanguageMetadata;
@@ -33,19 +34,13 @@ static LocalizedString g_translations[MAX_TRANSLATIONS];
 static int g_translation_count = 0;
 static BOOL g_initialized = FALSE;
 
-/** Adding a new language = one entry here */
+/** Adding a new language = one entry here (Auto-generated via X-Macro) */
 static const LanguageMetadata g_languageMetadata[APP_LANG_COUNT] = {
-    {APP_LANG_CHINESE_SIMP, LANG_ZH_CN_INI,  LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED,  L"zh_CN",   TRUE,  APP_LANG_ENGLISH},
-    {APP_LANG_CHINESE_TRAD, LANG_ZH_TW_INI,  LANG_CHINESE, SUBLANG_CHINESE_TRADITIONAL, L"zh-Hant", TRUE,  APP_LANG_ENGLISH},
-    {APP_LANG_ENGLISH,      LANG_EN_INI,     LANG_ENGLISH, 0,                           L"en",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_SPANISH,      LANG_ES_INI,     LANG_SPANISH, 0,                           L"es",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_FRENCH,       LANG_FR_INI,     LANG_FRENCH,  0,                           L"fr",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_GERMAN,       LANG_DE_INI,     LANG_GERMAN,  0,                           L"de",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_RUSSIAN,      LANG_RU_INI,     LANG_RUSSIAN, 0,                           L"ru",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_PORTUGUESE,   LANG_PT_INI,     LANG_PORTUGUESE, 0,                        L"pt",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_JAPANESE,     LANG_JA_INI,     LANG_JAPANESE, 0,                          L"ja",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_KOREAN,       LANG_KO_INI,     LANG_KOREAN,  0,                           L"ko",      FALSE, APP_LANG_ENGLISH},
-    {APP_LANG_ITALIAN,      LANG_IT_INI,     LANG_ITALIAN, 0,                           L"it",      FALSE, APP_LANG_ENGLISH},
+#define X(Enum, Code, Native, Eng, ConfigKey, ResId, MenuId, PId, SId, DirectZh) \
+    {Enum, ResId, PId, SId, L##Code, ConfigKey, DirectZh, APP_LANG_ENGLISH}, 
+#include "language_def.h"
+    LANGUAGE_LIST
+#undef X
 };
 
 /** @return Position after closing quote, or NULL */
@@ -229,7 +224,7 @@ static const wchar_t* FindTranslation(const wchar_t* english) {
     return NULL;
 }
 
-static void DetectSystemLanguage(void) {
+AppLanguage GetSystemDefaultLanguage(void) {
     LANGID langID = GetUserDefaultUILanguage();
     WORD primaryLang = PRIMARYLANGID(langID);
     WORD subLang = SUBLANGID(langID);
@@ -238,14 +233,17 @@ static void DetectSystemLanguage(void) {
         const LanguageMetadata* meta = &g_languageMetadata[i];
         
         if (meta->primaryLangId == primaryLang) {
-            if (meta->subLangId == 0 || meta->subLangId == subLang) {
-                CURRENT_LANGUAGE = meta->language;
-                return;
+            if (meta->subLangId == SUBLANG_NEUTRAL || meta->subLangId == subLang) {
+                return meta->language;
             }
         }
     }
     
-    CURRENT_LANGUAGE = APP_LANG_ENGLISH;
+    return APP_LANG_ENGLISH;
+}
+
+static void DetectSystemLanguage(void) {
+    CURRENT_LANGUAGE = GetSystemDefaultLanguage();
 }
 
 /**
@@ -300,4 +298,22 @@ BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize) {
     wcscpy_s(buffer, bufferSize, g_languageMetadata[language].localeCode);
     
     return TRUE;
+}
+
+const char* GetLanguageConfigKey(AppLanguage language) {
+    if (language < 0 || language >= APP_LANG_COUNT) {
+        return "English"; /* Default fallback */
+    }
+    return g_languageMetadata[language].configKey;
+}
+
+AppLanguage GetLanguageFromConfigKey(const char* key) {
+    if (!key) return APP_LANG_ENGLISH;
+    
+    for (int i = 0; i < APP_LANG_COUNT; i++) {
+        if (strcmp(key, g_languageMetadata[i].configKey) == 0) {
+            return g_languageMetadata[i].language;
+        }
+    }
+    return APP_LANG_ENGLISH;
 }

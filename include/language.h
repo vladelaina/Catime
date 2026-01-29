@@ -20,17 +20,10 @@
  * @brief Supported application languages
  */
 typedef enum {
-    APP_LANG_CHINESE_SIMP,
-    APP_LANG_CHINESE_TRAD,
-    APP_LANG_ENGLISH,
-    APP_LANG_SPANISH,
-    APP_LANG_FRENCH,
-    APP_LANG_GERMAN,
-    APP_LANG_RUSSIAN,
-    APP_LANG_PORTUGUESE,
-    APP_LANG_JAPANESE,
-    APP_LANG_KOREAN,
-    APP_LANG_ITALIAN,
+#define X(Enum, ...) Enum,
+#include "language_def.h"
+    LANGUAGE_LIST
+#undef X
     APP_LANG_COUNT
 } AppLanguage;
 
@@ -85,5 +78,25 @@ AppLanguage GetCurrentLanguage(void);
  * @return TRUE if successful, FALSE if buffer is NULL or too small
  */
 BOOL GetCurrentLanguageName(wchar_t* buffer, size_t bufferSize);
+
+/**
+ * @brief Get the configuration string key for a language (e.g., "Chinese_Simplified")
+ * @param language The language enum
+ * @return The configuration key string, or "English" if invalid
+ */
+const char* GetLanguageConfigKey(AppLanguage language);
+
+/**
+ * @brief Parse a configuration string key to a language enum
+ * @param key The configuration key string (e.g., "Chinese_Simplified")
+ * @return The corresponding language enum, or APP_LANG_ENGLISH if not found
+ */
+AppLanguage GetLanguageFromConfigKey(const char* key);
+
+/**
+ * @brief Detect the best matching application language for the current system locale
+ * @return The detected AppLanguage enum
+ */
+AppLanguage GetSystemDefaultLanguage(void);
 
 #endif

@@ -66,19 +66,7 @@ static const char* TimeoutActionTypeToString(TimeoutActionType action) {
 }
 
 static const char* LanguageToString(AppLanguage lang) {
-    switch (lang) {
-        case APP_LANG_CHINESE_SIMP: return "Chinese_Simplified";
-        case APP_LANG_CHINESE_TRAD: return "Chinese_Traditional";
-        case APP_LANG_ENGLISH: return "English";
-        case APP_LANG_SPANISH: return "Spanish";
-        case APP_LANG_FRENCH: return "French";
-        case APP_LANG_GERMAN: return "German";
-        case APP_LANG_RUSSIAN: return "Russian";
-        case APP_LANG_PORTUGUESE: return "Portuguese";
-        case APP_LANG_JAPANESE: return "Japanese";
-        case APP_LANG_KOREAN: return "Korean";
-        default: return "English";
-    }
+    return GetLanguageConfigKey(lang);
 }
 
 /* ============================================================================

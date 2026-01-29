@@ -31,19 +31,7 @@ BOOL g_ForceApplyConfig = FALSE;
 
 static int LanguageNameToEnum(const char* langName) {
     if (!langName) return APP_LANG_ENGLISH;
-    
-    if (strcmp(langName, "Chinese_Simplified") == 0) return APP_LANG_CHINESE_SIMP;
-    if (strcmp(langName, "Chinese_Traditional") == 0) return APP_LANG_CHINESE_TRAD;
-    if (strcmp(langName, "English") == 0) return APP_LANG_ENGLISH;
-    if (strcmp(langName, "Spanish") == 0) return APP_LANG_SPANISH;
-    if (strcmp(langName, "French") == 0) return APP_LANG_FRENCH;
-    if (strcmp(langName, "German") == 0) return APP_LANG_GERMAN;
-    if (strcmp(langName, "Russian") == 0) return APP_LANG_RUSSIAN;
-    if (strcmp(langName, "Portuguese") == 0) return APP_LANG_PORTUGUESE;
-    if (strcmp(langName, "Japanese") == 0) return APP_LANG_JAPANESE;
-    if (strcmp(langName, "Korean") == 0) return APP_LANG_KOREAN;
-    
-    return APP_LANG_ENGLISH;
+    return GetLanguageFromConfigKey(langName);
 }
 
 /* ============================================================================
