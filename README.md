@@ -42,6 +42,12 @@
 </p>
 
 
+
+
+<p align="center">
+    <img src="https://count.getloli.com/@catime?name=catime&theme=rule34&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" width="400">
+  </p>
+
 <!-- Demo Video -->
 <div align="center" style="margin-bottom: 30px;">
   <video src="https://github.com/user-attachments/assets/a59a85af-c522-4081-9a84-e0d3a71be236
