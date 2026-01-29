@@ -42,10 +42,8 @@
 </p>
 
 
-
-
 <p align="center">
-    <img src="https://count.getloli.com/@catime?name=catime&theme=rule34&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" width="400">
+    <img src="https://count.getloli.com/@catime?name=catime&theme=booru-qualityhentais&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" width="400">
   </p>
 
 <!-- Demo Video -->
