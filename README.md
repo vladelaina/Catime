@@ -1,34 +1,3 @@
-<div align="right">
-  <details>
-    <summary>🌐 Language</summary>
-    <div>
-      <div align="right">
-        <p><a href="https://github.com/vladelaina/Catime">English</a></p>
-        <p><a href="./i18n/zh-CN.md">简体中文</a></p>
-        <p><a href="./i18n/zh-Hant.md">繁體中文</a></p>
-        <p><a href="./i18n/ja.md">日本語</a></p>
-        <p><a href="./i18n/ko.md">한국어</a></p>
-        <p><a href="./i18n/hi.md">हिन्दी</a></p>
-        <p><a href="./i18n/th.md">ไทย</a></p>
-        <p><a href="./i18n/fr.md">Français</a></p>
-        <p><a href="./i18n/de.md">Deutsch</a></p>
-        <p><a href="./i18n/es.md">Español</a></p>
-        <p><a href="./i18n/it.md">Italiano</a></p>
-        <p><a href="./i18n/ru.md">Русский</a></p>
-        <p><a href="./i18n/pt.md">Português</a></p>
-        <p><a href="./i18n/nl.md">Nederlands</a></p>
-        <p><a href="./i18n/pl.md">Polski</a></p>
-        <p><a href="./i18n/ar.md">العربية</a></p>
-        <p><a href="./i18n/fa.md">فارسی</a></p>
-        <p><a href="./i18n/tr.md">Türkçe</a></p>
-        <p><a href="./i18n/vi.md">Tiếng Việt</a></p>
-        <p><a href="./i18n/id.md">Bahasa Indonesia</a></p>
-      </div>
-    </div>
-  </details>
-</div>
-
-
 <div align="center">
 
 # v1.4.0 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
@@ -87,10 +56,10 @@
 
 <!-- Community Links -->
 <div align="center" style="margin-bottom: 30px;">
-  👋 Join us on 
+  👏 Join us on 
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank" style="text-decoration: none; font-weight: bold; color: #5865F2;">Discord</a> 
   and 
-  <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=jLajcI6fmsK8MYh9Sx8s0IArOuR5k7mnn8upVJK%2BgJkeXrEop9EBsAD8tP%2BLhPDs&busi_data=eyJncm91cENvZGUiOiIxMDI3MzI3OTEyIiwidG9rZW4iOiI0UlNlc1RzV0QyUlZKNzBMK3RWczRZOUt0K0xIRHRvVVZSQnR3OFo3bUxBMFAzcG9jUjRZa2dwUGZEaCs0ZEhuIiwidWluIjoiMjM3NzY0MDY5OSJ9&data=6Ce8O75Fxrd5GoBAByGHSoQNA3cK7t4WyUWyoI9FB3LK0mmPbgtK3PlGKQrt4vQvQsrlV4QkdQ7lQKt8TDkEg&svctype=4&tempid=h5_group_info" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group</a>
+  <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=jLajcI6fmsK8MYh9Sx8s0IArOuR5k7mnn8upVJK%2BgJkeXrEop9EBsAD8tP%2BLhPDs&busi_data=eyJncm91cENvZGUiOiIxMDI3MzI3OTEyIiwidG9rZW4iOiI0UlNlc1RzV0QyUlZKNzBMK3RWczRZOUt0K0xIRHRvVVZSQnR3OFo3bUxBMFAzcG9jUjRZa2dwUGZEaCs0ZEhuIiwidWluIjoiMjM3NzY0MDY5OSJ9&data=6Ce8O75Fxrd5GoBAByGHSoQNA3cK7t4WyUWyoI9FB3LK0mmPbgtK3PlGKQrt4vQvQsrlV4QkdQ7lQKt8TDkEg&svctype=4&tempid=h5_group_info" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group(1079222265)</a>
 </div>
 
 
