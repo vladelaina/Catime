@@ -1,9 +1,39 @@
+<div align="right">
+  <details>
+    <summary>🌐 Language</summary>
+    <div>
+      <div align="right">
+        <p><a href="https://github.com/vladelaina/Catime">English</a></p>
+        <p><a href="./i18n/zh-CN.md">简体中文</a></p>
+        <p><a href="./i18n/zh-Hant.md">繁體中文</a></p>
+        <p><a href="./i18n/ja.md">日本語</a></p>
+        <p><a href="./i18n/ko.md">한국어</a></p>
+        <p><a href="./i18n/hi.md">हिन्दी</a></p>
+        <p><a href="./i18n/th.md">ไทย</a></p>
+        <p><a href="./i18n/fr.md">Français</a></p>
+        <p><a href="./i18n/de.md">Deutsch</a></p>
+        <p><a href="./i18n/es.md">Español</a></p>
+        <p><a href="./i18n/it.md">Italiano</a></p>
+        <p><a href="./i18n/ru.md">Русский</a></p>
+        <p><a href="./i18n/pt.md">Português</a></p>
+        <p><a href="./i18n/nl.md">Nederlands</a></p>
+        <p><a href="./i18n/pl.md">Polski</a></p>
+        <p><a href="./i18n/ar.md">العربية</a></p>
+        <p><a href="./i18n/fa.md">فارسی</a></p>
+        <p><a href="./i18n/tr.md">Türkçe</a></p>
+        <p><a href="./i18n/vi.md">Tiếng Việt</a></p>
+        <p><a href="./i18n/id.md">Bahasa Indonesia</a></p>
+      </div>
+    </div>
+  </details>
+</div>
+
+
 <div align="center">
 
 # v1.4.0 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
-
-
 </div>
+
 
 
 <!-- Project Title + Logo -->
