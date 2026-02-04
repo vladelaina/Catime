@@ -456,6 +456,9 @@ function translateSupportElements() {
         if (td.textContent === '温州市宇波机车部件有限公司') {
             td.textContent = 'Wenzhou Yubo Locomotive Parts CO.,LTD.';
         }
+        if (td.textContent === '1.4版本太好了') {
+            td.textContent = 'Version 1.4 is great';
+        }
         if (td.textContent === '加油') {
             td.textContent = 'Keep going';
         }
