@@ -233,9 +233,6 @@ static void UpdateTrayIconToCurrentFrame(void) {
         if (p < 0) p = 0;
         if (p > 100) p = 100;
 
-        WriteLog(LOG_LEVEL_DEBUG, "Percent icon update: target=%s p=%d preview=%d",
-                 targetName, p, g_isPreviewActive);
-
         HICON hIcon = CreatePercentIcon16(p);
         if (hIcon) {
             NOTIFYICONDATAW nid = {0};
@@ -359,6 +356,10 @@ static void TrayAnimationTimerCallback(void* userData) {
         
         UINT scaledDelay = ComputeScaledDelay(baseDelay);
         
+        /* Debug logging for animation timing */
+        /* WriteLog(LOG_LEVEL_DEBUG, "TrayAnim: Index=%d/%d BaseDelay=%u Scaled=%u", 
+                 *currentIndex, currentAnim->count, baseDelay, scaledDelay); */
+
         if (FrameRateController_ShouldAdvanceFrame(&g_frameRateCtrl, INTERNAL_TICK_INTERVAL_MS, scaledDelay)) {
             *currentIndex = (*currentIndex + 1) % currentAnim->count;
         }
@@ -487,6 +488,11 @@ const char* GetCurrentAnimationName(void) {
 BOOL SetCurrentAnimationName(const char* name) {
     if (!name || !*name) return FALSE;
 
+    /* Prevent redundant reloads if name is same and no preview is active */
+    if (!g_isPreviewActive && _stricmp(g_animationName, name) == 0) {
+        return TRUE;
+    }
+
     /* Validate animation exists */
     if (!IsValidAnimationSource(name)) {
         return FALSE;
@@ -544,8 +550,6 @@ BOOL SetCurrentAnimationName(const char* name) {
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
 
-    WriteLog(LOG_LEVEL_DEBUG, "SetCurrentAnimationName: loading '%s'", g_animationName);
-
     LoadedAnimation_Free(&g_mainAnimation);
     LoadedAnimation_Init(&g_mainAnimation);
 
@@ -553,9 +557,6 @@ BOOL SetCurrentAnimationName(const char* name) {
     int cy = GetSystemMetrics(SM_CYSMICON);
     LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
 
-    WriteLog(LOG_LEVEL_DEBUG, "LoadedAnimation: count=%d sourceType=%d",
-             g_mainAnimation.count, g_mainAnimation.sourceType);
-    
     g_mainIndex = 0;
     g_frameRateCtrl.framePosition = 0.0;
     

@@ -8,6 +8,7 @@
 #include "config.h"
 #include "../resource/resource.h"
 #include "system_monitor.h"
+#include "log.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
