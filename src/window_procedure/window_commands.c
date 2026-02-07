@@ -714,8 +714,6 @@ BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
             SetLanguage(LANGUAGE_MAP[i].language);
             WriteConfigLanguage(LANGUAGE_MAP[i].language);
             InvalidateRect(hwnd, NULL, TRUE);
-            extern void UpdateTrayIcon(HWND);
-            UpdateTrayIcon(hwnd);
             return TRUE;
         }
     }
