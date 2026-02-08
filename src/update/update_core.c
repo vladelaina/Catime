@@ -130,6 +130,16 @@ static BOOL OpenBrowserAndExit(const char* url, HWND hwnd) {
     return TRUE;
 }
 
+char g_newVersionString[32] = {0};
+BOOL g_isNewVersionAvailable = FALSE;
+
+BOOL GetNewVersionStatus(char* versionBuffer, size_t bufferSize) {
+    if (g_isNewVersionAvailable && versionBuffer) {
+        strncpy_s(versionBuffer, bufferSize, g_newVersionString, _TRUNCATE);
+    }
+    return g_isNewVersionAvailable;
+}
+
 /**
  * @brief Perform update check
  * @param silentCheck TRUE=only show if update found, FALSE=show all results
@@ -190,13 +200,15 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     if (versionCompare > 0) {
         LOG_INFO("New version found! Current: %s, Latest: %s", currentVersion, latestVersion);
         
-        /* Store update info and notify main thread to show dialog */
+        strncpy_s(g_newVersionString, sizeof(g_newVersionString), latestVersion, _TRUNCATE);
+        g_isNewVersionAvailable = TRUE;
+        
         StoreUpdateResult(TRUE, currentVersion, latestVersion, downloadUrl, releaseNotes);
-        PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 1, 0);
+        PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 1, silentCheck ? 1 : 0);
     } else {
         LOG_INFO("Already using latest version: %s", currentVersion);
+        g_isNewVersionAvailable = FALSE;
         if (!silentCheck) {
-            /* Store version info and notify main thread to show dialog */
             StoreUpdateResult(FALSE, currentVersion, NULL, NULL, NULL);
             PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 0, 0);
         }

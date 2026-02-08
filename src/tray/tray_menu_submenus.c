@@ -403,27 +403,81 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                 GetLocalizedString(NULL, L"Plugins"));
 }
 
-/**
- * @brief Build help/about submenu
- * @param hMenu Parent menu handle
- */
+static HBITMAP GetRedDotBitmap(void) {
+    static HBITMAP s_hRedDot = NULL;
+    if (s_hRedDot) return s_hRedDot;
+
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    if (cx == 0) cx = 16;
+    if (cy == 0) cy = 16;
+
+    BITMAPINFO bmi = {0};
+    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth = cx;
+    bmi.bmiHeader.biHeight = cy;
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void* pBits = NULL;
+    s_hRedDot = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
+    if (!s_hRedDot) return NULL;
+
+    memset(pBits, 0, cx * cy * 4);
+
+    int dotSize = 8;
+    int centerX = cx / 2;
+    int centerY = cy / 2;
+    int r = dotSize / 2;
+    DWORD color = 0xFFE51123; 
+
+    DWORD* pixels = (DWORD*)pBits;
+    for (int y = 0; y < cy; y++) {
+        for (int x = 0; x < cx; x++) {
+            int dx = x - centerX;
+            int dy = y - centerY;
+            if (dx*dx + dy*dy <= r*r) {
+                pixels[y * cx + x] = color;
+            }
+        }
+    }
+
+    return s_hRedDot;
+}
+
 void BuildHelpSubmenu(HMENU hMenu) {
     HMENU hAboutMenu = CreatePopupMenu();
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(NULL, L"About"));
-
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(NULL, L"Sponsor"));
-    
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
-    
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-    
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));
 
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, 
-               GetLocalizedString(NULL, L"Check for Updates"));
+    extern BOOL g_isNewVersionAvailable;
+    extern char g_newVersionString[32];
+    
+    if (g_isNewVersionAvailable) {
+        wchar_t updateText[64];
+        wchar_t wNewVersion[32];
+        wchar_t wCurrentVersion[32];
+        
+        MultiByteToWideChar(CP_UTF8, 0, g_newVersionString, -1, wNewVersion, 32);
+        MultiByteToWideChar(CP_UTF8, 0, CATIME_VERSION, -1, wCurrentVersion, 32);
+        
+        _snwprintf_s(updateText, 64, _TRUNCATE, L"v%s -> v%s", wCurrentVersion, wNewVersion);
+        AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, updateText);
+        
+        HBITMAP hDot = GetRedDotBitmap();
+        MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
+        mii.fMask = MIIM_BITMAP;
+        mii.hbmpItem = hDot;
+        SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_CHECK_UPDATE, FALSE, &mii);
+    } else {
+        AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, GetLocalizedString(NULL, L"Check for Updates"));
+    }
 
     HMENU hLangMenu = CreatePopupMenu();
     
@@ -435,13 +489,20 @@ void BuildHelpSubmenu(HMENU hMenu) {
 #undef X
 
     AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, L"Language");
-
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_POSITION,
-                GetLocalizedString(NULL, L"Reset Position"));
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_ALL,
-                GetLocalizedString(NULL, L"Reset"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_POSITION, GetLocalizedString(NULL, L"Reset Position"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_ALL, GetLocalizedString(NULL, L"Reset"));
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu,
-                GetLocalizedString(NULL, L"Help"));
+    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, GetLocalizedString(NULL, L"Help"));
+                
+    if (g_isNewVersionAvailable) {
+        int count = GetMenuItemCount(hMenu);
+        if (count > 0) {
+            HBITMAP hDot = GetRedDotBitmap();
+            MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
+            mii.fMask = MIIM_BITMAP;
+            mii.hbmpItem = hDot;
+            SetMenuItemInfoW(hMenu, count - 1, TRUE, &mii);
+        }
+    }
 }

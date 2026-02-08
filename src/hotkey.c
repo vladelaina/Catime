@@ -64,6 +64,7 @@ static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
     {IDC_HOTKEY_EDIT7,  IDC_HOTKEY_LABEL7,  NULL, L"Pause/Resume Timer:"},
     {IDC_HOTKEY_EDIT8,  IDC_HOTKEY_LABEL8,  NULL, L"Restart Timer:"},
     {IDC_HOTKEY_EDIT13, IDC_HOTKEY_LABEL13, NULL, L"Show Milliseconds:"},
+    {IDC_HOTKEY_EDIT14, IDC_HOTKEY_LABEL14, NULL, L"Always on Top:"},
 };
 
 static inline BOOL IsHotkeyEditControl(DWORD ctrlId) {
@@ -142,7 +143,8 @@ static void LoadHotkeyConfiguration(void) {
     ReadConfigHotkeys(&g_dialogHotkeys[0], &g_dialogHotkeys[1], &g_dialogHotkeys[3],
                      &g_dialogHotkeys[4], &g_dialogHotkeys[5], &g_dialogHotkeys[6],
                      &g_dialogHotkeys[7], &g_dialogHotkeys[8], &g_dialogHotkeys[9],
-                     &g_dialogHotkeys[10], &g_dialogHotkeys[11], &g_dialogHotkeys[12]);
+                     &g_dialogHotkeys[10], &g_dialogHotkeys[11], &g_dialogHotkeys[12],
+                     &g_dialogHotkeys[13]);
     ReadCustomCountdownHotkey(&g_dialogHotkeys[2]);
 }
 
@@ -171,7 +173,8 @@ static void SaveHotkeyConfiguration(void) {
     WriteConfigHotkeys(g_dialogHotkeys[0], g_dialogHotkeys[1], g_dialogHotkeys[3],
                       g_dialogHotkeys[4], g_dialogHotkeys[5], g_dialogHotkeys[6],
                       g_dialogHotkeys[7], g_dialogHotkeys[8], g_dialogHotkeys[9],
-                      g_dialogHotkeys[10], g_dialogHotkeys[11], g_dialogHotkeys[12]);
+                      g_dialogHotkeys[10], g_dialogHotkeys[11], g_dialogHotkeys[12],
+                      g_dialogHotkeys[13]);
 
     char customCountdownStr[64] = {0};
     HotkeyToString(g_dialogHotkeys[2], customCountdownStr, sizeof(customCountdownStr));

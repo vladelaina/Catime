@@ -508,13 +508,14 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
  * @param lp Reserved
  */
 LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)lp;
     if (wp == 1) {
-        /* Update available - show update dialog */
-        extern void ShowStoredUpdateDialog(HWND hwnd);
-        ShowStoredUpdateDialog(hwnd);
+        if (lp == 0) {
+            extern void ShowStoredUpdateDialog(HWND hwnd);
+            ShowStoredUpdateDialog(hwnd);
+        } else {
+            LOG_INFO("Silent update check found new version - notification deferred to menu");
+        }
     } else {
-        /* No update - show no update dialog */
         extern void ShowStoredNoUpdateDialog(HWND hwnd);
         ShowStoredNoUpdateDialog(hwnd);
     }

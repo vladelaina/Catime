@@ -10,7 +10,7 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.5.1-alph1"    /**< Version string */
+#define CATIME_VERSION "1.5.1-alph2"    /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
 #define CATIME_VERSION_MINOR 4           /**< Minor version number */
 #define CATIME_VERSION_PATCH 0           /**< Patch version number */
@@ -348,6 +348,7 @@
 #define HOTKEY_ID_RESTART_TIMER   110            /**< Restart timer hotkey ID */
 #define HOTKEY_ID_CUSTOM_COUNTDOWN 111           /**< Custom countdown hotkey ID */
 #define HOTKEY_ID_TOGGLE_MILLISECONDS 112        /**< Toggle milliseconds display hotkey ID */
+#define HOTKEY_ID_TOPMOST         113            /**< Toggle topmost hotkey ID */
 
 /** @brief Hotkey configuration dialog identifiers */
 #define CLOCK_IDD_HOTKEY_DIALOG 2100     /**< Hotkey configuration dialog */
@@ -385,6 +386,10 @@
 /** @brief Additional hotkey control identifiers (13) */
 #define IDC_HOTKEY_LABEL13 2127          /**< Hotkey label 13 */
 #define IDC_HOTKEY_EDIT13 2128           /**< Hotkey edit control 13 */
+
+/** @brief Additional hotkey control identifiers (14) */
+#define IDC_HOTKEY_LABEL14 2129          /**< Hotkey label 14 */
+#define IDC_HOTKEY_EDIT14 2130           /**< Hotkey edit control 14 */
 
 /** @brief Animation menu identifiers */
 #define CLOCK_IDM_ANIMATIONS_MENU 2200       /**< Animations submenu */
