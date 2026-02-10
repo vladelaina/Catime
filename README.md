@@ -4,14 +4,16 @@
 </div>
 
 
-
-<!-- Project Title + Logo -->
 <div align="center">
-  <a href="https://vladelaina.github.io/Catime" target="_blank">
+  <a href="https://cati.me" target="_blank">
     <img src="Images/catime_resize.png" alt="Catime" width="249">
   </a>
-  <h1>Catime</h1>
+  
+  <h1>
+    <a href="https://cati.me" target="_blank" style="text-decoration: none; color: inherit;">Cati.me</a>
+  </h1>
 </div>
+
 
 <!-- Project Description + Rocket Icon -->
 <p align="center"> 
@@ -20,10 +22,6 @@
 </p>
 
 
-<p align="center"
-  
-[**vladelaina.github.io/Catime**](https://vladelaina.github.io/Catime)
-</p>
 
 
 <p align="center">
