@@ -5,6 +5,9 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <shellapi.h>
 #include "main/main_single_instance.h"
 #include "main/main_cli_routing.h"
 #include "log.h"
@@ -12,6 +15,10 @@
 
 /** Global mutex handle for emergency cleanup in crash scenarios */
 static HANDLE g_GlobalMutex = NULL;
+
+#define SINGLE_INSTANCE_MUTEX_NAME L"Local\\Vladelaina.Catime.SingleInstance"
+#define EXISTING_WINDOW_RETRY_COUNT 20
+#define EXISTING_WINDOW_RETRY_DELAY_MS 100
 
 /** Search desktop wallpaper layer for timer window */
 static HWND FindInDesktopLayer(void) {
@@ -37,158 +44,131 @@ HWND FindExistingInstanceWindow(void) {
     return FindInDesktopLayer();
 }
 
+static HWND FindExistingInstanceWindowWithRetry(void) {
+    for (int i = 0; i < EXISTING_WINDOW_RETRY_COUNT; ++i) {
+        HWND hwnd = FindExistingInstanceWindow();
+        if (hwnd && IsWindow(hwnd)) {
+            return hwnd;
+        }
+        Sleep(EXISTING_WINDOW_RETRY_DELAY_MS);
+    }
+    return NULL;
+}
+
+static void TryActivateExistingWindow(HWND hwndExisting) {
+    if (!hwndExisting || !IsWindow(hwndExisting)) return;
+
+    if (!IsWindowVisible(hwndExisting)) {
+        ShowWindow(hwndExisting, SW_SHOWNA);
+    }
+
+    if (IsIconic(hwndExisting)) {
+        ShowWindow(hwndExisting, SW_RESTORE);
+    }
+
+    BringWindowToTop(hwndExisting);
+    SetForegroundWindow(hwndExisting);
+}
+
+static BOOL ExtractCommandArguments(LPCWSTR fullCmdLine, wchar_t* outArgs, size_t outCount) {
+    if (!outArgs || outCount == 0) return FALSE;
+
+    outArgs[0] = L'\0';
+
+    if (!fullCmdLine || fullCmdLine[0] == L'\0') return FALSE;
+
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(fullCmdLine, &argc);
+    if (!argv || argc <= 1) {
+        if (argv) LocalFree(argv);
+        return FALSE;
+    }
+
+    size_t used = 0;
+    BOOL hasArgs = FALSE;
+    for (int i = 1; i < argc; ++i) {
+        const wchar_t* arg = argv[i];
+        if (!arg || arg[0] == L'\0') continue;
+
+        size_t argLen = wcslen(arg);
+        if (used > 0) {
+            if (used + 1 >= outCount) break;
+            outArgs[used++] = L' ';
+        }
+
+        size_t copyLen = argLen;
+        if (copyLen > outCount - used - 1) {
+            copyLen = outCount - used - 1;
+        }
+        if (copyLen == 0) break;
+
+        memcpy(outArgs + used, arg, copyLen * sizeof(wchar_t));
+        used += copyLen;
+        outArgs[used] = L'\0';
+        hasArgs = TRUE;
+    }
+
+    LocalFree(argv);
+    return hasArgs;
+}
+
 BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     LOG_INFO("Checking if another instance is running...");
-    
-    HANDLE hMutex = CreateMutex(NULL, TRUE, L"CatimeMutex");
-    *outMutex = hMutex;
-    g_GlobalMutex = hMutex;  /* Store globally for crash cleanup */
-    
+
+    if (!outMutex) {
+        LOG_ERROR("HandleSingleInstance called with NULL outMutex");
+        return FALSE;
+    }
+    *outMutex = NULL;
+
+    HANDLE hMutex = CreateMutexW(NULL, TRUE, SINGLE_INSTANCE_MUTEX_NAME);
+    if (!hMutex) {
+        LOG_ERROR("CreateMutexW failed for single-instance mutex (err=%lu)", GetLastError());
+        return FALSE;
+    }
+
     if (GetLastError() != ERROR_ALREADY_EXISTS) {
-        Sleep(50);  /* Brief delay for mutex acquisition to stabilize */
+        g_GlobalMutex = hMutex;  /* Store globally for crash cleanup */
+        *outMutex = hMutex;
         return TRUE;
     }
-    
+
     LOG_INFO("Detected another instance is running");
-    HWND hwndExisting = FindExistingInstanceWindow();
-    
-    if (!hwndExisting) {
-        LOG_WARNING("Could not find window handle of existing instance, but mutex exists");
-        LOG_WARNING("Possible zombie process or race condition detected");
-        
-        /* Wait for the mutex to be released by the zombie process */
-        LOG_INFO("Waiting for mutex to be released (max 3 seconds)...");
-        DWORD waitResult = WaitForSingleObject(hMutex, 3000);
-        
-        if (waitResult == WAIT_OBJECT_0) {
-            /* Successfully acquired mutex ownership */
-            LOG_INFO("Mutex acquired successfully after waiting");
-            *outMutex = hMutex;
-            return TRUE;
-        } else if (waitResult == WAIT_ABANDONED) {
-            /* Previous owner terminated abnormally - we now own the mutex */
-            LOG_WARNING("Mutex was abandoned by zombie process. Acquired ownership.");
-            *outMutex = hMutex;
-            return TRUE;
-        } else if (waitResult == WAIT_TIMEOUT) {
-            /* Timeout - zombie process still holds mutex */
-            LOG_ERROR("Timeout waiting for mutex release. Force creating new instance.");
-            CloseHandle(hMutex);
-            g_GlobalMutex = NULL;
-            
-            /* Use unique mutex name to avoid conflict with zombie */
-            wchar_t uniqueMutexName[128];
-            _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
-            *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
-            g_GlobalMutex = *outMutex;
-            LOG_WARNING("Created unique mutex due to zombie process: %ls", uniqueMutexName);
-            return TRUE;
-        } else {
-            /* Wait failed */
-            LOG_ERROR("Failed to wait for mutex (error: %lu, result: 0x%08X)", GetLastError(), waitResult);
-            CloseHandle(hMutex);
-            g_GlobalMutex = NULL;
-            
-            /* Use unique mutex name */
-            wchar_t uniqueMutexName[128];
-            _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
-            *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
-            g_GlobalMutex = *outMutex;
-            LOG_WARNING("Created unique mutex due to wait failure: %ls", uniqueMutexName);
-            return TRUE;
-        }
-    }
-    
-    LOG_INFO("Found existing instance window handle: 0x%p", hwndExisting);
-    
-    LPWSTR lpCmdLineW = GetCommandLineW();
-    while (*lpCmdLineW && *lpCmdLineW != L' ') lpCmdLineW++;
-    while (*lpCmdLineW == L' ') lpCmdLineW++;
-    
-    if (lpCmdLineW && lpCmdLineW[0] != L'\0') {
-        char* cmdUtf8 = WideToUtf8Alloc(lpCmdLineW);
+
+    HWND hwndExisting = FindExistingInstanceWindowWithRetry();
+
+    wchar_t forwardedArgs[512];
+    BOOL hasArgs = ExtractCommandArguments(lpCmdLine, forwardedArgs, sizeof(forwardedArgs) / sizeof(forwardedArgs[0]));
+
+    if (hasArgs) {
+        char* cmdUtf8 = WideToUtf8Alloc(forwardedArgs);
         if (cmdUtf8) {
             LOG_INFO("Command line arguments: '%s'", cmdUtf8);
             free(cmdUtf8);
         }
-        
-        if (TryForwardSimpleCliToExisting(hwndExisting, lpCmdLineW)) {
-            LOG_INFO("Forwarded simple CLI command to existing instance and exiting");
-            /* Do not call ReleaseMutex - we don't own the mutex when ERROR_ALREADY_EXISTS */
-            CloseHandle(hMutex);
-            g_GlobalMutex = NULL;
-            *outMutex = NULL;
-            return FALSE;
+    }
+
+    if (!hwndExisting) {
+        LOG_WARNING("Single-instance mutex exists but no existing window was found. Exiting to enforce single instance.");
+        CloseHandle(hMutex);
+        return FALSE;
+    }
+
+    LOG_INFO("Found existing instance window handle: 0x%p", hwndExisting);
+
+    if (hasArgs) {
+        if (TryForwardSimpleCliToExisting(hwndExisting, forwardedArgs)) {
+            LOG_INFO("Forwarded CLI command to existing instance and exiting");
         } else {
-            LOG_INFO("CLI command not suitable for forwarding, will restart instance");
+            LOG_WARNING("Failed to forward CLI command to existing instance");
+            TryActivateExistingWindow(hwndExisting);
         }
-    }
-    
-    LOG_INFO("Closing existing instance to apply CLI arguments");
-    SendMessage(hwndExisting, WM_CLOSE, 0, 0);
-    
-    /* Wait for the existing instance to release the mutex */
-    LOG_INFO("Waiting for existing instance to release mutex (max 5 seconds)...");
-    DWORD waitResult = WaitForSingleObject(hMutex, 5000);
-    
-    if (waitResult == WAIT_OBJECT_0) {
-        /* Successfully acquired mutex ownership from the closed instance */
-        LOG_INFO("Mutex acquired successfully after existing instance closed");
-        *outMutex = hMutex;
-        g_GlobalMutex = hMutex;
-        return TRUE;
-    } else if (waitResult == WAIT_ABANDONED) {
-        /* Previous instance terminated abnormally - we now own the mutex */
-        LOG_WARNING("Mutex was abandoned by previous instance. Acquired ownership.");
-        *outMutex = hMutex;
-        g_GlobalMutex = hMutex;
-        return TRUE;
-    } else if (waitResult == WAIT_TIMEOUT) {
-        /* Timeout - existing instance didn't release mutex in time */
-        LOG_WARNING("Timeout waiting for existing instance to close. Will retry...");
-        
-        /* Give it one more chance with force close */
-        SendMessage(hwndExisting, WM_DESTROY, 0, 0);
-        Sleep(500);
-        
-        waitResult = WaitForSingleObject(hMutex, 2000);
-        if (waitResult == WAIT_OBJECT_0 || waitResult == WAIT_ABANDONED) {
-            if (waitResult == WAIT_ABANDONED) {
-                LOG_WARNING("Mutex was abandoned after force close. Acquired ownership.");
-            } else {
-                LOG_INFO("Mutex acquired after force close");
-            }
-            *outMutex = hMutex;
-            g_GlobalMutex = hMutex;
-            return TRUE;
-        }
-        
-        /* Still timeout - force create new instance */
-        LOG_ERROR("Failed to acquire mutex after force close. Creating new instance anyway.");
-        CloseHandle(hMutex);
-        g_GlobalMutex = NULL;
-        
-        /* Use unique mutex name to avoid conflict */
-        wchar_t uniqueMutexName[128];
-        _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
-        *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
-        g_GlobalMutex = *outMutex;
-        LOG_WARNING("Created unique mutex after force close failed: %ls", uniqueMutexName);
-        return TRUE;
     } else {
-        /* Wait failed */
-        LOG_ERROR("Failed to wait for mutex (error: %lu, result: 0x%08X)", GetLastError(), waitResult);
-        CloseHandle(hMutex);
-        g_GlobalMutex = NULL;
-        
-        /* Use unique mutex name */
-        wchar_t uniqueMutexName[128];
-        _snwprintf_s(uniqueMutexName, 128, _TRUNCATE, L"CatimeMutex_%lu", GetTickCount());
-        *outMutex = CreateMutex(NULL, TRUE, uniqueMutexName);
-        g_GlobalMutex = *outMutex;
-        LOG_WARNING("Created unique mutex due to wait failure: %ls", uniqueMutexName);
-        return TRUE;
+        TryActivateExistingWindow(hwndExisting);
     }
+
+    CloseHandle(hMutex);  /* We do not own this handle when ERROR_ALREADY_EXISTS */
+    return FALSE;
 }
 
 /**
