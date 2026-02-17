@@ -157,6 +157,8 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_MEASUREITEM, HandleMeasureItem, "Owner-drawn menu measurement"},
     {WM_DRAWITEM, HandleDrawItem, "Owner-drawn menu rendering"},
     {WM_EXITMENULOOP, HandleExitMenuLoop, "Menu loop exit"},
+    {WM_SYSCOMMAND, HandleSysCommand, "System command"},
+    {WM_SIZE, HandleSize, "Window size state changed"},
     {WM_CLOSE, HandleClose, "Window close"},
     {WM_KEYDOWN, HandleKeyDown, "Key down"},
     {WM_HOTKEY, HandleHotkey, "Global hotkey"},
@@ -319,8 +321,8 @@ void StartDefaultCountDown(HWND hwnd) {
 
 void StartPomodoroTimer(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
-    if (!IsWindowVisible(hwnd)) ShowWindow(hwnd, SW_SHOW);
+
+    EnsureWindowVisibleWithTopmostState(hwnd);
 
     extern void InitializePomodoro(void);
     InitializePomodoro();
@@ -453,7 +455,7 @@ void ToggleMilliseconds(HWND hwnd) {
 }
 
 void ToggleTopmost(HWND hwnd) {
-    extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
+    MarkEditModeTopmostOverride();
     SetWindowTopmost(hwnd, !CLOCK_WINDOW_TOPMOST);
 }
 
@@ -461,7 +463,7 @@ void ToggleWindowVisibility(HWND hwnd) {
     if (IsWindowVisible(hwnd)) {
         ShowWindow(hwnd, SW_HIDE);
     } else {
-        ShowWindow(hwnd, SW_SHOW);
+        EnsureWindowVisibleWithTopmostState(hwnd);
         SetForegroundWindow(hwnd);
     }
 }

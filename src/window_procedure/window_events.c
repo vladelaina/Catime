@@ -38,9 +38,6 @@ BOOL HandleWindowCreate(HWND hwnd) {
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
     LOG_INFO("Click-through mode set: %s", CLOCK_EDIT_MODE ? "disabled" : "enabled");
 
-    SetWindowTopmost(hwnd, CLOCK_WINDOW_TOPMOST);
-    LOG_INFO("Window topmost setting applied: %s", CLOCK_WINDOW_TOPMOST ? "yes" : "no");
-
     /* Enable OLE drag and drop for resource import with preview */
     InitializeOleDropTarget(hwnd);
     LOG_INFO("OLE Drag and drop enabled (requires Edit Mode if Click-Through is active)");
@@ -137,21 +134,16 @@ void HandleWindowDestroy(HWND hwnd) {
  * ============================================================================ */
 
 /**
- * Reset window to default state: force topmost and ensure visibility.
- * Called after timer restart to guarantee window is accessible.
+ * Reset window to default state: re-apply current topmost mode and ensure visibility.
+ * Called after timer restart to guarantee window is accessible without changing user preference.
  * 
  * @param hwnd Window handle to reset
  */
 void HandleWindowReset(HWND hwnd) {
     LOG_INFO("Window reset initiated");
     
-    CLOCK_WINDOW_TOPMOST = TRUE;
-    SetWindowTopmost(hwnd, TRUE);
-    WriteConfigTopmost("TRUE");
-    LOG_INFO("Window topmost forced to enabled and saved");
-    
-    ShowWindow(hwnd, SW_SHOW);
-    LOG_INFO("Window visibility ensured");
+    EnsureWindowVisibleWithTopmostState(hwnd);
+    LOG_INFO("Window topmost/visibility state re-applied: %s", CLOCK_WINDOW_TOPMOST ? "topmost" : "desktop-anchor");
     
     LOG_INFO("Window reset completed");
 }

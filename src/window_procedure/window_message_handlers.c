@@ -253,6 +253,23 @@ LRESULT HandleClose(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+LRESULT HandleSysCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
+    if (HandleTopmostMinimizeCommand(hwnd, (UINT)wp)) {
+        return 0;
+    }
+
+    return DefWindowProc(hwnd, WM_SYSCOMMAND, wp, lp);
+}
+
+LRESULT HandleSize(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (HandleTopmostSizeEvent(hwnd, wp)) {
+        return 0;
+    }
+
+    return DefWindowProc(hwnd, WM_SIZE, wp, lp);
+}
+
 LRESULT HandleLButtonDblClk(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (!CLOCK_EDIT_MODE) {
@@ -631,10 +648,8 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
         SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
     }
     
-    /* Ensure window visible and redraw */
-    if (!IsWindowVisible(hwnd)) {
-        ShowWindow(hwnd, SW_SHOW);
-    }
+    /* Re-apply visibility/topmost policy to recover from any z-order drift */
+    EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     
     ClearPendingPluginInfo();

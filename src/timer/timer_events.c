@@ -133,29 +133,15 @@ static BOOL HandleRetryTimer(HWND hwnd, UINT timerId, int* retryCount, RetrySetu
 }
 
 static void SetupTopmostWindow(HWND hwnd) {
-        if (CLOCK_WINDOW_TOPMOST) {
-            SetWindowTopmost(hwnd, TRUE);
-            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
-                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        }
-        if (!IsWindowVisible(hwnd)) {
-            ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-        }
+    if (CLOCK_WINDOW_TOPMOST) {
+        EnsureWindowVisibleWithTopmostState(hwnd);
+    }
 }
 
 static void SetupVisibilityWindow(HWND hwnd) {
-        if (!CLOCK_WINDOW_TOPMOST) {
-            HWND hProgman = FindWindowW(L"Progman", NULL);
-            if (hProgman) {
-                SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
-            }
-            
-            if (!IsWindowVisible(hwnd)) {
-                ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-            }
-            SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        }
+    if (!CLOCK_WINDOW_TOPMOST) {
+        EnsureWindowVisibleWithTopmostState(hwnd);
+    }
 }
 
 static BOOL AdvancePomodoroState(void) {
@@ -219,13 +205,11 @@ static BOOL HandleFontValidation(HWND hwnd) {
 
 static BOOL HandleForceRedraw(HWND hwnd) {
     KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
-        ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        InvalidateRect(hwnd, NULL, TRUE);
-        RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
-        return TRUE;
-    }
+    EnsureWindowVisibleWithTopmostState(hwnd);
+    InvalidateRect(hwnd, NULL, TRUE);
+    RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+    return TRUE;
+}
 
 static void HandleTimeoutActions(HWND hwnd) {
     switch (CLOCK_TIMEOUT_ACTION) {

@@ -16,6 +16,8 @@
 #include "color/color_parser.h"
 
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
+static BOOL g_editModeForcedTopmost = FALSE;
+static BOOL g_editModeTopmostOverride = FALSE;
 
 static UINT_PTR g_configSaveTimer = 0;
 
@@ -66,9 +68,12 @@ void StartDragWindow(HWND hwnd) {
 
 void StartEditMode(HWND hwnd) {
     PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
+    g_editModeForcedTopmost = FALSE;
+    g_editModeTopmostOverride = FALSE;
     
     if (!CLOCK_WINDOW_TOPMOST) {
-        SetWindowTopmost(hwnd, TRUE);
+        g_editModeForcedTopmost = TRUE;
+        SetWindowTopmostTransient(hwnd, TRUE);
     }
     
     CLOCK_EDIT_MODE = TRUE;
@@ -94,8 +99,8 @@ void EndEditMode(HWND hwnd) {
     extern void WriteConfigColor(const char* color);
     WriteConfigColor(CLOCK_TEXT_COLOR);
     
-    if (!PREVIOUS_TOPMOST_STATE) {
-        SetWindowTopmost(hwnd, FALSE);
+    if (g_editModeForcedTopmost && !g_editModeTopmostOverride && !PREVIOUS_TOPMOST_STATE) {
+        SetWindowTopmostTransient(hwnd, FALSE);
         
         InvalidateRect(hwnd, NULL, TRUE);
         RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
@@ -103,6 +108,15 @@ void EndEditMode(HWND hwnd) {
         KillTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH);
     } else {
         RefreshWindow(hwnd, TRUE);
+    }
+
+    g_editModeForcedTopmost = FALSE;
+    g_editModeTopmostOverride = FALSE;
+}
+
+void MarkEditModeTopmostOverride(void) {
+    if (CLOCK_EDIT_MODE) {
+        g_editModeTopmostOverride = TRUE;
     }
 }
 

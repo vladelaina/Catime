@@ -21,7 +21,6 @@
 
 #define WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define WINDOW_TITLE L"Catime"
-#define PROGMAN_CLASS L"Progman"
 #define COLOR_KEY_BLACK RGB(0, 0, 0)
 #define ALPHA_OPAQUE 255
 #define DEFAULT_TRAY_ANIMATION_SPEED_MS 150  /* 150ms balances smoothness with CPU usage (6.7 FPS) */
@@ -67,31 +66,6 @@ static void InitializeTrayAndAnimation(HWND hwnd, HINSTANCE hInstance) {
 }
 
 /**
- * @brief Make window always-on-top for overlay mode
- * @param hwnd Window handle
- */
-static void ApplyTopmostMode(HWND hwnd) {
-    SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-    LOG_INFO("Window set to topmost mode");
-}
-
-/**
- * @brief Make window normal z-order, parented to Progman
- * @param hwnd Window handle
- */
-static void ApplyNormalMode(HWND hwnd) {
-    HWND hProgman = FindWindowW(PROGMAN_CLASS, NULL);
-    if (hProgman) {
-        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)hProgman);
-        LOG_INFO("Window parented to Progman for Win+D protection");
-    }
-    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, 
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-    ShowWindow(hwnd, SW_SHOWNOACTIVATE);
-    LOG_INFO("Window set to normal mode");
-}
-
-/**
  * @brief Configure window layering, visibility, and z-order
  * @param hwnd Window handle
  * @param nCmdShow Initial show command from WinMain
@@ -102,12 +76,7 @@ static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
 
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
-
-    if (CLOCK_WINDOW_TOPMOST) {
-        ApplyTopmostMode(hwnd);
-    } else {
-        ApplyNormalMode(hwnd);
-    }
+    RefreshWindowTopmostState(hwnd);
 }
 
 /* ============================================================================

@@ -25,7 +25,6 @@
 #include "log.h"
 
 extern BOOL CLOCK_WINDOW_TOPMOST;
-extern void SetWindowTopmost(HWND hwnd, BOOL topmost);
 
 #define INPUT_BUFFER_SIZE 256
 
@@ -102,7 +101,7 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 g_cliHelpDialog = NULL;
                 HWND hMainWnd = GetParent(hwndDlg);
                 if (hMainWnd && CLOCK_WINDOW_TOPMOST) {
-                    SetWindowTopmost(hMainWnd, TRUE);
+                    RefreshWindowTopmostState(hMainWnd);
                 }
             }
             return TRUE;

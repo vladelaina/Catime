@@ -443,7 +443,7 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     /* Step 9: Refresh UI to match new config */
     RecalculateWindowSize(hwnd);
-    ShowWindow(hwnd, SW_SHOW);
+    EnsureWindowVisibleWithTopmostState(hwnd);
     ResetTimerWithInterval(hwnd);
     
     /* Step 10: Re-enable redraw and refresh display */

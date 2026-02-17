@@ -140,7 +140,7 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         }
         
         if (newTopmost != CLOCK_WINDOW_TOPMOST) {
-            SetWindowTopmost(hwnd, newTopmost);
+            SetWindowTopmostTransient(hwnd, newTopmost);
             changed = TRUE;
         }
         

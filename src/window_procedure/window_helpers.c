@@ -51,7 +51,7 @@ BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
     }
     
     if (params->showWindow) {
-        ShowWindow(hwnd, SW_SHOW);
+        EnsureWindowVisibleWithTopmostState(hwnd);
     }
     
     if (params->resetInterval && (wasShowingTime || mode == TIMER_MODE_SHOW_TIME)) {

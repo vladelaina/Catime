@@ -14,6 +14,7 @@
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
 #include "window/window_core.h"
+#include "window/window_desktop_integration.h"
 #include "log.h"
 
 /* ============================================================================
@@ -331,7 +332,7 @@ void ShowWindowForPreview(HWND hwnd) {
         }
 
         if (!isVisible) {
-            ShowWindow(hwnd, SW_SHOW);
+            EnsureWindowVisibleWithTopmostState(hwnd);
         }
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
@@ -430,4 +431,3 @@ BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
 
     return TRUE;
 }
-

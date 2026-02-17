@@ -127,10 +127,8 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
     }
     
-    /* Ensure window visible and redraw */
-    if (!IsWindowVisible(hwnd)) {
-        ShowWindow(hwnd, SW_SHOW);
-    }
+    /* Ensure window visible and consistent with topmost policy */
+    EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     
     return TRUE;
@@ -200,9 +198,7 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
     }
     
-    if (!IsWindowVisible(hwnd)) {
-        ShowWindow(hwnd, SW_SHOW);
-    }
+    EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     
     return TRUE;

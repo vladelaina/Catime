@@ -47,6 +47,13 @@ void StartEditMode(HWND hwnd);
  */
 void EndEditMode(HWND hwnd);
 
+/**
+ * @brief Mark that user explicitly changed topmost state during edit mode
+ *
+ * @details Prevents EndEditMode from restoring stale pre-edit topmost state.
+ */
+void MarkEditModeTopmostOverride(void);
+
 /* ============================================================================
  * Window Dragging Functions
  * ============================================================================ */
