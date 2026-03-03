@@ -124,8 +124,6 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 </div>
 
 
-
-
 ## 📥 Download
 
 - GitHub Releases
