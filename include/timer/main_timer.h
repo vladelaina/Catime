@@ -33,6 +33,11 @@ BOOL MainTimer_Start(HWND hwnd, UINT intervalMs);
 void MainTimer_Stop(void);
 
 /**
+ * @brief Mark one queued high-precision tick message as handled
+ */
+void MainTimer_NotifyTickHandled(void);
+
+/**
  * @brief Update timer interval (e.g., when switching to/from milliseconds mode)
  * @param intervalMs New interval in milliseconds
  */

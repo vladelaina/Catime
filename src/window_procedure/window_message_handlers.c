@@ -184,8 +184,8 @@ LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     /* Delegate to main timer event handler */
     HandleTimerEvent(hwnd, TIMER_ID_MAIN);
-    /* Force immediate repaint to bypass WM_PAINT queue delay */
-    UpdateWindow(hwnd);
+    /* Release coalescing gate for the next high-precision tick message. */
+    MainTimer_NotifyTickHandled();
     return 0;
 }
 

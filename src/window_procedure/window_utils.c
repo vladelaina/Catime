@@ -90,13 +90,15 @@ void ShowError(HWND hwnd, ErrorCode errorCode) {
  * Configuration Access Implementation
  * ============================================================================ */
 
-static __declspec(thread) char g_configPathCache[MAX_PATH] = {0};
-static __declspec(thread) BOOL g_configPathCached = FALSE;
+static char g_configPathCache[MAX_PATH] = {0};
+static volatile LONG g_configPathCached = 0;
 
 const char* GetCachedConfigPath(void) {
-    if (!g_configPathCached) {
-        GetConfigPath(g_configPathCache, MAX_PATH);
-        g_configPathCached = TRUE;
+    if (InterlockedCompareExchange(&g_configPathCached, 0, 0) == 0) {
+        char tempPath[MAX_PATH] = {0};
+        GetConfigPath(tempPath, MAX_PATH);
+        memcpy(g_configPathCache, tempPath, MAX_PATH);
+        InterlockedExchange(&g_configPathCached, 1);
     }
     return g_configPathCache;
 }

@@ -43,7 +43,6 @@ static int pomodoro_initial_loop_count = 0;
 static int pomodoro_initial_times[MAX_POMODORO_TIMES] = {0};
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
-static BOOL topmost_fast_mode_active = FALSE;
 
 static inline void ForceWindowRedraw(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
@@ -438,20 +437,16 @@ static void HandleCountdownCompletion(HWND hwnd) {
 }
 
 static BOOL HandleMainTimer(HWND hwnd) {
-    /* Manage fast topmost enforcement based on taskbar overlap */
-    BOOL overlapsTaskbar = EnforceTopmostOverTaskbar(hwnd);
-    
-    if (overlapsTaskbar && !topmost_fast_mode_active) {
-        SetTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE, 50, NULL);
-        topmost_fast_mode_active = TRUE;
-    } else if (!overlapsTaskbar && topmost_fast_mode_active) {
-        KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
-        topmost_fast_mode_active = FALSE;
-    }
-    
     static DWORD s_lastRenderTime = 0;
+    static DWORD s_lastTopmostCheck = 0;
     DWORD now_tick = GetTickCount();
     BOOL shouldRender = TRUE;
+
+    /* Throttle expensive topmost/taskbar overlap checks. */
+    if (s_lastTopmostCheck == 0 || (now_tick - s_lastTopmostCheck) >= 100) {
+        EnforceTopmostOverTaskbar(hwnd);
+        s_lastTopmostCheck = now_tick;
+    }
     
     if (CLOCK_HOLOGRAPHIC_EFFECT) {
         RECT rect;
@@ -523,8 +518,6 @@ static BOOL HandleMainTimer(HWND hwnd) {
         countdown_elapsed_time = CLOCK_TOTAL_TIME;
     }
     
-    InvalidateRect(hwnd, NULL, TRUE);
-    
     return TRUE;
 }
 
@@ -589,11 +582,6 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         case TIMER_ID_RENDER_ANIMATION:
             /* Pure render tick - decouples visual flow from logic update */
             InvalidateRect(hwnd, NULL, TRUE);
-            return TRUE;
-
-        case TIMER_ID_TOPMOST_ENFORCE:
-            /* Fast topmost enforcement when overlapping taskbar (50ms) */
-            EnforceTopmostOverTaskbar(hwnd);
             return TRUE;
 
         default:

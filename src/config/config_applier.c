@@ -250,7 +250,7 @@ void ApplyColorSettings(const ConfigSnapshot* snapshot) {
     /* Free existing color options */
     for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (COLOR_OPTIONS && COLOR_OPTIONS[i].hexColor) {
-            free(COLOR_OPTIONS[i].hexColor);
+            free((void*)COLOR_OPTIONS[i].hexColor);
         }
     }
     if (COLOR_OPTIONS) {
@@ -337,4 +337,3 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
     
     LOG_INFO("Configuration snapshot applied successfully");
 }
-

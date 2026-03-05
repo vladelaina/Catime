@@ -63,6 +63,31 @@ static COLORREF ParseColorString(const char* colorStr) {
     return RGB(r, g, b);
 }
 
+static BOOL HasPotentialMarkdownSyntax(const wchar_t* text) {
+    if (!text) return FALSE;
+
+    for (const wchar_t* p = text; *p; ++p) {
+        switch (*p) {
+            case L'!':
+            case L'[':
+            case L']':
+            case L'(':
+            case L')':
+            case L'<':
+            case L'>':
+            case L'*':
+            case L'_':
+            case L'`':
+            case L'#':
+                return TRUE;
+            default:
+                break;
+        }
+    }
+
+    return FALSE;
+}
+
 /**
  * @return Render context with preview or config settings
  * @note Static buffers avoid per-frame allocation
@@ -348,22 +373,28 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     MarkdownColorTag* colorTags = NULL; int colorTagCount = 0;
     MarkdownFontTag* fontTags = NULL; int fontTagCount = 0;
 
-    BOOL isMarkdown = ParseMarkdownLinks(timeText, &mdText, 
-                                         &links, &linkCount, 
-                                         &headings, &headingCount, 
-                                         &styles, &styleCount,
-                                         &listItems, &listItemCount,
-                                         &blockquotes, &blockquoteCount,
-                                         &colorTags, &colorTagCount,
-                                         &fontTags, &fontTagCount);
-                                         
-    const wchar_t* textToRender = isMarkdown ? mdText : timeText;
+    BOOL isMarkdown = FALSE;
+    if (HasPotentialMarkdownSyntax(timeText)) {
+        isMarkdown = ParseMarkdownLinks(timeText, &mdText,
+                                        &links, &linkCount,
+                                        &headings, &headingCount,
+                                        &styles, &styleCount,
+                                        &listItems, &listItemCount,
+                                        &blockquotes, &blockquoteCount,
+                                        &colorTags, &colorTagCount,
+                                        &fontTags, &fontTagCount);
+    }
+
+    const wchar_t* textToRender = (isMarkdown && mdText) ? mdText : timeText;
 
     // Measure text and resize window BEFORE creating the buffer
     // This prevents buffer overflow if the window grows
     SIZE textSize = {0};
     BOOL hasContent = (wcslen(textToRender) > 0) || (images && imageCount > 0);
     
+    SIZE measuredTextSize = {0};
+    BOOL measuredTextSizeValid = FALSE;
+
     if (hasContent) {
         BOOL measured = FALSE;
         
@@ -373,6 +404,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                 measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
             } else {
                 measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
+            }
+
+            if (measured) {
+                measuredTextSize = textSize;
+                measuredTextSizeValid = TRUE;
             }
 
             // If measurement failed, use default size
@@ -442,12 +478,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         // Render text if any
         if (wcslen(textToRender) > 0) {
             RECT textRect = rect;
-            SIZE textSizeMeasured = {0};
+            SIZE textSizeMeasured = measuredTextSize;
             
-            if (isMarkdown) {
-                MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, headings, headingCount);
-            } else {
-                MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, NULL, 0);
+            if (!measuredTextSizeValid) {
+                if (isMarkdown) {
+                    MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, headings, headingCount);
+                } else {
+                    MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, NULL, 0);
+                }
             }
             
             if (textSizeMeasured.cy > 0) {

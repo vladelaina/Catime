@@ -18,6 +18,7 @@ static HWND g_mainHwnd = NULL;
 static UINT g_timerInterval = 20;
 static BOOL g_highPrecisionActive = FALSE;
 static UINT g_timerResolutionMs = 0;
+static volatile LONG g_tickMessagePending = 0;
 
 /**
  * @brief Multimedia timer callback (worker thread)
@@ -28,7 +29,12 @@ static void CALLBACK MainTimerCallback(UINT uTimerID, UINT uMsg,
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
     
     if (g_mainHwnd && IsWindow(g_mainHwnd)) {
-        PostMessage(g_mainHwnd, CLOCK_WM_MAIN_TIMER_TICK, 0, 0);
+        /* Coalesce pending tick messages to avoid queue backlog under UI load. */
+        if (InterlockedCompareExchange(&g_tickMessagePending, 1, 0) == 0) {
+            if (!PostMessage(g_mainHwnd, CLOCK_WM_MAIN_TIMER_TICK, 0, 0)) {
+                InterlockedExchange(&g_tickMessagePending, 0);
+            }
+        }
     }
 }
 
@@ -132,6 +138,12 @@ void MainTimer_Stop(void) {
     if (g_mainHwnd) {
         KillTimer(g_mainHwnd, TIMER_ID_MAIN);
     }
+
+    InterlockedExchange(&g_tickMessagePending, 0);
+}
+
+void MainTimer_NotifyTickHandled(void) {
+    InterlockedExchange(&g_tickMessagePending, 0);
 }
 
 void MainTimer_SetInterval(UINT intervalMs) {

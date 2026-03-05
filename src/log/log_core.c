@@ -26,7 +26,7 @@ static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
 static HANDLE hLogFile = INVALID_HANDLE_VALUE;
 static CRITICAL_SECTION logCS;
 static volatile LONG csInitialized = 0;
-static LogLevel minLogLevel = LOG_LEVEL_DEBUG;
+static LogLevel minLogLevel = LOG_LEVEL_INFO;
 
 void GetLogFilePath(wchar_t* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
@@ -241,7 +241,13 @@ void WriteLog(LogLevel level, const char* format, ...) {
     /* Write to file */
     DWORD written;
     WriteFile(hLogFile, logBuffer, offset, &written, NULL);
-    FlushFileBuffers(hLogFile);
+
+    /* Avoid per-line disk flush; flush periodically and on high-severity entries. */
+    static int flushCounter = 0;
+    if (level >= LOG_LEVEL_ERROR || ++flushCounter >= 64) {
+        FlushFileBuffers(hLogFile);
+        flushCounter = 0;
+    }
 
     LeaveCriticalSection(&logCS);
 }
