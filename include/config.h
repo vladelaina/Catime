@@ -494,10 +494,11 @@ void WriteConfigPomodoroLoopCount(int loop_count);
 void WriteConfigTimeoutFile(const char* filePath);
 
 /**
- * @brief Write always-on-top setting (applies immediately)
+ * @brief Write always-on-top setting to config
  * @param topmost "TRUE" or "FALSE"
+ * @return TRUE on success, FALSE on write failure
  */
-void WriteConfigTopmost(const char* topmost);
+BOOL WriteConfigTopmost(const char* topmost);
 
 /**
  * @brief Set timeout action to open URL

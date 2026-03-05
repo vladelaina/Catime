@@ -278,8 +278,11 @@ void WriteConfigTimeOptions(const char* options) {
 /**
  * @brief Write window topmost setting
  */
-void WriteConfigTopmost(const char* topmost) {
-    UpdateConfigKeyValueAtomic(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", topmost);
+BOOL WriteConfigTopmost(const char* topmost) {
+    if (!topmost) {
+        return FALSE;
+    }
+    return UpdateConfigKeyValueAtomic(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", topmost);
 }
 
 /**

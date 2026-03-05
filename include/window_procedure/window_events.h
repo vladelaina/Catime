@@ -40,9 +40,8 @@ void HandleWindowDestroy(HWND hwnd);
  * @brief Reset to default state (recovery operation)
  * 
  * @details
- * Forces topmost enabled, persists to config, ensures visible.
- * 
- * @warning Destructive (overwrites user preference)
+ * Re-applies current topmost preference and ensures window visibility.
+ * Does not overwrite persisted topmost configuration.
  */
 void HandleWindowReset(HWND hwnd);
 

@@ -193,6 +193,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     if (msg == WM_TASKBARCREATED) {
         extern void RecreateTaskbarIcon(HWND, HINSTANCE);
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
+        RefreshWindowTopmostState(hwnd);
         return 0;
     }
     

@@ -15,7 +15,6 @@
 #define PROGMAN_CLASS L"Progman"
 #define WORKERW_CLASS L"WorkerW"
 #define SHELLDLL_CLASS L"SHELLDLL_DefView"
-#define TOPMOST_REASSERT_INTERVAL_MS 2000
 
 /* ============================================================================
  * Internal helpers
@@ -24,6 +23,7 @@
 static HWND FindDesktopWorkerWindow(void);
 static BOOL IsValidWindowHandle(HWND hwnd, const char* caller);
 static void ShowWindowNoActivateIfNeeded(HWND hwnd);
+static BOOL GetWindowTopmostState(HWND hwnd, BOOL* outTopmost);
 
 /**
  * @brief Find WorkerW window containing SHELLDLL_DefView
@@ -71,70 +71,109 @@ static BOOL TrySetWindowOwner(HWND hwnd, HWND owner) {
     return TRUE;
 }
 
-static BOOL TrySetWindowExStyle(HWND hwnd, LONG exStyle) {
+static BOOL TrySetWindowNoActivate(HWND hwnd, BOOL noActivate) {
     SetLastError(0);
-    LONG result = SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    if (exStyle == 0 && GetLastError() != 0) {
+        LOG_WARNING("GetWindowLong(GWL_EXSTYLE) failed (err=%lu)", GetLastError());
+        return FALSE;
+    }
+
+    LONG desiredStyle = noActivate ? (exStyle | WS_EX_NOACTIVATE) : (exStyle & ~WS_EX_NOACTIVATE);
+    if (desiredStyle == exStyle) {
+        return TRUE;
+    }
+
+    SetLastError(0);
+    LONG result = SetWindowLong(hwnd, GWL_EXSTYLE, desiredStyle);
     if (result == 0 && GetLastError() != 0) {
-        LOG_WARNING("SetWindowLong(GWL_EXSTYLE) failed (err=%lu)", GetLastError());
+        LOG_WARNING("SetWindowLong(GWL_EXSTYLE) update failed (err=%lu)", GetLastError());
         return FALSE;
     }
     return TRUE;
 }
 
-static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persistConfig, BOOL updateRuntimeState) {
+static BOOL GetWindowTopmostState(HWND hwnd, BOOL* outTopmost) {
+    if (!outTopmost) return FALSE;
+
+    SetLastError(0);
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-    LONG newExStyle = exStyle;
+    if (exStyle == 0 && GetLastError() != 0) {
+        LOG_WARNING("GetWindowLong(GWL_EXSTYLE) failed while checking topmost state (err=%lu)",
+                    GetLastError());
+        return FALSE;
+    }
+
+    *outTopmost = ((exStyle & WS_EX_TOPMOST) != 0);
+    return TRUE;
+}
+
+static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persistConfig, BOOL updateRuntimeState) {
+    BOOL ownerApplied = TRUE;
+    BOOL styleApplied = TRUE;
     BOOL zOrderApplied = FALSE;
     DWORD zOrderError = ERROR_SUCCESS;
 
     if (topmost) {
-        newExStyle &= ~WS_EX_NOACTIVATE;
-        TrySetWindowOwner(hwnd, NULL);
+        ownerApplied = TrySetWindowOwner(hwnd, NULL);
         zOrderApplied = SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
                                      SWP_FRAMECHANGED);
         if (!zOrderApplied) zOrderError = GetLastError();
+        styleApplied = TrySetWindowNoActivate(hwnd, FALSE);
     } else {
-        newExStyle |= WS_EX_NOACTIVATE;
-
         HWND hDesktop = FindDesktopWorkerWindow();
         if (hDesktop) {
-            TrySetWindowOwner(hwnd, hDesktop);
+            ownerApplied = TrySetWindowOwner(hwnd, hDesktop);
             LOG_INFO("Window parented to desktop anchor for Win+D protection");
         } else {
             LOG_WARNING("Desktop anchor not found, clearing parent");
-            TrySetWindowOwner(hwnd, NULL);
+            ownerApplied = TrySetWindowOwner(hwnd, NULL);
         }
 
         zOrderApplied = SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
                                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         if (!zOrderApplied) zOrderError = GetLastError();
-        SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
-        ShowWindowNoActivateIfNeeded(hwnd);
+        if (!SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
+                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)) {
+            LOG_WARNING("SetWindowPos(HWND_TOP) failed while applying non-topmost (err=%lu)",
+                        GetLastError());
+            zOrderApplied = FALSE;
+        }
+        styleApplied = TrySetWindowNoActivate(hwnd, TRUE);
     }
 
-    TrySetWindowExStyle(hwnd, newExStyle);
-    SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    if (!SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED)) {
+        LOG_WARNING("SetWindowPos(SWP_FRAMECHANGED) failed after topmost apply (err=%lu)",
+                    GetLastError());
+        styleApplied = FALSE;
+    }
 
-    if (zOrderApplied) {
+    if (zOrderApplied && ownerApplied && styleApplied) {
+        BOOL persisted = TRUE;
         if (updateRuntimeState) {
             CLOCK_WINDOW_TOPMOST = topmost;
         }
         if (persistConfig) {
-            WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
+            persisted = WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
+            if (!persisted) {
+                LOG_WARNING("Topmost state applied but failed to persist config");
+            }
         }
-        LOG_INFO("Window topmost state applied%s", persistConfig ? " and saved" : "");
+        LOG_INFO("Window topmost state applied%s", (persistConfig && persisted) ? " and saved" : "");
     } else {
         if (updateRuntimeState) {
-            LONG currentStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-            CLOCK_WINDOW_TOPMOST = (currentStyle & WS_EX_TOPMOST) != 0;
+            BOOL actualTopmost = FALSE;
+            if (GetWindowTopmostState(hwnd, &actualTopmost)) {
+                CLOCK_WINDOW_TOPMOST = actualTopmost;
+            }
         }
-        LOG_WARNING("Failed to apply requested topmost state (err=%lu)", zOrderError);
+        LOG_WARNING("Topmost apply incomplete: zOrder=%d owner=%d style=%d (zErr=%lu)",
+                    zOrderApplied, ownerApplied, styleApplied, zOrderError);
     }
 
-    return zOrderApplied;
+    return (zOrderApplied && ownerApplied && styleApplied);
 }
 
 /* ============================================================================
@@ -217,14 +256,11 @@ void ReattachToDesktop(HWND hwnd) {
         LOG_WARNING("Desktop worker not found, owner cleared");
     }
     
-    ShowWindowNoActivateIfNeeded(hwnd);
     SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 }
 
 BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
-    static DWORD s_lastTopmostReassertTick = 0;
-
     if (!IsValidWindowHandle(hwnd, "EnforceTopmostOverTaskbar")) return FALSE;
 
     /* Only enforce if topmost mode is enabled */
@@ -246,14 +282,15 @@ BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
                       rcWindow.left > rcTaskbar.right ||
                       rcWindow.bottom < rcTaskbar.top ||
                       rcWindow.top > rcTaskbar.bottom);
-    
-    DWORD nowTick = GetTickCount();
-    BOOL needPeriodicReassert = (nowTick - s_lastTopmostReassertTick) >= TOPMOST_REASSERT_INTERVAL_MS;
 
-    if (overlaps || needPeriodicReassert) {
+    BOOL styleTopmost = FALSE;
+    BOOL hasTopmostState = GetWindowTopmostState(hwnd, &styleTopmost);
+    BOOL needReassert = overlaps || !hasTopmostState || !styleTopmost;
+
+    if (needReassert) {
         if (SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                          SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE)) {
-            s_lastTopmostReassertTick = nowTick;
+            LOG_DEBUG("Topmost state reasserted (overlapsTaskbar=%d)", overlaps);
         }
     }
     
