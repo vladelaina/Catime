@@ -9,6 +9,7 @@
 #include "tray/tray.h"
 #include "color/color.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "language.h"
 #include "window_procedure/window_events.h"
 #include "timer/timer_events.h"
@@ -96,6 +97,11 @@ static inline void ForceWindowRedraw(HWND hwnd) {
  * @param interval Interval in milliseconds
  */
 static inline void RestartTimerWithInterval(HWND hwnd, UINT timerId, UINT interval) {
+    if (timerId == TIMER_ID_MAIN) {
+        MainTimer_Start(hwnd, interval);
+        return;
+    }
+
     KillTimer(hwnd, timerId);
     SetTimer(hwnd, timerId, interval, NULL);
 }
@@ -153,10 +159,10 @@ void TogglePauseResumeTimer(HWND hwnd) {
     
     if (CLOCK_IS_PAUSED) {
         CLOCK_LAST_TIME_UPDATE = time(NULL);
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         PauseNotificationSound();
     } else {
-        RestartTimerWithInterval(hwnd, 1, GetTimerInterval());
+        RestartTimerWithInterval(hwnd, TIMER_ID_MAIN, GetTimerInterval());
         ResumeNotificationSound();
     }
     

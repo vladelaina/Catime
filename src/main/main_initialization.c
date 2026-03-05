@@ -13,6 +13,7 @@
 #include "log.h"
 #include "config.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "timer/timer_events.h"
 #include "window.h"
 #include "cli.h"
@@ -330,7 +331,7 @@ void HandleStartupMode(HWND hwnd) {
             
         case STARTUP_MODE_NO_DISPLAY:
             ShowWindow(hwnd, SW_HIDE);
-            KillTimer(hwnd, 1);
+            MainTimer_Stop();
             elapsed_time = CLOCK_TOTAL_TIME;
             CLOCK_IS_PAUSED = TRUE;
             
@@ -493,7 +494,7 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     extern UINT GetTimerInterval(void);
     UINT interval = GetTimerInterval();
     
-    if (SetTimer(hwnd, 1, interval, NULL) == 0) {
+    if (!MainTimer_Start(hwnd, interval)) {
         LOG_WINDOWS_ERROR("Timer creation failed");
         return FALSE;
     }

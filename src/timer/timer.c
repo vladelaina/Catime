@@ -41,6 +41,9 @@ int last_displayed_second = -1;
 static LARGE_INTEGER timer_frequency = {0};
 static LARGE_INTEGER timer_last_count = {0};
 static BOOL high_precision_timer_initialized = FALSE;
+static int64_t s_suspend_mono_ms = 0;
+static int64_t s_suspend_tick_ms = 0;
+static BOOL s_suspend_snapshot_valid = FALSE;
 
 BOOL countdown_message_shown = FALSE;
 int pomodoro_work_cycles = 0;
@@ -58,15 +61,55 @@ int64_t g_target_end_time = 0;
 int64_t g_start_time = 0;
 int64_t g_pause_start_time = 0;
 
-/* Helper for millisecond precision */
+/* Monotonic millisecond clock for elapsed/remaining calculations */
 int64_t GetAbsoluteTimeMs(void) {
-    FILETIME ft;
-    GetSystemTimeAsFileTime(&ft);
-    ULARGE_INTEGER uli;
-    uli.LowPart = ft.dwLowDateTime;
-    uli.HighPart = ft.dwHighDateTime;
-    /* Convert 100-nanosecond intervals (since Jan 1, 1601) to milliseconds */
-    return (int64_t)(uli.QuadPart / 10000ULL);
+    LARGE_INTEGER nowCount;
+
+    if (!high_precision_timer_initialized) {
+        InitializeHighPrecisionTimer();
+    }
+
+    if (high_precision_timer_initialized &&
+        timer_frequency.QuadPart > 0 &&
+        QueryPerformanceCounter(&nowCount)) {
+        return (int64_t)((nowCount.QuadPart * 1000LL) / timer_frequency.QuadPart);
+    }
+
+    return (int64_t)GetTickCount64();
+}
+
+void Timer_OnSystemSuspend(void) {
+    s_suspend_mono_ms = GetAbsoluteTimeMs();
+    s_suspend_tick_ms = (int64_t)GetTickCount64();
+    s_suspend_snapshot_valid = TRUE;
+}
+
+void Timer_OnSystemResume(void) {
+    if (!s_suspend_snapshot_valid) return;
+
+    int64_t now_mono_ms = GetAbsoluteTimeMs();
+    int64_t now_tick_ms = (int64_t)GetTickCount64();
+    int64_t mono_delta = now_mono_ms - s_suspend_mono_ms;
+    int64_t tick_delta = now_tick_ms - s_suspend_tick_ms;
+
+    s_suspend_snapshot_valid = FALSE;
+
+    if (mono_delta < 0) mono_delta = 0;
+    if (tick_delta < 0) tick_delta = 0;
+
+    /* Detect missed suspended duration if monotonic source under-counted sleep time. */
+    int64_t correction_ms = tick_delta - mono_delta;
+    if (correction_ms < 200) return;
+    if (CLOCK_IS_PAUSED || CLOCK_SHOW_CURRENT_TIME) return;
+
+    if (CLOCK_COUNT_UP) {
+        g_start_time -= correction_ms;
+    } else if (CLOCK_TOTAL_TIME > 0) {
+        g_target_end_time -= correction_ms;
+        if (g_target_end_time < now_mono_ms) {
+            g_target_end_time = now_mono_ms;
+        }
+    }
 }
 
 /** Reset QPC baseline to prevent time jumps after pause/resume */

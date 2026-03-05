@@ -11,6 +11,7 @@
 #include "plugin/plugin_exit.h"
 #include "dialog/dialog_common.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
 #include "window.h"
@@ -49,7 +50,7 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         CLOCK_IS_PAUSED = TRUE;
         CLOCK_TOTAL_TIME = 0;
         countdown_elapsed_time = 0;
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         InvalidateRect(hwnd, NULL, TRUE);
         return TRUE;
     }
@@ -79,7 +80,7 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     CLOCK_IS_PAUSED = TRUE;
     
     /* Stop internal timer */
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     
     /* Reset Pomodoro if active */
     extern POMODORO_PHASE current_pomodoro_phase;
@@ -124,7 +125,7 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-        SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
+        MainTimer_Start(hwnd, 66);  /* 15 FPS for smooth animation */
     }
     
     /* Ensure window visible and consistent with topmost policy */
@@ -169,7 +170,7 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
             CLOCK_IS_PAUSED = TRUE;
             CLOCK_TOTAL_TIME = 0;
             countdown_elapsed_time = 0;
-            KillTimer(hwnd, 1);
+            MainTimer_Stop();
             InvalidateRect(hwnd, NULL, TRUE);
         }
         return TRUE;
@@ -185,7 +186,7 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     
     /* Check for <catime> tag */
     if (!PluginData_HasCatimeTag()) {
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         CLOCK_SHOW_CURRENT_TIME = FALSE;
         CLOCK_COUNT_UP = FALSE;
         CLOCK_IS_PAUSED = FALSE;
@@ -195,7 +196,7 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-        SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
+        MainTimer_Start(hwnd, 66);  /* 15 FPS for smooth animation */
     }
     
     EnsureWindowVisibleWithTopmostState(hwnd);
@@ -232,7 +233,7 @@ void HandlePluginExit(HWND hwnd) {
     CLOCK_IS_PAUSED = TRUE;
     CLOCK_TOTAL_TIME = 0;
     countdown_elapsed_time = 0;
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     InvalidateRect(hwnd, NULL, TRUE);
     
     LOG_INFO("Plugin exit completed via <exit> tag");

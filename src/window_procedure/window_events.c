@@ -104,7 +104,6 @@ void HandleWindowDestroy(HWND hwnd) {
     extern void MainTimer_Cleanup(void);
     MainTimer_Cleanup();
     
-    KillTimer(hwnd, TIMER_ID_MAIN);
     KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
     extern UINT GetClickThroughTimerId(void);
     KillTimer(hwnd, GetClickThroughTimerId());

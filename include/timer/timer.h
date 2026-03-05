@@ -155,4 +155,14 @@ void TogglePauseTimer(void);
  */
 BOOL InitializeHighPrecisionTimer(void);
 
+/**
+ * @brief Record timer baseline when system is about to suspend
+ */
+void Timer_OnSystemSuspend(void);
+
+/**
+ * @brief Reconcile timer baseline after system resume
+ */
+void Timer_OnSystemResume(void);
+
 #endif /* TIMER_H */

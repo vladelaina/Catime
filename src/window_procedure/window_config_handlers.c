@@ -11,6 +11,7 @@
 #include "window_procedure/window_hotkeys.h"
 #include "config.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "window.h"
 #include "color/color.h"
 #include "color/color_parser.h"
@@ -183,7 +184,7 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
     BOOL newShowMs = ReadConfigBool(CFG_SECTION_TIMER, CFG_KEY_SHOW_MILLISECONDS, FALSE);
     if (newShowMs != g_AppConfig.display.time_format.show_milliseconds) {
         g_AppConfig.display.time_format.show_milliseconds = newShowMs;
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
         changed = TRUE;
     }

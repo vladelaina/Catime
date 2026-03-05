@@ -20,6 +20,19 @@
 BOOL MainTimer_Init(HWND hwnd, UINT intervalMs);
 
 /**
+ * @brief Start (or resume) main timer ticks with desired interval
+ * @param hwnd Main window handle
+ * @param intervalMs Timer interval in milliseconds
+ * @return TRUE if successful
+ */
+BOOL MainTimer_Start(HWND hwnd, UINT intervalMs);
+
+/**
+ * @brief Stop main timer ticks (both multimedia timer and SetTimer fallback)
+ */
+void MainTimer_Stop(void);
+
+/**
  * @brief Update timer interval (e.g., when switching to/from milliseconds mode)
  * @param intervalMs New interval in milliseconds
  */

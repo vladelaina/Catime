@@ -21,33 +21,7 @@ TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
     SYSTEMTIME st;
     GetLocalTime(&st);
     
-    /* Forward declare for smooth display */
-    extern BOOL CLOCK_IS_PAUSED;
-    static int64_t s_current_time_last_second = -1;
-    static int s_current_time_frame_count = 0;
-    
-    int64_t current_second = st.wHour * 3600 + st.wMinute * 60 + st.wSecond;
-    int real_centis = st.wMilliseconds / 10;
-    int centiseconds;
-    
-    /* Don't smooth if paused or if in special states */
-    if (CLOCK_IS_PAUSED) {
-        centiseconds = real_centis;
-    } else {
-        /* Resync on second boundary */
-        if (current_second != s_current_time_last_second) {
-            s_current_time_last_second = current_second;
-            s_current_time_frame_count = 0;
-        }
-        
-        /* Smooth display for first 45 frames */
-        if (s_current_time_frame_count < 45) {
-            centiseconds = (s_current_time_frame_count * 2) % 100;
-            s_current_time_frame_count++;
-        } else {
-            centiseconds = real_centis;
-        }
-    }
+    int centiseconds = st.wMilliseconds / 10;
     
     TimeComponents tc;
     tc.hours = st.wHour;
@@ -67,66 +41,12 @@ TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
 }
 
 /**
- * Smooth centiseconds display system
- * 
- * Problem: Real-time sampling causes visual "stuttering" because render timing is uneven.
- * Solution: During active timing, display smoothly incrementing centiseconds.
- *           When paused/stopped, switch to real time for accuracy.
- * 
- * The display increments by 2 centiseconds per 20ms frame for visual smoothness.
- * Final time (on pause/stop) shows the accurate real value.
+ * Centiseconds display uses real sampled values to prioritize accuracy.
  */
-static int s_smooth_frame_count = 0;        /* Logical frame counter */
-static int64_t s_last_real_seconds = -1;    /* Track second boundaries */
-static BOOL s_smooth_active = FALSE;        /* Whether smooth mode is active */
-
-/* Get smoothed centiseconds value (0-99)
- * isCountdown: TRUE for countdown (decreasing), FALSE for count-up (increasing)
- */
+/* Get centiseconds value (0-99) from real elapsed/remaining milliseconds */
 static int GetSmoothedCentiseconds(int64_t elapsed_ms, BOOL isCountdown) {
-    extern BOOL CLOCK_IS_PAUSED;
-    
-    /* When paused, always show real time for accuracy */
-    if (CLOCK_IS_PAUSED) {
-        s_smooth_active = FALSE;
-        return (int)((elapsed_ms % 1000) / 10);
-    }
-    
-    /* Get real centiseconds for boundary handling */
-    int real_centis = (int)((elapsed_ms % 1000) / 10);
-    
-    /* Calculate real seconds */
-    int64_t real_seconds = elapsed_ms / 1000;
-    
-    /* On second boundary change, resync smooth display */
-    if (real_seconds != s_last_real_seconds) {
-        s_last_real_seconds = real_seconds;
-        s_smooth_frame_count = 0;
-        s_smooth_active = TRUE;
-    }
-    
-    if (!s_smooth_active) {
-        return real_centis;
-    }
-    
-    /* Each frame advances by 2 centiseconds (20ms interval) */
-    int smooth_centis;
-    if (isCountdown) {
-        /* Countdown: 99 → 97 → 95 → ... → 01 (decreasing) */
-        smooth_centis = 99 - ((s_smooth_frame_count * 2) % 100);
-    } else {
-        /* Count-up: 00 → 02 → 04 → ... → 98 (increasing) */
-        smooth_centis = (s_smooth_frame_count * 2) % 100;
-    }
-    s_smooth_frame_count++;
-    
-    /* After 45 frames (~900ms), blend towards real time to ensure smooth transition */
-    if (s_smooth_frame_count >= 45) {
-        /* Use real value for last portion of second to sync naturally */
-        return real_centis;
-    }
-    
-    return smooth_centis;
+    (void)isCountdown;
+    return (int)((elapsed_ms % 1000) / 10);
 }
 
 TimeComponents GetCountUpComponents(void) {
@@ -142,8 +62,8 @@ TimeComponents GetCountUpComponents(void) {
     
     int total_seconds = (int)(elapsed_ms / 1000);
     
-    /* Use smoothed centiseconds for visual fluidity, real value when paused */
-    int centis = GetSmoothedCentiseconds(elapsed_ms, FALSE);  /* FALSE = count-up, increasing */
+    /* Use real centiseconds sampled from elapsed milliseconds */
+    int centis = GetSmoothedCentiseconds(elapsed_ms, FALSE);
     
     TimeComponents tc;
     tc.hours = total_seconds / 3600;
@@ -164,12 +84,17 @@ TimeComponents GetCountDownComponents(void) {
     int64_t remaining_ms = g_target_end_time - now;
     if (remaining_ms < 0) remaining_ms = 0;
     
-    /* Round up seconds display so user sees full set value (e.g. 10:00 not 9:59)
-     * This only affects display - actual timer end time remains precise */
-    int total_seconds = (int)((remaining_ms + 999) / 1000);
+    /* With centiseconds shown, use real second value to avoid +1s display skew.
+     * Without centiseconds, keep round-up behavior for UX (e.g. 10:00 not 9:59). */
+    int total_seconds;
+    if (g_AppConfig.display.time_format.show_milliseconds) {
+        total_seconds = (int)(remaining_ms / 1000);
+    } else {
+        total_seconds = (int)((remaining_ms + 999) / 1000);
+    }
     
-    /* Use smoothed centiseconds for visual fluidity, real value when paused */
-    int centis = GetSmoothedCentiseconds(remaining_ms, TRUE);  /* TRUE = countdown, decreasing */
+    /* Use real centiseconds sampled from remaining milliseconds */
+    int centis = GetSmoothedCentiseconds(remaining_ms, TRUE);
     
     TimeComponents tc;
     tc.hours = total_seconds / 3600;

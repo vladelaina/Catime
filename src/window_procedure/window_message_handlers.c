@@ -9,6 +9,7 @@
 #include "window_procedure/window_events.h"
 #include "window_procedure/window_menus.h"
 #include "timer/timer_events.h"
+#include "timer/main_timer.h"
 #include "tray/tray_events.h"
 #include "tray/tray_animation_core.h"
 #include "drag_scale.h"
@@ -605,7 +606,7 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     CLOCK_IS_PAUSED = TRUE;
     
     /* Stop internal timer */
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     
     /* Reset Pomodoro if active */
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
@@ -645,7 +646,7 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
-        SetTimer(hwnd, 1, 66, NULL);  /* 15 FPS for smooth animation */
+        MainTimer_Start(hwnd, 66);  /* 15 FPS for smooth animation */
     }
     
     /* Re-apply visibility/topmost policy to recover from any z-order drift */

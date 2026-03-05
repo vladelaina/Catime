@@ -5,6 +5,7 @@
 #include "startup.h"
 #include "config.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "log.h"
 #include <windows.h>
 #include <shlobj.h>
@@ -137,28 +138,12 @@ static void CleanupComShellLink(ComShellLink* link) {
 
 /** Centralizes timer reset to avoid repetition - uses high-precision timer */
 static void RestartTimer(HWND hwnd, UINT interval) {
-    extern void MainTimer_SetInterval(UINT intervalMs);
-    extern BOOL MainTimer_IsHighPrecision(void);
-    
-    if (MainTimer_IsHighPrecision()) {
-        MainTimer_SetInterval(interval);
-    } else {
-        KillTimer(hwnd, TIMER_ID_MAIN);
-        SetTimer(hwnd, TIMER_ID_MAIN, interval, NULL);
-    }
+    MainTimer_Start(hwnd, interval);
 }
 
 static void StopTimer(HWND hwnd) {
-    extern void MainTimer_Cleanup(void);
-    extern BOOL MainTimer_IsHighPrecision(void);
-    
-    if (MainTimer_IsHighPrecision()) {
-        /* Don't cleanup entirely, just set very long interval */
-        extern void MainTimer_SetInterval(UINT intervalMs);
-        MainTimer_SetInterval(60000);  /* 1 minute */
-    } else {
-        KillTimer(hwnd, TIMER_ID_MAIN);
-    }
+    (void)hwnd;
+    MainTimer_Stop();
 }
 
 static BOOL ReadStartupModeConfig(char* modeName, size_t modeNameSize) {

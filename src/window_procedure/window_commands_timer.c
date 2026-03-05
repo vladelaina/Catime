@@ -12,6 +12,7 @@
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_common.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "timer/timer_events.h"
 #include "config.h"
 #include "window.h"
@@ -63,7 +64,7 @@ LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (!CLOCK_COUNT_UP) {
         TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
     } else {
         TogglePauseResumeTimer(hwnd);
@@ -85,7 +86,7 @@ LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     CleanupBeforeTimerAction();
     if (CLOCK_COUNT_UP) CLOCK_COUNT_UP = FALSE;
     ResetTimer();
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     HandleWindowReset(hwnd);
@@ -207,7 +208,7 @@ LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.work_time ||
         CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.short_break ||
         CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.long_break) {
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
     }
     

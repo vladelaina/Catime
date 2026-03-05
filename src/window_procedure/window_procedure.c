@@ -12,6 +12,7 @@
 #include "tray/tray_events.h"
 #include "config.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
@@ -47,12 +48,19 @@ static LRESULT HandlePowerBroadcast(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     static volatile LONG s_handling = 0;
 
+    if (wp == PBT_APMSUSPEND) {
+        Timer_OnSystemSuspend();
+        return TRUE;
+    }
+
     /* Handle system resume from sleep/hibernate */
-    if (wp == PBT_APMRESUMEAUTOMATIC || wp == PBT_APMRESUMESUSPEND) {
+    if (wp == PBT_APMRESUMEAUTOMATIC || wp == PBT_APMRESUMESUSPEND || wp == PBT_APMRESUMECRITICAL) {
         /* Prevent re-entry if called multiple times in quick succession */
         if (InterlockedCompareExchange(&s_handling, 1, 0) != 0) {
             return TRUE;
         }
+
+        Timer_OnSystemResume();
 
         LOG_INFO("System resumed from sleep/hibernate, reinitializing tray icon animation");
 
@@ -256,7 +264,7 @@ void ToggleShowTimeMode(HWND hwnd) {
         TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
         
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
     } else {
         /* Turn off: switch to idle state (no display, no timer) */
@@ -271,7 +279,7 @@ void ToggleShowTimeMode(HWND hwnd) {
         extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
         
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         InvalidateRect(hwnd, NULL, TRUE);
     }
 }
@@ -290,7 +298,7 @@ void StartCountUp(HWND hwnd) {
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
     
     // Ensure timer is running
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
 }
 
@@ -312,7 +320,7 @@ void StartDefaultCountDown(HWND hwnd) {
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
         
         // Ensure timer is running
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
     } else {
         /* Don't change timer state - just open dialog */
@@ -335,7 +343,7 @@ void StartPomodoroTimer(HWND hwnd) {
     /* Reset timer to set g_target_end_time for countdown display */
     ResetTimer();
 
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
 }
@@ -382,7 +390,7 @@ void RestartCurrentTimer(HWND hwnd) {
         ResetTimer();
         
         // Restart the timer after resetting pause state
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
         
         InvalidateRect(hwnd, NULL, TRUE);
@@ -436,7 +444,7 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     BOOL result = SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
     
     // Ensure timer is running
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
     
     return result;

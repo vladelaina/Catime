@@ -5,6 +5,7 @@
 
 #include "tray/tray_animation_timer.h"
 #include <mmsystem.h>
+#include "../../resource/resource.h"
 
 #pragma comment(lib, "winmm.lib")
 
@@ -19,6 +20,7 @@ static AnimationTimerCallback g_callback = NULL;
 static void* g_userData = NULL;
 static HWND g_timerHwnd = NULL;
 static UINT g_internalInterval = 10;
+static UINT g_timerResolutionMs = 0;
 
 /**
  * @brief Initialize frame rate controller
@@ -154,11 +156,14 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
             g_useHighPrecisionTimer = FALSE;
             
             /* Fallback to SetTimer */
-            if (SetTimer(hwnd, 1, g_internalInterval, FallbackTimerProc) == 0) {
+            if (SetTimer(hwnd, TIMER_ID_TRAY_ANIMATION, g_internalInterval, FallbackTimerProc) == 0) {
                 return FALSE;
             }
             return TRUE;
         }
+        g_timerResolutionMs = 2;
+    } else {
+        g_timerResolutionMs = SYSTEM_TIMER_RESOLUTION_MS;
     }
     
     /* Create multimedia timer */
@@ -171,11 +176,14 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
     );
     
     if (g_mmTimerId == 0) {
-        timeEndPeriod(SYSTEM_TIMER_RESOLUTION_MS);
+        if (g_timerResolutionMs > 0) {
+            timeEndPeriod(g_timerResolutionMs);
+            g_timerResolutionMs = 0;
+        }
         g_useHighPrecisionTimer = FALSE;
         
         /* Fallback to SetTimer */
-        if (SetTimer(hwnd, 1, g_internalInterval, FallbackTimerProc) == 0) {
+        if (SetTimer(hwnd, TIMER_ID_TRAY_ANIMATION, g_internalInterval, FallbackTimerProc) == 0) {
             return FALSE;
         }
         return TRUE;
@@ -195,11 +203,15 @@ void CleanupAnimationTimer(void) {
     }
     
     if (g_timerHwnd) {
-        KillTimer(g_timerHwnd, 1);
+        KillTimer(g_timerHwnd, TIMER_ID_TRAY_ANIMATION);
     }
     
+    if (g_timerResolutionMs > 0) {
+        timeEndPeriod(g_timerResolutionMs);
+        g_timerResolutionMs = 0;
+    }
+
     if (g_useHighPrecisionTimer) {
-        timeEndPeriod(SYSTEM_TIMER_RESOLUTION_MS);
         g_useHighPrecisionTimer = FALSE;
     }
     

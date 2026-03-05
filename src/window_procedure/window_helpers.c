@@ -8,6 +8,7 @@
 #include "config.h"
 #include "font.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "timer/timer_events.h"
 #include "window.h"
 #include "pomodoro.h"
@@ -55,7 +56,7 @@ BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
     }
     
     if (params->resetInterval && (wasShowingTime || mode == TIMER_MODE_SHOW_TIME)) {
-        KillTimer(hwnd, 1);
+        MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
     }
     

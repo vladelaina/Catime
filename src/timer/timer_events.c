@@ -10,6 +10,7 @@
 
 #include "timer/timer_events.h"
 #include "timer/timer.h"
+#include "timer/main_timer.h"
 #include "language.h"
 #include "notification.h"
 #include "pomodoro.h"
@@ -94,7 +95,7 @@ static BOOL ExecuteSystemAction(HWND hwnd, TimeoutActionType action) {
     for (size_t i = 0; i < sizeof(SYSTEM_ACTIONS) / sizeof(SYSTEM_ACTIONS[0]); i++) {
         if (SYSTEM_ACTIONS[i].action == action) {
             ResetTimerState(0);
-            KillTimer(hwnd, TIMER_ID_MAIN);
+            MainTimer_Stop();
             ForceWindowRedraw(hwnd);
             
             int result = system(SYSTEM_ACTIONS[i].command);
@@ -242,8 +243,8 @@ static void HandleTimeoutActions(HWND hwnd) {
             CLOCK_TOTAL_TIME = 0;
             countdown_elapsed_time = 0;
             ResetMillisecondAccumulator();
-            KillTimer(hwnd, TIMER_ID_MAIN);
-            SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
+            MainTimer_Stop();
+            MainTimer_Start(hwnd, GetTimerInterval());
             InvalidateRect(hwnd, NULL, TRUE);
             break;
 
@@ -258,8 +259,8 @@ static void HandleTimeoutActions(HWND hwnd) {
             countdown_message_shown = FALSE;
             CLOCK_IS_PAUSED = FALSE;
             ResetMillisecondAccumulator();
-            KillTimer(hwnd, TIMER_ID_MAIN);
-            SetTimer(hwnd, TIMER_ID_MAIN, GetTimerInterval(), NULL);
+            MainTimer_Stop();
+            MainTimer_Start(hwnd, GetTimerInterval());
             InvalidateRect(hwnd, NULL, TRUE);
             break;
 
@@ -347,7 +348,7 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         CLOCK_SHOW_CURRENT_TIME = FALSE;
         message_shown = TRUE;
         InvalidateRect(hwnd, NULL, TRUE);
-        KillTimer(hwnd, TIMER_ID_MAIN);
+        MainTimer_Stop();
         return FALSE;
     }
 

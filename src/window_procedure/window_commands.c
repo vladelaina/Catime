@@ -8,6 +8,7 @@
 #include "window_procedure/window_helpers.h"
 #include "window_procedure/window_hotkeys.h"
 #include "timer/timer_events.h"
+#include "timer/main_timer.h"
 #include "tray/tray_events.h"
 #include "window_procedure/window_events.h"
 #include "drag_scale.h"
@@ -394,7 +395,7 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     
     /* Step 1: Clean up active state */
     CleanupBeforeTimerAction();
-    KillTimer(hwnd, 1);
+    MainTimer_Stop();
     UnregisterGlobalHotkeys(hwnd);
     LOG_INFO("Reset: Active state cleaned (notifications, timers, hotkeys stopped)");
     

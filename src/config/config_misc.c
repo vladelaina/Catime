@@ -378,18 +378,12 @@ UINT GetTimerInterval(void) {
  * Uses high-precision multimedia timer for smooth milliseconds display
  */
 void ResetTimerWithInterval(HWND hwnd) {
-    extern void MainTimer_SetInterval(UINT intervalMs);
-    extern BOOL MainTimer_IsHighPrecision(void);
+    extern BOOL MainTimer_Start(HWND hwnd, UINT intervalMs);
     
     UINT interval = GetTimerInterval();
     
-    /* Use multimedia timer for high precision, fallback to SetTimer */
-    if (MainTimer_IsHighPrecision()) {
-        MainTimer_SetInterval(interval);
-    } else {
-        KillTimer(hwnd, 1);
-        SetTimer(hwnd, 1, interval, NULL);
-    }
+    /* Unified main timer start path keeps SetTimer/mmTimer behavior consistent */
+    MainTimer_Start(hwnd, interval);
     
     extern void ResetTimerMilliseconds(void);
     ResetTimerMilliseconds();
@@ -535,6 +529,5 @@ TimeoutActionType TimeoutActionType_FromStr(const char* str) {
 const char* TimeoutActionType_ToStr(TimeoutActionType val) {
     return EnumToString(TIMEOUT_ACTION_MAP, val, "MESSAGE");
 }
-
 
 
