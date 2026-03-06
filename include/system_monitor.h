@@ -4,7 +4,7 @@
  * 
  * Configurable refresh intervals balance accuracy vs overhead (500ms for real-time,
  * 2-5s for background). Atomic initialization ensures thread safety.
- * Network counter overflow handled for long-running sessions (32-bit wraparound).
+ * Network speed uses per-interface delta tracking with 32-bit counter wrap handling.
  */
 
 #ifndef SYSTEM_MONITOR_H
@@ -84,13 +84,14 @@ BOOL SystemMonitor_GetMemoryUsage(float* outPercent);
 BOOL SystemMonitor_GetUsage(float* outCpuPercent, float* outMemPercent);
 
 /**
- * @brief Get network speed (all interfaces, excludes loopback)
+ * @brief Get network speed (active interfaces, excludes loopback)
  * @param outUpBytesPerSec Upload speed output (bytes/sec)
  * @param outDownBytesPerSec Download speed output (bytes/sec)
  * @return TRUE on success
  * 
  * @details
- * Calculates speed from counter delta. Handles 32-bit overflow.
+ * Calculates speed from interface byte-counter delta.
+ * Tracks each interface separately to improve multi-adapter accuracy.
  * First call establishes baseline (returns 0.0).
  * 
  * @note Auto-initializes if needed
@@ -108,5 +109,3 @@ BOOL SystemMonitor_GetNetSpeed(float* outUpBytesPerSec, float* outDownBytesPerSe
 BOOL SystemMonitor_GetBatteryPercent(int* outPercent);
 
 #endif
-
-

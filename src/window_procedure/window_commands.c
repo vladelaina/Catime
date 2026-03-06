@@ -58,9 +58,10 @@ extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
  * ============================================================================ */
 
 static LRESULT CmdExit(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp; (void)hwnd;
-    RemoveTrayIcon();
-    PostQuitMessage(0);
+    (void)wp;
+    (void)lp;
+    /* Route all exits through WM_DESTROY cleanup path to keep shutdown ordering consistent. */
+    DestroyWindow(hwnd);
     return 0;
 }
 

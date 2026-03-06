@@ -109,11 +109,11 @@ void HandleWindowDestroy(HWND hwnd) {
     KillTimer(hwnd, GetClickThroughTimerId());
     LOG_INFO("Timers stopped");
     
-    RemoveTrayIcon();
-    LOG_INFO("Tray icon removed");
-    
     StopTrayAnimation(hwnd);
     LOG_INFO("Tray animation stopped");
+
+    RemoveTrayIcon();
+    LOG_INFO("Tray icon removed");
     
     if (!UnloadCurrentFontResource()) {
         LOG_WARNING("Failed to unload font resources");

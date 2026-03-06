@@ -7,6 +7,7 @@
 #include <psapi.h>
 #include <iphlpapi.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "system_monitor.h"
 
@@ -14,6 +15,8 @@
 #define DEFAULT_UPDATE_INTERVAL_MS 1000
 #define IF_TYPE_SOFTWARE_LOOPBACK 24
 #define COUNTER_MAX_32BIT 0x100000000ULL
+#define MAX_REASONABLE_RATE_BPS 100000000000.0 /* 100 GB/s guardrail for reset/wrap anomalies */
+#define MAX_TRACKED_INTERFACES 256
 
 typedef struct {
     FILETIME lastIdle;
@@ -23,12 +26,19 @@ typedef struct {
 } CpuTimesState;
 
 typedef struct {
+    DWORD index;
+    ULONGLONG inOctets;
+    ULONGLONG outOctets;
+} NetInterfaceCounter;
+
+typedef struct {
     BOOL hasBaseline;
-    ULONGLONG lastInOctets;
-    ULONGLONG lastOutOctets;
-    DWORD lastTick;
+    ULONGLONG lastTick;
+    NetInterfaceCounter lastCounters[MAX_TRACKED_INTERFACES];
+    DWORD lastCounterCount;
     float cachedUpBps;
     float cachedDownBps;
+    BOOL sampleAvailable;
 } NetworkState;
 
 /** Consolidates 13 globals into 1 structure */
@@ -42,11 +52,18 @@ typedef struct {
     } memory;
     NetworkState network;
     DWORD updateIntervalMs;
-    DWORD lastUpdateTick;
+    ULONGLONG lastUpdateTick;
 } SystemMonitorState;
 
 static volatile LONG g_initialized = 0;
 static SystemMonitorState g_state = {0};
+static SRWLOCK g_stateLock = SRWLOCK_INIT;
+
+typedef enum {
+    CPU_SAMPLE_ERROR = 0,
+    CPU_SAMPLE_BASELINE_ONLY,
+    CPU_SAMPLE_OK
+} CpuSampleResult;
 
 static inline ULONGLONG FileTimeToUll(const FILETIME* ft) {
     ULARGE_INTEGER u;
@@ -62,25 +79,29 @@ static inline float ClampPercent(double value) {
 }
 
 /** Network counters are 32-bit and wrap around */
-static inline ULONGLONG CalculateDelta64(ULONGLONG current, ULONGLONG previous) {
+static inline ULONGLONG CalculateDelta32(ULONGLONG current, ULONGLONG previous) {
     return (current >= previous) 
         ? (current - previous)
         : (COUNTER_MAX_32BIT - previous + current);
 }
 
+static inline ULONGLONG GetMonotonicTickMs(void) {
+    return GetTickCount64();
+}
+
 static inline BOOL ShouldRefresh(void) {
-    DWORD now = GetTickCount();
+    ULONGLONG now = GetMonotonicTickMs();
     return (g_state.lastUpdateTick == 0) || 
            ((now - g_state.lastUpdateTick) >= g_state.updateIntervalMs);
 }
 
 /** First call establishes baseline, second+ return deltas */
-static BOOL SampleCpuUsage(float* outPercent) {
-    if (!outPercent) return FALSE;
+static CpuSampleResult SampleCpuUsage(float* outPercent) {
+    if (!outPercent) return CPU_SAMPLE_ERROR;
 
     FILETIME idle, kernel, user;
     if (!GetSystemTimes(&idle, &kernel, &user)) {
-        return FALSE;
+        return CPU_SAMPLE_ERROR;
     }
 
     if (!g_state.cpu.timesState.hasBaseline) {
@@ -89,7 +110,7 @@ static BOOL SampleCpuUsage(float* outPercent) {
         g_state.cpu.timesState.lastUser = user;
         g_state.cpu.timesState.hasBaseline = TRUE;
         *outPercent = 0.0f;
-        return FALSE;
+        return CPU_SAMPLE_BASELINE_ONLY;
     }
 
     ULONGLONG idleNow = FileTimeToUll(&idle);
@@ -107,7 +128,7 @@ static BOOL SampleCpuUsage(float* outPercent) {
 
     if (totalDelta == 0) {
         *outPercent = 0.0f;
-        return TRUE;
+        return CPU_SAMPLE_OK;
     }
 
     ULONGLONG busyDelta = totalDelta - idleDelta;
@@ -118,7 +139,7 @@ static BOOL SampleCpuUsage(float* outPercent) {
     g_state.cpu.timesState.lastKernel = kernel;
     g_state.cpu.timesState.lastUser = user;
     
-    return TRUE;
+    return CPU_SAMPLE_OK;
 }
 
 static BOOL SampleMemoryUsage(float* outPercent) {
@@ -136,59 +157,120 @@ static BOOL SampleMemoryUsage(float* outPercent) {
     return TRUE;
 }
 
-/** Aggregates all non-loopback interfaces */
-static void SampleNetworkSpeed(void) {
+/** Collect active non-loopback interface counters (32-bit counters) */
+static BOOL CollectNetworkCounters32(NetInterfaceCounter* outCounters, DWORD* outCount) {
+    if (!outCounters || !outCount) return FALSE;
+    *outCount = 0;
+
     DWORD size = 0;
     DWORD ret = GetIfTable(NULL, &size, TRUE);
     if (ret != ERROR_INSUFFICIENT_BUFFER) {
-        return;
+        return FALSE;
     }
     
     MIB_IFTABLE* pTable = (MIB_IFTABLE*)malloc(size);
-    if (!pTable) return;
+    if (!pTable) return FALSE;
     
     ret = GetIfTable(pTable, &size, TRUE);
     if (ret != NO_ERROR) {
-        goto cleanup;
+        free(pTable);
+        return FALSE;
     }
 
-    ULONGLONG inSum = 0;
-    ULONGLONG outSum = 0;
+    DWORD count = 0;
     for (DWORD i = 0; i < pTable->dwNumEntries; ++i) {
         const MIB_IFROW* row = &pTable->table[i];
         if (row->dwType == IF_TYPE_SOFTWARE_LOOPBACK) continue;
-        inSum += (ULONGLONG)row->dwInOctets;
-        outSum += (ULONGLONG)row->dwOutOctets;
+#ifdef IF_OPER_STATUS_OPERATIONAL
+        if (row->dwOperStatus != IF_OPER_STATUS_OPERATIONAL) continue;
+#endif
+
+        if (count < MAX_TRACKED_INTERFACES) {
+            outCounters[count].index = row->dwIndex;
+            outCounters[count].inOctets = (ULONGLONG)row->dwInOctets;
+            outCounters[count].outOctets = (ULONGLONG)row->dwOutOctets;
+            ++count;
+        }
     }
 
-    DWORD now = GetTickCount();
-    
+    free(pTable);
+    *outCount = count;
+    return TRUE;
+}
+
+static const NetInterfaceCounter* FindCounterByIndex(const NetInterfaceCounter* counters, DWORD count, DWORD index) {
+    for (DWORD i = 0; i < count; ++i) {
+        if (counters[i].index == index) {
+            return &counters[i];
+        }
+    }
+    return NULL;
+}
+
+static void SetNetworkBaseline(const NetInterfaceCounter* counters, DWORD count, ULONGLONG now) {
+    DWORD clipped = (count > MAX_TRACKED_INTERFACES) ? MAX_TRACKED_INTERFACES : count;
+    g_state.network.lastCounterCount = clipped;
+    if (clipped > 0) {
+        memcpy(g_state.network.lastCounters, counters, sizeof(NetInterfaceCounter) * clipped);
+    }
+    g_state.network.lastTick = now;
+    g_state.network.hasBaseline = TRUE;
+    g_state.network.sampleAvailable = TRUE;
+}
+
+/** Aggregates active interfaces and computes B/s from per-interface deltas */
+static void SampleNetworkSpeed(void) {
+    NetInterfaceCounter currentCounters[MAX_TRACKED_INTERFACES];
+    DWORD currentCount = 0;
+    if (!CollectNetworkCounters32(currentCounters, &currentCount)) {
+        g_state.network.sampleAvailable = FALSE;
+        g_state.network.cachedDownBps = 0.0f;
+        g_state.network.cachedUpBps = 0.0f;
+        return;
+    }
+
+    ULONGLONG now = GetMonotonicTickMs();
+
     if (!g_state.network.hasBaseline) {
-        g_state.network.lastInOctets = inSum;
-        g_state.network.lastOutOctets = outSum;
-        g_state.network.lastTick = now;
-        g_state.network.hasBaseline = TRUE;
-        goto cleanup;
+        SetNetworkBaseline(currentCounters, currentCount, now);
+        g_state.network.cachedDownBps = 0.0f;
+        g_state.network.cachedUpBps = 0.0f;
+        return;
     }
 
-    DWORD elapsedMs = (now >= g_state.network.lastTick) ? 
-                      (now - g_state.network.lastTick) : 0;
+    ULONGLONG elapsedMs = (now >= g_state.network.lastTick) ?
+                          (now - g_state.network.lastTick) : 0;
     
     if (elapsedMs > 0) {
-        ULONGLONG din = CalculateDelta64(inSum, g_state.network.lastInOctets);
-        ULONGLONG dout = CalculateDelta64(outSum, g_state.network.lastOutOctets);
+        ULONGLONG totalInDelta = 0;
+        ULONGLONG totalOutDelta = 0;
+
+        for (DWORD i = 0; i < currentCount; ++i) {
+            const NetInterfaceCounter* cur = &currentCounters[i];
+            const NetInterfaceCounter* prev = FindCounterByIndex(g_state.network.lastCounters, g_state.network.lastCounterCount, cur->index);
+            if (!prev) {
+                /* New interface: establish baseline for this adapter first. */
+                continue;
+            }
+            totalInDelta += CalculateDelta32(cur->inOctets, prev->inOctets);
+            totalOutDelta += CalculateDelta32(cur->outOctets, prev->outOctets);
+        }
         
         double seconds = (double)elapsedMs / 1000.0;
-        g_state.network.cachedDownBps = (float)((double)din / seconds);
-        g_state.network.cachedUpBps = (float)((double)dout / seconds);
+        double downBps = (double)totalInDelta / seconds;
+        double upBps = (double)totalOutDelta / seconds;
+
+        /* Guard against reset/wrap artifacts from legacy counters. */
+        if (downBps <= MAX_REASONABLE_RATE_BPS && upBps <= MAX_REASONABLE_RATE_BPS) {
+            g_state.network.cachedDownBps = (float)downBps;
+            g_state.network.cachedUpBps = (float)upBps;
+        } else {
+            g_state.network.cachedDownBps = 0.0f;
+            g_state.network.cachedUpBps = 0.0f;
+        }
     }
 
-    g_state.network.lastInOctets = inSum;
-    g_state.network.lastOutOctets = outSum;
-    g_state.network.lastTick = now;
-
-cleanup:
-    free(pTable);
+    SetNetworkBaseline(currentCounters, currentCount, now);
 }
 
 /** Centralized refresh called by all getters */
@@ -198,7 +280,8 @@ static void RefreshCacheIfNeeded(void) {
     }
 
     float cpuTmp = 0.0f;
-    if (SampleCpuUsage(&cpuTmp)) {
+    CpuSampleResult cpuStatus = SampleCpuUsage(&cpuTmp);
+    if (cpuStatus == CPU_SAMPLE_OK) {
         g_state.cpu.cachedPercent = cpuTmp;
     }
 
@@ -208,67 +291,153 @@ static void RefreshCacheIfNeeded(void) {
     }
 
     SampleNetworkSpeed();
-    g_state.lastUpdateTick = GetTickCount();
+    /* Baseline creation requires an immediate follow-up sample to avoid startup 0%. */
+    if (cpuStatus == CPU_SAMPLE_BASELINE_ONLY) {
+        g_state.lastUpdateTick = 0;
+    } else {
+        g_state.lastUpdateTick = GetMonotonicTickMs();
+    }
 }
 
-/** Eliminates validation boilerplate in all getters */
-#define VALIDATE_AND_REFRESH(param) \
-    do { \
-        if (!(param)) return FALSE; \
-        if (g_initialized == 0) SystemMonitor_Init(); \
-        RefreshCacheIfNeeded(); \
-    } while(0)
+static inline LONG IsMonitorInitialized(void) {
+    return InterlockedCompareExchange(&g_initialized, 0, 0);
+}
 
 void SystemMonitor_Init(void) {
     if (InterlockedCompareExchange(&g_initialized, 1, 0) != 0) {
         return;
     }
 
+    AcquireSRWLockExclusive(&g_stateLock);
     ZeroMemory(&g_state, sizeof(g_state));
     g_state.updateIntervalMs = DEFAULT_UPDATE_INTERVAL_MS;
+    /*
+     * Prime CPU baseline during init so the next caller can obtain a
+     * delta sample instead of always seeing startup 0%.
+     */
+    {
+        FILETIME idle, kernel, user;
+        if (GetSystemTimes(&idle, &kernel, &user)) {
+            g_state.cpu.timesState.lastIdle = idle;
+            g_state.cpu.timesState.lastKernel = kernel;
+            g_state.cpu.timesState.lastUser = user;
+            g_state.cpu.timesState.hasBaseline = TRUE;
+        }
+    }
+    ReleaseSRWLockExclusive(&g_stateLock);
 }
 
 void SystemMonitor_Shutdown(void) {
+    AcquireSRWLockExclusive(&g_stateLock);
     InterlockedExchange(&g_initialized, 0);
     ZeroMemory(&g_state, sizeof(g_state));
+    ReleaseSRWLockExclusive(&g_stateLock);
 }
 
 void SystemMonitor_SetUpdateIntervalMs(DWORD intervalMs) {
+    if (IsMonitorInitialized() == 0) {
+        SystemMonitor_Init();
+    }
+    AcquireSRWLockExclusive(&g_stateLock);
+    if (IsMonitorInitialized() == 0) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        return;
+    }
     g_state.updateIntervalMs = (intervalMs == 0) ? DEFAULT_UPDATE_INTERVAL_MS : intervalMs;
+    ReleaseSRWLockExclusive(&g_stateLock);
 }
 
 void SystemMonitor_ForceRefresh(void) {
+    if (IsMonitorInitialized() == 0) {
+        SystemMonitor_Init();
+    }
+    AcquireSRWLockExclusive(&g_stateLock);
+    if (IsMonitorInitialized() == 0) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        return;
+    }
     g_state.lastUpdateTick = 0;
     RefreshCacheIfNeeded();
+    ReleaseSRWLockExclusive(&g_stateLock);
 }
 
 BOOL SystemMonitor_GetCpuUsage(float* outPercent) {
-    VALIDATE_AND_REFRESH(outPercent);
+    if (!outPercent) return FALSE;
+    *outPercent = 0.0f;
+    if (IsMonitorInitialized() == 0) {
+        SystemMonitor_Init();
+    }
+    AcquireSRWLockExclusive(&g_stateLock);
+    if (IsMonitorInitialized() == 0) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        return FALSE;
+    }
+    RefreshCacheIfNeeded();
     *outPercent = g_state.cpu.cachedPercent;
+    ReleaseSRWLockExclusive(&g_stateLock);
     return TRUE;
 }
 
 BOOL SystemMonitor_GetMemoryUsage(float* outPercent) {
-    VALIDATE_AND_REFRESH(outPercent);
+    if (!outPercent) return FALSE;
+    *outPercent = 0.0f;
+    if (IsMonitorInitialized() == 0) {
+        SystemMonitor_Init();
+    }
+    AcquireSRWLockExclusive(&g_stateLock);
+    if (IsMonitorInitialized() == 0) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        return FALSE;
+    }
+    RefreshCacheIfNeeded();
     *outPercent = g_state.memory.cachedPercent;
+    ReleaseSRWLockExclusive(&g_stateLock);
     return TRUE;
 }
 
 BOOL SystemMonitor_GetUsage(float* outCpuPercent, float* outMemPercent) {
-    VALIDATE_AND_REFRESH(outCpuPercent);
     if (!outMemPercent) return FALSE;
+    if (!outCpuPercent) return FALSE;
+    *outCpuPercent = 0.0f;
+    *outMemPercent = 0.0f;
+    if (IsMonitorInitialized() == 0) {
+        SystemMonitor_Init();
+    }
+    AcquireSRWLockExclusive(&g_stateLock);
+    if (IsMonitorInitialized() == 0) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        return FALSE;
+    }
+    RefreshCacheIfNeeded();
     
     *outCpuPercent = g_state.cpu.cachedPercent;
     *outMemPercent = g_state.memory.cachedPercent;
+    ReleaseSRWLockExclusive(&g_stateLock);
     return TRUE;
 }
 
 BOOL SystemMonitor_GetNetSpeed(float* outUpBytesPerSec, float* outDownBytesPerSec) {
-    VALIDATE_AND_REFRESH(outUpBytesPerSec);
     if (!outDownBytesPerSec) return FALSE;
+    if (!outUpBytesPerSec) return FALSE;
+    *outUpBytesPerSec = 0.0f;
+    *outDownBytesPerSec = 0.0f;
+    if (IsMonitorInitialized() == 0) {
+        SystemMonitor_Init();
+    }
+    AcquireSRWLockExclusive(&g_stateLock);
+    if (IsMonitorInitialized() == 0) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        return FALSE;
+    }
+    RefreshCacheIfNeeded();
     
+    if (!g_state.network.sampleAvailable) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        return FALSE;
+    }
     *outUpBytesPerSec = g_state.network.cachedUpBps;
     *outDownBytesPerSec = g_state.network.cachedDownBps;
+    ReleaseSRWLockExclusive(&g_stateLock);
     return TRUE;
 }
 
