@@ -7,6 +7,14 @@ const CURRENCY_STATE = {
     lastUpdated: 0
 };
 
+function getCurrentLanguage() {
+    const saved = localStorage.getItem('catime-language');
+    if (saved === 'en' || saved === 'zh') return saved;
+
+    const browserLang = (navigator.languages && navigator.languages[0]) || navigator.language || 'zh-CN';
+    return /^en\b/i.test(browserLang) ? 'en' : 'zh';
+}
+
 function initCurrency() {
     // Default to USD/English
     const cached = getCachedRateSync();
@@ -216,6 +224,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     initCoffeeParticles();
+    addSupportTranslations();
     
     initCurrency();
 
@@ -224,6 +233,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initCapsuleSparkles();
     initCapsuleConfetti();
     initCapsuleNumberObserver();
+});
+
+document.addEventListener('allComponentsLoaded', function() {
+    addSupportTranslations();
 });
 
 function initCoffeeParticles() {
@@ -293,9 +306,11 @@ function initScrollProgressIndicator() {
 }
 
 function addSupportTranslations() {
-    const currentLang = localStorage.getItem('catime-language') || 'zh';
+    const currentLang = getCurrentLanguage();
+    document.documentElement.lang = currentLang === 'en' ? 'en' : 'zh-CN';
     
     fixButtonPositions();
+    translateSharedChrome(currentLang);
     
     if (currentLang === 'en') {
         const pageTitle = document.getElementById('page-title');
@@ -331,6 +346,76 @@ function addSupportTranslations() {
         
         fixButtonVisibility();
     }
+}
+
+function translateSharedChrome(currentLang) {
+    const navLinks = document.querySelectorAll('.nav-links li a');
+    navLinks.forEach(link => {
+        const text = link.textContent.trim();
+        if (currentLang === 'zh') {
+            if (text === 'Home') link.textContent = '首页';
+            if (text === 'Guide') link.textContent = '指南';
+            if (text === 'About') link.textContent = '关于';
+            if (text === 'GitHub') link.textContent = 'GitHub';
+        } else {
+            if (text === '首页') link.textContent = 'Home';
+            if (text === '指南') link.textContent = 'Guide';
+            if (text === '关于') link.textContent = 'About';
+        }
+    });
+
+    const dropdownToggle = document.querySelector('.dropdown-toggle');
+    if (dropdownToggle) {
+        dropdownToggle.innerHTML = currentLang === 'zh'
+            ? '工具 <i class="fas fa-chevron-down"></i>'
+            : 'Tools <i class="fas fa-chevron-down"></i>';
+    }
+
+    const fontToolLink = document.querySelector('.dropdown-menu a');
+    if (fontToolLink && fontToolLink.textContent.includes('Font Simplifier')) {
+        fontToolLink.innerHTML = currentLang === 'zh'
+            ? '<i class="fas fa-font"></i> 字体简化工具'
+            : '<i class="fas fa-font"></i> Font Simplifier';
+    }
+    if (fontToolLink && fontToolLink.textContent.includes('字体简化工具') && currentLang === 'en') {
+        fontToolLink.innerHTML = '<i class="fas fa-font"></i> Font Simplifier';
+    }
+
+    document.querySelectorAll('.nav-actions .nav-button span').forEach(span => {
+        if (currentLang === 'zh') {
+            if (span.textContent === 'Download') span.textContent = '下载';
+            if (span.textContent === 'Support') span.textContent = '支持项目';
+        } else {
+            if (span.textContent === '下载') span.textContent = 'Download';
+            if (span.textContent === '支持项目') span.textContent = 'Support';
+        }
+    });
+
+    const footer = document.querySelector('.main-footer');
+    if (!footer) return;
+
+    const footerParagraphs = footer.querySelectorAll('p');
+    if (footerParagraphs.length >= 3) {
+        if (currentLang === 'zh') {
+            footerParagraphs[0].innerHTML = '&copy; 2025-2026 Catime 项目，由 <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a> 开发';
+            footerParagraphs[1].innerHTML = '基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 协议开源';
+            footerParagraphs[2].innerHTML = '图标画师：<a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
+        } else {
+            footerParagraphs[0].innerHTML = '&copy; 2025-2026 Catime Project by <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a>';
+            footerParagraphs[1].innerHTML = 'Open sourced under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> License';
+            footerParagraphs[2].innerHTML = 'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
+        }
+    }
+
+    footer.querySelectorAll('.footer-links a').forEach(link => {
+        const href = link.getAttribute('href') || '';
+        if (href.includes('message.bilibili.com')) {
+            link.textContent = currentLang === 'zh' ? '反馈' : 'Feedback';
+        }
+        if (href.includes('PRIVACY.md')) {
+            link.textContent = currentLang === 'zh' ? '隐私政策' : 'Privacy Policy';
+        }
+    });
 }
 
 function fixButtonPositions() {
@@ -395,6 +480,21 @@ function translateSupportElements() {
             label.innerHTML = '<i class="fab fa-alipay"></i> Alipay';
         }
     });
+
+    const wechatQr = document.querySelector('.wechat-qr');
+    if (wechatQr) {
+        wechatQr.alt = 'WeChat Pay';
+    }
+
+    const alipayQr = document.querySelector('.alipay-qr');
+    if (alipayQr) {
+        alipayQr.alt = 'Alipay';
+    }
+
+    const kofiButton = document.querySelector('.kofi-official-button');
+    if (kofiButton) {
+        kofiButton.alt = 'Support me on Ko-fi';
+    }
     
     const supportCards = document.querySelectorAll('.support-card');
     supportCards.forEach(card => {
@@ -402,13 +502,13 @@ function translateSupportElements() {
         const desc = card.querySelector('p');
         const btn = card.querySelector('.support-btn');
         
-        if (title && title.textContent === 'Star 项目') {
+        if (title && (title.textContent === '点亮 Star' || title.textContent === 'Star 项目')) {
             title.textContent = 'Star Project';
             desc.textContent = 'If you like Catime, please give us a Star on GitHub. It\'s the best encouragement for us!';
             if (btn) btn.innerHTML = '<i class="fab fa-github"></i> Star Project';
         }
         
-        if (title && title.textContent === '提交Issues') {
+        if (title && (title.textContent === '提交反馈' || title.textContent === '提交Issues')) {
             title.textContent = 'Submit Issues';
             desc.textContent = 'Found a bug or have feature suggestions? Welcome to submit Issues on GitHub to help us continuously improve Catime!';
             if (btn) {
@@ -558,13 +658,16 @@ function translateSupportElements() {
         if (td.textContent === '非常好小程序') {
             td.textContent = 'Very good app';
         }
+        if (td.textContent === '我是葱葱哦，想给你加个油，祝你的软件越做越好！') {
+            td.textContent = 'I am Congcong, just wanted to cheer you on. Hope your software keeps getting better and better!';
+        }
         
         if (td.parentElement && td.cellIndex === 3) { 
             td.style.maxWidth = '250px';
             td.style.wordWrap = 'break-word';
             td.style.whiteSpace = 'normal';
             
-            if (localStorage.getItem('catime-language') === 'en') {
+            if (getCurrentLanguage() === 'en') {
                 td.style.fontSize = '0.9rem';
                 td.style.lineHeight = '1.4';
             }
