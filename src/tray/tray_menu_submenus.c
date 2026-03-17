@@ -426,7 +426,9 @@ static HBITMAP GetRedDotBitmap(void) {
 
     memset(pBits, 0, cx * cy * 4);
 
-    int dotSize = 8;
+    int dotSize = (cx < cy ? cx : cy) / 3;
+    if (dotSize < 5) dotSize = 5;
+    if (dotSize > 6) dotSize = 6;
     int centerX = cx / 2;
     int centerY = cy / 2;
     int r = dotSize / 2;
