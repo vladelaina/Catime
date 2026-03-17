@@ -185,12 +185,12 @@ void SetStartupMode(HWND hwnd, const char* mode) {
 
 /** @brief Open user guide in browser */
 void OpenUserGuide(void) {
-    OpenUrlInBrowser(L"https://vladelaina.github.io/Catime/guide");
+    OpenUrlInBrowser(L"https://cati.me/guide");
 }
 
 /** @brief Open support page in browser */
 void OpenSupportPage(void) {
-    OpenUrlInBrowser(L"https://vladelaina.github.io/Catime/support");
+    OpenUrlInBrowser(L"https://cati.me/support");
 }
 
 /**
