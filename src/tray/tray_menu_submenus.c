@@ -403,10 +403,7 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                 GetLocalizedString(NULL, L"Plugins"));
 }
 
-static HBITMAP GetRedDotBitmap(void) {
-    static HBITMAP s_hRedDot = NULL;
-    if (s_hRedDot) return s_hRedDot;
-
+static HBITMAP CreateMenuDotBitmap(DWORD color, int divisor, int minDotSize, int maxDotSize) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (cx == 0) cx = 16;
@@ -421,18 +418,17 @@ static HBITMAP GetRedDotBitmap(void) {
     bmi.bmiHeader.biCompression = BI_RGB;
 
     void* pBits = NULL;
-    s_hRedDot = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-    if (!s_hRedDot) return NULL;
+    HBITMAP hDot = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
+    if (!hDot) return NULL;
 
     memset(pBits, 0, cx * cy * 4);
 
-    int dotSize = (cx < cy ? cx : cy) / 3;
-    if (dotSize < 5) dotSize = 5;
-    if (dotSize > 6) dotSize = 6;
+    int dotSize = (cx < cy ? cx : cy) / divisor;
+    if (dotSize < minDotSize) dotSize = minDotSize;
+    if (dotSize > maxDotSize) dotSize = maxDotSize;
     int centerX = cx / 2;
     int centerY = cy / 2;
     int r = dotSize / 2;
-    DWORD color = 0xFFE51123; 
 
     DWORD* pixels = (DWORD*)pBits;
     for (int y = 0; y < cy; y++) {
@@ -445,7 +441,67 @@ static HBITMAP GetRedDotBitmap(void) {
         }
     }
 
+    return hDot;
+}
+
+static HBITMAP GetRedDotBitmap(void) {
+    static HBITMAP s_hRedDot = NULL;
+    if (!s_hRedDot) {
+        s_hRedDot = CreateMenuDotBitmap(0xFFE51123, 3, 5, 6);
+    }
     return s_hRedDot;
+}
+
+static HBITMAP GetGoldSparkBitmap(void) {
+    static HBITMAP s_hGoldSpark = NULL;
+    if (!s_hGoldSpark) {
+        int cx = GetSystemMetrics(SM_CXSMICON);
+        int cy = GetSystemMetrics(SM_CYSMICON);
+        if (cx == 0) cx = 16;
+        if (cy == 0) cy = 16;
+
+        BITMAPINFO bmi = {0};
+        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        bmi.bmiHeader.biWidth = cx;
+        bmi.bmiHeader.biHeight = cy;
+        bmi.bmiHeader.biPlanes = 1;
+        bmi.bmiHeader.biBitCount = 32;
+        bmi.bmiHeader.biCompression = BI_RGB;
+
+        void* pBits = NULL;
+        s_hGoldSpark = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
+        if (!s_hGoldSpark) return NULL;
+
+        memset(pBits, 0, cx * cy * 4);
+
+        DWORD* pixels = (DWORD*)pBits;
+        int centerX = cx / 2;
+        int centerY = cy / 2;
+
+        #define SET_SPARK_PIXEL(px, py, value) \
+            do { \
+                if ((px) >= 0 && (px) < cx && (py) >= 0 && (py) < cy) { \
+                    pixels[(py) * cx + (px)] = (value); \
+                } \
+            } while (0)
+
+        SET_SPARK_PIXEL(centerX, centerY, 0xFFF8E437);
+        SET_SPARK_PIXEL(centerX - 1, centerY, 0xFFF4DE39);
+        SET_SPARK_PIXEL(centerX + 1, centerY, 0xFFF4DE39);
+        SET_SPARK_PIXEL(centerX, centerY - 1, 0xFFF4DE39);
+        SET_SPARK_PIXEL(centerX, centerY + 1, 0xFFF4DE39);
+        SET_SPARK_PIXEL(centerX - 1, centerY - 1, 0xFFEFD639);
+        SET_SPARK_PIXEL(centerX + 1, centerY - 1, 0xFFEFD639);
+        SET_SPARK_PIXEL(centerX - 1, centerY + 1, 0xFFEFD639);
+        SET_SPARK_PIXEL(centerX + 1, centerY + 1, 0xFFEFD639);
+        SET_SPARK_PIXEL(centerX, centerY - 2, 0xFFE5C932);
+        SET_SPARK_PIXEL(centerX, centerY + 2, 0xFFE5C932);
+        SET_SPARK_PIXEL(centerX - 2, centerY, 0xFFE5C932);
+        SET_SPARK_PIXEL(centerX + 2, centerY, 0xFFE5C932);
+
+        #undef SET_SPARK_PIXEL
+    }
+    return s_hGoldSpark;
 }
 
 void BuildHelpSubmenu(HMENU hMenu) {
@@ -453,7 +509,14 @@ void BuildHelpSubmenu(HMENU hMenu) {
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(NULL, L"About"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(NULL, L"Sponsor"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(NULL, L"Support Catime"));
+    {
+        HBITMAP hDot = GetGoldSparkBitmap();
+        MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
+        mii.fMask = MIIM_BITMAP;
+        mii.hbmpItem = hDot;
+        SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_SUPPORT, FALSE, &mii);
+    }
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));
