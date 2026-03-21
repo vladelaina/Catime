@@ -452,71 +452,15 @@ static HBITMAP GetRedDotBitmap(void) {
     return s_hRedDot;
 }
 
-static HBITMAP GetGoldSparkBitmap(void) {
-    static HBITMAP s_hGoldSpark = NULL;
-    if (!s_hGoldSpark) {
-        int cx = GetSystemMetrics(SM_CXSMICON);
-        int cy = GetSystemMetrics(SM_CYSMICON);
-        if (cx == 0) cx = 16;
-        if (cy == 0) cy = 16;
-
-        BITMAPINFO bmi = {0};
-        bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-        bmi.bmiHeader.biWidth = cx;
-        bmi.bmiHeader.biHeight = cy;
-        bmi.bmiHeader.biPlanes = 1;
-        bmi.bmiHeader.biBitCount = 32;
-        bmi.bmiHeader.biCompression = BI_RGB;
-
-        void* pBits = NULL;
-        s_hGoldSpark = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-        if (!s_hGoldSpark) return NULL;
-
-        memset(pBits, 0, cx * cy * 4);
-
-        DWORD* pixels = (DWORD*)pBits;
-        int centerX = cx / 2;
-        int centerY = cy / 2;
-
-        #define SET_SPARK_PIXEL(px, py, value) \
-            do { \
-                if ((px) >= 0 && (px) < cx && (py) >= 0 && (py) < cy) { \
-                    pixels[(py) * cx + (px)] = (value); \
-                } \
-            } while (0)
-
-        SET_SPARK_PIXEL(centerX, centerY, 0xFFF8E437);
-        SET_SPARK_PIXEL(centerX - 1, centerY, 0xFFF4DE39);
-        SET_SPARK_PIXEL(centerX + 1, centerY, 0xFFF4DE39);
-        SET_SPARK_PIXEL(centerX, centerY - 1, 0xFFF4DE39);
-        SET_SPARK_PIXEL(centerX, centerY + 1, 0xFFF4DE39);
-        SET_SPARK_PIXEL(centerX - 1, centerY - 1, 0xFFEFD639);
-        SET_SPARK_PIXEL(centerX + 1, centerY - 1, 0xFFEFD639);
-        SET_SPARK_PIXEL(centerX - 1, centerY + 1, 0xFFEFD639);
-        SET_SPARK_PIXEL(centerX + 1, centerY + 1, 0xFFEFD639);
-        SET_SPARK_PIXEL(centerX, centerY - 2, 0xFFE5C932);
-        SET_SPARK_PIXEL(centerX, centerY + 2, 0xFFE5C932);
-        SET_SPARK_PIXEL(centerX - 2, centerY, 0xFFE5C932);
-        SET_SPARK_PIXEL(centerX + 2, centerY, 0xFFE5C932);
-
-        #undef SET_SPARK_PIXEL
-    }
-    return s_hGoldSpark;
-}
-
 void BuildHelpSubmenu(HMENU hMenu) {
     HMENU hAboutMenu = CreatePopupMenu();
+    wchar_t supportLabel[96];
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(NULL, L"About"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, GetLocalizedString(NULL, L"Support Catime"));
-    {
-        HBITMAP hDot = GetGoldSparkBitmap();
-        MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
-        mii.fMask = MIIM_BITMAP;
-        mii.hbmpItem = hDot;
-        SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_SUPPORT, FALSE, &mii);
-    }
+    _snwprintf_s(supportLabel, _countof(supportLabel), _TRUNCATE, L"%s OvO",
+                 GetLocalizedString(NULL, L"Support Catime"));
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, supportLabel);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));
