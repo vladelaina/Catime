@@ -428,6 +428,7 @@ Agradecimiento especial a [猫屋敷梨梨Official](https://space.bilibili.com/2
     </tr>
   </tbody>
 </table>
+
 ## 🗝️ Aviso de derechos de autor
 Este proyecto se publica bajo la licencia open-source Apache License 2.0.
 
