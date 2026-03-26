@@ -428,6 +428,7 @@ build.bat                         # Windows
     </tr>
   </tbody>
 </table>
+
 ## 🗝️ 저작권 고지
 이 프로젝트는 오픈소스 Apache License 2.0 라이선스에 따라 공개됩니다.
 
