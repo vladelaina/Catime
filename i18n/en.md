@@ -1,6 +1,6 @@
 <div align="center">
 
-# v1.4.0 Released! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
+# v1.4.0 has been released! 🎉 [Download now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`！
 </div>
 
 
@@ -16,11 +16,9 @@
 
 
 <p align="center"> 
-  An ultra-lightweight Windows countdown and Pomodoro tool written in <b>pure C</b>, featuring a clean transparent interface,<br/>
-  rich customization options, powerful shortcuts, and nearly zero system resource consumption.
+  An ultra-light Windows countdown and Pomodoro timer tool written in <b>pure C</b>, with a clean and transparent interface,<br/>
+  plenty of customization options, powerful quick actions, and it barely uses system resources.
 </p>
-
-
 
 <p align="center">
     <img src="https://count.getloli.com/@catime?name=catime&theme=booru-qualityhentais&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto" width="400">
@@ -45,25 +43,23 @@
   <video src="https://github.com/user-attachments/assets/a59a85af-c522-4081-9a84-e0d3a71be236
 " autoplay loop style="border-radius: 8px; max-width: 800px;"></video>
 </div>
-
-
 <div align="center" style="margin-bottom: 30px;">
-  👏 Welcome to join our 
-  <a href="[https://discord.com/invite/W3tW2gtp6g](https://discord.com/invite/W3tW2gtp6g)" target="_blank" style="text-decoration: none; font-weight: bold; color: #5865F2;">Discord</a> 
-  and 
-  <a href="[https://qun.qq.com/universal-share/share?ac=1&authKey=jLajcI6fmsK8MYh9Sx8s0IArOuR5k7mnn8upVJK%2BgJkeXrEop9EBsAD8tP%2BLhPDs&busi_data=eyJncm91cENvZGUiOiIxMDI3MzI3OTEyIiwidG9rZW4iOiI0UlNlc1RzV0QyUlZKNzBMK3RWczRZOUt0K0xIRHRvVVZSQnR3OFo3bUxBMFAzcG9jUjRZa2dwUGZEaCs0ZEhuIiwidWluIjoiMjM3NzY0MDY5OSJ9&data=6Ce8O75Fxrd5GoBAByGHSoQNA3cK7t4WyUWyoI9FB3LK0mmPbgtK3PlGKQrt4vQvQsrlV4QkdQ7lQKt8TDkEg&svctype=4&tempid=h5_group_info](https://qun.qq.com/universal-share/share?ac=1&authKey=jLajcI6fmsK8MYh9Sx8s0IArOuR5k7mnn8upVJK%2BgJkeXrEop9EBsAD8tP%2BLhPDs&busi_data=eyJncm91cENvZGUiOiIxMDI3MzI3OTEyIiwidG9rZW4iOiI0UlNlc1RzV0QyUlZKNzBMK3RWczRZOUt0K0xIRHRvVVZSQnR3OFo3bUxBMFAzcG9jUjRZa2dwUGZEaCs0ZEhuIiwidWluIjoiMjM3NzY0MDY5OSJ9&data=6Ce8O75Fxrd5GoBAByGHSoQNA3cK7t4WyUWyoI9FB3LK0mmPbgtK3PlGKQrt4vQvQsrlV4QkdQ7lQKt8TDkEg&svctype=4&tempid=h5_group_info)" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group (1079222265)</a>
+  👏 Welcome to our
+  <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank" style="text-decoration: none; font-weight: bold; color: #5865F2;">Discord</a>
+  and
+  <a href="https://qun.qq.com/universal-share/share?ac=1&authKey=jLajcI6fmsK8MYh9Sx8s0IArOuR5k7mnn8upVJK%2BgJkeXrEop9EBsAD8tP%2BLhPDs&busi_data=eyJncm91cENvZGUiOiIxMDI3MzI3OTEyIiwidG9rZW4iOiI0UlNlc1RzV0QyUlZKNzBMK3RWczRZOUt0K0xIRHRvVVZSQnR3OFo3bUxBMFAzcG9jUjRZa2dwUGZEaCs0ZEhuIiwidWluIjoiMjM3NzY0MDY5OSJ9&data=6Ce8O75Fxrd5GoBAByGHSoQNA3cK7t4WyUWyoI9FB3LK0mmPbgtK3PlGKQrt4vQvQsrlV4QkdQ7lQKt8TDkEg&svctype=4&tempid=h5_group_info" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group (1079222265)</a>
 </div>
 
 
-## 🎨 Powerful Tray Animations
+## 🎨 Powerful tray animations
 
-Your tray icon can now come "alive"! Catime brings powerful custom animation capabilities:
+Your tray icon can now “come to life”! Catime brings powerful custom animation capabilities:
 
-- Custom Animations: Supports using GIFs, WebP, and static images like PNG, JPG as tray icons.
-- System Status Display: Supports real-time display of CPU usage, Memory usage, Battery percentage, and Caps Lock status.
+- **Custom animations**: Supports using **GIF**, **WebP**, and static images like **PNG** and **JPG** as tray icons.
+- **System status display**: Supports real-time display of **CPU usage**, **memory usage**, **battery percentage**, and the **Caps Lock** status.
 
 <div align="center">
-  <img src="[https://github.com/user-attachments/assets/0354b85b-0f96-4978-98e8-df4c0a7ec740](https://github.com/user-attachments/assets/0354b85b-0f96-4978-98e8-df4c0a7ec740)" width="600" height="200" alt="tray_animation" />
+  <img src="https://github.com/user-attachments/assets/0354b85b-0f96-4978-98e8-df4c0a7ec740" width="600" height="200" alt="tray_animation" />
 </div>
 
 > [!TIP]
@@ -73,32 +69,32 @@ Your tray icon can now come "alive"! Catime brings powerful custom animation cap
 
 ## 💫 [Plugins](https://github.com/vladelaina/Catime-Plugins)
 
-> Plugins only need to write content into output.txt, and Catime takes care of displaying it—it's that simple.
+> Plugins only need to write the content into **output.txt**, and Catime will display it for you. That’s all.
 
-<img width="1105" height="481" alt="image" src="[https://github.com/user-attachments/assets/734037a7-997c-48dd-b93f-513d1696ac54](https://github.com/user-attachments/assets/734037a7-997c-48dd-b93f-513d1696ac54)" />
+<img width="1105" height="481" alt="image" src="https://github.com/user-attachments/assets/734037a7-997c-48dd-b93f-513d1696ac54" />
 
 
 
-<img width="1920" height="899" alt="image" src="[https://github.com/user-attachments/assets/1ca3e4a4-c6b0-4c42-ac40-152330cec07a](https://github.com/user-attachments/assets/1ca3e4a4-c6b0-4c42-ac40-152330cec07a)" />
+<img width="1920" height="899" alt="image" src="https://github.com/user-attachments/assets/1ca3e4a4-c6b0-4c42-ac40-152330cec07a" />
 
 > [!TIP]
-> Looking for more useful plugins? Check out our companion project [Catime-Plugins](https://github.com/vladelaina/Catime-Plugins)!
+> Want to find more useful plugins? Take a look at our companion project [Catime-Plugins](https://github.com/vladelaina/Catime-Plugins)!
 
 
 
+## ❤️‍🔥 Keep an eye on us
 
-## ❤️‍🔥 Follow Us
-> Give us a Star and witness the continuous evolution of this minimalist time tool built with pure C. Don't miss future updates!
-<a href="[https://github.com/vladelaina/Catime](https://github.com/vladelaina/Catime)" target="_blank">
-    <img src="[https://github.com/user-attachments/assets/50cfc9d4-3d3f-4370-b233-89d76f78977e](https://github.com/user-attachments/assets/50cfc9d4-3d3f-4370-b233-89d76f78977e)" />
+> **Give us a Star** and witness how this minimalist time tool built with pure C keeps evolving. Don’t miss future updates!
+<a href="https://github.com/vladelaina/Catime" target="_blank">
+    <img src="https://github.com/user-attachments/assets/50cfc9d4-3d3f-4370-b233-89d76f78977e" />
 </a>
 
 
 ## Sponsors
 
 <div align="center">
-  <a href="[https://www.dkdun.cn/aff/SCEYKYCH](https://www.dkdun.cn/aff/SCEYKYCH)">
-    <img width="732" height="246" alt="dk" src="[https://github.com/user-attachments/assets/6d06ac2a-ae1d-4b3f-b828-65b653f6e189](https://github.com/user-attachments/assets/6d06ac2a-ae1d-4b3f-b828-65b653f6e189)" />
+  <a href="https://www.dkdun.cn/aff/SCEYKYCH">
+    <img width="732" height="246" alt="dk" src="https://github.com/user-attachments/assets/6d06ac2a-ae1d-4b3f-b828-65b653f6e189" />
   </a>
 
   <br><br>
@@ -106,19 +102,19 @@ Your tray icon can now come "alive"! Catime brings powerful custom animation cap
   <table align="center">
     <tr>
       <td style="vertical-align: middle; padding-right: 10px;">
-        <img alt="SignPath" src="[https://signpath.org/assets/favicon-50x50.png](https://signpath.org/assets/favicon-50x50.png)" />
+        <img alt="SignPath" src="https://signpath.org/assets/favicon-50x50.png" />
       </td>
       <td style="vertical-align: middle;">
-        Free Windows code signing services are provided by
-        <a href="[https://signpath.io](https://signpath.io)">SignPath.io</a>, with certificates sponsored by the
-        <a href="[https://signpath.org/](https://signpath.org/)">SignPath Foundation</a>.
+        The free Windows code signing service is provided by
+        <a href="https://signpath.io">SignPath.io</a>, and the certificates are sponsored by
+        <a href="https://signpath.org/">SignPath Foundation</a>.
       </td>
     </tr>
   </table>
 </div>
 
 
-## 📥 Download
+## 📥 Downloads
 
 - GitHub Releases
 
@@ -130,25 +126,25 @@ Your tray icon can now come "alive"! Catime brings powerful custom animation cap
   winget install --id VladElaina.Catime
   ```
 
-## [📑 User Guide](https://cati.me/guide)
+## [📑 Usage Guide](https://cati.me/guide)
 
-- Left-click tray icon: Set Time
-- Right-click tray icon: Open Menu
-- Edit Mode: Drag to adjust position, scroll wheel to scale, 🖱️ right-click to exit edit mode
+- **Left-click the tray icon**：Set **Time**
+- **Right-click the tray icon**：Open **Menu**
+- **Edit mode**：Drag to adjust the position, mouse wheel to zoom, 🖱️ right-click to exit edit mode
 
-> Configuration file is saved at `%LOCALAPPDATA%\Catime\config.ini`
+> The configuration file is saved at `%LOCALAPPDATA%\Catime\config.ini`
 
 ## ⚡ [Font Optimization](https://vladelaina.github.io/Catime/tools/font-tool/)
 
-Using the official [Font Thinning Tool](https://vladelaina.github.io/Catime/tools/font-tool/) can reduce custom font size by over 90%.
+Use the official [Font Simplification Tool](https://vladelaina.github.io/Catime/tools/font-tool/) to shrink your custom font size by **over 90%**.
 
-> Since Catime mainly displays numbers and symbols (`0-9`, `:`, `.`), most font characters are actually unnecessary.
+> Since Catime mainly displays numbers and symbols (`0-9`、`:`、`.`), most font characters are actually not needed.
 >
-> Suggestion: Please keep the original font file as a backup. Future software updates may require more characters.
+> **Suggestion**: Please keep the original font files as a backup. Future software updates may require more characters.
 
 ## 🛠️ Development
 
-Prerequisites: Building Catime requires MinGW and CMake.
+**Prerequisites**: Building Catime requires MinGW and CMake.
 
 ## Getting Started
 
@@ -163,18 +159,18 @@ sudo apt update && sudo apt install -y mingw-w64 cmake
 # Arch Linux
 sudo pacman -Syu --noconfirm mingw-w64 cmake
 
-# Windows - See configuration instructions below
+# Windows - see configuration notes below
 ```
 
 <details>
-<summary>📋 Windows Environment Configuration Instructions</summary>
+<summary>📋 Windows Environment Setup Instructions</summary>
 
-### 📦 Essential Tools
+### 📦 Prerequisite Tools
 
-| Tool | Description | Recommended Version Format | Download Link |
+| Tool | Description | Recommended version format | Download link |
 | ---------- | ---------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| MinGW  | GCC Compiler | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
-| CMake  | Build Tool | `cmake-<version>-windows-x86_64.msi` | [CMake](https://cmake.org/download/) |
+| **MinGW**  | GCC compiler | `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` | [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest) |
+| **CMake**  | Build tool | `cmake-<version>-windows-x86_64.msi` | [CMake](https://cmake.org/download/) |
 
 ### 🔧 Installation Steps
 
@@ -182,15 +178,15 @@ sudo pacman -Syu --noconfirm mingw-w64 cmake
 1. Download `x86_64-<version>-release-win32-seh-ucrt-rtv<num>-rev<num>.7z` from [MinGW Build](https://github.com/niXman/mingw-builds-binaries/releases/latest)
 2. Extract to `C:\mingw64`
 3. Add `C:\mingw64\bin` to the system `PATH` environment variable:
-   - Open: `Control Panel → System → Advanced System Settings → Environment Variables`
-   - Find `Path` in System Variables, click "Edit"
+   - Open: `Control Panel → System → Advanced system settings → Environment Variables`
+   - In **System variables**, find `Path` and click "Edit"
    - Add: `C:\mingw64\bin`
 
 #### 2. Install CMake
 1. Download and run `cmake-<version>-windows-x86_64.msi` from [CMake](https://cmake.org/download/)
-2. Select "Add CMake to the system PATH" during installation
+2. During the installation, select “Add CMake to the system PATH”
 
-#### 3. Verify Installation
+#### 3. Verify installation
 ```bash
 gcc --version
 cmake --version
@@ -207,8 +203,8 @@ build.bat                         # Windows
 
 # 🎁 [Support Catime](https://cati.me/support)
 <div align="center" style="margin: 20px 0;">
-  <a href="[https://cati.me/support](https://cati.me/support)">
-    <img src="[https://img.shields.io/badge/Support_Catime-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white](https://img.shields.io/badge/Support_Catime-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white)" 
+  <a href="https://cati.me/support">
+    <img src="https://img.shields.io/badge/Support_Catime-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" 
          alt="Support Catime" 
          width="2500" 
          height="1250">
@@ -217,9 +213,9 @@ build.bat                         # Windows
 
 
 
-<a href="[https://cati.me/support](https://cati.me/support)">
+<a href="https://cati.me/support">
   <img
-    src="[https://github.com/user-attachments/assets/49035b18-e803-4ee8-9ea5-2e3f32f099de](https://github.com/user-attachments/assets/49035b18-e803-4ee8-9ea5-2e3f32f099de)"
+    src="https://github.com/user-attachments/assets/49035b18-e803-4ee8-9ea5-2e3f32f099de"
     width="1889"
     height="872"
     alt="image"
@@ -233,20 +229,19 @@ build.bat                         # Windows
 
 ## 🌟 Star History
 
-<a href="[https://www.star-history.com/#vladelaina/Catime&Date](https://www.star-history.com/#vladelaina/Catime&Date)">
+<a href="https://www.star-history.com/#vladelaina/Catime&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="[https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date&theme=dark](https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date&theme=dark)" />
-   <source media="(prefers-color-scheme: light)" srcset="[https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date](https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date)" />
-   <img alt="Star History Chart" src="[https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date](https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date)" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" />
  </picture>
 </a>
 
+## [✨ Credits](https://cati.me/#thanks)
 
-## [✨ Acknowledgments](https://cati.me/#thanks)
+Special thanks to [猫屋敷梨梨Official](https://space.bilibili.com/26087398) for the wonderful icon design.
 
-Special thanks to [猫屋敷梨梨Official](https://space.bilibili.com/26087398) for the exquisite icon design.
-
-> Special thanks to the following contributors (in chronological order):
+> Special thanks to the following contributors (in chronological order)：
 
 <table>
   <tbody>
@@ -434,42 +429,30 @@ Special thanks to [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
   </tbody>
 </table>
 
+## 🗝️ Copyright Notice
+This project is released under the open-source Apache License 2.0.
 
-
-
-## 🗝️ License & Copyright
-
-This project is released under the Apache License 2.0.
-
-Icon Copyright Information:
-- Software icons were created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398), who reserves all rights. No commercial use is permitted without explicit authorization from the original author.
-
-Font Licenses:
-- MIT:
+Icon copyright notice：
+- Software icons created by [猫屋敷梨梨Official](https://space.bilibili.com/26087398) and all rights reserved. Without the original author's explicit permission, they may not be used for any commercial purposes.
+Font license：
+- MIT：
   - ProFontWindows Essence.ttf
-- SIL Open Font License:
+- SIL Open Font License：
   - DaddyTimeMono Essence.otf, DepartureMono Essence.otf,
     Rec Mono Casual Essence.ttf, Terminess Nerd Font Essence.ttf
-- OFL (Open Font License):
+- OFL（Open Font License）：
   - Jacquard 12 Essence.ttf, Jacquarda Bastarda 9 Essence.ttf,
     Pixelify Sans Essence.ttf, Rubik Burned Essence.ttf,
     Rubik Glitch Essence.ttf, Rubik Marker Hatch Essence.ttf,
     Rubik Puddles Essence.ttf, Wallpoet Essence.ttf
-
-Wallpapers:
-- Author: [猫屋敷梨梨Official](https://space.bilibili.com/26087398)
-  - Live Wallpaper Links: [猫屋敷梨梨「Whereabouts of Light」Illustration Night Ver.](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185) and [猫屋敷梨梨「Whereabouts of Light」Illustration Dusk Ver.](https://steamcommunity.com/sharedfiles/filedetails/?id=3171483657)
+Wallpapers：
+- Author：[猫屋敷梨梨Official](https://space.bilibili.com/26087398)
+  - Dynamic wallpaper links：[猫屋敷梨梨「Where the Stars Are」Artwork (Night Version)](https://steamcommunity.com/sharedfiles/filedetails/?id=3171487185) and [猫屋敷梨梨-「Where the Stars Are」Artwork (Dusk Version)](https://steamcommunity.com/sharedfiles/filedetails/?id=3171483657)
 ---
-
 <div align="center">
 
-Copyright © 2025-2026 - Catime\
+Copyright © 2025-2026 - **Catime**\
 By vladelaina\
 Made with ❤️ & ⌨️
 
 </div>
-
-
-
-
-
