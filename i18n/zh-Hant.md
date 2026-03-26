@@ -335,7 +335,7 @@ build.bat                          # Windows
         <a href="https://github.com/pyqmlp"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%9F%92.webp" width="100px;" alt="柒"/><br /><sub><b>柒</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
-        <a href="https://github.com/Mapaler"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%9E%AF%E8%B0%B7%E5%89%91%E4%BB%99.webp" width="100px;" alt="枫谷剑仙"/><br /><sub><b>枫谷剑仙</b></sub></a><br />
+        <a href="https://github.com/Mapaler"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%9E%AB%E8%B0%B7%E5%89%91%E4%BB%99.webp" width="100px;" alt="枫谷剑仙"/><br /><sub><b>枫谷剑仙</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/Crazy-A2"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Marial.webp" width="100px;" alt="Marial"/><br /><sub><b>Marial</b></sub></a><br />
