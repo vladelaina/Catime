@@ -83,6 +83,12 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
 void CleanupAnimationTimer(void);
 
 /**
+ * @brief Check whether the animation timer is currently running
+ * @return TRUE if any timer backend is active
+ */
+BOOL IsAnimationTimerActive(void);
+
+/**
  * @brief Check if using high-precision timer
  * @return TRUE if multimedia timer active, FALSE if using SetTimer
  */

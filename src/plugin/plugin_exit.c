@@ -19,6 +19,7 @@
 
 static volatile BOOL g_exitInProgress = FALSE;
 static HANDLE g_exitThread = NULL;
+static HANDLE g_exitStopEvent = NULL;
 
 /* Template for countdown display */
 static wchar_t* g_exitPrefix = NULL;
@@ -36,6 +37,16 @@ extern BOOL g_hasPluginData;
 /* ============================================================================
  * Exit Countdown Thread
  * ============================================================================ */
+
+static void CleanupCompletedExitThreadHandle(void) {
+    HANDLE threadHandle = g_exitThread;
+    if (!threadHandle) return;
+
+    if (WaitForSingleObject(threadHandle, 0) == WAIT_OBJECT_0) {
+        g_exitThread = NULL;
+        CloseHandle(threadHandle);
+    }
+}
 
 static DWORD WINAPI ExitCountdownThread(LPVOID lpParam) {
     int seconds = (int)(intptr_t)lpParam;
@@ -78,7 +89,9 @@ static DWORD WINAPI ExitCountdownThread(LPVOID lpParam) {
             InvalidateRect(g_notifyWnd, NULL, FALSE);
         }
         
-        Sleep(1000);
+        if (g_exitStopEvent && WaitForSingleObject(g_exitStopEvent, 1000) == WAIT_OBJECT_0) {
+            break;
+        }
         seconds--;
     }
     
@@ -104,20 +117,32 @@ void PluginExit_Init(HWND hwnd, CRITICAL_SECTION* dataCS) {
     g_exitThread = NULL;
     g_exitPrefix = NULL;
     g_exitSuffix = NULL;
+    if (!g_exitStopEvent) {
+        g_exitStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    } else {
+        ResetEvent(g_exitStopEvent);
+    }
 }
 
 void PluginExit_Shutdown(void) {
     PluginExit_Cancel();
+    if (g_exitStopEvent) {
+        CloseHandle(g_exitStopEvent);
+        g_exitStopEvent = NULL;
+    }
     g_notifyWnd = NULL;
     g_dataCS = NULL;
 }
 
 BOOL PluginExit_IsInProgress(void) {
+    CleanupCompletedExitThreadHandle();
     return g_exitInProgress;
 }
 
 BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
     if (!text || !textLen) return FALSE;
+
+    CleanupCompletedExitThreadHandle();
     
     /* Cancel any existing countdown first to avoid race condition */
     if (g_exitInProgress) {
@@ -216,6 +241,9 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
     }
     
     /* Start countdown thread */
+    if (g_exitStopEvent) {
+        ResetEvent(g_exitStopEvent);
+    }
     g_exitInProgress = TRUE;
     g_exitThread = CreateThread(NULL, 0, ExitCountdownThread, 
                                 (LPVOID)(intptr_t)seconds, 0, NULL);
@@ -230,18 +258,20 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
 }
 
 void PluginExit_Cancel(void) {
-    if (!g_exitInProgress) return;
-    
     g_exitInProgress = FALSE;
+    if (g_exitStopEvent) {
+        SetEvent(g_exitStopEvent);
+    }
     
     /* Wait for thread */
     if (g_exitThread) {
-        DWORD result = WaitForSingleObject(g_exitThread, 3000);
-        if (result != WAIT_OBJECT_0) {
-            LOG_ERROR("PluginExit: Thread did not terminate cleanly");
-        }
+        WaitForSingleObject(g_exitThread, INFINITE);
         CloseHandle(g_exitThread);
         g_exitThread = NULL;
+    }
+
+    if (g_exitStopEvent) {
+        ResetEvent(g_exitStopEvent);
     }
     
     /* Cleanup templates */

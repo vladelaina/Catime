@@ -101,6 +101,11 @@ BOOL GetPluginsDirectory(wchar_t* buffer, size_t bufferSize);
 BOOL GetImageCacheDirectory(wchar_t* buffer, size_t bufferSize);
 
 /**
+ * @brief Shutdown async download bookkeeping and release synchronization state
+ */
+void ShutdownMarkdownImage(void);
+
+/**
  * @brief Free image resources
  * @param images Image array
  * @param imageCount Image count

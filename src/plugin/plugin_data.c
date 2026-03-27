@@ -27,12 +27,14 @@ BOOL g_hasPluginData = FALSE;
  * ============================================================================ */
 
 static BOOL g_pluginModeActive = FALSE;
-static volatile BOOL g_forceNextUpdate = FALSE;
+static volatile LONG g_forceNextUpdate = FALSE;
 static CRITICAL_SECTION g_dataCS;
 static BOOL g_pluginDataInitialized = FALSE;
 
 /* Watcher thread */
 static HANDLE g_hWatchThread = NULL;
+static HANDLE g_hWatchStopEvent = NULL;
+static HANDLE g_hWatchWakeEvent = NULL;
 static HWND g_hNotifyWnd = NULL;
 static volatile BOOL g_isRunning = FALSE;
 
@@ -44,6 +46,7 @@ static size_t g_lastContentSize = 0;
 #define DEFAULT_POLL_INTERVAL_MS 500
 #define MIN_POLL_INTERVAL_MS 10
 #define MAX_POLL_INTERVAL_MS 5000
+#define MAX_PLUGIN_OUTPUT_BYTES (10 * 1024 * 1024)
 static volatile DWORD g_pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
 
 /* Notification throttling */
@@ -59,6 +62,12 @@ typedef struct {
 } PendingNotification;
 
 static PendingNotification g_pendingNotify = {0};
+
+static void WakeWatcherThread(void) {
+    if (g_hWatchWakeEvent) {
+        SetEvent(g_hWatchWakeEvent);
+    }
+}
 
 /**
  * @brief Parse and remove <fps:N> tag from content, update poll interval
@@ -365,6 +374,121 @@ static void EnsureOutputDirExists(const char* filePath) {
     }
 }
 
+static BOOL GetPluginOutputDirectory(wchar_t* buffer, size_t bufferSize) {
+    char filePath[MAX_PATH];
+    if (!GetPluginOutputPath(filePath, sizeof(filePath))) {
+        return FALSE;
+    }
+
+    wchar_t fullPath[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, fullPath, MAX_PATH);
+    wchar_t* lastSlash = wcsrchr(fullPath, L'\\');
+    if (!lastSlash) {
+        return FALSE;
+    }
+
+    *lastSlash = L'\0';
+    wcsncpy(buffer, fullPath, bufferSize - 1);
+    buffer[bufferSize - 1] = L'\0';
+    return TRUE;
+}
+
+static BOOL UpdateLastContentCache(const char* content, DWORD contentSize) {
+    size_t requiredSize = (size_t)contentSize + 1;
+    char* newBuf = (char*)realloc(g_lastContent, requiredSize);
+    if (!newBuf) {
+        LOG_ERROR("PluginData: Failed to resize last-content cache to %zu bytes", requiredSize);
+        return FALSE;
+    }
+
+    g_lastContent = newBuf;
+    g_lastContentSize = requiredSize;
+    memcpy(g_lastContent, content, contentSize);
+    g_lastContent[contentSize] = '\0';
+    return TRUE;
+}
+
+static BOOL ProcessPluginOutputFile(const char* filePath, BOOL forceRefresh,
+                                    FILETIME* lastWriteTime, DWORD* lastFileSize) {
+    HANDLE hFile = CreateFileA(
+        filePath,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    FILETIME currentWriteTime = {0};
+    GetFileTime(hFile, NULL, NULL, &currentWriteTime);
+
+    LARGE_INTEGER sizeValue;
+    if (!GetFileSizeEx(hFile, &sizeValue) || sizeValue.QuadPart <= 0) {
+        *lastWriteTime = currentWriteTime;
+        *lastFileSize = 0;
+        CloseHandle(hFile);
+        return FALSE;
+    }
+
+    if (sizeValue.QuadPart > MAX_PLUGIN_OUTPUT_BYTES) {
+        LOG_WARNING("PluginData: Skipping output.txt larger than %d bytes", MAX_PLUGIN_OUTPUT_BYTES);
+        *lastWriteTime = currentWriteTime;
+        *lastFileSize = (DWORD)sizeValue.QuadPart;
+        CloseHandle(hFile);
+        return FALSE;
+    }
+
+    DWORD fileSize = (DWORD)sizeValue.QuadPart;
+    if (!forceRefresh &&
+        CompareFileTime(&currentWriteTime, lastWriteTime) == 0 &&
+        fileSize == *lastFileSize) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+
+    char* currentContent = (char*)malloc((size_t)fileSize + 1);
+    if (!currentContent) {
+        CloseHandle(hFile);
+        return FALSE;
+    }
+
+    DWORD bytesRead = 0;
+    BOOL readOk = ReadFile(hFile, currentContent, fileSize, &bytesRead, NULL) && bytesRead > 0;
+    CloseHandle(hFile);
+
+    if (!readOk) {
+        free(currentContent);
+        return FALSE;
+    }
+
+    currentContent[bytesRead] = '\0';
+    EnterCriticalSection(&g_dataCS);
+    BOOL contentChanged = forceRefresh ||
+                          g_lastContent == NULL ||
+                          g_lastContentSize != (size_t)bytesRead + 1 ||
+                          memcmp(currentContent, g_lastContent, (size_t)bytesRead + 1) != 0;
+
+    *lastWriteTime = currentWriteTime;
+    *lastFileSize = fileSize;
+
+    if (contentChanged) {
+        UpdateLastContentCache(currentContent, bytesRead);
+    }
+    LeaveCriticalSection(&g_dataCS);
+
+    if (contentChanged && ParseContent(currentContent, bytesRead) && g_hNotifyWnd) {
+        InvalidateRect(g_hNotifyWnd, NULL, FALSE);
+    }
+
+    free(currentContent);
+    return contentChanged;
+}
+
 /**
  * @brief Background thread to monitor plugin data file
  */
@@ -379,75 +503,62 @@ static DWORD WINAPI FileWatcherThread(LPVOID lpParam) {
     
     LOG_INFO("PluginData: Watching file %s", filePath);
 
-    while (g_isRunning) {
-        // Check if we need to force an update (reset cache)
-        if (g_forceNextUpdate) {
-            g_forceNextUpdate = FALSE;
-            if (g_lastContent) {
-                g_lastContent[0] = '\0';
-            }
-        }
-        
-        // Use Win32 API for lower overhead (no CRT buffer)
-        HANDLE hFile = CreateFileA(
-            filePath,
-            GENERIC_READ,
-            FILE_SHARE_READ | FILE_SHARE_WRITE,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL
+    wchar_t outputDir[MAX_PATH] = {0};
+    HANDLE changeHandle = INVALID_HANDLE_VALUE;
+    if (GetPluginOutputDirectory(outputDir, MAX_PATH)) {
+        changeHandle = FindFirstChangeNotificationW(
+            outputDir,
+            FALSE,
+            FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE
         );
-
-        if (hFile != INVALID_HANDLE_VALUE) {
-            DWORD fileSize = GetFileSize(hFile, NULL);
-            
-            if (fileSize > 0 && fileSize != INVALID_FILE_SIZE) {
-                // Allocate buffer for current content
-                char* currentContent = (char*)malloc(fileSize + 1);
-                if (currentContent) {
-                    DWORD bytesRead = 0;
-                    
-                    if (ReadFile(hFile, currentContent, fileSize, &bytesRead, NULL) && bytesRead > 0) {
-                        currentContent[bytesRead] = '\0';
-
-                        // Check if content changed
-                        BOOL contentChanged = FALSE;
-                        if (g_lastContent == NULL || strcmp(currentContent, g_lastContent) != 0) {
-                            contentChanged = TRUE;
-                        }
-                        
-                        if (contentChanged) {
-                            // Update last content cache
-                            size_t newSize = bytesRead + 1;
-                            if (g_lastContent == NULL || g_lastContentSize < newSize) {
-                                char* newBuf = (char*)realloc(g_lastContent, newSize);
-                                if (newBuf) {
-                                    g_lastContent = newBuf;
-                                    g_lastContentSize = newSize;
-                                }
-                            }
-                            if (g_lastContent) {
-                                memcpy(g_lastContent, currentContent, bytesRead + 1);
-                            }
-                            
-                            if (ParseContent(currentContent, bytesRead)) {
-                                // Notify main window to repaint immediately
-                                // Note: <exit> tag is now handled inside ParseContent
-                                if (g_hNotifyWnd) {
-                                    InvalidateRect(g_hNotifyWnd, NULL, FALSE);
-                                }
-                            }
-                        }
-                    }
-                    free(currentContent);
-                }
-            }
-            CloseHandle(hFile);
+        if (changeHandle == INVALID_HANDLE_VALUE) {
+            LOG_WARNING("PluginData: Change notification unavailable, falling back to polling");
         }
-        
-        // Dynamic poll frequency (controlled by <fps:N> tag, default 500ms)
-        Sleep(g_pollIntervalMs);
+    }
+
+    FILETIME lastWriteTime = {0};
+    DWORD lastFileSize = 0;
+
+    while (g_isRunning) {
+        BOOL forceRefresh = InterlockedExchange(&g_forceNextUpdate, FALSE) != FALSE;
+        if (forceRefresh) {
+            ZeroMemory(&lastWriteTime, sizeof(lastWriteTime));
+            lastFileSize = 0;
+        }
+
+        ProcessPluginOutputFile(filePath, forceRefresh, &lastWriteTime, &lastFileSize);
+
+        HANDLE waitHandles[3];
+        DWORD waitCount = 0;
+        waitHandles[waitCount++] = g_hWatchStopEvent;
+        waitHandles[waitCount++] = g_hWatchWakeEvent;
+        if (changeHandle != INVALID_HANDLE_VALUE) {
+            waitHandles[waitCount++] = changeHandle;
+        }
+
+        DWORD waitTimeout = (changeHandle != INVALID_HANDLE_VALUE) ? INFINITE : g_pollIntervalMs;
+        DWORD waitResult = WaitForMultipleObjects(waitCount, waitHandles, FALSE, waitTimeout);
+        if (waitResult == WAIT_OBJECT_0) {
+            break;
+        }
+        if (waitResult == WAIT_OBJECT_0 + 1) {
+            if (g_hWatchWakeEvent) {
+                ResetEvent(g_hWatchWakeEvent);
+            }
+            continue;
+        }
+        if (changeHandle != INVALID_HANDLE_VALUE && waitResult == WAIT_OBJECT_0 + 2) {
+            if (!FindNextChangeNotification(changeHandle)) {
+                FindCloseChangeNotification(changeHandle);
+                changeHandle = INVALID_HANDLE_VALUE;
+                LOG_WARNING("PluginData: Change notification lost, switching to polling");
+            }
+            continue;
+        }
+    }
+
+    if (changeHandle != INVALID_HANDLE_VALUE) {
+        FindCloseChangeNotification(changeHandle);
     }
     
     return 0;
@@ -463,6 +574,20 @@ void PluginData_Init(HWND hwnd) {
     g_lastContent = NULL;
     g_lastContentSize = 0;
     g_isRunning = TRUE;
+    g_hWatchStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    g_hWatchWakeEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!g_hWatchStopEvent || !g_hWatchWakeEvent) {
+        LOG_ERROR("PluginData: Failed to create watcher events");
+        if (g_hWatchStopEvent) {
+            CloseHandle(g_hWatchStopEvent);
+            g_hWatchStopEvent = NULL;
+        }
+        if (g_hWatchWakeEvent) {
+            CloseHandle(g_hWatchWakeEvent);
+            g_hWatchWakeEvent = NULL;
+        }
+        g_isRunning = FALSE;
+    }
 
     /* Initialize exit subsystem */
     PluginExit_Init(hwnd, &g_dataCS);
@@ -473,7 +598,7 @@ void PluginData_Init(HWND hwnd) {
         EnsureOutputDirExists(outputPath);
     }
 
-    g_hWatchThread = CreateThread(NULL, 0, FileWatcherThread, NULL, 0, NULL);
+    g_hWatchThread = g_isRunning ? CreateThread(NULL, 0, FileWatcherThread, NULL, 0, NULL) : NULL;
     if (g_hWatchThread) {
         LOG_INFO("PluginData: Initialized");
     } else {
@@ -487,9 +612,21 @@ void PluginData_Shutdown(void) {
     /* Stop watcher thread */
     if (g_hWatchThread) {
         g_isRunning = FALSE;
-        WaitForSingleObject(g_hWatchThread, 1000);
+        if (g_hWatchStopEvent) {
+            SetEvent(g_hWatchStopEvent);
+        }
+        WakeWatcherThread();
+        WaitForSingleObject(g_hWatchThread, INFINITE);
         CloseHandle(g_hWatchThread);
         g_hWatchThread = NULL;
+    }
+    if (g_hWatchStopEvent) {
+        CloseHandle(g_hWatchStopEvent);
+        g_hWatchStopEvent = NULL;
+    }
+    if (g_hWatchWakeEvent) {
+        CloseHandle(g_hWatchWakeEvent);
+        g_hWatchWakeEvent = NULL;
     }
     
     /* Shutdown exit subsystem */
@@ -510,6 +647,7 @@ void PluginData_Shutdown(void) {
     LeaveCriticalSection(&g_dataCS);
     
     DeleteCriticalSection(&g_dataCS);
+    g_pluginDataInitialized = FALSE;
     LOG_INFO("PluginData: Shutdown");
 }
 
@@ -595,7 +733,8 @@ void PluginData_SetText(const wchar_t* text) {
     }
     
     // Force file watcher to re-read on next cycle
-    g_forceNextUpdate = TRUE;
+    InterlockedExchange(&g_forceNextUpdate, TRUE);
+    WakeWatcherThread();
 }
 
 void PluginData_SetActive(BOOL active) {
@@ -604,7 +743,7 @@ void PluginData_SetActive(BOOL active) {
     g_pluginModeActive = active;
     if (active) {
         // When activating, force file watcher to re-read immediately
-        g_forceNextUpdate = TRUE;
+        InterlockedExchange(&g_forceNextUpdate, TRUE);
         // Clear last content cache to force re-read
         if (g_lastContent) {
             g_lastContent[0] = '\0';
@@ -620,6 +759,10 @@ void PluginData_SetActive(BOOL active) {
     }
     LeaveCriticalSection(&g_dataCS);
     LOG_INFO("PluginData: Mode %s", active ? "ACTIVE" : "INACTIVE");
+
+    if (active) {
+        WakeWatcherThread();
+    }
     
     // If activating, immediately read the file content (don't wait for watcher)
     if (active) {
@@ -628,12 +771,13 @@ void PluginData_SetActive(BOOL active) {
             HANDLE hFile = CreateFileA(filePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
                                        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
             if (hFile != INVALID_HANDLE_VALUE) {
-                DWORD fileSize = GetFileSize(hFile, NULL);
-                if (fileSize > 0 && fileSize < 10 * 1024 * 1024) {  // Max 10MB
-                    char* content = (char*)malloc(fileSize + 1);
+                LARGE_INTEGER fileSize = {0};
+                if (GetFileSizeEx(hFile, &fileSize) && fileSize.QuadPart > 0 &&
+                    fileSize.QuadPart < MAX_PLUGIN_OUTPUT_BYTES) {
+                    char* content = (char*)malloc((size_t)fileSize.QuadPart + 1);
                     if (content) {
                         DWORD bytesRead = 0;
-                        if (ReadFile(hFile, content, fileSize, &bytesRead, NULL) && bytesRead > 0) {
+                        if (ReadFile(hFile, content, (DWORD)fileSize.QuadPart, &bytesRead, NULL) && bytesRead > 0) {
                             content[bytesRead] = '\0';
                             ParseContent(content, bytesRead);
                         }

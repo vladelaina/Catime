@@ -88,6 +88,104 @@ static BOOL HasPotentialMarkdownSyntax(const wchar_t* text) {
     return FALSE;
 }
 
+typedef struct {
+    BOOL valid;
+    BOOL isMarkdown;
+    wchar_t sourceText[TIME_TEXT_MAX_LEN];
+    wchar_t* mdText;
+    MarkdownLink* links;
+    int linkCount;
+    MarkdownHeading* headings;
+    int headingCount;
+    MarkdownStyle* styles;
+    int styleCount;
+    MarkdownListItem* listItems;
+    int listItemCount;
+    MarkdownBlockquote* blockquotes;
+    int blockquoteCount;
+    MarkdownColorTag* colorTags;
+    int colorTagCount;
+    MarkdownFontTag* fontTags;
+    int fontTagCount;
+} MarkdownRenderCache;
+
+static MarkdownRenderCache g_markdownRenderCache = {0};
+
+static void ClearMarkdownRenderCache(void) {
+    if (g_markdownRenderCache.links) {
+        FreeMarkdownLinks(g_markdownRenderCache.links, g_markdownRenderCache.linkCount);
+    }
+    free(g_markdownRenderCache.headings);
+    free(g_markdownRenderCache.styles);
+    free(g_markdownRenderCache.listItems);
+    free(g_markdownRenderCache.blockquotes);
+    free(g_markdownRenderCache.colorTags);
+    free(g_markdownRenderCache.fontTags);
+    free(g_markdownRenderCache.mdText);
+    ZeroMemory(&g_markdownRenderCache, sizeof(g_markdownRenderCache));
+}
+
+static void EnsureMarkdownRenderCache(const wchar_t* text) {
+    if (!text) {
+        ClearMarkdownRenderCache();
+        return;
+    }
+
+    if (g_markdownRenderCache.valid &&
+        wcscmp(g_markdownRenderCache.sourceText, text) == 0) {
+        return;
+    }
+
+    ClearMarkdownRenderCache();
+    wcsncpy(g_markdownRenderCache.sourceText, text, TIME_TEXT_MAX_LEN - 1);
+    g_markdownRenderCache.sourceText[TIME_TEXT_MAX_LEN - 1] = L'\0';
+    g_markdownRenderCache.valid = TRUE;
+
+    if (!HasPotentialMarkdownSyntax(text)) {
+        return;
+    }
+
+    g_markdownRenderCache.isMarkdown = ParseMarkdownLinks(
+        text,
+        &g_markdownRenderCache.mdText,
+        &g_markdownRenderCache.links, &g_markdownRenderCache.linkCount,
+        &g_markdownRenderCache.headings, &g_markdownRenderCache.headingCount,
+        &g_markdownRenderCache.styles, &g_markdownRenderCache.styleCount,
+        &g_markdownRenderCache.listItems, &g_markdownRenderCache.listItemCount,
+        &g_markdownRenderCache.blockquotes, &g_markdownRenderCache.blockquoteCount,
+        &g_markdownRenderCache.colorTags, &g_markdownRenderCache.colorTagCount,
+        &g_markdownRenderCache.fontTags, &g_markdownRenderCache.fontTagCount
+    );
+
+    if (!g_markdownRenderCache.isMarkdown) {
+        if (g_markdownRenderCache.links) {
+            FreeMarkdownLinks(g_markdownRenderCache.links, g_markdownRenderCache.linkCount);
+            g_markdownRenderCache.links = NULL;
+            g_markdownRenderCache.linkCount = 0;
+        }
+        free(g_markdownRenderCache.headings);
+        free(g_markdownRenderCache.styles);
+        free(g_markdownRenderCache.listItems);
+        free(g_markdownRenderCache.blockquotes);
+        free(g_markdownRenderCache.colorTags);
+        free(g_markdownRenderCache.fontTags);
+        free(g_markdownRenderCache.mdText);
+        g_markdownRenderCache.headings = NULL;
+        g_markdownRenderCache.styles = NULL;
+        g_markdownRenderCache.listItems = NULL;
+        g_markdownRenderCache.blockquotes = NULL;
+        g_markdownRenderCache.colorTags = NULL;
+        g_markdownRenderCache.fontTags = NULL;
+        g_markdownRenderCache.mdText = NULL;
+        g_markdownRenderCache.headingCount = 0;
+        g_markdownRenderCache.styleCount = 0;
+        g_markdownRenderCache.listItemCount = 0;
+        g_markdownRenderCache.blockquoteCount = 0;
+        g_markdownRenderCache.colorTagCount = 0;
+        g_markdownRenderCache.fontTagCount = 0;
+    }
+}
+
 /**
  * @return Render context with preview or config settings
  * @note Static buffers avoid per-frame allocation
@@ -181,6 +279,10 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
     }
 
     return FALSE;
+}
+
+void CleanupDrawingRenderCache(void) {
+    ClearMarkdownRenderCache();
 }
 
 /** @note GM_ADVANCED + HALFTONE improve text quality on high-DPI displays */
@@ -363,29 +465,21 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
 
     RenderContext ctx = CreateRenderContext();
 
-    // Parse Markdown
-    wchar_t* mdText = NULL;
-    MarkdownLink* links = NULL; int linkCount = 0;
-    MarkdownHeading* headings = NULL; int headingCount = 0;
-    MarkdownStyle* styles = NULL; int styleCount = 0;
-    MarkdownListItem* listItems = NULL; int listItemCount = 0;
-    MarkdownBlockquote* blockquotes = NULL; int blockquoteCount = 0;
-    MarkdownColorTag* colorTags = NULL; int colorTagCount = 0;
-    MarkdownFontTag* fontTags = NULL; int fontTagCount = 0;
+    EnsureMarkdownRenderCache(timeText);
 
-    BOOL isMarkdown = FALSE;
-    if (HasPotentialMarkdownSyntax(timeText)) {
-        isMarkdown = ParseMarkdownLinks(timeText, &mdText,
-                                        &links, &linkCount,
-                                        &headings, &headingCount,
-                                        &styles, &styleCount,
-                                        &listItems, &listItemCount,
-                                        &blockquotes, &blockquoteCount,
-                                        &colorTags, &colorTagCount,
-                                        &fontTags, &fontTagCount);
-    }
+    BOOL isMarkdown = g_markdownRenderCache.isMarkdown;
+    MarkdownLink* links = g_markdownRenderCache.links; int linkCount = g_markdownRenderCache.linkCount;
+    MarkdownHeading* headings = g_markdownRenderCache.headings; int headingCount = g_markdownRenderCache.headingCount;
+    MarkdownStyle* styles = g_markdownRenderCache.styles; int styleCount = g_markdownRenderCache.styleCount;
+    MarkdownListItem* listItems = g_markdownRenderCache.listItems; int listItemCount = g_markdownRenderCache.listItemCount;
+    MarkdownBlockquote* blockquotes = g_markdownRenderCache.blockquotes; int blockquoteCount = g_markdownRenderCache.blockquoteCount;
+    MarkdownColorTag* colorTags = g_markdownRenderCache.colorTags; int colorTagCount = g_markdownRenderCache.colorTagCount;
+    MarkdownFontTag* fontTags = g_markdownRenderCache.fontTags; int fontTagCount = g_markdownRenderCache.fontTagCount;
 
-    const wchar_t* textToRender = (isMarkdown && mdText) ? mdText : timeText;
+    (void)listItems;
+    (void)listItemCount;
+
+    const wchar_t* textToRender = (isMarkdown && g_markdownRenderCache.mdText) ? g_markdownRenderCache.mdText : timeText;
 
     // Measure text and resize window BEFORE creating the buffer
     // This prevents buffer overflow if the window grows
@@ -447,12 +541,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     
     // Create buffer with the final correct size
     if (!SetupDoubleBufferDIB(hdc, &rect, &memDC, &memBitmap, &oldBitmap, &pBits)) {
-        if (isMarkdown) {
-            FreeMarkdownLinks(links, linkCount);
-            free(headings); free(styles); free(listItems); free(blockquotes);
-            free(colorTags); free(fontTags);
-            free(mdText);
-        }
         if (images) {
             FreeMarkdownImages(images, imageCount);
         }
@@ -567,14 +655,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                 break;
             }
         }
-    }
-    
-    // Free markdown resources
-    if (isMarkdown) {
-        FreeMarkdownLinks(links, linkCount);
-        free(headings); free(styles); free(listItems); free(blockquotes);
-        free(colorTags); free(fontTags);
-        free(mdText);
     }
     
     // Free image resources

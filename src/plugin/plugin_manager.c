@@ -25,6 +25,7 @@ static BOOL g_pluginManagerInitialized = FALSE;
 
 /* Hot-reload monitoring */
 static HANDLE g_hHotReloadThread = NULL;
+static HANDLE g_hHotReloadStopEvent = NULL;
 static volatile BOOL g_hotReloadRunning = FALSE;
 static volatile int g_lastRunningPluginIndex = -1;
 static volatile int g_activePluginIndex = -1;
@@ -63,7 +64,10 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
     LOG_INFO("[HotReload] Thread started");
     
     while (g_hotReloadRunning) {
-        Sleep(1000);
+        if (g_hHotReloadStopEvent &&
+            WaitForSingleObject(g_hHotReloadStopEvent, 1000) == WAIT_OBJECT_0) {
+            break;
+        }
         if (!g_hotReloadRunning) break;
         
         EnterCriticalSection(&g_pluginCS);
@@ -135,9 +139,14 @@ void PluginManager_Init(void) {
 
     /* Start hot-reload monitoring thread */
     g_hotReloadRunning = TRUE;
+    g_hHotReloadStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
     g_hHotReloadThread = CreateThread(NULL, 0, HotReloadThread, NULL, 0, NULL);
     if (!g_hHotReloadThread) {
         LOG_WARNING("Failed to start hot-reload thread");
+        if (g_hHotReloadStopEvent) {
+            CloseHandle(g_hHotReloadStopEvent);
+            g_hHotReloadStopEvent = NULL;
+        }
     }
 
     LOG_INFO("Plugin manager initialized");
@@ -149,13 +158,16 @@ void PluginManager_Shutdown(void) {
     /* Stop hot-reload thread */
     if (g_hHotReloadThread) {
         g_hotReloadRunning = FALSE;
-        DWORD waitResult = WaitForSingleObject(g_hHotReloadThread, 5000);  /* Increased timeout to 5 seconds */
-        if (waitResult == WAIT_TIMEOUT) {
-            LOG_WARNING("Hot-reload thread did not stop within timeout, forcing termination");
-            /* Note: TerminateThread is dangerous but we're shutting down anyway */
+        if (g_hHotReloadStopEvent) {
+            SetEvent(g_hHotReloadStopEvent);
         }
+        WaitForSingleObject(g_hHotReloadThread, INFINITE);
         CloseHandle(g_hHotReloadThread);
         g_hHotReloadThread = NULL;
+    }
+    if (g_hHotReloadStopEvent) {
+        CloseHandle(g_hHotReloadStopEvent);
+        g_hHotReloadStopEvent = NULL;
     }
 
     EnterCriticalSection(&g_pluginCS);

@@ -45,6 +45,113 @@ static FuncGdipDrawImageRectI pGdipDrawImageRectI = NULL;
 static FuncGdipGetImageWidth pGdipGetImageWidth = NULL;
 static FuncGdipGetImageHeight pGdipGetImageHeight = NULL;
 
+#define MAX_CACHED_IMAGES 16
+
+typedef struct {
+    BOOL inUse;
+    wchar_t path[MAX_PATH];
+    FILETIME lastWriteTime;
+    GpBitmap bitmap;
+    UINT width;
+    UINT height;
+    DWORD lastAccessTick;
+} CachedImageEntry;
+
+static CachedImageEntry g_imageCache[MAX_CACHED_IMAGES] = {0};
+
+static void ReleaseCachedImageEntry(CachedImageEntry* entry) {
+    if (!entry) return;
+    if (entry->bitmap && pGdipDisposeImage) {
+        pGdipDisposeImage((GpImage)entry->bitmap);
+    }
+    ZeroMemory(entry, sizeof(*entry));
+}
+
+static BOOL GetImageWriteTime(const wchar_t* imagePath, FILETIME* writeTime) {
+    if (!imagePath || !writeTime) return FALSE;
+
+    HANDLE hFile = CreateFileW(imagePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    BOOL ok = GetFileTime(hFile, NULL, NULL, writeTime);
+    CloseHandle(hFile);
+    return ok;
+}
+
+static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
+    if (!g_gdiplusToken || !imagePath || !pGdipCreateBitmapFromFile ||
+        !pGdipGetImageWidth || !pGdipGetImageHeight) {
+        return NULL;
+    }
+
+    FILETIME writeTime = {0};
+    if (!GetImageWriteTime(imagePath, &writeTime)) {
+        return NULL;
+    }
+
+    CachedImageEntry* freeSlot = NULL;
+    CachedImageEntry* lruSlot = NULL;
+    for (int i = 0; i < MAX_CACHED_IMAGES; i++) {
+        CachedImageEntry* entry = &g_imageCache[i];
+        if (!entry->inUse) {
+            if (!freeSlot) freeSlot = entry;
+            continue;
+        }
+
+        if (wcscmp(entry->path, imagePath) == 0) {
+            if (CompareFileTime(&entry->lastWriteTime, &writeTime) == 0 && entry->bitmap) {
+                entry->lastAccessTick = GetTickCount();
+                return entry;
+            }
+
+            ReleaseCachedImageEntry(entry);
+            freeSlot = entry;
+            break;
+        }
+
+        if (!lruSlot || entry->lastAccessTick < lruSlot->lastAccessTick) {
+            lruSlot = entry;
+        }
+    }
+
+    CachedImageEntry* target = freeSlot ? freeSlot : lruSlot;
+    if (!target) {
+        return NULL;
+    }
+
+    if (target->inUse) {
+        ReleaseCachedImageEntry(target);
+    }
+
+    GpBitmap bitmap = NULL;
+    if (pGdipCreateBitmapFromFile(imagePath, &bitmap) != Ok || !bitmap) {
+        return NULL;
+    }
+
+    UINT w = 0;
+    UINT h = 0;
+    pGdipGetImageWidth((GpImage)bitmap, &w);
+    pGdipGetImageHeight((GpImage)bitmap, &h);
+
+    if (w == 0 || h == 0) {
+        pGdipDisposeImage((GpImage)bitmap);
+        return NULL;
+    }
+
+    target->inUse = TRUE;
+    target->bitmap = bitmap;
+    target->width = w;
+    target->height = h;
+    target->lastWriteTime = writeTime;
+    target->lastAccessTick = GetTickCount();
+    wcsncpy(target->path, imagePath, MAX_PATH - 1);
+    target->path[MAX_PATH - 1] = L'\0';
+    return target;
+}
+
 void InitDrawingImage(void) {
     if (g_hGdiPlus) return;
 
@@ -77,6 +184,10 @@ void InitDrawingImage(void) {
 
 
 void ShutdownDrawingImage(void) {
+    for (int i = 0; i < MAX_CACHED_IMAGES; i++) {
+        ReleaseCachedImageEntry(&g_imageCache[i]);
+    }
+
     if (g_gdiplusToken && pGdiplusShutdown) {
         pGdiplusShutdown(g_gdiplusToken);
         g_gdiplusToken = 0;
@@ -89,34 +200,28 @@ void ShutdownDrawingImage(void) {
 
 BOOL GetImageDimensions(const wchar_t* imagePath, int* outWidth, int* outHeight) {
     if (!g_gdiplusToken || !imagePath || !outWidth || !outHeight) return FALSE;
-    if (!pGdipCreateBitmapFromFile || !pGdipGetImageWidth || !pGdipGetImageHeight || !pGdipDisposeImage) return FALSE;
+    if (!pGdipGetImageWidth || !pGdipGetImageHeight) return FALSE;
     
     *outWidth = 0;
     *outHeight = 0;
-    
-    GpBitmap bitmap = NULL;
-    if (pGdipCreateBitmapFromFile(imagePath, &bitmap) != Ok || !bitmap) {
+
+    CachedImageEntry* entry = GetCachedImageEntry(imagePath);
+    if (!entry) {
         return FALSE;
     }
-    
-    UINT w = 0, h = 0;
-    pGdipGetImageWidth((GpImage)bitmap, &w);
-    pGdipGetImageHeight((GpImage)bitmap, &h);
-    
-    pGdipDisposeImage((GpImage)bitmap);
-    
-    *outWidth = (int)w;
-    *outHeight = (int)h;
-    return (w > 0 && h > 0);
+
+    *outWidth = (int)entry->width;
+    *outHeight = (int)entry->height;
+    return TRUE;
 }
 
 BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wchar_t* imagePath) {
     if (!g_gdiplusToken || !hdc || !imagePath) return FALSE;
     if (!pGdipCreateBitmapFromFile || !pGdipCreateFromHDC || !pGdipDeleteGraphics || 
-        !pGdipGetImageWidth || !pGdipGetImageHeight || !pGdipDrawImageRectI || !pGdipDisposeImage) return FALSE;
+        !pGdipGetImageWidth || !pGdipGetImageHeight || !pGdipDrawImageRectI) return FALSE;
 
-    GpBitmap bitmap = NULL;
-    if (pGdipCreateBitmapFromFile(imagePath, &bitmap) != Ok || !bitmap) {
+    CachedImageEntry* entry = GetCachedImageEntry(imagePath);
+    if (!entry || !entry->bitmap) {
         // Silent failure is okay if file not found/locked
         return FALSE;
     }
@@ -124,10 +229,8 @@ BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wcha
     // Get graphics from HDC
     GpGraphics graphics = NULL;
     if (pGdipCreateFromHDC(hdc, &graphics) == Ok && graphics) {
-        
-        UINT imgW = 0, imgH = 0;
-        pGdipGetImageWidth((GpImage)bitmap, &imgW);
-        pGdipGetImageHeight((GpImage)bitmap, &imgH);
+        UINT imgW = entry->width;
+        UINT imgH = entry->height;
 
         if (imgW > 0 && imgH > 0 && width > 0 && height > 0) {
             // Calculate scale to fit (Contain)
@@ -139,12 +242,11 @@ BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wcha
             int drawH = (int)(imgH * scale);
 
             // Draw from top-left (no centering)
-            pGdipDrawImageRectI(graphics, (GpImage)bitmap, x, y, drawW, drawH);
+            pGdipDrawImageRectI(graphics, (GpImage)entry->bitmap, x, y, drawW, drawH);
         }
         
         pGdipDeleteGraphics(graphics);
     }
 
-    pGdipDisposeImage((GpImage)bitmap);
     return TRUE;
 }

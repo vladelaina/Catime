@@ -68,14 +68,27 @@ typedef struct {
 static IniFile* g_ConfigIni = NULL;
 static CRITICAL_SECTION g_IniCriticalSection;
 static volatile LONG g_IniCriticalSectionInitialized = 0;
+static HANDLE g_ConfigWriteMutex = NULL;
+
+#define INI_CS_UNINITIALIZED 0
+#define INI_CS_INITIALIZING  1
+#define INI_CS_INITIALIZED   2
 
 /* ============================================================================
  * Thread safety
  * ============================================================================ */
 
 static void EnsureCriticalSectionInitialized(void) {
-    if (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 1, 0) == 0) {
+    if (InterlockedCompareExchange(&g_IniCriticalSectionInitialized,
+                                   INI_CS_INITIALIZING,
+                                   INI_CS_UNINITIALIZED) == INI_CS_UNINITIALIZED) {
         InitializeCriticalSection(&g_IniCriticalSection);
+        InterlockedExchange(&g_IniCriticalSectionInitialized, INI_CS_INITIALIZED);
+    }
+
+    while (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 0, 0) ==
+           INI_CS_INITIALIZING) {
+        Sleep(0);
     }
 }
 
@@ -90,11 +103,10 @@ static void ReleaseIniLock(void) {
 
 /* Global mutex for cross-process synchronization */
 static HANDLE GetConfigWriteMutex(void) {
-    static HANDLE hMutex = NULL;
-    if (hMutex == NULL) {
-        hMutex = CreateMutexW(NULL, FALSE, L"CatimeConfigWriteMutex");
+    if (g_ConfigWriteMutex == NULL) {
+        g_ConfigWriteMutex = CreateMutexW(NULL, FALSE, L"CatimeConfigWriteMutex");
     }
-    return hMutex;
+    return g_ConfigWriteMutex;
 }
 
 static void AcquireConfigWriteLock(void) {
@@ -746,4 +758,31 @@ void InvalidateIniCache(void) {
     }
 
     ReleaseIniLock();
+}
+
+void ShutdownIniCache(void) {
+    while (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 0, 0) ==
+           INI_CS_INITIALIZING) {
+        Sleep(0);
+    }
+
+    if (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 0, 0) ==
+        INI_CS_INITIALIZED) {
+        AcquireIniLock();
+        if (g_ConfigIni) {
+            FreeIniFile(g_ConfigIni);
+            g_ConfigIni = NULL;
+        }
+        ReleaseIniLock();
+        DeleteCriticalSection(&g_IniCriticalSection);
+        g_IniCriticalSectionInitialized = INI_CS_UNINITIALIZED;
+    } else if (g_ConfigIni) {
+        FreeIniFile(g_ConfigIni);
+        g_ConfigIni = NULL;
+    }
+
+    if (g_ConfigWriteMutex) {
+        CloseHandle(g_ConfigWriteMutex);
+        g_ConfigWriteMutex = NULL;
+    }
 }

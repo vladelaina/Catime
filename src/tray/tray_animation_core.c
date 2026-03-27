@@ -46,8 +46,10 @@ static LoadedAnimation g_previewAnimation;
 static int g_previewIndex = 0;
 
 /* Async loading */
-static HANDLE g_loadThread = NULL;
-static volatile BOOL g_cancelLoad = FALSE;
+static HANDLE g_previewWorkerThread = NULL;
+static HANDLE g_previewRequestEvent = NULL;
+static HANDLE g_previewStopEvent = NULL;
+static volatile LONG g_previewRequestSerial = 0;
 static char g_pendingPreviewName[MAX_PATH] = "";
 
 /* Resources */
@@ -66,6 +68,120 @@ static UINT g_consecutiveUpdateFailures = 0;
 static DWORD g_lastSuccessfulUpdateTime = 0;
 #define MAX_CONSECUTIVE_FAILURES 5
 #define UPDATE_TIMEOUT_MS 5000
+
+static void TrayAnimationTimerCallback(void* userData);
+static DWORD WINAPI PreviewWorkerThread(LPVOID param);
+
+extern BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim, void* pool, int cx, int cy);
+
+static BOOL ShouldRunTrayAnimationTimer(void) {
+    const LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
+    return currentAnim->isAnimated && currentAnim->count > 1;
+}
+
+static void EnsureTrayAnimationTimerState(void) {
+    if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+
+    BOOL shouldRun = FALSE;
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+        shouldRun = ShouldRunTrayAnimationTimer();
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        shouldRun = ShouldRunTrayAnimationTimer();
+    }
+
+    if (shouldRun) {
+        if (!IsAnimationTimerActive()) {
+            FrameRateController_Init(&g_frameRateCtrl, TRAY_UPDATE_INTERVAL_MS);
+            InitializeAnimationTimer(g_trayHwnd, INTERNAL_TICK_INTERVAL_MS, TrayAnimationTimerCallback, NULL);
+        }
+    } else if (IsAnimationTimerActive()) {
+        CleanupAnimationTimer();
+    }
+}
+
+static void SwapLoadedAnimation(LoadedAnimation* target, const LoadedAnimation* source) {
+    if (!target || !source) return;
+    *target = *source;
+}
+
+static BOOL EnsurePreviewWorkerStarted(void) {
+    if (g_previewWorkerThread) {
+        return TRUE;
+    }
+
+    if (!g_previewRequestEvent) {
+        g_previewRequestEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
+        if (!g_previewRequestEvent) {
+            WriteLog(LOG_LEVEL_ERROR, "Failed to create preview request event");
+            return FALSE;
+        }
+    }
+
+    if (!g_previewStopEvent) {
+        g_previewStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+        if (!g_previewStopEvent) {
+            CloseHandle(g_previewRequestEvent);
+            g_previewRequestEvent = NULL;
+            WriteLog(LOG_LEVEL_ERROR, "Failed to create preview stop event");
+            return FALSE;
+        }
+    }
+
+    ResetEvent(g_previewStopEvent);
+    g_previewWorkerThread = CreateThread(NULL, 0, PreviewWorkerThread, NULL, 0, NULL);
+    if (!g_previewWorkerThread) {
+        CloseHandle(g_previewRequestEvent);
+        CloseHandle(g_previewStopEvent);
+        g_previewRequestEvent = NULL;
+        g_previewStopEvent = NULL;
+        WriteLog(LOG_LEVEL_ERROR, "Failed to create preview worker thread");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void ShutdownPreviewWorker(void) {
+    if (g_previewStopEvent) {
+        SetEvent(g_previewStopEvent);
+    }
+
+    if (g_previewRequestEvent) {
+        SetEvent(g_previewRequestEvent);
+    }
+
+    if (g_previewWorkerThread) {
+        WaitForSingleObject(g_previewWorkerThread, INFINITE);
+        CloseHandle(g_previewWorkerThread);
+        g_previewWorkerThread = NULL;
+    }
+
+    if (g_previewRequestEvent) {
+        CloseHandle(g_previewRequestEvent);
+        g_previewRequestEvent = NULL;
+    }
+
+    if (g_previewStopEvent) {
+        CloseHandle(g_previewStopEvent);
+        g_previewStopEvent = NULL;
+    }
+}
+
+static void PostPreviewLoadedMessage(void) {
+    if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_pendingTrayUpdate = TRUE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_pendingTrayUpdate = TRUE;
+    }
+
+    PostMessage(g_trayHwnd, CLOCK_WM_ANIMATION_PREVIEW_LOADED, 0, 0);
+}
 
 /**
  * @brief Normalize config value (trim whitespace and quotes)
@@ -404,9 +520,12 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     
     LoadedAnimation_Init(&g_mainAnimation);
     LoadedAnimation_Init(&g_previewAnimation);
+    g_pendingPreviewName[0] = '\0';
+    g_previewAnimationName[0] = '\0';
     g_mainIndex = 0;
     g_previewIndex = 0;
     g_isPreviewActive = FALSE;
+    InterlockedExchange(&g_previewRequestSerial, 0);
     
     FrameRateController_Init(&g_frameRateCtrl, TRAY_UPDATE_INTERVAL_MS);
     
@@ -438,22 +557,30 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     if (g_mainAnimation.count > 0) {
         UpdateTrayIconToCurrentFrame();
     }
-    
-    /* Start timer */
-    InitializeAnimationTimer(hwnd, INTERNAL_TICK_INTERVAL_MS, TrayAnimationTimerCallback, NULL);
+
+    EnsureTrayAnimationTimerState();
 }
 
 /**
  * @brief Stop animation system
  */
 void StopTrayAnimation(HWND hwnd) {
-    g_cancelLoad = TRUE;
+    (void)hwnd;
 
-    if (g_loadThread) {
-        WaitForSingleObject(g_loadThread, 1000);
-        CloseHandle(g_loadThread);
-        g_loadThread = NULL;
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_pendingPreviewName[0] = '\0';
+        g_previewAnimationName[0] = '\0';
+        g_isPreviewActive = FALSE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_pendingPreviewName[0] = '\0';
+        g_previewAnimationName[0] = '\0';
+        g_isPreviewActive = FALSE;
     }
+    InterlockedIncrement(&g_previewRequestSerial);
+
+    ShutdownPreviewWorker();
 
     CleanupAnimationTimer();
 
@@ -503,28 +630,32 @@ BOOL SetCurrentAnimationName(const char* name) {
         _stricmp(g_previewAnimationName, name) == 0 && 
         (g_previewAnimation.count > 0 || g_previewAnimation.sourceType == ANIM_SOURCE_PERCENT ||
          g_previewAnimation.sourceType == ANIM_SOURCE_CAPSLOCK)) {
-        
+        LoadedAnimation oldMain;
+        LoadedAnimation_Init(&oldMain);
+
         if (g_criticalSectionInitialized) {
             EnterCriticalSection(&g_animCriticalSection);
         }
-        
-        LoadedAnimation_Free(&g_mainAnimation);
-        
-        g_mainAnimation = g_previewAnimation;
+
+        SwapLoadedAnimation(&oldMain, &g_mainAnimation);
+        SwapLoadedAnimation(&g_mainAnimation, &g_previewAnimation);
+        LoadedAnimation_Init(&g_previewAnimation);
         g_mainIndex = g_previewIndex;
         
         /* Clear preview */
-        LoadedAnimation_Init(&g_previewAnimation);
         g_previewIndex = 0;
         g_isPreviewActive = FALSE;
         g_previewAnimationName[0] = '\0';
+        g_pendingPreviewName[0] = '\0';
+        InterlockedIncrement(&g_previewRequestSerial);
+        strncpy(g_animationName, name, sizeof(g_animationName) - 1);
+        g_animationName[sizeof(g_animationName) - 1] = '\0';
         
         if (g_criticalSectionInitialized) {
             LeaveCriticalSection(&g_animCriticalSection);
         }
-        
-        strncpy(g_animationName, name, sizeof(g_animationName) - 1);
-        g_animationName[sizeof(g_animationName) - 1] = '\0';
+
+        LoadedAnimation_Free(&oldMain);
         
         /* Persist to config */
         char config_path[MAX_PATH] = {0};
@@ -538,33 +669,54 @@ BOOL SetCurrentAnimationName(const char* name) {
         }
         
         WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
-        
+
+        EnsureTrayAnimationTimerState();
         if (g_trayHwnd) {
             UpdateTrayIconToCurrentFrame();
         }
         
         return TRUE;
     }
-    
-    /* Load new animation */
-    strncpy(g_animationName, name, sizeof(g_animationName) - 1);
-    g_animationName[sizeof(g_animationName) - 1] = '\0';
 
-    LoadedAnimation_Free(&g_mainAnimation);
-    LoadedAnimation_Init(&g_mainAnimation);
+    LoadedAnimation newMain;
+    LoadedAnimation oldMain;
+    LoadedAnimation oldPreview;
+    LoadedAnimation_Init(&newMain);
+    LoadedAnimation_Init(&oldMain);
+    LoadedAnimation_Init(&oldPreview);
 
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+    LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy);
 
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+
+    SwapLoadedAnimation(&oldMain, &g_mainAnimation);
+    SwapLoadedAnimation(&g_mainAnimation, &newMain);
+    LoadedAnimation_Init(&newMain);
     g_mainIndex = 0;
     g_frameRateCtrl.framePosition = 0.0;
-    
-    if (g_isPreviewActive) {
+
+    if (g_isPreviewActive || g_pendingPreviewName[0] != '\0') {
+        SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
+        LoadedAnimation_Init(&g_previewAnimation);
         g_isPreviewActive = FALSE;
         g_previewAnimationName[0] = '\0';
-        LoadedAnimation_Free(&g_previewAnimation);
+        g_pendingPreviewName[0] = '\0';
+        InterlockedIncrement(&g_previewRequestSerial);
     }
+
+    strncpy(g_animationName, name, sizeof(g_animationName) - 1);
+    g_animationName[sizeof(g_animationName) - 1] = '\0';
+
+    if (g_criticalSectionInitialized) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+
+    LoadedAnimation_Free(&oldMain);
+    LoadedAnimation_Free(&oldPreview);
     
     /* Persist to config */
     char config_path[MAX_PATH] = {0};
@@ -578,7 +730,8 @@ BOOL SetCurrentAnimationName(const char* name) {
     }
     
     WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
-    
+
+    EnsureTrayAnimationTimerState();
     if (g_trayHwnd) {
         UpdateTrayIconToCurrentFrame();
     }
@@ -593,115 +746,143 @@ void PreviewAnimationFromFile(HWND hwnd, const char* filePath) {
     (void)hwnd;
     if (!filePath || !*filePath) return;
 
+    LoadedAnimation newPreview;
+    LoadedAnimation oldPreview;
+    LoadedAnimation_Init(&newPreview);
+    LoadedAnimation_Init(&oldPreview);
+
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    LoadAnimationFromPath(filePath, &newPreview, g_memoryPool, cx, cy);
+
     if (g_criticalSectionInitialized) {
         EnterCriticalSection(&g_animCriticalSection);
     }
-
-    /* Prepare preview */
-    LoadedAnimation_Free(&g_previewAnimation);
-    LoadedAnimation_Init(&g_previewAnimation);
-    
-    /* Save preview name (use full path) */
-    strncpy(g_previewAnimationName, filePath, sizeof(g_previewAnimationName) - 1);
-    g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
-    
-    /* Load animation */
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-    
-    /* Declare external helper */
-    extern BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim, void* pool, int cx, int cy);
-    
-    LoadAnimationFromPath(filePath, &g_previewAnimation, g_memoryPool, cx, cy);
-    
+    InterlockedIncrement(&g_previewRequestSerial);
+    g_pendingPreviewName[0] = '\0';
+    SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
+    SwapLoadedAnimation(&g_previewAnimation, &newPreview);
+    LoadedAnimation_Init(&newPreview);
     g_previewIndex = 0;
     g_isPreviewActive = TRUE;
+    strncpy(g_previewAnimationName, filePath, sizeof(g_previewAnimationName) - 1);
+    g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
     
     if (g_criticalSectionInitialized) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
+
+    LoadedAnimation_Free(&oldPreview);
     
     /* Force update */
+    EnsureTrayAnimationTimerState();
     UpdateTrayIconToCurrentFrame();
 }
 
 /**
- * @brief Async loading thread
+ * @brief Preview worker thread
  */
-static DWORD WINAPI AsyncLoadPreviewThread(LPVOID param) {
-    char* name = (char*)param;
-    if (!name || !*name) {
-        free(name);
-        return 0;
-    }
+static DWORD WINAPI PreviewWorkerThread(LPVOID param) {
+    (void)param;
 
-    WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: loading '%s'", name);
-
-    LoadedAnimation tempAnim;
-    LoadedAnimation_Init(&tempAnim);
-
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-
-    LoadAnimationByName(name, &tempAnim, g_memoryPool, cx, cy);
-
-    WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: loaded count=%d sourceType=%d",
-             tempAnim.count, tempAnim.sourceType);
-
-    if (g_cancelLoad) {
-        WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: cancelled");
-        LoadedAnimation_Free(&tempAnim);
-        free(name);
-        return 0;
-    }
-
-    if (g_criticalSectionInitialized) {
-        EnterCriticalSection(&g_animCriticalSection);
-    }
-
-    if (!g_cancelLoad && g_pendingPreviewName[0] != '\0' &&
-        _stricmp(g_pendingPreviewName, name) == 0) {
-
-        LoadedAnimation_Free(&g_previewAnimation);
-        g_previewAnimation = tempAnim;
-        g_previewIndex = 0;
-        g_frameRateCtrl.framePosition = 0.0;
-
-        /* For percent icons, capslock icons (count=0), __none__ (transparent), or regular animations (count>0), activate preview */
-        if (tempAnim.count > 0 || tempAnim.sourceType == ANIM_SOURCE_PERCENT ||
-            tempAnim.sourceType == ANIM_SOURCE_CAPSLOCK || _stricmp(name, "__none__") == 0) {
-            strncpy(g_previewAnimationName, name, sizeof(g_previewAnimationName) - 1);
-            g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
-            g_isPreviewActive = TRUE;
-            WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: preview activated for '%s'", name);
-        } else {
-            WriteLog(LOG_LEVEL_WARNING, "Animation preview failed to load: '%s'", name);
-            g_previewAnimationName[0] = '\0';
+    HANDLE waitHandles[2] = { g_previewStopEvent, g_previewRequestEvent };
+    for (;;) {
+        DWORD waitResult = WaitForMultipleObjects(2, waitHandles, FALSE, INFINITE);
+        if (waitResult == WAIT_OBJECT_0) {
+            break;
+        }
+        if (waitResult != WAIT_OBJECT_0 + 1) {
+            continue;
         }
 
-        g_pendingPreviewName[0] = '\0';
-    } else {
-        WriteLog(LOG_LEVEL_INFO, "AsyncLoadPreviewThread: conditions not met, freeing");
-        LoadedAnimation_Free(&tempAnim);
-    }
+        char requestedName[MAX_PATH] = {0};
+        LONG requestSerial = InterlockedCompareExchange(&g_previewRequestSerial, 0, 0);
 
-    if (g_criticalSectionInitialized) {
-        LeaveCriticalSection(&g_animCriticalSection);
-    }
-
-    if (g_trayHwnd && IsWindow(g_trayHwnd)) {
-        /* Set pending update flag so TrayAnimation_HandleUpdateMessage will update the icon */
         if (g_criticalSectionInitialized) {
             EnterCriticalSection(&g_animCriticalSection);
-            g_pendingTrayUpdate = TRUE;
+            strncpy(requestedName, g_pendingPreviewName, sizeof(requestedName) - 1);
+            requestedName[sizeof(requestedName) - 1] = '\0';
             LeaveCriticalSection(&g_animCriticalSection);
         } else {
-            g_pendingTrayUpdate = TRUE;
+            strncpy(requestedName, g_pendingPreviewName, sizeof(requestedName) - 1);
+            requestedName[sizeof(requestedName) - 1] = '\0';
         }
-        PostMessage(g_trayHwnd, CLOCK_WM_ANIMATION_PREVIEW_LOADED, 0, 0);
+
+        if (!requestedName[0]) {
+            continue;
+        }
+
+        WriteLog(LOG_LEVEL_INFO, "PreviewWorkerThread: loading '%s'", requestedName);
+
+        LoadedAnimation tempAnim;
+        LoadedAnimation oldPreview;
+        LoadedAnimation_Init(&tempAnim);
+        LoadedAnimation_Init(&oldPreview);
+
+        int cx = GetSystemMetrics(SM_CXSMICON);
+        int cy = GetSystemMetrics(SM_CYSMICON);
+        MemoryPool* localPool = MemoryPool_Create(MEMORY_POOL_SIZE);
+        LoadAnimationByName(requestedName, &tempAnim, localPool, cx, cy);
+        if (localPool) {
+            MemoryPool_Destroy(localPool);
+        }
+
+        if (g_previewStopEvent && WaitForSingleObject(g_previewStopEvent, 0) == WAIT_OBJECT_0) {
+            LoadedAnimation_Free(&tempAnim);
+            break;
+        }
+
+        BOOL shouldApply = FALSE;
+        if (g_criticalSectionInitialized) {
+            EnterCriticalSection(&g_animCriticalSection);
+        }
+
+        if (InterlockedCompareExchange(&g_previewRequestSerial, 0, 0) == requestSerial &&
+            g_pendingPreviewName[0] != '\0' &&
+            _stricmp(g_pendingPreviewName, requestedName) == 0) {
+
+            BOOL canActivate = (tempAnim.count > 0 || tempAnim.sourceType == ANIM_SOURCE_PERCENT ||
+                                tempAnim.sourceType == ANIM_SOURCE_CAPSLOCK ||
+                                _stricmp(requestedName, "__none__") == 0);
+
+            if (canActivate) {
+                SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
+                SwapLoadedAnimation(&g_previewAnimation, &tempAnim);
+                LoadedAnimation_Init(&tempAnim);
+                g_previewIndex = 0;
+                g_frameRateCtrl.framePosition = 0.0;
+                g_isPreviewActive = TRUE;
+                strncpy(g_previewAnimationName, requestedName, sizeof(g_previewAnimationName) - 1);
+                g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
+                shouldApply = TRUE;
+                WriteLog(LOG_LEVEL_INFO, "PreviewWorkerThread: preview activated for '%s'", requestedName);
+            } else {
+                SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
+                LoadedAnimation_Init(&g_previewAnimation);
+                g_isPreviewActive = FALSE;
+                g_previewAnimationName[0] = '\0';
+                g_pendingPreviewName[0] = '\0';
+                shouldApply = TRUE;
+                WriteLog(LOG_LEVEL_WARNING, "PreviewWorkerThread: preview failed to load '%s'", requestedName);
+            }
+        }
+
+        if (shouldApply) {
+            g_pendingPreviewName[0] = '\0';
+        }
+
+        if (g_criticalSectionInitialized) {
+            LeaveCriticalSection(&g_animCriticalSection);
+        }
+
+        LoadedAnimation_Free(&oldPreview);
+        LoadedAnimation_Free(&tempAnim);
+
+        if (shouldApply) {
+            PostPreviewLoadedMessage();
+        }
     }
 
-    free(name);
     return 0;
 }
 
@@ -719,31 +900,24 @@ void StartAnimationPreview(const char* name) {
         return;
     }
 
-    g_cancelLoad = TRUE;
-
-    if (g_loadThread) {
-        WaitForSingleObject(g_loadThread, 500);
-        CloseHandle(g_loadThread);
-        g_loadThread = NULL;
-    }
-
-    g_cancelLoad = FALSE;
-
-    strncpy(g_pendingPreviewName, name, sizeof(g_pendingPreviewName) - 1);
-    g_pendingPreviewName[sizeof(g_pendingPreviewName) - 1] = '\0';
-
-    WriteLog(LOG_LEVEL_INFO, "StartAnimationPreview: creating thread for '%s'", name);
-
-    char* nameCopy = _strdup(name);
-    if (!nameCopy) {
-        WriteLog(LOG_LEVEL_ERROR, "Failed to allocate memory for async load");
+    if (!EnsurePreviewWorkerStarted()) {
         return;
     }
 
-    g_loadThread = CreateThread(NULL, 0, AsyncLoadPreviewThread, nameCopy, 0, NULL);
-    if (!g_loadThread) {
-        free(nameCopy);
-        WriteLog(LOG_LEVEL_ERROR, "Failed to create async load thread");
+    LONG requestSerial = InterlockedIncrement(&g_previewRequestSerial);
+
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+    strncpy(g_pendingPreviewName, name, sizeof(g_pendingPreviewName) - 1);
+    g_pendingPreviewName[sizeof(g_pendingPreviewName) - 1] = '\0';
+    if (g_criticalSectionInitialized) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+
+    WriteLog(LOG_LEVEL_INFO, "StartAnimationPreview: queued '%s' (serial=%ld)", name, requestSerial);
+    if (g_previewRequestEvent) {
+        SetEvent(g_previewRequestEvent);
     }
 }
 
@@ -752,16 +926,9 @@ void StartAnimationPreview(const char* name) {
  */
 void CancelAnimationPreview(void) {
     WriteLog(LOG_LEVEL_INFO, "CancelAnimationPreview: called, g_isPreviewActive=%d", g_isPreviewActive);
-    if (!g_isPreviewActive) return;
+    if (!g_isPreviewActive && g_pendingPreviewName[0] == '\0') return;
 
-    g_cancelLoad = TRUE;
-
-    if (g_loadThread) {
-        WriteLog(LOG_LEVEL_INFO, "CancelAnimationPreview: waiting for load thread");
-        WaitForSingleObject(g_loadThread, 500);
-        CloseHandle(g_loadThread);
-        g_loadThread = NULL;
-    }
+    InterlockedIncrement(&g_previewRequestSerial);
 
     if (g_criticalSectionInitialized) {
         EnterCriticalSection(&g_animCriticalSection);
@@ -772,6 +939,7 @@ void CancelAnimationPreview(void) {
     g_previewAnimationName[0] = '\0';
     g_pendingPreviewName[0] = '\0';
     LoadedAnimation_Free(&g_previewAnimation);
+    LoadedAnimation_Init(&g_previewAnimation);
     g_frameRateCtrl.framePosition = 0.0;
 
     if (g_criticalSectionInitialized) {
@@ -779,6 +947,7 @@ void CancelAnimationPreview(void) {
     }
 
     WriteLog(LOG_LEVEL_INFO, "CancelAnimationPreview: updating tray icon to current frame");
+    EnsureTrayAnimationTimerState();
     UpdateTrayIconToCurrentFrame();
 }
 
@@ -865,26 +1034,47 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     
     if (name[0] == '\0') return;
     if (_stricmp(g_animationName, name) == 0) return;
-    
-    strncpy(g_animationName, name, sizeof(g_animationName) - 1);
-    g_animationName[sizeof(g_animationName) - 1] = '\0';
-    
-    LoadedAnimation_Free(&g_mainAnimation);
-    LoadedAnimation_Init(&g_mainAnimation);
-    
+
+ 
+    LoadedAnimation newMain;
+    LoadedAnimation oldMain;
+    LoadedAnimation oldPreview;
+    LoadedAnimation_Init(&newMain);
+    LoadedAnimation_Init(&oldMain);
+    LoadedAnimation_Init(&oldPreview);
+
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
-    
+    LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy);
+
+    if (g_criticalSectionInitialized) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+    strncpy(g_animationName, name, sizeof(g_animationName) - 1);
+    g_animationName[sizeof(g_animationName) - 1] = '\0';
+    SwapLoadedAnimation(&oldMain, &g_mainAnimation);
+    SwapLoadedAnimation(&g_mainAnimation, &newMain);
+    LoadedAnimation_Init(&newMain);
     g_mainIndex = 0;
     g_frameRateCtrl.framePosition = 0.0;
     
-    if (g_isPreviewActive) {
+    if (g_isPreviewActive || g_pendingPreviewName[0] != '\0') {
         g_isPreviewActive = FALSE;
         g_previewAnimationName[0] = '\0';
-        LoadedAnimation_Free(&g_previewAnimation);
+        g_pendingPreviewName[0] = '\0';
+        InterlockedIncrement(&g_previewRequestSerial);
+        SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
+        LoadedAnimation_Init(&g_previewAnimation);
     }
+
+    if (g_criticalSectionInitialized) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+
+    LoadedAnimation_Free(&oldMain);
+    LoadedAnimation_Free(&oldPreview);
     
+    EnsureTrayAnimationTimerState();
     if (g_trayHwnd && g_mainAnimation.count > 0) {
         UpdateTrayIconToCurrentFrame();
     }
@@ -974,6 +1164,8 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void) {
  */
 BOOL TrayAnimation_HandleUpdateMessage(void) {
     BOOL hasPending = FALSE;
+
+    EnsureTrayAnimationTimerState();
     
     if (g_criticalSectionInitialized) {
         EnterCriticalSection(&g_animCriticalSection);
@@ -990,4 +1182,3 @@ BOOL TrayAnimation_HandleUpdateMessage(void) {
     
     return FALSE;
 }
-

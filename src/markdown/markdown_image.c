@@ -209,10 +209,15 @@ static unsigned int g_downloadingHashes[MAX_DOWNLOADING] = {0};
 static int g_downloadingCount = 0;
 static CRITICAL_SECTION g_downloadCS;
 static volatile LONG g_downloadCSInit = 0;
+static HANDLE g_downloadIdleEvent = NULL;
+static volatile LONG g_activeDownloadCount = 0;
+static volatile LONG g_downloadShutdown = 0;
 
 static void EnsureDownloadCSInit(void) {
     if (InterlockedCompareExchange(&g_downloadCSInit, 1, 0) == 0) {
         InitializeCriticalSection(&g_downloadCS);
+        g_downloadIdleEvent = CreateEventW(NULL, TRUE, TRUE, NULL);
+        g_downloadShutdown = 0;
         InterlockedExchange(&g_downloadCSInit, 2);
     }
     /* Wait for initialization to complete */
@@ -269,6 +274,20 @@ static void RemoveDownloadingUrl(const wchar_t* url) {
     LeaveCriticalSection(&g_downloadCS);
 }
 
+static void MarkDownloadStarted(void) {
+    EnsureDownloadCSInit();
+    InterlockedIncrement(&g_activeDownloadCount);
+    if (g_downloadIdleEvent) {
+        ResetEvent(g_downloadIdleEvent);
+    }
+}
+
+static void MarkDownloadFinished(void) {
+    if (InterlockedDecrement(&g_activeDownloadCount) == 0 && g_downloadIdleEvent) {
+        SetEvent(g_downloadIdleEvent);
+    }
+}
+
 typedef struct {
     wchar_t url[2048];
     wchar_t cachePath[MAX_PATH];
@@ -290,12 +309,14 @@ static DWORD WINAPI AsyncDownloadThread(LPVOID param) {
     }
     
     free(p);
+    MarkDownloadFinished();
     return 0;
 }
 
 void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd) {
     if (!image || !image->imagePath) return;
     if (!IsNetworkUrl(image->imagePath)) return;
+    if (InterlockedCompareExchange(&g_downloadShutdown, 0, 0) != 0) return;
     
     /* Check if already cached */
     wchar_t cachePath[MAX_PATH];
@@ -332,11 +353,13 @@ void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd) {
     params->hwnd = hwnd;
     
     /* Start background thread */
+    MarkDownloadStarted();
     HANDLE hThread = CreateThread(NULL, 0, AsyncDownloadThread, params, 0, NULL);
     if (hThread) {
         CloseHandle(hThread);
         LOG_INFO("Started async download for: %ls", image->imagePath);
     } else {
+        MarkDownloadFinished();
         free(params);
         RemoveDownloadingUrl(image->imagePath);
         image->isDownloading = FALSE;
@@ -621,6 +644,28 @@ int RenderMarkdownImage(HDC hdc, MarkdownImage* image, int x, int y,
 /* ============================================================================
  * Cleanup
  * ============================================================================ */
+
+void ShutdownMarkdownImage(void) {
+    InterlockedExchange(&g_downloadShutdown, 1);
+
+    if (g_downloadIdleEvent && InterlockedCompareExchange(&g_activeDownloadCount, 0, 0) > 0) {
+        WaitForSingleObject(g_downloadIdleEvent, INFINITE);
+    }
+
+    if (g_downloadCSInit == 2) {
+        DeleteCriticalSection(&g_downloadCS);
+        g_downloadCSInit = 0;
+    }
+
+    if (g_downloadIdleEvent) {
+        CloseHandle(g_downloadIdleEvent);
+        g_downloadIdleEvent = NULL;
+    }
+
+    ZeroMemory(g_downloadingHashes, sizeof(g_downloadingHashes));
+    g_downloadingCount = 0;
+    g_activeDownloadCount = 0;
+}
 
 void FreeMarkdownImages(MarkdownImage* images, int imageCount) {
     if (!images) return;

@@ -868,6 +868,11 @@ void WriteConfigScaleSteps(int normal_step, int fast_step);
  */
 void FlushConfigToDisk(void);
 
+/**
+ * @brief Release cached INI state and synchronization primitives.
+ */
+void ShutdownIniCache(void);
+
 /* ============================================================================
  * Tray icon animation color configuration
  * ============================================================================ */

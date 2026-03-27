@@ -189,6 +189,25 @@ typedef struct {
 static FontMapEntry* g_fontMap = NULL;
 static int g_fontMapCount = 0;
 static int g_fontMapCapacity = 0;
+static HANDLE g_fontEnumThread = NULL;
+static HANDLE g_fontEnumStopEvent = NULL;
+static BOOL g_fontListReady = FALSE;
+
+#define WM_APP_FONT_ENUM_COMPLETE (WM_APP + 410)
+
+static BOOL ShouldStopFontEnumeration(void) {
+    return g_fontEnumStopEvent &&
+           WaitForSingleObject(g_fontEnumStopEvent, 0) == WAIT_OBJECT_0;
+}
+
+static void ResetFontMap(void) {
+    if (g_fontMap) {
+        free(g_fontMap);
+        g_fontMap = NULL;
+    }
+    g_fontMapCount = 0;
+    g_fontMapCapacity = 0;
+}
 
 static BOOL CheckFontHasRequiredGlyphs(const wchar_t* fontName) {
     /* Required characters for countdown timer: 0-9 and colon */
@@ -291,7 +310,10 @@ static void AddOrUpdateFontMap(const wchar_t* fontName, const char* fontPath) {
 static int CALLBACK EnumFontFamiliesProc(const LOGFONTW* lpelf, const TEXTMETRICW* lpntm, 
                                         DWORD fontType, LPARAM lParam) {
     (void)lpntm;
-    (void)lParam;
+    
+    if (lParam && WaitForSingleObject((HANDLE)lParam, 0) == WAIT_OBJECT_0) {
+        return 0;
+    }
     
     if (fontType & TRUETYPE_FONTTYPE) {
         const wchar_t* faceName = lpelf->lfFaceName;
@@ -347,6 +369,129 @@ static int CALLBACK EnumFontFamiliesProc(const LOGFONTW* lpelf, const TEXTMETRIC
 
 /* Store the index of currently selected font for visual indication */
 static int g_currentFontIndex = -1;
+
+static void SelectCurrentFontInList(HWND hdlg, HWND hwndList) {
+    if (!hdlg || !hwndList) return;
+
+    /* Check if current font is from Windows Fonts directory and select it */
+    wchar_t fontsDir[MAX_PATH];
+    if (SHGetFolderPathW(NULL, CSIDL_FONTS, NULL, 0, fontsDir) != S_OK) {
+        return;
+    }
+
+    wchar_t currentFontW[MAX_PATH];
+    MultiByteToWideChar(CP_UTF8, 0, FONT_FILE_NAME, -1, currentFontW, MAX_PATH);
+
+    LOG_INFO("FontPicker: Current font file: %s", FONT_FILE_NAME);
+    LOG_INFO("FontPicker: System fonts directory: %S", fontsDir);
+
+    if (wcsstr(currentFontW, fontsDir) == currentFontW) {
+        LOG_INFO("FontPicker: ✓ Current font IS a system font");
+
+        BOOL found = FALSE;
+        for (int i = 0; i < g_fontMapCount; i++) {
+            if (_stricmp(g_fontMap[i].fontPath, FONT_FILE_NAME) == 0) {
+                LOG_INFO("FontPicker: Found matching font in map: '%S'", g_fontMap[i].fontName);
+
+                LRESULT idx = SendMessageW(hwndList, LB_FINDSTRINGEXACT,
+                                           (WPARAM)-1, (LPARAM)g_fontMap[i].fontName);
+                LOG_INFO("FontPicker: LB_FINDSTRINGEXACT returned index: %d", (int)idx);
+
+                if (idx != LB_ERR) {
+                    SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)idx, 0);
+                    if (idx >= 0 && idx <= INT_MAX) {
+                        g_currentFontIndex = (int)idx;
+                    } else {
+                        g_currentFontIndex = -1;
+                    }
+
+                    SendMessageW(hwndList, LB_SETTOPINDEX, (WPARAM)idx, 0);
+                    SetFocus(hwndList);
+                    InvalidateRect(hwndList, NULL, TRUE);
+                    UpdateWindow(hwndList);
+                    found = TRUE;
+                }
+                break;
+            }
+        }
+
+        if (!found) {
+            LOG_WARNING("FontPicker: Current system font not in font map (may be filtered)");
+            SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)-1, 0);
+            g_currentFontIndex = -1;
+        }
+    } else {
+        LOG_INFO("FontPicker: ✗ Current font is NOT a system font (custom/local font)");
+        SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)-1, 0);
+        g_currentFontIndex = -1;
+    }
+
+    InvalidateRect(hwndList, NULL, TRUE);
+}
+
+static void PopulateFontList(HWND hdlg) {
+    HWND hwndList = GetDlgItem(hdlg, IDC_FONT_LIST_SIMPLE);
+    if (!hwndList) {
+        return;
+    }
+
+    SendMessageW(hwndList, LB_RESETCONTENT, 0, 0);
+    for (int i = 0; i < g_fontMapCount; i++) {
+        SendMessageW(hwndList, LB_ADDSTRING, 0, (LPARAM)g_fontMap[i].fontName);
+    }
+
+    EnableWindow(hwndList, TRUE);
+    EnableWindow(GetDlgItem(hdlg, IDOK), TRUE);
+    SetDlgItemTextW(hdlg, IDC_FONT_PICKER_LABEL,
+                    GetLocalizedString(NULL, L"Font families (variants filtered):"));
+
+    SelectCurrentFontInList(hdlg, hwndList);
+
+    LOG_INFO("FontPicker: Enumeration complete, %d valid fonts ready", g_fontMapCount);
+}
+
+static void BuildFontMap(void) {
+    HDC hdc = GetDC(NULL);
+    if (!hdc) {
+        return;
+    }
+
+    LOGFONTW lf = {0};
+    lf.lfCharSet = DEFAULT_CHARSET;
+    EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamiliesProc, (LPARAM)g_fontEnumStopEvent, 0);
+    ReleaseDC(NULL, hdc);
+
+    if (ShouldStopFontEnumeration()) {
+        return;
+    }
+
+    int writeIndex = 0;
+    for (int i = 0; i < g_fontMapCount; i++) {
+        if (ShouldStopFontEnumeration()) {
+            return;
+        }
+
+        if (CheckFontHasRequiredGlyphs(g_fontMap[i].fontName)) {
+            if (writeIndex != i) {
+                g_fontMap[writeIndex] = g_fontMap[i];
+            }
+            writeIndex++;
+        }
+    }
+
+    g_fontMapCount = writeIndex;
+}
+
+static DWORD WINAPI FontEnumerationThread(LPVOID param) {
+    HWND hdlg = (HWND)param;
+    BuildFontMap();
+
+    if (!ShouldStopFontEnumeration() && hdlg && IsWindow(hdlg)) {
+        PostMessageW(hdlg, WM_APP_FONT_ENUM_COMPLETE, 0, 0);
+    }
+
+    return 0;
+}
 
 static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
@@ -440,140 +585,49 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                 LOG_ERROR("FontPicker: Failed to get list control");
                 return TRUE;
             }
-            
-            /* Reset font map */
-            g_fontMapCount = 0;
-            LOG_INFO("FontPicker: Starting font enumeration");
-            
-            /* Enumerate all fonts and build deduplication map */
-            HDC hdc = GetDC(NULL);
-            LOGFONTW lf = {0};
-            lf.lfCharSet = DEFAULT_CHARSET;
-            EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamiliesProc, 0, 0);
-            ReleaseDC(NULL, hdc);
-            
-            LOG_INFO("FontPicker: Enumeration complete, found %d unique fonts", g_fontMapCount);
-            
-            /* Add deduplicated fonts to list, filtering out fonts without required glyphs */
-            LOG_INFO("FontPicker: Starting glyph validation for %d fonts", g_fontMapCount);
-            int validCount = 0;
-            int filteredCount = 0;
-            for (int i = 0; i < g_fontMapCount; i++) {
-                if (CheckFontHasRequiredGlyphs(g_fontMap[i].fontName)) {
-                    SendMessageW(hwndList, LB_ADDSTRING, 0, (LPARAM)g_fontMap[i].fontName);
-                    validCount++;
-                } else {
-                    LOG_WARNING("FontPicker: Filtered out font '%S' (missing glyphs)", g_fontMap[i].fontName);
-                    filteredCount++;
+
+            ResetFontMap();
+            g_fontListReady = FALSE;
+            EnableWindow(hwndList, FALSE);
+            EnableWindow(GetDlgItem(hdlg, IDOK), FALSE);
+            SetDlgItemTextW(hdlg, IDC_FONT_PICKER_LABEL,
+                           GetLocalizedString(NULL, L"Font families (variants filtered):"));
+
+            if (g_fontEnumStopEvent) {
+                CloseHandle(g_fontEnumStopEvent);
+                g_fontEnumStopEvent = NULL;
+            }
+            g_fontEnumStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+            g_fontEnumThread = g_fontEnumStopEvent
+                ? CreateThread(NULL, 0, FontEnumerationThread, hdlg, 0, NULL)
+                : NULL;
+
+            if (!g_fontEnumThread) {
+                LOG_WARNING("FontPicker: Background enumeration unavailable, falling back to synchronous load");
+                if (g_fontEnumStopEvent) {
+                    CloseHandle(g_fontEnumStopEvent);
+                    g_fontEnumStopEvent = NULL;
                 }
+                BuildFontMap();
+                g_fontListReady = TRUE;
+                PopulateFontList(hdlg);
             }
-            
-            LOG_INFO("FontPicker: ========== SUMMARY ==========");
-            LOG_INFO("FontPicker: Total enumerated: %d fonts", g_fontMapCount);
-            LOG_INFO("FontPicker: Valid (passed glyph check): %d fonts", validCount);
-            LOG_INFO("FontPicker: Filtered (failed glyph check): %d fonts", filteredCount);
-            LOG_INFO("FontPicker: ==============================");
-            
-            /* Check initial list selection state */
-            LRESULT initialSel = SendMessageW(hwndList, LB_GETCURSEL, 0, 0);
-            LOG_INFO("FontPicker: Initial listbox selection state: %d (LB_ERR=%d)", (int)initialSel, LB_ERR);
-            
-            /* Check if current font is from Windows Fonts directory and select it */
-            wchar_t fontsDir[MAX_PATH];
-            if (SHGetFolderPathW(NULL, CSIDL_FONTS, NULL, 0, fontsDir) == S_OK) {
-                wchar_t currentFontW[MAX_PATH];
-                MultiByteToWideChar(CP_UTF8, 0, FONT_FILE_NAME, -1, currentFontW, MAX_PATH);
-                
-                LOG_INFO("FontPicker: Current font file: %s", FONT_FILE_NAME);
-                LOG_INFO("FontPicker: System fonts directory: %S", fontsDir);
-                
-                if (wcsstr(currentFontW, fontsDir) == currentFontW) {
-                    /* Current font is from system fonts, find it in our font map */
-                    LOG_INFO("FontPicker: ✓ Current font IS a system font");
-                    
-                    /* Search for matching font in the map by file path */
-                    BOOL found = FALSE;
-                    for (int i = 0; i < g_fontMapCount; i++) {
-                        if (_stricmp(g_fontMap[i].fontPath, FONT_FILE_NAME) == 0) {
-                            /* Found it! Select this font in the list */
-                            LOG_INFO("FontPicker: Found matching font in map: '%S'", g_fontMap[i].fontName);
-                            
-                            LRESULT idx = SendMessageW(hwndList, LB_FINDSTRINGEXACT, 
-                                                       (WPARAM)-1, (LPARAM)g_fontMap[i].fontName);
-                            LOG_INFO("FontPicker: LB_FINDSTRINGEXACT returned index: %d", (int)idx);
-                            
-                            if (idx != LB_ERR) {
-                                LRESULT result = SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)idx, 0);
-                                LOG_INFO("FontPicker: LB_SETCURSEL(%d) returned: %d", (int)idx, (int)result);
-                                
-                                /* Store index for checkmark display (with bounds check) */
-                                if (idx >= 0 && idx <= INT_MAX) {
-                                    g_currentFontIndex = (int)idx;
-                                } else {
-                                    g_currentFontIndex = -1;  /* Invalid index */
-                                    LOG_WARNING("FontPicker: Font index out of range: %lld", (long long)idx);
-                                }
-                                
-                                /* Ensure item is visible and focused */
-                                SendMessageW(hwndList, LB_SETTOPINDEX, (WPARAM)idx, 0);
-                                SetFocus(hwndList);
-                                InvalidateRect(hwndList, NULL, TRUE);
-                                UpdateWindow(hwndList);
-                                LOG_INFO("FontPicker: Set focus, scrolled, and refreshed display for index %d", (int)idx);
-                                
-                                /* Verify selection */
-                                LRESULT curSel = SendMessageW(hwndList, LB_GETCURSEL, 0, 0);
-                                if (curSel == idx) {
-                                    LOG_INFO("FontPicker: ✓✓✓ Selection SUCCESS - index %d is selected with checkmark", (int)curSel);
-                                } else {
-                                    LOG_ERROR("FontPicker: ✗✗✗ Selection FAILED - wanted %d, got %d", (int)idx, (int)curSel);
-                                }
-                                found = TRUE;
-                            } else {
-                                LOG_ERROR("FontPicker: ✗ Font '%S' not found in listbox", g_fontMap[i].fontName);
-                            }
-                            break;
-                        }
-                    }
-                    
-                    if (!found) {
-                        LOG_WARNING("FontPicker: Current system font not in font map (may be filtered)");
-                        /* Explicitly clear selection */
-                        SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)-1, 0);
-                        g_currentFontIndex = -1;  /* No checkmark */
-                        LOG_INFO("FontPicker: Cleared selection (no match found)");
-                    }
-                } else {
-                    LOG_INFO("FontPicker: ✗ Current font is NOT a system font (custom/local font)");
-                    /* Explicitly clear any selection */
-                    LRESULT clearResult = SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)-1, 0);
-                    g_currentFontIndex = -1;  /* No checkmark for custom fonts */
-                    LOG_INFO("FontPicker: LB_SETCURSEL(-1) to clear selection, returned: %d", (int)clearResult);
-                    
-                    /* Verify selection is cleared */
-                    LRESULT afterClear = SendMessageW(hwndList, LB_GETCURSEL, 0, 0);
-                    if (afterClear == LB_ERR) {
-                        LOG_INFO("FontPicker: ✓ Selection cleared successfully (no item selected)");
-                    } else {
-                        LOG_WARNING("FontPicker: ✗ Selection clear failed, still at index: %d", (int)afterClear);
-                    }
-                }
-            }
-            
-            /* Final selection state check */
-            LRESULT finalSel = SendMessageW(hwndList, LB_GETCURSEL, 0, 0);
-            LOG_INFO("FontPicker: ========== INIT COMPLETE ==========");
-            LOG_INFO("FontPicker: Final selection state: %d (LB_ERR=%d)", (int)finalSel, LB_ERR);
-            if (finalSel == LB_ERR) {
-                LOG_INFO("FontPicker: No item selected (correct for custom fonts)");
-            } else {
-                wchar_t selectedFont[LF_FACESIZE];
-                SendMessageW(hwndList, LB_GETTEXT, (WPARAM)finalSel, (LPARAM)selectedFont);
-                LOG_INFO("FontPicker: Selected item at index %d: '%S'", (int)finalSel, selectedFont);
-            }
-            LOG_INFO("FontPicker: ======================================");
+
             return TRUE;
         }
+
+        case WM_APP_FONT_ENUM_COMPLETE:
+            g_fontListReady = TRUE;
+            if (g_fontEnumThread) {
+                CloseHandle(g_fontEnumThread);
+                g_fontEnumThread = NULL;
+            }
+            if (g_fontEnumStopEvent) {
+                CloseHandle(g_fontEnumStopEvent);
+                g_fontEnumStopEvent = NULL;
+            }
+            PopulateFontList(hdlg);
+            return TRUE;
 
         case WM_KEYDOWN:
             if (wp == VK_ESCAPE) {
@@ -609,6 +663,9 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                 return TRUE;
             } else if (LOWORD(wp) == IDC_FONT_LIST_SIMPLE) {
                 if (HIWORD(wp) == LBN_SELCHANGE) {
+                    if (!g_fontListReady) {
+                        return TRUE;
+                    }
                     /* Real-time preview when selection changes */
                     HWND hwndList = GetDlgItem(hdlg, IDC_FONT_LIST_SIMPLE);
                     int sel = (int)SendMessageW(hwndList, LB_GETCURSEL, 0, 0);
@@ -659,19 +716,30 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
             LOG_INFO("FontPicker: WM_DESTROY - Cleaning up resources");
             KillTimer(hdlg, 9998);
             Dialog_UnregisterInstance(DIALOG_INSTANCE_FONT_PICKER);
+
+            if (g_fontEnumStopEvent) {
+                SetEvent(g_fontEnumStopEvent);
+            }
+            if (g_fontEnumThread) {
+                WaitForSingleObject(g_fontEnumThread, INFINITE);
+                CloseHandle(g_fontEnumThread);
+                g_fontEnumThread = NULL;
+            }
+            if (g_fontEnumStopEvent) {
+                CloseHandle(g_fontEnumStopEvent);
+                g_fontEnumStopEvent = NULL;
+            }
             
             /* Clear checkmark index */
             g_currentFontIndex = -1;
+            g_fontListReady = FALSE;
             
             /* Cleanup font map memory */
             if (g_fontMap) {
                 LOG_INFO("FontPicker: Freeing font map (%d entries, %d bytes)", 
                          g_fontMapCount, g_fontMapCapacity * (int)sizeof(FontMapEntry));
-                free(g_fontMap);
-                g_fontMap = NULL;
-                g_fontMapCount = 0;
-                g_fontMapCapacity = 0;
             }
+            ResetFontMap();
             LOG_INFO("FontPicker: Dialog destroyed");
             return TRUE;
     }

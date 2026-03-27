@@ -17,5 +17,10 @@
  */
 void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps);
 
+/**
+ * Release cached markdown render data used across paint calls.
+ */
+void CleanupDrawingRenderCache(void);
+
 #endif /* DRAWING_RENDER_H */
 

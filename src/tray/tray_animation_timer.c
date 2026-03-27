@@ -21,6 +21,7 @@ static void* g_userData = NULL;
 static HWND g_timerHwnd = NULL;
 static UINT g_internalInterval = 10;
 static UINT g_timerResolutionMs = 0;
+static BOOL g_timerActive = FALSE;
 
 /**
  * @brief Initialize frame rate controller
@@ -142,6 +143,10 @@ static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
 BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
                                AnimationTimerCallback callback, void* userData) {
     if (!hwnd || !callback) return FALSE;
+
+    if (g_timerActive) {
+        CleanupAnimationTimer();
+    }
     
     g_timerHwnd = hwnd;
     g_callback = callback;
@@ -159,6 +164,7 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
             if (SetTimer(hwnd, TIMER_ID_TRAY_ANIMATION, g_internalInterval, FallbackTimerProc) == 0) {
                 return FALSE;
             }
+            g_timerActive = TRUE;
             return TRUE;
         }
         g_timerResolutionMs = 2;
@@ -186,10 +192,12 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
         if (SetTimer(hwnd, TIMER_ID_TRAY_ANIMATION, g_internalInterval, FallbackTimerProc) == 0) {
             return FALSE;
         }
+        g_timerActive = TRUE;
         return TRUE;
     }
     
     g_useHighPrecisionTimer = TRUE;
+    g_timerActive = TRUE;
     return TRUE;
 }
 
@@ -218,6 +226,11 @@ void CleanupAnimationTimer(void) {
     g_callback = NULL;
     g_userData = NULL;
     g_timerHwnd = NULL;
+    g_timerActive = FALSE;
+}
+
+BOOL IsAnimationTimerActive(void) {
+    return g_timerActive;
 }
 
 /**

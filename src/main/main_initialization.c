@@ -24,6 +24,8 @@
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "drawing/drawing_image.h"
+#include "drawing/drawing_render.h"
+#include "markdown/markdown_image.h"
 #include "markdown/markdown_interactive.h"
 #include "../resource/resource.h"
 #include <tlhelp32.h>
@@ -560,6 +562,12 @@ void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Cleaning up markdown interactive system");
     CleanupMarkdownInteractive();
 
+    LOG_INFO("Cleaning up cached markdown render state");
+    CleanupDrawingRenderCache();
+
+    LOG_INFO("Shutting down markdown image subsystem");
+    ShutdownMarkdownImage();
+
     LOG_INFO("Preparing to clean up update check thread resources");
     CleanupUpdateThread();
 
@@ -575,6 +583,9 @@ void CleanupResources(HANDLE hMutex) {
 
     LOG_INFO("Shutting down GDI+");
     ShutdownDrawingImage();
+
+    LOG_INFO("Shutting down INI cache");
+    ShutdownIniCache();
 
     if (hMutex) {
         LOG_INFO("Releasing mutex before exit");
