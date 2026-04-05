@@ -301,6 +301,7 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
  */
 static void UpdateTrayIconToCurrentFrame(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+    if (IsTrayInteractionSuspended()) return;
     
     if (g_criticalSectionInitialized) {
         EnterCriticalSection(&g_animCriticalSection);
@@ -443,6 +444,10 @@ static void RequestTrayIconUpdate(void) {
         LeaveCriticalSection(&g_animCriticalSection);
     } else {
         g_pendingTrayUpdate = TRUE;
+    }
+
+    if (IsTrayInteractionSuspended()) {
+        return;
     }
     
     PostMessage(g_trayHwnd, WM_TRAY_UPDATE_ICON, 0, 0);
@@ -1120,6 +1125,7 @@ void TrayAnimation_ClearCurrentName(void) {
  */
 void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+    if (IsTrayInteractionSuspended()) return;
     if (!g_animationName[0]) return;
     if (g_isPreviewActive) return;
     

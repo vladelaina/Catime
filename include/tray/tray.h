@@ -107,4 +107,16 @@ BOOL IsTrayMouseHookInstalled(void);
  */
 BOOL IsMouseOverTrayIconArea(POINT pt);
 
+/**
+ * @brief Suspend or resume tray background work during menu interaction
+ * @param suspended TRUE to pause hover/tooltip/icon updates
+ */
+void SetTrayInteractionSuspended(BOOL suspended);
+
+/**
+ * @brief Check whether tray background work is suspended
+ * @return TRUE if suspended
+ */
+BOOL IsTrayInteractionSuspended(void);
+
 #endif

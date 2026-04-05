@@ -36,6 +36,7 @@ BOOL g_showingOpacityTip = FALSE;
 /** @brief Cached tray icon rectangle for performance */
 static RECT g_cachedIconRect = {0};
 static DWORD g_lastRectUpdateTime = 0;
+static volatile LONG g_trayInteractionSuspended = FALSE;
 
 extern void ReadPercentIconColorsConfig(void);
 
@@ -69,6 +70,10 @@ static BOOL IsMouseOverTrayIconCached(POINT pt) {
  * @note Only handles wheel events, installed on-demand when mouse enters tray icon
  */
 static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (IsTrayInteractionSuspended()) {
+        return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
+    }
+
     if (nCode >= 0 && wParam == WM_MOUSEWHEEL) {
         MSLLHOOKSTRUCT* pMouseStruct = (MSLLHOOKSTRUCT*)lParam;
         
@@ -302,6 +307,10 @@ void UpdateTrayTooltip(const wchar_t* tip) {
 void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     (void)hwnd; (void)msg; (void)id; (void)time;
 
+    if (IsTrayInteractionSuspended()) {
+        return;
+    }
+
     /* Skip update if showing opacity tip */
     extern BOOL g_showingOpacityTip;
     if (g_showingOpacityTip) {
@@ -487,6 +496,30 @@ BOOL IsTrayMouseHookInstalled(void) {
  */
 BOOL IsMouseOverTrayIconArea(POINT pt) {
     return IsMouseOverTrayIconCached(pt);
+}
+
+void SetTrayInteractionSuspended(BOOL suspended) {
+    InterlockedExchange(&g_trayInteractionSuspended, suspended ? 1L : 0L);
+
+    if (suspended) {
+        if (g_mouseHook) {
+            UnhookWindowsHookEx(g_mouseHook);
+            g_mouseHook = NULL;
+        }
+        return;
+    }
+
+    if (g_showingOpacityTip) {
+        g_showingOpacityTip = FALSE;
+    }
+
+    if (g_mainHwnd) {
+        TrayTipTimerProc(g_mainHwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
+    }
+}
+
+BOOL IsTrayInteractionSuspended(void) {
+    return InterlockedCompareExchange(&g_trayInteractionSuspended, 0, 0) != 0;
 }
 
 /**

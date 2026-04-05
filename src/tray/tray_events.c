@@ -31,6 +31,10 @@ static HWND g_trayEventHwnd = NULL;
  */
 static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     (void)hwnd; (void)msg; (void)id; (void)time;
+
+    if (IsTrayInteractionSuspended()) {
+        return;
+    }
     
     POINT pt;
     GetCursorPos(&pt);
@@ -131,12 +135,16 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
     switch (uMouseMsg) {
         case WM_RBUTTONUP:
             SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+            SetTrayInteractionSuspended(TRUE);
             ShowColorMenu(hwnd);
+            SetTrayInteractionSuspended(FALSE);
             break;
             
         case WM_LBUTTONUP:
             SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+            SetTrayInteractionSuspended(TRUE);
             ShowContextMenu(hwnd);
+            SetTrayInteractionSuspended(FALSE);
             break;
             
         default:
