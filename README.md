@@ -57,7 +57,7 @@
   👏 Join us on 
   <a href="https://discord.com/invite/W3tW2gtp6g" target="_blank" style="text-decoration: none; font-weight: bold; color: #5865F2;">Discord</a> 
   and 
-  <a href="https://qm.qq.com/q/vjCduOQILI" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">QQ Group(1079222265)</a>to say hi and ask questions.
+  <a href="https://qm.qq.com/q/vjCduOQILI" target="_blank" style="text-decoration: none; font-weight: bold; color: #12B7F5;">🐧QQ Group(1079222265)</a>to say hi and ask questions.
 </div>
 
 
