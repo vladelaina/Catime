@@ -368,7 +368,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                             extern void WriteConfigDefaultStartTime(int seconds);
                             extern void WriteConfigStartupMode(const char* mode);
                             WriteConfigDefaultStartTime(total_seconds);
-                            WriteConfigStartupMode("COUNTDOWN");
+                            WriteConfigStartupMode("DEFAULT");
                             DestroyWindow(hwndDlg);
                         } else {
                             if (g_hwndParent) {

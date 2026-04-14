@@ -171,8 +171,8 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
     HMENU hStartupSettingsMenu = CreatePopupMenu();
     
     /* Use in-memory variable instead of reading config file each time */
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(CLOCK_STARTUP_MODE, "COUNTDOWN") == 0 ? MF_CHECKED : 0),
+    AppendMenuW(hStartupSettingsMenu, MF_STRING |
+                (strcmp(CLOCK_STARTUP_MODE, "DEFAULT") == 0 ? MF_CHECKED : 0),
                 CLOCK_IDC_SET_COUNTDOWN_TIME,
                 GetLocalizedString(NULL, L"Countdown"));
     

@@ -180,7 +180,7 @@ void TogglePauseResumeTimer(HWND hwnd) {
 /**
  * @brief Persist startup mode and refresh UI
  * @param hwnd Window handle for redraw
- * @param mode Startup mode ("COUNTDOWN", "COUNTUP", "SHOW_TIME", "NO_DISPLAY")
+ * @param mode Startup mode ("DEFAULT", "COUNT_UP", "SHOW_TIME", "NO_DISPLAY")
  */
 void SetStartupMode(HWND hwnd, const char* mode) {
     WriteConfigStartupMode(mode);
