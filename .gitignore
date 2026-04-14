@@ -25,3 +25,13 @@ build/*
 .idea/
 
 .vscode
+.codex
+.codex/
+.claude/
+.aider*
+.gemini/
+.qwen/
+.opencode/
+.roo/
+.augment/
+.kiro/

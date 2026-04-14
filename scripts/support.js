@@ -559,6 +559,9 @@ function translateSupportElements() {
         if (td.textContent === '1.4版本太好了') {
             td.textContent = 'Version 1.4 is great';
         }
+        if (td.textContent === '坚持就是胜利') {
+            td.textContent = 'Perseverance leads to victory';
+        }
         if (td.textContent === '加油') {
             td.textContent = 'Keep going';
         }
