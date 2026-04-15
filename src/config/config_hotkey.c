@@ -177,11 +177,11 @@ WORD StringToHotkey(const char* str) {
     char* lastToken = NULL;
     
     while (token) {
-        if (stricmp(token, "Ctrl") == 0) {
+        if (_stricmp(token, "Ctrl") == 0) {
             mod |= HOTKEYF_CONTROL;
-        } else if (stricmp(token, "Shift") == 0) {
+        } else if (_stricmp(token, "Shift") == 0) {
             mod |= HOTKEYF_SHIFT;
-        } else if (stricmp(token, "Alt") == 0) {
+        } else if (_stricmp(token, "Alt") == 0) {
             mod |= HOTKEYF_ALT;
         } else {
             /** Last token is the key name */
@@ -212,7 +212,7 @@ WORD StringToHotkey(const char* str) {
         /** Look up in mapping table */
         else {
             for (int i = 0; g_vkeyMap[i].name != NULL; i++) {
-                if (stricmp(lastToken, g_vkeyMap[i].name) == 0) {
+                if (_stricmp(lastToken, g_vkeyMap[i].name) == 0) {
                     vk = g_vkeyMap[i].vk;
                     break;
                 }
@@ -350,4 +350,3 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     
     fclose(file);
 }
-
