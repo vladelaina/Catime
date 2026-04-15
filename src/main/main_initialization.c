@@ -30,6 +30,61 @@
 #include "../resource/resource.h"
 #include <tlhelp32.h>
 
+static BOOL ContainsFlag(const wchar_t* cmdLine, const wchar_t* flag) {
+    const wchar_t* pos;
+
+    if (!cmdLine || !flag || !*flag) {
+        return FALSE;
+    }
+
+    pos = wcsstr(cmdLine, flag);
+    while (pos) {
+        const wchar_t before = (pos == cmdLine) ? L' ' : pos[-1];
+        const wchar_t after = pos[wcslen(flag)];
+        const BOOL beforeOk = before == L' ' || before == L'\t' || before == L'"';
+        const BOOL afterOk = after == L'\0' || after == L' ' || after == L'\t' || after == L'"' || after == L'=';
+
+        if (beforeOk && afterOk) {
+            return TRUE;
+        }
+        pos = wcsstr(pos + 1, flag);
+    }
+
+    return FALSE;
+}
+
+BOOL IsCiSmokeMode(void) {
+    return ContainsFlag(GetCommandLineW(), L"--ci-smoke");
+}
+
+UINT GetCiExitTimeoutMs(void) {
+    const wchar_t* cmdLine = GetCommandLineW();
+    const wchar_t* marker = wcsstr(cmdLine, L"--ci-exit-ms=");
+    wchar_t* end = NULL;
+    unsigned long value;
+
+    if (!marker) {
+        return 3000;
+    }
+
+    marker += wcslen(L"--ci-exit-ms=");
+    value = wcstoul(marker, &end, 10);
+    if (end == marker || value < 250 || value > 60000) {
+        return 3000;
+    }
+
+    return (UINT)value;
+}
+
+static VOID CALLBACK CiSmokeExitTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+    (void)uMsg;
+    (void)dwTime;
+
+    KillTimer(hwnd, idEvent);
+    LOG_INFO("CI smoke timeout reached, closing application");
+    PostMessage(hwnd, WM_CLOSE, 0, 0);
+}
+
 /* Helper to check if process is elevated */
 static BOOL IsElevated(void) {
     BOOL fRet = FALSE;
@@ -452,7 +507,8 @@ void InitializeDialogLanguages(void) {
 
 BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     (void)nCmdShow; // Unused parameter
-    
+    const BOOL ciSmokeMode = IsCiSmokeMode();
+
     // Initialize Plugin Data subsystem early - needed by CLI handlers and startup mode
     PluginData_Init(hwnd);
     PluginManager_SetNotifyWindow(hwnd);
@@ -512,12 +568,18 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         LOG_INFO("Font path check timer set successfully (2 second interval)");
     }
     
-    LOG_INFO("Starting automatic update check at startup...");
-    CheckForUpdateAsync(hwnd, TRUE);
-    
-    LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
-    HandleStartupMode(hwnd);
-    
+    if (ciSmokeMode) {
+        const UINT exitDelayMs = GetCiExitTimeoutMs();
+        LOG_INFO("CI smoke mode enabled, skipping startup-only side effects and auto-exiting in %u ms", exitDelayMs);
+        SetTimer(hwnd, TIMER_ID_CI_EXIT, exitDelayMs, CiSmokeExitTimerProc);
+    } else {
+        LOG_INFO("Starting automatic update check at startup...");
+        CheckForUpdateAsync(hwnd, TRUE);
+
+        LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
+        HandleStartupMode(hwnd);
+    }
+
     if (launchedFromStartup) {
         if (CLOCK_WINDOW_TOPMOST) {
             SetTimer(hwnd, TIMER_ID_TOPMOST_RETRY, 2000, NULL);

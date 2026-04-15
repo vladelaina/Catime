@@ -1,78 +1,545 @@
-name: build catime
+name: Catime CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths-ignore:
-      - 'README.md'
-      - 'README_EN.md'
-      - 'SECURITY.md'
-      - 'PRIVACY.md'
+      - "README.md"
+      - "README_EN.md"
+      - "SECURITY.md"
+      - "PRIVACY.md"
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths-ignore:
-      - 'README.md'
-      - 'README_EN.md'
-      - 'SECURITY.md'
-      - 'PRIVACY.md'
+      - "README.md"
+      - "README_EN.md"
+      - "SECURITY.md"
+      - "PRIVACY.md"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
 
 jobs:
+  codeql:
+    name: quality / codeql
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install MinGW compiler and CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 cmake
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: c-cpp
+          build-mode: manual
+
+      - name: Build for CodeQL
+        run: |
+          chmod +x build.sh
+          ./build.sh Debug
+
+      - name: Analyze with CodeQL
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:c-cpp"
+
+      - name: Prepare CodeQL summary
+        if: always()
+        run: |
+          mkdir -p quality-codeql
+          status="${{ job.status }}"
+          if [ "$status" = "success" ]; then
+            summary="CodeQL completed. See the Code Scanning tab for alerts."
+            findings="0"
+          else
+            summary="CodeQL did not complete successfully."
+            findings="-"
+          fi
+          cat > quality-codeql/status.json <<EOF
+          {"check":"CodeQL","status":"$status","findings":"$findings","summary":"$summary","details":["Review GitHub Code Scanning for the full CodeQL result set."]}
+          EOF
+
+      - name: Upload CodeQL summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-codeql
+          path: quality-codeql
+          if-no-files-found: error
+
+  cppcheck:
+    name: quality / cppcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck python3
+
+      - name: Run Cppcheck
+        id: cppcheck
+        run: |
+          set +e
+          mkdir -p quality-cppcheck
+          cppcheck \
+            --enable=warning,style,performance,portability,information \
+            --inconclusive \
+            --force \
+            --std=c11 \
+            --library=windows \
+            --suppress=missingIncludeSystem \
+            --error-exitcode=1 \
+            --xml \
+            --xml-version=2 \
+            -I include \
+            src 2> quality-cppcheck/cppcheck.xml
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Summarize Cppcheck findings
+        id: summarize
+        run: |
+          python3 - <<'PY'
+          import json
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+
+          xml_path = Path("quality-cppcheck/cppcheck.xml")
+          root = ET.parse(xml_path).getroot()
+          errors = root.findall(".//error")
+          details = []
+          for item in errors[:5]:
+              severity = item.attrib.get("severity", "unknown")
+              msg = item.attrib.get("msg", "").strip()
+              location = item.find("location")
+              if location is not None:
+                  file_path = location.attrib.get("file", "")
+                  line = location.attrib.get("line", "")
+                  details.append(f"{severity}: {msg} ({file_path}:{line})")
+              else:
+                  details.append(f"{severity}: {msg}")
+
+          payload = {
+              "check": "Cppcheck",
+              "status": "passed" if not errors else "failed",
+              "findings": len(errors),
+              "summary": "Cppcheck completed without findings" if not errors else f"Cppcheck reported {len(errors)} finding(s)",
+              "details": details,
+          }
+          Path("quality-cppcheck/status.json").write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
+          Path("quality-cppcheck/findings.txt").write_text("\n".join(details) + ("\n" if details else ""), encoding="utf-8")
+          print(f"findings={len(errors)}")
+          PY
+          findings=$(python3 -c 'import json; print(json.load(open("quality-cppcheck/status.json", encoding="utf-8"))["findings"])')
+          echo "findings=$findings" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Cppcheck report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-cppcheck
+          path: quality-cppcheck
+          if-no-files-found: error
+
+      - name: Enforce Cppcheck gate
+        if: always()
+        run: |
+          if [ "${{ steps.cppcheck.outputs.exit_code }}" != "0" ] || [ "${{ steps.summarize.outputs.findings }}" != "0" ]; then
+            exit 1
+          fi
+
+  msvc-analyze:
+    name: quality / msvc-analyze
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Configure MSVC analyzer build
+        shell: pwsh
+        run: |
+          cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A Win32 `
+            -DCMAKE_BUILD_TYPE=Debug `
+            -DCATIME_ENABLE_MSVC_ANALYZE=ON `
+            -DCATIME_ENABLE_WARNINGS=ON `
+            -DCATIME_WARNINGS_AS_ERRORS=OFF `
+            -DCATIME_ENABLE_BINARY_HARDENING=OFF
+
+      - name: Build with MSVC analyzer
+        id: build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
+          $ErrorActionPreference = "Continue"
+          cmake --build build-msvc --config Debug *>&1 | Tee-Object quality-msvc-analyze\build.log
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Merge analyzer SARIF
+        id: sarif
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
+          $count = python .github/scripts/ci/merge_sarif.py build-msvc quality-msvc-analyze\analysis.sarif
+          "sarif_results=$count" >> $env:GITHUB_OUTPUT
+
+      - name: Summarize analyzer findings
+        id: summarize
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
+          if (-not (Test-Path quality-msvc-analyze\build.log)) {
+            "" | Set-Content -Encoding utf8 quality-msvc-analyze\build.log
+          }
+          $warningLines = @(Select-String -Path quality-msvc-analyze\build.log -Pattern "warning C\d+:" -AllMatches)
+          $warningCount = $warningLines.Count
+          $details = @()
+          foreach ($line in $warningLines | Select-Object -First 5) {
+            $details += $line.Line.Trim()
+          }
+
+          $status = if ("${{ steps.build.outputs.exit_code }}" -eq "0" -and $warningCount -eq 0 -and [int]"${{ steps.sarif.outputs.sarif_results }}" -eq 0) { "passed" } else { "failed" }
+          $summary = if ($status -eq "passed") {
+            "MSVC /analyze completed without findings"
+          } else {
+            "MSVC /analyze reported $warningCount warning(s)"
+          }
+
+          $payload = [ordered]@{
+            check = "MSVC /analyze"
+            status = $status
+            findings = $warningCount
+            summary = $summary
+            details = $details
+          }
+
+          $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 quality-msvc-analyze\status.json
+          "warning_count=$warningCount" >> $env:GITHUB_OUTPUT
+          "status=$status" >> $env:GITHUB_OUTPUT
+
+      - name: Upload analyzer SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: quality-msvc-analyze/analysis.sarif
+          category: msvc-analyze
+
+      - name: Upload analyzer report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-msvc-analyze
+          path: quality-msvc-analyze
+          if-no-files-found: error
+
+      - name: Enforce analyzer gate
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
+            exit 1
+          }
+
+  windows-asan-smoke:
+    name: quality / windows-asan-smoke
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure ASan smoke build
+        shell: pwsh
+        run: |
+          cmake -S . -B build-asan -G "Visual Studio 17 2022" -A Win32 `
+            -DCMAKE_BUILD_TYPE=Debug `
+            -DCATIME_ENABLE_ASAN=ON `
+            -DCATIME_ENABLE_WARNINGS=ON `
+            -DCATIME_WARNINGS_AS_ERRORS=OFF `
+            -DCATIME_ENABLE_BINARY_HARDENING=OFF
+
+      - name: Build ASan smoke binary
+        id: build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-windows-asan | Out-Null
+          $ErrorActionPreference = "Continue"
+          cmake --build build-asan --config Debug *>&1 | Tee-Object quality-windows-asan\build.log
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Run ASan smoke test
+        id: smoke
+        if: always() && steps.build.outputs.exit_code == '0'
+        shell: pwsh
+        env:
+          ASAN_SAVE_DUMPS: quality-windows-asan\catime-asan.dmp
+        run: |
+          $ErrorActionPreference = "Continue"
+          & .\build-asan\Debug\catime.exe --ci-smoke --ci-exit-ms=4000 *>&1 | Tee-Object quality-windows-asan\asan.log
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Summarize ASan findings
+        id: summarize
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-windows-asan | Out-Null
+          if (-not (Test-Path quality-windows-asan\asan.log)) {
+            "" | Set-Content -Encoding utf8 quality-windows-asan\asan.log
+          }
+
+          $patterns = @(
+            "ERROR: AddressSanitizer",
+            "Address Sanitizer Error",
+            "AddressSanitizer:"
+          )
+
+          $details = @()
+          foreach ($pattern in $patterns) {
+            $matches = Select-String -Path quality-windows-asan\asan.log -Pattern $pattern -ErrorAction SilentlyContinue
+            foreach ($match in $matches) {
+              if ($details.Count -ge 5) {
+                break
+              }
+              $details += $match.Line.Trim()
+            }
+          }
+
+          $dumpCount = @(Get-ChildItem quality-windows-asan -Filter *.dmp -ErrorAction SilentlyContinue).Count
+          $findingCount = $details.Count + $dumpCount
+          $runExit = if ("${{ steps.smoke.outputs.exit_code }}") { "${{ steps.smoke.outputs.exit_code }}" } else { "0" }
+          $status = if ("${{ steps.build.outputs.exit_code }}" -eq "0" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
+          $summary = if ($status -eq "passed") {
+            "ASan smoke run completed without reported memory issues"
+          } else {
+            "ASan smoke run reported $findingCount issue marker(s)"
+          }
+
+          $payload = [ordered]@{
+            check = "Windows ASan Smoke"
+            status = $status
+            findings = $findingCount
+            summary = $summary
+            details = $details
+          }
+
+          $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 quality-windows-asan\status.json
+          "status=$status" >> $env:GITHUB_OUTPUT
+
+      - name: Upload ASan report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-windows-asan
+          path: quality-windows-asan
+          if-no-files-found: error
+
+      - name: Enforce ASan gate
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
+            exit 1
+          }
+
+  win32-binary-baseline:
+    name: quality / win32-binary-baseline
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure Win32 release build
+        shell: pwsh
+        run: |
+          cmake -S . -B build-win32-baseline -G "Visual Studio 17 2022" -A Win32 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCATIME_ENABLE_BINARY_HARDENING=ON `
+            -DCATIME_ENABLE_WARNINGS=ON `
+            -DCATIME_WARNINGS_AS_ERRORS=OFF
+
+      - name: Build Win32 release binary
+        id: build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-win32-baseline | Out-Null
+          $ErrorActionPreference = "Continue"
+          cmake --build build-win32-baseline --config Release
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Check Win32 PE hardening
+        if: always() && steps.build.outputs.exit_code == '0'
+        shell: pwsh
+        run: |
+          .\.github\scripts\ci\check_pe_hardening.ps1 `
+            -BinaryPath .\build-win32-baseline\Release\catime.exe `
+            -OutputDir .\quality-win32-baseline
+
+      - name: Prepare Win32 baseline placeholder
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .\quality-win32-baseline | Out-Null
+          if (-not (Test-Path .\quality-win32-baseline\status.json)) {
+            $payload = [ordered]@{
+              check = "Win32 Binary Baseline"
+              status = "failed"
+              findings = 1
+              summary = "Win32 baseline build did not complete successfully"
+              details = @("The MSVC Win32 release build failed before PE hardening checks could run.")
+            }
+            $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 .\quality-win32-baseline\status.json
+          }
+
+      - name: Upload Win32 baseline report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-win32-baseline
+          path: quality-win32-baseline
+          if-no-files-found: error
+
+  windows-drmemory:
+    name: quality / drmemory-nightly
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Dr. Memory
+        shell: pwsh
+        run: |
+          choco install drmemory.portable -y
+          if ($LASTEXITCODE -ne 0) {
+            choco install drmemory -y
+          }
+
+      - name: Configure Dr. Memory build
+        shell: pwsh
+        run: |
+          cmake -S . -B build-drmemory -G "Visual Studio 17 2022" -A Win32 `
+            -DCMAKE_BUILD_TYPE=Debug `
+            -DCATIME_ENABLE_WARNINGS=ON `
+            -DCATIME_WARNINGS_AS_ERRORS=OFF `
+            -DCATIME_ENABLE_BINARY_HARDENING=OFF
+
+      - name: Build Dr. Memory target
+        id: build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-drmemory | Out-Null
+          $ErrorActionPreference = "Continue"
+          cmake --build build-drmemory --config Debug
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Run Dr. Memory
+        if: always() && steps.build.outputs.exit_code == '0'
+        shell: pwsh
+        run: |
+          .\.github\scripts\ci\run_drmemory.ps1 `
+            -BinaryPath .\build-drmemory\Debug\catime.exe `
+            -OutputDir .\quality-drmemory
+
+      - name: Prepare Dr. Memory placeholder
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .\quality-drmemory | Out-Null
+          if (-not (Test-Path .\quality-drmemory\status.json)) {
+            $payload = [ordered]@{
+              check = "Dr. Memory"
+              status = "failed"
+              findings = 1
+              summary = "Dr. Memory did not complete successfully"
+              details = @("The Win32 Dr. Memory job stopped before a full memory report was produced.")
+            }
+            $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 .\quality-drmemory\status.json
+          }
+
+      - name: Upload Dr. Memory report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-drmemory
+          path: quality-drmemory
+          if-no-files-found: ignore
+
   build:
+    name: build / mingw-release
+    needs:
+      - codeql
+      - cppcheck
+      - msvc-analyze
+      - windows-asan-smoke
+      - win32-binary-baseline
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-      
-    - name: Set up China timezone
-      run: |
-        sudo timedatectl set-timezone Asia/Shanghai
-        echo "Current timezone: $(date +%Z)"
-        echo "Current time: $(date)"
-        
-    - name: Install MinGW compiler and CMake
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y mingw-w64 cmake
-        cmake --version
-        
-    - name: Extract version number
-      id: get_version
-      run: |
-        VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Version: $VERSION"
-      
-    - name: Build application
-      run: |
-        # Create output directory
-        mkdir -p output
-        
-        # Run the build script which handles CMake configuration and compilation
-        chmod +x build.sh
-        ./build.sh
-        
-        # Copy the build artifact to output directory
-        cp build/catime.exe output/
-        echo "Build completed using CMake"
-        
-    - name: Rename output file
-      run: |
-        # Rename to versioned filename
-        mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
-        
-    - name: Upload build artifacts
-      id: upload-unsigned
-      uses: actions/upload-artifact@v4
-      with:
-        name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
-        path: output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  # Code signing job - only execute on main branch commits
+      - name: Install MinGW compiler and CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mingw-w64 cmake
+          cmake --version
+
+      - name: Extract version number
+        id: get_version
+        run: |
+          VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build application
+        run: |
+          mkdir -p output
+          chmod +x build.sh
+          ./build.sh Release
+          cp build/catime.exe output/
+
+      - name: Rename output file
+        run: |
+          mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+
+      - name: Upload build artifacts
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
+          path: output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+
   sign:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
@@ -85,7 +552,50 @@ jobs:
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 
-  # Clean up temporary artifacts
+  quality-report:
+    name: quality / report
+    if: always()
+    needs:
+      - codeql
+      - cppcheck
+      - msvc-analyze
+      - windows-asan-smoke
+      - win32-binary-baseline
+      - windows-drmemory
+      - build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Download quality artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: quality-*
+          merge-multiple: false
+
+      - name: Append quality report
+        run: |
+          python3 .github/scripts/ci/render_summary.py artifacts >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo ""
+            echo "### Job Results"
+            echo ""
+            echo "- CodeQL: ${{ needs.codeql.result }}"
+            echo "- Cppcheck: ${{ needs.cppcheck.result }}"
+            echo "- MSVC Analyze: ${{ needs['msvc-analyze'].result }}"
+            echo "- Windows ASan Smoke: ${{ needs['windows-asan-smoke'].result }}"
+            echo "- Win32 Binary Baseline: ${{ needs['win32-binary-baseline'].result }}"
+            echo "- Dr. Memory: ${{ needs['windows-drmemory'].result }}"
+            echo "- MinGW Release Build: ${{ needs.build.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   cleanup:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: sign
@@ -93,8 +603,8 @@ jobs:
     permissions:
       actions: write
     steps:
-    - name: Delete temporary signing package
-      uses: geekyeggo/delete-artifact@v4
-      with:
-        name: catime-signing-package
-        failOnError: false
+      - name: Delete temporary signing package
+        uses: geekyeggo/delete-artifact@v4
+        with:
+          name: catime-signing-package
+          failOnError: false

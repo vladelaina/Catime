@@ -5,7 +5,12 @@
 
 #include "color/gradient.h"
 #include <string.h>
-#include <strings.h> // for strcasecmp
+#ifdef _MSC_VER
+#include <string.h>
+#define strcasecmp _stricmp
+#else
+#include <strings.h>
+#endif
 
 /* ============================================================================
  * Gradient Definitions Table

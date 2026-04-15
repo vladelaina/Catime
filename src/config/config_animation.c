@@ -10,7 +10,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _MSC_VER
+#include <string.h>
+#define strcasecmp _stricmp
+#else
 #include <strings.h>
+#endif
 #include <windows.h>
 
 typedef struct {
@@ -295,4 +300,3 @@ void WriteAnimationSpeedToConfig(const char* config_path) {
         WriteIniString("Animation", "PERCENT_ICON_BG_COLOR", buf, config_path);
     }
 }
-

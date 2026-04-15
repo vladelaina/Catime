@@ -17,6 +17,15 @@ build/*
 .idea/
 .vscode/
 .cursorrules
+.codex
+.codex/
+.claude/
+.aider*
+.gemini/
+.qwen/
+.opencode/
+.roo/
+.augment/
 .kiro
 
 # Project documentation

@@ -17,7 +17,12 @@
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
+#ifdef _MSC_VER
+#include <string.h>
+#define strcasecmp _stricmp
+#else
 #include <strings.h>
+#endif
 #include <stddef.h>
 #include <windows.h>
 #include <winnls.h>
@@ -605,4 +610,3 @@ void MigrateConfig(const char* config_path) {
     /* Clean up */
     FreeConfigEntryList(oldConfig);
 }
-

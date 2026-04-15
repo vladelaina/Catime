@@ -41,6 +41,18 @@ void InitializeDialogLanguages(void);
 BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow);
 
 /**
+ * Detect whether the current process was launched in CI smoke mode.
+ * @return TRUE when --ci-smoke was provided
+ */
+BOOL IsCiSmokeMode(void);
+
+/**
+ * Get the auto-exit timeout for CI smoke mode in milliseconds.
+ * @return Positive timeout, defaults to 3000ms
+ */
+UINT GetCiExitTimeoutMs(void);
+
+/**
  * Run main message loop
  * @param hwnd Window handle
  * @return Exit code

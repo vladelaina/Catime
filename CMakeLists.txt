@@ -7,6 +7,12 @@ project(Catime VERSION 1.0.0 LANGUAGES C RC)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+option(CATIME_ENABLE_WARNINGS "Enable stricter compiler warnings" ON)
+option(CATIME_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
+option(CATIME_ENABLE_ASAN "Enable AddressSanitizer for analyzer builds" OFF)
+option(CATIME_ENABLE_MSVC_ANALYZE "Enable MSVC static analysis" OFF)
+option(CATIME_ENABLE_BINARY_HARDENING "Enable Win32 binary hardening flags" ON)
+
 # Set default build type to Release
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -53,10 +59,68 @@ target_compile_definitions(catime PRIVATE
     MA_NO_OPUS
 )
 
+if(MSVC)
+    target_compile_definitions(catime PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        _CRT_NONSTDC_NO_WARNINGS
+        strcasecmp=_stricmp
+        strdup=_strdup
+    )
+endif()
+
+if(MSVC)
+    target_compile_options(catime PRIVATE /std:c11)
+endif()
+
+if(CATIME_ENABLE_WARNINGS)
+    if(MSVC)
+        target_compile_options(catime PRIVATE /W4)
+        if(CATIME_WARNINGS_AS_ERRORS)
+            target_compile_options(catime PRIVATE /WX)
+        endif()
+    elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options(catime PRIVATE -Wall -Wextra -Wpedantic)
+        if(CATIME_WARNINGS_AS_ERRORS)
+            target_compile_options(catime PRIVATE -Werror)
+        endif()
+    endif()
+endif()
+
 # Set compiler flags based on build type
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
+if(MSVC)
+    target_link_options(catime PRIVATE /SUBSYSTEM:WINDOWS)
+
+    if(CATIME_ENABLE_BINARY_HARDENING AND NOT CATIME_ENABLE_ASAN)
+        target_compile_options(catime PRIVATE /guard:cf)
+        target_link_options(catime PRIVATE /DYNAMICBASE /NXCOMPAT /guard:cf)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            target_link_options(catime PRIVATE /SAFESEH)
+        endif()
+    endif()
+
+    if(CATIME_ENABLE_MSVC_ANALYZE)
+        target_compile_options(catime PRIVATE
+            /analyze
+            /analyze:quiet
+            /analyze:autolog
+            /analyze:log:format:sarif
+        )
+    endif()
+
+    if(CATIME_ENABLE_ASAN)
+        target_compile_options(catime PRIVATE /fsanitize=address /Zi /Od)
+        target_link_options(catime PRIVATE /fsanitize=address /DEBUG /INCREMENTAL:NO)
+    elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_compile_definitions(catime PRIVATE NDEBUG)
+        target_compile_options(catime PRIVATE /O2 /Oi /Gy)
+        target_link_options(catime PRIVATE /OPT:REF /OPT:ICF)
+    else()
+        target_compile_options(catime PRIVATE /Zi /Od)
+        target_link_options(catime PRIVATE /DEBUG)
+    endif()
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_definitions(catime PRIVATE NDEBUG)
-    
+
     # Optimization flags for MinGW (size-optimized)
     target_compile_options(catime PRIVATE
         -Os                                      # Optimize for size (replaces -O3)
@@ -79,7 +143,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release")
         -fno-stack-protector                     # Disable stack protection (size reduction)
         -Wno-unknown-warning-option
     )
-    
+
     # Link-time optimization and size reduction
     target_link_options(catime PRIVATE
         -mwindows                                # Windows GUI application
