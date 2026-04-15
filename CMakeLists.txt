@@ -12,6 +12,7 @@ option(CATIME_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(CATIME_ENABLE_ASAN "Enable AddressSanitizer for analyzer builds" OFF)
 option(CATIME_ENABLE_MSVC_ANALYZE "Enable MSVC static analysis" OFF)
 option(CATIME_ENABLE_BINARY_HARDENING "Enable Win32 binary hardening flags" ON)
+option(CATIME_ENABLE_WIN32_RESOURCES "Enable Win32 resource compilation" ON)
 
 # Set default build type to Release
 if(NOT CMAKE_BUILD_TYPE)
@@ -25,11 +26,14 @@ file(GLOB_RECURSE SOURCES "src/*.c")
 file(GLOB_RECURSE HEADERS "include/*.h")
 
 # Collect resource files
-set(RESOURCE_FILES
-    resource/resource.rc
-    resource/languages.rc
-    resource/catime.rc
-)
+set(RESOURCE_FILES)
+if(CATIME_ENABLE_WIN32_RESOURCES)
+    set(RESOURCE_FILES
+        resource/resource.rc
+        resource/languages.rc
+        resource/catime.rc
+    )
+endif()
 
 # Create executable
 add_executable(catime ${SOURCES} ${HEADERS} ${RESOURCE_FILES})

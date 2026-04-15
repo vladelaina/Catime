@@ -220,7 +220,8 @@ jobs:
             -DCATIME_ENABLE_MSVC_ANALYZE=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
             -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_BINARY_HARDENING=OFF
+            -DCATIME_ENABLE_BINARY_HARDENING=OFF `
+            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
 
       - name: Build with MSVC analyzer
         id: build
@@ -321,7 +322,8 @@ jobs:
             -DCATIME_ENABLE_ASAN=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
             -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_BINARY_HARDENING=OFF
+            -DCATIME_ENABLE_BINARY_HARDENING=OFF `
+            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
 
       - name: Build ASan smoke binary
         id: build
@@ -436,7 +438,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DCATIME_ENABLE_BINARY_HARDENING=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF
+            -DCATIME_WARNINGS_AS_ERRORS=OFF `
+            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
 
       - name: Build Win32 release binary
         id: build
@@ -508,7 +511,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DCATIME_ENABLE_BINARY_HARDENING=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF
+            -DCATIME_WARNINGS_AS_ERRORS=OFF `
+            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
 
       - name: Build BinSkim target
         id: build
