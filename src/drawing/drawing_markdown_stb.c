@@ -283,10 +283,10 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
         float fallbackScale = fallbackBaseScale;
         
         // Check heading
-        while (curHeadingIdx < headingCount && i >= headings[curHeadingIdx].endPos) {
+        while (curHeadingIdx < headingCount && (size_t)i >= headings[curHeadingIdx].endPos) {
             curHeadingIdx++;
         }
-        if (curHeadingIdx < headingCount && i >= headings[curHeadingIdx].startPos) {
+        if (curHeadingIdx < headingCount && (size_t)i >= headings[curHeadingIdx].startPos) {
             scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
             if (fallbackLoaded) {
                 fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
@@ -412,8 +412,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 float scale = baseScale;
                 float fallbackScale = fallbackBaseScale;
 
-                while (tmpHeadingIdx < headingCount && j >= headings[tmpHeadingIdx].endPos) tmpHeadingIdx++;
-                if (tmpHeadingIdx < headingCount && j >= headings[tmpHeadingIdx].startPos) {
+                while (tmpHeadingIdx < headingCount && (size_t)j >= headings[tmpHeadingIdx].endPos) tmpHeadingIdx++;
+                if (tmpHeadingIdx < headingCount && (size_t)j >= headings[tmpHeadingIdx].startPos) {
                     scale = GetScaleForHeading(headings[tmpHeadingIdx].level, baseScale);
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[tmpHeadingIdx].level, fallbackBaseScale);
                 }
@@ -553,8 +553,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 COLORREF drawColor = color;
 
                 // Heading
-                while (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].endPos) curHeadingIdx++;
-                if (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].startPos) {
+                while (curHeadingIdx < headingCount && (size_t)j >= headings[curHeadingIdx].endPos) curHeadingIdx++;
+                if (curHeadingIdx < headingCount && (size_t)j >= headings[curHeadingIdx].startPos) {
                     scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
                 }
@@ -567,8 +567,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 // Link - track region for click detection
                 BOOL inLink = FALSE;
                 int activeLinkIdx = -1;
-                while (curLinkIdx < linkCount && j >= links[curLinkIdx].endPos) curLinkIdx++;
-                if (curLinkIdx < linkCount && j >= links[curLinkIdx].startPos) {
+                while (curLinkIdx < linkCount && (size_t)j >= links[curLinkIdx].endPos) curLinkIdx++;
+                if (curLinkIdx < linkCount && (size_t)j >= links[curLinkIdx].startPos) {
                     drawColor = RGB(0, 175, 255); // Link color #00AFFF
                     inLink = TRUE;
                     activeLinkIdx = curLinkIdx;

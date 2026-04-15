@@ -239,6 +239,17 @@ jobs:
           }
           exit 0
 
+      - name: Dump MSVC ResourceCompile config
+        if: always() && steps.build.outputs.binary_exists != 'true'
+        shell: pwsh
+        run: |
+          $project = Get-ChildItem .\build-msvc -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($project) {
+            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
+          } else {
+            Write-Output "::warning::catime.vcxproj was not found under build-msvc"
+          }
+
       - name: Merge analyzer SARIF
         id: sarif
         if: always()
@@ -328,6 +339,17 @@ jobs:
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
           exit 0
+
+      - name: Dump ASan ResourceCompile config
+        if: always() && steps.build.outputs.binary_exists != 'true'
+        shell: pwsh
+        run: |
+          $project = Get-ChildItem .\build-asan -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($project) {
+            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
+          } else {
+            Write-Output "::warning::catime.vcxproj was not found under build-asan"
+          }
 
       - name: Run ASan smoke test
         id: smoke
@@ -433,6 +455,17 @@ jobs:
           }
           exit 0
 
+      - name: Dump Win32 ResourceCompile config
+        if: always() && steps.build.outputs.binary_exists != 'true'
+        shell: pwsh
+        run: |
+          $project = Get-ChildItem .\build-win32-baseline -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($project) {
+            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
+          } else {
+            Write-Output "::warning::catime.vcxproj was not found under build-win32-baseline"
+          }
+
       - name: Check Win32 PE hardening
         if: always() && steps.build.outputs.binary_exists == 'true'
         shell: pwsh
@@ -493,6 +526,17 @@ jobs:
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
           exit 0
+
+      - name: Dump BinSkim ResourceCompile config
+        if: always() && steps.build.outputs.binary_exists != 'true'
+        shell: pwsh
+        run: |
+          $project = Get-ChildItem .\build-binskim -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($project) {
+            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
+          } else {
+            Write-Output "::warning::catime.vcxproj was not found under build-binskim"
+          }
 
       - name: Run BinSkim
         id: binskim

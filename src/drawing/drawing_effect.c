@@ -43,7 +43,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
         int reciprocal = (1 << 20) / div;
         
         for (int x = 0; x < w; x++) {
-            rowDest[x] = (sum * reciprocal) >> 20;
+            rowDest[x] = (unsigned char)((sum * reciprocal) >> 20);
             
             /* Slide window: remove (x - radius), add (x + radius + 1) */
             int outIdx = x - radius;
@@ -81,7 +81,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
         }
         
         for (int y = 0; y < h; y++) {
-            dest[y * w + x] = (sum * reciprocal) >> 20;
+            dest[y * w + x] = (unsigned char)((sum * reciprocal) >> 20);
             
             /* Slide window */
             int outIdx = y - radius;
