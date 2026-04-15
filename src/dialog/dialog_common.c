@@ -4,6 +4,7 @@
  */
 
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_error.h"
 #include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <stdlib.h>
@@ -311,8 +312,6 @@ BOOL Dialog_IsEmptyOrWhitespaceA(const char* str) {
 }
 
 void Dialog_ShowErrorAndRefocus(HWND hwndDlg, int editControlId) {
-    extern void ShowErrorDialogWithRefocus(HWND hwndParent, int editControlId);
-    
     /* Use modeless error dialog with automatic refocus on close */
     ShowErrorDialogWithRefocus(hwndDlg, editControlId);
 }
@@ -383,4 +382,3 @@ BOOL Dialog_IsOpen(DialogInstanceType type) {
 void MoveDialogToPrimaryScreen(HWND hwndDlg) {
     Dialog_CenterOnPrimaryScreen(hwndDlg);
 }
-

@@ -73,7 +73,7 @@ void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile) 
             if (fileName) fileName++;
             else fileName = wSoundFile;
             
-            int index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)fileName);
+            LRESULT index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)fileName);
             if (index != CB_ERR) {
                 SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
             } else {
@@ -158,7 +158,7 @@ void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo) {
     PopulateNotificationSoundComboBox(hwndCombo, currentFile);
     
     if (selectedFile[0] != L'\0') {
-        int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
+        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)selectedFile);
         if (newIndex != CB_ERR) {
             SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
         } else {

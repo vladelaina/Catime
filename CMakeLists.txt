@@ -46,42 +46,42 @@ target_include_directories(catime PRIVATE
 
 # Add compile definitions
 target_compile_definitions(catime PRIVATE
-    MINIAUDIO_IMPLEMENTATION
     UNICODE
     _UNICODE
-
-    # miniaudio optimization: disable unused features
-    MA_NO_GENERATION
-    MA_NO_ENCODING
-
-    # Disable unsupported audio formats
-    MA_NO_VORBIS
-    MA_NO_OPUS
+    $<$<COMPILE_LANGUAGE:C>:MINIAUDIO_IMPLEMENTATION>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_GENERATION>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_ENCODING>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_VORBIS>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_OPUS>
 )
 
 if(MSVC)
     target_compile_definitions(catime PRIVATE
-        _CRT_SECURE_NO_WARNINGS
-        _CRT_NONSTDC_NO_WARNINGS
-        strcasecmp=_stricmp
-        strdup=_strdup
+        $<$<COMPILE_LANGUAGE:C>:_CRT_SECURE_NO_WARNINGS>
+        $<$<COMPILE_LANGUAGE:C>:_CRT_NONSTDC_NO_WARNINGS>
+        $<$<COMPILE_LANGUAGE:C>:strcasecmp=_stricmp>
+        $<$<COMPILE_LANGUAGE:C>:strdup=_strdup>
     )
 endif()
 
 if(MSVC)
-    target_compile_options(catime PRIVATE /std:c11)
+    target_compile_options(catime PRIVATE $<$<COMPILE_LANGUAGE:C>:/std:c11>)
 endif()
 
 if(CATIME_ENABLE_WARNINGS)
     if(MSVC)
-        target_compile_options(catime PRIVATE /W4)
+        target_compile_options(catime PRIVATE $<$<COMPILE_LANGUAGE:C>:/W4>)
         if(CATIME_WARNINGS_AS_ERRORS)
-            target_compile_options(catime PRIVATE /WX)
+            target_compile_options(catime PRIVATE $<$<COMPILE_LANGUAGE:C>:/WX>)
         endif()
     elseif(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-        target_compile_options(catime PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:-Wall>
+            $<$<COMPILE_LANGUAGE:C>:-Wextra>
+            $<$<COMPILE_LANGUAGE:C>:-Wpedantic>
+        )
         if(CATIME_WARNINGS_AS_ERRORS)
-            target_compile_options(catime PRIVATE -Werror)
+            target_compile_options(catime PRIVATE $<$<COMPILE_LANGUAGE:C>:-Werror>)
         endif()
     endif()
 endif()
@@ -91,7 +91,7 @@ if(MSVC)
     target_link_options(catime PRIVATE /SUBSYSTEM:WINDOWS)
 
     if(CATIME_ENABLE_BINARY_HARDENING AND NOT CATIME_ENABLE_ASAN)
-        target_compile_options(catime PRIVATE /guard:cf)
+        target_compile_options(catime PRIVATE $<$<COMPILE_LANGUAGE:C>:/guard:cf>)
         target_link_options(catime PRIVATE /DYNAMICBASE /NXCOMPAT /guard:cf)
         if(CMAKE_SIZEOF_VOID_P EQUAL 4)
             target_link_options(catime PRIVATE /SAFESEH)
@@ -100,22 +100,33 @@ if(MSVC)
 
     if(CATIME_ENABLE_MSVC_ANALYZE)
         target_compile_options(catime PRIVATE
-            /analyze
-            /analyze:quiet
-            /analyze:autolog
-            /analyze:log:format:sarif
+            $<$<COMPILE_LANGUAGE:C>:/analyze>
+            $<$<COMPILE_LANGUAGE:C>:/analyze:quiet>
+            $<$<COMPILE_LANGUAGE:C>:/analyze:autolog>
+            $<$<COMPILE_LANGUAGE:C>:/analyze:log:format:sarif>
         )
     endif()
 
     if(CATIME_ENABLE_ASAN)
-        target_compile_options(catime PRIVATE /fsanitize=address /Zi /Od)
+        target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:/fsanitize=address>
+            $<$<COMPILE_LANGUAGE:C>:/Zi>
+            $<$<COMPILE_LANGUAGE:C>:/Od>
+        )
         target_link_options(catime PRIVATE /fsanitize=address /DEBUG /INCREMENTAL:NO)
     elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         target_compile_definitions(catime PRIVATE NDEBUG)
-        target_compile_options(catime PRIVATE /O2 /Oi /Gy)
+        target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:/O2>
+            $<$<COMPILE_LANGUAGE:C>:/Oi>
+            $<$<COMPILE_LANGUAGE:C>:/Gy>
+        )
         target_link_options(catime PRIVATE /OPT:REF /OPT:ICF)
     else()
-        target_compile_options(catime PRIVATE /Zi /Od)
+        target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:/Zi>
+            $<$<COMPILE_LANGUAGE:C>:/Od>
+        )
         target_link_options(catime PRIVATE /DEBUG)
     endif()
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
@@ -123,25 +134,25 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
 
     # Optimization flags for MinGW (size-optimized)
     target_compile_options(catime PRIVATE
-        -Os                                      # Optimize for size (replaces -O3)
-        -mtune=generic
-        -ffunction-sections                      # Enable function-level linking
-        -fdata-sections                          # Enable data-level linking
-        -fno-strict-aliasing
-        -flto                                    # Link-time optimization
-        -fno-exceptions                          # Disable C++ exceptions
-        -fomit-frame-pointer                     # Remove frame pointers
-        -fmerge-all-constants                    # Merge identical constants
-        -fno-math-errno                          # Don't set errno for math functions
-        -fno-trapping-math                       # Allow math optimizations
-        -ffast-math                              # Fast floating-point math
-        -finline-small-functions
-        -finline-functions-called-once
-        -fno-unwind-tables                       # Remove unwind tables
-        -fno-asynchronous-unwind-tables          # Remove async unwind tables
-        -fno-ident                               # Remove compiler identification
-        -fno-stack-protector                     # Disable stack protection (size reduction)
-        -Wno-unknown-warning-option
+        $<$<COMPILE_LANGUAGE:C>:-Os>
+        $<$<COMPILE_LANGUAGE:C>:-mtune=generic>
+        $<$<COMPILE_LANGUAGE:C>:-ffunction-sections>
+        $<$<COMPILE_LANGUAGE:C>:-fdata-sections>
+        $<$<COMPILE_LANGUAGE:C>:-fno-strict-aliasing>
+        $<$<COMPILE_LANGUAGE:C>:-flto>
+        $<$<COMPILE_LANGUAGE:C>:-fno-exceptions>
+        $<$<COMPILE_LANGUAGE:C>:-fomit-frame-pointer>
+        $<$<COMPILE_LANGUAGE:C>:-fmerge-all-constants>
+        $<$<COMPILE_LANGUAGE:C>:-fno-math-errno>
+        $<$<COMPILE_LANGUAGE:C>:-fno-trapping-math>
+        $<$<COMPILE_LANGUAGE:C>:-ffast-math>
+        $<$<COMPILE_LANGUAGE:C>:-finline-small-functions>
+        $<$<COMPILE_LANGUAGE:C>:-finline-functions-called-once>
+        $<$<COMPILE_LANGUAGE:C>:-fno-unwind-tables>
+        $<$<COMPILE_LANGUAGE:C>:-fno-asynchronous-unwind-tables>
+        $<$<COMPILE_LANGUAGE:C>:-fno-ident>
+        $<$<COMPILE_LANGUAGE:C>:-fno-stack-protector>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-unknown-warning-option>
     )
 
     # Link-time optimization and size reduction
@@ -157,9 +168,9 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
 else()
     # Debug flags
     target_compile_options(catime PRIVATE
-        -g
-        -O0
-        -Wno-unknown-warning-option
+        $<$<COMPILE_LANGUAGE:C>:-g>
+        $<$<COMPILE_LANGUAGE:C>:-O0>
+        $<$<COMPILE_LANGUAGE:C>:-Wno-unknown-warning-option>
     )
     
     target_link_options(catime PRIVATE

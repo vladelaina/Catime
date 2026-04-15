@@ -29,7 +29,7 @@ typedef HANDLE DPI_AWARENESS_CONTEXT;
  * ============================================================================ */
 
 typedef struct {
-    int controlId;
+    UINT controlId;
     const wchar_t* textCN;
     const wchar_t* textEN;
     const wchar_t* url;
@@ -45,7 +45,7 @@ static AboutLinkInfo g_aboutLinkInfos[] = {
     {IDC_SUPPORT, NULL, L"Discord", L"https://discord.com/invite/W3tW2gtp6g"}
 };
 
-static const int g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
+static const size_t g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
 
 /* ============================================================================
  * Global State
@@ -143,12 +143,12 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             /* Convert build time from UTC+8 to local time */
             SYSTEMTIME buildTimeUTC8 = {0};
-            buildTimeUTC8.wYear = year;
-            buildTimeUTC8.wMonth = month_num;
-            buildTimeUTC8.wDay = day;
-            buildTimeUTC8.wHour = hour;
-            buildTimeUTC8.wMinute = min;
-            buildTimeUTC8.wSecond = sec;
+            buildTimeUTC8.wYear = (WORD)year;
+            buildTimeUTC8.wMonth = (WORD)month_num;
+            buildTimeUTC8.wDay = (WORD)day;
+            buildTimeUTC8.wHour = (WORD)hour;
+            buildTimeUTC8.wMinute = (WORD)min;
+            buildTimeUTC8.wSecond = (WORD)sec;
 
             /* Convert to FILETIME (UTC+8 is 8 hours ahead of UTC) */
             FILETIME fileTime;
@@ -178,7 +178,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
-            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+            for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
                 const wchar_t* linkText = GetLocalizedString(g_aboutLinkInfos[i].textCN, g_aboutLinkInfos[i].textEN);
                 SetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, linkText);
             }
@@ -202,7 +202,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
 
-            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+            for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
                 if (LOWORD(wParam) == g_aboutLinkInfos[i].controlId && HIWORD(wParam) == STN_CLICKED) {
                     ShellExecuteW(NULL, L"open", g_aboutLinkInfos[i].url, NULL, NULL, SW_SHOWNORMAL);
                     return TRUE;
@@ -213,7 +213,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_DRAWITEM: {
             LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
 
-            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+            for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
                 if (lpDrawItem->CtlID == g_aboutLinkInfos[i].controlId) {
                     RECT rect = lpDrawItem->rcItem;
                     HDC hdc = lpDrawItem->hDC;
@@ -589,4 +589,3 @@ void ShowFontLicenseDialog(HWND hwndParent) {
         ShowWindow(hwndDlg, SW_SHOW);
     }
 }
-
