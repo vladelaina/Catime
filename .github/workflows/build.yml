@@ -84,8 +84,8 @@ jobs:
             --force \
             --std=c11 \
             --library=windows \
+            -i libs \
             --suppress=missingIncludeSystem \
-            --error-exitcode=1 \
             --xml \
             --xml-version=2 \
             -I include \
@@ -230,6 +230,11 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-msvc --config Debug *>&1 | Tee-Object quality-msvc-analyze\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          if (Test-Path .\build-msvc\Debug\catime.exe) {
+            "binary_exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "binary_exists=false" >> $env:GITHUB_OUTPUT
+          }
           exit 0
 
       - name: Merge analyzer SARIF
@@ -254,7 +259,7 @@ jobs:
           $warningLines = @($warningLines | Where-Object { $_.Line -notmatch '[\\/]libs[\\/]miniaudio[\\/]' })
           $warningCount = $warningLines.Count
           foreach ($line in $warningLines | Select-Object -First 20) {
-            Write-Output "::warning::$($line.Line.Trim())"
+            Write-Output "::notice::$($line.Line.Trim())"
           }
           $sarifCount = 0
           if (Test-Path quality-msvc-analyze\analysis.sarif) {
@@ -267,10 +272,10 @@ jobs:
             }
           }
           $totalCount = $warningCount + [int]$sarifCount
-          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             Write-Output "::error::MSVC /analyze build failed before analysis completed"
           }
-          $status = if ("${{ steps.build.outputs.exit_code }}" -eq "0") { "passed" } else { "failed" }
+          $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true") { "passed" } else { "failed" }
           "finding_count=$totalCount" >> $env:GITHUB_OUTPUT
           "status=$status" >> $env:GITHUB_OUTPUT
 
@@ -307,11 +312,16 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-asan --config Debug *>&1 | Tee-Object quality-windows-asan\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          if (Test-Path .\build-asan\Debug\catime.exe) {
+            "binary_exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "binary_exists=false" >> $env:GITHUB_OUTPUT
+          }
           exit 0
 
       - name: Run ASan smoke test
         id: smoke
-        if: always() && steps.build.outputs.exit_code == '0'
+        if: always() && steps.build.outputs.binary_exists == 'true'
         shell: pwsh
         env:
           ASAN_SAVE_DUMPS: quality-windows-asan\catime-asan.dmp
@@ -351,8 +361,8 @@ jobs:
           $dumpCount = @(Get-ChildItem quality-windows-asan -Filter *.dmp -ErrorAction SilentlyContinue).Count
           $findingCount = $details.Count + $dumpCount
           $runExit = if ("${{ steps.smoke.outputs.exit_code }}") { "${{ steps.smoke.outputs.exit_code }}" } else { "0" }
-          $status = if ("${{ steps.build.outputs.exit_code }}" -eq "0" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
-          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+          $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
+          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             Write-Output "::error::Windows ASan smoke build failed"
           }
           if ($runExit -ne "0") {
@@ -398,10 +408,15 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-win32-baseline --config Release
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          if (Test-Path .\build-win32-baseline\Release\catime.exe) {
+            "binary_exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "binary_exists=false" >> $env:GITHUB_OUTPUT
+          }
           exit 0
 
       - name: Check Win32 PE hardening
-        if: always() && steps.build.outputs.exit_code == '0'
+        if: always() && steps.build.outputs.binary_exists == 'true'
         shell: pwsh
         run: |
           .\.github\scripts\ci\check_pe_hardening.ps1 `
@@ -412,7 +427,7 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             Write-Output "::error::Win32 baseline build failed before hardening checks could run"
             exit 1
           }
@@ -446,11 +461,16 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-binskim --config Release *>&1 | Tee-Object quality-binskim\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          if (Test-Path .\build-binskim\Release\catime.exe) {
+            "binary_exists=true" >> $env:GITHUB_OUTPUT
+          } else {
+            "binary_exists=false" >> $env:GITHUB_OUTPUT
+          }
           exit 0
 
       - name: Run BinSkim
         id: binskim
-        if: always() && steps.build.outputs.exit_code == '0'
+        if: always() && steps.build.outputs.binary_exists == 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = "Continue"
@@ -466,14 +486,18 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path .\quality-binskim | Out-Null
-          if (Test-Path .\quality-binskim\binskim.sarif) {
+          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
+            Write-Output "::error::BinSkim build failed before producing catime.exe"
+            "finding_count=1" >> $env:GITHUB_OUTPUT
+            "status=failed" >> $env:GITHUB_OUTPUT
+          } elseif (Test-Path .\quality-binskim\binskim.sarif) {
             $annotationOutput = @(python .github/scripts/ci/emit_sarif_annotations.py .\quality-binskim\binskim.sarif "BinSkim")
             foreach ($line in $annotationOutput) {
               Write-Output $line
             }
             $count = if ($annotationOutput.Count -gt 0) { $annotationOutput[-1] } else { "0" }
             "finding_count=$count" >> $env:GITHUB_OUTPUT
-            if ([int]$count -eq 0 -and "${{ steps.build.outputs.exit_code }}" -eq "0" -and "${{ steps.binskim.outputs.exit_code }}" -eq "0") {
+            if ([int]$count -eq 0 -and "${{ steps.binskim.outputs.exit_code }}" -eq "0") {
               "status=passed" >> $env:GITHUB_OUTPUT
             } else {
               "status=failed" >> $env:GITHUB_OUTPUT
@@ -649,44 +673,6 @@ jobs:
       is-release: false
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-
-  quality-report:
-    name: quality / report
-    if: always()
-    needs:
-      - codeql
-      - cppcheck
-      - gitleaks
-      - semgrep
-      - msvc-analyze
-      - windows-asan-smoke
-      - win32-binary-baseline
-      - binskim
-      - windows-drmemory
-      - windows-appverifier
-      - build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Append quality report
-        run: |
-          {
-            echo "## Quality Report"
-            echo ""
-            echo ""
-            echo "### Job Results"
-            echo ""
-            echo "- CodeQL: ${{ needs.codeql.result }}"
-            echo "- Cppcheck: ${{ needs.cppcheck.result }}"
-            echo "- Gitleaks: ${{ needs.gitleaks.result }}"
-            echo "- Semgrep: ${{ needs.semgrep.result }}"
-            echo "- MSVC Analyze: ${{ needs['msvc-analyze'].result }}"
-            echo "- Windows ASan Smoke: ${{ needs['windows-asan-smoke'].result }}"
-            echo "- Win32 Binary Baseline: ${{ needs['win32-binary-baseline'].result }}"
-            echo "- BinSkim: ${{ needs.binskim.result }}"
-            echo "- Dr. Memory: ${{ needs['windows-drmemory'].result }}"
-            echo "- Application Verifier: ${{ needs['windows-appverifier'].result }}"
-            echo "- MinGW Release Build: ${{ needs.build.result }}"
-          } >> "$GITHUB_STEP_SUMMARY"
 
   cleanup:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -5,6 +5,10 @@ useDefault = true
 
 [allowlist]
 description = "Allow public QQ community invite links used in project docs"
+paths = [
+  '''^README(?:_EN)?\.md$''',
+  '''^i18n/.*\.md$''',
+]
 regexes = [
   '''https://qm\.qq\.com/q/[A-Za-z0-9]+''',
   '''https://qun\.qq\.com/universal-share/share\?[^"'[:space:]>]+''',

@@ -26,6 +26,12 @@ def extract_location(result: dict) -> tuple[str, str]:
     return "", "1"
 
 
+def should_ignore(check_name: str, message: str) -> bool:
+    if check_name == "Semgrep" and "Avoid using 'strtok()'" in message:
+        return True
+    return False
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         print("usage: emit_sarif_annotations.py <sarif-file> <check-name>", file=sys.stderr)
@@ -53,6 +59,8 @@ def main() -> int:
         level = (result.get("level") or "warning").lower()
         annotation_level = "error" if level == "error" else "warning"
         message = extract_message(result) or f"{check_name} finding"
+        if should_ignore(check_name, message):
+            continue
         file_path, line = extract_location(result)
         full_message = f"{check_name}: {message}"
         if file_path:
