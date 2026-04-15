@@ -13,10 +13,18 @@ if (-not (Test-Path $ProjectPath)) {
 function Write-DebugLine {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Message
+        [string]$Message,
+
+        [switch]$Annotate
     )
 
-    Write-Output "VCXPROJ_DEBUG $Message"
+    $line = "VCXPROJ_DEBUG $Message"
+    Write-Output "COPYABLE $line"
+    Write-Output $line
+    if ($Annotate) {
+        $escaped = $line.Replace("%", "%25").Replace("`r", "%0D").Replace("`n", "%0A")
+        Write-Output "::notice::$escaped"
+    }
 }
 
 try {
@@ -31,14 +39,14 @@ $ns = New-Object System.Xml.XmlNamespaceManager($xml.NameTable)
 $ns.AddNamespace("msb", "http://schemas.microsoft.com/developer/msbuild/2003")
 
 Write-Output "::notice::Inspecting ResourceCompile settings from $(Split-Path $ProjectPath -Leaf)"
-Write-DebugLine "Project=$ProjectPath"
+Write-DebugLine "Project=$ProjectPath" -Annotate
 
 $globals = $xml.SelectSingleNode("//msb:PropertyGroup[@Label='Globals']", $ns)
 if ($globals) {
     foreach ($name in @("Platform", "ProjectGuid", "Keyword", "WindowsTargetPlatformVersion")) {
         $node = $globals.SelectSingleNode("msb:$name", $ns)
         if ($node -and $node.InnerText) {
-            Write-DebugLine "Global.$name=$($node.InnerText.Trim())"
+            Write-DebugLine "Global.$name=$($node.InnerText.Trim())" -Annotate
         }
     }
 }
@@ -50,7 +58,7 @@ if ($resourceItems.Count -eq 0) {
     foreach ($item in $resourceItems) {
         $include = $item.GetAttribute("Include")
         if ($include) {
-            Write-DebugLine "ResourceInclude=$include"
+            Write-DebugLine "ResourceInclude=$include" -Annotate
         }
     }
 }
@@ -64,13 +72,14 @@ if ($definitionGroups.Count -eq 0) {
         if (-not $condition) {
             $condition = "<none>"
         }
-        Write-DebugLine "ResourceDefinition.Condition=$condition"
+        Write-DebugLine "ResourceDefinition.Condition=$condition" -Annotate
         $resourceCompile = $group.SelectSingleNode("msb:ResourceCompile", $ns)
         foreach ($child in $resourceCompile.ChildNodes) {
             if ($child.NodeType -eq [System.Xml.XmlNodeType]::Element) {
                 $value = $child.InnerText.Trim()
                 if ($value) {
-                    Write-DebugLine "ResourceDefinition.$($child.LocalName)=$value"
+                    $annotate = $child.LocalName -ne "AdditionalOptions"
+                    Write-DebugLine "ResourceDefinition.$($child.LocalName)=$value" -Annotate:$annotate
                 }
             }
         }
