@@ -75,16 +75,14 @@ $summary = if ($status -eq "passed") {
     "Dr. Memory reported $errorCount issue(s)"
 }
 
-$payload = [ordered]@{
-    check = "Dr. Memory"
-    status = $status
-    findings = $errorCount
-    summary = $summary
-    details = $detailLines
-}
-
-$payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $OutputDir "status.json")
-
 if ($status -ne "passed") {
+    foreach ($line in $detailLines) {
+        Write-Output "::error::$line"
+    }
+    if ($detailLines.Count -eq 0) {
+        Write-Output "::error::$summary"
+    }
     exit 1
 }
+
+Write-Output "::notice::$summary"

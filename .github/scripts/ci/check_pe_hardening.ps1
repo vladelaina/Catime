@@ -54,16 +54,11 @@ $summary = if ($missing.Count -eq 0) {
     "Missing hardening flags: $($missing -join ', ')"
 }
 
-$payload = [ordered]@{
-    check = "Win32 Binary Baseline"
-    status = $status
-    findings = $missing.Count
-    summary = $summary
-    details = $missing
-}
-
-$payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 (Join-Path $OutputDir "status.json")
-
 if ($missing.Count -gt 0) {
+    foreach ($item in $missing) {
+        Write-Output "::error::$item"
+    }
     Write-Error $summary
+} else {
+    Write-Output "::notice::$summary"
 }

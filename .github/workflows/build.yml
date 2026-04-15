@@ -58,30 +58,6 @@ jobs:
         with:
           category: "/language:c-cpp"
 
-      - name: Prepare CodeQL summary
-        if: always()
-        run: |
-          mkdir -p quality-codeql
-          status="${{ job.status }}"
-          if [ "$status" = "success" ]; then
-            summary="CodeQL completed. See the Code Scanning tab for alerts."
-            findings="0"
-          else
-            summary="CodeQL did not complete successfully."
-            findings="-"
-          fi
-          cat > quality-codeql/status.json <<EOF
-          {"check":"CodeQL","status":"$status","findings":"$findings","summary":"$summary","details":["Review GitHub Code Scanning for the full CodeQL result set."]}
-          EOF
-
-      - name: Upload CodeQL summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-codeql
-          path: quality-codeql
-          if-no-files-found: error
-
   cppcheck:
     name: quality / cppcheck
     runs-on: ubuntu-latest
@@ -114,55 +90,107 @@ jobs:
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Summarize Cppcheck findings
+      - name: Emit Cppcheck annotations
         id: summarize
         run: |
-          python3 - <<'PY'
-          import json
-          import xml.etree.ElementTree as ET
-          from pathlib import Path
-
-          xml_path = Path("quality-cppcheck/cppcheck.xml")
-          root = ET.parse(xml_path).getroot()
-          errors = root.findall(".//error")
-          details = []
-          for item in errors[:5]:
-              severity = item.attrib.get("severity", "unknown")
-              msg = item.attrib.get("msg", "").strip()
-              location = item.find("location")
-              if location is not None:
-                  file_path = location.attrib.get("file", "")
-                  line = location.attrib.get("line", "")
-                  details.append(f"{severity}: {msg} ({file_path}:{line})")
-              else:
-                  details.append(f"{severity}: {msg}")
-
-          payload = {
-              "check": "Cppcheck",
-              "status": "passed" if not errors else "failed",
-              "findings": len(errors),
-              "summary": "Cppcheck completed without findings" if not errors else f"Cppcheck reported {len(errors)} finding(s)",
-              "details": details,
-          }
-          Path("quality-cppcheck/status.json").write_text(json.dumps(payload, ensure_ascii=True, indent=2), encoding="utf-8")
-          Path("quality-cppcheck/findings.txt").write_text("\n".join(details) + ("\n" if details else ""), encoding="utf-8")
-          print(f"findings={len(errors)}")
-          PY
-          findings=$(python3 -c 'import json; print(json.load(open("quality-cppcheck/status.json", encoding="utf-8"))["findings"])')
+          findings=$(python3 .github/scripts/ci/emit_cppcheck_annotations.py quality-cppcheck/cppcheck.xml | tee /tmp/cppcheck-annotations.log | tail -n 1)
           echo "findings=$findings" >> "$GITHUB_OUTPUT"
-
-      - name: Upload Cppcheck report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-cppcheck
-          path: quality-cppcheck
-          if-no-files-found: error
 
       - name: Enforce Cppcheck gate
         if: always()
         run: |
           if [ "${{ steps.cppcheck.outputs.exit_code }}" != "0" ] || [ "${{ steps.summarize.outputs.findings }}" != "0" ]; then
+            exit 1
+          fi
+
+  gitleaks:
+    name: security / gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Gitleaks
+        run: |
+          set -e
+          GITLEAKS_VERSION="8.30.0"
+          curl -sSL -o /tmp/gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp
+          chmod +x /tmp/gitleaks
+          /tmp/gitleaks version
+
+      - name: Run Gitleaks
+        id: gitleaks
+        run: |
+          set +e
+          mkdir -p quality-gitleaks
+          /tmp/gitleaks git . \
+            --report-format sarif \
+            --report-path quality-gitleaks/gitleaks.sarif \
+            --redact \
+            --no-banner
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Emit Gitleaks annotations
+        id: summarize
+        if: always()
+        run: |
+          if [ -f quality-gitleaks/gitleaks.sarif ]; then
+            output=$(python3 .github/scripts/ci/emit_sarif_annotations.py quality-gitleaks/gitleaks.sarif "Gitleaks")
+            printf '%s\n' "$output"
+            findings=$(printf '%s\n' "$output" | tail -n 1)
+          else
+            echo "::error::Gitleaks SARIF report was not produced"
+            findings=1
+          fi
+          echo "findings=$findings" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce Gitleaks gate
+        if: always()
+        run: |
+          if [ "${{ steps.gitleaks.outputs.exit_code }}" != "0" ] || [ "${{ steps.summarize.outputs.findings }}" != "0" ]; then
+            exit 1
+          fi
+
+  semgrep:
+    name: security / semgrep
+    runs-on: ubuntu-latest
+    container:
+      image: semgrep/semgrep
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep CE
+        id: semgrep
+        run: |
+          set +e
+          mkdir -p quality-semgrep
+          semgrep scan --config auto --sarif --output quality-semgrep/semgrep.sarif .
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Emit Semgrep annotations
+        id: summarize
+        if: always()
+        run: |
+          if [ -f quality-semgrep/semgrep.sarif ]; then
+            output=$(python3 .github/scripts/ci/emit_sarif_annotations.py quality-semgrep/semgrep.sarif "Semgrep")
+            printf '%s\n' "$output"
+            findings=$(printf '%s\n' "$output" | tail -n 1)
+          else
+            echo "::error::Semgrep SARIF report was not produced"
+            findings=1
+          fi
+          echo "findings=$findings" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce Semgrep gate
+        if: always()
+        run: |
+          if [ "${{ steps.semgrep.outputs.exit_code }}" != "0" ] || [ "${{ steps.summarize.outputs.findings }}" != "0" ]; then
             exit 1
           fi
 
@@ -218,44 +246,33 @@ jobs:
           }
           $warningLines = @(Select-String -Path quality-msvc-analyze\build.log -Pattern "warning C\d+:" -AllMatches)
           $warningCount = $warningLines.Count
-          $details = @()
-          foreach ($line in $warningLines | Select-Object -First 5) {
-            $details += $line.Line.Trim()
+          foreach ($line in $warningLines | Select-Object -First 20) {
+            Write-Output "::warning::$($line.Line.Trim())"
           }
-
-          $status = if ("${{ steps.build.outputs.exit_code }}" -eq "0" -and $warningCount -eq 0 -and [int]"${{ steps.sarif.outputs.sarif_results }}" -eq 0) { "passed" } else { "failed" }
-          $summary = if ($status -eq "passed") {
-            "MSVC /analyze completed without findings"
-          } else {
-            "MSVC /analyze reported $warningCount warning(s)"
+          $sarifCount = 0
+          if (Test-Path quality-msvc-analyze\analysis.sarif) {
+            $sarifOutput = @(python .github/scripts/ci/emit_sarif_annotations.py quality-msvc-analyze\analysis.sarif "MSVC /analyze")
+            foreach ($line in $sarifOutput) {
+              Write-Output $line
+            }
+            if ($sarifOutput.Count -gt 0) {
+              $sarifCount = $sarifOutput[-1]
+            }
           }
-
-          $payload = [ordered]@{
-            check = "MSVC /analyze"
-            status = $status
-            findings = $warningCount
-            summary = $summary
-            details = $details
+          $totalCount = $warningCount + [int]$sarifCount
+          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+            Write-Output "::error::MSVC /analyze build failed before analysis completed"
           }
-
-          $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 quality-msvc-analyze\status.json
-          "warning_count=$warningCount" >> $env:GITHUB_OUTPUT
+          $status = if ("${{ steps.build.outputs.exit_code }}" -eq "0" -and $totalCount -eq 0) { "passed" } else { "failed" }
+          "finding_count=$totalCount" >> $env:GITHUB_OUTPUT
           "status=$status" >> $env:GITHUB_OUTPUT
 
       - name: Upload analyzer SARIF
-        if: always()
+        if: always() && hashFiles('quality-msvc-analyze/analysis.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: quality-msvc-analyze/analysis.sarif
           category: msvc-analyze
-
-      - name: Upload analyzer report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-msvc-analyze
-          path: quality-msvc-analyze
-          if-no-files-found: error
 
       - name: Enforce analyzer gate
         if: always()
@@ -335,30 +352,19 @@ jobs:
           $findingCount = $details.Count + $dumpCount
           $runExit = if ("${{ steps.smoke.outputs.exit_code }}") { "${{ steps.smoke.outputs.exit_code }}" } else { "0" }
           $status = if ("${{ steps.build.outputs.exit_code }}" -eq "0" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
-          $summary = if ($status -eq "passed") {
-            "ASan smoke run completed without reported memory issues"
-          } else {
-            "ASan smoke run reported $findingCount issue marker(s)"
+          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+            Write-Output "::error::Windows ASan smoke build failed"
           }
-
-          $payload = [ordered]@{
-            check = "Windows ASan Smoke"
-            status = $status
-            findings = $findingCount
-            summary = $summary
-            details = $details
+          if ($runExit -ne "0") {
+            Write-Output "::error::Windows ASan smoke run exited with code $runExit"
           }
-
-          $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 quality-windows-asan\status.json
+          foreach ($detail in $details) {
+            Write-Output "::error::$detail"
+          }
+          if ($dumpCount -gt 0) {
+            Write-Output "::error::Windows ASan generated $dumpCount dump file(s)"
+          }
           "status=$status" >> $env:GITHUB_OUTPUT
-
-      - name: Upload ASan report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-windows-asan
-          path: quality-windows-asan
-          if-no-files-found: error
 
       - name: Enforce ASan gate
         if: always()
@@ -402,29 +408,96 @@ jobs:
             -BinaryPath .\build-win32-baseline\Release\catime.exe `
             -OutputDir .\quality-win32-baseline
 
-      - name: Prepare Win32 baseline placeholder
+      - name: Enforce Win32 baseline gate
         if: always()
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path .\quality-win32-baseline | Out-Null
-          if (-not (Test-Path .\quality-win32-baseline\status.json)) {
-            $payload = [ordered]@{
-              check = "Win32 Binary Baseline"
-              status = "failed"
-              findings = 1
-              summary = "Win32 baseline build did not complete successfully"
-              details = @("The MSVC Win32 release build failed before PE hardening checks could run.")
-            }
-            $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 .\quality-win32-baseline\status.json
+          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+            Write-Output "::error::Win32 baseline build failed before hardening checks could run"
+            exit 1
           }
 
-      - name: Upload Win32 baseline report
-        if: always()
-        uses: actions/upload-artifact@v4
+  binskim:
+    name: quality / binskim
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          name: quality-win32-baseline
-          path: quality-win32-baseline
-          if-no-files-found: error
+          python-version: "3.x"
+
+      - name: Configure BinSkim release build
+        shell: pwsh
+        run: |
+          cmake -S . -B build-binskim -G "Visual Studio 17 2022" -A Win32 `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCATIME_ENABLE_BINARY_HARDENING=ON `
+            -DCATIME_ENABLE_WARNINGS=ON `
+            -DCATIME_WARNINGS_AS_ERRORS=OFF
+
+      - name: Build BinSkim target
+        id: build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-binskim | Out-Null
+          $ErrorActionPreference = "Continue"
+          cmake --build build-binskim --config Release *>&1 | Tee-Object quality-binskim\build.log
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Run BinSkim
+        id: binskim
+        if: always() && steps.build.outputs.exit_code == '0'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Continue"
+          .\.github\scripts\ci\run_binskim.ps1 `
+            -BinaryPath .\build-binskim\Release\catime.exe `
+            -OutputDir .\quality-binskim
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Summarize BinSkim findings
+        id: summarize
+        if: always()
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path .\quality-binskim | Out-Null
+          if (Test-Path .\quality-binskim\binskim.sarif) {
+            $annotationOutput = @(python .github/scripts/ci/emit_sarif_annotations.py .\quality-binskim\binskim.sarif "BinSkim")
+            foreach ($line in $annotationOutput) {
+              Write-Output $line
+            }
+            $count = if ($annotationOutput.Count -gt 0) { $annotationOutput[-1] } else { "0" }
+            "finding_count=$count" >> $env:GITHUB_OUTPUT
+            if ([int]$count -eq 0 -and "${{ steps.build.outputs.exit_code }}" -eq "0" -and "${{ steps.binskim.outputs.exit_code }}" -eq "0") {
+              "status=passed" >> $env:GITHUB_OUTPUT
+            } else {
+              "status=failed" >> $env:GITHUB_OUTPUT
+            }
+          } else {
+            Write-Output "::error::BinSkim SARIF report was not produced"
+            "finding_count=1" >> $env:GITHUB_OUTPUT
+            "status=failed" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Upload BinSkim SARIF
+        if: always() && hashFiles('quality-binskim/binskim.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: quality-binskim/binskim.sarif
+          category: binskim
+
+      - name: Enforce BinSkim gate
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
+            exit 1
+          }
 
   windows-drmemory:
     name: quality / drmemory-nightly
@@ -469,38 +542,70 @@ jobs:
             -BinaryPath .\build-drmemory\Debug\catime.exe `
             -OutputDir .\quality-drmemory
 
-      - name: Prepare Dr. Memory placeholder
+      - name: Enforce Dr. Memory gate
         if: always()
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path .\quality-drmemory | Out-Null
-          if (-not (Test-Path .\quality-drmemory\status.json)) {
-            $payload = [ordered]@{
-              check = "Dr. Memory"
-              status = "failed"
-              findings = 1
-              summary = "Dr. Memory did not complete successfully"
-              details = @("The Win32 Dr. Memory job stopped before a full memory report was produced.")
-            }
-            $payload | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 .\quality-drmemory\status.json
+          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+            Write-Output "::error::Dr. Memory build failed before runtime checks could run"
+            exit 1
           }
 
-      - name: Upload Dr. Memory report
+  windows-appverifier:
+    name: quality / appverifier-nightly
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AppVerifier build
+        shell: pwsh
+        run: |
+          cmake -S . -B build-appverifier -G "Visual Studio 17 2022" -A Win32 `
+            -DCMAKE_BUILD_TYPE=Debug `
+            -DCATIME_ENABLE_WARNINGS=ON `
+            -DCATIME_WARNINGS_AS_ERRORS=OFF `
+            -DCATIME_ENABLE_BINARY_HARDENING=OFF
+
+      - name: Build AppVerifier target
+        id: build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path quality-appverifier | Out-Null
+          $ErrorActionPreference = "Continue"
+          cmake --build build-appverifier --config Debug *>&1 | Tee-Object quality-appverifier\build.log
+          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          exit 0
+
+      - name: Run Application Verifier
+        if: always() && steps.build.outputs.exit_code == '0'
+        shell: pwsh
+        run: |
+          .\.github\scripts\ci\run_appverifier.ps1 `
+            -BinaryPath .\build-appverifier\Debug\catime.exe `
+            -OutputDir .\quality-appverifier
+
+      - name: Enforce AppVerifier gate
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: quality-drmemory
-          path: quality-drmemory
-          if-no-files-found: ignore
+        shell: pwsh
+        run: |
+          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+            Write-Output "::error::Application Verifier build failed before runtime checks could run"
+            exit 1
+          }
 
   build:
     name: build / mingw-release
     needs:
       - codeql
       - cppcheck
+      - gitleaks
+      - semgrep
       - msvc-analyze
       - windows-asan-smoke
       - win32-binary-baseline
+      - binskim
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
@@ -558,41 +663,35 @@ jobs:
     needs:
       - codeql
       - cppcheck
+      - gitleaks
+      - semgrep
       - msvc-analyze
       - windows-asan-smoke
       - win32-binary-baseline
+      - binskim
       - windows-drmemory
+      - windows-appverifier
       - build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Download quality artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          pattern: quality-*
-          merge-multiple: false
-
       - name: Append quality report
         run: |
-          python3 .github/scripts/ci/render_summary.py artifacts >> "$GITHUB_STEP_SUMMARY"
           {
+            echo "## Quality Report"
+            echo ""
             echo ""
             echo "### Job Results"
             echo ""
             echo "- CodeQL: ${{ needs.codeql.result }}"
             echo "- Cppcheck: ${{ needs.cppcheck.result }}"
+            echo "- Gitleaks: ${{ needs.gitleaks.result }}"
+            echo "- Semgrep: ${{ needs.semgrep.result }}"
             echo "- MSVC Analyze: ${{ needs['msvc-analyze'].result }}"
             echo "- Windows ASan Smoke: ${{ needs['windows-asan-smoke'].result }}"
             echo "- Win32 Binary Baseline: ${{ needs['win32-binary-baseline'].result }}"
+            echo "- BinSkim: ${{ needs.binskim.result }}"
             echo "- Dr. Memory: ${{ needs['windows-drmemory'].result }}"
+            echo "- Application Verifier: ${{ needs['windows-appverifier'].result }}"
             echo "- MinGW Release Build: ${{ needs.build.result }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
