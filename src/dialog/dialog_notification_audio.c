@@ -180,7 +180,7 @@ void HandleSoundComboDropdown(HWND hwndCombo) {
     PopulateNotificationSoundComboBox(hwndCombo, currentFile);
     
     if (selectedFile[0] != L'\0') {
-        int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
+        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)selectedFile);
         if (newIndex != CB_ERR) {
             SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
         }

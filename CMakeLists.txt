@@ -18,9 +18,6 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Add Windows specific definitions
-add_definitions(-D_WINDOWS)
-
 # Collect all source files
 file(GLOB_RECURSE SOURCES "src/*.c")
 
@@ -46,6 +43,7 @@ target_include_directories(catime PRIVATE
 
 # Add compile definitions
 target_compile_definitions(catime PRIVATE
+    _WINDOWS
     UNICODE
     _UNICODE
     $<$<COMPILE_LANGUAGE:C>:MINIAUDIO_IMPLEMENTATION>

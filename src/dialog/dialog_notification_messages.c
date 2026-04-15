@@ -32,6 +32,7 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    (void)lParam;
     DialogContext* ctx = Dialog_GetContext(hwndDlg);
 
     switch (msg) {

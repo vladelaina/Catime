@@ -34,6 +34,7 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    (void)lParam;
     DialogContext* ctx = Dialog_GetContext(hwndDlg);
 
     switch (msg) {
@@ -91,8 +92,8 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wopacityStr, sizeof(wopacityStr)/sizeof(wchar_t));
 
                 for (int i = 0; wtimeStr[i] != L'\0'; i++) {
-                    if (wtimeStr[i] == L'。' || wtimeStr[i] == L'，' || wtimeStr[i] == L',' ||
-                        wtimeStr[i] == L'．' || wtimeStr[i] == L'、') {
+                    if (wtimeStr[i] == L'\x3002' || wtimeStr[i] == L'\xFF0C' || wtimeStr[i] == L',' ||
+                        wtimeStr[i] == L'\xFF0E' || wtimeStr[i] == L'\x3001') {
                         wtimeStr[i] = L'.';
                     }
                 }
@@ -100,7 +101,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 WideCharToMultiByte(CP_UTF8, 0, wtimeStr, -1, timeStr, sizeof(timeStr), NULL, NULL);
                 WideCharToMultiByte(CP_UTF8, 0, wopacityStr, -1, opacityStr, sizeof(opacityStr), NULL, NULL);
 
-                float timeInSeconds = atof(timeStr);
+                float timeInSeconds = strtof(timeStr, NULL);
                 int timeInMs = (int)(timeInSeconds * 1000.0f);
 
                 if (timeInMs > 0 && timeInMs < 100) timeInMs = 100;

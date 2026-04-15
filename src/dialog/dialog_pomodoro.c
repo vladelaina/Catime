@@ -46,6 +46,7 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    (void)lParam;
     DialogContext* ctx = Dialog_GetContext(hwndDlg);
 
     switch (msg) {
@@ -312,4 +313,3 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 
     return FALSE;
 }
-
