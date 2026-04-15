@@ -12,4 +12,5 @@ paths = [
 regexes = [
   '''https://qm\.qq\.com/q/[A-Za-z0-9]+''',
   '''https://qun\.qq\.com/universal-share/share\?[^"'[:space:]>]+''',
+  '''KEY=Ctrl\+Shift\+Alt\+Key''',
 ]

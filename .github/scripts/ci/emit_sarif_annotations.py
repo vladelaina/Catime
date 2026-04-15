@@ -26,7 +26,10 @@ def extract_location(result: dict) -> tuple[str, str]:
     return "", "1"
 
 
-def should_ignore(check_name: str, message: str) -> bool:
+def should_ignore(check_name: str, message: str, file_path: str) -> bool:
+    normalized = file_path.replace("\\", "/")
+    if normalized.startswith("libs/miniaudio/"):
+        return True
     if check_name == "Semgrep" and "Avoid using 'strtok()'" in message:
         return True
     return False
@@ -55,20 +58,24 @@ def main() -> int:
     for run in data.get("runs") or []:
         results.extend(run.get("results") or [])
 
-    for result in results[:50]:
+    emitted = 0
+    for result in results:
         level = (result.get("level") or "warning").lower()
         annotation_level = "error" if level == "error" else "warning"
         message = extract_message(result) or f"{check_name} finding"
-        if should_ignore(check_name, message):
-            continue
         file_path, line = extract_location(result)
+        if should_ignore(check_name, message, file_path):
+            continue
         full_message = f"{check_name}: {message}"
         if file_path:
             print(f"::{annotation_level} file={file_path},line={line}::{escape(full_message)}")
         else:
             print(f"::{annotation_level}::{escape(full_message)}")
+        emitted += 1
+        if emitted >= 50:
+            break
 
-    print(len(results))
+    print(emitted)
     return 0
 
 

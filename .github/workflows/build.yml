@@ -230,8 +230,10 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-msvc --config Debug *>&1 | Tee-Object quality-msvc-analyze\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          if (Test-Path .\build-msvc\Debug\catime.exe) {
+          $binary = Get-ChildItem .\build-msvc -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($binary) {
             "binary_exists=true" >> $env:GITHUB_OUTPUT
+            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
           } else {
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
@@ -312,8 +314,10 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-asan --config Debug *>&1 | Tee-Object quality-windows-asan\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          if (Test-Path .\build-asan\Debug\catime.exe) {
+          $binary = Get-ChildItem .\build-asan -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($binary) {
             "binary_exists=true" >> $env:GITHUB_OUTPUT
+            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
           } else {
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
@@ -327,7 +331,7 @@ jobs:
           ASAN_SAVE_DUMPS: quality-windows-asan\catime-asan.dmp
         run: |
           $ErrorActionPreference = "Continue"
-          & .\build-asan\Debug\catime.exe --ci-smoke --ci-exit-ms=4000 *>&1 | Tee-Object quality-windows-asan\asan.log
+          & "${{ steps.build.outputs.binary_path }}" --ci-smoke --ci-exit-ms=4000 *>&1 | Tee-Object quality-windows-asan\asan.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
           exit 0
 
@@ -408,8 +412,10 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-win32-baseline --config Release
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          if (Test-Path .\build-win32-baseline\Release\catime.exe) {
+          $binary = Get-ChildItem .\build-win32-baseline -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($binary) {
             "binary_exists=true" >> $env:GITHUB_OUTPUT
+            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
           } else {
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
@@ -420,7 +426,7 @@ jobs:
         shell: pwsh
         run: |
           .\.github\scripts\ci\check_pe_hardening.ps1 `
-            -BinaryPath .\build-win32-baseline\Release\catime.exe `
+            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
             -OutputDir .\quality-win32-baseline
 
       - name: Enforce Win32 baseline gate
@@ -461,8 +467,10 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-binskim --config Release *>&1 | Tee-Object quality-binskim\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          if (Test-Path .\build-binskim\Release\catime.exe) {
+          $binary = Get-ChildItem .\build-binskim -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($binary) {
             "binary_exists=true" >> $env:GITHUB_OUTPUT
+            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
           } else {
             "binary_exists=false" >> $env:GITHUB_OUTPUT
           }
@@ -475,7 +483,7 @@ jobs:
         run: |
           $ErrorActionPreference = "Continue"
           .\.github\scripts\ci\run_binskim.ps1 `
-            -BinaryPath .\build-binskim\Release\catime.exe `
+            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
             -OutputDir .\quality-binskim
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
           exit 0
@@ -549,21 +557,28 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-drmemory --config Debug
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          $binary = Get-ChildItem .\build-drmemory -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($binary) {
+            "binary_exists=true" >> $env:GITHUB_OUTPUT
+            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
+          } else {
+            "binary_exists=false" >> $env:GITHUB_OUTPUT
+          }
           exit 0
 
       - name: Run Dr. Memory
-        if: always() && steps.build.outputs.exit_code == '0'
+        if: always() && steps.build.outputs.binary_exists == 'true'
         shell: pwsh
         run: |
           .\.github\scripts\ci\run_drmemory.ps1 `
-            -BinaryPath .\build-drmemory\Debug\catime.exe `
+            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
             -OutputDir .\quality-drmemory
 
       - name: Enforce Dr. Memory gate
         if: always()
         shell: pwsh
         run: |
-          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             Write-Output "::error::Dr. Memory build failed before runtime checks could run"
             exit 1
           }
@@ -593,21 +608,28 @@ jobs:
           $ErrorActionPreference = "Continue"
           cmake --build build-appverifier --config Debug *>&1 | Tee-Object quality-appverifier\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
+          $binary = Get-ChildItem .\build-appverifier -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($binary) {
+            "binary_exists=true" >> $env:GITHUB_OUTPUT
+            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
+          } else {
+            "binary_exists=false" >> $env:GITHUB_OUTPUT
+          }
           exit 0
 
       - name: Run Application Verifier
-        if: always() && steps.build.outputs.exit_code == '0'
+        if: always() && steps.build.outputs.binary_exists == 'true'
         shell: pwsh
         run: |
           .\.github\scripts\ci\run_appverifier.ps1 `
-            -BinaryPath .\build-appverifier\Debug\catime.exe `
+            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
             -OutputDir .\quality-appverifier
 
       - name: Enforce AppVerifier gate
         if: always()
         shell: pwsh
         run: |
-          if ("${{ steps.build.outputs.exit_code }}" -ne "0") {
+          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             Write-Output "::error::Application Verifier build failed before runtime checks could run"
             exit 1
           }

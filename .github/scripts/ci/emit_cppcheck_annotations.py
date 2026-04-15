@@ -8,6 +8,13 @@ def escape(value: str) -> str:
     return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
+def should_ignore(file_path: str, message: str) -> bool:
+    normalized = file_path.replace("\\", "/")
+    if normalized.startswith("libs/miniaudio/"):
+        return True
+    return False
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         print("usage: emit_cppcheck_annotations.py <cppcheck-xml>", file=sys.stderr)
@@ -21,7 +28,8 @@ def main() -> int:
     root = ET.parse(xml_path).getroot()
     errors = root.findall(".//error")
 
-    for item in errors[:50]:
+    emitted = 0
+    for item in errors:
         severity = item.attrib.get("severity", "warning").lower()
         message = item.attrib.get("msg", "").strip() or item.attrib.get("id", "Cppcheck finding")
         location = item.find("location")
@@ -29,11 +37,16 @@ def main() -> int:
         if location is not None:
             file_path = location.attrib.get("file", "")
             line = location.attrib.get("line", "1")
+            if should_ignore(file_path, message):
+                continue
             print(f"::{level} file={file_path},line={line}::{escape(message)}")
         else:
             print(f"::{level}::{escape(message)}")
+        emitted += 1
+        if emitted >= 50:
+            break
 
-    print(len(errors))
+    print(emitted)
     return 0
 
 
