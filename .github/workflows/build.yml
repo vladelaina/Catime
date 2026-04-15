@@ -275,6 +275,11 @@ jobs:
           }
           $totalCount = $warningCount + [int]$sarifCount
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
+            $errors = @(Select-String -Path quality-msvc-analyze\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined" -AllMatches)
+            foreach ($line in $errors | Select-Object -First 20) {
+              Write-Output "COPYABLE ERROR $($line.Line.Trim())"
+              Write-Output "::error::$($line.Line.Trim())"
+            }
             Write-Output "::error::MSVC /analyze build failed before analysis completed"
           }
           $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true") { "passed" } else { "failed" }
@@ -367,6 +372,13 @@ jobs:
           $runExit = if ("${{ steps.smoke.outputs.exit_code }}") { "${{ steps.smoke.outputs.exit_code }}" } else { "0" }
           $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
+            if (Test-Path .\quality-windows-asan\build.log) {
+              $errors = @(Select-String -Path .\quality-windows-asan\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined|MSB8058|MSB8059|LNK1356" -AllMatches)
+              foreach ($line in $errors | Select-Object -First 20) {
+                Write-Output "COPYABLE ERROR $($line.Line.Trim())"
+                Write-Output "::error::$($line.Line.Trim())"
+              }
+            }
             Write-Output "::error::Windows ASan smoke build failed"
           }
           if ($runExit -ne "0") {
@@ -410,7 +422,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path quality-win32-baseline | Out-Null
           $ErrorActionPreference = "Continue"
-          cmake --build build-win32-baseline --config Release
+          cmake --build build-win32-baseline --config Release *>&1 | Tee-Object quality-win32-baseline\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
           $binary = Get-ChildItem .\build-win32-baseline -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($binary) {
@@ -434,6 +446,13 @@ jobs:
         shell: pwsh
         run: |
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
+            if (Test-Path .\quality-win32-baseline\build.log) {
+              $errors = @(Select-String -Path .\quality-win32-baseline\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined" -AllMatches)
+              foreach ($line in $errors | Select-Object -First 20) {
+                Write-Output "COPYABLE ERROR $($line.Line.Trim())"
+                Write-Output "::error::$($line.Line.Trim())"
+              }
+            }
             Write-Output "::error::Win32 baseline build failed before hardening checks could run"
             exit 1
           }
@@ -495,6 +514,13 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path .\quality-binskim | Out-Null
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
+            if (Test-Path .\quality-binskim\build.log) {
+              $errors = @(Select-String -Path .\quality-binskim\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined" -AllMatches)
+              foreach ($line in $errors | Select-Object -First 20) {
+                Write-Output "COPYABLE ERROR $($line.Line.Trim())"
+                Write-Output "::error::$($line.Line.Trim())"
+              }
+            }
             Write-Output "::error::BinSkim build failed before producing catime.exe"
             "finding_count=1" >> $env:GITHUB_OUTPUT
             "status=failed" >> $env:GITHUB_OUTPUT

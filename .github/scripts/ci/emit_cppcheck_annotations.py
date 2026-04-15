@@ -39,8 +39,10 @@ def main() -> int:
             line = location.attrib.get("line", "1")
             if should_ignore(file_path, message):
                 continue
+            print(f"COPYABLE {level.upper()} {file_path}:{line} {message}")
             print(f"::{level} file={file_path},line={line}::{escape(message)}")
         else:
+            print(f"COPYABLE {level.upper()} {message}")
             print(f"::{level}::{escape(message)}")
         emitted += 1
         if emitted >= 50:

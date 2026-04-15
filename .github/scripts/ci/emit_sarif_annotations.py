@@ -30,6 +30,11 @@ def should_ignore(check_name: str, message: str, file_path: str) -> bool:
     normalized = file_path.replace("\\", "/")
     if normalized.startswith("libs/miniaudio/"):
         return True
+    if check_name == "MSVC /analyze":
+        if not normalized:
+            return True
+        if "/src/" not in f"/{normalized}" and "/include/" not in f"/{normalized}" and not normalized.startswith("src/") and not normalized.startswith("include/"):
+            return True
     if check_name == "Semgrep" and "Avoid using 'strtok()'" in message:
         return True
     return False
@@ -68,8 +73,10 @@ def main() -> int:
             continue
         full_message = f"{check_name}: {message}"
         if file_path:
+            print(f"COPYABLE {annotation_level.upper()} {file_path}:{line} {full_message}")
             print(f"::{annotation_level} file={file_path},line={line}::{escape(full_message)}")
         else:
+            print(f"COPYABLE {annotation_level.upper()} {full_message}")
             print(f"::{annotation_level}::{escape(full_message)}")
         emitted += 1
         if emitted >= 50:

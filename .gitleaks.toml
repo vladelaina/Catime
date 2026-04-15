@@ -8,6 +8,7 @@ description = "Allow public QQ community invite links used in project docs"
 paths = [
   '''^README(?:_EN)?\.md$''',
   '''^i18n/.*\.md$''',
+  '''^src/config/config_defaults\.c$''',
 ]
 regexes = [
   '''https://qm\.qq\.com/q/[A-Za-z0-9]+''',
