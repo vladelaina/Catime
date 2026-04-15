@@ -193,16 +193,16 @@ WORD StringToHotkey(const char* str) {
     if (lastToken) {
         /** Handle single character keys (A-Z, 0-9) */
         if (strlen(lastToken) == 1) {
-            char ch = toupper(lastToken[0]);
+            int ch = toupper((unsigned char)lastToken[0]);
             if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
-                vk = ch;
+                vk = (BYTE)ch;
             }
         } 
         /** Handle function keys (F1-F24) */
         else if (lastToken[0] == 'F' && isdigit(lastToken[1])) {
             int fNum = atoi(lastToken + 1);
             if (fNum >= 1 && fNum <= 24) {
-                vk = VK_F1 + fNum - 1;
+                vk = (BYTE)(VK_F1 + fNum - 1);
             }
         }
         /** Handle hex format (0xNN) */

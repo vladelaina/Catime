@@ -282,7 +282,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         strncpy(tempSoundFile, g_AppConfig.notification.sound.sound_file, sizeof(tempSoundFile) - 1);
                         tempSoundFile[sizeof(tempSoundFile) - 1] = '\0';
 
-                        wchar_t wFileName[MAX_PATH];
+                        wchar_t wFileName[MAX_PATH] = {0};
                         SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
 
                         const wchar_t* sysBeepText = GetLocalizedString(NULL, L"System Beep");
@@ -410,7 +410,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 char soundFile[MAX_PATH] = {0};
                 
                 if (index > 0) {
-                    wchar_t wFileName[MAX_PATH];
+                    wchar_t wFileName[MAX_PATH] = {0};
                     SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                     
                     const wchar_t* sysBeepText = GetLocalizedString(NULL, L"System Beep");

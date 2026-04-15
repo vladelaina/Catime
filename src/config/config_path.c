@@ -36,8 +36,8 @@ void GetConfigPath(char* path, size_t size) {
         PFN_SHGetKnownFolderPath pfn = (PFN_SHGetKnownFolderPath)GetProcAddress(hShell, "SHGetKnownFolderPath");
         if (pfn) {
             /* FOLDERID_LocalAppData */
-            static const GUID FOLDERID_LocalAppData = {0xF1B32785,0x6FBA,0x4FCF,{0x9D,0x55,0x7B,0x8E,0x7F,0x15,0x70,0x91}};
-            hr = pfn(&FOLDERID_LocalAppData, 0, NULL, &wLocalAppData);
+            static const GUID folderIdLocalAppDataGuid = {0xF1B32785,0x6FBA,0x4FCF,{0x9D,0x55,0x7B,0x8E,0x7F,0x15,0x70,0x91}};
+            hr = pfn(&folderIdLocalAppDataGuid, 0, NULL, &wLocalAppData);
         } else {
             hr = E_NOTIMPL;
         }

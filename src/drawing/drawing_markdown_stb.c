@@ -317,7 +317,7 @@ static const struct {
     const wchar_t* icon;
 } g_alertColors[] = {
     {BLOCKQUOTE_NOTE,      RGB(31, 136, 229),  L"\x24D8 "},  /* ⓘ Blue */
-    {BLOCKQUOTE_TIP,       RGB(26, 127, 55),   L"\x1F4A1 "}, /* 💡 Green */
+    {BLOCKQUOTE_TIP,       RGB(26, 127, 55),   L"\x2728 "},  /* ✨ Green */
     {BLOCKQUOTE_IMPORTANT, RGB(130, 80, 223),  L"\x2139 "},  /* ℹ Purple */
     {BLOCKQUOTE_WARNING,   RGB(191, 135, 0),   L"\x26A0 "},  /* ⚠ Yellow */
     {BLOCKQUOTE_CAUTION,   RGB(207, 34, 46),   L"\x26D4 "},  /* ⛔ Red */

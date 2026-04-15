@@ -95,7 +95,7 @@ BOOL HandleSoundTestButton(HWND hwndDlg, HWND hwndCombo, HWND hwndSlider, BOOL* 
             int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
             SetAudioVolume(volume);
             
-            wchar_t wFileName[MAX_PATH];
+            wchar_t wFileName[MAX_PATH] = {0};
             SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
             
             char tempSoundFile[MAX_PATH];

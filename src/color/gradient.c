@@ -87,7 +87,7 @@ static char g_CustomNameBuffer[COLOR_HEX_BUFFER];
 static uint32_t g_CustomVersion = 0;
 
 static COLORREF ParseHexColor(const char* hex) {
-    int r, g, b;
+    unsigned int r, g, b;
     const char* start = (hex[0] == '#') ? hex + 1 : hex;
     if (sscanf(start, "%02x%02x%02x", &r, &g, &b) == 3) {
         return RGB(r, g, b);

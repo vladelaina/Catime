@@ -9,6 +9,9 @@
 #include "../resource/resource.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
+#include "menu_preview.h"
+#include "timer/main_timer.h"
+#include "drawing/drawing_timer_precision.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -358,9 +361,6 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
  * - Animated gradient: 66ms = 15 FPS (smooth animation without excessive CPU)
  */
 UINT GetTimerInterval(void) {
-    extern BOOL GetActiveShowMilliseconds(void);
-    extern void GetActiveColor(char* outColor, size_t bufferSize);
-    
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     
@@ -378,14 +378,11 @@ UINT GetTimerInterval(void) {
  * Uses high-precision multimedia timer for smooth milliseconds display
  */
 void ResetTimerWithInterval(HWND hwnd) {
-    extern BOOL MainTimer_Start(HWND hwnd, UINT intervalMs);
-    
     UINT interval = GetTimerInterval();
     
     /* Unified main timer start path keeps SetTimer/mmTimer behavior consistent */
     MainTimer_Start(hwnd, interval);
     
-    extern void ResetTimerMilliseconds(void);
     ResetTimerMilliseconds();
 }
 
@@ -529,5 +526,4 @@ TimeoutActionType TimeoutActionType_FromStr(const char* str) {
 const char* TimeoutActionType_ToStr(TimeoutActionType val) {
     return EnumToString(TIMEOUT_ACTION_MAP, val, "MESSAGE");
 }
-
 

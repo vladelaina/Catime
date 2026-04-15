@@ -248,7 +248,7 @@ void ApplyColorSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
     
     /* Free existing color options */
-    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (COLOR_OPTIONS && COLOR_OPTIONS[i].hexColor) {
             free((void*)COLOR_OPTIONS[i].hexColor);
         }

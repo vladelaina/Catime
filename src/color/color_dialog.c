@@ -88,7 +88,7 @@ static void PopulateCustomColors(COLORREF* acrCustClr, size_t maxColors) {
         if (strchr(hexColor, '_') != NULL) continue;
         
         if (hexColor[0] == '#') {
-            int r, g, b;
+            unsigned int r, g, b;
             if (sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b) == 3) {
                 acrCustClr[custIdx++] = RGB(r, g, b);
             }
@@ -208,7 +208,12 @@ COLORREF ShowColorDialog(HWND hwnd) {
     
     int r = 255, g = 255, b = 255;
     if (CLOCK_TEXT_COLOR[0] == '#') {
-        sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &r, &g, &b);
+        unsigned int hexR = 255, hexG = 255, hexB = 255;
+        if (sscanf(CLOCK_TEXT_COLOR + 1, "%02x%02x%02x", &hexR, &hexG, &hexB) == 3) {
+            r = (int)hexR;
+            g = (int)hexG;
+            b = (int)hexB;
+        }
     } else {
         sscanf(CLOCK_TEXT_COLOR, "%d,%d,%d", &r, &g, &b);
     }
@@ -251,4 +256,3 @@ COLORREF ShowColorDialog(HWND hwnd) {
     CancelPreview(hwnd);
     return (COLORREF)-1;
 }
-

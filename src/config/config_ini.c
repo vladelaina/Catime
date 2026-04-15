@@ -604,8 +604,6 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
  */
 int ReadIniInt(const char* section, const char* key, int defaultValue,
                const char* filePath) {
-    char buffer[64];
-
     AcquireIniLock();
 
     const char* value = GetIniValue(section, key, filePath);

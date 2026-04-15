@@ -257,11 +257,13 @@ jobs:
           if (-not (Test-Path quality-msvc-analyze\build.log)) {
             "" | Set-Content -Encoding utf8 quality-msvc-analyze\build.log
           }
-          $warningLines = @(Select-String -Path quality-msvc-analyze\build.log -Pattern "warning C\d+:" -AllMatches)
-          $warningLines = @($warningLines | Where-Object { $_.Line -notmatch '[\\/]libs[\\/]miniaudio[\\/]' })
-          $warningCount = $warningLines.Count
-          foreach ($line in $warningLines | Select-Object -First 20) {
-            Write-Output "::notice::$($line.Line.Trim())"
+          $warningOutput = @(python .github/scripts/ci/emit_build_log_annotations.py quality-msvc-analyze\build.log warnings --max 20)
+          foreach ($line in $warningOutput) {
+            Write-Output $line
+          }
+          $warningCount = 0
+          if ($warningOutput.Count -gt 0) {
+            $warningCount = [int]$warningOutput[-1]
           }
           $sarifCount = 0
           if (Test-Path quality-msvc-analyze\analysis.sarif) {
@@ -275,10 +277,9 @@ jobs:
           }
           $totalCount = $warningCount + [int]$sarifCount
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
-            $errors = @(Select-String -Path quality-msvc-analyze\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined" -AllMatches)
-            foreach ($line in $errors | Select-Object -First 20) {
-              Write-Output "COPYABLE ERROR $($line.Line.Trim())"
-              Write-Output "::error::$($line.Line.Trim())"
+            $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py quality-msvc-analyze\build.log errors --max 20)
+            foreach ($line in $errorOutput) {
+              Write-Output $line
             }
             Write-Output "::error::MSVC /analyze build failed before analysis completed"
           }
@@ -373,10 +374,9 @@ jobs:
           $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             if (Test-Path .\quality-windows-asan\build.log) {
-              $errors = @(Select-String -Path .\quality-windows-asan\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined|MSB8058|MSB8059|LNK1356" -AllMatches)
-              foreach ($line in $errors | Select-Object -First 20) {
-                Write-Output "COPYABLE ERROR $($line.Line.Trim())"
-                Write-Output "::error::$($line.Line.Trim())"
+              $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py .\quality-windows-asan\build.log errors --max 20)
+              foreach ($line in $errorOutput) {
+                Write-Output $line
               }
             }
             Write-Output "::error::Windows ASan smoke build failed"
@@ -447,10 +447,9 @@ jobs:
         run: |
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             if (Test-Path .\quality-win32-baseline\build.log) {
-              $errors = @(Select-String -Path .\quality-win32-baseline\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined" -AllMatches)
-              foreach ($line in $errors | Select-Object -First 20) {
-                Write-Output "COPYABLE ERROR $($line.Line.Trim())"
-                Write-Output "::error::$($line.Line.Trim())"
+              $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py .\quality-win32-baseline\build.log errors --max 20)
+              foreach ($line in $errorOutput) {
+                Write-Output $line
               }
             }
             Write-Output "::error::Win32 baseline build failed before hardening checks could run"
@@ -515,10 +514,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path .\quality-binskim | Out-Null
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             if (Test-Path .\quality-binskim\build.log) {
-              $errors = @(Select-String -Path .\quality-binskim\build.log -Pattern "error [A-Z]+\d+:|fatal error|LNK\d+|error MSB\d+|cannot open file|undefined" -AllMatches)
-              foreach ($line in $errors | Select-Object -First 20) {
-                Write-Output "COPYABLE ERROR $($line.Line.Trim())"
-                Write-Output "::error::$($line.Line.Trim())"
+              $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py .\quality-binskim\build.log errors --max 20)
+              foreach ($line in $errorOutput) {
+                Write-Output $line
               }
             }
             Write-Output "::error::BinSkim build failed before producing catime.exe"
