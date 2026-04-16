@@ -361,6 +361,7 @@ jobs:
           ASAN_SAVE_DUMPS: quality-windows-asan\catime-asan.dmp
         run: |
           $ErrorActionPreference = "Continue"
+          .\.github\scripts\ci\prepare_msvc_asan_runtime.ps1 -BinaryPath "${{ steps.build.outputs.binary_path }}"
           & "${{ steps.build.outputs.binary_path }}" --ci-smoke --ci-exit-ms=4000 *>&1 | Tee-Object quality-windows-asan\asan.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
           exit 0
@@ -580,10 +581,34 @@ jobs:
             if ([int]$count -eq 0 -and "${{ steps.binskim.outputs.exit_code }}" -eq "0") {
               "status=passed" >> $env:GITHUB_OUTPUT
             } else {
+              if (Test-Path .\quality-binskim\binskim-stderr.txt) {
+                Get-Content .\quality-binskim\binskim-stderr.txt | Select-Object -First 20 | ForEach-Object {
+                  if ($_.Trim()) {
+                    Write-Output "COPYABLE ERROR BinSkim stderr: $($_.Trim())"
+                    Write-Output "::error::BinSkim stderr: $($_.Trim())"
+                  }
+                }
+              }
+              if (Test-Path .\quality-binskim\binskim-stdout.txt) {
+                Get-Content .\quality-binskim\binskim-stdout.txt | Select-Object -First 20 | ForEach-Object {
+                  if ($_.Trim()) {
+                    Write-Output "COPYABLE NOTICE BinSkim stdout: $($_.Trim())"
+                    Write-Output "::notice::BinSkim stdout: $($_.Trim())"
+                  }
+                }
+              }
               "status=failed" >> $env:GITHUB_OUTPUT
             }
           } else {
             Write-Output "::error::BinSkim SARIF report was not produced"
+            if (Test-Path .\quality-binskim\binskim-stderr.txt) {
+              Get-Content .\quality-binskim\binskim-stderr.txt | Select-Object -First 20 | ForEach-Object {
+                if ($_.Trim()) {
+                  Write-Output "COPYABLE ERROR BinSkim stderr: $($_.Trim())"
+                  Write-Output "::error::BinSkim stderr: $($_.Trim())"
+                }
+              }
+            }
             "finding_count=1" >> $env:GITHUB_OUTPUT
             "status=failed" >> $env:GITHUB_OUTPUT
           }
