@@ -337,7 +337,7 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     char line[256];
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_CUSTOM_COUNTDOWN=", 24) == 0) {
-            char* value = line + 24;
+            const char* value = line + 24;
 
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';

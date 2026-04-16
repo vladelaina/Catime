@@ -422,7 +422,7 @@ void LoadPluginTrustFromConfig(void) {
             char* separator = strchr(value, '|');
             if (separator && (separator - value) < MAX_PATH) {
                 *separator = '\0';
-                char* hash = separator + 1;
+                const char* hash = separator + 1;
                 
                 if (strlen(hash) == 64) {  /* SHA256 hex is 64 chars */
                     /* Validate hash contains only hex characters */
@@ -436,7 +436,7 @@ void LoadPluginTrustFromConfig(void) {
                         }
                     }
                     
-                    if (validHash && strlen(value) > 0) {  /* Also check path is not empty */
+                    if (validHash && value[0] != '\0') {
                         /* Defensive check: ensure we don't overflow (though loop limit prevents this) */
                         if (g_AppConfig.plugin_trust.count >= MAX_TRUSTED_PLUGINS) {
                             LOG_ERROR("Plugin trust list overflow during load (max: %d)", MAX_TRUSTED_PLUGINS);

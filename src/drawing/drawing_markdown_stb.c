@@ -283,10 +283,10 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
         float fallbackScale = fallbackBaseScale;
         
         // Check heading
-        while (curHeadingIdx < headingCount && (size_t)i >= headings[curHeadingIdx].endPos) {
+        while (curHeadingIdx < headingCount && i >= (size_t)headings[curHeadingIdx].endPos) {
             curHeadingIdx++;
         }
-        if (curHeadingIdx < headingCount && (size_t)i >= headings[curHeadingIdx].startPos) {
+        if (curHeadingIdx < headingCount && i >= (size_t)headings[curHeadingIdx].startPos) {
             scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
             if (fallbackLoaded) {
                 fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
@@ -412,8 +412,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 float scale = baseScale;
                 float fallbackScale = fallbackBaseScale;
 
-                while (tmpHeadingIdx < headingCount && (size_t)j >= headings[tmpHeadingIdx].endPos) tmpHeadingIdx++;
-                if (tmpHeadingIdx < headingCount && (size_t)j >= headings[tmpHeadingIdx].startPos) {
+                while (tmpHeadingIdx < headingCount && j >= (size_t)headings[tmpHeadingIdx].endPos) tmpHeadingIdx++;
+                if (tmpHeadingIdx < headingCount && j >= (size_t)headings[tmpHeadingIdx].startPos) {
                     scale = GetScaleForHeading(headings[tmpHeadingIdx].level, baseScale);
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[tmpHeadingIdx].level, fallbackBaseScale);
                 }
@@ -553,8 +553,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 COLORREF drawColor = color;
 
                 // Heading
-                while (curHeadingIdx < headingCount && (size_t)j >= headings[curHeadingIdx].endPos) curHeadingIdx++;
-                if (curHeadingIdx < headingCount && (size_t)j >= headings[curHeadingIdx].startPos) {
+                while (curHeadingIdx < headingCount && j >= (size_t)headings[curHeadingIdx].endPos) curHeadingIdx++;
+                if (curHeadingIdx < headingCount && j >= (size_t)headings[curHeadingIdx].startPos) {
                     scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
                 }
@@ -567,14 +567,14 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 // Link - track region for click detection
                 BOOL inLink = FALSE;
                 int activeLinkIdx = -1;
-                while (curLinkIdx < linkCount && (size_t)j >= links[curLinkIdx].endPos) curLinkIdx++;
-                if (curLinkIdx < linkCount && (size_t)j >= links[curLinkIdx].startPos) {
+                while (curLinkIdx < linkCount && j >= (size_t)links[curLinkIdx].endPos) curLinkIdx++;
+                if (curLinkIdx < linkCount && j >= (size_t)links[curLinkIdx].startPos) {
                     drawColor = RGB(0, 175, 255); // Link color #00AFFF
                     inLink = TRUE;
                     activeLinkIdx = curLinkIdx;
                     
                     /* Update link rect for first char */
-                    if ((size_t)j == links[curLinkIdx].startPos) {
+                    if (j == (size_t)links[curLinkIdx].startPos) {
                         links[curLinkIdx].linkRect.left = currentX;
                         links[curLinkIdx].linkRect.top = currentY;
                         links[curLinkIdx].linkRect.bottom = currentY + lineMaxHeight;
@@ -592,8 +592,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     isStrikethrough = TRUE;
                 }
                 
-                while (curStyleIdx < styleCount && (size_t)j >= styles[curStyleIdx].endPos) curStyleIdx++;
-                if (curStyleIdx < styleCount && (size_t)j >= styles[curStyleIdx].startPos) {
+                while (curStyleIdx < styleCount && j >= (size_t)styles[curStyleIdx].endPos) curStyleIdx++;
+                if (curStyleIdx < styleCount && j >= (size_t)styles[curStyleIdx].startPos) {
                     MarkdownStyleType styleType = styles[curStyleIdx].type;
                     if (styleType == STYLE_CODE) {
                         drawColor = RGB(100, 100, 100);
@@ -612,8 +612,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 /* Color tag handling - override drawColor with tag color or gradient */
                 BOOL useColorTagGradient = FALSE;
                 MarkdownColorTag* activeColorTag = NULL;
-                while (curColorTagIdx < colorTagCount && (size_t)j >= colorTags[curColorTagIdx].endPos) curColorTagIdx++;
-                if (curColorTagIdx < colorTagCount && (size_t)j >= colorTags[curColorTagIdx].startPos) {
+                while (curColorTagIdx < colorTagCount && j >= (size_t)colorTags[curColorTagIdx].endPos) curColorTagIdx++;
+                if (curColorTagIdx < colorTagCount && j >= (size_t)colorTags[curColorTagIdx].startPos) {
                     MarkdownColorTag* tag = &colorTags[curColorTagIdx];
                     if (tag->colorCount == 1) {
                         /* Single color */
@@ -628,8 +628,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 /* Font tag handling - use cached font if specified */
                 stbtt_fontinfo* charFontInfo = fontInfo;
                 float charScale = scale;
-                while (curFontTagIdx < fontTagCount && (size_t)j >= fontTags[curFontTagIdx].endPos) curFontTagIdx++;
-                if (curFontTagIdx < fontTagCount && (size_t)j >= fontTags[curFontTagIdx].startPos) {
+                while (curFontTagIdx < fontTagCount && j >= (size_t)fontTags[curFontTagIdx].endPos) curFontTagIdx++;
+                if (curFontTagIdx < fontTagCount && j >= (size_t)fontTags[curFontTagIdx].startPos) {
                     stbtt_fontinfo* cachedFont = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
                     if (cachedFont) {
                         charFontInfo = cachedFont;

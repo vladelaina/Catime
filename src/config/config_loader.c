@@ -217,7 +217,6 @@ static void ProcessFontPath(ConfigSnapshot* snapshot, const char* config_path) {
             }
             
             if (fontFound) {
-                extern BOOL GetFontNameFromFile(const char* fontPath, char* fontName, size_t fontNameSize);
                 if (!GetFontNameFromFile(fontPath, snapshot->fontInternalName, 
                                         sizeof(snapshot->fontInternalName))) {
                     char* lastSlash = strrchr(actualFontFileName, '\\');

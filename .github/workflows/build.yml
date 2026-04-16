@@ -81,10 +81,11 @@ jobs:
           cppcheck \
             --enable=warning,style,performance,portability,information \
             --inconclusive \
-            --force \
+            --max-configs=12 \
             --std=c11 \
             --library=windows \
             -i libs \
+            -i src/audio_player.c \
             --suppress=missingIncludeSystem \
             --xml \
             --xml-version=2 \

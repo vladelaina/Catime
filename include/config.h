@@ -511,7 +511,7 @@ void WriteConfigTimeoutWebsite(const char* url);
  * @param times Time array (seconds)
  * @param count Array size
  */
-void WriteConfigPomodoroTimeOptions(int* times, int count);
+void WriteConfigPomodoroTimeOptions(const int* times, int count);
 
 /* ============================================================================
  * Notification configuration functions

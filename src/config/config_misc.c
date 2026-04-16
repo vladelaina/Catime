@@ -120,7 +120,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
 /**
  * @brief Write custom pomodoro time intervals to config
  */
-void WriteConfigPomodoroTimeOptions(int* times, int count) {
+void WriteConfigPomodoroTimeOptions(const int* times, int count) {
     if (!times || count <= 0) return;
     
     char timesStr[512] = {0};
@@ -391,8 +391,6 @@ void ResetTimerWithInterval(HWND hwnd) {
  * @brief Update startup mode configuration
  */
 void WriteConfigStartupMode(const char* mode) {
-    extern char CLOCK_STARTUP_MODE[20];
-    
     /* Update in-memory variable */
     strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
     CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
@@ -526,4 +524,3 @@ TimeoutActionType TimeoutActionType_FromStr(const char* str) {
 const char* TimeoutActionType_ToStr(TimeoutActionType val) {
     return EnumToString(TIMEOUT_ACTION_MAP, val, "MESSAGE");
 }
-
