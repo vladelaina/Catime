@@ -574,7 +574,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                     activeLinkIdx = curLinkIdx;
                     
                     /* Update link rect for first char */
-                    if (j == links[curLinkIdx].startPos) {
+                    if ((size_t)j == links[curLinkIdx].startPos) {
                         links[curLinkIdx].linkRect.left = currentX;
                         links[curLinkIdx].linkRect.top = currentY;
                         links[curLinkIdx].linkRect.bottom = currentY + lineMaxHeight;
@@ -588,12 +588,12 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 BOOL isStrikethrough = FALSE;
                 
                 // Apply strikethrough for completed todo (skip checkbox symbol itself)
-                if (isCompletedTodo && j > currentLineStart) {
+                if (isCompletedTodo && j > (size_t)currentLineStart) {
                     isStrikethrough = TRUE;
                 }
                 
-                while (curStyleIdx < styleCount && j >= styles[curStyleIdx].endPos) curStyleIdx++;
-                if (curStyleIdx < styleCount && j >= styles[curStyleIdx].startPos) {
+                while (curStyleIdx < styleCount && (size_t)j >= styles[curStyleIdx].endPos) curStyleIdx++;
+                if (curStyleIdx < styleCount && (size_t)j >= styles[curStyleIdx].startPos) {
                     MarkdownStyleType styleType = styles[curStyleIdx].type;
                     if (styleType == STYLE_CODE) {
                         drawColor = RGB(100, 100, 100);
@@ -612,8 +612,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 /* Color tag handling - override drawColor with tag color or gradient */
                 BOOL useColorTagGradient = FALSE;
                 MarkdownColorTag* activeColorTag = NULL;
-                while (curColorTagIdx < colorTagCount && (int)j >= colorTags[curColorTagIdx].endPos) curColorTagIdx++;
-                if (curColorTagIdx < colorTagCount && (int)j >= colorTags[curColorTagIdx].startPos) {
+                while (curColorTagIdx < colorTagCount && (size_t)j >= colorTags[curColorTagIdx].endPos) curColorTagIdx++;
+                if (curColorTagIdx < colorTagCount && (size_t)j >= colorTags[curColorTagIdx].startPos) {
                     MarkdownColorTag* tag = &colorTags[curColorTagIdx];
                     if (tag->colorCount == 1) {
                         /* Single color */
@@ -628,8 +628,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 /* Font tag handling - use cached font if specified */
                 stbtt_fontinfo* charFontInfo = fontInfo;
                 float charScale = scale;
-                while (curFontTagIdx < fontTagCount && (int)j >= fontTags[curFontTagIdx].endPos) curFontTagIdx++;
-                if (curFontTagIdx < fontTagCount && (int)j >= fontTags[curFontTagIdx].startPos) {
+                while (curFontTagIdx < fontTagCount && (size_t)j >= fontTags[curFontTagIdx].endPos) curFontTagIdx++;
+                if (curFontTagIdx < fontTagCount && (size_t)j >= fontTags[curFontTagIdx].startPos) {
                     stbtt_fontinfo* cachedFont = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
                     if (cachedFont) {
                         charFontInfo = cachedFont;

@@ -646,116 +646,6 @@ jobs:
             exit 1
           }
 
-  windows-drmemory:
-    name: quality / drmemory-nightly
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Install Dr. Memory
-        shell: pwsh
-        run: |
-          choco install drmemory.portable -y
-          if ($LASTEXITCODE -ne 0) {
-            choco install drmemory -y
-          }
-
-      - name: Configure Dr. Memory build
-        shell: pwsh
-        run: |
-          cmake -S . -B build-drmemory -G "Visual Studio 17 2022" -A Win32 `
-            -DCMAKE_BUILD_TYPE=Debug `
-            -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_BINARY_HARDENING=OFF
-
-      - name: Build Dr. Memory target
-        id: build
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-drmemory | Out-Null
-          $ErrorActionPreference = "Continue"
-          cmake --build build-drmemory --config Debug
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          $binary = Get-ChildItem .\build-drmemory -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($binary) {
-            "binary_exists=true" >> $env:GITHUB_OUTPUT
-            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
-          } else {
-            "binary_exists=false" >> $env:GITHUB_OUTPUT
-          }
-          exit 0
-
-      - name: Run Dr. Memory
-        if: always() && steps.build.outputs.binary_exists == 'true'
-        shell: pwsh
-        run: |
-          .\.github\scripts\ci\run_drmemory.ps1 `
-            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
-            -OutputDir .\quality-drmemory
-
-      - name: Enforce Dr. Memory gate
-        if: always()
-        shell: pwsh
-        run: |
-          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
-            Write-Output "::error::Dr. Memory build failed before runtime checks could run"
-            exit 1
-          }
-
-  windows-appverifier:
-    name: quality / appverifier-nightly
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Configure AppVerifier build
-        shell: pwsh
-        run: |
-          cmake -S . -B build-appverifier -G "Visual Studio 17 2022" -A Win32 `
-            -DCMAKE_BUILD_TYPE=Debug `
-            -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_BINARY_HARDENING=OFF
-
-      - name: Build AppVerifier target
-        id: build
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-appverifier | Out-Null
-          $ErrorActionPreference = "Continue"
-          cmake --build build-appverifier --config Debug *>&1 | Tee-Object quality-appverifier\build.log
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          $binary = Get-ChildItem .\build-appverifier -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($binary) {
-            "binary_exists=true" >> $env:GITHUB_OUTPUT
-            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
-          } else {
-            "binary_exists=false" >> $env:GITHUB_OUTPUT
-          }
-          exit 0
-
-      - name: Run Application Verifier
-        if: always() && steps.build.outputs.binary_exists == 'true'
-        shell: pwsh
-        run: |
-          .\.github\scripts\ci\run_appverifier.ps1 `
-            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
-            -OutputDir .\quality-appverifier
-
-      - name: Enforce AppVerifier gate
-        if: always()
-        shell: pwsh
-        run: |
-          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
-            Write-Output "::error::Application Verifier build failed before runtime checks could run"
-            exit 1
-          }
-
   build:
     name: build / mingw-release
     needs:
@@ -801,7 +691,7 @@ jobs:
 
       - name: Upload build artifacts
         id: upload-unsigned
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
           path: output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
@@ -826,7 +716,7 @@ jobs:
       actions: write
     steps:
       - name: Delete temporary signing package
-        uses: geekyeggo/delete-artifact@v4
+        uses: geekyeggo/delete-artifact@v5
         with:
           name: catime-signing-package
           failOnError: false

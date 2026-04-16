@@ -6,7 +6,6 @@
 #include "color/gradient.h"
 #include <string.h>
 #ifdef _MSC_VER
-#include <string.h>
 #define strcasecmp _stricmp
 #else
 #include <strings.h>
@@ -112,7 +111,7 @@ static void ParseCustomGradient(const char* name) {
 
     int count = 0;
     char* ctx = NULL;
-    char* token = strtok_s(tempName, "_", &ctx);
+    const char* token = strtok_s(tempName, "_", &ctx);
     
     while (token && count < MAX_CUSTOM_GRADIENT_COLORS) {
         g_CustomPalette[count++] = ParseHexColor(token);

@@ -124,10 +124,10 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     
     /** Handle alphanumeric keys */
     if (vk >= 'A' && vk <= 'Z') {
-        char keyName[2] = {vk, '\0'};
+        const char keyName[2] = {(char)vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= '0' && vk <= '9') {
-        char keyName[2] = {vk, '\0'};
+        const char keyName[2] = {(char)vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= VK_F1 && vk <= VK_F24) {
         /** Handle function keys */
@@ -174,7 +174,7 @@ WORD StringToHotkey(const char* str) {
     
     /** Parse modifier and key components */
     char* token = strtok(buffer, "+");
-    char* lastToken = NULL;
+    const char* lastToken = NULL;
     
     while (token) {
         if (_stricmp(token, "Ctrl") == 0) {

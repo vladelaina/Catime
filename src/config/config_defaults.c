@@ -450,11 +450,11 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
         /* This handles migration from old ANSI config files to new UTF-8 ones */
         if (!IsUtf8String(line)) {
             wchar_t wLine[4096];
-            char utf8Line[4096];
             
             /* ANSI -> Wide */
             int wLen = MultiByteToWideChar(CP_ACP, 0, line, -1, wLine, 4096);
             if (wLen > 0) {
+                char utf8Line[4096];
                 /* Wide -> UTF-8 */
                 int uLen = WideCharToMultiByte(CP_UTF8, 0, wLine, -1, utf8Line, 4096, NULL, NULL);
                 if (uLen > 0) {
@@ -507,7 +507,7 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
             strncpy(entry->section, currentSection, sizeof(entry->section) - 1);
 
             /* Trim key */
-            char* key = trimmed;
+            const char* key = trimmed;
             char* keyEnd = eq - 1;
             while (keyEnd > key && isspace((unsigned char)*keyEnd)) keyEnd--;
             size_t keyLen = keyEnd - key + 1;

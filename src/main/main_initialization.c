@@ -514,13 +514,16 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     PluginManager_SetNotifyWindow(hwnd);
     
     LPWSTR lpCmdLineW = GetCommandLineW();
+    if (!lpCmdLineW) {
+        lpCmdLineW = L"";
+    }
     while (*lpCmdLineW && *lpCmdLineW != L' ') lpCmdLineW++;
     while (*lpCmdLineW == L' ') lpCmdLineW++;
     
     BOOL launchedFromStartup = FALSE;
     wchar_t cmdBuf[512] = {0};
     
-    if (lpCmdLineW && lpCmdLineW[0] != L'\0') {
+    if (lpCmdLineW[0] != L'\0') {
         wcsncpy(cmdBuf, lpCmdLineW, sizeof(cmdBuf)/sizeof(wchar_t) - 1);
         cmdBuf[sizeof(cmdBuf)/sizeof(wchar_t) - 1] = L'\0';
         

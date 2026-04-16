@@ -198,7 +198,9 @@ void ReloadAnimationSpeedFromConfig(void) {
 }
 
 static int ParseHex2(const char* s) {
-    int v = 0; sscanf(s, "%2x", &v); return v & 0xFF;
+    unsigned int v = 0;
+    sscanf(s, "%2x", &v);
+    return (int)(v & 0xFF);
 }
 
 static BOOL ParseColorString(const char* str, COLORREF* out) {
