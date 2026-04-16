@@ -288,22 +288,27 @@ jobs:
             }
           }
           $totalCount = $warningCount + [int]$sarifCount
+          $reason = "MSVC /analyze completed"
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py quality-msvc-analyze\build.log errors --max 20)
             foreach ($line in $errorOutput) {
               Write-Output $line
             }
             Write-Output "::error::MSVC /analyze build failed before analysis completed"
+            $reason = "MSVC /analyze build failed before analysis completed"
           }
           $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true") { "passed" } else { "failed" }
           "finding_count=$totalCount" >> $env:GITHUB_OUTPUT
           "status=$status" >> $env:GITHUB_OUTPUT
+          "reason=$reason" >> $env:GITHUB_OUTPUT
 
       - name: Enforce analyzer gate
         if: always()
         shell: pwsh
         run: |
           if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
+            Write-Output "::error::${{ steps.summarize.outputs.reason }}"
+            Write-Output "::notice::MSVC /analyze finding count: ${{ steps.summarize.outputs.finding_count }}"
             exit 1
           }
 
@@ -396,6 +401,7 @@ jobs:
           $dumpCount = @(Get-ChildItem quality-windows-asan -Filter *.dmp -ErrorAction SilentlyContinue).Count
           $findingCount = $details.Count + $dumpCount
           $runExit = if ("${{ steps.smoke.outputs.exit_code }}") { "${{ steps.smoke.outputs.exit_code }}" } else { "0" }
+          $reason = "Windows ASan smoke completed"
           $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             if (Test-Path .\quality-windows-asan\build.log) {
@@ -405,23 +411,30 @@ jobs:
               }
             }
             Write-Output "::error::Windows ASan smoke build failed"
+            $reason = "Windows ASan smoke build failed"
           }
           if ($runExit -ne "0") {
             Write-Output "::error::Windows ASan smoke run exited with code $runExit"
+            $reason = "Windows ASan smoke run exited with code $runExit"
           }
           foreach ($detail in $details) {
             Write-Output "::error::$detail"
           }
           if ($dumpCount -gt 0) {
             Write-Output "::error::Windows ASan generated $dumpCount dump file(s)"
+            $reason = "Windows ASan generated $dumpCount dump file(s)"
           }
           "status=$status" >> $env:GITHUB_OUTPUT
+          "finding_count=$findingCount" >> $env:GITHUB_OUTPUT
+          "reason=$reason" >> $env:GITHUB_OUTPUT
 
       - name: Enforce ASan gate
         if: always()
         shell: pwsh
         run: |
           if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
+            Write-Output "::error::${{ steps.summarize.outputs.reason }}"
+            Write-Output "::notice::Windows ASan finding count: ${{ steps.summarize.outputs.finding_count }}"
             exit 1
           }
 
@@ -561,6 +574,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path .\quality-binskim | Out-Null
+          $reason = "BinSkim completed"
           if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
             if (Test-Path .\quality-binskim\build.log) {
               $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py .\quality-binskim\build.log errors --max 20)
@@ -571,6 +585,7 @@ jobs:
             Write-Output "::error::BinSkim build failed before producing catime.exe"
             "finding_count=1" >> $env:GITHUB_OUTPUT
             "status=failed" >> $env:GITHUB_OUTPUT
+            "reason=BinSkim build failed before producing catime.exe" >> $env:GITHUB_OUTPUT
           } elseif (Test-Path .\quality-binskim\binskim.sarif) {
             $annotationOutput = @(python .github/scripts/ci/emit_sarif_annotations.py .\quality-binskim\binskim.sarif "BinSkim")
             foreach ($line in $annotationOutput) {
@@ -580,6 +595,7 @@ jobs:
             "finding_count=$count" >> $env:GITHUB_OUTPUT
             if ([int]$count -eq 0 -and "${{ steps.binskim.outputs.exit_code }}" -eq "0") {
               "status=passed" >> $env:GITHUB_OUTPUT
+              "reason=$reason" >> $env:GITHUB_OUTPUT
             } else {
               if (Test-Path .\quality-binskim\binskim-stderr.txt) {
                 Get-Content .\quality-binskim\binskim-stderr.txt | Select-Object -First 20 | ForEach-Object {
@@ -597,7 +613,9 @@ jobs:
                   }
                 }
               }
+              $reason = "BinSkim reported findings or exited with code ${{ steps.binskim.outputs.exit_code }}"
               "status=failed" >> $env:GITHUB_OUTPUT
+              "reason=$reason" >> $env:GITHUB_OUTPUT
             }
           } else {
             Write-Output "::error::BinSkim SARIF report was not produced"
@@ -611,6 +629,7 @@ jobs:
             }
             "finding_count=1" >> $env:GITHUB_OUTPUT
             "status=failed" >> $env:GITHUB_OUTPUT
+            "reason=BinSkim SARIF report was not produced" >> $env:GITHUB_OUTPUT
           }
 
       - name: Enforce BinSkim gate
@@ -618,6 +637,8 @@ jobs:
         shell: pwsh
         run: |
           if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
+            Write-Output "::error::${{ steps.summarize.outputs.reason }}"
+            Write-Output "::notice::BinSkim finding count: ${{ steps.summarize.outputs.finding_count }}"
             exit 1
           }
 
