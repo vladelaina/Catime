@@ -593,7 +593,11 @@ jobs:
             }
             $count = if ($annotationOutput.Count -gt 0) { $annotationOutput[-1] } else { "0" }
             "finding_count=$count" >> $env:GITHUB_OUTPUT
-            if ([int]$count -eq 0 -and "${{ steps.binskim.outputs.exit_code }}" -eq "0") {
+            $exitCode = "${{ steps.binskim.outputs.exit_code }}"
+            if ([int]$count -eq 0) {
+              if ($exitCode -ne "0") {
+                Write-Output "::notice::BinSkim rich return code was $exitCode with zero emitted findings"
+              }
               "status=passed" >> $env:GITHUB_OUTPUT
               "reason=$reason" >> $env:GITHUB_OUTPUT
             } else {
@@ -613,7 +617,7 @@ jobs:
                   }
                 }
               }
-              $reason = "BinSkim reported findings or exited with code ${{ steps.binskim.outputs.exit_code }}"
+              $reason = "BinSkim reported findings (exit code $exitCode)"
               "status=failed" >> $env:GITHUB_OUTPUT
               "reason=$reason" >> $env:GITHUB_OUTPUT
             }
