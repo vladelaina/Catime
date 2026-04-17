@@ -28,6 +28,24 @@ static CRITICAL_SECTION logCS;
 static volatile LONG csInitialized = 0;
 static LogLevel minLogLevel = LOG_LEVEL_INFO;
 
+#define LOG_CS_UNINITIALIZED 0
+#define LOG_CS_INITIALIZING 1
+#define LOG_CS_INITIALIZED 2
+
+static void EnsureLogCSInitialized(void) {
+    if (InterlockedCompareExchange(&csInitialized,
+                                   LOG_CS_INITIALIZING,
+                                   LOG_CS_UNINITIALIZED) == LOG_CS_UNINITIALIZED) {
+        InitializeCriticalSection(&logCS);
+        InterlockedExchange(&csInitialized, LOG_CS_INITIALIZED);
+        return;
+    }
+
+    while (InterlockedCompareExchange(&csInitialized, 0, 0) == LOG_CS_INITIALIZING) {
+        Sleep(0);
+    }
+}
+
 void GetLogFilePath(wchar_t* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
     GetConfigPath(configPath, MAX_PATH);
@@ -152,9 +170,7 @@ static void CheckAndRotateLog(void) {
 }
 
 BOOL InitializeLogSystem(void) {
-    if (InterlockedCompareExchange(&csInitialized, 1, 0) == 0) {
-        InitializeCriticalSection(&logCS);
-    }
+    EnsureLogCSInitialized();
 
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
 
@@ -260,8 +276,13 @@ void CleanupLogSystem(void) {
         hLogFile = INVALID_HANDLE_VALUE;
     }
 
-    if (InterlockedCompareExchange(&csInitialized, 0, 1) == 1) {
+    while (InterlockedCompareExchange(&csInitialized, 0, 0) == LOG_CS_INITIALIZING) {
+        Sleep(0);
+    }
+
+    if (InterlockedCompareExchange(&csInitialized, 0, 0) == LOG_CS_INITIALIZED) {
         DeleteCriticalSection(&logCS);
+        InterlockedExchange(&csInitialized, LOG_CS_UNINITIALIZED);
     }
 }
 

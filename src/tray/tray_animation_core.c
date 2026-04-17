@@ -61,6 +61,14 @@ static CRITICAL_SECTION g_animCriticalSection;
 static volatile LONG g_criticalSectionInitialized = 0;
 static BOOL g_pendingTrayUpdate = FALSE;
 
+#define ANIM_CS_UNINITIALIZED 0
+#define ANIM_CS_INITIALIZING 1
+#define ANIM_CS_INITIALIZED 2
+
+static BOOL IsAnimCriticalSectionReady(void) {
+    return InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZED;
+}
+
 /* Error recovery:
  * - 5000ms timeout: Reasonable duration before declaring icon update as failed
  */
@@ -83,7 +91,7 @@ static void EnsureTrayAnimationTimerState(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
 
     BOOL shouldRun = FALSE;
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
         shouldRun = ShouldRunTrayAnimationTimer();
         LeaveCriticalSection(&g_animCriticalSection);
@@ -172,7 +180,7 @@ static void ShutdownPreviewWorker(void) {
 static void PostPreviewLoadedMessage(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
         g_pendingTrayUpdate = TRUE;
         LeaveCriticalSection(&g_animCriticalSection);
@@ -303,7 +311,7 @@ static void UpdateTrayIconToCurrentFrame(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
     if (IsTrayInteractionSuspended()) return;
     
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
         g_pendingTrayUpdate = FALSE;
         LeaveCriticalSection(&g_animCriticalSection);
@@ -438,7 +446,7 @@ static void UpdateTrayIconToCurrentFrame(void) {
 static void RequestTrayIconUpdate(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
     
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
         g_pendingTrayUpdate = TRUE;
         LeaveCriticalSection(&g_animCriticalSection);
@@ -464,7 +472,7 @@ static void TrayAnimationTimerCallback(void* userData) {
         return;
     }
     
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
     }
     
@@ -487,14 +495,14 @@ static void TrayAnimationTimerCallback(void* userData) {
     }
     
     if (FrameRateController_ShouldUpdateTray(&g_frameRateCtrl)) {
-        if (g_criticalSectionInitialized) {
+        if (IsAnimCriticalSectionReady()) {
             LeaveCriticalSection(&g_animCriticalSection);
         }
         RequestTrayIconUpdate();
         return;
     }
     
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 }
@@ -515,8 +523,15 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     }
     
     /* Initialize resources - use atomic operation for thread safety */
-    if (InterlockedCompareExchange(&g_criticalSectionInitialized, 1, 0) == 0) {
+    if (InterlockedCompareExchange(&g_criticalSectionInitialized,
+                                   ANIM_CS_INITIALIZING,
+                                   ANIM_CS_UNINITIALIZED) == ANIM_CS_UNINITIALIZED) {
         InitializeCriticalSection(&g_animCriticalSection);
+        InterlockedExchange(&g_criticalSectionInitialized, ANIM_CS_INITIALIZED);
+    } else {
+        while (InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZING) {
+            Sleep(0);
+        }
     }
     
     if (!g_memoryPool) {
@@ -572,7 +587,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 void StopTrayAnimation(HWND hwnd) {
     (void)hwnd;
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
         g_pendingPreviewName[0] = '\0';
         g_previewAnimationName[0] = '\0';
@@ -597,9 +612,13 @@ void StopTrayAnimation(HWND hwnd) {
         g_memoryPool = NULL;
     }
 
-    if (g_criticalSectionInitialized == 1) {
+    while (InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZING) {
+        Sleep(0);
+    }
+
+    if (InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZED) {
         DeleteCriticalSection(&g_animCriticalSection);
-        InterlockedExchange(&g_criticalSectionInitialized, 0);
+        InterlockedExchange(&g_criticalSectionInitialized, ANIM_CS_UNINITIALIZED);
     }
 
     g_consecutiveUpdateFailures = 0;
@@ -638,7 +657,7 @@ BOOL SetCurrentAnimationName(const char* name) {
         LoadedAnimation oldMain;
         LoadedAnimation_Init(&oldMain);
 
-        if (g_criticalSectionInitialized) {
+        if (IsAnimCriticalSectionReady()) {
             EnterCriticalSection(&g_animCriticalSection);
         }
 
@@ -656,7 +675,7 @@ BOOL SetCurrentAnimationName(const char* name) {
         strncpy(g_animationName, name, sizeof(g_animationName) - 1);
         g_animationName[sizeof(g_animationName) - 1] = '\0';
         
-        if (g_criticalSectionInitialized) {
+        if (IsAnimCriticalSectionReady()) {
             LeaveCriticalSection(&g_animCriticalSection);
         }
 
@@ -694,7 +713,7 @@ BOOL SetCurrentAnimationName(const char* name) {
     int cy = GetSystemMetrics(SM_CYSMICON);
     LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy);
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
     }
 
@@ -716,7 +735,7 @@ BOOL SetCurrentAnimationName(const char* name) {
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 
@@ -760,7 +779,7 @@ void PreviewAnimationFromFile(HWND hwnd, const char* filePath) {
     int cy = GetSystemMetrics(SM_CYSMICON);
     LoadAnimationFromPath(filePath, &newPreview, g_memoryPool, cx, cy);
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
     }
     InterlockedIncrement(&g_previewRequestSerial);
@@ -773,7 +792,7 @@ void PreviewAnimationFromFile(HWND hwnd, const char* filePath) {
     strncpy(g_previewAnimationName, filePath, sizeof(g_previewAnimationName) - 1);
     g_previewAnimationName[sizeof(g_previewAnimationName) - 1] = '\0';
     
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 
@@ -803,7 +822,7 @@ static DWORD WINAPI PreviewWorkerThread(LPVOID param) {
         char requestedName[MAX_PATH] = {0};
         LONG requestSerial = InterlockedCompareExchange(&g_previewRequestSerial, 0, 0);
 
-        if (g_criticalSectionInitialized) {
+        if (IsAnimCriticalSectionReady()) {
             EnterCriticalSection(&g_animCriticalSection);
             strncpy(requestedName, g_pendingPreviewName, sizeof(requestedName) - 1);
             requestedName[sizeof(requestedName) - 1] = '\0';
@@ -838,7 +857,7 @@ static DWORD WINAPI PreviewWorkerThread(LPVOID param) {
         }
 
         BOOL shouldApply = FALSE;
-        if (g_criticalSectionInitialized) {
+        if (IsAnimCriticalSectionReady()) {
             EnterCriticalSection(&g_animCriticalSection);
         }
 
@@ -876,7 +895,7 @@ static DWORD WINAPI PreviewWorkerThread(LPVOID param) {
             g_pendingPreviewName[0] = '\0';
         }
 
-        if (g_criticalSectionInitialized) {
+        if (IsAnimCriticalSectionReady()) {
             LeaveCriticalSection(&g_animCriticalSection);
         }
 
@@ -911,12 +930,12 @@ void StartAnimationPreview(const char* name) {
 
     LONG requestSerial = InterlockedIncrement(&g_previewRequestSerial);
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
     }
     strncpy(g_pendingPreviewName, name, sizeof(g_pendingPreviewName) - 1);
     g_pendingPreviewName[sizeof(g_pendingPreviewName) - 1] = '\0';
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 
@@ -935,7 +954,7 @@ void CancelAnimationPreview(void) {
 
     InterlockedIncrement(&g_previewRequestSerial);
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
     }
 
@@ -947,7 +966,7 @@ void CancelAnimationPreview(void) {
     LoadedAnimation_Init(&g_previewAnimation);
     g_frameRateCtrl.framePosition = 0.0;
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 
@@ -1052,7 +1071,7 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     int cy = GetSystemMetrics(SM_CYSMICON);
     LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy);
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
     }
     strncpy(g_animationName, name, sizeof(g_animationName) - 1);
@@ -1072,7 +1091,7 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
         LoadedAnimation_Init(&g_previewAnimation);
     }
 
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 
@@ -1111,11 +1130,11 @@ void TrayAnimation_RecomputeTimerDelay(void) {
  * @brief Clear current animation name to force reload
  */
 void TrayAnimation_ClearCurrentName(void) {
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
     }
     g_animationName[0] = '\0';
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
 }
@@ -1173,7 +1192,7 @@ BOOL TrayAnimation_HandleUpdateMessage(void) {
 
     EnsureTrayAnimationTimerState();
     
-    if (g_criticalSectionInitialized) {
+    if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
         hasPending = g_pendingTrayUpdate;
         LeaveCriticalSection(&g_animCriticalSection);

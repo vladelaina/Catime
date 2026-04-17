@@ -4,6 +4,7 @@
  */
 
 #include "markdown/markdown_parser.h"
+#include "utils/url_safety.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -219,7 +220,7 @@ const wchar_t* GetClickedLinkUrl(MarkdownLink* links, int linkCount, POINT point
 
 BOOL HandleMarkdownClick(MarkdownLink* links, int linkCount, POINT clickPoint) {
     const wchar_t* clickedUrl = GetClickedLinkUrl(links, linkCount, clickPoint);
-    if (clickedUrl) {
+    if (clickedUrl && IsSafeOpenUrlW(clickedUrl)) {
         ShellExecuteW(NULL, L"open", clickedUrl, NULL, NULL, SW_SHOWNORMAL);
         return TRUE;
     }

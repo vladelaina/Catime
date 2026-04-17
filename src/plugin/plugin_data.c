@@ -268,14 +268,20 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
  */
 static BOOL ParseContent(const char* content, size_t contentLen) {
     if (!content || contentLen == 0) return FALSE;
-    
-    /* Parse <fps:N> tag first */
-    ParseFpsTag(content);
-    
-    /* Skip if exit countdown is active */
-    if (PluginExit_IsInProgress()) return TRUE;
 
     EnterCriticalSection(&g_dataCS);
+
+    if (!g_pluginModeActive) {
+        LeaveCriticalSection(&g_dataCS);
+        return FALSE;
+    }
+
+    ParseFpsTag(content);
+
+    if (PluginExit_IsInProgress()) {
+        LeaveCriticalSection(&g_dataCS);
+        return TRUE;
+    }
 
     /* Calculate required buffer size */
     int requiredLen = MultiByteToWideChar(CP_UTF8, 0, content, (int)contentLen, NULL, 0);
@@ -339,6 +345,15 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
     return len > 0;
 }
 
+/*
+ * Design note: output.txt is intentionally a stable, shared local IPC surface,
+ * but it is only consumed while plugin mode is active.
+ * During plugin mode, the active plugin and other same-user helper processes may
+ * write compatible content here to build broader local automation flows.
+ * Outside plugin mode, Catime intentionally ignores this file.
+ * Catime-owned local state text such as "Loading..." or "FAIL" is also allowed
+ * to override the file-driven content when needed.
+ */
 /* Plugin output file name */
 #define PLUGIN_OUTPUT_FILENAME "output.txt"
 

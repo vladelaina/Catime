@@ -20,6 +20,27 @@ static HANDLE g_GlobalMutex = NULL;
 #define EXISTING_WINDOW_RETRY_COUNT 20
 #define EXISTING_WINDOW_RETRY_DELAY_MS 100
 
+static BOOL IsTrustedExistingInstanceWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) return FALSE;
+
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+    if (pid == 0) return FALSE;
+
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (!hProcess) return FALSE;
+
+    wchar_t currentPath[MAX_PATH] = {0};
+    wchar_t targetPath[MAX_PATH] = {0};
+    DWORD targetPathSize = MAX_PATH;
+    GetModuleFileNameW(NULL, currentPath, MAX_PATH);
+
+    BOOL trusted = QueryFullProcessImageNameW(hProcess, 0, targetPath, &targetPathSize) &&
+                   _wcsicmp(currentPath, targetPath) == 0;
+    CloseHandle(hProcess);
+    return trusted;
+}
+
 /** Search desktop wallpaper layer for timer window */
 static HWND FindInDesktopLayer(void) {
     HWND hProgman = FindWindowW(L"Progman", NULL);
@@ -39,9 +60,10 @@ static HWND FindInDesktopLayer(void) {
 
 HWND FindExistingInstanceWindow(void) {
     HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
-    if (hwnd) return hwnd;
+    if (IsTrustedExistingInstanceWindow(hwnd)) return hwnd;
 
-    return FindInDesktopLayer();
+    hwnd = FindInDesktopLayer();
+    return IsTrustedExistingInstanceWindow(hwnd) ? hwnd : NULL;
 }
 
 static HWND FindExistingInstanceWindowWithRetry(void) {

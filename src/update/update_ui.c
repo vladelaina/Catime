@@ -10,6 +10,7 @@
 #include "language.h"
 #include "log.h"
 #include "utils/string_convert.h"
+#include "utils/url_safety.h"
 #include "../../resource/resource.h"
 #include <strsafe.h>
 #include <commctrl.h>
@@ -610,7 +611,13 @@ void TriggerUpdateDownload(HWND hwnd) {
     const char* url = GetPendingUpdateDownloadUrl();
     if (url && url[0] != '\0') {
         LOG_INFO("User chose to update now (from modeless dialog)");
-        
+
+        if (!IsSafeOpenUrlA(url)) {
+            LOG_ERROR("Blocked unsafe update URL: %s", url);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(NULL, L"Unsafe download URL was blocked"));
+            return;
+        }
+
         /* Open browser with download URL */
         wchar_t* urlW = Utf8ToWideAlloc(url);
         if (urlW) {
