@@ -351,7 +351,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                         if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
                             if (g_pomodoroSelectedIndex >= 0 && g_pomodoroSelectedIndex < g_AppConfig.pomodoro.times_count) {
                                 g_AppConfig.pomodoro.times[g_pomodoroSelectedIndex] = total_seconds;
-                                extern void WriteConfigPomodoroTimeOptions(int* times, int count);
                                 WriteConfigPomodoroTimeOptions(g_AppConfig.pomodoro.times, g_AppConfig.pomodoro.times_count);
                                 
                                 if (g_pomodoroSelectedIndex == 0) g_AppConfig.pomodoro.work_time = total_seconds;

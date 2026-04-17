@@ -278,7 +278,6 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 if (times_count > 1) g_AppConfig.pomodoro.short_break = times[1];
                 if (times_count > 2) g_AppConfig.pomodoro.long_break = times[2];
 
-                extern void WriteConfigPomodoroTimeOptions(int* times, int count);
                 WriteConfigPomodoroTimeOptions(times, times_count);
 
                 DestroyWindow(hwndDlg);
