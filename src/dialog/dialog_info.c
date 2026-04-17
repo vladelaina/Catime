@@ -155,12 +155,10 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             SystemTimeToFileTime(&buildTimeUTC8, &fileTime);
 
             /* Subtract 8 hours to get UTC time */
-            ULARGE_INTEGER uli;
-            uli.LowPart = fileTime.dwLowDateTime;
-            uli.HighPart = fileTime.dwHighDateTime;
-            uli.QuadPart -= (ULONGLONG)8 * 60 * 60 * 10000000;  /* 8 hours in 100-nanosecond intervals */
-            fileTime.dwLowDateTime = uli.LowPart;
-            fileTime.dwHighDateTime = uli.HighPart;
+            ULONGLONG utcTicks = (((ULONGLONG)fileTime.dwHighDateTime) << 32) | fileTime.dwLowDateTime;
+            utcTicks -= (ULONGLONG)8 * 60 * 60 * 10000000;  /* 8 hours in 100-nanosecond intervals */
+            fileTime.dwLowDateTime = (DWORD)(utcTicks & 0xFFFFFFFFULL);
+            fileTime.dwHighDateTime = (DWORD)(utcTicks >> 32);
 
             /* Convert to local time */
             FILETIME localFileTime;
@@ -294,8 +292,6 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             Dialog_SubclassEdit(hwndEdit, ctx);
-
-            extern char CLOCK_TIMEOUT_WEBSITE_URL[];
             if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
                 wchar_t wUrl[MAX_PATH];
                 MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH);
@@ -420,8 +416,8 @@ static void CleanupFontLicenseResources(void) {
     if (g_displayText) { free(g_displayText); g_displayText = NULL; }
 }
 
-INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
-    switch (message) {
+INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
             

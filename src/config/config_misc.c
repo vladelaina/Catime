@@ -36,6 +36,11 @@ static inline BOOL FileExistsUtf8(const char* utf8Path) {
     return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
 }
 
+static void UpdateStartupModeBuffer(const char* mode) {
+    strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
+    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+}
+
 /** Note: All external variables are declared in their respective headers */
 
 /** Enum-string mapping */
@@ -392,8 +397,7 @@ void ResetTimerWithInterval(HWND hwnd) {
  */
 void WriteConfigStartupMode(const char* mode) {
     /* Update in-memory variable */
-    strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
-    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+    UpdateStartupModeBuffer(mode);
     
     /* Persist to config file */
     UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "STARTUP_MODE", mode);

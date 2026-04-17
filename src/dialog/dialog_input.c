@@ -187,9 +187,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             /* Populate edit with current values */
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                extern int time_options[];
-                extern int time_options_count;
-
                 char currentOptions[256] = {0};
                 for (int i = 0; i < time_options_count; i++) {
                     char timeStr[32];
@@ -291,14 +288,12 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                 int dialogId = (int)(LONG_PTR)ctx->userData;
                 
                 if (dialogId == CLOCK_IDD_SHORTCUT_DIALOG) {
-                    extern int time_options[];
-                    extern int time_options_count;
                     extern void WriteConfigTimeOptions(const char* options);
                     
                     char inputCopy[256];
                     WideCharToMultiByte(CP_UTF8, 0, inputText, -1, inputCopy, sizeof(inputCopy), NULL, NULL);
                     
-                    char* token = strtok(inputCopy, " ");
+                    const char* token = strtok(inputCopy, " ");
                     char options[256] = {0};
                     int valid = 1;
                     int count = 0;
