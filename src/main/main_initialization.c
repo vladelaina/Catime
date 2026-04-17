@@ -12,6 +12,7 @@
 #include "main/main_single_instance.h"
 #include "log.h"
 #include "config.h"
+#include "config/config_plugin_security.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
@@ -25,6 +26,7 @@
 #include "plugin/plugin_manager.h"
 #include "drawing/drawing_image.h"
 #include "drawing/drawing_render.h"
+#include "drawing/drawing_timer_precision.h"
 #include "markdown/markdown_image.h"
 #include "markdown/markdown_interactive.h"
 #include "../resource/resource.h"
@@ -504,7 +506,8 @@ void InitializeDialogLanguages(void) {
 }
 
 BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
-    (void)nCmdShow; // Unused parameter
+    UNREFERENCED_PARAMETER(hInstance);
+    UNREFERENCED_PARAMETER(nCmdShow);
     const BOOL ciSmokeMode = IsCiSmokeMode();
 
     // Initialize Plugin Data subsystem early - needed by CLI handlers and startup mode
@@ -550,7 +553,6 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     }
     
     LOG_INFO("Setting main timer...");
-    extern UINT GetTimerInterval(void);
     UINT interval = GetTimerInterval();
     
     if (!MainTimer_Start(hwnd, interval)) {
@@ -602,11 +604,12 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
 }
 
 int RunMessageLoop(HWND hwnd) {
+    UNREFERENCED_PARAMETER(hwnd);
+
     LOG_INFO("Entering main message loop");
     
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
-        extern HWND GetCliHelpDialog(void);
         HWND hCliHelp = GetCliHelpDialog();
         if (hCliHelp && IsDialogMessage(hCliHelp, &msg)) {
             continue;
@@ -640,7 +643,6 @@ void CleanupResources(HANDLE hMutex) {
     PluginData_Shutdown();
     
     LOG_INFO("Cleaning up plugin trust resources");
-    extern void CleanupPluginTrustCS(void);
     CleanupPluginTrustCS();
 
     LOG_INFO("Shutting down GDI+");
