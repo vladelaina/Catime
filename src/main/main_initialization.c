@@ -381,8 +381,6 @@ void HandleStartupMode(HWND hwnd) {
             elapsed_time = 0;
             countup_elapsed_time = 0;
             
-            extern int64_t g_start_time;
-            extern int64_t GetAbsoluteTimeMs(void);
             g_start_time = GetAbsoluteTimeMs();
             break;
             
@@ -561,7 +559,6 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     }
     LOG_INFO("Timer set successfully with %ums interval", interval);
     
-    extern void ResetTimerMilliseconds(void);
     ResetTimerMilliseconds();
     
     LOG_INFO("Setting font path check timer...");

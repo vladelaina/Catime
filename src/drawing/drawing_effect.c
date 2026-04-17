@@ -266,14 +266,14 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
         DWORD* pDestRow = pixels + screenY * destWidth;
         const unsigned char* pAlphaRow = alphaMap + j * gw;
         
-        unsigned char* pShadowRow = NULL;
+        const unsigned char* pShadowRow = NULL;
         int sY = j - shadowOffset;
         if (sY >= 0 && sY < gh) pShadowRow = shadowMap + sY * gw;
 
         /* Bevel pointers */
         int bevelOffset = 2;
-        unsigned char* pBevelRowUL = (j >= bevelOffset) ? alphaMap + (j - bevelOffset) * gw : NULL;
-        unsigned char* pBevelRowDR = (j < gh - bevelOffset) ? alphaMap + (j + bevelOffset) * gw : NULL;
+        const unsigned char* pBevelRowUL = (j >= bevelOffset) ? alphaMap + (j - bevelOffset) * gw : NULL;
+        const unsigned char* pBevelRowDR = (j < gh - bevelOffset) ? alphaMap + (j + bevelOffset) * gw : NULL;
 
         /* Sheen calculation */
         int sheen = 0;
@@ -385,7 +385,7 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
     /* 1. Dynamic Buffer Allocation */
@@ -601,7 +601,7 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int x_pos, int y_pos,
-                            unsigned char* bitmap, int w, int h,
+                            const unsigned char* bitmap, int w, int h,
                             int r, int g, int b,
                             GlowColorCallback colorCb, void* userData,
                             int timeOffset) {
@@ -878,7 +878,7 @@ static void InitSlopeLUT(void) {
  */
 void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
                        int x_pos, int y_pos,
-                       unsigned char* bitmap, int w, int h,
+                       const unsigned char* bitmap, int w, int h,
                        int r, int g, int b,
                        GlowColorCallback colorCb, void* userData,
                        int timeOffset) {
