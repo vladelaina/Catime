@@ -510,8 +510,8 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
         if (screenY < 0 || screenY >= destHeight) continue;
 
         DWORD* pDestRow = pixels + screenY * destWidth;
-        unsigned char* pGlowRow = buf1 + j * gw;
-        unsigned char* pTubeRow = buf2 + j * gw;
+        const unsigned char* pGlowRow = buf1 + j * gw;
+        const unsigned char* pTubeRow = buf2 + j * gw;
 
         for (int i = 0; i < gw; i++) {
             int screenX = startX + i;
@@ -657,9 +657,9 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
 
         DWORD* pDestRow = pixels + screenY * destWidth;
         unsigned char* pAlphaRow = alphaMap + j * gw;
-        unsigned char* pGlowRow = glowMap + j * gw;
-        unsigned char* pRowPrev = alphaMap + (j - 1) * gw;
-        unsigned char* pRowNext = alphaMap + (j + 1) * gw;
+        const unsigned char* pGlowRow = glowMap + j * gw;
+        const unsigned char* pRowPrev = alphaMap + (j - 1) * gw;
+        const unsigned char* pRowNext = alphaMap + (j + 1) * gw;
 
         /* Calculate Loop Bounds to remove per-pixel boundary checks */
         /* Range of i is [1, gw - 1) normally */

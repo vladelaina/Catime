@@ -36,6 +36,9 @@ static const int g_alertTypeCount = sizeof(g_alertTypes) / sizeof(g_alertTypes[0
 
 BOOL ParseCodeBlock(const wchar_t** src, ParseState* state, wchar_t** dest, BOOL* inCodeBlock) {
     const wchar_t* p = *src;
+    UNREFERENCED_PARAMETER(state);
+    UNREFERENCED_PARAMETER(dest);
+
     
     // Skip leading spaces
     while (*p == L' ') p++;
@@ -201,6 +204,7 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
 
 BOOL ParseHeading(const wchar_t** src, ParseState* state, wchar_t** dest,
                   BOOL* inHeading, int* currentHeadingIndex) {
+    UNREFERENCED_PARAMETER(dest);
     if (**src != L'#') return FALSE;
     
     const wchar_t* hashEnd = *src;

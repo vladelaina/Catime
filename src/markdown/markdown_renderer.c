@@ -193,7 +193,7 @@ static void ProcessMarkdownCharacter(
             memcpy(&lf, baseLf, sizeof(LOGFONT));
             lf.lfHeight = currentFontHeight;
             lf.lfWeight = currentFontWeight;
-            lf.lfItalic = currentItalic;
+            lf.lfItalic = (BYTE)(currentItalic ? 1 : 0);
 
             if (currentMonospace) {
                 wcscpy_s(lf.lfFaceName, LF_FACESIZE, L"Consolas");
