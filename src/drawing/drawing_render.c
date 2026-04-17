@@ -618,11 +618,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                     const wchar_t* loadingText = L"Loading...";
                     SetBkMode(memDC, TRANSPARENT);
                     SetTextColor(memDC, ParseColorString(CLOCK_TEXT_COLOR));
-                    SIZE textSize;
-                    GetTextExtentPoint32W(memDC, loadingText, (int)wcslen(loadingText), &textSize);
-                    int textX = (rect.right - textSize.cx) / 2;
+                    SIZE loadingTextSize;
+                    GetTextExtentPoint32W(memDC, loadingText, (int)wcslen(loadingText), &loadingTextSize);
+                    int textX = (rect.right - loadingTextSize.cx) / 2;
                     TextOutW(memDC, textX, imgY, loadingText, (int)wcslen(loadingText));
-                    imgY += textSize.cy + 5;
+                    imgY += loadingTextSize.cy + 5;
                     continue;
                 }
                 

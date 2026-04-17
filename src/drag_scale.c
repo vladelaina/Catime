@@ -14,6 +14,7 @@
 #include "plugin/plugin_data.h"
 
 #include "color/color_parser.h"
+#include "color/color_state.h"
 
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 static BOOL g_editModeForcedTopmost = FALSE;
@@ -95,8 +96,6 @@ void EndEditMode(HWND hwnd) {
     SetClickThrough(hwnd, TRUE);
     SaveWindowSettings(hwnd);
     
-    extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
-    extern void WriteConfigColor(const char* color);
     WriteConfigColor(CLOCK_TEXT_COLOR);
     
     if (g_editModeForcedTopmost && !g_editModeTopmostOverride && !PREVIOUS_TOPMOST_STATE) {

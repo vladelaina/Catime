@@ -26,7 +26,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
     /* Using sliding window sum */
     for (int y = 0; y < h; y++) {
         int rowOffset = y * w;
-        unsigned char* rowSrc = src + rowOffset;
+        const unsigned char* rowSrc = src + rowOffset;
         unsigned char* rowDest = tempBuffer + rowOffset;
         
         int sum = 0;
@@ -853,7 +853,7 @@ static void InitSlopeLUT(void) {
         
         int fresnel = 0;
         if (slope_int > 25) {
-            int f = ((slope_int - 25) * 120) >> 8;
+            int f = ((slope_int - 25) * 120) / 256;
             if (f > 80) f = 80;
             fresnel = f;
         }

@@ -244,7 +244,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                     return TRUE;
                 }
 
-                char *token;
+                const char* token;
                 char input_copy[256];
                 StringCbCopyA(input_copy, sizeof(input_copy), input);
 
