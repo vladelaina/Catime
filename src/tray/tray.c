@@ -14,6 +14,7 @@
 #include "tray/tray_animation_percent.h"
 #include "system_monitor.h"
 #include "config.h"
+#include "tray/tray_events.h"
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
 #define PERCENT_ICON_WARMUP_MS 120  /* Allow CPU/memory sampling to stabilize (first read often returns 0%) */
@@ -423,7 +424,6 @@ void RemoveTrayIcon(void) {
     }
 
     /* Stop hover detection timer */
-    extern void StopTrayHoverDetection(void);
     StopTrayHoverDetection();
 
     /* Uninstall mouse hook */

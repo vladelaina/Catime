@@ -5,6 +5,7 @@
 
 #include <windows.h>
 #include "drawing/drawing_timer_precision.h"
+#include "timer/timer.h"
 
 /**
  * @file drawing_timer_precision.c
@@ -21,13 +22,6 @@ void PauseTimerMilliseconds(void) {}
 
 /** @return Elapsed centiseconds (0-99) synchronized with main timer */
 int GetElapsedCentiseconds(void) {
-    extern BOOL CLOCK_IS_PAUSED;
-    extern BOOL CLOCK_COUNT_UP;
-    extern BOOL CLOCK_SHOW_CURRENT_TIME;
-    extern int64_t g_target_end_time;
-    extern int64_t g_start_time;
-    extern int64_t g_pause_start_time;
-    extern int64_t GetAbsoluteTimeMs(void);
     
     int64_t calc_time_point;
     

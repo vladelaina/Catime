@@ -24,6 +24,7 @@
 #include "drawing/drawing_image.h"
 #include "markdown/markdown_parser.h"
 #include "markdown/markdown_image.h"
+#include "markdown/markdown_interactive.h"
 #include "color/color_parser.h"
 #include "../resource/resource.h"
 
@@ -197,8 +198,6 @@ static RenderContext CreateRenderContext(void) {
     static char fontInternalName[MAX_PATH];
     static char colorStr[COLOR_HEX_BUFFER];
     
-    extern void GetActiveFont(char*, char*, size_t);
-    extern void GetActiveColor(char*, size_t);
     
     GetActiveFont(fontFileName, fontInternalName, sizeof(fontFileName));
     GetActiveColor(colorStr, sizeof(colorStr));
@@ -596,7 +595,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         
         // Fill clickable regions with minimal alpha for mouse hit-testing (non-edit mode only)
         if (!CLOCK_EDIT_MODE) {
-            extern void FillClickableRegionsAlpha(DWORD* pixels, int width, int height);
             FillClickableRegionsAlpha(pixels, rect.right, rect.bottom);
         }
         

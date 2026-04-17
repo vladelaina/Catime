@@ -40,7 +40,7 @@ static int ClampMarkdownPos(size_t pos) {
 /* Italic blend with per-row shear */
 static void BlendCharBitmapItalicSTB(void* destBits, int destWidth, int destHeight,
                                       int x_pos, int y_pos,
-                                      unsigned char* bitmap, int w, int h,
+                                      const unsigned char* bitmap, int w, int h,
                                       int r, int g, int b, float slant) {
     DWORD* pixels = (DWORD*)destBits;
     for (int j = 0; j < h; ++j) {
@@ -69,7 +69,7 @@ static void BlendCharBitmapItalicSTB(void* destBits, int destWidth, int destHeig
 /* Italic blend with gradient and per-row shear */
 static void BlendCharBitmapItalicGradientSTB(void* destBits, int destWidth, int destHeight,
                                               int x_pos, int y_pos,
-                                              unsigned char* bitmap, int w, int h,
+                                              const unsigned char* bitmap, int w, int h,
                                               float slant, int gradientMode, int timeOffset, int totalWidth) {
     DWORD* pixels = (DWORD*)destBits;
     const GradientInfo* info = GetGradientInfo((GradientType)gradientMode);
@@ -140,7 +140,7 @@ static void BlendCharBitmapItalicGradientSTB(void* destBits, int destWidth, int 
  */
 static void BlendCharBitmapColorTagGradientSTB(void* destBits, int destWidth, int destHeight,
                                                 int x_pos, int y_pos,
-                                                unsigned char* bitmap, int w, int h,
+                                                const unsigned char* bitmap, int w, int h,
                                                 const MarkdownColorTag* colorTag, int timeOffset, int totalWidth) {
     if (!colorTag || colorTag->colorCount < 2) return;
     
@@ -194,7 +194,7 @@ static void BlendCharBitmapColorTagGradientSTB(void* destBits, int destWidth, in
  */
 static void BlendCharBitmapColorTagGradientItalicSTB(void* destBits, int destWidth, int destHeight,
                                                       int x_pos, int y_pos,
-                                                      unsigned char* bitmap, int w, int h,
+                                                      const unsigned char* bitmap, int w, int h,
                                                       const MarkdownColorTag* colorTag, int timeOffset, int totalWidth,
                                                       float slant) {
     if (!colorTag || colorTag->colorCount < 2) return;

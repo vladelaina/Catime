@@ -9,6 +9,7 @@
 #include "drawing/drawing_time_format.h"
 #include "timer/timer.h"
 #include "config.h"
+#include "menu_preview.h"
 
 extern int countdown_elapsed_time;
 extern int countup_elapsed_time;
@@ -50,10 +51,6 @@ static int GetSmoothedCentiseconds(int64_t elapsed_ms, BOOL isCountdown) {
 }
 
 TimeComponents GetCountUpComponents(void) {
-    extern BOOL CLOCK_IS_PAUSED;
-    extern int64_t g_start_time;
-    extern int64_t g_pause_start_time;
-    extern int64_t GetAbsoluteTimeMs(void);
     
     /* Single time sample for both seconds and centiseconds */
     int64_t now = CLOCK_IS_PAUSED ? g_pause_start_time : GetAbsoluteTimeMs();
@@ -74,10 +71,6 @@ TimeComponents GetCountUpComponents(void) {
 }
 
 TimeComponents GetCountDownComponents(void) {
-    extern BOOL CLOCK_IS_PAUSED;
-    extern int64_t g_target_end_time;
-    extern int64_t g_pause_start_time;
-    extern int64_t GetAbsoluteTimeMs(void);
     
     /* Single time sample for both seconds and centiseconds */
     int64_t now = CLOCK_IS_PAUSED ? g_pause_start_time : GetAbsoluteTimeMs();
@@ -213,8 +206,6 @@ void FormatTimeComponentsForDisplay(
 void GetTimeText(wchar_t* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
     
-    extern TimeFormatType GetActiveTimeFormat(void);
-    extern BOOL GetActiveShowMilliseconds(void);
     
     TimeFormatType finalFormat = GetActiveTimeFormat();
     BOOL finalShowMs = GetActiveShowMilliseconds();
