@@ -663,6 +663,8 @@ BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) 
 
 void RenderTextSTB(void* bits, int width, int height, const wchar_t* text, 
                    COLORREF color, int fontSize, float fontScale, BOOL editMode) {
+    UNREFERENCED_PARAMETER(editMode);
+
     if (!g_fontLoaded || !text || !bits) return;
 
     float scale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)(fontSize * fontScale));

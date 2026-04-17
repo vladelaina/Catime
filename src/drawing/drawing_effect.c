@@ -107,7 +107,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
  */
 void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
     /* 1. Dynamic Buffer Allocation */
@@ -159,7 +159,7 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
         if (screenY < 0 || screenY >= destHeight) continue;
 
         DWORD* pDestRow = pixels + screenY * destWidth;
-        unsigned char* pGlowRow = glowMap + j * gw;
+        const unsigned char* pGlowRow = glowMap + j * gw;
 
         for (int i = 0; i < gw; i++) {
             int screenX = startX + i;
@@ -212,7 +212,7 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
     /* Dynamic Buffer Allocation */
@@ -264,7 +264,7 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
         if (screenY < 0 || screenY >= destHeight) continue;
 
         DWORD* pDestRow = pixels + screenY * destWidth;
-        unsigned char* pAlphaRow = alphaMap + j * gw;
+        const unsigned char* pAlphaRow = alphaMap + j * gw;
         
         unsigned char* pShadowRow = NULL;
         int sY = j - shadowOffset;

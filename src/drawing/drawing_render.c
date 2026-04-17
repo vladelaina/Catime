@@ -257,6 +257,9 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                               MarkdownBlockquote* blockquotes, int blockquoteCount,
                               MarkdownColorTag* colorTags, int colorTagCount,
                               MarkdownFontTag* fontTags, int fontTagCount) {
+    UNREFERENCED_PARAMETER(hdc);
+    UNREFERENCED_PARAMETER(editMode);
+
     // Use STB Truetype for high-quality rendering
     char absoluteFontPath[MAX_PATH];
     
