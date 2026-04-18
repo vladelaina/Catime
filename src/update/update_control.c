@@ -53,6 +53,7 @@ void DrawRoundedRect(HDC hdc, RECT rect, int radius, COLORREF color) {
 /** @brief Subclassed window procedure for scrollable notes control */
 LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
                                          UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    UNREFERENCED_PARAMETER(dwRefData);
     switch (msg) {
         case WM_LBUTTONDOWN: {
             int scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");

@@ -55,7 +55,7 @@ BOOL TimeParser_Validate(const char* input) {
     int digit_count = 0;
 
     for (int i = 0; i < len; i++) {
-        char c = tolower((unsigned char)input[i]);
+        int c = tolower((unsigned char)input[i]);
         if (isdigit(input[i])) {
             digit_count++;
         } else if (c == ' ' || c == '\t') {
@@ -76,7 +76,7 @@ BOOL TimeParser_HasUnits(const char* input) {
     if (!input) return FALSE;
 
     for (const char* p = input; *p; p++) {
-        char c = tolower((unsigned char)*p);
+        int c = tolower((unsigned char)*p);
         if (c == 'h' || c == 'm' || c == 's') {
             return TRUE;
         }
@@ -206,7 +206,7 @@ BOOL TimeParser_ParseBasic(const char* input, int* seconds) {
         pos = SkipWhitespace(pos);
 
         char unit = '\0';
-        char c = tolower((unsigned char)*pos);
+        int c = tolower((unsigned char)*pos);
         if (c == 'h' || c == 'm' || c == 's') {
             unit = c;
             pos++;

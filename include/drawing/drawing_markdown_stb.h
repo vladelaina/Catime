@@ -14,7 +14,7 @@
  * @brief Measure multi-line Markdown text with headings
  */
 BOOL MeasureMarkdownSTB(const wchar_t* text,
-                        MarkdownHeading* headings, int headingCount,
+                        const MarkdownHeading* headings, int headingCount,
                         int fontSize, int* width, int* height);
 
 /**

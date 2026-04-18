@@ -248,12 +248,12 @@ static void BlendCharBitmapColorTagGradientItalicSTB(void* destBits, int destWid
 /* Public API */
 
 BOOL MeasureMarkdownSTB(const wchar_t* text,
-                        MarkdownHeading* headings, int headingCount,
+                        const MarkdownHeading* headings, int headingCount,
                         int fontSize, int* width, int* height) {
     if (!IsFontLoadedSTB() || !text) return FALSE;
 
-    stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
-    stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
+    const stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
+    const stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
     BOOL fallbackLoaded = IsFallbackFontLoadedSTB();
 
     float baseScale = stbtt_ScaleForPixelHeight(fontInfo, (float)fontSize);
@@ -348,8 +348,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
     /* Clear previous clickable regions before rendering */
     ClearClickableRegions();
 
-    stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
-    stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
+    const stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
+    const stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
     BOOL fallbackLoaded = IsFallbackFontLoadedSTB();
 
     float baseScale = stbtt_ScaleForPixelHeight(fontInfo, (float)(fontSize * fontScale));

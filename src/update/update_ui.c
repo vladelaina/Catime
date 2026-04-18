@@ -42,6 +42,7 @@ static BOOL g_shouldExitAfterDialog = FALSE;
 
 /** @brief Exit notification dialog */
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
     switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_EXIT_MSG, hwndDlg);
@@ -463,6 +464,7 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
 static char g_noUpdateVersion[64] = {0};
 
 INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
     switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_NO_UPDATE, hwndDlg);
