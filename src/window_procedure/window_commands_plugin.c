@@ -17,6 +17,8 @@
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
+#include "audio_player.h"
+#include "plugin/plugin_process.h"
 #include "log.h"
 #include <windows.h>
 
@@ -67,7 +69,6 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     /* Plugin is trusted - proceed with state change and launch */
     
     /* Stop notification sound */
-    extern void StopNotificationSound(void);
     StopNotificationSound();
     
     /* Prevent countdown completion notification from triggering */
@@ -111,7 +112,6 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         /* Launch failed - show error */
         LOG_ERROR("Plugin failed to start: %ls", pluginInfo ? pluginInfo->displayName : L"unknown");
         
-        extern const wchar_t* PluginProcess_GetLastError(void);
         const wchar_t* errorMsg = PluginProcess_GetLastError();
         if (errorMsg && errorMsg[0] != L'\0') {
             PluginData_SetText(errorMsg);

@@ -12,6 +12,7 @@
 #include "timer/main_timer.h"
 #include "tray/tray_events.h"
 #include "tray/tray_animation_core.h"
+#include "config/config_watcher.h"
 #include "drag_scale.h"
 #include "window_procedure/window_procedure.h"
 #include "cli.h"
@@ -37,6 +38,8 @@
 #define BUFFER_SIZE_CLI_INPUT 256
 #define BUFFER_SIZE_MENU_ITEM 100
 
+UINT GetPendingAnimationPreviewItem(void);
+
 extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;
 extern size_t COLOR_OPTIONS_COUNT;
@@ -50,7 +53,6 @@ LRESULT HandleCreate(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     RegisterGlobalHotkeys(hwnd);
     HandleWindowCreate(hwnd);
-    extern void ConfigWatcher_Start(HWND hwnd);
     ConfigWatcher_Start(hwnd);
     return 0;
 }
@@ -86,7 +88,7 @@ LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleLButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp;
+    (void)wp; (void)lp;
     
     /* In non-edit mode, check for clickable region clicks */
     if (!CLOCK_EDIT_MODE) {
@@ -157,17 +159,13 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     }
     if (wp == IDT_ANIMATION_PREVIEW_DELAY) {
         KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
-        extern UINT GetPendingAnimationPreviewItem(void);
         UINT menuItem = GetPendingAnimationPreviewItem();
         if (menuItem != 0) {
-            extern BOOL DispatchMenuPreview(HWND hwnd, UINT menuId);
             DispatchMenuPreview(hwnd, menuItem);
         }
         return 0;
     }
     /* Handle click-through timer for dynamic WS_EX_TRANSPARENT switching */
-    extern UINT GetClickThroughTimerId(void);
-    extern void UpdateClickThroughState(HWND hwnd);
     if (wp == GetClickThroughTimerId()) {
         UpdateClickThroughState(hwnd);
         return 0;
@@ -193,7 +191,6 @@ LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     UnregisterGlobalHotkeys(hwnd);
     HandleWindowDestroy(hwnd);
-    extern void ConfigWatcher_Stop(void);
     ConfigWatcher_Stop();
     
     return 0;

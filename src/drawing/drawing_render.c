@@ -56,7 +56,11 @@ static COLORREF ParseColorString(const char* colorStr) {
     int r = 255, g = 255, b = 255;
     
     if (colorStr[0] == '#' && strlen(colorStr) == 7) {
-        sscanf(colorStr + 1, "%02x%02x%02x", &r, &g, &b);
+        unsigned int ur = 255, ug = 255, ub = 255;
+        sscanf(colorStr + 1, "%02x%02x%02x", &ur, &ug, &ub);
+        r = (int)ur;
+        g = (int)ug;
+        b = (int)ub;
     } else {
         sscanf(colorStr, "%d,%d,%d", &r, &g, &b);
     }
