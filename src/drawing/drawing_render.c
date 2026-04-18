@@ -236,7 +236,7 @@ static BOOL ResolveFontPath(const RenderContext* ctx, char* outPath) {
 }
 
 static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, SIZE* outSize,
-                               MarkdownHeading* headings, int headingCount) {
+                               const MarkdownHeading* headings, int headingCount) {
     char absoluteFontPath[MAX_PATH];
     if (ResolveFontPath(ctx, absoluteFontPath)) {
         if (InitFontSTB(absoluteFontPath)) {
@@ -255,7 +255,7 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
 
 static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits,
                               MarkdownLink* links, int linkCount,
-                              MarkdownHeading* headings, int headingCount,
+                              const MarkdownHeading* headings, int headingCount,
                               MarkdownStyle* styles, int styleCount,
                               MarkdownBlockquote* blockquotes, int blockquoteCount,
                               MarkdownColorTag* colorTags, int colorTagCount,
@@ -683,7 +683,6 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     ptDst.x = rcWindow.left;
     ptDst.y = rcWindow.top;
     
-    extern int CLOCK_WINDOW_OPACITY;
     BYTE alpha = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
     
     BLENDFUNCTION blend = {0};
