@@ -10,6 +10,8 @@
 #include "window_procedure/window_utils.h"
 #include "window_procedure/window_helpers.h"
 #include "tray/tray_events.h"
+#include "tray/tray_animation_core.h"
+#include "tray/tray.h"
 #include "config.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
@@ -66,15 +68,12 @@ static LRESULT HandlePowerBroadcast(HWND hwnd, WPARAM wp, LPARAM lp) {
 
         /* Step 1: Clear animation name to force reload
          * This bypasses the "same name" check in ApplyAnimationPathValueNoPersist */
-        extern void TrayAnimation_ClearCurrentName(void);
         TrayAnimation_ClearCurrentName();
 
         /* Step 2: Reload animation from config */
-        extern LRESULT HandleAppAnimPathChanged(HWND);
         HandleAppAnimPathChanged(hwnd);
 
         /* Step 3: Recreate tray icon with newly loaded animation */
-        extern void RecreateTaskbarIcon(HWND, HINSTANCE);
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
 
         InterlockedExchange(&s_handling, 0);
@@ -199,12 +198,11 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     if (msg == WM_TASKBARCREATED) {
-        extern void RecreateTaskbarIcon(HWND, HINSTANCE);
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         RefreshWindowTopmostState(hwnd);
         return 0;
     }
-    
+
     /* Handle WM_MOUSEACTIVATE to prevent window activation in non-topmost mode */
     if (msg == WM_MOUSEACTIVATE) {
         extern BOOL CLOCK_WINDOW_TOPMOST;
@@ -212,17 +210,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return MA_NOACTIVATE;  /* Don't activate window on click */
         }
     }
-    
+
     /* Handle WM_NCHITTEST for click-through in non-edit mode */
     if (msg == WM_NCHITTEST) {
         if (!CLOCK_EDIT_MODE) {
             POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-            
+
             /* Update region positions based on current window position */
             RECT rcWindow;
             GetWindowRect(hwnd, &rcWindow);
             UpdateRegionPositions(rcWindow.left, rcWindow.top);
-            
+
             /* Check if cursor is over a clickable region */
             const ClickableRegion* region = GetClickableRegionAt(pt);
             if (region) {
@@ -231,17 +229,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return HTTRANSPARENT;  /* Pass through */
         }
     }
-    
+
     if (DispatchAppMessage(hwnd, msg)) {
         return 0;
     }
-    
+
     for (const MessageDispatchEntry* entry = MESSAGE_DISPATCH_TABLE; entry->handler; entry++) {
         if (entry->msg == msg) {
             return entry->handler(hwnd, wp, lp);
         }
     }
-    
+
     return DefWindowProc(hwnd, msg, wp, lp);
 }
 
@@ -251,19 +249,19 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
+
     extern POMODORO_PHASE current_pomodoro_phase;
     extern void ResetPomodoroState(void);
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     if (!CLOCK_SHOW_CURRENT_TIME) {
         /* Turn on: switch to show current time mode */
         TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
-        
+
         MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
     } else {
@@ -274,11 +272,11 @@ void ToggleShowTimeMode(HWND hwnd) {
         CLOCK_TOTAL_TIME = 0;
         countdown_elapsed_time = 0;
         countup_elapsed_time = 0;
-        
+
         /* Mark as shown to prevent notification when entering idle state */
         extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
-        
+
         MainTimer_Stop();
         InvalidateRect(hwnd, NULL, TRUE);
     }
@@ -286,17 +284,17 @@ void ToggleShowTimeMode(HWND hwnd) {
 
 void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
+
     extern POMODORO_PHASE current_pomodoro_phase;
     extern void ResetPomodoroState(void);
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
-    
+
     // Ensure timer is running
     MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
@@ -304,21 +302,21 @@ void StartCountUp(HWND hwnd) {
 
 void StartDefaultCountDown(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
+
     extern BOOL countdown_message_shown;
     extern POMODORO_PHASE current_pomodoro_phase;
     extern void ResetPomodoroState(void);
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     if (g_AppConfig.timer.default_start_time > 0) {
         /* Only reset countdown_message_shown when actually starting countdown */
         countdown_message_shown = FALSE;
         TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-        
+
         // Ensure timer is running
         MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
@@ -366,16 +364,16 @@ void RestartCurrentTimer(HWND hwnd) {
     extern int message_shown, countdown_message_shown;
     extern int countdown_elapsed_time, countup_elapsed_time;
     extern void ResetMillisecondAccumulator(void);
-    
+
     CloseAllNotifications(); // Centralized cleanup
     StopNotificationSound();
-    
+
     CleanupBeforeTimerAction();
-    
+
     if (!CLOCK_SHOW_CURRENT_TIME) {
         message_shown = FALSE;
         countdown_message_shown = FALSE;
-        
+
         if (CLOCK_COUNT_UP) {
             countdown_elapsed_time = 0;
             countup_elapsed_time = 0;
@@ -385,17 +383,17 @@ void RestartCurrentTimer(HWND hwnd) {
             elapsed_time = 0;
         }
         CLOCK_IS_PAUSED = FALSE;
-        
+
         /* Call ResetTimer() to properly reset g_target_end_time for countdown mode */
         ResetTimer();
-        
+
         // Restart the timer after resetting pause state
         MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
-        
+
         InvalidateRect(hwnd, NULL, TRUE);
     }
-    
+
     extern void HandleWindowReset(HWND);
     HandleWindowReset(hwnd);
 }
@@ -418,7 +416,7 @@ void CleanupBeforeTimerAction(void) {
     extern void StopNotificationSound(void);
     StopNotificationSound();
     CloseAllNotifications();
-    
+
     // Check if plugin text has <catime> tag - if so, keep plugin active
     // The time will be embedded within the plugin text via the tag
     if (!PluginData_HasCatimeTag()) {
@@ -431,35 +429,35 @@ void CleanupBeforeTimerAction(void) {
 
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
-    
+
     extern BOOL countdown_message_shown;
     extern void ResetPomodoroState(void);
     countdown_message_shown = FALSE;
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     TimerModeParams params = {seconds, TRUE, TRUE, TRUE};
     BOOL result = SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-    
+
     // Ensure timer is running
     MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
-    
+
     return result;
 }
 
 void ToggleMilliseconds(HWND hwnd) {
     extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
     extern void ResetTimerWithInterval(HWND hwnd);
-    
+
     BOOL newState = !g_AppConfig.display.time_format.show_milliseconds;
     WriteConfigShowMilliseconds(newState);
-    
+
     /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
     ResetTimerWithInterval(hwnd);
-    
+
     InvalidateRect(hwnd, NULL, TRUE);
 }
 

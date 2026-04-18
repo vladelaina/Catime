@@ -42,6 +42,11 @@ void SetBlurBehind(HWND hwnd, BOOL enable);
 UINT GetClickThroughTimerId(void);
 
 /**
+ *  Refresh dynamic click-through state based on cursor position
+ */
+void UpdateClickThroughState(HWND hwnd);
+
+/**
  * @brief Initialize DWM functions for blur effects
  * @return TRUE if loaded successfully
  * 

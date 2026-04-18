@@ -15,7 +15,7 @@
  * @note Double-buffering eliminates flicker
  * @note Window auto-resizes to fit text
  */
-void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps);
+void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps);
 
 /**
  * Release cached markdown render data used across paint calls.

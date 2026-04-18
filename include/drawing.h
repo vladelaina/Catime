@@ -1,7 +1,7 @@
 /**
  * @file drawing.h
  * @brief Timer display rendering with double buffering (unified header)
- * 
+ *
  * Double buffering prevents flicker during frequent updates (especially for centiseconds).
  * RenderContext struct reduces parameter passing in rendering pipeline.
  */
@@ -54,12 +54,12 @@ typedef struct {
  * @brief Main paint handler
  * @param hwnd Window handle
  * @param ps Paint structure
- * 
+ *
  * @details
- * Pipeline: setup double buffer → determine mode → format text → 
+ * Pipeline: setup double buffer → determine mode → format text →
  * render to backbuffer → present.
  */
-void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps);
+void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT *ps);
 
 /* ============================================================================
  * Public API - Timer Millisecond Tracking
@@ -67,14 +67,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT *ps);
 
 /**
  * @brief Reset centisecond baseline
- * 
+ *
  * @details Call when timer starts/resumes/resets
  */
 void ResetTimerMilliseconds(void);
 
 /**
  * @brief Freeze centiseconds at current value
- * 
+ *
  * @details Call when pausing timer
  */
 void PauseTimerMilliseconds(void);
