@@ -337,11 +337,11 @@ static COLORREF GetAlertColor(BlockquoteAlertType type) {
 
 void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownLink* links, int linkCount,
-                       MarkdownHeading* headings, int headingCount,
+                       const MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
                        MarkdownBlockquote* blockquotes, int blockquoteCount,
                        MarkdownColorTag* colorTags, int colorTagCount,
-                       MarkdownFontTag* fontTags, int fontTagCount,
+                       const MarkdownFontTag* fontTags, int fontTagCount,
                        COLORREF color, int fontSize, float fontScale, int gradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
 
@@ -619,10 +619,10 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
 
                 /* Color tag handling - override drawColor with tag color or gradient */
                 BOOL useColorTagGradient = FALSE;
-                MarkdownColorTag* activeColorTag = NULL;
+                const MarkdownColorTag* activeColorTag = NULL;
                 while (curColorTagIdx < colorTagCount && j >= (size_t)colorTags[curColorTagIdx].endPos) curColorTagIdx++;
                 if (curColorTagIdx < colorTagCount && j >= (size_t)colorTags[curColorTagIdx].startPos) {
-                    MarkdownColorTag* tag = &colorTags[curColorTagIdx];
+                    const MarkdownColorTag* tag = &colorTags[curColorTagIdx];
                     if (tag->colorCount == 1) {
                         /* Single color */
                         drawColor = tag->colors[0];
@@ -634,11 +634,11 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 }
 
                 /* Font tag handling - use cached font if specified */
-                stbtt_fontinfo* charFontInfo = fontInfo;
+                const stbtt_fontinfo* charFontInfo = fontInfo;
                 float charScale = scale;
                 while (curFontTagIdx < fontTagCount && j >= (size_t)fontTags[curFontTagIdx].endPos) curFontTagIdx++;
                 if (curFontTagIdx < fontTagCount && j >= (size_t)fontTags[curFontTagIdx].startPos) {
-                    stbtt_fontinfo* cachedFont = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
+                    const stbtt_fontinfo* cachedFont = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
                     if (cachedFont) {
                         charFontInfo = cachedFont;
                         charScale = stbtt_ScaleForPixelHeight(cachedFont, (float)(fontSize * fontScale));

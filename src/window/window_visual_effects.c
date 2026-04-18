@@ -5,6 +5,7 @@
 
 #include "window/window_visual_effects.h"
 #include "log.h"
+#include "markdown/markdown_interactive.h"
 #include <dwmapi.h>
 
 /* ============================================================================
@@ -124,11 +125,9 @@ void UpdateClickThroughState(HWND hwnd) {
     }
     
     /* Check if mouse is over a clickable region */
-    extern void UpdateRegionPositions(int windowX, int windowY);
-    extern const void* GetClickableRegionAt(POINT pt);
     
     UpdateRegionPositions(rcWindow.left, rcWindow.top);
-    const void* region = GetClickableRegionAt(pt);
+    const ClickableRegion* region = GetClickableRegionAt(pt);
     
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     

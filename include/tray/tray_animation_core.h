@@ -121,6 +121,11 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void);
 BOOL TrayAnimation_HandleUpdateMessage(void);
 
 /**
+ * @brief Preview animation from file path without persistence
+ */
+void PreviewAnimationFromFile(HWND hwnd, const char* filePath);
+
+/**
  * @brief Check if animation preview is currently active
  * @return TRUE if animation preview is active
  */

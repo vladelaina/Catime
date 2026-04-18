@@ -208,7 +208,7 @@ BOOL TimeParser_ParseBasic(const char* input, int* seconds) {
         char unit = '\0';
         int c = tolower((unsigned char)*pos);
         if (c == 'h' || c == 'm' || c == 's') {
-            unit = c;
+            unit = (char)c;
             pos++;
         }
 
@@ -380,7 +380,7 @@ void TimeParser_FormatToHMS(int seconds, int* hours, int* mins, int* secs) {
  * ============================================================================ */
 
 int TimeParser_GetUnitMultiplier(char unit) {
-    char c = tolower((unsigned char)unit);
+    int c = tolower((unsigned char)unit);
     switch (c) {
         case 'h': return SECONDS_PER_HOUR;
         case 'm': return SECONDS_PER_MINUTE;
