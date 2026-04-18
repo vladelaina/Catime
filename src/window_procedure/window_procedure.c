@@ -14,7 +14,9 @@
 #include "tray/tray.h"
 #include "config.h"
 #include "timer/timer.h"
+#include "timer/timer_events.h"
 #include "timer/main_timer.h"
+#include "audio_player.h"
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
@@ -25,6 +27,7 @@
 #include <windowsx.h>
 
 #include "window_procedure/window_drop_target.h"
+#include "window_procedure/window_events.h"
 #include "color/color_parser.h"
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
@@ -251,7 +254,6 @@ void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
 
     extern POMODORO_PHASE current_pomodoro_phase;
-    extern void ResetPomodoroState(void);
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
@@ -286,7 +288,6 @@ void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
 
     extern POMODORO_PHASE current_pomodoro_phase;
-    extern void ResetPomodoroState(void);
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
@@ -305,7 +306,6 @@ void StartDefaultCountDown(HWND hwnd) {
 
     extern BOOL countdown_message_shown;
     extern POMODORO_PHASE current_pomodoro_phase;
-    extern void ResetPomodoroState(void);
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
@@ -331,7 +331,6 @@ void StartPomodoroTimer(HWND hwnd) {
 
     EnsureWindowVisibleWithTopmostState(hwnd);
 
-    extern void InitializePomodoro(void);
     InitializePomodoro();
 
     CLOCK_SHOW_CURRENT_TIME = FALSE;
@@ -360,10 +359,8 @@ void ToggleEditMode(HWND hwnd) {
 
 
 void RestartCurrentTimer(HWND hwnd) {
-    extern void StopNotificationSound(void);
     extern int message_shown, countdown_message_shown;
     extern int countdown_elapsed_time, countup_elapsed_time;
-    extern void ResetMillisecondAccumulator(void);
 
     CloseAllNotifications(); // Centralized cleanup
     StopNotificationSound();
@@ -394,7 +391,6 @@ void RestartCurrentTimer(HWND hwnd) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
 
-    extern void HandleWindowReset(HWND);
     HandleWindowReset(hwnd);
 }
 
@@ -413,7 +409,6 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 }
 
 void CleanupBeforeTimerAction(void) {
-    extern void StopNotificationSound(void);
     StopNotificationSound();
     CloseAllNotifications();
 
@@ -431,7 +426,6 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
 
     extern BOOL countdown_message_shown;
-    extern void ResetPomodoroState(void);
     countdown_message_shown = FALSE;
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
@@ -449,8 +443,6 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
 }
 
 void ToggleMilliseconds(HWND hwnd) {
-    extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
-    extern void ResetTimerWithInterval(HWND hwnd);
 
     BOOL newState = !g_AppConfig.display.time_format.show_milliseconds;
     WriteConfigShowMilliseconds(newState);

@@ -53,7 +53,7 @@ Utf8String ToUtf8(const wchar_t* wide) {
  * ============================================================================ */
 
 void ShowError(HWND hwnd, ErrorCode errorCode) {
-    const wchar_t* title = GetLocalizedString(NULL, L"Error");
+    UNREFERENCED_PARAMETER(hwnd);
     const wchar_t* message;
     
     switch (errorCode) {

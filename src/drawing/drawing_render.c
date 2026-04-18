@@ -496,23 +496,20 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     BOOL measuredTextSizeValid = FALSE;
 
     if (hasContent) {
-        BOOL measured = FALSE;
-
         // Measure text if any
         if (wcslen(textToRender) > 0) {
             if (isMarkdown) {
-                measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
+                measuredTextSizeValid = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
             } else {
-                measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
+                measuredTextSizeValid = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
             }
 
-            if (measured) {
+            if (measuredTextSizeValid) {
                 measuredTextSize = textSize;
-                measuredTextSizeValid = TRUE;
             }
 
             // If measurement failed, use default size
-            if (!measured) {
+            if (!measuredTextSizeValid) {
                 textSize.cx = 100;
                 textSize.cy = 30;
             }
