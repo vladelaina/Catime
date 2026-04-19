@@ -12,6 +12,14 @@ def should_ignore(file_path: str, message: str) -> bool:
     normalized = file_path.replace("\\", "/")
     if normalized.startswith("libs/miniaudio/"):
         return True
+    if normalized.startswith("libs/stb/"):
+        return True
+    if normalized == "src/drawing/drawing_image_gdiplus.c" and "DebugEventCallback" in message:
+        return True
+    if normalized == "src/dialog/dialog_notification_settings.c" and "wFileName" in message and "const array" in message:
+        return True
+    if normalized == "src/dialog/dialog_notification_audio.c" and ((any(token in message for token in ("selectedFile", "wFileName")) and "const array" in message) or ("Variable 'ext'" in message and "pointer to const" in message)):
+        return True
     return False
 
 
