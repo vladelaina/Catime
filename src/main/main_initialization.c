@@ -17,6 +17,7 @@
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
 #include "window.h"
+#include "window/window_initialization.h"
 #include "cli.h"
 #include "async_update_checker.h"
 #include "dialog/dialog_language.h"
@@ -143,7 +144,7 @@ static BOOL RelaunchAsStandardUser(void) {
     GetModuleFileNameW(NULL, szPath, MAX_PATH);
 
     /* Reconstruct command line safely - CreateProcess might modify the buffer */
-    wchar_t* pszOriginalCmdLine = GetCommandLineW();
+    const wchar_t* pszOriginalCmdLine = GetCommandLineW();
     size_t cmdLen = wcslen(pszOriginalCmdLine) + 1;
     wchar_t* pszCmdLineCopy = (wchar_t*)malloc(cmdLen * sizeof(wchar_t));
 
@@ -466,7 +467,6 @@ BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     /* Initialize markdown interactive system */
     InitMarkdownInteractive();
     
-    extern BOOL InitializeApplication(HINSTANCE);
     if (!InitializeApplication(hInstance)) {
         LOG_ERROR("Application initialization failed. Check log file for details.");
         return FALSE;
