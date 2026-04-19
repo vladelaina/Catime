@@ -32,7 +32,7 @@ BOOL GetFontsFolderW(wchar_t* outW, size_t size, BOOL ensureCreate) {
     if (!Utf8ToWide(configPathUtf8, configPathW, MAX_PATH)) return FALSE;
     
     /* Extract directory (remove config.ini) */
-    wchar_t* lastSep = wcsrchr(configPathW, L'\\');
+    const wchar_t* lastSep = wcsrchr(configPathW, L'\\');
     if (!lastSep) return FALSE;
     
     size_t dirLen = (size_t)(lastSep - configPathW);

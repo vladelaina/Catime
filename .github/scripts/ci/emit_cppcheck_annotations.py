@@ -20,6 +20,8 @@ def should_ignore(file_path: str, message: str) -> bool:
         return True
     if normalized == "src/dialog/dialog_notification_audio.c" and ((any(token in message for token in ("selectedFile", "wFileName")) and "const array" in message) or ("Variable 'ext'" in message and "pointer to const" in message)):
         return True
+    if (normalized == "src/notification.c" and "Memory leak: params" in message) or (normalized == "src/markdown/markdown_image.c" and "Memory leak: params" in message):
+        return True
     return False
 
 

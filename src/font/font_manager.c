@@ -299,7 +299,7 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
     if (hMemory == NULL) return FALSE;
     
     /* Lock resource */
-    void* fontData = LockResource(hMemory);
+    const void* fontData = LockResource(hMemory);
     if (fontData == NULL) return FALSE;
     
     /* Get size */

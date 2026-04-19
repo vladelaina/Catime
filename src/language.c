@@ -169,7 +169,7 @@ static BOOL LoadResourceToBuffer(UINT resourceId, char** outBuffer) {
 static void ParseLanguageBuffer(char* buffer) {
     wchar_t wide_buffer[MAX_STRING_LENGTH];
     
-    char* line = strtok(buffer, "\r\n");
+    const char* line = strtok(buffer, "\r\n");
     
     while (line && g_translation_count < MAX_TRANSLATIONS) {
         if (line[0] == '\0') {
@@ -177,7 +177,7 @@ static void ParseLanguageBuffer(char* buffer) {
             continue;
         }
         
-        line = (char*)SkipUTF8BOM(line);
+        line = SkipUTF8BOM(line);
         
         if (UTF8ToWideChar(line, wide_buffer, MAX_STRING_LENGTH) > 0) {
             ParseIniLine(wide_buffer);

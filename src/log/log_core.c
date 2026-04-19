@@ -53,7 +53,7 @@ void GetLogFilePath(wchar_t* logPath, size_t size) {
     wchar_t configPathW[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, configPath, -1, configPathW, MAX_PATH);
     
-    wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
+    const wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
     if (lastSeparator) {
         size_t dirLen = lastSeparator - configPathW + 1;
         wcsncpy(logPath, configPathW, dirLen);
@@ -78,10 +78,7 @@ static ULONGLONG GetLogFileSize(void) {
     
     WIN32_FILE_ATTRIBUTE_DATA fileInfo;
     if (GetFileAttributesExW(LOG_FILE_PATH, GetFileExInfoStandard, &fileInfo)) {
-        ULARGE_INTEGER size;
-        size.LowPart = fileInfo.nFileSizeLow;
-        size.HighPart = fileInfo.nFileSizeHigh;
-        return size.QuadPart;
+        return ((ULONGLONG)fileInfo.nFileSizeHigh << 32) | (ULONGLONG)fileInfo.nFileSizeLow;
     }
     
     return 0;
@@ -234,12 +231,15 @@ void WriteLog(LogLevel level, const char* format, ...) {
     }
 
     time_t now;
-    struct tm local_time;
+    struct tm local_time = {0};
     char timeStr[32] = {0};
 
     time(&now);
-    localtime_s(&local_time, &now);
-    strftime(timeStr, sizeof(timeStr), LOG_TIMESTAMP_FORMAT, &local_time);
+    if (localtime_s(&local_time, &now) == 0) {
+        strftime(timeStr, sizeof(timeStr), LOG_TIMESTAMP_FORMAT, &local_time);
+    } else {
+        strcpy_s(timeStr, sizeof(timeStr), "1970-01-01 00:00:00");
+    }
 
     /* Format log message */
     char logBuffer[4096];
@@ -286,8 +286,8 @@ void CleanupLogSystem(void) {
     }
 }
 
-void SetMinimumLogLevel(LogLevel level) {
-    minLogLevel = level;
+void SetMinimumLogLevel(LogLevel minLevel) {
+    minLogLevel = minLevel;
 }
 
 LogLevel GetMinimumLogLevel(void) {
