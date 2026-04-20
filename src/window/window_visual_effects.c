@@ -23,6 +23,7 @@
 
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
+static HMODULE g_hDwmapi = NULL;
 
 /* ============================================================================
  * Windows composition structures (for blur effects)
@@ -62,9 +63,11 @@ static pfnSetWindowCompositionAttribute _SetWindowCompositionAttribute = NULL;
  * ============================================================================ */
 
 BOOL InitDWMFunctions(void) {
-    HMODULE hDwmapi = LoadLibraryW(DWMAPI_DLL);
-    if (hDwmapi) {
-        _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(hDwmapi, "DwmEnableBlurBehindWindow");
+    if (!g_hDwmapi) {
+        g_hDwmapi = LoadLibraryW(DWMAPI_DLL);
+    }
+    if (g_hDwmapi) {
+        _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(g_hDwmapi, "DwmEnableBlurBehindWindow");
         
         if (_DwmEnableBlurBehindWindow) {
             LOG_INFO("DWM functions loaded successfully");

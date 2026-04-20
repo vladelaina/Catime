@@ -318,7 +318,7 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                         MarkdownHeading* headings, int headingCount,
                         MarkdownStyle* styles, int styleCount,
                         MarkdownListItem* listItems, int listItemCount,
-                        MarkdownBlockquote* blockquotes, int blockquoteCount,
+                        const MarkdownBlockquote* blockquotes, int blockquoteCount,
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor);
 
 /**
@@ -340,7 +340,7 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
                                   MarkdownHeading* headings, int headingCount,
                                   MarkdownStyle* styles, int styleCount,
                                   MarkdownListItem* listItems, int listItemCount,
-                                  MarkdownBlockquote* blockquotes, int blockquoteCount,
+                                  const MarkdownBlockquote* blockquotes, int blockquoteCount,
                                   RECT drawRect);
 
 /**

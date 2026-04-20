@@ -425,7 +425,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         }
         
         case WM_NCHITTEST: {
-            NotificationData* data = GetNotificationData(hwnd);
+            const NotificationData* data = GetNotificationData(hwnd);
             /* Normal notifications are non-interactive */
             if (!data || !data->isPreview) {
                 return HTCLIENT;
@@ -469,7 +469,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         }
         
         case WM_SETCURSOR: {
-            NotificationData* data = GetNotificationData(hwnd);
+            const NotificationData* data = GetNotificationData(hwnd);
             /* Preview windows show crosshair cursor for dragging */
             if (data && data->isPreview) {
                 WORD hitTest = LOWORD(lParam);
@@ -512,7 +512,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         }
         
         case WM_EXITSIZEMOVE: {
-            NotificationData* data = GetNotificationData(hwnd);
+            const NotificationData* data = GetNotificationData(hwnd);
             /* Save position/size only for preview windows */
             if (data && data->isPreview) {
                 RECT rect;
