@@ -26,7 +26,6 @@
 typedef struct {
     const char* pattern;
     bool (*matcher)(const char*, const char*);
-    const char* description;
 } PackageDetectionRule;
 
 typedef enum {
@@ -156,9 +155,9 @@ static void ExtractDirectory(const char* file_path, char* output, size_t output_
 
 /** Extensible pattern matching avoids hardcoding install paths */
 static const PackageDetectionRule PACKAGE_RULES[] = {
-    { STORE_PATH_PREFIX,      StartsWith,   "Microsoft Store (WindowsApps)" },
-    { WINGET_PATH_PATTERN,    Contains,     "WinGet standard path" },
-    { WINGET_EXE_PATTERN,     Contains,     "WinGet executable pattern" },
+    { STORE_PATH_PREFIX,      StartsWith },
+    { WINGET_PATH_PATTERN,    Contains },
+    { WINGET_EXE_PATTERN,     Contains },
 };
 
 static const size_t PACKAGE_RULES_COUNT = sizeof(PACKAGE_RULES) / sizeof(PACKAGE_RULES[0]);

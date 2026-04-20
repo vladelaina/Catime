@@ -80,7 +80,6 @@ static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         
         /* Only process if mouse is over tray icon */
         if (IsMouseOverTrayIconCached(pMouseStruct->pt)) {
-            extern int CLOCK_WINDOW_OPACITY;
             extern void WriteConfigWindowOpacity(int opacity);
             extern int ReadConfigOpacityStepNormal(void);
             extern int ReadConfigOpacityStepFast(void);

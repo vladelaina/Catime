@@ -94,14 +94,13 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
                 if (CompareFileTime(&currentModTime, &g_plugins[indexToMonitor].lastModTime) != 0) {
                     LOG_INFO("[HotReload] File changed: %ls", g_plugins[indexToMonitor].displayName);
                     g_plugins[indexToMonitor].lastModTime = currentModTime;
-                    int idx = indexToMonitor;
                     LeaveCriticalSection(&g_pluginCS);
                     
                     /* Post message to main thread instead of calling directly */
                     /* This avoids deadlock when security dialog needs to be shown */
                     HWND hwnd = PluginProcess_GetNotifyWindow();
                     if (hwnd) {
-                        PostMessage(hwnd, WM_PLUGIN_HOT_RELOAD, (WPARAM)idx, 0);
+                        PostMessage(hwnd, WM_PLUGIN_HOT_RELOAD, (WPARAM)indexToMonitor, 0);
                     } else {
                         /* No window available - skip hot-reload this cycle */
                         /* Window should be set during initialization */
@@ -524,8 +523,8 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
 
     EnterCriticalSection(&g_pluginCS);
     
-    /* Revalidate index (array might have changed during dialog) */
-    if (index < 0 || index >= g_pluginCount) {
+    /* Revalidate upper bound (plugin list might have changed during dialog) */
+    if (index >= g_pluginCount) {
         LOG_ERROR("Plugin index invalid after security dialog");
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;

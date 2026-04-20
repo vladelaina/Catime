@@ -63,7 +63,7 @@ static void ShowTimeoutNotification(HWND hwnd, const char* messageUtf8, BOOL pla
     }
 
     wchar_t messageBuffer[MESSAGE_BUFFER_SIZE];
-    wchar_t* messageW = SafeUtf8ToWide(messageUtf8, messageBuffer, MESSAGE_BUFFER_SIZE);
+    const wchar_t* messageW = SafeUtf8ToWide(messageUtf8, messageBuffer, MESSAGE_BUFFER_SIZE);
     
     if (messageW) {
         ShowNotification(hwnd, messageW);
@@ -457,7 +457,6 @@ static BOOL HandleMainTimer(HWND hwnd) {
     }
     
     if (CLOCK_SHOW_CURRENT_TIME) {
-        extern int last_displayed_second;
         last_displayed_second = -1;
         if (shouldRender) {
             s_lastRenderTime = now_tick;
