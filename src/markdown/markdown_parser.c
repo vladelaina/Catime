@@ -49,7 +49,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *fontTags = NULL;
     *fontTagCount = 0;
 
-    if (!input || wcslen(input) == 0) return FALSE;
+    if (wcslen(input) == 0) return FALSE;
 
     // Skip BOM if present (double safety)
     if (*input == 0xFEFF) {

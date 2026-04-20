@@ -102,15 +102,13 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         0, NULL);
     
     if (size > 0) {
-        if (messageBuffer != NULL) {
-            if (size >= 2 && messageBuffer[size-2] == L'\r' && messageBuffer[size-1] == L'\n') {
-                messageBuffer[size-2] = L'\0';
-            }
-
-            WideCharToMultiByte(CP_UTF8, 0, messageBuffer, -1, buffer, bufferSize, NULL, NULL);
-            LocalFree(messageBuffer);
-            return;
+        if (size >= 2 && messageBuffer[size-2] == L'\r' && messageBuffer[size-1] == L'\n') {
+            messageBuffer[size-2] = L'\0';
         }
+
+        WideCharToMultiByte(CP_UTF8, 0, messageBuffer, -1, buffer, bufferSize, NULL, NULL);
+        LocalFree(messageBuffer);
+        return;
     }
 
     _snprintf_s(buffer, bufferSize, _TRUNCATE, "Unknown error (code: %lu)", errorCode);

@@ -281,11 +281,6 @@ void ShowWindowForPreview(HWND hwnd) {
 
     BOOL isVisible = IsWindowVisible(hwnd);
 
-    extern BOOL CLOCK_SHOW_CURRENT_TIME;
-    extern BOOL CLOCK_COUNT_UP;
-    extern int CLOCK_TOTAL_TIME;
-    extern int countdown_elapsed_time;
-
     BOOL hasActiveContent = CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP ||
                            (CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME);
 
@@ -347,11 +342,6 @@ void RestoreWindowVisibility(HWND hwnd) {
 
     WriteLog(LOG_LEVEL_INFO, "RestoreWindowVisibility: was visible=%d, created preview timer=%d",
              g_previewState.wasWindowVisible, g_previewState.createdPreviewTimer);
-
-    extern BOOL CLOCK_SHOW_CURRENT_TIME;
-    extern BOOL CLOCK_COUNT_UP;
-    extern int CLOCK_TOTAL_TIME;
-    extern int countdown_elapsed_time;
 
     if (g_previewState.createdPreviewTimer) {
         WriteLog(LOG_LEVEL_INFO, "Clearing preview timer that we created");
