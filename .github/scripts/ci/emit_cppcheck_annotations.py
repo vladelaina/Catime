@@ -10,6 +10,8 @@ def escape(value: str) -> str:
 
 def should_ignore(file_path: str, message: str) -> bool:
     normalized = file_path.replace("\\", "/")
+    if message.startswith("Active checkers:"):
+        return True
     if normalized.startswith("libs/miniaudio/"):
         return True
     if normalized.startswith("libs/stb/"):
@@ -45,12 +47,12 @@ def main() -> int:
         severity = item.attrib.get("severity", "warning").lower()
         message = item.attrib.get("msg", "").strip() or item.attrib.get("id", "Cppcheck finding")
         location = item.find("location")
+        file_path = location.attrib.get("file", "") if location is not None else ""
         level = "error" if severity in {"error"} else "warning"
+        if should_ignore(file_path, message):
+            continue
         if location is not None:
-            file_path = location.attrib.get("file", "")
             line = location.attrib.get("line", "1")
-            if should_ignore(file_path, message):
-                continue
             print(f"COPYABLE {level.upper()} {file_path}:{line} {message}")
             print(f"::{level} file={file_path},line={line}::{escape(message)}")
         else:
