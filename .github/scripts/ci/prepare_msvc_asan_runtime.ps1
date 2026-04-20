@@ -45,5 +45,5 @@ $dlls = Find-AsanDlls
 
 foreach ($dll in $dlls) {
     Copy-Item -Path $dll.FullName -Destination (Join-Path $binaryDir $dll.Name) -Force
-    Write-Output "::notice::Prepared ASan runtime: $($dll.Name)"
+    Write-Output "Prepared ASan runtime: $($dll.Name)"
 }

@@ -44,7 +44,7 @@ jobs:
     
     steps:
     - name: Download unsigned artifact
-      uses: actions/download-artifact@v5
+      uses: actions/download-artifact@v8
       with:
         name: ${{ inputs.artifact-name }}
         path: ./unsigned-artifacts
@@ -79,7 +79,7 @@ jobs:
         
     - name: Upload signing package as artifact (temporary)
       id: upload-signing-package
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: catime-signing-package
         path: ./signing-input/*.exe
@@ -87,7 +87,7 @@ jobs:
         
     - name: Submit to SignPath for signing
       id: signpath-submit
-      uses: signpath/github-action-submit-signing-request@v1
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
         organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
@@ -127,7 +127,7 @@ jobs:
         
     - name: Upload signed artifacts
       id: upload-signed
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}
         path: ./signed-output/*.exe

@@ -60,5 +60,5 @@ if ($missing.Count -gt 0) {
     }
     Write-Error $summary
 } else {
-    Write-Output "::notice::$summary"
+    Write-Output $summary
 }
