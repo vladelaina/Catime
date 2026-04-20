@@ -90,7 +90,7 @@ jobs:
             --xml \
             --xml-version=2 \
             -I include \
-            src 2> quality-cppcheck/cppcheck.xml
+            src > quality-cppcheck/cppcheck.stdout 2> quality-cppcheck/cppcheck.xml
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
           exit 0
 
