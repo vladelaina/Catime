@@ -208,7 +208,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     /* Handle WM_MOUSEACTIVATE to prevent window activation in non-topmost mode */
     if (msg == WM_MOUSEACTIVATE) {
-        extern BOOL CLOCK_WINDOW_TOPMOST;
         if (!CLOCK_EDIT_MODE && !CLOCK_WINDOW_TOPMOST) {
             return MA_NOACTIVATE;  /* Don't activate window on click */
         }
@@ -253,8 +252,6 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
 
-    extern POMODORO_PHASE current_pomodoro_phase;
-
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
@@ -276,7 +273,6 @@ void ToggleShowTimeMode(HWND hwnd) {
         countup_elapsed_time = 0;
 
         /* Mark as shown to prevent notification when entering idle state */
-        extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
 
         MainTimer_Stop();
@@ -286,8 +282,6 @@ void ToggleShowTimeMode(HWND hwnd) {
 
 void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
-
-    extern POMODORO_PHASE current_pomodoro_phase;
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
@@ -303,9 +297,6 @@ void StartCountUp(HWND hwnd) {
 
 void StartDefaultCountDown(HWND hwnd) {
     CleanupBeforeTimerAction();
-
-    extern BOOL countdown_message_shown;
-    extern POMODORO_PHASE current_pomodoro_phase;
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
@@ -359,8 +350,6 @@ void ToggleEditMode(HWND hwnd) {
 
 
 void RestartCurrentTimer(HWND hwnd) {
-    extern int message_shown, countdown_message_shown;
-    extern int countdown_elapsed_time, countup_elapsed_time;
 
     CloseAllNotifications(); // Centralized cleanup
     StopNotificationSound();
@@ -376,7 +365,6 @@ void RestartCurrentTimer(HWND hwnd) {
             countup_elapsed_time = 0;
         } else {
             countdown_elapsed_time = 0;
-            extern int elapsed_time;
             elapsed_time = 0;
         }
         CLOCK_IS_PAUSED = FALSE;
@@ -401,7 +389,7 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 
     /* countdown_message_shown is reset inside StartCountdownWithTime/StartDefaultCountDown */
     int zeroBased = index - 1;
-    if (zeroBased >= 0 && zeroBased < time_options_count) {
+    if (zeroBased < time_options_count) {
         StartCountdownWithTime(hwnd, time_options[zeroBased]);
     } else {
         StartDefaultCountDown(hwnd);
@@ -425,7 +413,6 @@ void CleanupBeforeTimerAction(void) {
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
 
-    extern BOOL countdown_message_shown;
     countdown_message_shown = FALSE;
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {

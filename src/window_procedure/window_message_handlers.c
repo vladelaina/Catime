@@ -209,7 +209,7 @@ LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     UNREFERENCED_PARAMETER(hwnd);
     (void)wp;
-    WINDOWPOS* pwp = (WINDOWPOS*)lp;
+    const WINDOWPOS* pwp = (const WINDOWPOS*)lp;
     if (!(pwp->flags & SWP_NOSIZE)) {
         if (CLOCK_EDIT_MODE) {
             // Region update logic removed - relying on UpdateLayeredWindow alpha channel
@@ -472,8 +472,6 @@ LRESULT HandleDialogCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     int seconds = (int)wp;
     if (seconds > 0) {
-        extern void CleanupBeforeTimerAction(void);
-        extern BOOL StartCountdownWithTime(HWND hwnd, int seconds);
         CleanupBeforeTimerAction();
         StartCountdownWithTime(hwnd, seconds);
     }
@@ -501,7 +499,6 @@ LRESULT HandleDialogColor(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     if (wp == 0) {
         /* Color cancelled - restore preview if needed */
-        extern void CancelPreview(HWND hwnd);
         CancelPreview(hwnd);
     }
     InvalidateRect(hwnd, NULL, TRUE);
