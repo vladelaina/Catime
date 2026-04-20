@@ -256,7 +256,7 @@ STDMETHODIMP DragEnter(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeySta
 
 STDMETHODIMP DragOver(IDropTarget* this, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     (void)grfKeyState; (void)pt;
-    OleDropTarget* target = (OleDropTarget*)this;
+    const OleDropTarget* target = (const OleDropTarget*)this;
     
     if (target->isValidDrop) {
         *pdwEffect = DROPEFFECT_COPY;

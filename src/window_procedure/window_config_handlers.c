@@ -192,7 +192,6 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
                          CLOCK_TIMEOUT_TEXT, sizeof(CLOCK_TIMEOUT_TEXT), "0");
     
     /* Timeout action (preserve one-time actions) */
-    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
     if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_RESTART &&
         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SLEEP) {
@@ -347,8 +346,6 @@ LRESULT HandleAppRecentFilesChanged(HWND hwnd) {
     extern void LoadRecentFiles(void);
     LoadRecentFiles();
     
-    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
-    extern char CLOCK_TIMEOUT_FILE_PATH[];
     
     /* Validate current timeout file against recent files */
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE) {

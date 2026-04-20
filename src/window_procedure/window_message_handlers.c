@@ -419,10 +419,10 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
         if (!info) return FALSE;
         DrawGradientRect(lpdis->hDC, &colorRect, info);
     } else {
-        int r, g, b;
+        unsigned int r = 0, g = 0, b = 0;
         sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
 
-        HBRUSH hBrush = CreateSolidBrush(RGB(r, g, b));
+        HBRUSH hBrush = CreateSolidBrush(RGB((int)r, (int)g, (int)b));
         HPEN hPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
 
         HGDIOBJ oldBrush = SelectObject(lpdis->hDC, hBrush);
@@ -588,9 +588,7 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     MainTimer_Stop();
 
     /* Reset Pomodoro if active */
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-    }
+    current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
     /* Reset timer values */
     CLOCK_TOTAL_TIME = 0;
