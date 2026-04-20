@@ -185,7 +185,7 @@ HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                                 
                                 for (UINT y = 0; y < dstH; ++y) {
                                     BYTE* dstRow = (BYTE*)pvBits + ((yoff + (int)y) * cx + xoff) * 4;
-                                    BYTE* srcRow = tmp + y * scaledStride;
+                                    const BYTE* srcRow = tmp + y * scaledStride;
                                     memcpy(dstRow, srcRow, scaledStride);
                                 }
                             }
@@ -524,7 +524,7 @@ HICON DecodeStaticImage(const char* utf8Path, int iconWidth, int iconHeight) {
     wchar_t wPath[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
 
-    wchar_t* ext = wcsrchr(wPath, L'.');
+    const wchar_t* ext = wcsrchr(wPath, L'.');
     if (ext && _wcsicmp(ext, L".ico") == 0) {
         return (HICON)LoadImageW(NULL, wPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
     }

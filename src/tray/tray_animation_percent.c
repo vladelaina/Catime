@@ -148,13 +148,16 @@ HICON CreatePercentIcon16(int percent) {
                               ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
     HFONT oldf = hFont ? (HFONT)SelectObject(mem, hFont) : NULL;
 
+    int txtLen = (int)wcsnlen(txt, _countof(txt));
+
+
     /* Center text */
     SIZE sz = {0};
-    GetTextExtentPoint32W(mem, txt, lstrlenW(txt), &sz);
+    GetTextExtentPoint32W(mem, txt, txtLen, &sz);
     int x = (cx - sz.cx) / 2;
     int y = (cy - sz.cy) / 2;
 
-    TextOutW(mem, x, y, txt, lstrlenW(txt));
+    TextOutW(mem, x, y, txt, txtLen);
 
     /* Cleanup font */
     if (oldf) SelectObject(mem, oldf);

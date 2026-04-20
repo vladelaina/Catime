@@ -75,7 +75,7 @@ static BOOL GetAnimationsFolderPathW(wchar_t* outPath, size_t size) {
  * @brief Check if file is an animation file
  */
 static BOOL IsAnimationFile(const wchar_t* fileName) {
-    wchar_t* ext = wcsrchr(fileName, L'.');
+    const wchar_t* ext = wcsrchr(fileName, L'.');
     if (!ext) return FALSE;
     
     return _wcsicmp(ext, L".gif") == 0 ||
@@ -249,7 +249,7 @@ static void BuildAnimationMenuFromEntries(HMENU hRootMenu, AnimEntry* entries, i
     qsort(sortedEntries, count, sizeof(AnimEntry*), CompareAnimEntries);
     
     for (int i = 0; i < count; i++) {
-        AnimEntry* entry = sortedEntries[i];
+        const AnimEntry* entry = sortedEntries[i];
         
         if (entry->isSpecial) continue;
         

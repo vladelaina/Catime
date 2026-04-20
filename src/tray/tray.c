@@ -312,7 +312,6 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     }
 
     /* Skip update if showing opacity tip */
-    extern BOOL g_showingOpacityTip;
     if (g_showingOpacityTip) {
         return;
     }
