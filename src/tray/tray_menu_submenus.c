@@ -162,7 +162,6 @@ void BuildTimeoutActionSubmenu(HMENU hMenu) {
  * @param hMenu Parent menu handle
  */
 void BuildPresetManagementSubmenu(HMENU hMenu) {
-    extern char CLOCK_STARTUP_MODE[20];
     
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,

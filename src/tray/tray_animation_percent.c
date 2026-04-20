@@ -194,7 +194,7 @@ HICON CreatePercentIcon16(int percent) {
                                       ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
         HFONT oldMaskFont = hMaskFont ? (HFONT)SelectObject(memMask, hMaskFont) : NULL;
 
-        TextOutW(memMask, x, y, txt, lstrlenW(txt));
+        TextOutW(memMask, x, y, txt, txtLen);
 
         if (oldMaskFont) SelectObject(memMask, oldMaskFont);
         if (hMaskFont) DeleteObject(hMaskFont);

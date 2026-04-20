@@ -173,7 +173,7 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             ScanFontFolderRecursive(fullPath, newRelativePath, ctx, depth + 1);
         } else {
-            wchar_t* ext = wcsrchr(findData.cFileName, L'.');
+            const wchar_t* ext = wcsrchr(findData.cFileName, L'.');
             if (ext && (_wcsicmp(ext, L".ttf") == 0 || _wcsicmp(ext, L".otf") == 0)) {
                 AddFontEntry(ctx, findData.cFileName, newRelativePath);
             }

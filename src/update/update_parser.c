@@ -45,7 +45,7 @@ static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char
             escapeCount++;
         } else if (*valueEnd == '\"' && (escapeCount % 2 == 0)) {
             break;
-        } else if (*valueEnd != '\\') {
+        } else {
             escapeCount = 0;
         }
         valueEnd++;

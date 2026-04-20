@@ -562,8 +562,8 @@ void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
     (void)hwnd;
     
     /* Log the error for debugging */
-    char errorMsgUtf8[512] = {0};
     if (errorMsg) {
+        char errorMsgUtf8[512] = {0};
         WideCharToMultiByte(CP_UTF8, 0, errorMsg, -1, errorMsgUtf8, sizeof(errorMsgUtf8), NULL, NULL);
         LOG_WARNING("Update check failed: %s", errorMsgUtf8);
     }
@@ -628,7 +628,6 @@ void TriggerUpdateDownload(HWND hwnd) {
         }
         
         /* Set flag to exit after dialog closes, then show exit message */
-        extern BOOL g_shouldExitAfterDialog;
         g_shouldExitAfterDialog = TRUE;
         ShowExitMessageDialog(hwnd);
         /* PostQuitMessage will be called in WM_DESTROY of exit dialog */
