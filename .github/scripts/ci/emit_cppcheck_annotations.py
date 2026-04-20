@@ -22,6 +22,8 @@ def should_ignore(file_path: str, message: str) -> bool:
         return True
     if (normalized == "src/notification.c" and "Memory leak: params" in message) or (normalized == "src/markdown/markdown_image.c" and "Memory leak: params" in message):
         return True
+    if normalized == "src/window_procedure/ole_drop_target.c" and "Parameter 'this' can be declared as pointer to const" in message:
+        return True
     return False
 
 

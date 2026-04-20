@@ -94,20 +94,19 @@ typedef LRESULT (*AppMessageHandler)(HWND hwnd);
 typedef struct {
     UINT msgId;
     AppMessageHandler handler;
-    const char* description;
 } AppMessageDispatchEntry;
 
 static const AppMessageDispatchEntry APP_MESSAGE_DISPATCH_TABLE[] = {
-    {WM_APP_DISPLAY_CHANGED,       HandleAppDisplayChanged,       "Display settings reload"},
-    {WM_APP_TIMER_CHANGED,         HandleAppTimerChanged,         "Timer settings reload"},
-    {WM_APP_POMODORO_CHANGED,      HandleAppPomodoroChanged,      "Pomodoro settings reload"},
-    {WM_APP_NOTIFICATION_CHANGED,  HandleAppNotificationChanged,  "Notification settings reload"},
-    {WM_APP_HOTKEYS_CHANGED,       HandleAppHotkeysChanged,       "Hotkey assignments reload"},
-    {WM_APP_RECENTFILES_CHANGED,   HandleAppRecentFilesChanged,   "Recent files list reload"},
-    {WM_APP_COLORS_CHANGED,        HandleAppColorsChanged,        "Color options reload"},
-    {WM_APP_ANIM_SPEED_CHANGED,    HandleAppAnimSpeedChanged,     "Animation speed reload"},
-    {WM_APP_ANIM_PATH_CHANGED,     HandleAppAnimPathChanged,      "Animation path reload"},
-    {0,                             NULL,                          NULL}
+    {WM_APP_DISPLAY_CHANGED, HandleAppDisplayChanged},
+    {WM_APP_TIMER_CHANGED, HandleAppTimerChanged},
+    {WM_APP_POMODORO_CHANGED, HandleAppPomodoroChanged},
+    {WM_APP_NOTIFICATION_CHANGED, HandleAppNotificationChanged},
+    {WM_APP_HOTKEYS_CHANGED, HandleAppHotkeysChanged},
+    {WM_APP_RECENTFILES_CHANGED, HandleAppRecentFilesChanged},
+    {WM_APP_COLORS_CHANGED, HandleAppColorsChanged},
+    {WM_APP_ANIM_SPEED_CHANGED, HandleAppAnimSpeedChanged},
+    {WM_APP_ANIM_PATH_CHANGED, HandleAppAnimPathChanged},
+    {0,                             NULL}
 };
 
 static inline BOOL DispatchAppMessage(HWND hwnd, UINT msg) {
@@ -143,55 +142,54 @@ typedef LRESULT (*MessageHandler)(HWND hwnd, WPARAM wp, LPARAM lp);
 typedef struct {
     UINT msg;
     MessageHandler handler;
-    const char* description;
 } MessageDispatchEntry;
 
 static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
-    {WM_CREATE, HandleCreate, "Window creation"},
-    {WM_SETCURSOR, HandleSetCursor, "Cursor management"},
-    {WM_LBUTTONDOWN, HandleLButtonDown, "Mouse left button down"},
-    {WM_LBUTTONUP, HandleLButtonUp, "Mouse left button up"},
-    {WM_LBUTTONDBLCLK, HandleLButtonDblClk, "Mouse double-click"},
-    {WM_RBUTTONDOWN, HandleRButtonDown, "Mouse right button down"},
-    {WM_RBUTTONUP, HandleRButtonUp, "Mouse right button up"},
-    {WM_MOUSEWHEEL, HandleMouseWheel, "Mouse wheel scroll"},
-    {WM_MOUSEMOVE, HandleMouseMove, "Mouse movement"},
-    {WM_PAINT, HandlePaint, "Window painting"},
-    {WM_TIMER, HandleTimer, "Timer tick"},
-    {WM_DESTROY, HandleDestroy, "Window destruction"},
-    {CLOCK_WM_TRAYICON, HandleTrayIcon, "Tray icon message"},
-    {WM_COMMAND, HandleCommand, "Menu command"},
-    {WM_WINDOWPOSCHANGED, HandleWindowPosChanged, "Window position changed"},
-    {WM_DISPLAYCHANGE, HandleDisplayChange, "Display configuration changed"},
-    {WM_MENUSELECT, HandleMenuSelect, "Menu item selection"},
-    {WM_MEASUREITEM, HandleMeasureItem, "Owner-drawn menu measurement"},
-    {WM_DRAWITEM, HandleDrawItem, "Owner-drawn menu rendering"},
-    {WM_EXITMENULOOP, HandleExitMenuLoop, "Menu loop exit"},
-    {WM_SYSCOMMAND, HandleSysCommand, "System command"},
-    {WM_SIZE, HandleSize, "Window size state changed"},
-    {WM_CLOSE, HandleClose, "Window close"},
-    {WM_KEYDOWN, HandleKeyDown, "Key down"},
-    {WM_HOTKEY, HandleHotkey, "Global hotkey"},
-    {WM_COPYDATA, HandleCopyData, "Inter-process communication"},
-    {WM_POWERBROADCAST, HandlePowerBroadcast, "Power management events"},
-    {WM_APP_QUICK_COUNTDOWN_INDEX, HandleQuickCountdownIndex, "Quick countdown by index"},
-    {WM_APP_SHOW_CLI_HELP, HandleShowCliHelp, "Show CLI help"},
-    {WM_USER + 100, HandleTrayUpdateIcon, "Tray icon update"},
-    {WM_APP + 1, HandleAppReregisterHotkeys, "Hotkey re-registration"},
-    {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded, "Animation preview loaded"},
-    {CLOCK_WM_PLUGIN_EXIT, HandlePluginExitMessage, "Plugin exit via <exit> tag"},
-    {CLOCK_WM_MAIN_TIMER_TICK, HandleMainTimerTick, "High-precision timer tick"},
+    {WM_CREATE, HandleCreate},
+    {WM_SETCURSOR, HandleSetCursor},
+    {WM_LBUTTONDOWN, HandleLButtonDown},
+    {WM_LBUTTONUP, HandleLButtonUp},
+    {WM_LBUTTONDBLCLK, HandleLButtonDblClk},
+    {WM_RBUTTONDOWN, HandleRButtonDown},
+    {WM_RBUTTONUP, HandleRButtonUp},
+    {WM_MOUSEWHEEL, HandleMouseWheel},
+    {WM_MOUSEMOVE, HandleMouseMove},
+    {WM_PAINT, HandlePaint},
+    {WM_TIMER, HandleTimer},
+    {WM_DESTROY, HandleDestroy},
+    {CLOCK_WM_TRAYICON, HandleTrayIcon},
+    {WM_COMMAND, HandleCommand},
+    {WM_WINDOWPOSCHANGED, HandleWindowPosChanged},
+    {WM_DISPLAYCHANGE, HandleDisplayChange},
+    {WM_MENUSELECT, HandleMenuSelect},
+    {WM_MEASUREITEM, HandleMeasureItem},
+    {WM_DRAWITEM, HandleDrawItem},
+    {WM_EXITMENULOOP, HandleExitMenuLoop},
+    {WM_SYSCOMMAND, HandleSysCommand},
+    {WM_SIZE, HandleSize},
+    {WM_CLOSE, HandleClose},
+    {WM_KEYDOWN, HandleKeyDown},
+    {WM_HOTKEY, HandleHotkey},
+    {WM_COPYDATA, HandleCopyData},
+    {WM_POWERBROADCAST, HandlePowerBroadcast},
+    {WM_APP_QUICK_COUNTDOWN_INDEX, HandleQuickCountdownIndex},
+    {WM_APP_SHOW_CLI_HELP, HandleShowCliHelp},
+    {WM_USER + 100, HandleTrayUpdateIcon},
+    {WM_APP + 1, HandleAppReregisterHotkeys},
+    {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded},
+    {CLOCK_WM_PLUGIN_EXIT, HandlePluginExitMessage},
+    {CLOCK_WM_MAIN_TIMER_TICK, HandleMainTimerTick},
     /* Modeless dialog result handlers */
-    {WM_DIALOG_COUNTDOWN, HandleDialogCountdown, "Countdown dialog result"},
-    {WM_DIALOG_SHORTCUT, HandleDialogShortcut, "Shortcut time dialog result"},
-    {WM_DIALOG_COLOR, HandleDialogColor, "Color dialog result"},
-    {WM_DIALOG_UPDATE, HandleDialogUpdate, "Update dialog result"},
-    {WM_UPDATE_CHECK_RESULT, HandleUpdateCheckResult, "Update check result from background thread"},
-    {WM_DIALOG_FONT_LICENSE, HandleDialogFontLicense, "Font license dialog result"},
-    {WM_DIALOG_PLUGIN_SECURITY, HandleDialogPluginSecurity, "Plugin security dialog result"},
-    {WM_PLUGIN_HOT_RELOAD, HandlePluginHotReload, "Plugin hot-reload from background thread"},
-    {WM_PLUGIN_NOTIFY, HandlePluginNotifyMessage, "Plugin notification from <notify> tag"},
-    {0, NULL, NULL}
+    {WM_DIALOG_COUNTDOWN, HandleDialogCountdown},
+    {WM_DIALOG_SHORTCUT, HandleDialogShortcut},
+    {WM_DIALOG_COLOR, HandleDialogColor},
+    {WM_DIALOG_UPDATE, HandleDialogUpdate},
+    {WM_UPDATE_CHECK_RESULT, HandleUpdateCheckResult},
+    {WM_DIALOG_FONT_LICENSE, HandleDialogFontLicense},
+    {WM_DIALOG_PLUGIN_SECURITY, HandleDialogPluginSecurity},
+    {WM_PLUGIN_HOT_RELOAD, HandlePluginHotReload},
+    {WM_PLUGIN_NOTIFY, HandlePluginNotifyMessage},
+    {0, NULL}
 };
 
 /* ============================================================================
