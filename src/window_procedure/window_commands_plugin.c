@@ -72,7 +72,6 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     StopNotificationSound();
     
     /* Prevent countdown completion notification from triggering */
-    extern BOOL countdown_message_shown;
     countdown_message_shown = TRUE;
     
     /* Reset timer flags */
@@ -84,15 +83,9 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     MainTimer_Stop();
     
     /* Reset Pomodoro if active */
-    extern POMODORO_PHASE current_pomodoro_phase;
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-    }
+    current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
     /* Reset timer values */
-    extern int CLOCK_TOTAL_TIME;
-    extern int countdown_elapsed_time;
-    extern int countup_elapsed_time;
     CLOCK_TOTAL_TIME = 0;
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;

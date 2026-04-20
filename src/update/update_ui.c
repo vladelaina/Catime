@@ -117,7 +117,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             InitializeDialog(hwndDlg, IDD_UPDATE_DIALOG);
             g_textHeight = 0;
 
-            VersionInfo* versionInfo = &g_updateVersionInfo;
+            const VersionInfo* versionInfo = &g_updateVersionInfo;
             if (versionInfo->currentVersion) {
                 wchar_t* currentVerW = LocalUtf8ToWideAlloc(versionInfo->currentVersion);
                 wchar_t* latestVerW = LocalUtf8ToWideAlloc(versionInfo->latestVersion);

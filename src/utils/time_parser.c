@@ -265,7 +265,6 @@ BOOL TimeParser_ParseAdvanced(const char* input, int* seconds) {
 
     /* Check for absolute time format (ends with 't' or 'T') */
     if (len > 0 && (input_copy[len - 1] == 't' || input_copy[len - 1] == 'T')) {
-        input_copy[len - 1] = '\0';
         /* For now, delegate to ParseBasic as we don't implement absolute time in core */
         /* This can be extended in the future if needed */
         return FALSE;

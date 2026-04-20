@@ -553,7 +553,6 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     if (index >= g_AppConfig.recent_files.count) return TRUE;
     
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
-        extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
         WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
         WriteConfigTimeoutAction("MESSAGE");
