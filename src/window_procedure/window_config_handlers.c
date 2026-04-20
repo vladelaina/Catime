@@ -116,8 +116,6 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         BOOL posChanged = !skipPositionUpdate && ((posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y));
         BOOL scaleChanged = (newScale > 0.0f && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f);
         
-        extern float CLOCK_FONT_SCALE_FACTOR;
-        extern float PLUGIN_FONT_SCALE_FACTOR;
         
         if (scaleChanged) {
             CLOCK_WINDOW_SCALE = newScale;

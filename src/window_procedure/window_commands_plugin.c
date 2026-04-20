@@ -43,7 +43,6 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         PluginData_Clear();
         
         /* Prevent countdown completion notification from triggering */
-        extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
         
         /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
@@ -150,7 +149,6 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         PluginData_Clear();
         
         /* Prevent countdown completion notification from triggering */
-        extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
         
         if (hadCatimeTag) {
@@ -174,7 +172,6 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     PluginData_SetActive(TRUE);
     
     /* Prevent countdown completion notification from triggering */
-    extern BOOL countdown_message_shown;
     countdown_message_shown = TRUE;
     
     /* Check for <catime> tag */
@@ -217,7 +214,6 @@ void HandlePluginExit(HWND hwnd) {
     PluginData_Clear();
     
     /* Prevent countdown completion notification from triggering */
-    extern BOOL countdown_message_shown;
     countdown_message_shown = TRUE;
     
     /* Switch to idle state - don't reset timer to avoid 1-minute fallback */

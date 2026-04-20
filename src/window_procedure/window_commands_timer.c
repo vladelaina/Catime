@@ -154,7 +154,6 @@ static const TimeoutActionEntry TIMEOUT_ACTIONS[] = {
 
 LRESULT CmdSetTimeoutAction(HWND hwnd, TimeoutActionType action) {
     (void)hwnd;
-    extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
     CLOCK_TIMEOUT_ACTION = action;
     
     for (size_t i = 0; i < sizeof(TIMEOUT_ACTIONS)/sizeof(TIMEOUT_ACTIONS[0]); i++) {
@@ -195,9 +194,6 @@ LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CleanupBeforeTimerAction();
-
-    extern POMODORO_PHASE current_pomodoro_phase;
-    extern int current_pomodoro_time_index, complete_pomodoro_cycles;
 
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;
