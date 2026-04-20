@@ -57,7 +57,6 @@ typedef struct {
         BOOL showMilliseconds;
         char animationPath[MAX_PATH];
         EffectType effect;
-        int monitorIndex;
     } data;
     BOOL needsTimerReset;
     BOOL wasWindowVisible;
@@ -295,8 +294,6 @@ void ShowWindowForPreview(HWND hwnd) {
     }
 
     if (!isVisible || !hasActiveContent) {
-        extern BOOL CLOCK_IS_PAUSED;
-
         g_previewState.wasWindowVisible = isVisible;
         g_previewState.didShowForPreview = TRUE;
 
@@ -315,9 +312,6 @@ void ShowWindowForPreview(HWND hwnd) {
             countdown_elapsed_time = 0;
             
             /* CRITICAL: Also set g_target_end_time for GetCountDownComponents() */
-            extern int64_t g_target_end_time;
-            extern int64_t g_pause_start_time;
-            extern int64_t GetAbsoluteTimeMs(void);
             int64_t now = GetAbsoluteTimeMs();
             g_pause_start_time = now;
             g_target_end_time = now + ((int64_t)previewTime * 1000);
@@ -351,7 +345,6 @@ void RestoreWindowVisibility(HWND hwnd) {
         CLOCK_COUNT_UP = FALSE;
         
         /* Also clear g_target_end_time to avoid stale values */
-        extern int64_t g_target_end_time;
         g_target_end_time = 0;
     } else {
         WriteLog(LOG_LEVEL_INFO, "Not clearing timer - was showing existing active timer");
@@ -374,15 +367,11 @@ void RestoreWindowVisibility(HWND hwnd) {
 BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
     if (!outText || bufferSize == 0) return FALSE;
 
-    extern BOOL CLOCK_EDIT_MODE;
-
     if (!CLOCK_EDIT_MODE) {
         return FALSE;
     }
 
     /* Show current time in edit mode when no active content */
-    extern BOOL CLOCK_USE_24HOUR;
-    extern BOOL CLOCK_SHOW_SECONDS;
     
     SYSTEMTIME st;
     GetLocalTime(&st);

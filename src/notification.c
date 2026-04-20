@@ -361,7 +361,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             DrawNotificationText(memDC, L"Catime", titleRect, titleFont, 
                                NOTIFICATION_TITLE_COLOR, DT_SINGLELINE);
             
-            NotificationData* data = GetNotificationData(hwnd);
+            const NotificationData* data = GetNotificationData(hwnd);
             if (data && data->messageText) {
                 RECT textRect = {
                     NOTIFICATION_PADDING_H, 

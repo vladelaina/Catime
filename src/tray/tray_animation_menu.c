@@ -216,7 +216,7 @@ static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name) {
     int count = GetMenuItemCount(hParent);
     MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
     mii.fMask = MIIM_STRING | MIIM_SUBMENU;
-    wchar_t buffer[MAX_PATH];
+    wchar_t buffer[MAX_PATH] = {0};
     
     for (int i = 0; i < count; i++) {
         mii.dwTypeData = buffer;

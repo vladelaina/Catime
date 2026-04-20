@@ -68,7 +68,7 @@ static void ProcessMarkdownCharacter(
     int styleCount,
     MarkdownListItem* listItems,
     int listItemCount,
-    MarkdownBlockquote* blockquotes,
+    const MarkdownBlockquote* blockquotes,
     int blockquoteCount,
     HFONT hOriginalFont,
     const LOGFONT* baseLf,
