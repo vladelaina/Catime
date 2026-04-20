@@ -81,6 +81,7 @@ jobs:
           cppcheck \
             --enable=warning,style,performance,portability,information \
             --inconclusive \
+            --quiet \
             --max-configs=12 \
             --std=c11 \
             --library=windows \
