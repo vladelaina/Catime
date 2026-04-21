@@ -58,4 +58,9 @@ void ResetMillisecondAccumulator(void);
  */
 void InitializePomodoro(void);
 
+/**
+ *  Reset Pomodoro state back to idle
+ */
+void ResetPomodoroState(void);
+
 #endif

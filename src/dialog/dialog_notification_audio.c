@@ -73,7 +73,7 @@ void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile) 
             if (fileName) fileName++;
             else fileName = wSoundFile;
             
-            int index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)fileName);
+            LRESULT index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)fileName);
             if (index != CB_ERR) {
                 SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
             } else {
@@ -95,7 +95,7 @@ BOOL HandleSoundTestButton(HWND hwndDlg, HWND hwndCombo, HWND hwndSlider, BOOL* 
             int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
             SetAudioVolume(volume);
             
-            wchar_t wFileName[MAX_PATH];
+            wchar_t wFileName[MAX_PATH] = {0};
             SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
             
             char tempSoundFile[MAX_PATH];
@@ -158,7 +158,7 @@ void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo) {
     PopulateNotificationSoundComboBox(hwndCombo, currentFile);
     
     if (selectedFile[0] != L'\0') {
-        int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
+        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)selectedFile);
         if (newIndex != CB_ERR) {
             SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
         } else {
@@ -180,7 +180,7 @@ void HandleSoundComboDropdown(HWND hwndCombo) {
     PopulateNotificationSoundComboBox(hwndCombo, currentFile);
     
     if (selectedFile[0] != L'\0') {
-        int newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, -1, (LPARAM)selectedFile);
+        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)selectedFile);
         if (newIndex != CB_ERR) {
             SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
         }

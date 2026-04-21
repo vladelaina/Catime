@@ -55,7 +55,7 @@ static wchar_t* NormalizeWhitespace(wchar_t* str) {
 }
 
 static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
-    wchar_t cmdStr[2] = {cmd, L'\0'};
+    const wchar_t cmdStr[2] = {cmd, L'\0'};
     
     for (size_t i = 0; i < sizeof(SINGLE_CHAR_COMMANDS) / sizeof(SINGLE_CHAR_COMMANDS[0]); i++) {
         if (wcscmp(cmdStr, SINGLE_CHAR_COMMANDS[i].command) == 0) {
@@ -127,7 +127,7 @@ BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) 
     wcsncpy(buf, lpCmdLine, sizeof(buf)/sizeof(wchar_t) - 1);
     buf[sizeof(buf)/sizeof(wchar_t) - 1] = L'\0';
     
-    wchar_t* cmd = NormalizeWhitespace(buf);
+    const wchar_t* cmd = NormalizeWhitespace(buf);
     if (!cmd || *cmd == L'\0') return FALSE;
     
     size_t len = wcslen(cmd);

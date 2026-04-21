@@ -101,4 +101,3 @@ void ShowCliHelpDialog(HWND hwndParent);
 INT_PTR CALLBACK CliHelpDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #endif /* DIALOG_INFO_H */
-

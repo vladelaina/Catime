@@ -6,6 +6,7 @@
 #include "config.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
+#include "timer/timer_events.h"
 #include "log.h"
 #include <windows.h>
 #include <shlobj.h>
@@ -72,6 +73,7 @@ static const size_t STARTUP_MODE_COUNT = sizeof(STARTUP_MODE_CONFIGS) / sizeof(S
 static BOOL GetStartupShortcutPath(wchar_t* output, size_t outputSize) {
     wchar_t startupFolder[MAX_PATH];
     HRESULT hr;
+    UNREFERENCED_PARAMETER(outputSize);
     
     hr = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupFolder);
     if (FAILED(hr)) {
@@ -152,6 +154,7 @@ static BOOL ReadStartupModeConfig(char* modeName, size_t modeNameSize) {
     FILE* configFile;
     char line[CONFIG_LINE_BUFFER_SIZE];
     BOOL found = FALSE;
+    UNREFERENCED_PARAMETER(modeNameSize);
     
     GetConfigPath(configPath, MAX_PATH);
     
@@ -188,9 +191,6 @@ static void ApplyModeConfig(HWND hwnd, const StartupModeConfig* config) {
     countup_elapsed_time = 0;
     
     /* Initialize absolute time references for timer calculation */
-    extern int64_t g_start_time;
-    extern int64_t g_target_end_time;
-    extern int64_t GetAbsoluteTimeMs(void);
     int64_t now = GetAbsoluteTimeMs();
     
     if (config->countUp) {
@@ -199,7 +199,6 @@ static void ApplyModeConfig(HWND hwnd, const StartupModeConfig* config) {
         g_target_end_time = now + ((int64_t)CLOCK_TOTAL_TIME * 1000);
     }
     
-    extern void ResetMillisecondAccumulator(void);
     ResetMillisecondAccumulator();
     
     if (config->enableTimer) {

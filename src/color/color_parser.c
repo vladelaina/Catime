@@ -151,7 +151,7 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     strncpy(lower, input, sizeof(lower) - 1);
     lower[sizeof(lower) - 1] = '\0';
     for (char* p = lower; *p; p++) {
-        *p = tolower(*p);
+        *p = (char)tolower((unsigned char)*p);
     }
     
     if (ParseCSSColor(lower, output, output_size)) return;
@@ -251,4 +251,3 @@ BOOL isValidColorOrGradient(const char* input) {
     /* Single color: use existing validation */
     return isValidColor(input);
 }
-

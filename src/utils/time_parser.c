@@ -55,7 +55,7 @@ BOOL TimeParser_Validate(const char* input) {
     int digit_count = 0;
 
     for (int i = 0; i < len; i++) {
-        char c = tolower((unsigned char)input[i]);
+        int c = tolower((unsigned char)input[i]);
         if (isdigit(input[i])) {
             digit_count++;
         } else if (c == ' ' || c == '\t') {
@@ -76,7 +76,7 @@ BOOL TimeParser_HasUnits(const char* input) {
     if (!input) return FALSE;
 
     for (const char* p = input; *p; p++) {
-        char c = tolower((unsigned char)*p);
+        int c = tolower((unsigned char)*p);
         if (c == 'h' || c == 'm' || c == 's') {
             return TRUE;
         }
@@ -206,9 +206,9 @@ BOOL TimeParser_ParseBasic(const char* input, int* seconds) {
         pos = SkipWhitespace(pos);
 
         char unit = '\0';
-        char c = tolower((unsigned char)*pos);
+        int c = tolower((unsigned char)*pos);
         if (c == 'h' || c == 'm' || c == 's') {
-            unit = c;
+            unit = (char)c;
             pos++;
         }
 
@@ -265,7 +265,6 @@ BOOL TimeParser_ParseAdvanced(const char* input, int* seconds) {
 
     /* Check for absolute time format (ends with 't' or 'T') */
     if (len > 0 && (input_copy[len - 1] == 't' || input_copy[len - 1] == 'T')) {
-        input_copy[len - 1] = '\0';
         /* For now, delegate to ParseBasic as we don't implement absolute time in core */
         /* This can be extended in the future if needed */
         return FALSE;
@@ -380,7 +379,7 @@ void TimeParser_FormatToHMS(int seconds, int* hours, int* mins, int* secs) {
  * ============================================================================ */
 
 int TimeParser_GetUnitMultiplier(char unit) {
-    char c = tolower((unsigned char)unit);
+    int c = tolower((unsigned char)unit);
     switch (c) {
         case 'h': return SECONDS_PER_HOUR;
         case 'm': return SECONDS_PER_MINUTE;

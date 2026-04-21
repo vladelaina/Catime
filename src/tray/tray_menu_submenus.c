@@ -162,7 +162,6 @@ void BuildTimeoutActionSubmenu(HMENU hMenu) {
  * @param hMenu Parent menu handle
  */
 void BuildPresetManagementSubmenu(HMENU hMenu) {
-    extern char CLOCK_STARTUP_MODE[20];
     
     HMENU hTimeOptionsMenu = CreatePopupMenu();
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
@@ -255,21 +254,21 @@ void BuildFormatSubmenu(HMENU hMenu) {
 void BuildColorSubmenu(HMENU hMenu) {
     HMENU hColorSubMenu = CreatePopupMenu();
 
-    for (int i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
         /* Display as sequence number for easier selection */
         wchar_t hexColorW[32];
-        _snwprintf_s(hexColorW, 32, _TRUNCATE, L"%d", i + 1);
+        _snwprintf_s(hexColorW, 32, _TRUNCATE, L"%u", (unsigned int)(i + 1));
         
         MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
         mii.fType = MFT_STRING | MFT_OWNERDRAW;
         mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
-        mii.wID = CMD_COLOR_OPTIONS_BASE + i;
+        mii.wID = CMD_COLOR_OPTIONS_BASE + (UINT)i;
         mii.dwTypeData = hexColorW;
         
-        InsertMenuItem(hColorSubMenu, i, TRUE, &mii);
+        InsertMenuItem(hColorSubMenu, (UINT)i, TRUE, &mii);
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
 

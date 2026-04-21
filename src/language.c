@@ -130,10 +130,7 @@ static int UTF8ToWideChar(const char* utf8, wchar_t* wstr, int wstr_size) {
 }
 
 static const char* SkipUTF8BOM(const char* str) {
-    if (str[0] == (char)0xEF && str[1] == (char)0xBB && str[2] == (char)0xBF) {
-        return str + 3;
-    }
-    return str;
+    return (strncmp(str, "\xEF\xBB\xBF", 3) == 0) ? str + 3 : str;
 }
 
 /** @param outBuffer Caller must free */
@@ -172,7 +169,7 @@ static BOOL LoadResourceToBuffer(UINT resourceId, char** outBuffer) {
 static void ParseLanguageBuffer(char* buffer) {
     wchar_t wide_buffer[MAX_STRING_LENGTH];
     
-    char* line = strtok(buffer, "\r\n");
+    const char* line = strtok(buffer, "\r\n");
     
     while (line && g_translation_count < MAX_TRANSLATIONS) {
         if (line[0] == '\0') {
@@ -180,7 +177,7 @@ static void ParseLanguageBuffer(char* buffer) {
             continue;
         }
         
-        line = (char*)SkipUTF8BOM(line);
+        line = SkipUTF8BOM(line);
         
         if (UTF8ToWideChar(line, wide_buffer, MAX_STRING_LENGTH) > 0) {
             ParseIniLine(wide_buffer);

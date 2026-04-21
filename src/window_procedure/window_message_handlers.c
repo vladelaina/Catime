@@ -12,6 +12,12 @@
 #include "timer/main_timer.h"
 #include "tray/tray_events.h"
 #include "tray/tray_animation_core.h"
+#include "config/config_watcher.h"
+#include "update/update_internal.h"
+#include "dialog/dialog_plugin_security.h"
+#include "plugin/plugin_process.h"
+#include "audio_player.h"
+#include "timer/timer.h"
 #include "drag_scale.h"
 #include "window_procedure/window_procedure.h"
 #include "cli.h"
@@ -37,6 +43,8 @@
 #define BUFFER_SIZE_CLI_INPUT 256
 #define BUFFER_SIZE_MENU_ITEM 100
 
+UINT GetPendingAnimationPreviewItem(void);
+
 extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;
 extern size_t COLOR_OPTIONS_COUNT;
@@ -50,30 +58,29 @@ LRESULT HandleCreate(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     RegisterGlobalHotkeys(hwnd);
     HandleWindowCreate(hwnd);
-    extern void ConfigWatcher_Start(HWND hwnd);
     ConfigWatcher_Start(hwnd);
     return 0;
 }
 
 LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
-    
+
     /* In non-edit mode, show hand cursor for clickable regions */
     if (!CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
         POINT pt;
         GetCursorPos(&pt);
-        
+
         RECT rcWindow;
         GetWindowRect(hwnd, &rcWindow);
         UpdateRegionPositions(rcWindow.left, rcWindow.top);
-        
+
         const ClickableRegion* region = GetClickableRegionAt(pt);
         if (region) {
             SetCursor(LoadCursorW(NULL, IDC_HAND));
             return TRUE;
         }
     }
-    
+
     if (CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
         SetCursor(LoadCursorW(NULL, IDC_ARROW));
         return TRUE;
@@ -86,25 +93,25 @@ LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleLButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp;
-    
+    (void)wp; (void)lp;
+
     /* In non-edit mode, check for clickable region clicks */
     if (!CLOCK_EDIT_MODE) {
         POINT pt;
         GetCursorPos(&pt);
-        
+
         /* Update region positions */
         RECT rcWindow;
         GetWindowRect(hwnd, &rcWindow);
         UpdateRegionPositions(rcWindow.left, rcWindow.top);
-        
+
         const ClickableRegion* region = GetClickableRegionAt(pt);
         if (region) {
             HandleRegionClick(region, hwnd);
             return 0;
         }
     }
-    
+
     StartDragWindow(hwnd);
     return 0;
 }
@@ -157,17 +164,13 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     }
     if (wp == IDT_ANIMATION_PREVIEW_DELAY) {
         KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
-        extern UINT GetPendingAnimationPreviewItem(void);
         UINT menuItem = GetPendingAnimationPreviewItem();
         if (menuItem != 0) {
-            extern BOOL DispatchMenuPreview(HWND hwnd, UINT menuId);
             DispatchMenuPreview(hwnd, menuItem);
         }
         return 0;
     }
     /* Handle click-through timer for dynamic WS_EX_TRANSPARENT switching */
-    extern UINT GetClickThroughTimerId(void);
-    extern void UpdateClickThroughState(HWND hwnd);
     if (wp == GetClickThroughTimerId()) {
         UpdateClickThroughState(hwnd);
         return 0;
@@ -193,9 +196,8 @@ LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     UnregisterGlobalHotkeys(hwnd);
     HandleWindowDestroy(hwnd);
-    extern void ConfigWatcher_Stop(void);
     ConfigWatcher_Stop();
-    
+
     return 0;
 }
 
@@ -205,8 +207,9 @@ LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
+    UNREFERENCED_PARAMETER(hwnd);
     (void)wp;
-    WINDOWPOS* pwp = (WINDOWPOS*)lp;
+    const WINDOWPOS* pwp = (const WINDOWPOS*)lp;
     if (!(pwp->flags & SWP_NOSIZE)) {
         if (CLOCK_EDIT_MODE) {
             // Region update logic removed - relying on UpdateLayeredWindow alpha channel
@@ -406,20 +409,20 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
     GradientType gradientType = GetGradientTypeByName(hexColor);
-    
+
     /* Draw color/gradient with space for sequence number */
     RECT colorRect = lpdis->rcItem;
     colorRect.left += 28;  /* Leave space for number */
-    
+
     if (gradientType != GRADIENT_NONE) {
         const GradientInfo* info = GetGradientInfo(gradientType);
         if (!info) return FALSE;
         DrawGradientRect(lpdis->hDC, &colorRect, info);
     } else {
-        int r, g, b;
+        unsigned int r = 0, g = 0, b = 0;
         sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
 
-        HBRUSH hBrush = CreateSolidBrush(RGB(r, g, b));
+        HBRUSH hBrush = CreateSolidBrush(RGB((int)r, (int)g, (int)b));
         HPEN hPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
 
         HGDIOBJ oldBrush = SelectObject(lpdis->hDC, hBrush);
@@ -469,8 +472,6 @@ LRESULT HandleDialogCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     int seconds = (int)wp;
     if (seconds > 0) {
-        extern void CleanupBeforeTimerAction(void);
-        extern BOOL StartCountdownWithTime(HWND hwnd, int seconds);
         CleanupBeforeTimerAction();
         StartCountdownWithTime(hwnd, seconds);
     }
@@ -498,7 +499,6 @@ LRESULT HandleDialogColor(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     if (wp == 0) {
         /* Color cancelled - restore preview if needed */
-        extern void CancelPreview(HWND hwnd);
         CancelPreview(hwnd);
     }
     InvalidateRect(hwnd, NULL, TRUE);
@@ -514,7 +514,6 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     if (wp == IDYES) {
         /* User chose to update - trigger download and exit */
-        extern void TriggerUpdateDownload(HWND hwnd);
         TriggerUpdateDownload(hwnd);
     }
     return 0;
@@ -528,13 +527,11 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (wp == 1) {
         if (lp == 0) {
-            extern void ShowStoredUpdateDialog(HWND hwnd);
             ShowStoredUpdateDialog(hwnd);
         } else {
             LOG_INFO("Silent update check found new version - notification deferred to menu");
         }
     } else {
-        extern void ShowStoredNoUpdateDialog(HWND hwnd);
         ShowStoredNoUpdateDialog(hwnd);
     }
     return 0;
@@ -548,9 +545,6 @@ LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleDialogFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     if (wp == IDOK) {
-        extern void SetFontLicenseAccepted(BOOL);
-        extern void SetFontLicenseVersionAccepted(const char*);
-        extern const char* GetCurrentFontLicenseVersion(void);
         SetFontLicenseAccepted(TRUE);
         SetFontLicenseVersionAccepted(GetCurrentFontLicenseVersion());
         InvalidateRect(hwnd, NULL, TRUE);
@@ -565,53 +559,33 @@ LRESULT HandleDialogFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
  */
 LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
-    
-    extern int GetPendingPluginIndex(void);
-    extern void ClearPendingPluginInfo(void);
-    extern BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin);
-    extern const PluginInfo* PluginManager_GetPlugin(int index);
-    extern void PluginData_SetText(const wchar_t* text);
-    extern void PluginData_SetActive(BOOL active);
-    extern const wchar_t* PluginProcess_GetLastError(void);
-    extern void StopNotificationSound(void);
-    extern void GetActiveColor(char* outColor, size_t bufferSize);
-    extern BOOL CLOCK_SHOW_CURRENT_TIME;
-    extern BOOL CLOCK_COUNT_UP;
-    extern BOOL CLOCK_IS_PAUSED;
-    extern int CLOCK_TOTAL_TIME;
-    extern int countdown_elapsed_time;
-    extern int countup_elapsed_time;
-    extern POMODORO_PHASE current_pomodoro_phase;
-    
+
     int pluginIndex = GetPendingPluginIndex();
-    
+
     if (wp == IDCANCEL) {
         /* User cancelled - just clear pending info, don't change display state */
         ClearPendingPluginInfo();
         return 0;
     }
-    
+
     /* User confirmed - now change state and start plugin */
-    
+
     /* Stop notification sound */
     StopNotificationSound();
-    
+
     /* Prevent countdown completion notification from triggering */
-    extern BOOL countdown_message_shown;
     countdown_message_shown = TRUE;
-    
+
     /* Reset timer flags */
     CLOCK_SHOW_CURRENT_TIME = FALSE;
     CLOCK_COUNT_UP = FALSE;
     CLOCK_IS_PAUSED = TRUE;
-    
+
     /* Stop internal timer */
     MainTimer_Stop();
-    
+
     /* Reset Pomodoro if active */
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-    }
+    current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
     /* Reset timer values */
     CLOCK_TOTAL_TIME = 0;
@@ -626,11 +600,11 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
         PluginData_SetText(loadingText);
         PluginData_SetActive(TRUE);
     }
-    
+
     /* IDYES = Trust & Run, IDOK = Run Once */
     BOOL trustPlugin = (wp == IDYES);
     BOOL startResult = PluginManager_StartPluginAfterSecurityCheck(pluginIndex, trustPlugin);
-    
+
     if (!startResult) {
         /* Failed to start after security check - show specific error */
         const wchar_t* errorMsg = PluginProcess_GetLastError();
@@ -641,20 +615,20 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
         PluginData_SetActive(TRUE);
     }
-    
+
     /* Check if animated gradient needs timer for smooth animation */
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
         MainTimer_Start(hwnd, 66);  /* 15 FPS for smooth animation */
     }
-    
+
     /* Re-apply visibility/topmost policy to recover from any z-order drift */
     EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
-    
+
     ClearPendingPluginInfo();
-    
+
     return 0;
 }
 
@@ -666,14 +640,12 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandlePluginHotReload(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd;
     (void)lp;
-    
-    extern BOOL PluginManager_RestartPlugin(int index);
-    
+
     int pluginIndex = (int)wp;
     LOG_INFO("[HotReload] Restarting plugin %d from main thread", pluginIndex);
-    
+
     PluginManager_RestartPlugin(pluginIndex);
-    
+
     return 0;
 }
 

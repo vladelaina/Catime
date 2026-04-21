@@ -14,7 +14,7 @@
  * @brief Measure multi-line Markdown text with headings
  */
 BOOL MeasureMarkdownSTB(const wchar_t* text,
-                        MarkdownHeading* headings, int headingCount,
+                        const MarkdownHeading* headings, int headingCount,
                         int fontSize, int* width, int* height);
 
 /**
@@ -22,11 +22,11 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
  */
 void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownLink* links, int linkCount,
-                       MarkdownHeading* headings, int headingCount,
+                       const MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
                        MarkdownBlockquote* blockquotes, int blockquoteCount,
                        MarkdownColorTag* colorTags, int colorTagCount,
-                       MarkdownFontTag* fontTags, int fontTagCount,
+                       const MarkdownFontTag* fontTags, int fontTagCount,
                        COLORREF color, int fontSize, float fontScale, int gradientMode);
 
 #endif // DRAWING_MARKDOWN_STB_H

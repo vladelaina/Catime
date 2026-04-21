@@ -27,7 +27,7 @@ void CalculateScrollbarThumbRect(RECT clientRect, int scrollPos, int scrollMax,
 
     int maxThumbTop = trackHeight - thumbHeight;
     int scrollRange = contentHeight - scrollPage;
-    int thumbTop = (scrollRange > 0 && maxThumbTop > 0) ? (int)((float)scrollPos / scrollRange * maxThumbTop) : 0;
+    int thumbTop = (maxThumbTop > 0) ? (int)((float)scrollPos / scrollRange * maxThumbTop) : 0;
 
     outThumbRect->left = clientRect.right - MODERN_SCROLLBAR_WIDTH - MODERN_SCROLLBAR_MARGIN;
     outThumbRect->top = clientRect.top + thumbTop;
@@ -53,6 +53,7 @@ void DrawRoundedRect(HDC hdc, RECT rect, int radius, COLORREF color) {
 /** @brief Subclassed window procedure for scrollable notes control */
 LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
                                          UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    UNREFERENCED_PARAMETER(dwRefData);
     switch (msg) {
         case WM_LBUTTONDOWN: {
             int scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
@@ -76,8 +77,7 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                     return 0;
                 } else if (pt.x >= clientRect.right - MODERN_SCROLLBAR_WIDTH - MODERN_SCROLLBAR_MARGIN) {
                     int trackHeight = clientRect.bottom - clientRect.top;
-                    int thumbHeight = (scrollMax > 0) ? (int)((float)scrollPage / scrollMax * trackHeight) : trackHeight;
-                    if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
+                    (void)trackHeight;
 
                     if (pt.y < thumbRect.top) {
                         scrollPos -= scrollPage;

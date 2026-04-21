@@ -195,9 +195,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         !g_AppConfig.notification.display.disabled);
             
             int totalSeconds = g_AppConfig.notification.display.timeout_ms / 1000;
-            st.wHour = totalSeconds / 3600;
-            st.wMinute = (totalSeconds % 3600) / 60;
-            st.wSecond = totalSeconds % 60;
+            st.wHour = (WORD)(totalSeconds / 3600);
+            st.wMinute = (WORD)((totalSeconds % 3600) / 60);
+            st.wSecond = (WORD)(totalSeconds % 60);
             
             SendDlgItemMessage(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, DTM_SETSYSTEMTIME, 
                               GDT_VALID, (LPARAM)&st);
@@ -282,7 +282,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         strncpy(tempSoundFile, g_AppConfig.notification.sound.sound_file, sizeof(tempSoundFile) - 1);
                         tempSoundFile[sizeof(tempSoundFile) - 1] = '\0';
 
-                        wchar_t wFileName[MAX_PATH];
+                        wchar_t wFileName[MAX_PATH] = {0};
                         SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
 
                         const wchar_t* sysBeepText = GetLocalizedString(NULL, L"System Beep");
@@ -410,7 +410,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 char soundFile[MAX_PATH] = {0};
                 
                 if (index > 0) {
-                    wchar_t wFileName[MAX_PATH];
+                    wchar_t wFileName[MAX_PATH] = {0};
                     SendMessageW(hwndCombo, CB_GETLBTEXT, index, (LPARAM)wFileName);
                     
                     const wchar_t* sysBeepText = GetLocalizedString(NULL, L"System Beep");

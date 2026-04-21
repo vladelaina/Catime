@@ -23,7 +23,7 @@
  * Uses aggressive focus stealing because Windows fails to reliably bring
  * topmost windows to front on request.
  */
-void ShowCliHelpDialog(HWND hwnd);
+void ShowCliHelpDialog(HWND hwndParent);
 
 /**
  * @brief Parses and executes CLI command

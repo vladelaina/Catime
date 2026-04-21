@@ -17,7 +17,12 @@
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
+#ifdef _MSC_VER
+#include <string.h>
+#define strcasecmp _stricmp
+#else
 #include <strings.h>
+#endif
 #include <stddef.h>
 #include <windows.h>
 #include <winnls.h>
@@ -284,7 +289,7 @@ void WriteDefaultsToConfig(const char* config_path) {
             fputs(";========================================================\n", f);
             fputs("; Hotkeys section help (hot reload supported)\n", f);
             fputs(";========================================================\n", f);
-            fputs("; Format: KEY=Ctrl+Shift+Alt+Key  or  KEY=None  or  KEY=0xNN (hex VK)\n", f);
+            fputs("; Value examples: Ctrl+Shift+Alt+F5, None, 0xNN (hex VK)\n", f);
             fputs(";  - Modifiers: Ctrl, Shift, Alt (combine with '+')\n", f);
             fputs(";  - Keys: A-Z, 0-9, F1..F24, Backspace, Tab, Enter, Esc, Space,\n", f);
             fputs(";           PageUp, PageDown, End, Home, Left, Up, Right, Down, Insert, Delete,\n", f);
@@ -445,11 +450,11 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
         /* This handles migration from old ANSI config files to new UTF-8 ones */
         if (!IsUtf8String(line)) {
             wchar_t wLine[4096];
-            char utf8Line[4096];
             
             /* ANSI -> Wide */
             int wLen = MultiByteToWideChar(CP_ACP, 0, line, -1, wLine, 4096);
             if (wLen > 0) {
+                char utf8Line[4096];
                 /* Wide -> UTF-8 */
                 int uLen = WideCharToMultiByte(CP_UTF8, 0, wLine, -1, utf8Line, 4096, NULL, NULL);
                 if (uLen > 0) {
@@ -502,7 +507,7 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
             strncpy(entry->section, currentSection, sizeof(entry->section) - 1);
 
             /* Trim key */
-            char* key = trimmed;
+            const char* key = trimmed;
             char* keyEnd = eq - 1;
             while (keyEnd > key && isspace((unsigned char)*keyEnd)) keyEnd--;
             size_t keyLen = keyEnd - key + 1;
@@ -605,4 +610,3 @@ void MigrateConfig(const char* config_path) {
     /* Clean up */
     FreeConfigEntryList(oldConfig);
 }
-

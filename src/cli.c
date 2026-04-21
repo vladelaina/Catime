@@ -115,7 +115,7 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     return FALSE;
 }
 
-void ShowCliHelpDialog(HWND hwnd) {
+void ShowCliHelpDialog(HWND hwndParent) {
     if (g_cliHelpDialog && IsWindow(g_cliHelpDialog)) {
         DestroyWindow(g_cliHelpDialog);
         g_cliHelpDialog = NULL;
@@ -123,7 +123,7 @@ void ShowCliHelpDialog(HWND hwnd) {
         g_cliHelpDialog = CreateDialogParamW(
             GetModuleHandleW(NULL), 
             MAKEINTRESOURCE(IDD_CLI_HELP_DIALOG), 
-            hwnd, 
+            hwndParent,
             CliHelpDlgProc, 
             0
         );

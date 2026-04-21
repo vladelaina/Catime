@@ -215,7 +215,7 @@ BOOL InitFontSTB(const char* fontFilePath) {
  */
 void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight, 
                           int x_pos, int y_pos, 
-                          unsigned char* bitmap, int w, int h, 
+                          const unsigned char* bitmap, int w, int h,
                           int r, int g, int b) {
     DWORD* pixels = (DWORD*)destBits;
 
@@ -396,7 +396,7 @@ static void InitializeGradientLUT(const GradientInfo* info) {
 
 void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
                                 int x_pos, int y_pos, 
-                                unsigned char* bitmap, int w, int h, 
+                                const unsigned char* bitmap, int w, int h,
                                 int startX, int totalWidth, int gradientType,
                                 int timeOffset) {
     DWORD* pixels = (DWORD*)destBits;
@@ -516,7 +516,7 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
 
         /* Pointers */
         DWORD* destRow = pixels + (screen_y * destWidth) + (x_pos + start_i);
-        unsigned char* srcRow = bitmap + (j * w) + start_i;
+        const unsigned char* srcRow = bitmap + (j * w) + start_i;
 
         /* Pre-calculate starting LUT index for this row if Animated */
         float currentLutIdxFloat = 0.0f;
@@ -663,6 +663,8 @@ BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) 
 
 void RenderTextSTB(void* bits, int width, int height, const wchar_t* text, 
                    COLORREF color, int fontSize, float fontScale, BOOL editMode) {
+    UNREFERENCED_PARAMETER(editMode);
+
     if (!g_fontLoaded || !text || !bits) return;
 
     float scale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)(fontSize * fontScale));
@@ -684,12 +686,10 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
     
     // Calculate total text height to vertically center the whole block
     int totalTextHeight = 0;
-    int numLines = 0;
     {
         int w, h;
         MeasureTextSTB(text, (int)(fontSize * fontScale), &w, &h);
         totalTextHeight = h;
-        numLines = (lineHeight > 0) ? (h / lineHeight) : 1;
     }
     
     int startY = (height - totalTextHeight) / 2;

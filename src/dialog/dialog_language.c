@@ -259,7 +259,7 @@ static BOOL LocalizeControl(HWND hwndCtl, int dialogID, int controlID) {
 }
 
 static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
-    EnumChildWindowsData* data = (EnumChildWindowsData*)lParam;
+    const EnumChildWindowsData* data = (const EnumChildWindowsData*)lParam;
     int controlID = GetDlgCtrlID(hwndCtl);
     
     if (controlID == 0) {

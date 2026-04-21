@@ -127,10 +127,10 @@ void ReadConfig() {
         LOG_INFO("DEBUG_TRACE: >> Version MISMATCH detected. Entering logic block.");
         
         LOG_INFO("DEBUG_TRACE: Checking FORCE_CONFIG_RESET_ON_UPDATE macro value...");
-        int forceResetValue = FORCE_CONFIG_RESET_ON_UPDATE;
-        LOG_INFO("DEBUG_TRACE: FORCE_CONFIG_RESET_ON_UPDATE evaluates to: %d", forceResetValue);
+        LOG_INFO("DEBUG_TRACE: FORCE_CONFIG_RESET_ON_UPDATE evaluates to: %d", FORCE_CONFIG_RESET_ON_UPDATE);
 
-        if (forceResetValue) {
+#if FORCE_CONFIG_RESET_ON_UPDATE
+        {
             LOG_WARNING("DEBUG_TRACE: >> DECISION: FORCE RESET (Switch is ON)");
             LOG_INFO("DEBUG_TRACE: Preparing to delete old configuration file...");
             
@@ -206,13 +206,16 @@ void ReadConfig() {
             
             LOG_INFO("DEBUG_TRACE: Configuration reset and applied successfully.");
             return; /* EXIT FUNCTION HERE - Do not proceed to LoadConfigFromFile */
-        } else {
+        }
+#else
+        {
             LOG_INFO("DEBUG_TRACE: >> DECISION: STANDARD MIGRATION (Switch is OFF)");
             LOG_INFO("DEBUG_TRACE: Calling MigrateConfig...");
             MigrateConfig(config_path);
             needsWriteBack = TRUE;
             LOG_INFO("DEBUG_TRACE: >> MIGRATION COMPLETE. needsWriteBack set to TRUE.");
         }
+#endif
     } else {
         LOG_INFO("DEBUG_TRACE: >> Version MATCH detected. Skipping all migration/reset logic.");
         LOG_INFO("DEBUG_TRACE: Logic skipped because config version matches app version.");

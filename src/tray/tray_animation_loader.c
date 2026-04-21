@@ -220,7 +220,7 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
                 if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
                 if (fileCount >= maxCount) break;
                 
-                wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
+                const wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
                 if (!dot) continue;
                 
                 size_t nameLen = (size_t)(dot - ffd.cFileName);
@@ -266,7 +266,7 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
     
     for (int i = 0; i < fileCount; ++i) {
         HICON hIcon = NULL;
-        wchar_t* ext = wcsrchr(files[i].path, L'.');
+        const wchar_t* ext = wcsrchr(files[i].path, L'.');
         
         if (ext && _wcsicmp(ext, L".ico") == 0) {
             hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, 
@@ -333,7 +333,7 @@ BOOL IsValidAnimationSource(const char* name) {
         do {
             if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
             
-            wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
+            const wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
             if (ext && (_wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
                        _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
                        _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 ||

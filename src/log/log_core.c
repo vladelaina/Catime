@@ -28,6 +28,24 @@ static CRITICAL_SECTION logCS;
 static volatile LONG csInitialized = 0;
 static LogLevel minLogLevel = LOG_LEVEL_INFO;
 
+#define LOG_CS_UNINITIALIZED 0
+#define LOG_CS_INITIALIZING 1
+#define LOG_CS_INITIALIZED 2
+
+static void EnsureLogCSInitialized(void) {
+    if (InterlockedCompareExchange(&csInitialized,
+                                   LOG_CS_INITIALIZING,
+                                   LOG_CS_UNINITIALIZED) == LOG_CS_UNINITIALIZED) {
+        InitializeCriticalSection(&logCS);
+        InterlockedExchange(&csInitialized, LOG_CS_INITIALIZED);
+        return;
+    }
+
+    while (InterlockedCompareExchange(&csInitialized, 0, 0) == LOG_CS_INITIALIZING) {
+        Sleep(0);
+    }
+}
+
 void GetLogFilePath(wchar_t* logPath, size_t size) {
     char configPath[MAX_PATH] = {0};
     GetConfigPath(configPath, MAX_PATH);
@@ -35,7 +53,7 @@ void GetLogFilePath(wchar_t* logPath, size_t size) {
     wchar_t configPathW[MAX_PATH] = {0};
     MultiByteToWideChar(CP_UTF8, 0, configPath, -1, configPathW, MAX_PATH);
     
-    wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
+    const wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
     if (lastSeparator) {
         size_t dirLen = lastSeparator - configPathW + 1;
         wcsncpy(logPath, configPathW, dirLen);
@@ -60,10 +78,7 @@ static ULONGLONG GetLogFileSize(void) {
     
     WIN32_FILE_ATTRIBUTE_DATA fileInfo;
     if (GetFileAttributesExW(LOG_FILE_PATH, GetFileExInfoStandard, &fileInfo)) {
-        ULARGE_INTEGER size;
-        size.LowPart = fileInfo.nFileSizeLow;
-        size.HighPart = fileInfo.nFileSizeHigh;
-        return size.QuadPart;
+        return ((ULONGLONG)fileInfo.nFileSizeHigh << 32) | (ULONGLONG)fileInfo.nFileSizeLow;
     }
     
     return 0;
@@ -152,9 +167,7 @@ static void CheckAndRotateLog(void) {
 }
 
 BOOL InitializeLogSystem(void) {
-    if (InterlockedCompareExchange(&csInitialized, 1, 0) == 0) {
-        InitializeCriticalSection(&logCS);
-    }
+    EnsureLogCSInitialized();
 
     GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
 
@@ -218,12 +231,15 @@ void WriteLog(LogLevel level, const char* format, ...) {
     }
 
     time_t now;
-    struct tm local_time;
+    struct tm local_time = {0};
     char timeStr[32] = {0};
 
     time(&now);
-    localtime_s(&local_time, &now);
-    strftime(timeStr, sizeof(timeStr), LOG_TIMESTAMP_FORMAT, &local_time);
+    if (localtime_s(&local_time, &now) == 0) {
+        strftime(timeStr, sizeof(timeStr), LOG_TIMESTAMP_FORMAT, &local_time);
+    } else {
+        strcpy_s(timeStr, sizeof(timeStr), "1970-01-01 00:00:00");
+    }
 
     /* Format log message */
     char logBuffer[4096];
@@ -260,13 +276,18 @@ void CleanupLogSystem(void) {
         hLogFile = INVALID_HANDLE_VALUE;
     }
 
-    if (InterlockedCompareExchange(&csInitialized, 0, 1) == 1) {
+    while (InterlockedCompareExchange(&csInitialized, 0, 0) == LOG_CS_INITIALIZING) {
+        Sleep(0);
+    }
+
+    if (InterlockedCompareExchange(&csInitialized, 0, 0) == LOG_CS_INITIALIZED) {
         DeleteCriticalSection(&logCS);
+        InterlockedExchange(&csInitialized, LOG_CS_UNINITIALIZED);
     }
 }
 
-void SetMinimumLogLevel(LogLevel level) {
-    minLogLevel = level;
+void SetMinimumLogLevel(LogLevel minLevel) {
+    minLogLevel = minLevel;
 }
 
 LogLevel GetMinimumLogLevel(void) {

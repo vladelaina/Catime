@@ -5,7 +5,11 @@
 
 #include "color/gradient.h"
 #include <string.h>
-#include <strings.h> // for strcasecmp
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
+#else
+#include <strings.h>
+#endif
 
 /* ============================================================================
  * Gradient Definitions Table
@@ -82,7 +86,7 @@ static char g_CustomNameBuffer[COLOR_HEX_BUFFER];
 static uint32_t g_CustomVersion = 0;
 
 static COLORREF ParseHexColor(const char* hex) {
-    int r, g, b;
+    unsigned int r, g, b;
     const char* start = (hex[0] == '#') ? hex + 1 : hex;
     if (sscanf(start, "%02x%02x%02x", &r, &g, &b) == 3) {
         return RGB(r, g, b);
@@ -107,7 +111,7 @@ static void ParseCustomGradient(const char* name) {
 
     int count = 0;
     char* ctx = NULL;
-    char* token = strtok_s(tempName, "_", &ctx);
+    const char* token = strtok_s(tempName, "_", &ctx);
     
     while (token && count < MAX_CUSTOM_GRADIENT_COLORS) {
         g_CustomPalette[count++] = ParseHexColor(token);

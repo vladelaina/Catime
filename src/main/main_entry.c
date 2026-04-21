@@ -38,8 +38,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    
-    SetupDesktopShortcut();
+    if (!IsCiSmokeMode()) {
+        SetupDesktopShortcut();
+    }
     InitializeDialogLanguages();
     
     HANDLE hMutex = NULL;

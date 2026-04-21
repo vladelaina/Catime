@@ -10,9 +10,13 @@
 #include "window_procedure/window_utils.h"
 #include "window_procedure/window_helpers.h"
 #include "tray/tray_events.h"
+#include "tray/tray_animation_core.h"
+#include "tray/tray.h"
 #include "config.h"
 #include "timer/timer.h"
+#include "timer/timer_events.h"
 #include "timer/main_timer.h"
+#include "audio_player.h"
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
@@ -23,6 +27,7 @@
 #include <windowsx.h>
 
 #include "window_procedure/window_drop_target.h"
+#include "window_procedure/window_events.h"
 #include "color/color_parser.h"
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
@@ -66,15 +71,12 @@ static LRESULT HandlePowerBroadcast(HWND hwnd, WPARAM wp, LPARAM lp) {
 
         /* Step 1: Clear animation name to force reload
          * This bypasses the "same name" check in ApplyAnimationPathValueNoPersist */
-        extern void TrayAnimation_ClearCurrentName(void);
         TrayAnimation_ClearCurrentName();
 
         /* Step 2: Reload animation from config */
-        extern LRESULT HandleAppAnimPathChanged(HWND);
         HandleAppAnimPathChanged(hwnd);
 
         /* Step 3: Recreate tray icon with newly loaded animation */
-        extern void RecreateTaskbarIcon(HWND, HINSTANCE);
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
 
         InterlockedExchange(&s_handling, 0);
@@ -92,20 +94,19 @@ typedef LRESULT (*AppMessageHandler)(HWND hwnd);
 typedef struct {
     UINT msgId;
     AppMessageHandler handler;
-    const char* description;
 } AppMessageDispatchEntry;
 
 static const AppMessageDispatchEntry APP_MESSAGE_DISPATCH_TABLE[] = {
-    {WM_APP_DISPLAY_CHANGED,       HandleAppDisplayChanged,       "Display settings reload"},
-    {WM_APP_TIMER_CHANGED,         HandleAppTimerChanged,         "Timer settings reload"},
-    {WM_APP_POMODORO_CHANGED,      HandleAppPomodoroChanged,      "Pomodoro settings reload"},
-    {WM_APP_NOTIFICATION_CHANGED,  HandleAppNotificationChanged,  "Notification settings reload"},
-    {WM_APP_HOTKEYS_CHANGED,       HandleAppHotkeysChanged,       "Hotkey assignments reload"},
-    {WM_APP_RECENTFILES_CHANGED,   HandleAppRecentFilesChanged,   "Recent files list reload"},
-    {WM_APP_COLORS_CHANGED,        HandleAppColorsChanged,        "Color options reload"},
-    {WM_APP_ANIM_SPEED_CHANGED,    HandleAppAnimSpeedChanged,     "Animation speed reload"},
-    {WM_APP_ANIM_PATH_CHANGED,     HandleAppAnimPathChanged,      "Animation path reload"},
-    {0,                             NULL,                          NULL}
+    {WM_APP_DISPLAY_CHANGED, HandleAppDisplayChanged},
+    {WM_APP_TIMER_CHANGED, HandleAppTimerChanged},
+    {WM_APP_POMODORO_CHANGED, HandleAppPomodoroChanged},
+    {WM_APP_NOTIFICATION_CHANGED, HandleAppNotificationChanged},
+    {WM_APP_HOTKEYS_CHANGED, HandleAppHotkeysChanged},
+    {WM_APP_RECENTFILES_CHANGED, HandleAppRecentFilesChanged},
+    {WM_APP_COLORS_CHANGED, HandleAppColorsChanged},
+    {WM_APP_ANIM_SPEED_CHANGED, HandleAppAnimSpeedChanged},
+    {WM_APP_ANIM_PATH_CHANGED, HandleAppAnimPathChanged},
+    {0,                             NULL}
 };
 
 static inline BOOL DispatchAppMessage(HWND hwnd, UINT msg) {
@@ -141,55 +142,54 @@ typedef LRESULT (*MessageHandler)(HWND hwnd, WPARAM wp, LPARAM lp);
 typedef struct {
     UINT msg;
     MessageHandler handler;
-    const char* description;
 } MessageDispatchEntry;
 
 static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
-    {WM_CREATE, HandleCreate, "Window creation"},
-    {WM_SETCURSOR, HandleSetCursor, "Cursor management"},
-    {WM_LBUTTONDOWN, HandleLButtonDown, "Mouse left button down"},
-    {WM_LBUTTONUP, HandleLButtonUp, "Mouse left button up"},
-    {WM_LBUTTONDBLCLK, HandleLButtonDblClk, "Mouse double-click"},
-    {WM_RBUTTONDOWN, HandleRButtonDown, "Mouse right button down"},
-    {WM_RBUTTONUP, HandleRButtonUp, "Mouse right button up"},
-    {WM_MOUSEWHEEL, HandleMouseWheel, "Mouse wheel scroll"},
-    {WM_MOUSEMOVE, HandleMouseMove, "Mouse movement"},
-    {WM_PAINT, HandlePaint, "Window painting"},
-    {WM_TIMER, HandleTimer, "Timer tick"},
-    {WM_DESTROY, HandleDestroy, "Window destruction"},
-    {CLOCK_WM_TRAYICON, HandleTrayIcon, "Tray icon message"},
-    {WM_COMMAND, HandleCommand, "Menu command"},
-    {WM_WINDOWPOSCHANGED, HandleWindowPosChanged, "Window position changed"},
-    {WM_DISPLAYCHANGE, HandleDisplayChange, "Display configuration changed"},
-    {WM_MENUSELECT, HandleMenuSelect, "Menu item selection"},
-    {WM_MEASUREITEM, HandleMeasureItem, "Owner-drawn menu measurement"},
-    {WM_DRAWITEM, HandleDrawItem, "Owner-drawn menu rendering"},
-    {WM_EXITMENULOOP, HandleExitMenuLoop, "Menu loop exit"},
-    {WM_SYSCOMMAND, HandleSysCommand, "System command"},
-    {WM_SIZE, HandleSize, "Window size state changed"},
-    {WM_CLOSE, HandleClose, "Window close"},
-    {WM_KEYDOWN, HandleKeyDown, "Key down"},
-    {WM_HOTKEY, HandleHotkey, "Global hotkey"},
-    {WM_COPYDATA, HandleCopyData, "Inter-process communication"},
-    {WM_POWERBROADCAST, HandlePowerBroadcast, "Power management events"},
-    {WM_APP_QUICK_COUNTDOWN_INDEX, HandleQuickCountdownIndex, "Quick countdown by index"},
-    {WM_APP_SHOW_CLI_HELP, HandleShowCliHelp, "Show CLI help"},
-    {WM_USER + 100, HandleTrayUpdateIcon, "Tray icon update"},
-    {WM_APP + 1, HandleAppReregisterHotkeys, "Hotkey re-registration"},
-    {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded, "Animation preview loaded"},
-    {CLOCK_WM_PLUGIN_EXIT, HandlePluginExitMessage, "Plugin exit via <exit> tag"},
-    {CLOCK_WM_MAIN_TIMER_TICK, HandleMainTimerTick, "High-precision timer tick"},
+    {WM_CREATE, HandleCreate},
+    {WM_SETCURSOR, HandleSetCursor},
+    {WM_LBUTTONDOWN, HandleLButtonDown},
+    {WM_LBUTTONUP, HandleLButtonUp},
+    {WM_LBUTTONDBLCLK, HandleLButtonDblClk},
+    {WM_RBUTTONDOWN, HandleRButtonDown},
+    {WM_RBUTTONUP, HandleRButtonUp},
+    {WM_MOUSEWHEEL, HandleMouseWheel},
+    {WM_MOUSEMOVE, HandleMouseMove},
+    {WM_PAINT, HandlePaint},
+    {WM_TIMER, HandleTimer},
+    {WM_DESTROY, HandleDestroy},
+    {CLOCK_WM_TRAYICON, HandleTrayIcon},
+    {WM_COMMAND, HandleCommand},
+    {WM_WINDOWPOSCHANGED, HandleWindowPosChanged},
+    {WM_DISPLAYCHANGE, HandleDisplayChange},
+    {WM_MENUSELECT, HandleMenuSelect},
+    {WM_MEASUREITEM, HandleMeasureItem},
+    {WM_DRAWITEM, HandleDrawItem},
+    {WM_EXITMENULOOP, HandleExitMenuLoop},
+    {WM_SYSCOMMAND, HandleSysCommand},
+    {WM_SIZE, HandleSize},
+    {WM_CLOSE, HandleClose},
+    {WM_KEYDOWN, HandleKeyDown},
+    {WM_HOTKEY, HandleHotkey},
+    {WM_COPYDATA, HandleCopyData},
+    {WM_POWERBROADCAST, HandlePowerBroadcast},
+    {WM_APP_QUICK_COUNTDOWN_INDEX, HandleQuickCountdownIndex},
+    {WM_APP_SHOW_CLI_HELP, HandleShowCliHelp},
+    {WM_USER + 100, HandleTrayUpdateIcon},
+    {WM_APP + 1, HandleAppReregisterHotkeys},
+    {CLOCK_WM_ANIMATION_PREVIEW_LOADED, HandleAnimationPreviewLoaded},
+    {CLOCK_WM_PLUGIN_EXIT, HandlePluginExitMessage},
+    {CLOCK_WM_MAIN_TIMER_TICK, HandleMainTimerTick},
     /* Modeless dialog result handlers */
-    {WM_DIALOG_COUNTDOWN, HandleDialogCountdown, "Countdown dialog result"},
-    {WM_DIALOG_SHORTCUT, HandleDialogShortcut, "Shortcut time dialog result"},
-    {WM_DIALOG_COLOR, HandleDialogColor, "Color dialog result"},
-    {WM_DIALOG_UPDATE, HandleDialogUpdate, "Update dialog result"},
-    {WM_UPDATE_CHECK_RESULT, HandleUpdateCheckResult, "Update check result from background thread"},
-    {WM_DIALOG_FONT_LICENSE, HandleDialogFontLicense, "Font license dialog result"},
-    {WM_DIALOG_PLUGIN_SECURITY, HandleDialogPluginSecurity, "Plugin security dialog result"},
-    {WM_PLUGIN_HOT_RELOAD, HandlePluginHotReload, "Plugin hot-reload from background thread"},
-    {WM_PLUGIN_NOTIFY, HandlePluginNotifyMessage, "Plugin notification from <notify> tag"},
-    {0, NULL, NULL}
+    {WM_DIALOG_COUNTDOWN, HandleDialogCountdown},
+    {WM_DIALOG_SHORTCUT, HandleDialogShortcut},
+    {WM_DIALOG_COLOR, HandleDialogColor},
+    {WM_DIALOG_UPDATE, HandleDialogUpdate},
+    {WM_UPDATE_CHECK_RESULT, HandleUpdateCheckResult},
+    {WM_DIALOG_FONT_LICENSE, HandleDialogFontLicense},
+    {WM_DIALOG_PLUGIN_SECURITY, HandleDialogPluginSecurity},
+    {WM_PLUGIN_HOT_RELOAD, HandlePluginHotReload},
+    {WM_PLUGIN_NOTIFY, HandlePluginNotifyMessage},
+    {0, NULL}
 };
 
 /* ============================================================================
@@ -199,30 +199,28 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
 LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     if (msg == WM_TASKBARCREATED) {
-        extern void RecreateTaskbarIcon(HWND, HINSTANCE);
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         RefreshWindowTopmostState(hwnd);
         return 0;
     }
-    
+
     /* Handle WM_MOUSEACTIVATE to prevent window activation in non-topmost mode */
     if (msg == WM_MOUSEACTIVATE) {
-        extern BOOL CLOCK_WINDOW_TOPMOST;
         if (!CLOCK_EDIT_MODE && !CLOCK_WINDOW_TOPMOST) {
             return MA_NOACTIVATE;  /* Don't activate window on click */
         }
     }
-    
+
     /* Handle WM_NCHITTEST for click-through in non-edit mode */
     if (msg == WM_NCHITTEST) {
         if (!CLOCK_EDIT_MODE) {
             POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
-            
+
             /* Update region positions based on current window position */
             RECT rcWindow;
             GetWindowRect(hwnd, &rcWindow);
             UpdateRegionPositions(rcWindow.left, rcWindow.top);
-            
+
             /* Check if cursor is over a clickable region */
             const ClickableRegion* region = GetClickableRegionAt(pt);
             if (region) {
@@ -231,17 +229,17 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             return HTTRANSPARENT;  /* Pass through */
         }
     }
-    
+
     if (DispatchAppMessage(hwnd, msg)) {
         return 0;
     }
-    
+
     for (const MessageDispatchEntry* entry = MESSAGE_DISPATCH_TABLE; entry->handler; entry++) {
         if (entry->msg == msg) {
             return entry->handler(hwnd, wp, lp);
         }
     }
-    
+
     return DefWindowProc(hwnd, msg, wp, lp);
 }
 
@@ -251,19 +249,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
 void ToggleShowTimeMode(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
-    extern POMODORO_PHASE current_pomodoro_phase;
-    extern void ResetPomodoroState(void);
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     if (!CLOCK_SHOW_CURRENT_TIME) {
         /* Turn on: switch to show current time mode */
         TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
-        
+
         MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
     } else {
@@ -274,11 +269,10 @@ void ToggleShowTimeMode(HWND hwnd) {
         CLOCK_TOTAL_TIME = 0;
         countdown_elapsed_time = 0;
         countup_elapsed_time = 0;
-        
+
         /* Mark as shown to prevent notification when entering idle state */
-        extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
-        
+
         MainTimer_Stop();
         InvalidateRect(hwnd, NULL, TRUE);
     }
@@ -286,17 +280,14 @@ void ToggleShowTimeMode(HWND hwnd) {
 
 void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
-    extern POMODORO_PHASE current_pomodoro_phase;
-    extern void ResetPomodoroState(void);
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
-    
+
     // Ensure timer is running
     MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
@@ -304,21 +295,17 @@ void StartCountUp(HWND hwnd) {
 
 void StartDefaultCountDown(HWND hwnd) {
     CleanupBeforeTimerAction();
-    
-    extern BOOL countdown_message_shown;
-    extern POMODORO_PHASE current_pomodoro_phase;
-    extern void ResetPomodoroState(void);
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     if (g_AppConfig.timer.default_start_time > 0) {
         /* Only reset countdown_message_shown when actually starting countdown */
         countdown_message_shown = FALSE;
         TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-        
+
         // Ensure timer is running
         MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
@@ -333,7 +320,6 @@ void StartPomodoroTimer(HWND hwnd) {
 
     EnsureWindowVisibleWithTopmostState(hwnd);
 
-    extern void InitializePomodoro(void);
     InitializePomodoro();
 
     CLOCK_SHOW_CURRENT_TIME = FALSE;
@@ -362,41 +348,35 @@ void ToggleEditMode(HWND hwnd) {
 
 
 void RestartCurrentTimer(HWND hwnd) {
-    extern void StopNotificationSound(void);
-    extern int message_shown, countdown_message_shown;
-    extern int countdown_elapsed_time, countup_elapsed_time;
-    extern void ResetMillisecondAccumulator(void);
-    
+
     CloseAllNotifications(); // Centralized cleanup
     StopNotificationSound();
-    
+
     CleanupBeforeTimerAction();
-    
+
     if (!CLOCK_SHOW_CURRENT_TIME) {
         message_shown = FALSE;
         countdown_message_shown = FALSE;
-        
+
         if (CLOCK_COUNT_UP) {
             countdown_elapsed_time = 0;
             countup_elapsed_time = 0;
         } else {
             countdown_elapsed_time = 0;
-            extern int elapsed_time;
             elapsed_time = 0;
         }
         CLOCK_IS_PAUSED = FALSE;
-        
+
         /* Call ResetTimer() to properly reset g_target_end_time for countdown mode */
         ResetTimer();
-        
+
         // Restart the timer after resetting pause state
         MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
-        
+
         InvalidateRect(hwnd, NULL, TRUE);
     }
-    
-    extern void HandleWindowReset(HWND);
+
     HandleWindowReset(hwnd);
 }
 
@@ -407,7 +387,7 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 
     /* countdown_message_shown is reset inside StartCountdownWithTime/StartDefaultCountDown */
     int zeroBased = index - 1;
-    if (zeroBased >= 0 && zeroBased < time_options_count) {
+    if (zeroBased < time_options_count) {
         StartCountdownWithTime(hwnd, time_options[zeroBased]);
     } else {
         StartDefaultCountDown(hwnd);
@@ -415,10 +395,9 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 }
 
 void CleanupBeforeTimerAction(void) {
-    extern void StopNotificationSound(void);
     StopNotificationSound();
     CloseAllNotifications();
-    
+
     // Check if plugin text has <catime> tag - if so, keep plugin active
     // The time will be embedded within the plugin text via the tag
     if (!PluginData_HasCatimeTag()) {
@@ -431,35 +410,31 @@ void CleanupBeforeTimerAction(void) {
 
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
-    
-    extern BOOL countdown_message_shown;
-    extern void ResetPomodoroState(void);
+
     countdown_message_shown = FALSE;
-    
+
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
-    
+
     TimerModeParams params = {seconds, TRUE, TRUE, TRUE};
     BOOL result = SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
-    
+
     // Ensure timer is running
     MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
-    
+
     return result;
 }
 
 void ToggleMilliseconds(HWND hwnd) {
-    extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
-    extern void ResetTimerWithInterval(HWND hwnd);
-    
+
     BOOL newState = !g_AppConfig.display.time_format.show_milliseconds;
     WriteConfigShowMilliseconds(newState);
-    
+
     /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
     ResetTimerWithInterval(hwnd);
-    
+
     InvalidateRect(hwnd, NULL, TRUE);
 }
 

@@ -5,8 +5,6 @@
 #include <windows.h>
 #include "resource.h"
 
-#pragma code_page(65001)
-
 /** @brief About dialog with links laid out horizontally */
 IDD_ABOUT_DIALOG DIALOGEX 0, 0, 280, 80
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -24,7 +22,7 @@ BEGIN
                                                                           100,  35, 180, 12
 
     /** Primary credit link positioned centrally */
-    CONTROL     "Special thanks to 猫屋敷梨梨Official for the icon", IDC_CREDIT_LINK, "Static", SS_OWNERDRAW | SS_NOTIFY,
+    CONTROL     "Special thanks for the icon", IDC_CREDIT_LINK, "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           100,  45, 350, 12
 
     /** Bottom row of clickable links for external resources */
@@ -38,4 +36,4 @@ BEGIN
                                                                           165,  65,  50, 12
     CONTROL     "Discord",                   IDC_SUPPORT,         "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           215,  65,  50, 12
-END 
+END

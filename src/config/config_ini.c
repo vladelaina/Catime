@@ -389,7 +389,7 @@ static IniFile* ParseIniFile(const char* filePath) {
             char* end = strchr(trimmed, ']');
             if (end) {
                 *end = '\0';
-                char* sectionName = TrimWhitespace(trimmed + 1);
+                const char* sectionName = TrimWhitespace(trimmed + 1);
                 currentSection = FindSection(ini, sectionName);
                 if (!currentSection) {
                     currentSection = CreateSection(ini, sectionName);
@@ -402,8 +402,8 @@ static IniFile* ParseIniFile(const char* filePath) {
         char* eq = strchr(trimmed, '=');
         if (eq && currentSection) {
             *eq = '\0';
-            char* key = TrimWhitespace(trimmed);
-            char* value = TrimWhitespace(eq + 1);
+            const char* key = TrimWhitespace(trimmed);
+            const char* value = TrimWhitespace(eq + 1);
 
             IniEntry* entry = FindEntry(currentSection, key);
             if (entry) {
@@ -604,8 +604,6 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
  */
 int ReadIniInt(const char* section, const char* key, int defaultValue,
                const char* filePath) {
-    char buffer[64];
-
     AcquireIniLock();
 
     const char* value = GetIniValue(section, key, filePath);

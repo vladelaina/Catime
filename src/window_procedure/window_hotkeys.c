@@ -176,7 +176,6 @@ static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
 }
 
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
-    extern WORD StringToHotkey(const char* str);
     extern void HotkeyToString(WORD hotkey, char* out, size_t size);
     
     LOG_INFO("Registering global hotkeys...");

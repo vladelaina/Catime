@@ -5,6 +5,7 @@
 
 #include "window/window_visual_effects.h"
 #include "log.h"
+#include "markdown/markdown_interactive.h"
 #include <dwmapi.h>
 
 /* ============================================================================
@@ -22,6 +23,7 @@
 
 typedef HRESULT (WINAPI *pfnDwmEnableBlurBehindWindow)(HWND hWnd, const DWM_BLURBEHIND* pBlurBehind);
 static pfnDwmEnableBlurBehindWindow _DwmEnableBlurBehindWindow = NULL;
+static HMODULE g_hDwmapi = NULL;
 
 /* ============================================================================
  * Windows composition structures (for blur effects)
@@ -61,9 +63,11 @@ static pfnSetWindowCompositionAttribute _SetWindowCompositionAttribute = NULL;
  * ============================================================================ */
 
 BOOL InitDWMFunctions(void) {
-    HMODULE hDwmapi = LoadLibraryW(DWMAPI_DLL);
-    if (hDwmapi) {
-        _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(hDwmapi, "DwmEnableBlurBehindWindow");
+    if (!g_hDwmapi) {
+        g_hDwmapi = LoadLibraryW(DWMAPI_DLL);
+    }
+    if (g_hDwmapi) {
+        _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(g_hDwmapi, "DwmEnableBlurBehindWindow");
         
         if (_DwmEnableBlurBehindWindow) {
             LOG_INFO("DWM functions loaded successfully");
@@ -124,11 +128,9 @@ void UpdateClickThroughState(HWND hwnd) {
     }
     
     /* Check if mouse is over a clickable region */
-    extern void UpdateRegionPositions(int windowX, int windowY);
-    extern const void* GetClickableRegionAt(POINT pt);
     
     UpdateRegionPositions(rcWindow.left, rcWindow.top);
-    const void* region = GetClickableRegionAt(pt);
+    const ClickableRegion* region = GetClickableRegionAt(pt);
     
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
     

@@ -143,7 +143,7 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
         return 0;
     }
     
-    BYTE buffer[WATCH_BUFFER_SIZE];
+    BYTE buffer[WATCH_BUFFER_SIZE] = {0};
     DWORD bytesReturned = 0;
     OVERLAPPED ov = {0};
     HANDLE hEvents[WATCH_EVENT_COUNT];

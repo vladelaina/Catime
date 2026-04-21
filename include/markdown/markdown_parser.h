@@ -214,7 +214,7 @@ const wchar_t* GetClickedLinkUrl(MarkdownLink* links, int linkCount, POINT point
  * @param linkIndex Output link index (optional)
  * @return TRUE if in link
  */
-BOOL IsCharacterInLink(MarkdownLink* links, int linkCount, int position, int* linkIndex);
+BOOL IsCharacterInLink(const MarkdownLink* links, int linkCount, int position, int* linkIndex);
 
 /**
  * @brief Check if character position is in heading (for styling)
@@ -224,7 +224,7 @@ BOOL IsCharacterInLink(MarkdownLink* links, int linkCount, int position, int* li
  * @param headingIndex Output heading index (optional)
  * @return TRUE if in heading
  */
-BOOL IsCharacterInHeading(MarkdownHeading* headings, int headingCount, int position, int* headingIndex);
+BOOL IsCharacterInHeading(const MarkdownHeading* headings, int headingCount, int position, int* headingIndex);
 
 /**
  * @brief Check if character position is in inline style (for styling)
@@ -234,7 +234,7 @@ BOOL IsCharacterInHeading(MarkdownHeading* headings, int headingCount, int posit
  * @param styleIndex Output style index (optional)
  * @return TRUE if in styled text
  */
-BOOL IsCharacterInStyle(MarkdownStyle* styles, int styleCount, int position, int* styleIndex);
+BOOL IsCharacterInStyle(const MarkdownStyle* styles, int styleCount, int position, int* styleIndex);
 
 /**
  * @brief Check if character position is in list item (for rendering)
@@ -244,7 +244,7 @@ BOOL IsCharacterInStyle(MarkdownStyle* styles, int styleCount, int position, int
  * @param listItemIndex Output list item index (optional)
  * @return TRUE if in list item
  */
-BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int position, int* listItemIndex);
+BOOL IsCharacterInListItem(const MarkdownListItem* listItems, int listItemCount, int position, int* listItemIndex);
 
 /**
  * @brief Check if character position is in blockquote (for rendering)
@@ -254,7 +254,7 @@ BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int p
  * @param blockquoteIndex Output blockquote index (optional)
  * @return TRUE if in blockquote
  */
-BOOL IsCharacterInBlockquote(MarkdownBlockquote* blockquotes, int blockquoteCount, int position, int* blockquoteIndex);
+BOOL IsCharacterInBlockquote(const MarkdownBlockquote* blockquotes, int blockquoteCount, int position, int* blockquoteIndex);
 
 /**
  * @brief Check if character position is in color tag (for rendering)
@@ -264,7 +264,7 @@ BOOL IsCharacterInBlockquote(MarkdownBlockquote* blockquotes, int blockquoteCoun
  * @param colorTagIndex Output color tag index (optional)
  * @return TRUE if in color tag
  */
-BOOL IsCharacterInColorTag(MarkdownColorTag* colorTags, int colorTagCount, int position, int* colorTagIndex);
+BOOL IsCharacterInColorTag(const MarkdownColorTag* colorTags, int colorTagCount, int position, int* colorTagIndex);
 
 /**
  * @brief Check if character position is in font tag (for rendering)
@@ -274,7 +274,7 @@ BOOL IsCharacterInColorTag(MarkdownColorTag* colorTags, int colorTagCount, int p
  * @param fontTagIndex Output font tag index (optional)
  * @return TRUE if in font tag
  */
-BOOL IsCharacterInFontTag(MarkdownFontTag* fontTags, int fontTagCount, int position, int* fontTagIndex);
+BOOL IsCharacterInFontTag(const MarkdownFontTag* fontTags, int fontTagCount, int position, int* fontTagIndex);
 
 /**
  * @brief Interpolate color for gradient at given position
@@ -318,7 +318,7 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                         MarkdownHeading* headings, int headingCount,
                         MarkdownStyle* styles, int styleCount,
                         MarkdownListItem* listItems, int listItemCount,
-                        MarkdownBlockquote* blockquotes, int blockquoteCount,
+                        const MarkdownBlockquote* blockquotes, int blockquoteCount,
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor);
 
 /**
@@ -340,7 +340,7 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
                                   MarkdownHeading* headings, int headingCount,
                                   MarkdownStyle* styles, int styleCount,
                                   MarkdownListItem* listItems, int listItemCount,
-                                  MarkdownBlockquote* blockquotes, int blockquoteCount,
+                                  const MarkdownBlockquote* blockquotes, int blockquoteCount,
                                   RECT drawRect);
 
 /**

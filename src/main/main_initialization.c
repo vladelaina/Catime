@@ -12,10 +12,12 @@
 #include "main/main_single_instance.h"
 #include "log.h"
 #include "config.h"
+#include "config/config_plugin_security.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
 #include "window.h"
+#include "window/window_initialization.h"
 #include "cli.h"
 #include "async_update_checker.h"
 #include "dialog/dialog_language.h"
@@ -25,10 +27,66 @@
 #include "plugin/plugin_manager.h"
 #include "drawing/drawing_image.h"
 #include "drawing/drawing_render.h"
+#include "drawing/drawing_timer_precision.h"
 #include "markdown/markdown_image.h"
 #include "markdown/markdown_interactive.h"
 #include "../resource/resource.h"
 #include <tlhelp32.h>
+
+static BOOL ContainsFlag(const wchar_t* cmdLine, const wchar_t* flag) {
+    const wchar_t* pos;
+
+    if (!cmdLine || !flag || !*flag) {
+        return FALSE;
+    }
+
+    pos = wcsstr(cmdLine, flag);
+    while (pos) {
+        const wchar_t before = (pos == cmdLine) ? L' ' : pos[-1];
+        const wchar_t after = pos[wcslen(flag)];
+        const BOOL beforeOk = before == L' ' || before == L'\t' || before == L'"';
+        const BOOL afterOk = after == L'\0' || after == L' ' || after == L'\t' || after == L'"' || after == L'=';
+
+        if (beforeOk && afterOk) {
+            return TRUE;
+        }
+        pos = wcsstr(pos + 1, flag);
+    }
+
+    return FALSE;
+}
+
+BOOL IsCiSmokeMode(void) {
+    return ContainsFlag(GetCommandLineW(), L"--ci-smoke");
+}
+
+UINT GetCiExitTimeoutMs(void) {
+    const wchar_t* cmdLine = GetCommandLineW();
+    const wchar_t* marker = wcsstr(cmdLine, L"--ci-exit-ms=");
+    wchar_t* end = NULL;
+    unsigned long value;
+
+    if (!marker) {
+        return 3000;
+    }
+
+    marker += wcslen(L"--ci-exit-ms=");
+    value = wcstoul(marker, &end, 10);
+    if (end == marker || value < 250 || value > 60000) {
+        return 3000;
+    }
+
+    return (UINT)value;
+}
+
+static VOID CALLBACK CiSmokeExitTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+    (void)uMsg;
+    (void)dwTime;
+
+    KillTimer(hwnd, idEvent);
+    LOG_INFO("CI smoke timeout reached, closing application");
+    PostMessage(hwnd, WM_CLOSE, 0, 0);
+}
 
 /* Helper to check if process is elevated */
 static BOOL IsElevated(void) {
@@ -86,7 +144,7 @@ static BOOL RelaunchAsStandardUser(void) {
     GetModuleFileNameW(NULL, szPath, MAX_PATH);
 
     /* Reconstruct command line safely - CreateProcess might modify the buffer */
-    wchar_t* pszOriginalCmdLine = GetCommandLineW();
+    const wchar_t* pszOriginalCmdLine = GetCommandLineW();
     size_t cmdLen = wcslen(pszOriginalCmdLine) + 1;
     wchar_t* pszCmdLineCopy = (wchar_t*)malloc(cmdLen * sizeof(wchar_t));
 
@@ -326,8 +384,6 @@ void HandleStartupMode(HWND hwnd) {
             elapsed_time = 0;
             countup_elapsed_time = 0;
             
-            extern int64_t g_start_time;
-            extern int64_t GetAbsoluteTimeMs(void);
             g_start_time = GetAbsoluteTimeMs();
             break;
             
@@ -411,7 +467,6 @@ BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     /* Initialize markdown interactive system */
     InitMarkdownInteractive();
     
-    extern BOOL InitializeApplication(HINSTANCE);
     if (!InitializeApplication(hInstance)) {
         LOG_ERROR("Application initialization failed. Check log file for details.");
         return FALSE;
@@ -451,20 +506,25 @@ void InitializeDialogLanguages(void) {
 }
 
 BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
-    (void)nCmdShow; // Unused parameter
-    
+    UNREFERENCED_PARAMETER(hInstance);
+    UNREFERENCED_PARAMETER(nCmdShow);
+    const BOOL ciSmokeMode = IsCiSmokeMode();
+
     // Initialize Plugin Data subsystem early - needed by CLI handlers and startup mode
     PluginData_Init(hwnd);
     PluginManager_SetNotifyWindow(hwnd);
     
     LPWSTR lpCmdLineW = GetCommandLineW();
+    if (!lpCmdLineW) {
+        lpCmdLineW = L"";
+    }
     while (*lpCmdLineW && *lpCmdLineW != L' ') lpCmdLineW++;
     while (*lpCmdLineW == L' ') lpCmdLineW++;
     
     BOOL launchedFromStartup = FALSE;
     wchar_t cmdBuf[512] = {0};
     
-    if (lpCmdLineW && lpCmdLineW[0] != L'\0') {
+    if (lpCmdLineW[0] != L'\0') {
         wcsncpy(cmdBuf, lpCmdLineW, sizeof(cmdBuf)/sizeof(wchar_t) - 1);
         cmdBuf[sizeof(cmdBuf)/sizeof(wchar_t) - 1] = L'\0';
         
@@ -493,7 +553,6 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     }
     
     LOG_INFO("Setting main timer...");
-    extern UINT GetTimerInterval(void);
     UINT interval = GetTimerInterval();
     
     if (!MainTimer_Start(hwnd, interval)) {
@@ -502,7 +561,6 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     }
     LOG_INFO("Timer set successfully with %ums interval", interval);
     
-    extern void ResetTimerMilliseconds(void);
     ResetTimerMilliseconds();
     
     LOG_INFO("Setting font path check timer...");
@@ -512,12 +570,18 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         LOG_INFO("Font path check timer set successfully (2 second interval)");
     }
     
-    LOG_INFO("Starting automatic update check at startup...");
-    CheckForUpdateAsync(hwnd, TRUE);
-    
-    LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
-    HandleStartupMode(hwnd);
-    
+    if (ciSmokeMode) {
+        const UINT exitDelayMs = GetCiExitTimeoutMs();
+        LOG_INFO("CI smoke mode enabled, skipping startup-only side effects and auto-exiting in %u ms", exitDelayMs);
+        SetTimer(hwnd, TIMER_ID_CI_EXIT, exitDelayMs, CiSmokeExitTimerProc);
+    } else {
+        LOG_INFO("Starting automatic update check at startup...");
+        CheckForUpdateAsync(hwnd, TRUE);
+
+        LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
+        HandleStartupMode(hwnd);
+    }
+
     if (launchedFromStartup) {
         if (CLOCK_WINDOW_TOPMOST) {
             SetTimer(hwnd, TIMER_ID_TOPMOST_RETRY, 2000, NULL);
@@ -540,11 +604,12 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
 }
 
 int RunMessageLoop(HWND hwnd) {
+    UNREFERENCED_PARAMETER(hwnd);
+
     LOG_INFO("Entering main message loop");
     
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
-        extern HWND GetCliHelpDialog(void);
         HWND hCliHelp = GetCliHelpDialog();
         if (hCliHelp && IsDialogMessage(hCliHelp, &msg)) {
             continue;
@@ -578,7 +643,6 @@ void CleanupResources(HANDLE hMutex) {
     PluginData_Shutdown();
     
     LOG_INFO("Cleaning up plugin trust resources");
-    extern void CleanupPluginTrustCS(void);
     CleanupPluginTrustCS();
 
     LOG_INFO("Shutting down GDI+");

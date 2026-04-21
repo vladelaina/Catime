@@ -26,7 +26,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
     /* Using sliding window sum */
     for (int y = 0; y < h; y++) {
         int rowOffset = y * w;
-        unsigned char* rowSrc = src + rowOffset;
+        const unsigned char* rowSrc = src + rowOffset;
         unsigned char* rowDest = tempBuffer + rowOffset;
         
         int sum = 0;
@@ -43,7 +43,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
         int reciprocal = (1 << 20) / div;
         
         for (int x = 0; x < w; x++) {
-            rowDest[x] = (sum * reciprocal) >> 20;
+            rowDest[x] = (unsigned char)((sum * reciprocal) >> 20);
             
             /* Slide window: remove (x - radius), add (x + radius + 1) */
             int outIdx = x - radius;
@@ -81,7 +81,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
         }
         
         for (int y = 0; y < h; y++) {
-            dest[y * w + x] = (sum * reciprocal) >> 20;
+            dest[y * w + x] = (unsigned char)((sum * reciprocal) >> 20);
             
             /* Slide window */
             int outIdx = y - radius;
@@ -107,7 +107,7 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
  */
 void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
     /* 1. Dynamic Buffer Allocation */
@@ -159,7 +159,7 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
         if (screenY < 0 || screenY >= destHeight) continue;
 
         DWORD* pDestRow = pixels + screenY * destWidth;
-        unsigned char* pGlowRow = glowMap + j * gw;
+        const unsigned char* pGlowRow = glowMap + j * gw;
 
         for (int i = 0; i < gw; i++) {
             int screenX = startX + i;
@@ -212,7 +212,7 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
     /* Dynamic Buffer Allocation */
@@ -264,16 +264,16 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
         if (screenY < 0 || screenY >= destHeight) continue;
 
         DWORD* pDestRow = pixels + screenY * destWidth;
-        unsigned char* pAlphaRow = alphaMap + j * gw;
+        const unsigned char* pAlphaRow = alphaMap + j * gw;
         
-        unsigned char* pShadowRow = NULL;
+        const unsigned char* pShadowRow = NULL;
         int sY = j - shadowOffset;
         if (sY >= 0 && sY < gh) pShadowRow = shadowMap + sY * gw;
 
         /* Bevel pointers */
         int bevelOffset = 2;
-        unsigned char* pBevelRowUL = (j >= bevelOffset) ? alphaMap + (j - bevelOffset) * gw : NULL;
-        unsigned char* pBevelRowDR = (j < gh - bevelOffset) ? alphaMap + (j + bevelOffset) * gw : NULL;
+        const unsigned char* pBevelRowUL = (j >= bevelOffset) ? alphaMap + (j - bevelOffset) * gw : NULL;
+        const unsigned char* pBevelRowDR = (j < gh - bevelOffset) ? alphaMap + (j + bevelOffset) * gw : NULL;
 
         /* Sheen calculation */
         int sheen = 0;
@@ -385,7 +385,7 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
     /* 1. Dynamic Buffer Allocation */
@@ -510,8 +510,8 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
         if (screenY < 0 || screenY >= destHeight) continue;
 
         DWORD* pDestRow = pixels + screenY * destWidth;
-        unsigned char* pGlowRow = buf1 + j * gw;
-        unsigned char* pTubeRow = buf2 + j * gw;
+        const unsigned char* pGlowRow = buf1 + j * gw;
+        const unsigned char* pTubeRow = buf2 + j * gw;
 
         for (int i = 0; i < gw; i++) {
             int screenX = startX + i;
@@ -601,7 +601,7 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int x_pos, int y_pos,
-                            unsigned char* bitmap, int w, int h,
+                            const unsigned char* bitmap, int w, int h,
                             int r, int g, int b,
                             GlowColorCallback colorCb, void* userData,
                             int timeOffset) {
@@ -657,9 +657,9 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
 
         DWORD* pDestRow = pixels + screenY * destWidth;
         unsigned char* pAlphaRow = alphaMap + j * gw;
-        unsigned char* pGlowRow = glowMap + j * gw;
-        unsigned char* pRowPrev = alphaMap + (j - 1) * gw;
-        unsigned char* pRowNext = alphaMap + (j + 1) * gw;
+        const unsigned char* pGlowRow = glowMap + j * gw;
+        const unsigned char* pRowPrev = alphaMap + (j - 1) * gw;
+        const unsigned char* pRowNext = alphaMap + (j + 1) * gw;
 
         /* Calculate Loop Bounds to remove per-pixel boundary checks */
         /* Range of i is [1, gw - 1) normally */
@@ -853,7 +853,7 @@ static void InitSlopeLUT(void) {
         
         int fresnel = 0;
         if (slope_int > 25) {
-            int f = ((slope_int - 25) * 120) >> 8;
+            int f = ((slope_int - 25) * 120) / 256;
             if (f > 80) f = 80;
             fresnel = f;
         }
@@ -878,7 +878,7 @@ static void InitSlopeLUT(void) {
  */
 void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
                        int x_pos, int y_pos,
-                       unsigned char* bitmap, int w, int h,
+                       const unsigned char* bitmap, int w, int h,
                        int r, int g, int b,
                        GlowColorCallback colorCb, void* userData,
                        int timeOffset) {

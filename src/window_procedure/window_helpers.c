@@ -7,6 +7,7 @@
 #include "window_procedure/window_utils.h"
 #include "config.h"
 #include "font.h"
+#include "font/font_manager.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
@@ -22,6 +23,9 @@
 #include <string.h>
 #include <winnls.h>
 #include <commdlg.h>
+
+/* Defined in config_ini.c; kept as a file-scope forward declaration until a shared header exists. */
+void InvalidateIniCache(void);
 
 extern wchar_t inputText[256];
 extern int elapsed_time;
@@ -207,6 +211,7 @@ BOOL ShowFilePicker(HWND hwnd, char* selectedPath, size_t bufferSize) {
 }
 
 BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
+    UNREFERENCED_PARAMETER(hwnd);
     if (!filePathUtf8 || filePathUtf8[0] == '\0') {
         return FALSE;
     }
@@ -271,7 +276,6 @@ void ResetConfigurationFile(void) {
     GetConfigPath(config_path, MAX_PATH);
     
     /* Clear in-memory INI cache first - critical for reset to work */
-    extern void InvalidateIniCache(void);
     InvalidateIniCache();
     
     /* Delete the config file - ReadConfig will recreate it */
@@ -281,7 +285,6 @@ void ResetConfigurationFile(void) {
 }
 
 void ReloadDefaultFont(void) {
-    extern BOOL LoadFontByNameAndGetRealName(HINSTANCE, const char*, char*, size_t);
     
     /* Use the default font name, not the current FONT_FILE_NAME */
     const char* defaultFontName = DEFAULT_FONT_NAME;
@@ -295,8 +298,6 @@ void ReloadDefaultFont(void) {
 }
 
 void RecalculateWindowSize(HWND hwnd) {
-    extern float CLOCK_FONT_SCALE_FACTOR;
-    extern float PLUGIN_FONT_SCALE_FACTOR;
     
     CLOCK_WINDOW_SCALE = 1.0f;
     CLOCK_FONT_SCALE_FACTOR = 1.0f;

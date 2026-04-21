@@ -68,7 +68,7 @@ static void ProcessMarkdownCharacter(
     int styleCount,
     MarkdownListItem* listItems,
     int listItemCount,
-    MarkdownBlockquote* blockquotes,
+    const MarkdownBlockquote* blockquotes,
     int blockquoteCount,
     HFONT hOriginalFont,
     const LOGFONT* baseLf,
@@ -193,7 +193,7 @@ static void ProcessMarkdownCharacter(
             memcpy(&lf, baseLf, sizeof(LOGFONT));
             lf.lfHeight = currentFontHeight;
             lf.lfWeight = currentFontWeight;
-            lf.lfItalic = currentItalic;
+            lf.lfItalic = (BYTE)(currentItalic ? 1 : 0);
 
             if (currentMonospace) {
                 wcscpy_s(lf.lfFaceName, LF_FACESIZE, L"Consolas");
@@ -278,7 +278,7 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                         MarkdownHeading* headings, int headingCount,
                         MarkdownStyle* styles, int styleCount,
                         MarkdownListItem* listItems, int listItemCount,
-                        MarkdownBlockquote* blockquotes, int blockquoteCount,
+                        const MarkdownBlockquote* blockquotes, int blockquoteCount,
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor) {
     if (!hdc || !displayText) return;
 
@@ -341,7 +341,7 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
                                   MarkdownHeading* headings, int headingCount,
                                   MarkdownStyle* styles, int styleCount,
                                   MarkdownListItem* listItems, int listItemCount,
-                                  MarkdownBlockquote* blockquotes, int blockquoteCount,
+                                  const MarkdownBlockquote* blockquotes, int blockquoteCount,
                                   RECT drawRect) {
     if (!hdc || !displayText) return 0;
 

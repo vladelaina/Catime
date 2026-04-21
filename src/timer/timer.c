@@ -217,11 +217,11 @@ void FormatTime(int remaining_time, char* time_text) {
 static int ParseAbsoluteTime(char* input) {
     _tzset();
     time_t now = time(NULL);
-    struct tm* tm_now = localtime(&now);
+    const struct tm* tm_now = localtime(&now);
     struct tm tm_target = *tm_now;
     int hour = -1, minute = -1, second = -1;
     int count = 0;
-    char* token = strtok(input, " ");
+    const char* token = strtok(input, " ");
 
     while (token && count < 3) {
         char* endptr;

@@ -24,6 +24,7 @@
 #include "drawing/drawing_image.h"
 #include "markdown/markdown_parser.h"
 #include "markdown/markdown_image.h"
+#include "markdown/markdown_interactive.h"
 #include "color/color_parser.h"
 #include "../resource/resource.h"
 
@@ -42,7 +43,7 @@ static COLORREF ParseColorString(const char* colorStr) {
     if (!colorStr || strlen(colorStr) == 0) {
         return RGB(255, 255, 255);
     }
-    
+
     /* Check if it's a gradient name */
     GradientType gradType = GetGradientTypeByName(colorStr);
     if (gradType != GRADIENT_NONE) {
@@ -51,15 +52,19 @@ static COLORREF ParseColorString(const char* colorStr) {
             return info->startColor;  /* Use gradient start color for GDI */
         }
     }
-    
+
     int r = 255, g = 255, b = 255;
-    
+
     if (colorStr[0] == '#' && strlen(colorStr) == 7) {
-        sscanf(colorStr + 1, "%02x%02x%02x", &r, &g, &b);
+        unsigned int ur = 255, ug = 255, ub = 255;
+        sscanf(colorStr + 1, "%02x%02x%02x", &ur, &ug, &ub);
+        r = (int)ur;
+        g = (int)ug;
+        b = (int)ub;
     } else {
         sscanf(colorStr, "%d,%d,%d", &r, &g, &b);
     }
-    
+
     return RGB(r, g, b);
 }
 
@@ -192,26 +197,24 @@ static void EnsureMarkdownRenderCache(const wchar_t* text) {
  */
 static RenderContext CreateRenderContext(void) {
     RenderContext ctx;
-    
+
     static char fontFileName[MAX_PATH];
     static char fontInternalName[MAX_PATH];
     static char colorStr[COLOR_HEX_BUFFER];
-    
-    extern void GetActiveFont(char*, char*, size_t);
-    extern void GetActiveColor(char*, size_t);
-    
+
+
     GetActiveFont(fontFileName, fontInternalName, sizeof(fontFileName));
     GetActiveColor(colorStr, sizeof(colorStr));
-    
+
     ctx.fontFileName = fontFileName;
     ctx.fontInternalName = fontInternalName;
     ctx.textColor = ParseColorString(colorStr);
-    
+
     /* Use plugin scale when in plugin mode, otherwise use clock scale */
     ctx.fontScaleFactor = PluginData_IsActive() ? PLUGIN_FONT_SCALE_FACTOR : CLOCK_FONT_SCALE_FACTOR;
-    
+
     ctx.gradientMode = (int)GetGradientTypeByName(colorStr);
-    
+
     return ctx;
 }
 
@@ -220,7 +223,7 @@ static BOOL ResolveFontPath(const RenderContext* ctx, char* outPath) {
     if (relPath) {
         return BuildFullFontPath(relPath, outPath, MAX_PATH);
     }
-    
+
     if (ExpandEnvironmentStringsA(ctx->fontFileName, outPath, MAX_PATH) > 0) {
         if (!strchr(outPath, ':')) {
             char simpleName[MAX_PATH];
@@ -233,12 +236,12 @@ static BOOL ResolveFontPath(const RenderContext* ctx, char* outPath) {
 }
 
 static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, SIZE* outSize,
-                               MarkdownHeading* headings, int headingCount) {
+                               const MarkdownHeading* headings, int headingCount) {
     char absoluteFontPath[MAX_PATH];
     if (ResolveFontPath(ctx, absoluteFontPath)) {
         if (InitFontSTB(absoluteFontPath)) {
             int w, h;
-            if (MeasureMarkdownSTB(text, headings, headingCount, 
+            if (MeasureMarkdownSTB(text, headings, headingCount,
                                   (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), &w, &h)) {
                 outSize->cx = w;
                 outSize->cy = h;
@@ -246,20 +249,23 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
             }
         }
     }
-    
+
     return FALSE;
 }
 
 static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits,
                               MarkdownLink* links, int linkCount,
-                              MarkdownHeading* headings, int headingCount,
+                              const MarkdownHeading* headings, int headingCount,
                               MarkdownStyle* styles, int styleCount,
                               MarkdownBlockquote* blockquotes, int blockquoteCount,
                               MarkdownColorTag* colorTags, int colorTagCount,
-                              MarkdownFontTag* fontTags, int fontTagCount) {
+                              const MarkdownFontTag* fontTags, int fontTagCount) {
+    UNREFERENCED_PARAMETER(hdc);
+    UNREFERENCED_PARAMETER(editMode);
+
     // Use STB Truetype for high-quality rendering
     char absoluteFontPath[MAX_PATH];
-    
+
     // Resolve font path to absolute path for STB
     if (ResolveFontPath(ctx, absoluteFontPath)) {
         if (InitFontSTB(absoluteFontPath)) {
@@ -270,8 +276,8 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                              blockquotes, blockquoteCount,
                              colorTags, colorTagCount,
                              fontTags, fontTagCount,
-                             ctx->textColor, 
-                             (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor), 
+                             ctx->textColor,
+                             (int)(CLOCK_BASE_FONT_SIZE * ctx->fontScaleFactor),
                              1.0f,
                              ctx->gradientMode); // Internal scale is handled by font size
             return TRUE;
@@ -322,17 +328,17 @@ static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP*
     return TRUE;
 }
 
-/** 
+/**
  * @brief Manually set alpha channel to opaque for non-black pixels
  * @details GDI text drawing leaves alpha channel as 0, which DWM treats as transparent.
  *          We iterate pixels to set Alpha=255 where RGB != 0.
  */
 static void FixAlphaChannel(void* bits, int width, int height) {
     if (!bits) return;
-    
+
     DWORD* pixels = (DWORD*)bits;
     int count = width * height;
-    
+
     for (int i = 0; i < count; i++) {
         // Check if RGB is not black (0x00RRGGBB)
         if ((pixels[i] & 0x00FFFFFF) != 0) {
@@ -352,28 +358,28 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     if (textSize->cx <= 0 || textSize->cy <= 0) {
         return;
     }
-    
-    if (textSize->cx == (rect->right - rect->left) && 
+
+    if (textSize->cx == (rect->right - rect->left) &&
         textSize->cy == (rect->bottom - rect->top)) {
         return;
     }
-    
+
     RECT windowRect;
     GetWindowRect(hwnd, &windowRect);
-    
+
     SetWindowPos(hwnd, NULL,
         windowRect.left, windowRect.top,
         textSize->cx + WINDOW_HORIZONTAL_PADDING,
         textSize->cy + WINDOW_VERTICAL_PADDING,
         SWP_NOZORDER | SWP_NOACTIVATE);
-    
+
     GetClientRect(hwnd, rect);
 }
 
 // Global flag to suppress rendering during mode transitions
 BOOL g_IsTransitioning = FALSE;
 
-void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
+void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     wchar_t timeText[TIME_TEXT_MAX_LEN];
     HDC hdc = ps->hdc;
     RECT rect;
@@ -382,31 +388,31 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     // If transitioning, skip text generation to avoid artifacts
     // We still need to clear the window to transparent, so we proceed to SetupDoubleBufferDIB
     // but we will skip RenderText later.
-    
+
     GetTimeText(timeText, TIME_TEXT_MAX_LEN);
 
     // Check for plugin data
     wchar_t pluginText[TIME_TEXT_MAX_LEN] = {0};
     MarkdownImage* images = NULL;
     int imageCount = 0;
-    
+
     if (PluginData_GetText(pluginText, TIME_TEXT_MAX_LEN)) {
         // Get current time text once
         wchar_t savedTime[256];
         GetTimeText(savedTime, 256);
-        
+
         // First pass: extract images and count them
         int imgCapacity = CountMarkdownImages(pluginText);
         if (imgCapacity > 0) {
             images = (MarkdownImage*)calloc(imgCapacity, sizeof(MarkdownImage));
         }
-        
+
         // Replace ALL <catime></catime> tags and extract ![](path) images
         wchar_t result[TIME_TEXT_MAX_LEN] = {0};
         wchar_t* src = pluginText;
         wchar_t* dst = result;
         size_t remaining = TIME_TEXT_MAX_LEN - 1;
-        
+
         while (*src && remaining > 0) {
             // Check for image tag first: ![...](...)
             if (*src == L'!' && *(src + 1) == L'[' && images && imageCount < imgCapacity) {
@@ -416,11 +422,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                     continue;
                 }
             }
-            
+
             // Check for <catime> tag
             wchar_t* tagStart = wcsstr(src, L"<catime>");
             wchar_t* tagEnd = tagStart ? wcsstr(tagStart, L"</catime>") : NULL;
-            
+
             if (tagStart && tagEnd && tagEnd > tagStart && tagStart == src) {
                 // Insert time text
                 size_t timeLen = wcslen(savedTime);
@@ -428,7 +434,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                 wcsncpy(dst, savedTime, timeLen);
                 dst += timeLen;
                 remaining -= timeLen;
-                
+
                 // Move past </catime>
                 src = tagEnd + 9;
             } else if (tagStart && tagEnd && tagEnd > tagStart) {
@@ -438,14 +444,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                 wcsncpy(dst, src, beforeLen);
                 dst += beforeLen;
                 remaining -= beforeLen;
-                
+
                 // Insert time text
                 size_t timeLen = wcslen(savedTime);
                 if (timeLen > remaining) timeLen = remaining;
                 wcsncpy(dst, savedTime, timeLen);
                 dst += timeLen;
                 remaining -= timeLen;
-                
+
                 // Move past </catime>
                 src = tagEnd + 9;
             } else {
@@ -455,7 +461,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             }
         }
         *dst = L'\0';
-        
+
         wcscpy_s(timeText, TIME_TEXT_MAX_LEN, result);
     }
 
@@ -469,12 +475,12 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
 
     BOOL isMarkdown = g_markdownRenderCache.isMarkdown;
     MarkdownLink* links = g_markdownRenderCache.links; int linkCount = g_markdownRenderCache.linkCount;
-    MarkdownHeading* headings = g_markdownRenderCache.headings; int headingCount = g_markdownRenderCache.headingCount;
+    const MarkdownHeading* headings = g_markdownRenderCache.headings; int headingCount = g_markdownRenderCache.headingCount;
     MarkdownStyle* styles = g_markdownRenderCache.styles; int styleCount = g_markdownRenderCache.styleCount;
     MarkdownListItem* listItems = g_markdownRenderCache.listItems; int listItemCount = g_markdownRenderCache.listItemCount;
     MarkdownBlockquote* blockquotes = g_markdownRenderCache.blockquotes; int blockquoteCount = g_markdownRenderCache.blockquoteCount;
     MarkdownColorTag* colorTags = g_markdownRenderCache.colorTags; int colorTagCount = g_markdownRenderCache.colorTagCount;
-    MarkdownFontTag* fontTags = g_markdownRenderCache.fontTags; int fontTagCount = g_markdownRenderCache.fontTagCount;
+    const MarkdownFontTag* fontTags = g_markdownRenderCache.fontTags; int fontTagCount = g_markdownRenderCache.fontTagCount;
 
     (void)listItems;
     (void)listItemCount;
@@ -485,44 +491,41 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     // This prevents buffer overflow if the window grows
     SIZE textSize = {0};
     BOOL hasContent = (wcslen(textToRender) > 0) || (images && imageCount > 0);
-    
+
     SIZE measuredTextSize = {0};
     BOOL measuredTextSizeValid = FALSE;
 
     if (hasContent) {
-        BOOL measured = FALSE;
-        
         // Measure text if any
         if (wcslen(textToRender) > 0) {
             if (isMarkdown) {
-                measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
+                measuredTextSizeValid = MeasureTextMarkdown(textToRender, &ctx, &textSize, headings, headingCount);
             } else {
-                measured = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
+                measuredTextSizeValid = MeasureTextMarkdown(textToRender, &ctx, &textSize, NULL, 0);
             }
 
-            if (measured) {
+            if (measuredTextSizeValid) {
                 measuredTextSize = textSize;
-                measuredTextSizeValid = TRUE;
             }
 
             // If measurement failed, use default size
-            if (!measured) {
+            if (!measuredTextSizeValid) {
                 textSize.cx = 100;
                 textSize.cy = 30;
             }
         }
-        
+
         // Add image dimensions to total size
         if (images && imageCount > 0) {
             textSize.cy += 5;  // Small gap between text and first image
-            
+
             for (int i = 0; i < imageCount; i++) {
                 int renderW = 0, renderH = 0;
                 // Use large max values to get natural scaled size (not constrained by window)
                 if (CalculateImageRenderSize(&images[i], 10000, 10000, &renderW, &renderH)) {
                     renderW += 10;  // Add padding
                     renderH += 5;
-                    
+
                     if (renderW > textSize.cx) textSize.cx = renderW;
                     textSize.cy += renderH;
                 } else if (images[i].isNetworkImage && !images[i].isDownloaded) {
@@ -534,11 +537,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
 
         AdjustWindowSize(hwnd, &textSize, &rect);
     }
-    
+
     HDC memDC;
     HBITMAP memBitmap, oldBitmap;
     void* pBits = NULL;
-    
+
     // Create buffer with the final correct size
     if (!SetupDoubleBufferDIB(hdc, &rect, &memDC, &memBitmap, &oldBitmap, &pBits)) {
         if (images) {
@@ -546,28 +549,28 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
         }
         return;
     }
-    
+
     // Manually clear background
     // Edit Mode: Alpha=5 to capture mouse click on background
     // Normal Mode: Alpha=0 for full transparency (clickable regions filled later)
     int numPixels = rect.right * rect.bottom;
     DWORD* pixels = (DWORD*)pBits;
     DWORD clearColor = CLOCK_EDIT_MODE ? 0x05000000 : 0x00000000;
-    
+
     // Simple loop is fast enough for small window
     for (int i = 0; i < numPixels; i++) {
         pixels[i] = clearColor;
     }
-    
+
     // Skip rendering during transition to avoid black artifacts
     if (!g_IsTransitioning && hasContent) {
         int textHeight = 0;
-        
+
         // Render text if any
         if (wcslen(textToRender) > 0) {
             RECT textRect = rect;
             SIZE textSizeMeasured = measuredTextSize;
-            
+
             if (!measuredTextSizeValid) {
                 if (isMarkdown) {
                     MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, headings, headingCount);
@@ -575,11 +578,11 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                     MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured, NULL, 0);
                 }
             }
-            
+
             if (textSizeMeasured.cy > 0) {
                 textHeight = textSizeMeasured.cy;
             }
-            
+
             if (isMarkdown) {
                 RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
                                   links, linkCount, headings, headingCount, styles, styleCount,
@@ -590,52 +593,51 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
                                   NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0);
             }
         }
-        
+
         // Fill clickable regions with minimal alpha for mouse hit-testing (non-edit mode only)
         if (!CLOCK_EDIT_MODE) {
-            extern void FillClickableRegionsAlpha(DWORD* pixels, int width, int height);
             FillClickableRegionsAlpha(pixels, rect.right, rect.bottom);
         }
-        
+
         // Render images below text (centered horizontally like text)
         if (images && imageCount > 0) {
             int imgY = textHeight > 0 ? textHeight + 5 : 5;
             int maxW = rect.right - 10;
             if (maxW <= 0) maxW = rect.right;  // Fallback if window too narrow
-            
+
             for (int i = 0; i < imageCount; i++) {
                 int maxH = rect.bottom - imgY - 5;
                 if (maxH <= 0) break;  // No more space for images
-                
+
                 // Check if network image needs async download
                 if (images[i].isNetworkImage && !images[i].isDownloaded && !images[i].isDownloading) {
                     StartAsyncImageDownload(&images[i], hwnd);
                 }
-                
+
                 // If downloading, show "Loading..." text
                 if (images[i].isDownloading || (images[i].isNetworkImage && !images[i].isDownloaded)) {
                     // Draw "Loading..." centered with same color as text
                     const wchar_t* loadingText = L"Loading...";
                     SetBkMode(memDC, TRANSPARENT);
                     SetTextColor(memDC, ParseColorString(CLOCK_TEXT_COLOR));
-                    SIZE textSize;
-                    GetTextExtentPoint32W(memDC, loadingText, (int)wcslen(loadingText), &textSize);
-                    int textX = (rect.right - textSize.cx) / 2;
+                    SIZE loadingTextSize;
+                    GetTextExtentPoint32W(memDC, loadingText, (int)wcslen(loadingText), &loadingTextSize);
+                    int textX = (rect.right - loadingTextSize.cx) / 2;
                     TextOutW(memDC, textX, imgY, loadingText, (int)wcslen(loadingText));
-                    imgY += textSize.cy + 5;
+                    imgY += loadingTextSize.cy + 5;
                     continue;
                 }
-                
+
                 // Get render size for centering
                 int imgRenderW = 0, imgRenderH = 0;
                 if (!CalculateImageRenderSize(&images[i], maxW, maxH, &imgRenderW, &imgRenderH)) {
                     continue;  // Skip this image if calculation fails
                 }
-                
+
                 // Center horizontally
                 int imgX = (rect.right - imgRenderW) / 2;
                 if (imgX < 5) imgX = 5;
-                
+
                 int imgHeight = RenderMarkdownImage(memDC, &images[i], imgX, imgY, maxW, maxH);
                 if (imgHeight > 0) {
                     imgY += imgHeight + 5;
@@ -645,7 +647,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     } else if (CLOCK_EDIT_MODE) {
         FixAlphaChannel(pBits, rect.right, rect.bottom);
     }
-    
+
     /* Check if any color tag has gradient (multiple colors) before freeing */
     BOOL hasColorTagGradient = FALSE;
     if (colorTags && colorTagCount > 0) {
@@ -656,12 +658,12 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             }
         }
     }
-    
+
     // Free image resources
     if (images) {
         FreeMarkdownImages(images, imageCount);
     }
-    
+
     HDC hdcScreen = GetDC(NULL);
     if (!hdcScreen) {
         SelectObject(memDC, oldBitmap);
@@ -672,15 +674,14 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
     POINT ptSrc = {0, 0};
     SIZE sizeWnd = {rect.right, rect.bottom};
     POINT ptDst = {0, 0};
-    
+
     RECT rcWindow;
     GetWindowRect(hwnd, &rcWindow);
     ptDst.x = rcWindow.left;
     ptDst.y = rcWindow.top;
-    
-    extern int CLOCK_WINDOW_OPACITY;
+
     BYTE alpha = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
-    
+
     BLENDFUNCTION blend = {0};
     blend.BlendOp = AC_SRC_OVER;
     blend.BlendFlags = 0;
@@ -695,7 +696,7 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
             SetWindowLong(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
             SetWindowLong(hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
-            
+
             // Retry update
             if (!UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA)) {
                 err = GetLastError();
@@ -705,48 +706,48 @@ void HandleWindowPaint(HWND hwnd, PAINTSTRUCT* ps) {
             WriteLog(LOG_LEVEL_ERROR, "UpdateLayeredWindow failed! Error code: %lu", err);
         }
     }
-    
+
     ReleaseDC(NULL, hdcScreen);
-    
+
     SelectObject(memDC, oldBitmap);
     DeleteObject(memBitmap);
     DeleteDC(memDC);
-    
+
     /* Dynamic timer interval adjustment based on current window size */
     /* This ensures smooth animation for small windows, reduced lag for large windows */
     BOOL needsAnimationTimer = CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT ||
                                CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT ||
                                hasColorTagGradient;
-    
+
     /* Track if color tag gradient timer was set by us (not by effect settings) */
     static BOOL s_colorTagTimerActive = FALSE;
-    
+
     if (needsAnimationTimer) {
         static UINT s_lastInterval = 0;
         int pixelCount = rect.right * rect.bottom;
-        
+
         /* Holographic effect is significantly heavier (double Gaussian blur + per-pixel HSV)
          * and needs more aggressive throttling to prevent mouse lag */
         UINT newInterval;
         if (CLOCK_HOLOGRAPHIC_EFFECT) {
-            newInterval = (pixelCount < 30000) ? 50 : 
-                          (pixelCount < 100000) ? 80 : 
+            newInterval = (pixelCount < 30000) ? 50 :
+                          (pixelCount < 100000) ? 80 :
                           (pixelCount < 300000) ? 120 : 200;
         } else if (hasColorTagGradient) {
             /* Color tag gradient animation - use moderate interval */
-            newInterval = (pixelCount < 50000) ? 33 : 
+            newInterval = (pixelCount < 50000) ? 33 :
                           (pixelCount < 200000) ? 50 : 80;
         } else {
-            newInterval = (pixelCount < 50000) ? 33 : 
-                          (pixelCount < 200000) ? 50 : 
+            newInterval = (pixelCount < 50000) ? 33 :
+                          (pixelCount < 200000) ? 50 :
                           (pixelCount < 500000) ? 80 : 120;
         }
-        
+
         if (newInterval != s_lastInterval) {
             SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, newInterval, NULL);
             s_lastInterval = newInterval;
         }
-        
+
         if (hasColorTagGradient) {
             s_colorTagTimerActive = TRUE;
         }

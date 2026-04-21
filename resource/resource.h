@@ -76,6 +76,7 @@
 #define TIMER_ID_RENDER_ANIMATION 2002       /**< Dedicated animation render timer (30-60 FPS) */
 #define TIMER_ID_TOPMOST_ENFORCE 2003        /**< Fast topmost enforcement when near taskbar (50ms) */
 #define TIMER_ID_TRAY_ANIMATION 2004         /**< Tray animation fallback timer */
+#define TIMER_ID_CI_EXIT 2005                /**< CI smoke-mode auto-exit timer */
 #define TRAY_TIP_TIMER_ID 42421              /**< Tray tooltip update timer */
 
 /** @brief Timer interval constants */

@@ -59,6 +59,7 @@ BOOL FrameRateController_ShouldAdvanceFrame(FrameRateController* ctrl,
  * @brief Record latency and adapt interval
  */
 void FrameRateController_RecordLatency(FrameRateController* ctrl, UINT actualElapsed) {
+    UNREFERENCED_PARAMETER(actualElapsed);
     if (!ctrl) return;
     
     DWORD currentTime = GetTickCount();

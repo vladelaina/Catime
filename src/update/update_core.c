@@ -7,6 +7,7 @@
 #include "log.h"
 #include "language.h"
 #include "utils/string_convert.h"
+#include "utils/url_safety.h"
 #include "../../resource/resource.h"
 #include <windows.h>
 #include <wininet.h>
@@ -15,6 +16,8 @@
 #include <stdlib.h>
 
 #pragma comment(lib, "wininet.lib")
+
+#define MAX_HTTP_RESPONSE_SIZE (1024 * 1024)
 
 /* Thin wrappers using utils/string_convert.h */
 static inline wchar_t* LocalUtf8ToWideAlloc(const char* utf8Str) {
@@ -68,14 +71,19 @@ static BOOL ReadHttpResponse(HttpResources* res) {
     }
     
     DWORD totalBytes = 0;
-    DWORD bytesRead;
-    
-    while (InternetReadFile(res->hConnect, res->buffer + totalBytes,
-                           bufferSize - totalBytes - 1, &bytesRead) && bytesRead > 0) {
+    DWORD bytesRead = 0;
+    BOOL readOk = TRUE;
+
+    while ((readOk = InternetReadFile(res->hConnect, res->buffer + totalBytes,
+                                      bufferSize - totalBytes - 1, &bytesRead)) && bytesRead > 0) {
         totalBytes += bytesRead;
-        
+
         if (totalBytes >= bufferSize - 256) {
             size_t newSize = bufferSize * 2;
+            if (newSize > MAX_HTTP_RESPONSE_SIZE) {
+                LOG_ERROR("HTTP response exceeded maximum allowed size (%d bytes)", MAX_HTTP_RESPONSE_SIZE);
+                return FALSE;
+            }
             char* newBuffer = (char*)realloc(res->buffer, newSize);
             if (!newBuffer) {
                 LOG_ERROR("Buffer expansion failed (current size: %zu)", bufferSize);
@@ -84,6 +92,11 @@ static BOOL ReadHttpResponse(HttpResources* res) {
             res->buffer = newBuffer;
             bufferSize = newSize;
         }
+    }
+
+    if (!readOk) {
+        LOG_ERROR("Failed while reading HTTP response (error code: %lu)", GetLastError());
+        return FALSE;
     }
     
     res->buffer[totalBytes] = '\0';
@@ -112,6 +125,11 @@ static void CleanupHttpResources(HttpResources* res) {
  * @return TRUE if browser opened successfully
  */
 static BOOL OpenBrowserAndExit(const char* url, HWND hwnd) {
+    if (!IsSafeOpenUrlA(url)) {
+        ShowUpdateErrorDialog(hwnd, GetLocalizedString(NULL, L"Unsafe download URL was blocked"));
+        return FALSE;
+    }
+
     wchar_t* urlW = LocalUtf8ToWideAlloc(url);
     if (!urlW) return FALSE;
     

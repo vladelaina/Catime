@@ -9,6 +9,9 @@
 #include "../resource/resource.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
+#include "menu_preview.h"
+#include "timer/main_timer.h"
+#include "drawing/drawing_timer_precision.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +34,11 @@ static inline BOOL FileExistsUtf8(const char* utf8Path) {
     if (!utf8Path) return FALSE;
     UTF8_TO_WIDE(utf8Path, wPath);
     return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
+}
+
+static void UpdateStartupModeBuffer(const char* mode) {
+    strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
+    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
 }
 
 /** Note: All external variables are declared in their respective headers */
@@ -117,7 +125,7 @@ void WriteConfigPomodoroLoopCount(int loop_count) {
 /**
  * @brief Write custom pomodoro time intervals to config
  */
-void WriteConfigPomodoroTimeOptions(int* times, int count) {
+void WriteConfigPomodoroTimeOptions(const int* times, int count) {
     if (!times || count <= 0) return;
     
     char timesStr[512] = {0};
@@ -358,9 +366,6 @@ void WriteConfigShowMilliseconds(BOOL showMilliseconds) {
  * - Animated gradient: 66ms = 15 FPS (smooth animation without excessive CPU)
  */
 UINT GetTimerInterval(void) {
-    extern BOOL GetActiveShowMilliseconds(void);
-    extern void GetActiveColor(char* outColor, size_t bufferSize);
-    
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
     
@@ -378,14 +383,11 @@ UINT GetTimerInterval(void) {
  * Uses high-precision multimedia timer for smooth milliseconds display
  */
 void ResetTimerWithInterval(HWND hwnd) {
-    extern BOOL MainTimer_Start(HWND hwnd, UINT intervalMs);
-    
     UINT interval = GetTimerInterval();
     
     /* Unified main timer start path keeps SetTimer/mmTimer behavior consistent */
     MainTimer_Start(hwnd, interval);
     
-    extern void ResetTimerMilliseconds(void);
     ResetTimerMilliseconds();
 }
 
@@ -394,11 +396,8 @@ void ResetTimerWithInterval(HWND hwnd) {
  * @brief Update startup mode configuration
  */
 void WriteConfigStartupMode(const char* mode) {
-    extern char CLOCK_STARTUP_MODE[20];
-    
     /* Update in-memory variable */
-    strncpy(CLOCK_STARTUP_MODE, mode, sizeof(CLOCK_STARTUP_MODE) - 1);
-    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+    UpdateStartupModeBuffer(mode);
     
     /* Persist to config file */
     UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "STARTUP_MODE", mode);
@@ -529,5 +528,3 @@ TimeoutActionType TimeoutActionType_FromStr(const char* str) {
 const char* TimeoutActionType_ToStr(TimeoutActionType val) {
     return EnumToString(TIMEOUT_ACTION_MAP, val, "MESSAGE");
 }
-
-

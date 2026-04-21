@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+import json
+import sys
+from pathlib import Path
+
+
+def escape(value: str) -> str:
+    return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def extract_message(result: dict) -> str:
+    message = result.get("message") or {}
+    text = message.get("text") or message.get("markdown") or ""
+    return " ".join(str(text).split())
+
+
+def extract_location(result: dict) -> tuple[str, str]:
+    for location in result.get("locations") or []:
+        physical = location.get("physicalLocation") or {}
+        artifact = physical.get("artifactLocation") or {}
+        uri = (artifact.get("uri") or "").replace("\\", "/")
+        region = physical.get("region") or {}
+        line = str(region.get("startLine") or "1")
+        if uri:
+            return uri, line
+    return "", "1"
+
+
+def should_ignore(check_name: str, message: str, file_path: str) -> bool:
+    normalized = file_path.replace("\\", "/")
+    if normalized.startswith("libs/miniaudio/"):
+        return True
+    if check_name == "MSVC /analyze":
+        if not normalized:
+            return True
+        if "/src/" not in f"/{normalized}" and "/include/" not in f"/{normalized}" and not normalized.startswith("src/") and not normalized.startswith("include/"):
+            return True
+    if check_name == "Semgrep" and "Avoid using 'strtok()'" in message:
+        return True
+    return False
+
+
+def main() -> int:
+    if len(sys.argv) != 3:
+        print("usage: emit_sarif_annotations.py <sarif-file> <check-name>", file=sys.stderr)
+        return 2
+
+    sarif_path = Path(sys.argv[1])
+    check_name = sys.argv[2]
+
+    if not sarif_path.exists():
+        print("0")
+        return 0
+
+    try:
+        data = json.loads(sarif_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        print(f"::error::{escape(check_name + ' SARIF report could not be parsed')}")
+        print("1")
+        return 0
+
+    results = []
+    for run in data.get("runs") or []:
+        results.extend(run.get("results") or [])
+
+    emitted = 0
+    for result in results:
+        level = (result.get("level") or "warning").lower()
+        annotation_level = "error" if level == "error" else "warning"
+        message = extract_message(result) or f"{check_name} finding"
+        file_path, line = extract_location(result)
+        if should_ignore(check_name, message, file_path):
+            continue
+        full_message = f"{check_name}: {message}"
+        if file_path:
+            print(f"COPYABLE {annotation_level.upper()} {file_path}:{line} {full_message}")
+            print(f"::{annotation_level} file={file_path},line={line}::{escape(full_message)}")
+        else:
+            print(f"COPYABLE {annotation_level.upper()} {full_message}")
+            print(f"::{annotation_level}::{escape(full_message)}")
+        emitted += 1
+        if emitted >= 50:
+            break
+
+    print(emitted)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

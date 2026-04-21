@@ -115,8 +115,8 @@ int NaturalCompareA(const char* a, const char* b) {
             continue;
         }
         
-        char ca = tolower((unsigned char)*pa);
-        char cb = tolower((unsigned char)*pb);
+        int ca = tolower((unsigned char)*pa);
+        int cb = tolower((unsigned char)*pb);
         if (ca != cb) {
             return (ca < cb) ? -1 : 1;
         }
@@ -227,8 +227,8 @@ static int CompareComponentA(const char* a, const char* b) {
             continue;
         }
         
-        char ca = tolower((unsigned char)*a);
-        char cb = tolower((unsigned char)*b);
+        int ca = tolower((unsigned char)*a);
+        int cb = tolower((unsigned char)*b);
         if (ca != cb) return (ca < cb) ? -1 : 1;
         a++; b++;
     }

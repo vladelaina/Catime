@@ -8,6 +8,8 @@
 #include "config.h"
 #include "drag_scale.h"
 #include "window_procedure/window_events.h"
+#include "timer/main_timer.h"
+#include "window/window_visual_effects.h"
 #include "window_procedure/window_utils.h"
 #include "window_procedure/ole_drop_target.h"
 #include "log.h"
@@ -66,8 +68,6 @@ BOOL HandleWindowCreate(HWND hwnd) {
     }
 
     /* Initialize high-precision multimedia timer for smooth milliseconds display */
-    extern BOOL MainTimer_Init(HWND hwnd, UINT intervalMs);
-    extern UINT GetTimerInterval(void);
     if (MainTimer_Init(hwnd, GetTimerInterval())) {
         LOG_INFO("High-precision timer initialized");
     } else {
@@ -101,11 +101,9 @@ void HandleWindowDestroy(HWND hwnd) {
     CleanupUpdateThread();
 
     /* Cleanup high-precision timer */
-    extern void MainTimer_Cleanup(void);
     MainTimer_Cleanup();
     
     KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
-    extern UINT GetClickThroughTimerId(void);
     KillTimer(hwnd, GetClickThroughTimerId());
     LOG_INFO("Timers stopped");
     

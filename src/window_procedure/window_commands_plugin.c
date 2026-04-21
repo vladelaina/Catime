@@ -17,6 +17,8 @@
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
+#include "audio_player.h"
+#include "plugin/plugin_process.h"
 #include "log.h"
 #include <windows.h>
 
@@ -41,7 +43,6 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         PluginData_Clear();
         
         /* Prevent countdown completion notification from triggering */
-        extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
         
         /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
@@ -67,11 +68,9 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     /* Plugin is trusted - proceed with state change and launch */
     
     /* Stop notification sound */
-    extern void StopNotificationSound(void);
     StopNotificationSound();
     
     /* Prevent countdown completion notification from triggering */
-    extern BOOL countdown_message_shown;
     countdown_message_shown = TRUE;
     
     /* Reset timer flags */
@@ -83,15 +82,9 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     MainTimer_Stop();
     
     /* Reset Pomodoro if active */
-    extern POMODORO_PHASE current_pomodoro_phase;
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        current_pomodoro_phase = POMODORO_PHASE_IDLE;
-    }
+    current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
     /* Reset timer values */
-    extern int CLOCK_TOTAL_TIME;
-    extern int countdown_elapsed_time;
-    extern int countup_elapsed_time;
     CLOCK_TOTAL_TIME = 0;
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
@@ -111,7 +104,6 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         /* Launch failed - show error */
         LOG_ERROR("Plugin failed to start: %ls", pluginInfo ? pluginInfo->displayName : L"unknown");
         
-        extern const wchar_t* PluginProcess_GetLastError(void);
         const wchar_t* errorMsg = PluginProcess_GetLastError();
         if (errorMsg && errorMsg[0] != L'\0') {
             PluginData_SetText(errorMsg);
@@ -157,7 +149,6 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         PluginData_Clear();
         
         /* Prevent countdown completion notification from triggering */
-        extern BOOL countdown_message_shown;
         countdown_message_shown = TRUE;
         
         if (hadCatimeTag) {
@@ -181,7 +172,6 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     PluginData_SetActive(TRUE);
     
     /* Prevent countdown completion notification from triggering */
-    extern BOOL countdown_message_shown;
     countdown_message_shown = TRUE;
     
     /* Check for <catime> tag */
@@ -224,7 +214,6 @@ void HandlePluginExit(HWND hwnd) {
     PluginData_Clear();
     
     /* Prevent countdown completion notification from triggering */
-    extern BOOL countdown_message_shown;
     countdown_message_shown = TRUE;
     
     /* Switch to idle state - don't reset timer to avoid 1-minute fallback */

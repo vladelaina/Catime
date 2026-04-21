@@ -362,25 +362,23 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
     int posX, posY;
     
     /* Handle special X position values */
-    if (DEFAULT_WINDOW_POS_X == -2) {
-        posX = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (windowWidth / 2);
-        if (posX + windowWidth > mi.rcMonitor.right) {
-            posX = mi.rcMonitor.right - windowWidth - 20;
-        }
-    } else if (DEFAULT_WINDOW_POS_X == -1) {
-        posX = mi.rcMonitor.left + (screenWidth - windowWidth) / 2;
-    } else {
-        posX = mi.rcMonitor.left + DEFAULT_WINDOW_POS_X;
+#if DEFAULT_WINDOW_POS_X == -2
+    posX = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (windowWidth / 2);
+    if (posX + windowWidth > mi.rcMonitor.right) {
+        posX = mi.rcMonitor.right - windowWidth - 20;
     }
-    
+#elif DEFAULT_WINDOW_POS_X == -1
+    posX = mi.rcMonitor.left + (screenWidth - windowWidth) / 2;
+#else
+    posX = mi.rcMonitor.left + DEFAULT_WINDOW_POS_X;
+#endif
+
     /* Handle special Y position value (-1 = top of monitor) */
-    if (DEFAULT_WINDOW_POS_Y == -1) {
-        posY = mi.rcMonitor.top;
-    } else if (DEFAULT_WINDOW_POS_Y < 0) {
-        posY = mi.rcMonitor.top;
-    } else {
-        posY = mi.rcMonitor.top + DEFAULT_WINDOW_POS_Y;
-    }
+#if DEFAULT_WINDOW_POS_Y < 0
+    posY = mi.rcMonitor.top;
+#else
+    posY = mi.rcMonitor.top + DEFAULT_WINDOW_POS_Y;
+#endif
     
     CLOCK_WINDOW_POS_X = posX;
     CLOCK_WINDOW_POS_Y = posY;
@@ -555,7 +553,6 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     if (index >= g_AppConfig.recent_files.count) return TRUE;
     
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
-        extern TimeoutActionType CLOCK_TIMEOUT_ACTION;
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
         WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
         WriteConfigTimeoutAction("MESSAGE");

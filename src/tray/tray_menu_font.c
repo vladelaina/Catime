@@ -173,7 +173,7 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             ScanFontFolderRecursive(fullPath, newRelativePath, ctx, depth + 1);
         } else {
-            wchar_t* ext = wcsrchr(findData.cFileName, L'.');
+            const wchar_t* ext = wcsrchr(findData.cFileName, L'.');
             if (ext && (_wcsicmp(ext, L".ttf") == 0 || _wcsicmp(ext, L".otf") == 0)) {
                 AddFontEntry(ctx, findData.cFileName, newRelativePath);
             }
@@ -232,7 +232,7 @@ static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name, BOOL shouldCheck)
     int count = GetMenuItemCount(hParent);
     MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
     mii.fMask = MIIM_STRING | MIIM_SUBMENU | MIIM_STATE;
-    wchar_t buffer[MAX_PATH];
+    wchar_t buffer[MAX_PATH] = {0};
     
     for (int i = 0; i < count; i++) {
         mii.dwTypeData = buffer;

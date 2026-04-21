@@ -472,27 +472,24 @@ static void ParseImageSize(const wchar_t* sizeStr, size_t len, int* width, int* 
     
     if (xPos) {
         /* WxH format */
-        wchar_t widthStr[16] = {0};
-        wchar_t heightStr[16] = {0};
-        
         size_t wLen = xPos - sizeStr;
         if (wLen > 0 && wLen < 16) {
+            wchar_t widthStr[16] = {0};
             wcsncpy(widthStr, sizeStr, wLen);
             *width = _wtoi(widthStr);
         }
         
         size_t hLen = len - wLen - 1;
         if (hLen > 0 && hLen < 16) {
+            wchar_t heightStr[16] = {0};
             wcsncpy(heightStr, xPos + 1, hLen);
             *height = _wtoi(heightStr);
         }
-    } else {
+    } else if (len < 16) {
         /* Single number - treat as width, height auto */
         wchar_t numStr[16] = {0};
-        if (len < 16) {
-            wcsncpy(numStr, sizeStr, len);
-            *width = _wtoi(numStr);
-        }
+        wcsncpy(numStr, sizeStr, len);
+        *width = _wtoi(numStr);
     }
 }
 

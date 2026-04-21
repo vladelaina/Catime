@@ -33,7 +33,7 @@ typedef void (*GlowColorCallback)(int x, int y, int* r, int* g, int* b, void* us
  */
 void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData);
 
@@ -56,7 +56,7 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData);
 
@@ -65,7 +65,7 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
                       int x_pos, int y_pos,
-                      unsigned char* bitmap, int w, int h,
+                      const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData);
 
@@ -75,7 +75,7 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int x_pos, int y_pos,
-                            unsigned char* bitmap, int w, int h,
+                            const unsigned char* bitmap, int w, int h,
                             int r, int g, int b,
                             GlowColorCallback colorCb, void* userData,
                             int timeOffset);
@@ -86,7 +86,7 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
  */
 void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
                        int x_pos, int y_pos,
-                       unsigned char* bitmap, int w, int h,
+                       const unsigned char* bitmap, int w, int h,
                        int r, int g, int b,
                        GlowColorCallback colorCb, void* userData,
                        int timeOffset);

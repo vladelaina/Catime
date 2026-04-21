@@ -63,7 +63,7 @@ static BOOL GetTargetFolderPath(ResourceType type, wchar_t* outPath, size_t size
     wchar_t wconfigPath[MAX_PATH];
     MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
     
-    wchar_t* lastSep = wcsrchr(wconfigPath, L'\\');
+    const wchar_t* lastSep = wcsrchr(wconfigPath, L'\\');
     if (!lastSep) return FALSE;
     
     size_t dirLen = (size_t)(lastSep - wconfigPath);

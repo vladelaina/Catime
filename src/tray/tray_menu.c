@@ -54,7 +54,7 @@ extern void FormatPomodoroTime(int minutes, wchar_t* buffer, size_t size);
  * @note Delegates to specialized submenu builders for maintainability
  */
 void ShowColorMenu(HWND hwnd) {
-    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+    SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
     
@@ -112,7 +112,7 @@ void ShowColorMenu(HWND hwnd) {
  * @note Includes timer management, Pomodoro, and quick countdown options
  */
 void ShowContextMenu(HWND hwnd) {
-    SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+    SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
     
@@ -129,8 +129,7 @@ void ShowContextMenu(HWND hwnd) {
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
     
-    BOOL canRestart = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || 
-                      (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0)));
+    BOOL canRestart = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0));
     
     AppendMenuW(hTimerManageMenu, MF_STRING | (canRestart ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_RESTART, 

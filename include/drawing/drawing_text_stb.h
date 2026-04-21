@@ -49,7 +49,7 @@ typedef struct {
  * 
  * @note Uses LRU eviction when cache is full
  */
-stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontName);
+stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath);
 
 /**
  * @brief Clear all cached fonts
@@ -97,12 +97,12 @@ void GetCharMetricsSTB(wchar_t c, wchar_t nextC, float scale, float fallbackScal
 
 void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight, 
                         int x_pos, int y_pos, 
-                        unsigned char* bitmap, int w, int h, 
+                        const unsigned char* bitmap, int w, int h,
                         int r, int g, int b);
 
 void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
                                 int x_pos, int y_pos, 
-                                unsigned char* bitmap, int w, int h, 
+                                const unsigned char* bitmap, int w, int h,
                                 int startX, int totalWidth, int gradientType,
                                 int timeOffset);
 

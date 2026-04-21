@@ -45,7 +45,6 @@ static void RestoreOriginalFont(void) {
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
     
     LOG_INFO("FontRestore: Restoring config...");
-    extern void WriteConfigFont(const char* fontName, BOOL reload);
     WriteConfigFont(FONT_FILE_NAME, FALSE);
     FlushConfigToDisk();
     LOG_INFO("FontRestore: ✓ Config restored");
@@ -144,11 +143,10 @@ static void ApplyFontToMainWindow(const wchar_t* fontName, HWND hdlg, HWND hwndL
     LOG_INFO("FontApply: Updated FONT_FILE_NAME to: %s", FONT_FILE_NAME);
     
     /* Load font and get internal name */
-    extern int LoadFontByNameAndGetRealName(HINSTANCE, const char*, char*, size_t);
     HINSTANCE hInstance = GetModuleHandleW(NULL);
     
     LOG_INFO("FontApply: Loading font via LoadFontByNameAndGetRealName...");
-    if (LoadFontByNameAndGetRealName(hInstance, fontPath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME)) == 0) {
+    if (!LoadFontByNameAndGetRealName(hInstance, fontPath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
         LOG_WARNING("FontApply: LoadFontByNameAndGetRealName failed, using display name as fallback");
         WideCharToMultiByte(CP_UTF8, 0, fontName, -1,
                            FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME), NULL, NULL);
@@ -156,7 +154,6 @@ static void ApplyFontToMainWindow(const wchar_t* fontName, HWND hdlg, HWND hwndL
         LOG_INFO("FontApply: ✓ Font loaded successfully, internal name: %s", FONT_INTERNAL_NAME);
     }
     
-    extern void WriteConfigFont(const char* fontName, BOOL reload);
     LOG_INFO("FontApply: Writing config to disk...");
     WriteConfigFont(FONT_FILE_NAME, FALSE);
     FlushConfigToDisk();

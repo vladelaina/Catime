@@ -518,9 +518,9 @@ BOOL ExtractMarkdownStrikethrough(const wchar_t** src, ParseState* state) {
 static COLORREF ParseWideHexColor(const wchar_t* hex) {
     if (!hex || *hex != L'#') return RGB(0, 0, 0);
     
-    int r = 0, g = 0, b = 0;
+    unsigned int r = 0, g = 0, b = 0;
     if (swscanf(hex + 1, L"%02x%02x%02x", &r, &g, &b) == 3) {
-        return RGB(r, g, b);
+        return RGB((int)r, (int)g, (int)b);
     }
     return RGB(0, 0, 0);
 }

@@ -14,6 +14,7 @@
 #include "tray/tray_animation_percent.h"
 #include "system_monitor.h"
 #include "config.h"
+#include "tray/tray_events.h"
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
 #define PERCENT_ICON_WARMUP_MS 120  /* Allow CPU/memory sampling to stabilize (first read often returns 0%) */
@@ -79,7 +80,6 @@ static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         
         /* Only process if mouse is over tray icon */
         if (IsMouseOverTrayIconCached(pMouseStruct->pt)) {
-            extern int CLOCK_WINDOW_OPACITY;
             extern void WriteConfigWindowOpacity(int opacity);
             extern int ReadConfigOpacityStepNormal(void);
             extern int ReadConfigOpacityStepFast(void);
@@ -312,7 +312,6 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     }
 
     /* Skip update if showing opacity tip */
-    extern BOOL g_showingOpacityTip;
     if (g_showingOpacityTip) {
         return;
     }
@@ -423,7 +422,6 @@ void RemoveTrayIcon(void) {
     }
 
     /* Stop hover detection timer */
-    extern void StopTrayHoverDetection(void);
     StopTrayHoverDetection();
 
     /* Uninstall mouse hook */

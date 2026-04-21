@@ -29,7 +29,7 @@ typedef HANDLE DPI_AWARENESS_CONTEXT;
  * ============================================================================ */
 
 typedef struct {
-    int controlId;
+    UINT controlId;
     const wchar_t* textCN;
     const wchar_t* textEN;
     const wchar_t* url;
@@ -45,7 +45,7 @@ static AboutLinkInfo g_aboutLinkInfos[] = {
     {IDC_SUPPORT, NULL, L"Discord", L"https://discord.com/invite/W3tW2gtp6g"}
 };
 
-static const int g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
+static const size_t g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
 
 /* ============================================================================
  * Global State
@@ -143,24 +143,22 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             /* Convert build time from UTC+8 to local time */
             SYSTEMTIME buildTimeUTC8 = {0};
-            buildTimeUTC8.wYear = year;
-            buildTimeUTC8.wMonth = month_num;
-            buildTimeUTC8.wDay = day;
-            buildTimeUTC8.wHour = hour;
-            buildTimeUTC8.wMinute = min;
-            buildTimeUTC8.wSecond = sec;
+            buildTimeUTC8.wYear = (WORD)year;
+            buildTimeUTC8.wMonth = (WORD)month_num;
+            buildTimeUTC8.wDay = (WORD)day;
+            buildTimeUTC8.wHour = (WORD)hour;
+            buildTimeUTC8.wMinute = (WORD)min;
+            buildTimeUTC8.wSecond = (WORD)sec;
 
             /* Convert to FILETIME (UTC+8 is 8 hours ahead of UTC) */
             FILETIME fileTime;
             SystemTimeToFileTime(&buildTimeUTC8, &fileTime);
 
             /* Subtract 8 hours to get UTC time */
-            ULARGE_INTEGER uli;
-            uli.LowPart = fileTime.dwLowDateTime;
-            uli.HighPart = fileTime.dwHighDateTime;
-            uli.QuadPart -= (ULONGLONG)8 * 60 * 60 * 10000000;  /* 8 hours in 100-nanosecond intervals */
-            fileTime.dwLowDateTime = uli.LowPart;
-            fileTime.dwHighDateTime = uli.HighPart;
+            ULONGLONG utcTicks = (((ULONGLONG)fileTime.dwHighDateTime) << 32) | fileTime.dwLowDateTime;
+            utcTicks -= (ULONGLONG)8 * 60 * 60 * 10000000;  /* 8 hours in 100-nanosecond intervals */
+            fileTime.dwLowDateTime = (DWORD)(utcTicks & 0xFFFFFFFFULL);
+            fileTime.dwHighDateTime = (DWORD)(utcTicks >> 32);
 
             /* Convert to local time */
             FILETIME localFileTime;
@@ -178,7 +176,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             SetDlgItemTextW(hwndDlg, IDC_BUILD_DATE, timeStr);
 
-            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+            for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
                 const wchar_t* linkText = GetLocalizedString(g_aboutLinkInfos[i].textCN, g_aboutLinkInfos[i].textEN);
                 SetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, linkText);
             }
@@ -202,7 +200,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
 
-            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+            for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
                 if (LOWORD(wParam) == g_aboutLinkInfos[i].controlId && HIWORD(wParam) == STN_CLICKED) {
                     ShellExecuteW(NULL, L"open", g_aboutLinkInfos[i].url, NULL, NULL, SW_SHOWNORMAL);
                     return TRUE;
@@ -213,7 +211,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_DRAWITEM: {
             LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
 
-            for (int i = 0; i < g_aboutLinkInfoCount; i++) {
+            for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
                 if (lpDrawItem->CtlID == g_aboutLinkInfos[i].controlId) {
                     RECT rect = lpDrawItem->rcItem;
                     HDC hdc = lpDrawItem->hDC;
@@ -294,8 +292,6 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             Dialog_SubclassEdit(hwndEdit, ctx);
-
-            extern char CLOCK_TIMEOUT_WEBSITE_URL[];
             if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
                 wchar_t wUrl[MAX_PATH];
                 MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH);
@@ -420,8 +416,8 @@ static void CleanupFontLicenseResources(void) {
     if (g_displayText) { free(g_displayText); g_displayText = NULL; }
 }
 
-INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT message, WPARAM wParam, LPARAM lParam) {
-    switch (message) {
+INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
             
@@ -589,4 +585,3 @@ void ShowFontLicenseDialog(HWND hwndParent) {
         ShowWindow(hwndDlg, SW_SHOW);
     }
 }
-

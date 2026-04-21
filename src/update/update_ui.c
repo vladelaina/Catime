@@ -10,6 +10,7 @@
 #include "language.h"
 #include "log.h"
 #include "utils/string_convert.h"
+#include "utils/url_safety.h"
 #include "../../resource/resource.h"
 #include <strsafe.h>
 #include <commctrl.h>
@@ -41,6 +42,7 @@ static BOOL g_shouldExitAfterDialog = FALSE;
 
 /** @brief Exit notification dialog */
 INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
     switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_EXIT_MSG, hwndDlg);
@@ -115,7 +117,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             InitializeDialog(hwndDlg, IDD_UPDATE_DIALOG);
             g_textHeight = 0;
 
-            VersionInfo* versionInfo = &g_updateVersionInfo;
+            const VersionInfo* versionInfo = &g_updateVersionInfo;
             if (versionInfo->currentVersion) {
                 wchar_t* currentVerW = LocalUtf8ToWideAlloc(versionInfo->currentVersion);
                 wchar_t* latestVerW = LocalUtf8ToWideAlloc(versionInfo->latestVersion);
@@ -462,6 +464,7 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
 static char g_noUpdateVersion[64] = {0};
 
 INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    UNREFERENCED_PARAMETER(lParam);
     switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_NO_UPDATE, hwndDlg);
@@ -559,8 +562,8 @@ void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
     (void)hwnd;
     
     /* Log the error for debugging */
-    char errorMsgUtf8[512] = {0};
     if (errorMsg) {
+        char errorMsgUtf8[512] = {0};
         WideCharToMultiByte(CP_UTF8, 0, errorMsg, -1, errorMsgUtf8, sizeof(errorMsgUtf8), NULL, NULL);
         LOG_WARNING("Update check failed: %s", errorMsgUtf8);
     }
@@ -610,7 +613,13 @@ void TriggerUpdateDownload(HWND hwnd) {
     const char* url = GetPendingUpdateDownloadUrl();
     if (url && url[0] != '\0') {
         LOG_INFO("User chose to update now (from modeless dialog)");
-        
+
+        if (!IsSafeOpenUrlA(url)) {
+            LOG_ERROR("Blocked unsafe update URL: %s", url);
+            ShowUpdateErrorDialog(hwnd, GetLocalizedString(NULL, L"Unsafe download URL was blocked"));
+            return;
+        }
+
         /* Open browser with download URL */
         wchar_t* urlW = Utf8ToWideAlloc(url);
         if (urlW) {
@@ -619,7 +628,6 @@ void TriggerUpdateDownload(HWND hwnd) {
         }
         
         /* Set flag to exit after dialog closes, then show exit message */
-        extern BOOL g_shouldExitAfterDialog;
         g_shouldExitAfterDialog = TRUE;
         ShowExitMessageDialog(hwnd);
         /* PostQuitMessage will be called in WM_DESTROY of exit dialog */

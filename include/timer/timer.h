@@ -62,6 +62,9 @@ extern int64_t g_target_end_time;  /* For Countdown: When the timer should end *
 extern int64_t g_start_time;       /* For CountUp: When the timer started */
 extern int64_t g_pause_start_time; /* Timestamp when pause began */
 
+/* Monotonic absolute time source (milliseconds) */
+int64_t GetAbsoluteTimeMs(void);
+
 extern time_t CLOCK_LAST_TIME_UPDATE;
 extern int last_displayed_second;
 

@@ -160,7 +160,6 @@ static void StartPreview(OleDropTarget* target, const wchar_t* filePath) {
     } 
     else if (!target->isPreviewingAnim && IsAnimationFile(filePath)) {
         /* Preview animation */
-        extern void PreviewAnimationFromFile(HWND hwnd, const char* filePath);
         PreviewAnimationFromFile(target->hwnd, pathUtf8);
         target->isPreviewingAnim = TRUE;
         LOG_INFO("Previewing animation: %s", pathUtf8);
@@ -257,7 +256,7 @@ STDMETHODIMP DragEnter(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeySta
 
 STDMETHODIMP DragOver(IDropTarget* this, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     (void)grfKeyState; (void)pt;
-    OleDropTarget* target = (OleDropTarget*)this;
+    const OleDropTarget* target = (const OleDropTarget*)this;
     
     if (target->isValidDrop) {
         *pdwEffect = DROPEFFECT_COPY;

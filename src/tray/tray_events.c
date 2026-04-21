@@ -134,14 +134,14 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
 
     switch (uMouseMsg) {
         case WM_RBUTTONUP:
-            SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+            SetCursor(LoadCursorW(NULL, IDC_ARROW));
             SetTrayInteractionSuspended(TRUE);
             ShowColorMenu(hwnd);
             SetTrayInteractionSuspended(FALSE);
             break;
             
         case WM_LBUTTONUP:
-            SetCursor(LoadCursorW(NULL, MAKEINTRESOURCEW(IDC_ARROW)));
+            SetCursor(LoadCursorW(NULL, IDC_ARROW));
             SetTrayInteractionSuspended(TRUE);
             ShowContextMenu(hwnd);
             SetTrayInteractionSuspended(FALSE);

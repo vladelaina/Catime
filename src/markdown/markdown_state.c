@@ -4,6 +4,7 @@
  */
 
 #include "markdown/markdown_parser.h"
+#include "utils/url_safety.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -145,31 +146,31 @@ void FreeMarkdownLinks(MarkdownLink* links, int linkCount) {
         return FALSE; \
     } while(0)
 
-BOOL IsCharacterInLink(MarkdownLink* links, int linkCount, int position, int* linkIndex) {
+BOOL IsCharacterInLink(const MarkdownLink* links, int linkCount, int position, int* linkIndex) {
     IS_CHARACTER_IN_RANGE(links, linkCount, position, linkIndex);
 }
 
-BOOL IsCharacterInHeading(MarkdownHeading* headings, int headingCount, int position, int* headingIndex) {
+BOOL IsCharacterInHeading(const MarkdownHeading* headings, int headingCount, int position, int* headingIndex) {
     IS_CHARACTER_IN_RANGE(headings, headingCount, position, headingIndex);
 }
 
-BOOL IsCharacterInStyle(MarkdownStyle* styles, int styleCount, int position, int* styleIndex) {
+BOOL IsCharacterInStyle(const MarkdownStyle* styles, int styleCount, int position, int* styleIndex) {
     IS_CHARACTER_IN_RANGE(styles, styleCount, position, styleIndex);
 }
 
-BOOL IsCharacterInListItem(MarkdownListItem* listItems, int listItemCount, int position, int* listItemIndex) {
+BOOL IsCharacterInListItem(const MarkdownListItem* listItems, int listItemCount, int position, int* listItemIndex) {
     IS_CHARACTER_IN_RANGE(listItems, listItemCount, position, listItemIndex);
 }
 
-BOOL IsCharacterInBlockquote(MarkdownBlockquote* blockquotes, int blockquoteCount, int position, int* blockquoteIndex) {
+BOOL IsCharacterInBlockquote(const MarkdownBlockquote* blockquotes, int blockquoteCount, int position, int* blockquoteIndex) {
     IS_CHARACTER_IN_RANGE(blockquotes, blockquoteCount, position, blockquoteIndex);
 }
 
-BOOL IsCharacterInColorTag(MarkdownColorTag* colorTags, int colorTagCount, int position, int* colorTagIndex) {
+BOOL IsCharacterInColorTag(const MarkdownColorTag* colorTags, int colorTagCount, int position, int* colorTagIndex) {
     IS_CHARACTER_IN_RANGE(colorTags, colorTagCount, position, colorTagIndex);
 }
 
-BOOL IsCharacterInFontTag(MarkdownFontTag* fontTags, int fontTagCount, int position, int* fontTagIndex) {
+BOOL IsCharacterInFontTag(const MarkdownFontTag* fontTags, int fontTagCount, int position, int* fontTagIndex) {
     IS_CHARACTER_IN_RANGE(fontTags, fontTagCount, position, fontTagIndex);
 }
 
@@ -219,7 +220,7 @@ const wchar_t* GetClickedLinkUrl(MarkdownLink* links, int linkCount, POINT point
 
 BOOL HandleMarkdownClick(MarkdownLink* links, int linkCount, POINT clickPoint) {
     const wchar_t* clickedUrl = GetClickedLinkUrl(links, linkCount, clickPoint);
-    if (clickedUrl) {
+    if (clickedUrl && IsSafeOpenUrlW(clickedUrl)) {
         ShellExecuteW(NULL, L"open", clickedUrl, NULL, NULL, SW_SHOWNORMAL);
         return TRUE;
     }

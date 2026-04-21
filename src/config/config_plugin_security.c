@@ -19,25 +19,29 @@
 static CRITICAL_SECTION g_pluginTrustCS;
 static volatile LONG g_pluginTrustCSInitialized = 0;
 
+#define PLUGIN_TRUST_CS_UNINITIALIZED 0
+#define PLUGIN_TRUST_CS_INITIALIZING 1
+#define PLUGIN_TRUST_CS_INITIALIZED 2
+
 /**
  * @brief Initialize plugin trust critical section (thread-safe)
  * Uses InterlockedCompareExchange for atomic initialization
  */
 static void EnsurePluginTrustCSInitialized(void) {
-    /* Fast path: already initialized */
-    if (g_pluginTrustCSInitialized == 1) {
+    if (g_pluginTrustCSInitialized == PLUGIN_TRUST_CS_INITIALIZED) {
         return;
     }
-    
-    /* Atomic initialization using InterlockedCompareExchange */
-    if (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 1, 0) == 0) {
-        /* This thread won the race, initialize the critical section */
+
+    if (InterlockedCompareExchange(&g_pluginTrustCSInitialized,
+                                   PLUGIN_TRUST_CS_INITIALIZING,
+                                   PLUGIN_TRUST_CS_UNINITIALIZED) == PLUGIN_TRUST_CS_UNINITIALIZED) {
         InitializeCriticalSection(&g_pluginTrustCS);
-    } else {
-        /* Another thread is initializing or has initialized, wait */
-        while (g_pluginTrustCSInitialized != 1) {
-            Sleep(0);  /* Yield to other threads */
-        }
+        InterlockedExchange(&g_pluginTrustCSInitialized, PLUGIN_TRUST_CS_INITIALIZED);
+        return;
+    }
+
+    while (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) == PLUGIN_TRUST_CS_INITIALIZING) {
+        Sleep(0);
     }
 }
 
@@ -385,14 +389,15 @@ BOOL UntrustPlugin(const char* pluginPath) {
  * WARNING: Must be called only after all threads that might use it have stopped
  */
 void CleanupPluginTrustCS(void) {
-    if (g_pluginTrustCSInitialized == 1) {
-        /* Acquire lock one last time to ensure no thread is using it */
+    while (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) == PLUGIN_TRUST_CS_INITIALIZING) {
+        Sleep(0);
+    }
+
+    if (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) == PLUGIN_TRUST_CS_INITIALIZED) {
         EnterCriticalSection(&g_pluginTrustCS);
         LeaveCriticalSection(&g_pluginTrustCS);
-        
-        /* Now safe to delete */
         DeleteCriticalSection(&g_pluginTrustCS);
-        InterlockedExchange(&g_pluginTrustCSInitialized, 0);
+        InterlockedExchange(&g_pluginTrustCSInitialized, PLUGIN_TRUST_CS_UNINITIALIZED);
     }
 }
 
@@ -417,12 +422,12 @@ void LoadPluginTrustFromConfig(void) {
         char value[MAX_PATH + 65 + 2];
         ReadIniString(INI_SECTION_PLUGIN_TRUST, key, "", value, sizeof(value), config_path);
         
-        if (strlen(value) > 0) {
+        if (value[0] != '\0') {
             /* Parse "path|hash" format */
             char* separator = strchr(value, '|');
-            if (separator && (separator - value) < MAX_PATH) {
+            if (separator && separator != value && (separator - value) < MAX_PATH) {
                 *separator = '\0';
-                char* hash = separator + 1;
+                const char* const hash = separator + 1;
                 
                 if (strlen(hash) == 64) {  /* SHA256 hex is 64 chars */
                     /* Validate hash contains only hex characters */
@@ -436,7 +441,7 @@ void LoadPluginTrustFromConfig(void) {
                         }
                     }
                     
-                    if (validHash && strlen(value) > 0) {  /* Also check path is not empty */
+                    if (validHash) {
                         /* Defensive check: ensure we don't overflow (though loop limit prevents this) */
                         if (g_AppConfig.plugin_trust.count >= MAX_TRUSTED_PLUGINS) {
                             LOG_ERROR("Plugin trust list overflow during load (max: %d)", MAX_TRUSTED_PLUGINS);

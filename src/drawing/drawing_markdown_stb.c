@@ -33,10 +33,14 @@ static int GetLineHeight(float scale) {
     return (int)((ascent - descent + lineGap) * scale);
 }
 
+static int ClampMarkdownPos(size_t pos) {
+    return (pos > (size_t)INT_MAX) ? INT_MAX : (int)pos;
+}
+
 /* Italic blend with per-row shear */
 static void BlendCharBitmapItalicSTB(void* destBits, int destWidth, int destHeight,
                                       int x_pos, int y_pos,
-                                      unsigned char* bitmap, int w, int h,
+                                      const unsigned char* bitmap, int w, int h,
                                       int r, int g, int b, float slant) {
     DWORD* pixels = (DWORD*)destBits;
     for (int j = 0; j < h; ++j) {
@@ -65,7 +69,7 @@ static void BlendCharBitmapItalicSTB(void* destBits, int destWidth, int destHeig
 /* Italic blend with gradient and per-row shear */
 static void BlendCharBitmapItalicGradientSTB(void* destBits, int destWidth, int destHeight,
                                               int x_pos, int y_pos,
-                                              unsigned char* bitmap, int w, int h,
+                                              const unsigned char* bitmap, int w, int h,
                                               float slant, int gradientMode, int timeOffset, int totalWidth) {
     DWORD* pixels = (DWORD*)destBits;
     const GradientInfo* info = GetGradientInfo((GradientType)gradientMode);
@@ -136,7 +140,7 @@ static void BlendCharBitmapItalicGradientSTB(void* destBits, int destWidth, int 
  */
 static void BlendCharBitmapColorTagGradientSTB(void* destBits, int destWidth, int destHeight,
                                                 int x_pos, int y_pos,
-                                                unsigned char* bitmap, int w, int h,
+                                                const unsigned char* bitmap, int w, int h,
                                                 const MarkdownColorTag* colorTag, int timeOffset, int totalWidth) {
     if (!colorTag || colorTag->colorCount < 2) return;
     
@@ -190,7 +194,7 @@ static void BlendCharBitmapColorTagGradientSTB(void* destBits, int destWidth, in
  */
 static void BlendCharBitmapColorTagGradientItalicSTB(void* destBits, int destWidth, int destHeight,
                                                       int x_pos, int y_pos,
-                                                      unsigned char* bitmap, int w, int h,
+                                                      const unsigned char* bitmap, int w, int h,
                                                       const MarkdownColorTag* colorTag, int timeOffset, int totalWidth,
                                                       float slant) {
     if (!colorTag || colorTag->colorCount < 2) return;
@@ -244,12 +248,12 @@ static void BlendCharBitmapColorTagGradientItalicSTB(void* destBits, int destWid
 /* Public API */
 
 BOOL MeasureMarkdownSTB(const wchar_t* text,
-                        MarkdownHeading* headings, int headingCount,
+                        const MarkdownHeading* headings, int headingCount,
                         int fontSize, int* width, int* height) {
     if (!IsFontLoadedSTB() || !text) return FALSE;
 
-    stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
-    stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
+    const stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
+    const stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
     BOOL fallbackLoaded = IsFallbackFontLoadedSTB();
 
     float baseScale = stbtt_ScaleForPixelHeight(fontInfo, (float)fontSize);
@@ -283,10 +287,11 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
         float fallbackScale = fallbackBaseScale;
         
         // Check heading
-        while (curHeadingIdx < headingCount && i >= headings[curHeadingIdx].endPos) {
+        int charPos = ClampMarkdownPos(i);
+        while (curHeadingIdx < headingCount && charPos >= headings[curHeadingIdx].endPos) {
             curHeadingIdx++;
         }
-        if (curHeadingIdx < headingCount && i >= headings[curHeadingIdx].startPos) {
+        if (curHeadingIdx < headingCount && charPos >= headings[curHeadingIdx].startPos) {
             scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
             if (fallbackLoaded) {
                 fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
@@ -332,19 +337,19 @@ static COLORREF GetAlertColor(BlockquoteAlertType type) {
 
 void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        MarkdownLink* links, int linkCount,
-                       MarkdownHeading* headings, int headingCount,
+                       const MarkdownHeading* headings, int headingCount,
                        MarkdownStyle* styles, int styleCount,
                        MarkdownBlockquote* blockquotes, int blockquoteCount,
                        MarkdownColorTag* colorTags, int colorTagCount,
-                       MarkdownFontTag* fontTags, int fontTagCount,
+                       const MarkdownFontTag* fontTags, int fontTagCount,
                        COLORREF color, int fontSize, float fontScale, int gradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
 
     /* Clear previous clickable regions before rendering */
     ClearClickableRegions();
 
-    stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
-    stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
+    const stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
+    const stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
     BOOL fallbackLoaded = IsFallbackFontLoadedSTB();
 
     float baseScale = stbtt_ScaleForPixelHeight(fontInfo, (float)(fontSize * fontScale));
@@ -365,7 +370,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
     int blockLeftX = (width - maxLineWidth) / 2;  // Left edge of centered text block
     
     size_t len = wcslen(text);
-    int currentLineStart = 0;
+    size_t currentLineStart = 0;
     
     // State trackers
     int curHeadingIdx = 0;
@@ -411,9 +416,10 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 
                 float scale = baseScale;
                 float fallbackScale = fallbackBaseScale;
+                int lineCharPos = ClampMarkdownPos(j);
 
-                while (tmpHeadingIdx < headingCount && j >= headings[tmpHeadingIdx].endPos) tmpHeadingIdx++;
-                if (tmpHeadingIdx < headingCount && j >= headings[tmpHeadingIdx].startPos) {
+                while (tmpHeadingIdx < headingCount && lineCharPos >= headings[tmpHeadingIdx].endPos) tmpHeadingIdx++;
+                if (tmpHeadingIdx < headingCount && lineCharPos >= headings[tmpHeadingIdx].startPos) {
                     scale = GetScaleForHeading(headings[tmpHeadingIdx].level, baseScale);
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[tmpHeadingIdx].level, fallbackBaseScale);
                 }
@@ -495,15 +501,16 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
             }
 
             // Check if this line is inside a blockquote
-            while (curBlockquoteIdx < blockquoteCount && 
-                   (int)currentLineStart >= blockquotes[curBlockquoteIdx].endPos) {
+            int currentLineStartPos = ClampMarkdownPos(currentLineStart);
+            while (curBlockquoteIdx < blockquoteCount &&
+                   currentLineStartPos >= blockquotes[curBlockquoteIdx].endPos) {
                 curBlockquoteIdx++;
             }
             
             BlockquoteAlertType activeAlertType = BLOCKQUOTE_NORMAL;
             BOOL inBlockquote = FALSE;
             if (curBlockquoteIdx < blockquoteCount && 
-                (int)currentLineStart >= blockquotes[curBlockquoteIdx].startPos) {
+                currentLineStartPos >= blockquotes[curBlockquoteIdx].startPos) {
                 inBlockquote = TRUE;
                 activeAlertType = blockquotes[curBlockquoteIdx].alertType;
             }
@@ -551,10 +558,11 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 float scale = baseScale;
                 float fallbackScale = fallbackBaseScale;
                 COLORREF drawColor = color;
+                int renderPos = ClampMarkdownPos(j);
 
                 // Heading
-                while (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].endPos) curHeadingIdx++;
-                if (curHeadingIdx < headingCount && j >= headings[curHeadingIdx].startPos) {
+                while (curHeadingIdx < headingCount && renderPos >= headings[curHeadingIdx].endPos) curHeadingIdx++;
+                if (curHeadingIdx < headingCount && renderPos >= headings[curHeadingIdx].startPos) {
                     scale = GetScaleForHeading(headings[curHeadingIdx].level, baseScale);
                     if (fallbackLoaded) fallbackScale = GetScaleForHeading(headings[curHeadingIdx].level, fallbackBaseScale);
                 }
@@ -567,14 +575,14 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 // Link - track region for click detection
                 BOOL inLink = FALSE;
                 int activeLinkIdx = -1;
-                while (curLinkIdx < linkCount && j >= links[curLinkIdx].endPos) curLinkIdx++;
-                if (curLinkIdx < linkCount && j >= links[curLinkIdx].startPos) {
+                while (curLinkIdx < linkCount && renderPos >= links[curLinkIdx].endPos) curLinkIdx++;
+                if (curLinkIdx < linkCount && renderPos >= links[curLinkIdx].startPos) {
                     drawColor = RGB(0, 175, 255); // Link color #00AFFF
                     inLink = TRUE;
                     activeLinkIdx = curLinkIdx;
                     
                     /* Update link rect for first char */
-                    if (j == links[curLinkIdx].startPos) {
+                    if (renderPos == links[curLinkIdx].startPos) {
                         links[curLinkIdx].linkRect.left = currentX;
                         links[curLinkIdx].linkRect.top = currentY;
                         links[curLinkIdx].linkRect.bottom = currentY + lineMaxHeight;
@@ -588,12 +596,12 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 BOOL isStrikethrough = FALSE;
                 
                 // Apply strikethrough for completed todo (skip checkbox symbol itself)
-                if (isCompletedTodo && j > currentLineStart) {
+                if (isCompletedTodo && renderPos > currentLineStartPos) {
                     isStrikethrough = TRUE;
                 }
                 
-                while (curStyleIdx < styleCount && j >= styles[curStyleIdx].endPos) curStyleIdx++;
-                if (curStyleIdx < styleCount && j >= styles[curStyleIdx].startPos) {
+                while (curStyleIdx < styleCount && renderPos >= styles[curStyleIdx].endPos) curStyleIdx++;
+                if (curStyleIdx < styleCount && renderPos >= styles[curStyleIdx].startPos) {
                     MarkdownStyleType styleType = styles[curStyleIdx].type;
                     if (styleType == STYLE_CODE) {
                         drawColor = RGB(100, 100, 100);
@@ -611,10 +619,10 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
 
                 /* Color tag handling - override drawColor with tag color or gradient */
                 BOOL useColorTagGradient = FALSE;
-                MarkdownColorTag* activeColorTag = NULL;
-                while (curColorTagIdx < colorTagCount && (int)j >= colorTags[curColorTagIdx].endPos) curColorTagIdx++;
-                if (curColorTagIdx < colorTagCount && (int)j >= colorTags[curColorTagIdx].startPos) {
-                    MarkdownColorTag* tag = &colorTags[curColorTagIdx];
+                const MarkdownColorTag* activeColorTag = NULL;
+                while (curColorTagIdx < colorTagCount && j >= (size_t)colorTags[curColorTagIdx].endPos) curColorTagIdx++;
+                if (curColorTagIdx < colorTagCount && j >= (size_t)colorTags[curColorTagIdx].startPos) {
+                    const MarkdownColorTag* tag = &colorTags[curColorTagIdx];
                     if (tag->colorCount == 1) {
                         /* Single color */
                         drawColor = tag->colors[0];
@@ -626,11 +634,11 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 }
 
                 /* Font tag handling - use cached font if specified */
-                stbtt_fontinfo* charFontInfo = fontInfo;
+                const stbtt_fontinfo* charFontInfo = fontInfo;
                 float charScale = scale;
-                while (curFontTagIdx < fontTagCount && (int)j >= fontTags[curFontTagIdx].endPos) curFontTagIdx++;
-                if (curFontTagIdx < fontTagCount && (int)j >= fontTags[curFontTagIdx].startPos) {
-                    stbtt_fontinfo* cachedFont = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
+                while (curFontTagIdx < fontTagCount && j >= (size_t)fontTags[curFontTagIdx].endPos) curFontTagIdx++;
+                if (curFontTagIdx < fontTagCount && j >= (size_t)fontTags[curFontTagIdx].startPos) {
+                    const stbtt_fontinfo* cachedFont = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
                     if (cachedFont) {
                         charFontInfo = cachedFont;
                         charScale = stbtt_ScaleForPixelHeight(cachedFont, (float)(fontSize * fontScale));

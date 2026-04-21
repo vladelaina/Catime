@@ -46,6 +46,7 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    (void)lParam;
     DialogContext* ctx = Dialog_GetContext(hwndDlg);
 
     switch (msg) {
@@ -179,6 +180,7 @@ void ShowPomodoroComboDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
+    (void)lParam;
     DialogContext* ctx = Dialog_GetContext(hwndDlg);
 
     switch (msg) {
@@ -242,7 +244,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                     return TRUE;
                 }
 
-                char *token;
+                const char* token;
                 char input_copy[256];
                 StringCbCopyA(input_copy, sizeof(input_copy), input);
 
@@ -276,7 +278,6 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 if (times_count > 1) g_AppConfig.pomodoro.short_break = times[1];
                 if (times_count > 2) g_AppConfig.pomodoro.long_break = times[2];
 
-                extern void WriteConfigPomodoroTimeOptions(int* times, int count);
                 WriteConfigPomodoroTimeOptions(times, times_count);
 
                 DestroyWindow(hwndDlg);
@@ -312,4 +313,3 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 
     return FALSE;
 }
-

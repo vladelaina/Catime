@@ -66,10 +66,7 @@ typedef enum {
 } CpuSampleResult;
 
 static inline ULONGLONG FileTimeToUll(const FILETIME* ft) {
-    ULARGE_INTEGER u;
-    u.LowPart = ft->dwLowDateTime;
-    u.HighPart = ft->dwHighDateTime;
-    return u.QuadPart;
+    return ((ULONGLONG)ft->dwHighDateTime << 32) | (ULONGLONG)ft->dwLowDateTime;
 }
 
 static inline float ClampPercent(double value) {

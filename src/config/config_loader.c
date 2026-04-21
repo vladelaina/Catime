@@ -194,9 +194,6 @@ static void ProcessFontPath(ConfigSnapshot* snapshot, const char* config_path) {
     
     /* Set font internal name */
     if (isFontsFolderFont) {
-        char fontPath[MAX_PATH];
-        BOOL fontFound = FALSE;
-        
         wchar_t wConfigPath[MAX_PATH] = {0};
         MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
         
@@ -212,12 +209,8 @@ static void ProcessFontPath(ConfigSnapshot* snapshot, const char* config_path) {
                         wConfigPath, wActualFontFileName);
             
             if (GetFileAttributesW(wFontPath) != INVALID_FILE_ATTRIBUTES) {
-                fontFound = TRUE;
+                char fontPath[MAX_PATH];
                 WideCharToMultiByte(CP_UTF8, 0, wFontPath, -1, fontPath, MAX_PATH, NULL, NULL);
-            }
-            
-            if (fontFound) {
-                extern BOOL GetFontNameFromFile(const char* fontPath, char* fontName, size_t fontNameSize);
                 if (!GetFontNameFromFile(fontPath, snapshot->fontInternalName, 
                                         sizeof(snapshot->fontInternalName))) {
                     char* lastSlash = strrchr(actualFontFileName, '\\');

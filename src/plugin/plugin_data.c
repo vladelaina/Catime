@@ -192,7 +192,7 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
         wchar_t* colonPos = wcschr(notifyStart + 7, L':');
         if (colonPos && colonPos < tagEnd) {
             /* Has type parameter */
-            wchar_t* typeStart = colonPos + 1;
+            const wchar_t* typeStart = colonPos + 1;
             wchar_t* typeEnd = wcschr(typeStart, L':');
             if (!typeEnd || typeEnd > tagEnd) {
                 typeEnd = tagEnd;
@@ -215,7 +215,7 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
             
             /* Check for timeout parameter (only for toast) */
             if (typeEnd < tagEnd && *typeEnd == L':') {
-                wchar_t* timeoutStart = typeEnd + 1;
+                const wchar_t* timeoutStart = typeEnd + 1;
                 customTimeout = _wtoi(timeoutStart);
                 if (customTimeout < 0) customTimeout = 0;
                 if (customTimeout > 60000) customTimeout = 60000;  /* Max 60 seconds */
@@ -268,14 +268,20 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
  */
 static BOOL ParseContent(const char* content, size_t contentLen) {
     if (!content || contentLen == 0) return FALSE;
-    
-    /* Parse <fps:N> tag first */
-    ParseFpsTag(content);
-    
-    /* Skip if exit countdown is active */
-    if (PluginExit_IsInProgress()) return TRUE;
 
     EnterCriticalSection(&g_dataCS);
+
+    if (!g_pluginModeActive) {
+        LeaveCriticalSection(&g_dataCS);
+        return FALSE;
+    }
+
+    ParseFpsTag(content);
+
+    if (PluginExit_IsInProgress()) {
+        LeaveCriticalSection(&g_dataCS);
+        return TRUE;
+    }
 
     /* Calculate required buffer size */
     int requiredLen = MultiByteToWideChar(CP_UTF8, 0, content, (int)contentLen, NULL, 0);
@@ -339,6 +345,15 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
     return len > 0;
 }
 
+/*
+ * Design note: output.txt is intentionally a stable, shared local IPC surface,
+ * but it is only consumed while plugin mode is active.
+ * During plugin mode, the active plugin and other same-user helper processes may
+ * write compatible content here to build broader local automation flows.
+ * Outside plugin mode, Catime intentionally ignores this file.
+ * Catime-owned local state text such as "Loading..." or "FAIL" is also allowed
+ * to override the file-driven content when needed.
+ */
 /* Plugin output file name */
 #define PLUGIN_OUTPUT_FILENAME "output.txt"
 
@@ -762,10 +777,8 @@ void PluginData_SetActive(BOOL active) {
 
     if (active) {
         WakeWatcherThread();
-    }
-    
-    // If activating, immediately read the file content (don't wait for watcher)
-    if (active) {
+
+        // If activating, immediately read the file content (don't wait for watcher)
         char filePath[MAX_PATH];
         if (GetPluginOutputPath(filePath, sizeof(filePath))) {
             HANDLE hFile = CreateFileA(filePath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -805,8 +818,8 @@ BOOL PluginData_HasCatimeTag(void) {
     EnterCriticalSection(&g_dataCS);
     if (g_pluginModeActive && g_hasPluginData && g_pluginDisplayText) {
         // Check for <catime> and </catime> tags
-        wchar_t* start = wcsstr(g_pluginDisplayText, L"<catime>");
-        wchar_t* end = wcsstr(g_pluginDisplayText, L"</catime>");
+        const wchar_t* start = wcsstr(g_pluginDisplayText, L"<catime>");
+        const wchar_t* end = wcsstr(g_pluginDisplayText, L"</catime>");
         if (start && end && end > start) {
             hasTag = TRUE;
         }

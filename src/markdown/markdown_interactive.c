@@ -5,11 +5,19 @@
 
 #include "markdown/markdown_interactive.h"
 #include "log.h"
+#include "utils/url_safety.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <shellapi.h>
 
+/*
+ * Design note: output.txt is intentionally shared by design, but only within
+ * plugin mode. It is a local, same-user integration point for plugin-compatible
+ * writers while plugin mode is active, not a per-plugin private channel.
+ * Outside plugin mode, Catime does not consume this file, and Catime-owned
+ * local state text may override file-driven content.
+ */
 /* Plugin output file path */
 #define PLUGIN_OUTPUT_FILENAME "output.txt"
 
@@ -24,23 +32,37 @@ static int g_windowOffsetY = 0;
 static CRITICAL_SECTION g_interactiveCS;
 static volatile LONG g_initialized = 0;
 
+#define INTERACTIVE_CS_UNINITIALIZED 0
+#define INTERACTIVE_CS_INITIALIZING 1
+#define INTERACTIVE_CS_INITIALIZED 2
+
 /* ============================================================================
  * Initialization
  * ============================================================================ */
 
 void InitMarkdownInteractive(void) {
-    /* Use atomic operation to prevent double initialization */
-    if (InterlockedCompareExchange(&g_initialized, 1, 0) == 0) {
+    if (InterlockedCompareExchange(&g_initialized,
+                                   INTERACTIVE_CS_INITIALIZING,
+                                   INTERACTIVE_CS_UNINITIALIZED) == INTERACTIVE_CS_UNINITIALIZED) {
         InitializeCriticalSection(&g_interactiveCS);
         g_regionCount = 0;
+        InterlockedExchange(&g_initialized, INTERACTIVE_CS_INITIALIZED);
+        return;
+    }
+
+    while (InterlockedCompareExchange(&g_initialized, 0, 0) == INTERACTIVE_CS_INITIALIZING) {
+        Sleep(0);
     }
 }
 
 void CleanupMarkdownInteractive(void) {
-    if (g_initialized != 1) return;
+    while (InterlockedCompareExchange(&g_initialized, 0, 0) == INTERACTIVE_CS_INITIALIZING) {
+        Sleep(0);
+    }
+    if (InterlockedCompareExchange(&g_initialized, 0, 0) != INTERACTIVE_CS_INITIALIZED) return;
     ClearClickableRegions();
     DeleteCriticalSection(&g_interactiveCS);
-    InterlockedExchange(&g_initialized, 0);
+    InterlockedExchange(&g_initialized, INTERACTIVE_CS_UNINITIALIZED);
 }
 
 /* ============================================================================
@@ -48,7 +70,7 @@ void CleanupMarkdownInteractive(void) {
  * ============================================================================ */
 
 void ClearClickableRegions(void) {
-    if (g_initialized != 1) return;
+    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return;
     EnterCriticalSection(&g_interactiveCS);
     
     for (int i = 0; i < g_regionCount; i++) {
@@ -63,7 +85,7 @@ void ClearClickableRegions(void) {
 }
 
 void AddLinkRegion(const RECT* rect, const wchar_t* url) {
-    if (g_initialized != 1 || !rect || !url) return;
+    if (g_initialized != INTERACTIVE_CS_INITIALIZED || !rect || !url) return;
     EnterCriticalSection(&g_interactiveCS);
     
     if (g_regionCount < MAX_CLICKABLE_REGIONS) {
@@ -83,7 +105,7 @@ void AddLinkRegion(const RECT* rect, const wchar_t* url) {
 }
 
 void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
-    if (g_initialized != 1 || !rect) return;
+    if (g_initialized != INTERACTIVE_CS_INITIALIZED || !rect) return;
     EnterCriticalSection(&g_interactiveCS);
     
     if (g_regionCount < MAX_CLICKABLE_REGIONS) {
@@ -105,7 +127,7 @@ void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
 }
 
 void UpdateRegionPositions(int windowX, int windowY) {
-    if (g_initialized != 1) return;
+    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return;
     EnterCriticalSection(&g_interactiveCS);
     
     /* Just store window position - regions are in window coords */
@@ -116,7 +138,7 @@ void UpdateRegionPositions(int windowX, int windowY) {
 }
 
 const ClickableRegion* GetClickableRegionAt(POINT pt) {
-    if (g_initialized != 1) return NULL;
+    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return NULL;
     
     const ClickableRegion* result = NULL;
     EnterCriticalSection(&g_interactiveCS);
@@ -136,7 +158,7 @@ const ClickableRegion* GetClickableRegionAt(POINT pt) {
 }
 
 BOOL HasClickableRegions(void) {
-    if (g_initialized != 1) return FALSE;
+    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return FALSE;
     BOOL result;
     EnterCriticalSection(&g_interactiveCS);
     result = (g_regionCount > 0);
@@ -145,7 +167,7 @@ BOOL HasClickableRegions(void) {
 }
 
 void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
-    if (g_initialized != 1 || !pixels) return;
+    if (g_initialized != INTERACTIVE_CS_INITIALIZED || !pixels) return;
     EnterCriticalSection(&g_interactiveCS);
     
     /* Fill each clickable region with minimal alpha so Windows sends mouse messages */
@@ -265,7 +287,7 @@ BOOL HandleRegionClick(const ClickableRegion* region, HWND hwnd) {
     
     switch (region->type) {
         case CLICK_TYPE_LINK:
-            if (region->url) {
+            if (region->url && IsSafeOpenUrlW(region->url)) {
                 ShellExecuteW(NULL, L"open", region->url, NULL, NULL, SW_SHOWNORMAL);
                 LOG_INFO("Opened link: %ls", region->url);
                 return TRUE;

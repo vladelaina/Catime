@@ -24,7 +24,6 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen
     }
     
     const wchar_t* lastDot = wcsrchr(fileName, L'.');
-    const wchar_t* fileNameNoExt = fileName;
     const wchar_t* ext = L"";
     size_t nameNoExtLen = nameLen;
     size_t extLen = 0;

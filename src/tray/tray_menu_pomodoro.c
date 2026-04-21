@@ -38,7 +38,7 @@ void LoadPomodoroConfig(void) {
     
     /* Parse comma-separated time values */
     g_AppConfig.pomodoro.times_count = 0;
-    char* token = strtok(options, ",");
+    const char* token = strtok(options, ",");
     int index = 0;
     
     while (token && index < MAX_POMODORO_TIMES) {

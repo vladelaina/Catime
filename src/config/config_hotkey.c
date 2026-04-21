@@ -124,10 +124,10 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     
     /** Handle alphanumeric keys */
     if (vk >= 'A' && vk <= 'Z') {
-        char keyName[2] = {vk, '\0'};
+        const char keyName[2] = {(char)vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= '0' && vk <= '9') {
-        char keyName[2] = {vk, '\0'};
+        const char keyName[2] = {(char)vk, '\0'};
         strncat(buffer, keyName, bufferSize - len - 1);
     } else if (vk >= VK_F1 && vk <= VK_F24) {
         /** Handle function keys */
@@ -174,14 +174,14 @@ WORD StringToHotkey(const char* str) {
     
     /** Parse modifier and key components */
     char* token = strtok(buffer, "+");
-    char* lastToken = NULL;
+    const char* lastToken = NULL;
     
     while (token) {
-        if (stricmp(token, "Ctrl") == 0) {
+        if (_stricmp(token, "Ctrl") == 0) {
             mod |= HOTKEYF_CONTROL;
-        } else if (stricmp(token, "Shift") == 0) {
+        } else if (_stricmp(token, "Shift") == 0) {
             mod |= HOTKEYF_SHIFT;
-        } else if (stricmp(token, "Alt") == 0) {
+        } else if (_stricmp(token, "Alt") == 0) {
             mod |= HOTKEYF_ALT;
         } else {
             /** Last token is the key name */
@@ -193,16 +193,16 @@ WORD StringToHotkey(const char* str) {
     if (lastToken) {
         /** Handle single character keys (A-Z, 0-9) */
         if (strlen(lastToken) == 1) {
-            char ch = toupper(lastToken[0]);
+            int ch = toupper((unsigned char)lastToken[0]);
             if ((ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9')) {
-                vk = ch;
+                vk = (BYTE)ch;
             }
         } 
         /** Handle function keys (F1-F24) */
         else if (lastToken[0] == 'F' && isdigit(lastToken[1])) {
             int fNum = atoi(lastToken + 1);
             if (fNum >= 1 && fNum <= 24) {
-                vk = VK_F1 + fNum - 1;
+                vk = (BYTE)(VK_F1 + fNum - 1);
             }
         }
         /** Handle hex format (0xNN) */
@@ -212,7 +212,7 @@ WORD StringToHotkey(const char* str) {
         /** Look up in mapping table */
         else {
             for (int i = 0; g_vkeyMap[i].name != NULL; i++) {
-                if (stricmp(lastToken, g_vkeyMap[i].name) == 0) {
+                if (_stricmp(lastToken, g_vkeyMap[i].name) == 0) {
                     vk = g_vkeyMap[i].vk;
                     break;
                 }
@@ -337,7 +337,7 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     char line[256];
     while (fgets(line, sizeof(line), file)) {
         if (strncmp(line, "HOTKEY_CUSTOM_COUNTDOWN=", 24) == 0) {
-            char* value = line + 24;
+            const char* value = line + 24;
 
             char* newline = strchr(value, '\n');
             if (newline) *newline = '\0';
@@ -350,4 +350,3 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     
     fclose(file);
 }
-

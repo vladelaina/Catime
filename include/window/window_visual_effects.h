@@ -37,6 +37,16 @@ BOOL IsSoftClickThroughEnabled(void);
 void SetBlurBehind(HWND hwnd, BOOL enable);
 
 /**
+ * @brief Get timer ID used for click-through polling
+ */
+UINT GetClickThroughTimerId(void);
+
+/**
+ *  Refresh dynamic click-through state based on cursor position
+ */
+void UpdateClickThroughState(HWND hwnd);
+
+/**
  * @brief Initialize DWM functions for blur effects
  * @return TRUE if loaded successfully
  * 
