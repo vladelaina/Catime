@@ -11,12 +11,14 @@
 #include "log.h"
 #include "config.h"
 
+#ifdef _MSC_VER
 #pragma comment(lib, "dwmapi.lib")
 #pragma comment(lib, "user32.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "comdlg32.lib")
 #pragma comment(lib, "dbghelp.lib")
 #pragma comment(lib, "comctl32.lib")
+#endif
 
 /** Global variables not yet refactored into AppConfig */
 int default_countdown_time = 0;
@@ -27,11 +29,11 @@ int message_shown = 0;
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
     (void)hPrevInstance;
     (void)lpCmdLine;
-    
+
     if (!InitializeSubsystems()) {
         return 1;
     }
-    
+
     if (!InitializeApplicationSubsystem(hInstance)) {
         CoUninitialize();
         CleanupLogSystem();
@@ -42,14 +44,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SetupDesktopShortcut();
     }
     InitializeDialogLanguages();
-    
+
     HANDLE hMutex = NULL;
     if (!HandleSingleInstance(GetCommandLineW(), &hMutex)) {
         CoUninitialize();
         CleanupLogSystem();
         return 0;
     }
-    
+
     LOG_INFO("Starting main window creation...");
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
     if (!hwnd) {
@@ -58,16 +60,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 0;
     }
     LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
-    
+
     if (!SetupMainWindow(hInstance, hwnd, nCmdShow)) {
         CleanupResources(hMutex);
         return 0;
     }
-    
+
     int exitCode = RunMessageLoop(hwnd);
-    
+
     CleanupResources(hMutex);
-    
+
     return exitCode;
 }
 

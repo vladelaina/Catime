@@ -343,7 +343,8 @@ void RecalculateWindowSize(HWND hwnd) {
     if (configPosX == -2 || configPosX == -1) {
         POINT pt = {0, 0};
         HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
-        MONITORINFO mi = {sizeof(mi)};
+        MONITORINFO mi = {0};
+        mi.cbSize = sizeof(mi);
         GetMonitorInfo(hMon, &mi);
         int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
         

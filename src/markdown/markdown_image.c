@@ -12,7 +12,9 @@
 #include <stdio.h>
 #include <wininet.h>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "wininet.lib")
+#endif
 
 /* ============================================================================
  * Path Resolution
@@ -30,15 +32,15 @@ BOOL GetImageCacheDirectory(wchar_t* buffer, size_t bufferSize) {
     wchar_t tempDir[MAX_PATH];
     DWORD result = GetTempPathW(MAX_PATH, tempDir);
     if (result == 0 || result >= MAX_PATH) return FALSE;
-    
+
     /* Build path: %TEMP%\Catime\images */
     wchar_t catimeDir[MAX_PATH];
     _snwprintf_s(catimeDir, MAX_PATH, _TRUNCATE, L"%sCatime", tempDir);
     CreateDirectoryW(catimeDir, NULL);
-    
+
     _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%sCatime\\images", tempDir);
     CreateDirectoryW(buffer, NULL);
-    
+
     return TRUE;
 }
 
@@ -47,7 +49,7 @@ BOOL GetImageCacheDirectory(wchar_t* buffer, size_t bufferSize) {
  */
 static BOOL IsNetworkUrl(const wchar_t* path) {
     if (!path) return FALSE;
-    return (_wcsnicmp(path, L"http://", 7) == 0 || 
+    return (_wcsnicmp(path, L"http://", 7) == 0 ||
             _wcsnicmp(path, L"https://", 8) == 0);
 }
 
@@ -71,7 +73,7 @@ static void GenerateCacheFilename(const wchar_t* url, wchar_t* filename, size_t 
         hash = hash * 31 + *p;
         p++;
     }
-    
+
     /* Extract extension from URL */
     const wchar_t* ext = L".png";  /* Default */
     const wchar_t* lastDot = wcsrchr(url, L'.');
@@ -86,7 +88,7 @@ static void GenerateCacheFilename(const wchar_t* url, wchar_t* filename, size_t 
             ext = L".webp";
         }
     }
-    
+
     _snwprintf_s(filename, size, _TRUNCATE, L"%08X%s", hash, ext);
 }
 
@@ -96,37 +98,37 @@ static void GenerateCacheFilename(const wchar_t* url, wchar_t* filename, size_t 
 
 BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     if (!url || !localPath) return FALSE;
-    
+
     /* Get cache directory */
     wchar_t cacheDir[MAX_PATH];
     if (!GetImageCacheDirectory(cacheDir, MAX_PATH)) {
         LOG_ERROR("Failed to get image cache directory");
         return FALSE;
     }
-    
+
     /* Generate cache filename */
     wchar_t filename[64];
     GenerateCacheFilename(url, filename, 64);
-    
+
     /* Build full cache path */
     _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
-    
+
     /* Check if already cached */
     if (GetFileAttributesW(localPath) != INVALID_FILE_ATTRIBUTES) {
         LOG_INFO("Image already cached: %ls", filename);
         return TRUE;
     }
-    
+
     LOG_INFO("Downloading image: %ls", url);
-    
+
     /* Open Internet session */
-    HINTERNET hInternet = InternetOpenW(L"Catime/1.0", INTERNET_OPEN_TYPE_DIRECT, 
+    HINTERNET hInternet = InternetOpenW(L"Catime/1.0", INTERNET_OPEN_TYPE_DIRECT,
                                          NULL, NULL, 0);
     if (!hInternet) {
         LOG_ERROR("Failed to open Internet session");
         return FALSE;
     }
-    
+
     /* Open URL */
     HINTERNET hUrl = InternetOpenUrlW(hInternet, url, NULL, 0,
                                        INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
@@ -135,7 +137,7 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
         InternetCloseHandle(hInternet);
         return FALSE;
     }
-    
+
     /* Create local file */
     HANDLE hFile = CreateFileW(localPath, GENERIC_WRITE, 0, NULL,
                                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -145,21 +147,21 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
         InternetCloseHandle(hInternet);
         return FALSE;
     }
-    
+
     /* Download and write */
     BYTE buffer[8192];
     DWORD bytesRead, bytesWritten;
     DWORD totalBytes = 0;
     BOOL success = TRUE;
-    
+
     while (InternetReadFile(hUrl, buffer, sizeof(buffer), &bytesRead) && bytesRead > 0) {
-        if (!WriteFile(hFile, buffer, bytesRead, &bytesWritten, NULL) || 
+        if (!WriteFile(hFile, buffer, bytesRead, &bytesWritten, NULL) ||
             bytesWritten != bytesRead) {
             success = FALSE;
             break;
         }
         totalBytes += bytesRead;
-        
+
         /* Limit to 10MB */
         if (totalBytes > 10 * 1024 * 1024) {
             LOG_ERROR("Image too large (>10MB)");
@@ -167,11 +169,11 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
             break;
         }
     }
-    
+
     CloseHandle(hFile);
     InternetCloseHandle(hUrl);
     InternetCloseHandle(hInternet);
-    
+
     if (success && totalBytes > 0) {
         LOG_INFO("Downloaded %lu bytes to: %ls", totalBytes, filename);
         return TRUE;
@@ -187,15 +189,15 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
  */
 BOOL IsImageCached(const wchar_t* url, wchar_t* localPath) {
     if (!url || !localPath) return FALSE;
-    
+
     wchar_t cacheDir[MAX_PATH];
     if (!GetImageCacheDirectory(cacheDir, MAX_PATH)) return FALSE;
-    
+
     wchar_t filename[64];
     GenerateCacheFilename(url, filename, 64);
-    
+
     _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
-    
+
     return (GetFileAttributesW(localPath) != INVALID_FILE_ATTRIBUTES);
 }
 
@@ -236,7 +238,7 @@ static unsigned int HashUrl(const wchar_t* url) {
 static BOOL IsUrlDownloading(const wchar_t* url) {
     if (g_downloadCSInit != 2) return FALSE;
     unsigned int hash = HashUrl(url);
-    
+
     EnterCriticalSection(&g_downloadCS);
     BOOL found = FALSE;
     for (int i = 0; i < g_downloadingCount; i++) {
@@ -251,7 +253,7 @@ static BOOL IsUrlDownloading(const wchar_t* url) {
 
 static void AddDownloadingUrl(const wchar_t* url) {
     EnsureDownloadCSInit();
-    
+
     unsigned int hash = HashUrl(url);
     EnterCriticalSection(&g_downloadCS);
     if (g_downloadingCount < MAX_DOWNLOADING) {
@@ -263,7 +265,7 @@ static void AddDownloadingUrl(const wchar_t* url) {
 static void RemoveDownloadingUrl(const wchar_t* url) {
     if (g_downloadCSInit != 2) return;
     unsigned int hash = HashUrl(url);
-    
+
     EnterCriticalSection(&g_downloadCS);
     for (int i = 0; i < g_downloadingCount; i++) {
         if (g_downloadingHashes[i] == hash) {
@@ -296,18 +298,18 @@ typedef struct {
 
 static DWORD WINAPI AsyncDownloadThread(LPVOID param) {
     AsyncDownloadParams* p = (AsyncDownloadParams*)param;
-    
+
     /* Download synchronously in background */
     DownloadImageToCache(p->url, p->cachePath);
-    
+
     /* Remove from downloading list */
     RemoveDownloadingUrl(p->url);
-    
+
     /* Trigger window repaint */
     if (p->hwnd && IsWindow(p->hwnd)) {
         InvalidateRect(p->hwnd, NULL, FALSE);
     }
-    
+
     free(p);
     MarkDownloadFinished();
     return 0;
@@ -317,7 +319,7 @@ void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd) {
     if (!image || !image->imagePath) return;
     if (!IsNetworkUrl(image->imagePath)) return;
     if (InterlockedCompareExchange(&g_downloadShutdown, 0, 0) != 0) return;
-    
+
     /* Check if already cached */
     wchar_t cachePath[MAX_PATH];
     if (IsImageCached(image->imagePath, cachePath)) {
@@ -327,17 +329,17 @@ void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd) {
         image->isDownloading = FALSE;
         return;
     }
-    
+
     /* Check if already downloading */
     if (IsUrlDownloading(image->imagePath)) {
         image->isDownloading = TRUE;
         return;
     }
-    
+
     /* Mark as downloading */
     image->isDownloading = TRUE;
     AddDownloadingUrl(image->imagePath);
-    
+
     /* Prepare params */
     AsyncDownloadParams* params = (AsyncDownloadParams*)malloc(sizeof(AsyncDownloadParams));
     if (!params) {
@@ -346,12 +348,12 @@ void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd) {
         image->downloadFailed = TRUE;
         return;
     }
-    
+
     wcsncpy(params->url, image->imagePath, 2047);
     params->url[2047] = L'\0';
     params->cachePath[0] = L'\0';
     params->hwnd = hwnd;
-    
+
     /* Start background thread */
     MarkDownloadStarted();
     HANDLE hThread = CreateThread(NULL, 0, AsyncDownloadThread, params, 0, NULL);
@@ -373,19 +375,19 @@ void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd) {
 
 BOOL ResolveImagePath(MarkdownImage* image) {
     if (!image || !image->imagePath) return FALSE;
-    
+
     /* Free previous resolved path */
     if (image->resolvedPath) {
         free(image->resolvedPath);
         image->resolvedPath = NULL;
     }
-    
+
     const wchar_t* path = image->imagePath;
-    
+
     /* Network URL - check cache only, don't block */
     if (IsNetworkUrl(path)) {
         image->isNetworkImage = TRUE;
-        
+
         /* Check if already cached */
         wchar_t cachePath[MAX_PATH];
         if (IsImageCached(path, cachePath)) {
@@ -395,29 +397,29 @@ BOOL ResolveImagePath(MarkdownImage* image) {
             image->isDownloading = FALSE;
             return TRUE;
         }
-        
+
         /* Not cached - caller should use StartAsyncImageDownload */
         return FALSE;
     }
-    
+
     image->isNetworkImage = FALSE;
-    
+
     /* Absolute path */
     if (IsAbsolutePath(path)) {
         image->resolvedPath = _wcsdup(path);
         if (!image->resolvedPath) return FALSE;
         return (GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES);
     }
-    
+
     /* Relative path - resolve relative to plugins directory */
     wchar_t pluginsDir[MAX_PATH];
     if (!GetPluginsDirectory(pluginsDir, MAX_PATH)) {
         return FALSE;
     }
-    
+
     wchar_t fullPath[MAX_PATH];
     _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginsDir, path);
-    
+
     image->resolvedPath = _wcsdup(fullPath);
     if (!image->resolvedPath) return FALSE;
     return (GetFileAttributesW(fullPath) != INVALID_FILE_ATTRIBUTES);
@@ -429,10 +431,10 @@ BOOL ResolveImagePath(MarkdownImage* image) {
 
 int CountMarkdownImages(const wchar_t* input) {
     if (!input) return 0;
-    
+
     int count = 0;
     const wchar_t* p = input;
-    
+
     while (*p) {
         if (*p == L'!' && *(p + 1) == L'[') {
             /* Find ]( */
@@ -448,7 +450,7 @@ int CountMarkdownImages(const wchar_t* input) {
         }
         p++;
     }
-    
+
     return count;
 }
 
@@ -458,9 +460,9 @@ int CountMarkdownImages(const wchar_t* input) {
 static void ParseImageSize(const wchar_t* sizeStr, size_t len, int* width, int* height) {
     *width = 0;
     *height = 0;
-    
+
     if (len == 0) return;
-    
+
     /* Find 'x' separator */
     const wchar_t* xPos = NULL;
     for (size_t i = 0; i < len; i++) {
@@ -469,7 +471,7 @@ static void ParseImageSize(const wchar_t* sizeStr, size_t len, int* width, int* 
             break;
         }
     }
-    
+
     if (xPos) {
         /* WxH format */
         size_t wLen = xPos - sizeStr;
@@ -478,7 +480,7 @@ static void ParseImageSize(const wchar_t* sizeStr, size_t len, int* width, int* 
             wcsncpy(widthStr, sizeStr, wLen);
             *width = _wtoi(widthStr);
         }
-        
+
         size_t hLen = len - wLen - 1;
         if (hLen > 0 && hLen < 16) {
             wchar_t heightStr[16] = {0};
@@ -493,43 +495,43 @@ static void ParseImageSize(const wchar_t* sizeStr, size_t len, int* width, int* 
     }
 }
 
-BOOL ExtractMarkdownImage(const wchar_t** src, MarkdownImage* images, 
+BOOL ExtractMarkdownImage(const wchar_t** src, MarkdownImage* images,
                           int* imageCount, int imageCapacity, int currentPos) {
     if (!src || !*src || !images || !imageCount) return FALSE;
     if (*imageCount >= imageCapacity) return FALSE;
-    
+
     const wchar_t* p = *src;
-    
+
     /* Must start with ![ */
     if (*p != L'!' || *(p + 1) != L'[') return FALSE;
-    
+
     p += 2;  /* Skip ![ */
-    
+
     /* Find ] */
     const wchar_t* bracketEnd = wcschr(p, L']');
     if (!bracketEnd || *(bracketEnd + 1) != L'(') return FALSE;
-    
+
     /* Extract size string (between [ and ]) */
     size_t sizeLen = bracketEnd - p;
     int specWidth = 0, specHeight = 0;
     if (sizeLen > 0) {
         ParseImageSize(p, sizeLen, &specWidth, &specHeight);
     }
-    
+
     /* Find path between ( and ) */
     const wchar_t* pathStart = bracketEnd + 2;
     const wchar_t* pathEnd = wcschr(pathStart, L')');
     if (!pathEnd || pathEnd == pathStart) return FALSE;
-    
+
     size_t pathLen = pathEnd - pathStart;
-    
+
     /* Allocate and copy path */
     wchar_t* imagePath = (wchar_t*)malloc((pathLen + 1) * sizeof(wchar_t));
     if (!imagePath) return FALSE;
-    
+
     wcsncpy(imagePath, pathStart, pathLen);
     imagePath[pathLen] = L'\0';
-    
+
     /* Fill image structure */
     MarkdownImage* img = &images[*imageCount];
     memset(img, 0, sizeof(MarkdownImage));
@@ -538,13 +540,13 @@ BOOL ExtractMarkdownImage(const wchar_t** src, MarkdownImage* images,
     img->specifiedHeight = specHeight;
     img->startPos = currentPos;
     img->endPos = currentPos;  /* Images don't occupy text space */
-    
+
     /* Check if network image */
     img->isNetworkImage = IsNetworkUrl(imagePath);
-    
+
     (*imageCount)++;
     *src = pathEnd + 1;
-    
+
     return TRUE;
 }
 
@@ -560,25 +562,25 @@ BOOL CalculateImageRenderSize(MarkdownImage* image, int maxWidth, int maxHeight,
                               int* outWidth, int* outHeight) {
     if (!image || !outWidth || !outHeight) return FALSE;
     if (maxWidth <= 0 || maxHeight <= 0) return FALSE;
-    
+
     *outWidth = 0;
     *outHeight = 0;
-    
+
     /* Resolve path if not already done */
     if (!image->resolvedPath) {
         if (!ResolveImagePath(image)) return FALSE;
     }
-    
+
     /* Get actual image dimensions */
     int imgW = 0, imgH = 0;
     if (!GetImageDimensions(image->resolvedPath, &imgW, &imgH) || imgW <= 0 || imgH <= 0) {
         return FALSE;
     }
-    
+
     /* Apply scale factor based on current mode */
     float scale = PluginData_IsActive() ? PLUGIN_FONT_SCALE_FACTOR : CLOCK_FONT_SCALE_FACTOR;
     if (scale < 0.1f) scale = 1.0f;
-    
+
     /* Determine target size */
     int targetW, targetH;
     if (image->specifiedWidth > 0 && image->specifiedHeight > 0) {
@@ -598,32 +600,32 @@ BOOL CalculateImageRenderSize(MarkdownImage* image, int maxWidth, int maxHeight,
         targetW = (int)(imgW * scale);
         targetH = (int)(imgH * scale);
     }
-    
+
     /* Clamp to max bounds */
     if (targetW > maxWidth) targetW = maxWidth;
     if (targetH > maxHeight) targetH = maxHeight;
-    
+
     /* Calculate actual size maintaining aspect ratio */
     float scaleX = (float)targetW / imgW;
     float scaleY = (float)targetH / imgH;
     float fitScale = (scaleX < scaleY) ? scaleX : scaleY;
-    
+
     *outWidth = (int)(imgW * fitScale);
     *outHeight = (int)(imgH * fitScale);
-    
+
     return TRUE;
 }
 
-int RenderMarkdownImage(HDC hdc, MarkdownImage* image, int x, int y, 
+int RenderMarkdownImage(HDC hdc, MarkdownImage* image, int x, int y,
                         int maxWidth, int maxHeight) {
     if (!hdc || !image) return 0;
-    
+
     /* Calculate render size (also resolves path) */
     int actualWidth = 0, actualHeight = 0;
     if (!CalculateImageRenderSize(image, maxWidth, maxHeight, &actualWidth, &actualHeight)) {
         return 0;
     }
-    
+
     /* Render using GDI+ */
     if (RenderImageGDIPlus(hdc, x, y, actualWidth, actualHeight, image->resolvedPath)) {
         /* Update rect for click detection */
@@ -631,10 +633,10 @@ int RenderMarkdownImage(HDC hdc, MarkdownImage* image, int x, int y,
         image->imageRect.top = y;
         image->imageRect.right = x + actualWidth;
         image->imageRect.bottom = y + actualHeight;
-        
+
         return actualHeight;
     }
-    
+
     return 0;
 }
 
@@ -666,7 +668,7 @@ void ShutdownMarkdownImage(void) {
 
 void FreeMarkdownImages(MarkdownImage* images, int imageCount) {
     if (!images) return;
-    
+
     for (int i = 0; i < imageCount; i++) {
         if (images[i].imagePath) {
             free(images[i].imagePath);

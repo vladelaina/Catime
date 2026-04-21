@@ -24,7 +24,7 @@
 
 AppConfig g_AppConfig = {
     .recent_files = {
-        .files = {{0}},
+        .files = {{{0}}},
         .count = 0
     },
     .pomodoro = {

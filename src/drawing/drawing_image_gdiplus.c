@@ -1,5 +1,6 @@
 #include "drawing/drawing_image.h"
 #include "log.h"
+#include <string.h>
 
 /* GDI+ Flat API definitions for C compatibility */
 #ifndef ULONG_PTR
@@ -44,6 +45,12 @@ static FuncGdipDisposeImage pGdipDisposeImage = NULL;
 static FuncGdipDrawImageRectI pGdipDrawImageRectI = NULL;
 static FuncGdipGetImageWidth pGdipGetImageWidth = NULL;
 static FuncGdipGetImageHeight pGdipGetImageHeight = NULL;
+
+#define LOAD_GDIPLUS_PROC(module, name, target) \
+    do { \
+        FARPROC proc = GetProcAddress((module), (name)); \
+        memcpy(&(target), &proc, sizeof(target)); \
+    } while (0)
 
 #define MAX_CACHED_IMAGES 16
 
@@ -161,15 +168,15 @@ void InitDrawingImage(void) {
         return;
     }
 
-    pGdiplusStartup = (FuncGdiplusStartup)GetProcAddress(g_hGdiPlus, "GdiplusStartup");
-    pGdiplusShutdown = (FuncGdiplusShutdown)GetProcAddress(g_hGdiPlus, "GdiplusShutdown");
-    pGdipCreateFromHDC = (FuncGdipCreateFromHDC)GetProcAddress(g_hGdiPlus, "GdipCreateFromHDC");
-    pGdipDeleteGraphics = (FuncGdipDeleteGraphics)GetProcAddress(g_hGdiPlus, "GdipDeleteGraphics");
-    pGdipCreateBitmapFromFile = (FuncGdipCreateBitmapFromFile)GetProcAddress(g_hGdiPlus, "GdipCreateBitmapFromFile");
-    pGdipDisposeImage = (FuncGdipDisposeImage)GetProcAddress(g_hGdiPlus, "GdipDisposeImage");
-    pGdipDrawImageRectI = (FuncGdipDrawImageRectI)GetProcAddress(g_hGdiPlus, "GdipDrawImageRectI");
-    pGdipGetImageWidth = (FuncGdipGetImageWidth)GetProcAddress(g_hGdiPlus, "GdipGetImageWidth");
-    pGdipGetImageHeight = (FuncGdipGetImageHeight)GetProcAddress(g_hGdiPlus, "GdipGetImageHeight");
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdiplusStartup", pGdiplusStartup);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdiplusShutdown", pGdiplusShutdown);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdipCreateFromHDC", pGdipCreateFromHDC);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdipDeleteGraphics", pGdipDeleteGraphics);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdipCreateBitmapFromFile", pGdipCreateBitmapFromFile);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdipDisposeImage", pGdipDisposeImage);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdipDrawImageRectI", pGdipDrawImageRectI);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdipGetImageWidth", pGdipGetImageWidth);
+    LOAD_GDIPLUS_PROC(g_hGdiPlus, "GdipGetImageHeight", pGdipGetImageHeight);
 
     if (pGdiplusStartup) {
         GdiplusStartupInput input = {1, NULL, FALSE, FALSE};

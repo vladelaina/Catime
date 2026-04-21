@@ -326,12 +326,9 @@ BOOL Dialog_IsValidNumberInput(const wchar_t* str) {
     }
     
     BOOL hasDigit = FALSE;
-    wchar_t cleanStr[16] = {0};
-    int cleanIndex = 0;
     
     for (int i = 0; str[i]; i++) {
         if (iswdigit(str[i])) {
-            cleanStr[cleanIndex++] = str[i];
             hasDigit = TRUE;
         } else if (!iswspace(str[i])) {
             return FALSE;

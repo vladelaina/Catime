@@ -274,6 +274,12 @@ static void HandleTimeoutActions(HWND hwnd) {
                 }
             }
             break;
+
+        case TIMEOUT_ACTION_SHUTDOWN:
+        case TIMEOUT_ACTION_RESTART:
+        case TIMEOUT_ACTION_SLEEP:
+            /* These system actions are handled earlier by ExecuteSystemAction(). */
+            break;
     }
 }
 

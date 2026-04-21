@@ -56,9 +56,9 @@ void TogglePauseResumeTimer(HWND hwnd);
 /**
  * @brief Set startup mode and update UI
  * @param hwnd Window handle
- * @param mode "COUNTDOWN", "COUNTUP", "SHOW_TIME", "NO_DISPLAY"
+ * @param mode "DEFAULT", "COUNT_UP", "SHOW_TIME", "NO_DISPLAY", or "POMODORO"
  * 
- * @details Persists to config, updates menu checkmarks
+ * @details Persists to config and refreshes the UI state
  */
 void SetStartupMode(HWND hwnd, const char* mode);
 

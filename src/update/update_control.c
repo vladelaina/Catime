@@ -7,7 +7,9 @@
 #include <windowsx.h>
 #include <commctrl.h>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "comctl32.lib")
+#endif
 
 /** @brief Calculate modern scrollbar thumb rectangle */
 void CalculateScrollbarThumbRect(RECT clientRect, int scrollPos, int scrollMax,

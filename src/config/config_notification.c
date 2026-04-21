@@ -34,15 +34,6 @@ static const char* EnumToString(const EnumStrMap* map, int value, const char* de
     return defaultVal;
 }
 
-static int StringToEnum(const EnumStrMap* map, const char* str, int defaultVal) {
-    if (!map || !str) return defaultVal;
-    for (int i = 0; map[i].str != NULL; i++) {
-        if (strcmp(map[i].str, str) == 0) {
-            return map[i].value;
-        }
-    }
-    return defaultVal;
-}
 
 /**
  * @brief Update notification message texts in config

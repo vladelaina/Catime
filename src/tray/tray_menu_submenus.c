@@ -261,7 +261,8 @@ void BuildColorSubmenu(HMENU hMenu) {
         wchar_t hexColorW[32];
         _snwprintf_s(hexColorW, 32, _TRUNCATE, L"%u", (unsigned int)(i + 1));
         
-        MENUITEMINFO mii = { sizeof(MENUITEMINFO) };
+        MENUITEMINFO mii = {0};
+        mii.cbSize = sizeof(mii);
         mii.fMask = MIIM_STRING | MIIM_ID | MIIM_STATE | MIIM_FTYPE;
         mii.fType = MFT_STRING | MFT_OWNERDRAW;
         mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
@@ -479,7 +480,8 @@ void BuildHelpSubmenu(HMENU hMenu) {
         AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, updateText);
         
         HBITMAP hDot = GetRedDotBitmap();
-        MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
+        MENUITEMINFOW mii = {0};
+        mii.cbSize = sizeof(mii);
         mii.fMask = MIIM_BITMAP;
         mii.hbmpItem = hDot;
         SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_CHECK_UPDATE, FALSE, &mii);
@@ -507,7 +509,8 @@ void BuildHelpSubmenu(HMENU hMenu) {
         int count = GetMenuItemCount(hMenu);
         if (count > 0) {
             HBITMAP hDot = GetRedDotBitmap();
-            MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
+            MENUITEMINFOW mii = {0};
+            mii.cbSize = sizeof(mii);
             mii.fMask = MIIM_BITMAP;
             mii.hbmpItem = hDot;
             SetMenuItemInfoW(hMenu, count - 1, TRUE, &mii);

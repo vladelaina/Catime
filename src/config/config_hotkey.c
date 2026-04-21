@@ -269,7 +269,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
     GetConfigPath(config_path, MAX_PATH);
     
     /** Read all hotkeys using data-driven approach */
-    for (int i = 0; i < sizeof(entries) / sizeof(entries[0]); i++) {
+    for (size_t i = 0; i < sizeof(entries) / sizeof(entries[0]); ++i) {
         char hotkeyStr[64];
         ReadIniString(INI_SECTION_HOTKEYS, entries[i].key, "None", 
                      hotkeyStr, sizeof(hotkeyStr), config_path);
@@ -307,7 +307,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     GetConfigPath(config_path, MAX_PATH);
     
     /** Write all hotkeys using data-driven approach */
-    for (int i = 0; i < sizeof(entries) / sizeof(entries[0]); i++) {
+    for (size_t i = 0; i < sizeof(entries) / sizeof(entries[0]); ++i) {
         char hotkeyStr[64];
         HotkeyToString(entries[i].value, hotkeyStr, sizeof(hotkeyStr));
         WriteIniString(INI_SECTION_HOTKEYS, entries[i].key, hotkeyStr, config_path);

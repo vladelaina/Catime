@@ -96,16 +96,6 @@ static void ProcessMarkdownCharacter(
         return;
     }
 
-    /* Skip emoji and special symbols that commonly show as boxes
-     * Only check characters in problematic ranges, not CJK or common text */
-    if (ch >= 0x1F300 && ch <= 0x1FAFF) {  /* Emoji ranges */
-        WORD glyphIndex = 0;
-        DWORD result = GetGlyphIndicesW(hdc, &ch, 1, &glyphIndex, GGI_MARK_NONEXISTING_GLYPHS);
-        if (result != GDI_ERROR && glyphIndex == 0xFFFF) {
-            return;  /* Skip emoji without valid glyph */
-        }
-    }
-
     int linkIndex = -1;
     BOOL isLink = IsCharacterInLink(links, linkCount, position, &linkIndex);
 

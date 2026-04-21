@@ -1,7 +1,7 @@
 /**
  * @file main_timer.c
  * @brief High-precision main window timer implementation
- * 
+ *
  * Uses multimedia timer (timeSetEvent) for precise timing.
  * Posts WM message to main thread for thread-safe window updates.
  */
@@ -10,7 +10,9 @@
 #include "../../resource/resource.h"
 #include <mmsystem.h>
 
+#ifdef _MSC_VER
 #pragma comment(lib, "winmm.lib")
+#endif
 
 /* Timer state */
 static MMRESULT g_mainTimerId = 0;
@@ -27,7 +29,7 @@ static volatile LONG g_tickMessagePending = 0;
 static void CALLBACK MainTimerCallback(UINT uTimerID, UINT uMsg,
                                        DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
-    
+
     if (g_mainHwnd && IsWindow(g_mainHwnd)) {
         /* Coalesce pending tick messages to avoid queue backlog under UI load. */
         if (InterlockedCompareExchange(&g_tickMessagePending, 1, 0) == 0) {
@@ -61,13 +63,13 @@ static BOOL StartMultimediaTimer(void) {
 
 BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
     if (!hwnd) return FALSE;
-    
+
     /* Cleanup any existing timer */
     MainTimer_Cleanup();
-    
+
     g_mainHwnd = hwnd;
     g_timerInterval = NormalizeInterval(intervalMs);
-    
+
     /* Set system timer resolution to 1ms for precision */
     MMRESULT res = timeBeginPeriod(1);
     if (res != TIMERR_NOERROR) {
@@ -82,7 +84,7 @@ BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
     } else {
         g_timerResolutionMs = 1;
     }
-    
+
     if (!StartMultimediaTimer()) {
         /* Fallback to SetTimer */
         if (g_timerResolutionMs > 0) {
@@ -92,7 +94,7 @@ BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
         g_highPrecisionActive = FALSE;
         return StartSetTimerFallback();
     }
-    
+
     g_highPrecisionActive = TRUE;
     return TRUE;
 }

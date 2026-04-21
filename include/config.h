@@ -805,8 +805,8 @@ UINT GetTimerInterval(void);
 void ResetTimerWithInterval(HWND hwnd);
 
 /**
- * @brief Write startup mode (validates against known modes)
- * @param mode "COUNTDOWN", "COUNTUP", "SHOW_TIME", "NO_DISPLAY"
+ * @brief Write startup mode to config and update in-memory state
+ * @param mode "DEFAULT", "COUNT_UP", "SHOW_TIME", "NO_DISPLAY", or "POMODORO"
  */
 void WriteConfigStartupMode(const char* mode);
 

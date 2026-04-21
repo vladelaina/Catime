@@ -209,7 +209,7 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
         L"\\*.jpeg", L"\\*.webp", L"\\*.tif", L"\\*.tiff"
     };
     
-    for (int p = 0; p < sizeof(patterns)/sizeof(patterns[0]); ++p) {
+    for (size_t p = 0; p < sizeof(patterns) / sizeof(patterns[0]); ++p) {
         wchar_t wSearch[MAX_PATH] = {0};
         _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s%s", wFolder, patterns[p]);
         

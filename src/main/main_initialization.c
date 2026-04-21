@@ -158,7 +158,8 @@ static BOOL RelaunchAsStandardUser(void) {
 
     wcscpy_s(pszCmdLineCopy, cmdLen, pszOriginalCmdLine);
 
-    STARTUPINFOW si = {sizeof(STARTUPINFOW)};
+    STARTUPINFOW si = {0};
+    si.cb = sizeof(si);
     PROCESS_INFORMATION pi = {0};
 
     BOOL bResult = CreateProcessWithTokenW(hNewToken, LOGON_WITH_PROFILE, NULL, pszCmdLineCopy, 0, NULL, NULL, &si, &pi);
@@ -253,7 +254,8 @@ static BOOL IsSecondaryLogonServiceRunning(void) {
 
 /* Check if running on Windows Server edition */
 static BOOL IsWindowsServer(void) {
-    OSVERSIONINFOEXW osvi = {sizeof(OSVERSIONINFOEXW)};
+    OSVERSIONINFOEXW osvi = {0};
+    osvi.dwOSVersionInfoSize = sizeof(osvi);
     DWORDLONG dwlConditionMask = 0;
 
     VER_SET_CONDITION(dwlConditionMask, VER_PRODUCT_TYPE, VER_EQUAL);

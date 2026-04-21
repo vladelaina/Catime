@@ -230,7 +230,8 @@ static int CompareFontEntries(const void* a, const void* b) {
  */
 static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name, BOOL shouldCheck) {
     int count = GetMenuItemCount(hParent);
-    MENUITEMINFOW mii = { sizeof(MENUITEMINFOW) };
+    MENUITEMINFOW mii = {0};
+    mii.cbSize = sizeof(mii);
     mii.fMask = MIIM_STRING | MIIM_SUBMENU | MIIM_STATE;
     wchar_t buffer[MAX_PATH] = {0};
     

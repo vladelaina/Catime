@@ -57,9 +57,9 @@ static void HotkeyCustomCountdown(HWND hwnd) {
         SetForegroundWindow(g_hwndInputDialog);
         return;
     }
-    
+
     ClearInputBuffer(inputText, sizeof(inputText));
-    
+
     /* Use modeless dialog */
     ShowCountdownInputDialog(hwnd);
 }
@@ -72,11 +72,10 @@ static void HotkeyQuickCountdown(HWND hwnd, int index) {
  * Hotkey Dispatch Table
  * ============================================================================ */
 
-#define QUICK_CD(n) (void(*)(HWND))(void*)(uintptr_t)(n)
-
 typedef struct {
     int id;
     HotkeyAction action;
+    int quickCountdownIndex;
 } HotkeyDescriptor;
 
 static void HotkeyPauseResume(HWND hwnd) {
@@ -85,20 +84,20 @@ static void HotkeyPauseResume(HWND hwnd) {
 }
 
 static const HotkeyDescriptor HOTKEY_DISPATCH_TABLE[] = {
-    {HOTKEY_ID_SHOW_TIME, ToggleShowTimeMode},
-    {HOTKEY_ID_COUNT_UP, StartCountUp},
-    {HOTKEY_ID_COUNTDOWN, StartDefaultCountDown},
-    {HOTKEY_ID_QUICK_COUNTDOWN1, QUICK_CD(1)},
-    {HOTKEY_ID_QUICK_COUNTDOWN2, QUICK_CD(2)},
-    {HOTKEY_ID_QUICK_COUNTDOWN3, QUICK_CD(3)},
-    {HOTKEY_ID_POMODORO, StartPomodoroTimer},
-    {HOTKEY_ID_TOGGLE_VISIBILITY, HotkeyToggleVisibility},
-    {HOTKEY_ID_EDIT_MODE, ToggleEditMode},
-    {HOTKEY_ID_PAUSE_RESUME, HotkeyPauseResume},
-    {HOTKEY_ID_RESTART_TIMER, HotkeyRestartTimer},
-    {HOTKEY_ID_CUSTOM_COUNTDOWN, HotkeyCustomCountdown},
-    {HOTKEY_ID_TOGGLE_MILLISECONDS, HotkeyToggleMilliseconds},
-    {HOTKEY_ID_TOPMOST, HotkeyToggleTopmost}
+    {HOTKEY_ID_SHOW_TIME, ToggleShowTimeMode, 0},
+    {HOTKEY_ID_COUNT_UP, StartCountUp, 0},
+    {HOTKEY_ID_COUNTDOWN, StartDefaultCountDown, 0},
+    {HOTKEY_ID_QUICK_COUNTDOWN1, NULL, 1},
+    {HOTKEY_ID_QUICK_COUNTDOWN2, NULL, 2},
+    {HOTKEY_ID_QUICK_COUNTDOWN3, NULL, 3},
+    {HOTKEY_ID_POMODORO, StartPomodoroTimer, 0},
+    {HOTKEY_ID_TOGGLE_VISIBILITY, HotkeyToggleVisibility, 0},
+    {HOTKEY_ID_EDIT_MODE, ToggleEditMode, 0},
+    {HOTKEY_ID_PAUSE_RESUME, HotkeyPauseResume, 0},
+    {HOTKEY_ID_RESTART_TIMER, HotkeyRestartTimer, 0},
+    {HOTKEY_ID_CUSTOM_COUNTDOWN, HotkeyCustomCountdown, 0},
+    {HOTKEY_ID_TOGGLE_MILLISECONDS, HotkeyToggleMilliseconds, 0},
+    {HOTKEY_ID_TOPMOST, HotkeyToggleTopmost, 0}
 };
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -106,13 +105,12 @@ static const HotkeyDescriptor HOTKEY_DISPATCH_TABLE[] = {
 BOOL DispatchHotkey(HWND hwnd, int hotkeyId) {
     for (size_t i = 0; i < ARRAY_SIZE(HOTKEY_DISPATCH_TABLE); i++) {
         if (HOTKEY_DISPATCH_TABLE[i].id == hotkeyId) {
-            HotkeyAction action = HOTKEY_DISPATCH_TABLE[i].action;
-            
-            if (hotkeyId >= HOTKEY_ID_QUICK_COUNTDOWN1 && hotkeyId <= HOTKEY_ID_QUICK_COUNTDOWN3) {
-                int index = (int)(uintptr_t)(void*)action;
-                HotkeyQuickCountdown(hwnd, index);
+            const HotkeyDescriptor* descriptor = &HOTKEY_DISPATCH_TABLE[i];
+
+            if (descriptor->quickCountdownIndex > 0) {
+                HotkeyQuickCountdown(hwnd, descriptor->quickCountdownIndex);
             } else {
-                action(hwnd);
+                descriptor->action(hwnd);
             }
             return TRUE;
         }
@@ -154,15 +152,15 @@ static HotkeyConfig g_hotkeyConfigs[] = {
 
 static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
     if (config->value == 0) return FALSE;
-    
+
     BYTE vk = LOBYTE(config->value);
     BYTE mod = HIBYTE(config->value);
-    
+
     UINT fsModifiers = 0;
     if (mod & HOTKEYF_ALT) fsModifiers |= MOD_ALT;
     if (mod & HOTKEYF_CONTROL) fsModifiers |= MOD_CONTROL;
     if (mod & HOTKEYF_SHIFT) fsModifiers |= MOD_SHIFT;
-    
+
     if (!RegisterHotKey(hwnd, config->id, fsModifiers, vk)) {
         extern void HotkeyToString(WORD hotkey, char* out, size_t size);
         char hotkeyStr[64];
@@ -177,25 +175,25 @@ static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
 
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
     extern void HotkeyToString(WORD hotkey, char* out, size_t size);
-    
+
     LOG_INFO("Registering global hotkeys...");
     UnregisterGlobalHotkeys(hwnd);
-    
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
+
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
         char hotkeyStr[64];
-        ReadIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey, 
+        ReadIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey,
                      "None", hotkeyStr, sizeof(hotkeyStr), config_path);
         g_hotkeyConfigs[i].value = StringToHotkey(hotkeyStr);
     }
-    
+
     BOOL anyRegistered = FALSE;
     BOOL configChanged = FALSE;
     int successCount = 0;
     int failCount = 0;
-    
+
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
         WORD oldValue = g_hotkeyConfigs[i].value;
         if (RegisterSingleHotkey(hwnd, &g_hotkeyConfigs[i])) {
@@ -210,17 +208,17 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
             failCount++;
         }
     }
-    
+
     if (configChanged) {
         LOG_INFO("Updating configuration to clear failed hotkeys");
         for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
             char hotkeyStr[64];
             HotkeyToString(g_hotkeyConfigs[i].value, hotkeyStr, sizeof(hotkeyStr));
-            WriteIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey, 
+            WriteIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey,
                           hotkeyStr, config_path);
         }
     }
-    
+
     LOG_INFO("Hotkey registration completed: %d successful, %d failed\n", successCount, failCount);
     return anyRegistered;
 }

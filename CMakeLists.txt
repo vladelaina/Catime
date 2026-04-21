@@ -154,7 +154,7 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         $<$<COMPILE_LANGUAGE:C>:-fno-asynchronous-unwind-tables>
         $<$<COMPILE_LANGUAGE:C>:-fno-ident>
         $<$<COMPILE_LANGUAGE:C>:-fno-stack-protector>
-        $<$<COMPILE_LANGUAGE:C>:-Wno-unknown-warning-option>
+        $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:Clang>>:-Wno-unknown-warning-option>
     )
 
     # Link-time optimization and size reduction
@@ -172,7 +172,7 @@ else()
     target_compile_options(catime PRIVATE
         $<$<COMPILE_LANGUAGE:C>:-g>
         $<$<COMPILE_LANGUAGE:C>:-O0>
-        $<$<COMPILE_LANGUAGE:C>:-Wno-unknown-warning-option>
+        $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:Clang>>:-Wno-unknown-warning-option>
     )
     
     target_link_options(catime PRIVATE

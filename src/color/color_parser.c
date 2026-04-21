@@ -45,23 +45,6 @@ static const CSSColor CSS_COLORS[] = {
 #define CSS_COLORS_COUNT (sizeof(CSS_COLORS) / sizeof(CSS_COLORS[0]))
 
 /* ============================================================================
- * String Utilities (Internal use only)
- * ============================================================================ */
-
-static void TrimString(char* str) {
-    if (!str) return;
-
-    char* start = str;
-    while (*start && isspace((unsigned char)*start)) start++;
-    if (start != str) memmove(str, start, strlen(start) + 1);
-
-    size_t len = strlen(str);
-    while (len > 0 && isspace((unsigned char)str[len - 1])) {
-        str[--len] = '\0';
-    }
-}
-
-/* ============================================================================
  * Color Conversion Functions
  * ============================================================================ */
 

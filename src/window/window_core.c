@@ -109,7 +109,8 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     if (CLOCK_WINDOW_POS_X == -2 || CLOCK_WINDOW_POS_X == -1) {
         POINT pt = {0, 0};
         HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
-        MONITORINFO mi = {sizeof(mi)};
+        MONITORINFO mi = {0};
+        mi.cbSize = sizeof(mi);
         GetMonitorInfo(hMon, &mi);
         int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
         

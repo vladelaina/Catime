@@ -127,16 +127,6 @@ static BOOL InitializeAudioEngine(void) {
     return TRUE;
 }
 
-static void UninitializeAudioEngine(void) {
-    if (g_engineInitialized) {
-        if (g_soundInitialized) {
-            ma_sound_uninit(&g_sound);
-            g_soundInitialized = MA_FALSE;
-        }
-        ma_engine_uninit(&g_audioEngine);
-        g_engineInitialized = MA_FALSE;
-    }
-}
 
 /* ============================================================================
  * Path conversion utilities

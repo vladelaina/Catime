@@ -53,6 +53,23 @@ static const size_t g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_a
 
 char g_websiteInput[512] = {0};
 
+typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
+typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
+
+static GetThreadDpiAwarenessContextFunc LoadGetThreadDpiAwarenessContext(HMODULE module) {
+    FARPROC proc = GetProcAddress(module, "GetThreadDpiAwarenessContext");
+    GetThreadDpiAwarenessContextFunc func = NULL;
+    memcpy(&func, &proc, sizeof(func));
+    return func;
+}
+
+static SetThreadDpiAwarenessContextFunc LoadSetThreadDpiAwarenessContext(HMODULE module) {
+    FARPROC proc = GetProcAddress(module, "SetThreadDpiAwarenessContext");
+    SetThreadDpiAwarenessContextFunc func = NULL;
+    memcpy(&func, &proc, sizeof(func));
+    return func;
+}
+
 /* ============================================================================
  * About Dialog Implementation
  * ============================================================================ */
@@ -68,13 +85,10 @@ void ShowAboutDialog(HWND hwndParent) {
     HANDLE hOldDpiContext = NULL;
     HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
     if (hUser32) {
-        typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
-        typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
-
         GetThreadDpiAwarenessContextFunc getThreadDpiAwarenessContextFunc =
-            (GetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "GetThreadDpiAwarenessContext");
+            LoadGetThreadDpiAwarenessContext(hUser32);
         SetThreadDpiAwarenessContextFunc setThreadDpiAwarenessContextFunc =
-            (SetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetThreadDpiAwarenessContext");
+            LoadSetThreadDpiAwarenessContext(hUser32);
 
         if (getThreadDpiAwarenessContextFunc && setThreadDpiAwarenessContextFunc) {
             hOldDpiContext = getThreadDpiAwarenessContextFunc();
@@ -94,9 +108,8 @@ void ShowAboutDialog(HWND hwndParent) {
     }
 
     if (hOldDpiContext && hUser32) {
-        typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
         SetThreadDpiAwarenessContextFunc setThreadDpiAwarenessContextFunc =
-            (SetThreadDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetThreadDpiAwarenessContext");
+            LoadSetThreadDpiAwarenessContext(hUser32);
         if (setThreadDpiAwarenessContextFunc) {
             setThreadDpiAwarenessContextFunc(hOldDpiContext);
         }

@@ -37,15 +37,6 @@ static int CmpAnimSpeedPoint(const void* a, const void* b) {
     return 0;
 }
 
-static void TrimSpaces(char* s) {
-    if (!s) return;
-    size_t len = strlen(s);
-    size_t i = 0; while (i < len && (s[i] == ' ' || s[i] == '\t')) i++;
-    if (i > 0) memmove(s, s + i, len - i + 1);
-    len = strlen(s);
-    while (len > 0 && (s[len - 1] == ' ' || s[len - 1] == '\t')) s[--len] = '\0';
-}
-
 static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8) {
     g_animSpeedPointCount = 0;
     if (!configPathUtf8 || !*configPathUtf8) return;
@@ -217,9 +208,12 @@ static BOOL ParseColorString(const char* str, COLORREF* out) {
     }
     int r=0,g=0,b=0;
     if (sscanf(str, "%d,%d,%d", &r, &g, &b) == 3) {
-        if (r<0) r=0; if (r>255) r=255;
-        if (g<0) g=0; if (g>255) g=255;
-        if (b<0) b=0; if (b>255) b=255;
+        if (r < 0) r = 0;
+        if (r > 255) r = 255;
+        if (g < 0) g = 0;
+        if (g > 255) g = 255;
+        if (b < 0) b = 0;
+        if (b > 255) b = 255;
         *out = RGB(r, g, b);
         return TRUE;
     }
