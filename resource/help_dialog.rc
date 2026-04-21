@@ -12,36 +12,7 @@ CAPTION "Catime CLI Help"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     /** Comprehensive CLI documentation in scrollable read-only text control */
-    CONTROL \
-"Usage: catime <argument>\r\n\r\n"
-"Countdown inputs (same rules as UI):\r\n"
-"  25=25 minutes\r\n"
-"  25h=25 hours\r\n"
-"  25s=25 seconds\r\n"
-"  2h3m=2 hours 3 minutes\r\n"
-"  25 30=25 minutes 30 seconds\r\n"
-"  1 30 20=1 hour 30 minutes 20 seconds\r\n"
-"  17 20t=Countdown to 17:20\r\n"
-"  9 9 9t=Countdown to 09:09:09\r\n\r\n"
-"Quick modes (single-letter):\r\n"
-"  s         = show current time\r\n"
-"  u         = start count up\r\n"
-"  q1        = start Quick Countdown 1\r\n"
-"  q2        = start Quick Countdown 2\r\n"
-"  q3        = start Quick Countdown 3\r\n"
-"  p         = start Pomodoro\r\n"
-"  p<number> = start Quick Countdown by index (e.g., p4)\r\n"
-"  v         = toggle visibility\r\n"
-"  e         = enter edit mode\r\n"
-"  pr        = pause or resume the timer\r\n"
-"  r         = restart the current timer\r\n\r\n"
-"  h         = show this help dialog\r\n"
-"Examples:\r\n"
-"  catime 25\r\n"
-"  catime 17 20t\r\n"
-"  catime q1\r\n"
-"  catime v\r\n"
-"  catime p4\r\n",
+    CONTROL "Usage: catime <argument>\r\n\r\nCountdown inputs (same rules as UI):\r\n  25=25 minutes\r\n  25h=25 hours\r\n  25s=25 seconds\r\n  2h3m=2 hours 3 minutes\r\n  25 30=25 minutes 30 seconds\r\n  1 30 20=1 hour 30 minutes 20 seconds\r\n  17 20t=Countdown to 17:20\r\n  9 9 9t=Countdown to 09:09:09\r\n\r\nQuick modes (single-letter):\r\n  s         = show current time\r\n  u         = start count up\r\n  q1        = start Quick Countdown 1\r\n  q2        = start Quick Countdown 2\r\n  q3        = start Quick Countdown 3\r\n  p         = start Pomodoro\r\n  p<number> = start Quick Countdown by index (e.g., p4)\r\n  v         = toggle visibility\r\n  e         = enter edit mode\r\n  pr        = pause or resume the timer\r\n  r         = restart the current timer\r\n\r\n  h         = show this help dialog\r\nExamples:\r\n  catime 25\r\n  catime 17 20t\r\n  catime q1\r\n  catime v\r\n  catime p4\r\n",
             IDC_CLI_HELP_EDIT, "EDIT", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 10, 10, 340, 215
     DEFPUSHBUTTON   "OK", IDOK, 285, 235, 65, 14
 END
