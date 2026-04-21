@@ -128,6 +128,7 @@ BOOL ValidateTimerConfig(ConfigSnapshot* snapshot) {
     /* Validate startup mode */
     if (strlen(snapshot->startupMode) > 0) {
         if (strcmp(snapshot->startupMode, "COUNTDOWN") != 0 &&
+            strcmp(snapshot->startupMode, "DEFAULT") != 0 &&
             strcmp(snapshot->startupMode, "COUNT_UP") != 0 &&
             strcmp(snapshot->startupMode, "SHOW_TIME") != 0 &&
             strcmp(snapshot->startupMode, "NO_DISPLAY") != 0 &&
