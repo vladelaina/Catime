@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wctype.h>
+#include <limits.h>
 #include "log.h"
 #include "language.h"
 #include "tray/tray_menu.h"
@@ -74,19 +75,24 @@ static BOOL GetFontsFolderPath(wchar_t* outPath, size_t size) {
  * @brief Get current font relative path for matching
  */
 static void GetCurrentFontRelativePath(wchar_t* outPath, size_t size) {
-    if (!outPath || size == 0) return;
+    if (!outPath || size == 0 || size > INT_MAX) return;
     outPath[0] = L'\0';
-    
+
     const char* prefix = FONTS_PATH_PREFIX;
     size_t prefixLen = strlen(prefix);
-    
+    const char* source = NULL;
+
     if (_strnicmp(FONT_FILE_NAME, prefix, prefixLen) == 0) {
         /* Custom font - extract relative path */
-        MultiByteToWideChar(CP_UTF8, 0, FONT_FILE_NAME + prefixLen, -1, outPath, (int)size);
-    } else if (strchr(FONT_FILE_NAME, ':') == NULL && 
+        source = FONT_FILE_NAME + prefixLen;
+    } else if (strchr(FONT_FILE_NAME, ':') == NULL &&
                (strchr(FONT_FILE_NAME, '\\') != NULL || strchr(FONT_FILE_NAME, '/') != NULL)) {
         /* Relative path without prefix */
-        MultiByteToWideChar(CP_UTF8, 0, FONT_FILE_NAME, -1, outPath, (int)size);
+        source = FONT_FILE_NAME;
+    }
+
+    if (source && MultiByteToWideChar(CP_UTF8, 0, source, -1, outPath, (int)size) <= 0) {
+        outPath[0] = L'\0';
     }
     /* System fonts or just filename - leave empty */
 }

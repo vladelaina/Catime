@@ -68,10 +68,17 @@ static HFONT CreateNotificationFont(int size, int weight) {
 }
 
 static int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
-    HFONT oldFont = (HFONT)SelectObject(hdc, font);
-    SIZE textSize;
+    HFONT oldFont = NULL;
+    if (font) {
+        oldFont = (HFONT)SelectObject(hdc, font);
+    }
+
+    SIZE textSize = {0};
     GetTextExtentPoint32W(hdc, text, wcslen(text), &textSize);
-    SelectObject(hdc, oldFont);
+
+    if (oldFont) {
+        SelectObject(hdc, oldFont);
+    }
     return textSize.cx;
 }
 
@@ -86,20 +93,32 @@ static void CalculateNotificationPosition(int width, int height, int* x, int* y)
 
 static void DrawNotificationBorder(HDC hdc, RECT rect) {
     HPEN pen = CreatePen(PS_SOLID, 1, NOTIFICATION_BORDER_COLOR);
-    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
-    
+    HPEN oldPen = NULL;
+    if (pen) {
+        oldPen = (HPEN)SelectObject(hdc, pen);
+    }
+
     Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
-    
-    SelectObject(hdc, oldPen);
-    DeleteObject(pen);
+
+    if (oldPen) {
+        SelectObject(hdc, oldPen);
+    }
+    if (pen) {
+        DeleteObject(pen);
+    }
 }
 
 static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, 
                                  HFONT font, COLORREF color, DWORD flags) {
-    HFONT oldFont = (HFONT)SelectObject(memDC, font);
+    HFONT oldFont = NULL;
+    if (font) {
+        oldFont = (HFONT)SelectObject(memDC, font);
+    }
     SetTextColor(memDC, color);
     DrawTextW(memDC, text, -1, &rect, flags);
-    SelectObject(memDC, oldFont);
+    if (oldFont) {
+        SelectObject(memDC, oldFont);
+    }
 }
 
 /** Centralized opacity calculation for fade animations */
@@ -333,25 +352,61 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            
+            if (!hdc) {
+                return 0;
+            }
+
             RECT clientRect;
             GetClientRect(hwnd, &clientRect);
-            
+
             HDC memDC = CreateCompatibleDC(hdc);
-            HBITMAP memBitmap = CreateCompatibleBitmap(hdc, clientRect.right, clientRect.bottom);
-            HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
-            
-            HBRUSH whiteBrush = CreateSolidBrush(NOTIFICATION_BG_COLOR);
-            FillRect(memDC, &clientRect, whiteBrush);
-            DeleteObject(whiteBrush);
-            
+            HBITMAP memBitmap = NULL;
+            HBITMAP oldBitmap = NULL;
+            HBRUSH whiteBrush = NULL;
+            HFONT titleFont = NULL;
+            HFONT contentFont = NULL;
+
+            if (!memDC) {
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
+
+            int paintWidth = clientRect.right - clientRect.left;
+            int paintHeight = clientRect.bottom - clientRect.top;
+            if (paintWidth <= 0 || paintHeight <= 0) {
+                DeleteDC(memDC);
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
+
+            memBitmap = CreateCompatibleBitmap(hdc, paintWidth, paintHeight);
+            if (!memBitmap) {
+                DeleteDC(memDC);
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
+
+            oldBitmap = (HBITMAP)SelectObject(memDC, memBitmap);
+            if (!oldBitmap) {
+                DeleteObject(memBitmap);
+                DeleteDC(memDC);
+                EndPaint(hwnd, &ps);
+                return 0;
+            }
+
+            whiteBrush = CreateSolidBrush(NOTIFICATION_BG_COLOR);
+            if (whiteBrush) {
+                FillRect(memDC, &clientRect, whiteBrush);
+                DeleteObject(whiteBrush);
+            }
+
             DrawNotificationBorder(memDC, clientRect);
-            
+
             SetBkMode(memDC, TRANSPARENT);
-            
-            HFONT titleFont = CreateNotificationFont(NOTIFICATION_TITLE_FONT_SIZE, FW_BOLD);
-            HFONT contentFont = CreateNotificationFont(NOTIFICATION_CONTENT_FONT_SIZE, FW_NORMAL);
-            
+
+            titleFont = CreateNotificationFont(NOTIFICATION_TITLE_FONT_SIZE, FW_BOLD);
+            contentFont = CreateNotificationFont(NOTIFICATION_CONTENT_FONT_SIZE, FW_NORMAL);
+
             RECT titleRect = {
                 NOTIFICATION_PADDING_H, 
                 NOTIFICATION_PADDING_V, 
@@ -360,7 +415,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             };
             DrawNotificationText(memDC, L"Catime", titleRect, titleFont, 
                                NOTIFICATION_TITLE_COLOR, DT_SINGLELINE);
-            
+
             const NotificationData* data = GetNotificationData(hwnd);
             if (data && data->messageText) {
                 RECT textRect = {
@@ -372,15 +427,15 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 DrawNotificationText(memDC, data->messageText, textRect, contentFont,
                                    NOTIFICATION_CONTENT_COLOR, DT_SINGLELINE | DT_END_ELLIPSIS);
             }
-            
-            BitBlt(hdc, 0, 0, clientRect.right, clientRect.bottom, memDC, 0, 0, SRCCOPY);
-            
+
+            BitBlt(hdc, 0, 0, paintWidth, paintHeight, memDC, 0, 0, SRCCOPY);
+
             SelectObject(memDC, oldBitmap);
-            DeleteObject(titleFont);
-            DeleteObject(contentFont);
+            if (titleFont) DeleteObject(titleFont);
+            if (contentFont) DeleteObject(contentFont);
             DeleteObject(memBitmap);
             DeleteDC(memDC);
-            
+
             EndPaint(hwnd, &ps);
             return 0;
         }

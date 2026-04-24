@@ -225,7 +225,10 @@ static void HandleTimeoutActions(HWND hwnd) {
         case TIMEOUT_ACTION_OPEN_FILE:
             if (strlen(CLOCK_TIMEOUT_FILE_PATH) > 0) {
                 wchar_t wPath[MAX_PATH];
-                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH);
+                if (MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_FILE_PATH, -1, wPath, MAX_PATH) <= 0) {
+                    LOG_WARNING("Failed to convert timeout file path: %s", CLOCK_TIMEOUT_FILE_PATH);
+                    break;
+                }
                 HINSTANCE result = ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
                 if ((INT_PTR)result <= 32) {
                     LOG_WARNING("Failed to open timeout file: %s (error: %d)", 
@@ -266,7 +269,10 @@ static void HandleTimeoutActions(HWND hwnd) {
         case TIMEOUT_ACTION_OPEN_WEBSITE:
             if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
                 wchar_t wUrl[MAX_PATH];
-                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH);
+                if (MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH) <= 0) {
+                    LOG_WARNING("Failed to convert timeout website URL: %s", CLOCK_TIMEOUT_WEBSITE_URL);
+                    break;
+                }
                 HINSTANCE result = ShellExecuteW(NULL, L"open", wUrl, NULL, NULL, SW_NORMAL);
                 if ((INT_PTR)result <= 32) {
                     LOG_WARNING("Failed to open timeout website: %s (error: %d)", 
@@ -460,8 +466,10 @@ static BOOL HandleMainTimer(HWND hwnd) {
         int pixels = rect.right * rect.bottom;
         DWORD minInterval = (pixels < 30000) ? 0 : (pixels < 100000) ? 50 : (pixels < 300000) ? 100 : 150;
         if (minInterval > 0 && (now_tick - s_lastRenderTime) < minInterval) shouldRender = FALSE;
+    } else if (!g_AppConfig.display.time_format.show_milliseconds && !CLOCK_SHOW_CURRENT_TIME) {
+        if (s_lastRenderTime != 0 && (now_tick - s_lastRenderTime) < 250) shouldRender = FALSE;
     }
-    
+
     if (CLOCK_SHOW_CURRENT_TIME) {
         last_displayed_second = -1;
         if (shouldRender) {

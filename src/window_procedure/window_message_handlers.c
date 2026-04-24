@@ -425,16 +425,16 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
         HBRUSH hBrush = CreateSolidBrush(RGB((int)r, (int)g, (int)b));
         HPEN hPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
 
-        HGDIOBJ oldBrush = SelectObject(lpdis->hDC, hBrush);
-        HGDIOBJ oldPen = SelectObject(lpdis->hDC, hPen);
+        HGDIOBJ oldBrush = hBrush ? SelectObject(lpdis->hDC, hBrush) : NULL;
+        HGDIOBJ oldPen = hPen ? SelectObject(lpdis->hDC, hPen) : NULL;
 
         Rectangle(lpdis->hDC, colorRect.left, colorRect.top,
                  colorRect.right, colorRect.bottom);
 
-        SelectObject(lpdis->hDC, oldPen);
-        SelectObject(lpdis->hDC, oldBrush);
-        DeleteObject(hPen);
-        DeleteObject(hBrush);
+        if (oldPen) SelectObject(lpdis->hDC, oldPen);
+        if (oldBrush) SelectObject(lpdis->hDC, oldBrush);
+        if (hPen) DeleteObject(hPen);
+        if (hBrush) DeleteObject(hBrush);
     }
 
     /* Draw sequence number on left side */
@@ -593,10 +593,10 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     countup_elapsed_time = 0;
 
     /* Show loading message */
-    const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
-    if (pluginInfo) {
+    PluginInfo pluginInfo;
+    if (PluginManager_CopyPlugin(pluginIndex, &pluginInfo)) {
         wchar_t loadingText[256];
-        _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo->displayName);
+        _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo.displayName);
         PluginData_SetText(loadingText);
         PluginData_SetActive(TRUE);
     }
@@ -753,4 +753,3 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     return 0;
 }
-

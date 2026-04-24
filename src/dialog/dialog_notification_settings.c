@@ -297,9 +297,15 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                             char fileName[MAX_PATH];
                             WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
 
-                            snprintf(g_AppConfig.notification.sound.sound_file,
-                                    sizeof(g_AppConfig.notification.sound.sound_file),
-                                    "%s\\%s", audio_path, fileName);
+                            int pathLen = snprintf(g_AppConfig.notification.sound.sound_file,
+                                                   sizeof(g_AppConfig.notification.sound.sound_file),
+                                                   "%s\\%s", audio_path, fileName);
+                            if (pathLen < 0 || pathLen >= (int)sizeof(g_AppConfig.notification.sound.sound_file)) {
+                                strncpy(g_AppConfig.notification.sound.sound_file, tempSoundFile,
+                                       sizeof(g_AppConfig.notification.sound.sound_file) - 1);
+                                g_AppConfig.notification.sound.sound_file[sizeof(g_AppConfig.notification.sound.sound_file) - 1] = '\0';
+                                return TRUE;
+                            }
                         }
 
                         if (PlayNotificationSound(hwndDlg)) {
@@ -424,7 +430,10 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                         char fileName[MAX_PATH];
                         WideCharToMultiByte(CP_UTF8, 0, wFileName, -1, fileName, MAX_PATH, NULL, NULL);
                         
-                        snprintf(soundFile, sizeof(soundFile), "%s\\%s", audio_path, fileName);
+                        int pathLen = snprintf(soundFile, sizeof(soundFile), "%s\\%s", audio_path, fileName);
+                        if (pathLen < 0 || pathLen >= (int)sizeof(soundFile)) {
+                            return TRUE;
+                        }
                     }
                 }
                 

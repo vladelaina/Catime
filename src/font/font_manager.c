@@ -10,6 +10,7 @@
 #include "utils/string_convert.h"
 #include "utils/path_utils.h"
 #include "config.h"
+#include "log.h"
 #include "../../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
@@ -333,7 +334,11 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
     /* Extract each font */
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         char outputPath[MAX_PATH];
-        snprintf(outputPath, MAX_PATH, "%s\\%s", fontsFolderPath, fontResources[i].fontName);
+        int outputPathLen = snprintf(outputPath, MAX_PATH, "%s\\%s", fontsFolderPath, fontResources[i].fontName);
+        if (outputPathLen < 0 || outputPathLen >= MAX_PATH) {
+            LOG_WARNING("Font output path too long: %s", fontResources[i].fontName);
+            continue;
+        }
         ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath);
     }
     

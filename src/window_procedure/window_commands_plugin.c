@@ -90,10 +90,11 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     countup_elapsed_time = 0;
 
     /* Show loading message */
-    const PluginInfo* pluginInfo = PluginManager_GetPlugin(pluginIndex);
-    if (pluginInfo) {
+    PluginInfo pluginInfo;
+    BOOL hasPluginInfo = PluginManager_CopyPlugin(pluginIndex, &pluginInfo);
+    if (hasPluginInfo) {
         wchar_t loadingText[256];
-        _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo->displayName);
+        _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo.displayName);
         PluginData_SetText(loadingText);
     }
     
@@ -102,7 +103,7 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     
     if (!startResult) {
         /* Launch failed - show error */
-        LOG_ERROR("Plugin failed to start: %ls", pluginInfo ? pluginInfo->displayName : L"unknown");
+        LOG_ERROR("Plugin failed to start: %ls", hasPluginInfo ? pluginInfo.displayName : L"unknown");
         
         const wchar_t* errorMsg = PluginProcess_GetLastError();
         if (errorMsg && errorMsg[0] != L'\0') {

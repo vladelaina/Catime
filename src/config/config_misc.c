@@ -374,8 +374,19 @@ UINT GetTimerInterval(void) {
         return 66; /* 15 FPS - sufficient for smooth gradient animation */
     }
     
-    /* Optimized balance: 50 FPS for milliseconds (2x more efficient than 100 FPS) */
-    return GetActiveShowMilliseconds() ? 20 : 1000;
+    /* Optimized balance: 50 FPS for milliseconds (2x more efficient than 100 FPS). */
+    if (GetActiveShowMilliseconds()) {
+        return 20;
+    }
+
+    /* Active timers still tick internally at 10 FPS so completion actions and
+     * Pomodoro transitions are not delayed by a full second. Rendering remains
+     * second-based when milliseconds are hidden. */
+    if (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0)) {
+        return 100;
+    }
+
+    return 1000;
 }
 
 /**

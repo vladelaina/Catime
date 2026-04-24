@@ -35,6 +35,18 @@ static BOOL RestartPluginInternal(int index);
 static BOOL GetFileModTime(const wchar_t* path, FILETIME* modTime);
 static void StopPluginInternal(int index);
 
+static BOOL Utf8ToWideFixed(const char* src, wchar_t* dest, int destCount) {
+    if (!src || !dest || destCount <= 0) return FALSE;
+    dest[0] = L'\0';
+    return MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, destCount) > 0;
+}
+
+static BOOL WideToUtf8Fixed(const wchar_t* src, char* dest, int destCount) {
+    if (!src || !dest || destCount <= 0) return FALSE;
+    dest[0] = '\0';
+    return WideCharToMultiByte(CP_UTF8, 0, src, -1, dest, destCount, NULL, NULL) > 0;
+}
+
 /**
  * @brief Comparator for plugin sorting (by display name, natural order)
  */
@@ -62,18 +74,18 @@ static BOOL GetFileModTime(const wchar_t* path, FILETIME* modTime) {
 static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
     (void)lpParam;
     LOG_INFO("[HotReload] Thread started");
-    
+
     while (g_hotReloadRunning) {
         if (g_hHotReloadStopEvent &&
             WaitForSingleObject(g_hHotReloadStopEvent, 1000) == WAIT_OBJECT_0) {
             break;
         }
         if (!g_hotReloadRunning) break;
-        
+
         EnterCriticalSection(&g_pluginCS);
-        
+
         int indexToMonitor = -1;
-        
+
         /* Find running plugin or last running */
         for (int i = 0; i < g_pluginCount; i++) {
             if (g_plugins[i].isRunning) {
@@ -82,11 +94,11 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
                 break;
             }
         }
-        if (indexToMonitor < 0 && g_lastRunningPluginIndex >= 0 && 
+        if (indexToMonitor < 0 && g_lastRunningPluginIndex >= 0 &&
             g_lastRunningPluginIndex < g_pluginCount) {
             indexToMonitor = g_lastRunningPluginIndex;
         }
-        
+
         /* Check file modification */
         if (indexToMonitor >= 0) {
             FILETIME currentModTime;
@@ -95,7 +107,7 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
                     LOG_INFO("[HotReload] File changed: %ls", g_plugins[indexToMonitor].displayName);
                     g_plugins[indexToMonitor].lastModTime = currentModTime;
                     LeaveCriticalSection(&g_pluginCS);
-                    
+
                     /* Post message to main thread instead of calling directly */
                     /* This avoids deadlock when security dialog needs to be shown */
                     HWND hwnd = PluginProcess_GetNotifyWindow();
@@ -106,15 +118,15 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
                         /* Window should be set during initialization */
                         LOG_WARNING("[HotReload] No notify window, skipping reload");
                     }
-                    
+
                     EnterCriticalSection(&g_pluginCS);
                 }
             }
         }
-        
+
         LeaveCriticalSection(&g_pluginCS);
     }
-    
+
     LOG_INFO("[HotReload] Thread stopped");
     return 0;
 }
@@ -153,7 +165,7 @@ void PluginManager_Init(void) {
 
 void PluginManager_Shutdown(void) {
     if (!g_pluginManagerInitialized) return;
-    
+
     /* Stop hot-reload thread */
     if (g_hHotReloadThread) {
         g_hotReloadRunning = FALSE;
@@ -179,7 +191,7 @@ void PluginManager_Shutdown(void) {
 
     /* Shutdown process management */
     PluginProcess_Shutdown();
-    
+
     g_activePluginIndex = -1;
     g_lastRunningPluginIndex = -1;
     g_pluginCount = 0;
@@ -211,7 +223,10 @@ int PluginManager_ScanPlugins(void) {
 
     /* Convert to wide string for Unicode support */
     wchar_t pluginDir[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, pluginDirA, -1, pluginDir, MAX_PATH);
+    if (!Utf8ToWideFixed(pluginDirA, pluginDir, MAX_PATH)) {
+        LOG_ERROR("Failed to convert plugin directory path to UTF-16");
+        return 0;
+    }
 
     LOG_INFO("Scanning plugin directory: %s", pluginDirA);
 
@@ -227,7 +242,9 @@ int PluginManager_ScanPlugins(void) {
     for (size_t ext = 0; ext < PLUGIN_EXTENSION_COUNT; ext++) {
         wchar_t searchPath[MAX_PATH];
         wchar_t extPattern[32];
-        MultiByteToWideChar(CP_UTF8, 0, PLUGIN_EXTENSIONS[ext], -1, extPattern, 32);
+        if (!Utf8ToWideFixed(PLUGIN_EXTENSIONS[ext], extPattern, 32)) {
+            continue;
+        }
         _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginDir, extPattern);
 
         WIN32_FIND_DATAW findData;
@@ -247,7 +264,7 @@ int PluginManager_ScanPlugins(void) {
                     plugin->name[63] = L'\0';
                     ExtractDisplayName(findData.cFileName, plugin->displayName, 64);
                     _snwprintf_s(plugin->path, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginDir, findData.cFileName);
-                    
+
                     plugin->isRunning = FALSE;
                     memset(&plugin->pi, 0, sizeof(plugin->pi));
 
@@ -306,7 +323,7 @@ int PluginManager_ScanPlugins(void) {
     // Update global list
     memcpy(g_plugins, newPlugins, sizeof(g_plugins));
     g_pluginCount = newPluginCount;
-    
+
     // Re-map g_lastRunningPluginIndex to new list
     if (lastRunningName[0]) {
         g_lastRunningPluginIndex = -1;  // Reset first
@@ -317,7 +334,7 @@ int PluginManager_ScanPlugins(void) {
             }
         }
     }
-    
+
     // Re-map g_activePluginIndex to new list
     if (activePluginName[0]) {
         g_activePluginIndex = -1;  // Reset first
@@ -351,7 +368,7 @@ void PluginManager_RequestScanAsync(void) {
     if (InterlockedCompareExchange(&g_asyncScanPending, 1, 0) != 0) {
         return;
     }
-    
+
     HANDLE hThread = CreateThread(NULL, 0, AsyncScanThread, NULL, 0, NULL);
     if (hThread) {
         CloseHandle(hThread);
@@ -371,10 +388,30 @@ int PluginManager_GetPluginCount(void) {
 }
 
 const PluginInfo* PluginManager_GetPlugin(int index) {
-    if (index < 0 || index >= g_pluginCount) {
+    static PluginInfo pluginSnapshot;
+
+    if (!PluginManager_CopyPlugin(index, &pluginSnapshot)) {
         return NULL;
     }
-    return &g_plugins[index];
+
+    return &pluginSnapshot;
+}
+
+BOOL PluginManager_CopyPlugin(int index, PluginInfo* outPlugin) {
+    if (!g_pluginManagerInitialized || !outPlugin) {
+        return FALSE;
+    }
+
+    EnterCriticalSection(&g_pluginCS);
+
+    if (index < 0 || index >= g_pluginCount) {
+        LeaveCriticalSection(&g_pluginCS);
+        return FALSE;
+    }
+
+    *outPlugin = g_plugins[index];
+    LeaveCriticalSection(&g_pluginCS);
+    return TRUE;
 }
 
 /**
@@ -384,10 +421,10 @@ const PluginInfo* PluginManager_GetPlugin(int index) {
  */
 static void TerminatePluginInternal(int index) {
     if (index < 0 || index >= g_pluginCount) return;
-    
+
     PluginInfo* plugin = &g_plugins[index];
     if (!plugin->isRunning) return;
-    
+
     PluginProcess_Terminate(plugin);
     LOG_INFO("Terminated plugin (internal): %ls", plugin->displayName);
 }
@@ -398,10 +435,10 @@ static void TerminatePluginInternal(int index) {
  */
 static void StopPluginInternal(int index) {
     if (index < 0 || index >= g_pluginCount) return;
-    
+
     PluginInfo* plugin = &g_plugins[index];
     if (!plugin->isRunning) return;
-    
+
     PluginProcess_Terminate(plugin);
     PluginData_Clear();
     LOG_INFO("Stopped plugin (internal): %ls", plugin->displayName);
@@ -417,7 +454,7 @@ static BOOL LaunchPluginInternal(int index) {
     if (index < 0 || index >= g_pluginCount) {
         return FALSE;
     }
-    
+
     PluginInfo* plugin = &g_plugins[index];
     LOG_INFO("Starting plugin: %ls", plugin->displayName);
 
@@ -460,7 +497,7 @@ BOOL PluginManager_StartPlugin(int index) {
             TerminatePluginInternal(i);
         }
     }
-    
+
     /* Reset indices since we terminated other plugins */
     g_lastRunningPluginIndex = -1;
 
@@ -471,15 +508,19 @@ BOOL PluginManager_StartPlugin(int index) {
     pluginPath[MAX_PATH - 1] = L'\0';
     wcsncpy(pluginDisplayName, g_plugins[index].displayName, 63);
     pluginDisplayName[63] = L'\0';
-    
+
     /* Convert to UTF-8 for security check functions */
     char pluginPathUtf8[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, pluginPath, -1, pluginPathUtf8, MAX_PATH, NULL, NULL);
-    
+    if (!WideToUtf8Fixed(pluginPath, pluginPathUtf8, MAX_PATH)) {
+        LOG_ERROR("Failed to convert plugin path to UTF-8: %ls", pluginPath);
+        LeaveCriticalSection(&g_pluginCS);
+        return FALSE;
+    }
+
     /* Security check: verify plugin trust before launching */
     if (!IsPluginTrusted(pluginPathUtf8)) {
         LOG_INFO("Plugin not trusted, showing security dialog: %ls", pluginDisplayName);
-        
+
         /* Calculate and save hash at dialog show time for later verification */
         char pluginHash[65];
         if (CalculatePluginHash(pluginPathUtf8, pluginHash)) {
@@ -488,20 +529,23 @@ BOOL PluginManager_StartPlugin(int index) {
             LOG_ERROR("Failed to calculate plugin hash for security dialog");
             SetPendingPluginHash("");
         }
-        
+
         LeaveCriticalSection(&g_pluginCS);
-        
+
         /* Show modeless security confirmation dialog */
         HWND hwnd = PluginProcess_GetNotifyWindow();
-        
+
         char displayNameUtf8[128];
-        WideCharToMultiByte(CP_UTF8, 0, pluginDisplayName, -1, displayNameUtf8, 128, NULL, NULL);
+        if (!WideToUtf8Fixed(pluginDisplayName, displayNameUtf8, 128)) {
+            LOG_ERROR("Failed to convert plugin display name to UTF-8: %ls", pluginDisplayName);
+            return FALSE;
+        }
         ShowPluginSecurityDialog(hwnd, pluginPathUtf8, displayNameUtf8, index);
-        
+
         /* Return FALSE - plugin will be started via WM_DIALOG_PLUGIN_SECURITY message handler */
         return FALSE;
     }
-    
+
     /* Plugin is trusted, launch directly */
     BOOL result = LaunchPluginInternal(index);
     LeaveCriticalSection(&g_pluginCS);
@@ -522,18 +566,18 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
     }
 
     EnterCriticalSection(&g_pluginCS);
-    
+
     /* Revalidate upper bound (plugin list might have changed during dialog) */
     if (index >= g_pluginCount) {
         LOG_ERROR("Plugin index invalid after security dialog");
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;
     }
-    
+
     /* CRITICAL: First, terminate ALL orphaned processes in Job Object
      * This catches child processes that outlived their parent script */
     PluginProcess_TerminateAllOrphans();
-    
+
     /* Stop any plugins that may have started while security dialog was open */
     /* This ensures single-instance even if user started another plugin during dialog */
     for (int i = 0; i < g_pluginCount; i++) {
@@ -542,15 +586,19 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
             TerminatePluginInternal(i);
         }
     }
-    
+
     /* Get plugin path for trust operation */
     wchar_t pluginPath[MAX_PATH];
     wcsncpy(pluginPath, g_plugins[index].path, MAX_PATH - 1);
     pluginPath[MAX_PATH - 1] = L'\0';
-    
+
     char pluginPathUtf8[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, pluginPath, -1, pluginPathUtf8, MAX_PATH, NULL, NULL);
-    
+    if (!WideToUtf8Fixed(pluginPath, pluginPathUtf8, MAX_PATH)) {
+        LOG_ERROR("Failed to convert plugin path to UTF-8: %ls", pluginPath);
+        LeaveCriticalSection(&g_pluginCS);
+        return FALSE;
+    }
+
     /* Security: Verify plugin file hasn't changed since dialog was shown */
     const char* savedHash = GetPendingPluginHash();
     if (savedHash && savedHash[0] != '\0') {
@@ -576,7 +624,7 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
     } else {
         LOG_WARNING("No saved hash available for verification (proceeding anyway)");
     }
-    
+
     if (trustPlugin) {
         /* User chose "Trust & Run" - add to trust list */
         if (TrustPlugin(pluginPathUtf8)) {
@@ -585,7 +633,7 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
             LOG_ERROR("Failed to add plugin to trust list: %ls (will still run once)", g_plugins[index].displayName);
         }
     }
-    
+
     BOOL result = LaunchPluginInternal(index);
     LeaveCriticalSection(&g_pluginCS);
     return result;
@@ -596,26 +644,26 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
  */
 static BOOL RestartPluginInternal(int index) {
     if (index < 0 || index >= g_pluginCount) return FALSE;
-    
+
     PluginInfo* plugin = &g_plugins[index];
-    
+
     /* Stop the plugin first */
     PluginManager_StopPlugin(index);
-    
+
     /* Show "Loading..." message */
     wchar_t loadingText[256];
     _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", plugin->displayName);
     PluginData_SetText(loadingText);
     PluginData_SetActive(TRUE);
-    
+
     /* Force redraw */
     HWND hwnd = PluginProcess_GetNotifyWindow();
     if (hwnd) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
-    
+
     Sleep(100);
-    
+
     return PluginManager_StartPlugin(index);
 }
 
@@ -638,7 +686,7 @@ BOOL PluginManager_StopPlugin(int index) {
     /* Terminate via process module */
     PluginProcess_Terminate(plugin);
     PluginData_Clear();
-    
+
     g_lastRunningPluginIndex = -1;
     g_activePluginIndex = -1;
 
@@ -690,18 +738,21 @@ BOOL PluginManager_NeedsSecurityCheck(int index) {
     }
 
     EnterCriticalSection(&g_pluginCS);
-    
+
     /* Get plugin path */
     wchar_t pluginPath[MAX_PATH];
     wcsncpy(pluginPath, g_plugins[index].path, MAX_PATH - 1);
     pluginPath[MAX_PATH - 1] = L'\0';
-    
+
     LeaveCriticalSection(&g_pluginCS);
-    
+
     /* Convert to UTF-8 for security check */
     char pluginPathUtf8[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, pluginPath, -1, pluginPathUtf8, MAX_PATH, NULL, NULL);
-    
+    if (!WideToUtf8Fixed(pluginPath, pluginPathUtf8, MAX_PATH)) {
+        LOG_ERROR("Failed to convert plugin path to UTF-8: %ls", pluginPath);
+        return TRUE;
+    }
+
     /* Return TRUE if NOT trusted (needs security check) */
     return !IsPluginTrusted(pluginPathUtf8);
 }
@@ -726,10 +777,10 @@ BOOL PluginManager_OpenPluginFolder(void) {
     if (!PluginManager_GetPluginDir(pluginDir, sizeof(pluginDir))) {
         return FALSE;
     }
-    
+
     // Ensure directory exists
     CreateDirectoryA(pluginDir, NULL);
-    
+
     // Open in explorer
     ShellExecuteA(NULL, "open", pluginDir, NULL, NULL, SW_SHOW);
     return TRUE;
@@ -745,4 +796,49 @@ int PluginManager_GetActivePluginIndex(void) {
 
 BOOL PluginManager_RestartPlugin(int index) {
     return RestartPluginInternal(index);
+}
+
+void PluginManager_HandleProcessExit(DWORD processId, const wchar_t* displayName) {
+    if (!g_pluginManagerInitialized || processId == 0) return;
+
+    BOOL shouldClearDisplay = FALSE;
+    HANDLE hProcessToClose = NULL;
+
+    EnterCriticalSection(&g_pluginCS);
+
+    for (int i = 0; i < g_pluginCount; i++) {
+        PluginInfo* plugin = &g_plugins[i];
+        if (plugin->pi.dwProcessId != processId) {
+            continue;
+        }
+
+        if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
+            LOG_INFO("[Thread] Plugin exited: %ls", displayName ? displayName : plugin->displayName);
+            hProcessToClose = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
+            memset(&plugin->pi, 0, sizeof(plugin->pi));
+            shouldClearDisplay = TRUE;
+
+            if (g_activePluginIndex == i) {
+                g_activePluginIndex = -1;
+            }
+            if (g_lastRunningPluginIndex == i) {
+                g_lastRunningPluginIndex = -1;
+            }
+        }
+        break;
+    }
+
+    LeaveCriticalSection(&g_pluginCS);
+
+    if (hProcessToClose) {
+        CloseHandle(hProcessToClose);
+    }
+
+    if (shouldClearDisplay) {
+        PluginData_Clear();
+        HWND hwnd = PluginProcess_GetNotifyWindow();
+        if (hwnd) {
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
+    }
 }

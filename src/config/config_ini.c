@@ -460,7 +460,11 @@ static BOOL WriteIniAtomically(IniFile* ini) {
     if (!ini || !ini->filePath[0]) return FALSE;
 
     char tempPath[MAX_PATH];
-    snprintf(tempPath, sizeof(tempPath), "%s.tmp", ini->filePath);
+    int tempPathLen = snprintf(tempPath, sizeof(tempPath), "%s.tmp", ini->filePath);
+    if (tempPathLen < 0 || tempPathLen >= (int)sizeof(tempPath)) {
+        LOG_ERROR("Config temp path too long: %s", ini->filePath);
+        return FALSE;
+    }
 
     if (!WriteIniToFile(ini, tempPath)) {
         return FALSE;

@@ -117,6 +117,12 @@ HICON CreatePercentIcon16(int percent) {
         return NULL;
     }
     HGDIOBJ old = SelectObject(mem, hbmColor);
+    if (!old) {
+        DeleteDC(mem);
+        ReleaseDC(NULL, hdc);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
 
     if (useTransparentBg) {
         /* Transparent background: fill with transparent pixels (alpha=0) */
@@ -128,8 +134,10 @@ HICON CreatePercentIcon16(int percent) {
         /* Solid background: use configured color */
         RECT rc = {0, 0, cx, cy};
         HBRUSH bk = CreateSolidBrush(bgColor);
-        FillRect(mem, &rc, bk);
-        DeleteObject(bk);
+        if (bk) {
+            FillRect(mem, &rc, bk);
+            DeleteObject(bk);
+        }
     }
 
     /* Setup text rendering */
@@ -175,15 +183,32 @@ HICON CreatePercentIcon16(int percent) {
     }
 
     HDC memMask = CreateCompatibleDC(hdc);
+    if (!memMask) {
+        ReleaseDC(NULL, hdc);
+        DeleteDC(mem);
+        DeleteObject(hbmMask);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
     HGDIOBJ oldMask = SelectObject(memMask, hbmMask);
+    if (!oldMask) {
+        DeleteDC(memMask);
+        ReleaseDC(NULL, hdc);
+        DeleteDC(mem);
+        DeleteObject(hbmMask);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
 
     if (useTransparentBg) {
         /* For transparent background: mask = white (1) for background, black (0) for text */
         /* First fill entire mask with white (transparent) */
         RECT rc = {0, 0, cx, cy};
         HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
-        FillRect(memMask, &rc, whiteBrush);
-        DeleteObject(whiteBrush);
+        if (whiteBrush) {
+            FillRect(memMask, &rc, whiteBrush);
+            DeleteObject(whiteBrush);
+        }
 
         /* Draw text in black on mask to mark opaque text pixels */
         SetBkMode(memMask, TRANSPARENT);
@@ -202,8 +227,10 @@ HICON CreatePercentIcon16(int percent) {
         /* For solid background: entire icon is opaque (mask all black) */
         RECT rc = {0, 0, cx, cy};
         HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
-        FillRect(memMask, &rc, blackBrush);
-        DeleteObject(blackBrush);
+        if (blackBrush) {
+            FillRect(memMask, &rc, blackBrush);
+            DeleteObject(blackBrush);
+        }
     }
 
     SelectObject(memMask, oldMask);
@@ -277,6 +304,12 @@ HICON CreateCapsLockIcon(BOOL capsOn) {
         return NULL;
     }
     HGDIOBJ old = SelectObject(mem, hbmColor);
+    if (!old) {
+        DeleteDC(mem);
+        ReleaseDC(NULL, hdc);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
 
     if (useTransparentBg) {
         /* Transparent background: fill with transparent pixels (alpha=0) */
@@ -288,8 +321,10 @@ HICON CreateCapsLockIcon(BOOL capsOn) {
         /* Solid background: use configured color */
         RECT rc = {0, 0, cx, cy};
         HBRUSH bk = CreateSolidBrush(bgColor);
-        FillRect(mem, &rc, bk);
-        DeleteObject(bk);
+        if (bk) {
+            FillRect(mem, &rc, bk);
+            DeleteObject(bk);
+        }
     }
 
     /* Setup text rendering */
@@ -332,14 +367,31 @@ HICON CreateCapsLockIcon(BOOL capsOn) {
     }
 
     HDC memMask = CreateCompatibleDC(hdc);
+    if (!memMask) {
+        ReleaseDC(NULL, hdc);
+        DeleteDC(mem);
+        DeleteObject(hbmMask);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
     HGDIOBJ oldMask = SelectObject(memMask, hbmMask);
+    if (!oldMask) {
+        DeleteDC(memMask);
+        ReleaseDC(NULL, hdc);
+        DeleteDC(mem);
+        DeleteObject(hbmMask);
+        DeleteObject(hbmColor);
+        return NULL;
+    }
 
     if (useTransparentBg) {
         /* For transparent background: mask = white for bg, black for text */
         RECT rc = {0, 0, cx, cy};
         HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
-        FillRect(memMask, &rc, whiteBrush);
-        DeleteObject(whiteBrush);
+        if (whiteBrush) {
+            FillRect(memMask, &rc, whiteBrush);
+            DeleteObject(whiteBrush);
+        }
 
         /* Draw text in black on mask */
         SetBkMode(memMask, TRANSPARENT);
@@ -358,8 +410,10 @@ HICON CreateCapsLockIcon(BOOL capsOn) {
         /* For solid background: entire icon is opaque */
         RECT rc = {0, 0, cx, cy};
         HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
-        FillRect(memMask, &rc, blackBrush);
-        DeleteObject(blackBrush);
+        if (blackBrush) {
+            FillRect(memMask, &rc, blackBrush);
+            DeleteObject(blackBrush);
+        }
     }
 
     SelectObject(memMask, oldMask);

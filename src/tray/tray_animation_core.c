@@ -78,6 +78,26 @@ static DWORD g_lastSuccessfulUpdateTime = 0;
 #define UPDATE_TIMEOUT_MS 5000
 
 static void TrayAnimationTimerCallback(void* userData);
+
+static BOOL BuildAnimationConfigPath(const char* name, char* animPath, size_t animPathSize) {
+    if (!name || !animPath || animPathSize == 0) return FALSE;
+
+    int pathLen = 0;
+    if (IsBuiltinAnimationName(name)) {
+        pathLen = snprintf(animPath, animPathSize, "%s", name);
+    } else {
+        pathLen = snprintf(animPath, animPathSize,
+                           "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", name);
+    }
+
+    if (pathLen < 0 || (size_t)pathLen >= animPathSize) {
+        animPath[0] = '\0';
+        LOG_WARNING("Animation config path too long: %s", name);
+        return FALSE;
+    }
+
+    return TRUE;
+}
 static DWORD WINAPI PreviewWorkerThread(LPVOID param);
 
 extern BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim, void* pool, int cx, int cy);
@@ -685,14 +705,9 @@ BOOL SetCurrentAnimationName(const char* name) {
         char config_path[MAX_PATH] = {0};
         GetConfigPath(config_path, sizeof(config_path));
         char animPath[MAX_PATH];
-        
-        if (IsBuiltinAnimationName(name)) {
-            snprintf(animPath, sizeof(animPath), "%s", name);
-        } else {
-            snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", name);
+        if (BuildAnimationConfigPath(name, animPath, sizeof(animPath))) {
+            WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
         }
-        
-        WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
 
         EnsureTrayAnimationTimerState();
         if (g_trayHwnd) {
@@ -746,14 +761,9 @@ BOOL SetCurrentAnimationName(const char* name) {
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     char animPath[MAX_PATH];
-    
-    if (IsBuiltinAnimationName(name)) {
-        snprintf(animPath, sizeof(animPath), "%s", name);
-    } else {
-        snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", name);
+    if (BuildAnimationConfigPath(name, animPath, sizeof(animPath))) {
+        WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
     }
-    
-    WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
 
     EnsureTrayAnimationTimerState();
     if (g_trayHwnd) {

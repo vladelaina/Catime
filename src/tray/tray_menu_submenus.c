@@ -370,8 +370,8 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                     GetLocalizedString(NULL, L"No plugins found"));
     } else {
         for (int i = 0; i < pluginCount; i++) {
-            const PluginInfo* plugin = PluginManager_GetPlugin(i);
-            if (plugin) {
+            PluginInfo plugin;
+            if (PluginManager_CopyPlugin(i, &plugin)) {
                 // Check if this is the active plugin (by user action, not just process state)
                 UINT flags = MF_STRING;
                 if (i == activePluginIndex) {
@@ -379,7 +379,7 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                 }
                 
                 /* plugin->displayName is already wchar_t, use directly */
-                AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_BASE + i, plugin->displayName);
+                AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_BASE + i, plugin.displayName);
             }
         }
     }
@@ -470,12 +470,12 @@ void BuildHelpSubmenu(HMENU hMenu) {
     
     if (g_isNewVersionAvailable) {
         wchar_t updateText[64];
-        wchar_t wNewVersion[32];
-        wchar_t wCurrentVersion[32];
-        
+        wchar_t wNewVersion[32] = L"?";
+        wchar_t wCurrentVersion[32] = L"?";
+
         MultiByteToWideChar(CP_UTF8, 0, g_newVersionString, -1, wNewVersion, 32);
         MultiByteToWideChar(CP_UTF8, 0, CATIME_VERSION, -1, wCurrentVersion, 32);
-        
+
         _snwprintf_s(updateText, 64, _TRUNCATE, L"v%s -> v%s", wCurrentVersion, wNewVersion);
         AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_CHECK_UPDATE, updateText);
         

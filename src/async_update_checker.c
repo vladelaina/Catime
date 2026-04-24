@@ -21,14 +21,14 @@ typedef struct {
 } UpdateThreadParams;
 
 static HANDLE g_hUpdateThread = NULL;
-static BOOL g_bUpdateThreadRunning = FALSE;
+static volatile LONG g_updateThreadRunning = 0;
 
 /* ============================================================================
  * Internal helpers
  * ============================================================================ */
 
 static void ResetThreadState(void) {
-    g_bUpdateThreadRunning = FALSE;
+    InterlockedExchange(&g_updateThreadRunning, 0);
     if (g_hUpdateThread) {
         CloseHandle(g_hUpdateThread);
         g_hUpdateThread = NULL;
@@ -65,7 +65,7 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     UpdateThreadParams* threadParams = (UpdateThreadParams*)param;
     if (!threadParams) {
         LOG_ERROR("Thread parameters are null");
-        g_bUpdateThreadRunning = FALSE;
+        InterlockedExchange(&g_updateThreadRunning, 0);
         _endthreadex(1);
         return 1;
     }
@@ -77,8 +77,8 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     LOG_INFO("Update check started (silent: %s)", silentCheck ? "yes" : "no");
     CheckForUpdateSilent(hwnd, silentCheck);
     LOG_INFO("Update check completed");
-    
-    g_bUpdateThreadRunning = FALSE;
+
+    InterlockedExchange(&g_updateThreadRunning, 0);
     _endthreadex(0);
     return 0;
 }
@@ -96,8 +96,11 @@ void CleanupUpdateThread(void) {
     
     switch (waitResult) {
         case WAIT_TIMEOUT:
-            LOG_WARNING("Thread cleanup timeout, forcibly closing handle");
-            break;
+            LOG_WARNING("Thread cleanup timeout, closing handle while thread finishes in background");
+            CloseHandle(g_hUpdateThread);
+            g_hUpdateThread = NULL;
+            LOG_INFO("Thread handle cleaned up");
+            return;
         case WAIT_OBJECT_0:
             LOG_INFO("Thread ended normally");
             break;
@@ -105,28 +108,27 @@ void CleanupUpdateThread(void) {
             LOG_WARNING("Unexpected wait result: %lu", waitResult);
             break;
     }
-    
+
     ResetThreadState();
     LOG_INFO("Thread resources cleaned up");
 }
 
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
-    if (g_bUpdateThreadRunning) {
+    if (InterlockedCompareExchange(&g_updateThreadRunning, 1, 0) != 0) {
         LOG_INFO("Update check already running, skipping request");
         return;
     }
-    
+
     if (g_hUpdateThread) {
         CloseHandle(g_hUpdateThread);
         g_hUpdateThread = NULL;
     }
-    
+
     UpdateThreadParams* threadParams = PrepareThreadParams(hwnd, silentCheck);
     if (!threadParams) {
+        InterlockedExchange(&g_updateThreadRunning, 0);
         return;
     }
-    
-    g_bUpdateThreadRunning = TRUE;
     HANDLE hThread = (HANDLE)_beginthreadex(
         NULL,
         0,

@@ -10,6 +10,7 @@
 #include <shlwapi.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 #include "config/config_watcher.h"
 #include "config.h"
@@ -100,11 +101,18 @@ static void NotifyConfigChanges(HWND hwnd) {
 }
 
 static HANDLE SetupDirectoryWatch(const char* iniPath, wchar_t* outDir, size_t outDirSize) {
+    if (!iniPath || !outDir || outDirSize == 0 || outDirSize > INT_MAX) {
+        return INVALID_HANDLE_VALUE;
+    }
+
     char dirPath[MAX_PATH];
     ExtractDirectoryPath(iniPath, dirPath, sizeof(dirPath));
-    
-    MultiByteToWideChar(CP_UTF8, 0, dirPath, -1, outDir, (int)outDirSize);
-    
+
+    if (MultiByteToWideChar(CP_UTF8, 0, dirPath, -1, outDir, (int)outDirSize) == 0) {
+        outDir[0] = L'\0';
+        return INVALID_HANDLE_VALUE;
+    }
+
     return CreateFileW(outDir, FILE_LIST_DIRECTORY,
                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                       NULL, OPEN_EXISTING,
@@ -153,7 +161,11 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
     }
     
     wchar_t wIni[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, iniPath, -1, wIni, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, iniPath, -1, wIni, MAX_PATH) == 0) {
+        CloseHandle(hDir);
+        CleanupWatchEvents(hEvents);
+        return 0;
+    }
     const wchar_t* wFileName = GetFileNameFromPath(wIni);
     
     for (;;) {
@@ -169,9 +181,10 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
         
         DWORD wait = WaitForMultipleObjects(WATCH_EVENT_COUNT, hEvents, FALSE, INFINITE);
         if (wait == WAIT_OBJECT_0) {
+            CancelIo(hDir);
             break;
         }
-        
+
         DWORD bytes = 0;
         if (!GetOverlappedResult(hDir, &ov, &bytes, FALSE)) {
             continue;

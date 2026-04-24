@@ -311,8 +311,9 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
         return;
     }
 
-    /* Skip update if showing opacity tip */
+    /* Keep percent icons fresh while preserving the temporary opacity tooltip. */
     if (g_showingOpacityTip) {
+        TrayAnimation_UpdatePercentIconIfNeeded();
         return;
     }
 
@@ -386,9 +387,13 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     
     const char* animName = GetCurrentAnimationName();
     AnimationType type = GetAnimationType(animName);
+    BOOL destroyInitialIcon = FALSE;
     HICON hInitial = GetInitialPercentIcon(type);
-    if (!hInitial) {
+    if (hInitial) {
+        destroyInitialIcon = TRUE;
+    } else {
         hInitial = GetInitialAnimationHicon();
+        destroyInitialIcon = (hInitial && animName && _stricmp(animName, "__none__") == 0);
     }
     
     memset(&nid, 0, sizeof(nid));
@@ -401,6 +406,9 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
 
     Shell_NotifyIconW(NIM_ADD, &nid);
+    if (destroyInitialIcon) {
+        DestroyIcon(hInitial);
+    }
     
     /* Note: We don't use NOTIFYICON_VERSION_4 because it changes message format
      * and doesn't reliably send WM_MOUSEMOVE. Instead, we use a timer-based
@@ -441,6 +449,8 @@ void RemoveTrayIcon(void) {
  * @note Displays for 3 seconds without title
  */
 void ShowTrayNotification(HWND hwnd, const char* message) {
+    if (!message) return;
+
     NOTIFYICONDATAW nid_notify = {0};
     nid_notify.cbSize = sizeof(NOTIFYICONDATAW);
     nid_notify.hWnd = hwnd;
@@ -448,10 +458,13 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
     nid_notify.uFlags = NIF_INFO;
     nid_notify.dwInfoFlags = NIIF_NONE;
     nid_notify.uTimeout = 3000;
-    
-    MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo, sizeof(nid_notify.szInfo)/sizeof(WCHAR));
+
+    if (MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo,
+                            (int)_countof(nid_notify.szInfo)) <= 0) {
+        return;
+    }
     nid_notify.szInfoTitle[0] = L'\0';
-    
+
     Shell_NotifyIconW(NIM_MODIFY, &nid_notify);
 }
 

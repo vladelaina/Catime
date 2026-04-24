@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
 
 /* ============================================================================
  * Constants
@@ -58,12 +59,17 @@ typedef struct {
  * @brief Get animations folder path (wide char)
  */
 static BOOL GetAnimationsFolderPathW(wchar_t* outPath, size_t size) {
+    if (!outPath || size == 0 || size > INT_MAX) return FALSE;
+
     char utf8Path[MAX_PATH];
     GetAnimationsFolderPath(utf8Path, MAX_PATH);
-    
+
     if (utf8Path[0] == '\0') return FALSE;
-    
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, outPath, (int)size);
+
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, outPath, (int)size) <= 0) {
+        outPath[0] = L'\0';
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -153,7 +159,10 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
         if (relativePathUtf8[0] == '\0') {
             strncpy(newRelativePath, fileNameUtf8, MAX_PATH - 1);
         } else {
-            snprintf(newRelativePath, MAX_PATH, "%s\\%s", relativePathUtf8, fileNameUtf8);
+            int relativePathLen = snprintf(newRelativePath, MAX_PATH, "%s\\%s", relativePathUtf8, fileNameUtf8);
+            if (relativePathLen < 0 || relativePathLen >= MAX_PATH) {
+                continue;
+            }
         }
         newRelativePath[MAX_PATH - 1] = '\0';
         
@@ -407,10 +416,11 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
 void OpenAnimationsFolder(void) {
     char base[MAX_PATH] = {0};
     GetAnimationsFolderPath(base, sizeof(base));
-    
+    if (base[0] == '\0') return;
+
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, base, -1, wPath, MAX_PATH);
-    
+    if (MultiByteToWideChar(CP_UTF8, 0, base, -1, wPath, MAX_PATH) <= 0) return;
+
     ShellExecuteW(NULL, L"open", wPath, NULL, NULL, SW_SHOWNORMAL);
 }
 

@@ -16,9 +16,18 @@
 #include "markdown/markdown_parser.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "log.h"
 
 #define BULLET_POINT L"• "
+
+static BOOL CalculateDisplayBufferCapacity(size_t textLen, size_t* capacity) {
+    if (!capacity) return FALSE;
+    if (textLen > (SIZE_MAX - 1024) / 2) return FALSE;
+
+    *capacity = textLen * 2 + 1024;
+    return TRUE;
+}
 
 /** Parse [text](url) format, # headings, inline styles, list items, and blockquotes with pre-allocation optimization */
 BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
@@ -82,7 +91,10 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         ParseState state = {0};
         state.currentPos = 0;
         
-        state.displayText = (wchar_t*)malloc((inputLen + 1) * sizeof(wchar_t));
+        size_t displayCapacity = 0;
+        if (!CalculateDisplayBufferCapacity(inputLen, &displayCapacity)) return FALSE;
+
+        state.displayText = (wchar_t*)malloc(displayCapacity * sizeof(wchar_t));
         if (!state.displayText) return FALSE;
         
         int estimatedColorTags = CountMarkdownColorTags(input);
@@ -176,7 +188,10 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     ParseState state = {0};
     state.currentPos = 0;  // Start from 0, will be updated after parsing before section
 
-    state.displayText = (wchar_t*)malloc((totalLen + wcslen(BULLET_POINT) * 200 + 1) * sizeof(wchar_t));
+    size_t displayCapacity = 0;
+    if (!CalculateDisplayBufferCapacity(totalLen, &displayCapacity)) { free(mdContent); return FALSE; }
+
+    state.displayText = (wchar_t*)malloc(displayCapacity * sizeof(wchar_t));
     if (!state.displayText) { free(mdContent); return FALSE; }
     
     // Pre-allocate color/font tag arrays early (needed for before section parsing)

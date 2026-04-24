@@ -3,8 +3,11 @@
  * @brief System performance monitoring with macro-driven validation
  */
 
+#include <winsock2.h>
 #include <windows.h>
 #include <psapi.h>
+#include <ifdef.h>
+#include <netioapi.h>
 #include <iphlpapi.h>
 #include <stdio.h>
 #include <string.h>
@@ -75,11 +78,18 @@ static inline float ClampPercent(double value) {
     return (float)value;
 }
 
-/** Network counters are 32-bit and wrap around */
+/** Network counters from GetIfTable are 32-bit and wrap around. */
 static inline ULONGLONG CalculateDelta32(ULONGLONG current, ULONGLONG previous) {
-    return (current >= previous) 
+    return (current >= previous)
         ? (current - previous)
         : (COUNTER_MAX_32BIT - previous + current);
+}
+
+/** 64-bit counters should not wrap in practice; decreasing values indicate reset. */
+static inline BOOL CalculateDelta64(ULONGLONG current, ULONGLONG previous, ULONGLONG* outDelta) {
+    if (!outDelta || current < previous) return FALSE;
+    *outDelta = current - previous;
+    return TRUE;
 }
 
 static inline ULONGLONG GetMonotonicTickMs(void) {
@@ -118,14 +128,28 @@ static CpuSampleResult SampleCpuUsage(float* outPercent) {
     ULONGLONG kernelPrev = FileTimeToUll(&g_state.cpu.timesState.lastKernel);
     ULONGLONG userPrev = FileTimeToUll(&g_state.cpu.timesState.lastUser);
 
+    if (idleNow < idlePrev || kernelNow < kernelPrev || userNow < userPrev) {
+        g_state.cpu.timesState.lastIdle = idle;
+        g_state.cpu.timesState.lastKernel = kernel;
+        g_state.cpu.timesState.lastUser = user;
+        return CPU_SAMPLE_ERROR;
+    }
+
     ULONGLONG idleDelta = idleNow - idlePrev;
     ULONGLONG kernelDelta = kernelNow - kernelPrev;
     ULONGLONG userDelta = userNow - userPrev;
     ULONGLONG totalDelta = kernelDelta + userDelta;
 
     if (totalDelta == 0) {
-        *outPercent = 0.0f;
+        *outPercent = g_state.cpu.cachedPercent;
         return CPU_SAMPLE_OK;
+    }
+
+    if (idleDelta > totalDelta) {
+        g_state.cpu.timesState.lastIdle = idle;
+        g_state.cpu.timesState.lastKernel = kernel;
+        g_state.cpu.timesState.lastUser = user;
+        return CPU_SAMPLE_ERROR;
     }
 
     ULONGLONG busyDelta = totalDelta - idleDelta;
@@ -154,7 +178,65 @@ static BOOL SampleMemoryUsage(float* outPercent) {
     return TRUE;
 }
 
-/** Collect active non-loopback interface counters (32-bit counters) */
+typedef NETIO_STATUS (WINAPI *GetIfTable2Fn)(PMIB_IF_TABLE2* Table);
+typedef VOID (WINAPI *FreeMibTableFn)(PVOID Memory);
+
+static HMODULE g_iphlpapiModule = NULL;
+static GetIfTable2Fn g_getIfTable2 = NULL;
+static FreeMibTableFn g_freeMibTable = NULL;
+static BOOL g_netioApiResolved = FALSE;
+static BOOL g_iphlpapiLoadedByUs = FALSE;
+
+static BOOL ResolveNetworkApi64(void) {
+    if (g_netioApiResolved) {
+        return g_getIfTable2 && g_freeMibTable;
+    }
+
+    g_netioApiResolved = TRUE;
+    g_iphlpapiModule = GetModuleHandleW(L"iphlpapi.dll");
+    if (!g_iphlpapiModule) {
+        g_iphlpapiModule = LoadLibraryW(L"iphlpapi.dll");
+        g_iphlpapiLoadedByUs = (g_iphlpapiModule != NULL);
+    }
+    if (!g_iphlpapiModule) return FALSE;
+
+    FARPROC getIfTable2Proc = GetProcAddress(g_iphlpapiModule, "GetIfTable2");
+    FARPROC freeMibTableProc = GetProcAddress(g_iphlpapiModule, "FreeMibTable");
+    memcpy(&g_getIfTable2, &getIfTable2Proc, sizeof(g_getIfTable2));
+    memcpy(&g_freeMibTable, &freeMibTableProc, sizeof(g_freeMibTable));
+    return g_getIfTable2 && g_freeMibTable;
+}
+
+static BOOL CollectNetworkCounters64(NetInterfaceCounter* outCounters, DWORD* outCount) {
+    if (!outCounters || !outCount) return FALSE;
+    *outCount = 0;
+    if (!ResolveNetworkApi64()) return FALSE;
+
+    PMIB_IF_TABLE2 table = NULL;
+    if (g_getIfTable2(&table) != NO_ERROR || !table) {
+        return FALSE;
+    }
+
+    DWORD count = 0;
+    for (ULONG i = 0; i < table->NumEntries; ++i) {
+        const MIB_IF_ROW2* row = &table->Table[i];
+        if (row->Type == IF_TYPE_SOFTWARE_LOOPBACK) continue;
+        if (row->OperStatus != IfOperStatusUp) continue;
+
+        if (count < MAX_TRACKED_INTERFACES) {
+            outCounters[count].index = row->InterfaceIndex;
+            outCounters[count].inOctets = row->InOctets;
+            outCounters[count].outOctets = row->OutOctets;
+            ++count;
+        }
+    }
+
+    g_freeMibTable(table);
+    *outCount = count;
+    return TRUE;
+}
+
+/** Collect active non-loopback interface counters (32-bit fallback). */
 static BOOL CollectNetworkCounters32(NetInterfaceCounter* outCounters, DWORD* outCount) {
     if (!outCounters || !outCount) return FALSE;
     *outCount = 0;
@@ -164,10 +246,10 @@ static BOOL CollectNetworkCounters32(NetInterfaceCounter* outCounters, DWORD* ou
     if (ret != ERROR_INSUFFICIENT_BUFFER) {
         return FALSE;
     }
-    
+
     MIB_IFTABLE* pTable = (MIB_IFTABLE*)malloc(size);
     if (!pTable) return FALSE;
-    
+
     ret = GetIfTable(pTable, &size, TRUE);
     if (ret != NO_ERROR) {
         free(pTable);
@@ -195,6 +277,18 @@ static BOOL CollectNetworkCounters32(NetInterfaceCounter* outCounters, DWORD* ou
     return TRUE;
 }
 
+static BOOL CollectNetworkCounters(NetInterfaceCounter* outCounters, DWORD* outCount, BOOL* outIs64Bit) {
+    if (!outCounters || !outCount || !outIs64Bit) return FALSE;
+
+    if (CollectNetworkCounters64(outCounters, outCount)) {
+        *outIs64Bit = TRUE;
+        return TRUE;
+    }
+
+    *outIs64Bit = FALSE;
+    return CollectNetworkCounters32(outCounters, outCount);
+}
+
 static const NetInterfaceCounter* FindCounterByIndex(const NetInterfaceCounter* counters, DWORD count, DWORD index) {
     for (DWORD i = 0; i < count; ++i) {
         if (counters[i].index == index) {
@@ -219,7 +313,8 @@ static void SetNetworkBaseline(const NetInterfaceCounter* counters, DWORD count,
 static void SampleNetworkSpeed(void) {
     NetInterfaceCounter currentCounters[MAX_TRACKED_INTERFACES];
     DWORD currentCount = 0;
-    if (!CollectNetworkCounters32(currentCounters, &currentCount)) {
+    BOOL countersAre64Bit = FALSE;
+    if (!CollectNetworkCounters(currentCounters, &currentCount, &countersAre64Bit)) {
         g_state.network.sampleAvailable = FALSE;
         g_state.network.cachedDownBps = 0.0f;
         g_state.network.cachedUpBps = 0.0f;
@@ -249,8 +344,19 @@ static void SampleNetworkSpeed(void) {
                 /* New interface: establish baseline for this adapter first. */
                 continue;
             }
-            totalInDelta += CalculateDelta32(cur->inOctets, prev->inOctets);
-            totalOutDelta += CalculateDelta32(cur->outOctets, prev->outOctets);
+            ULONGLONG inDelta = 0;
+            ULONGLONG outDelta = 0;
+            if (countersAre64Bit) {
+                if (!CalculateDelta64(cur->inOctets, prev->inOctets, &inDelta) ||
+                    !CalculateDelta64(cur->outOctets, prev->outOctets, &outDelta)) {
+                    continue;
+                }
+            } else {
+                inDelta = CalculateDelta32(cur->inOctets, prev->inOctets);
+                outDelta = CalculateDelta32(cur->outOctets, prev->outOctets);
+            }
+            totalInDelta += inDelta;
+            totalOutDelta += outDelta;
         }
         
         double seconds = (double)elapsedMs / 1000.0;
@@ -328,6 +434,14 @@ void SystemMonitor_Shutdown(void) {
     AcquireSRWLockExclusive(&g_stateLock);
     InterlockedExchange(&g_initialized, 0);
     ZeroMemory(&g_state, sizeof(g_state));
+    g_getIfTable2 = NULL;
+    g_freeMibTable = NULL;
+    g_netioApiResolved = FALSE;
+    if (g_iphlpapiLoadedByUs && g_iphlpapiModule) {
+        FreeLibrary(g_iphlpapiModule);
+    }
+    g_iphlpapiModule = NULL;
+    g_iphlpapiLoadedByUs = FALSE;
     ReleaseSRWLockExclusive(&g_stateLock);
 }
 

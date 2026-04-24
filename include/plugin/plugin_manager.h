@@ -60,6 +60,14 @@ int PluginManager_GetPluginCount(void);
 const PluginInfo* PluginManager_GetPlugin(int index);
 
 /**
+ * @brief Copy plugin info by index
+ * @param index Plugin index (0-based)
+ * @param outPlugin Destination snapshot
+ * @return TRUE if copied, FALSE if invalid index
+ */
+BOOL PluginManager_CopyPlugin(int index, PluginInfo* outPlugin);
+
+/**
  * @brief Start a plugin
  * @param index Plugin index
  * @return TRUE if started successfully, FALSE if security dialog shown or failed
@@ -142,5 +150,12 @@ void PluginManager_SetNotifyWindow(HWND hwnd);
  * @note This function should be called from the main UI thread
  */
 BOOL PluginManager_RestartPlugin(int index);
+
+/**
+ * @brief Mark a plugin process as exited from the process monitor thread
+ * @param processId Process ID that exited
+ * @param displayName Display name for logging
+ */
+void PluginManager_HandleProcessExit(DWORD processId, const wchar_t* displayName);
 
 #endif /* PLUGIN_MANAGER_H */

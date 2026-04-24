@@ -283,7 +283,11 @@ void HandleDropFiles(HWND hwnd, HDROP hDrop) {
              strncpy(relPathA, fileNameA, MAX_PATH);
         }
 
-        snprintf(configValue, sizeof(configValue), "%s%s", FONTS_PATH_PREFIX, relPathA);
+        int configValueLen = snprintf(configValue, sizeof(configValue), "%s%s", FONTS_PATH_PREFIX, relPathA);
+        if (configValueLen < 0 || configValueLen >= (int)sizeof(configValue)) {
+            LOG_WARNING("Dropped font path too long: %s", relPathA);
+            return;
+        }
 
         SwitchFont(GetModuleHandle(NULL), configValue);
         InvalidateRect(hwnd, NULL, TRUE);

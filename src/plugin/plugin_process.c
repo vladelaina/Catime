@@ -34,7 +34,7 @@ typedef struct {
 static const wchar_t* GetInterpreter(const wchar_t* path) {
     const wchar_t* ext = wcsrchr(path, L'.');
     if (!ext) return NULL;
-    
+
     /* Python - use pythonw.exe (GUI subsystem, no console) */
     if (_wcsicmp(ext, L".py") == 0 || _wcsicmp(ext, L".pyw") == 0) {
         return L"pythonw.exe";
@@ -79,7 +79,7 @@ static const wchar_t* GetInterpreter(const wchar_t* path) {
     if (_wcsicmp(ext, L".sh") == 0) {
         return L"bash.exe";
     }
-    
+
     return NULL;
 }
 
@@ -89,7 +89,7 @@ static const wchar_t* GetInterpreter(const wchar_t* path) {
 static const wchar_t* GetInterpreterName(const wchar_t* path) {
     const wchar_t* ext = wcsrchr(path, L'.');
     if (!ext) return NULL;
-    
+
     if (_wcsicmp(ext, L".py") == 0 || _wcsicmp(ext, L".pyw") == 0) return L"pythonw.exe";
     if (_wcsicmp(ext, L".ps1") == 0) return L"powershell.exe";
     if (_wcsicmp(ext, L".bat") == 0 || _wcsicmp(ext, L".cmd") == 0) return L"cmd.exe";
@@ -101,7 +101,7 @@ static const wchar_t* GetInterpreterName(const wchar_t* path) {
     if (_wcsicmp(ext, L".pl") == 0 || _wcsicmp(ext, L".pm") == 0) return L"perl.exe";
     if (_wcsicmp(ext, L".php") == 0) return L"php.exe";
     if (_wcsicmp(ext, L".sh") == 0) return L"bash.exe";
-    
+
     return NULL;
 }
 
@@ -111,13 +111,16 @@ static const wchar_t* GetInterpreterName(const wchar_t* path) {
 static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     PluginLauncherArgs* args = (PluginLauncherArgs*)lpParam;
     PluginInfo* plugin = args->plugin;
-    
+    wchar_t displayName[64];
+    wcsncpy(displayName, plugin->displayName, 63);
+    displayName[63] = L'\0';
+
     args->errorMsg[0] = L'\0';  /* Clear error message */
-    
+
     LOG_INFO("[Thread] ========== LAUNCH START ==========");
     LOG_INFO("[Thread] Plugin name: %ls", plugin->displayName);
     LOG_INFO("[Thread] Plugin path: %ls", plugin->path);
-    
+
     /* Extract working directory from plugin path */
     wchar_t workDir[MAX_PATH];
     wcsncpy(workDir, plugin->path, MAX_PATH - 1);
@@ -125,31 +128,32 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     wchar_t* lastSlash = wcsrchr(workDir, L'\\');
     if (lastSlash) *lastSlash = L'\0';
     LOG_INFO("[Thread] Work directory: %ls", workDir);
-    
+
     HANDLE hProcess = NULL;
+    HANDLE hMonitorProcess = NULL;
     DWORD dwProcessId = 0;
     const wchar_t* interpreter = GetInterpreter(plugin->path);
-    
+
     if (interpreter) {
         /* Use CreateProcess with interpreter */
         wchar_t cmdLine[MAX_PATH * 2 + 256];
         _snwprintf_s(cmdLine, MAX_PATH * 2 + 256, _TRUNCATE, L"%s \"%s\"", interpreter, plugin->path);
         LOG_INFO("[Thread] Command: %ls", cmdLine);
-        
+
         STARTUPINFOW si = {0};
         si.cb = sizeof(si);
         si.dwFlags = STARTF_USESHOWWINDOW;
         si.wShowWindow = SW_HIDE;
-        
+
         PROCESS_INFORMATION pi = {0};
-        
+
         /* CREATE_NO_WINDOW prevents console window */
         if (!CreateProcessW(NULL, cmdLine, NULL, NULL, FALSE,
                            CREATE_NO_WINDOW, NULL, workDir, &si, &pi)) {
             DWORD error = GetLastError();
             LOG_ERROR("[Thread] CreateProcess FAILED! Error: %lu", error);
             LOG_ERROR("[Thread] Tip: Make sure '%ls' is installed and in PATH", interpreter);
-            
+
             /* Set error message for display */
             const wchar_t* interpreterName = GetInterpreterName(plugin->path);
             if (interpreterName) {
@@ -157,12 +161,12 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             } else {
                 _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Launch failed");
             }
-            
+
             args->success = FALSE;
             SetEvent(args->hReadyEvent);
             return 0;
         }
-        
+
         LOG_INFO("[Thread] CreateProcess SUCCESS! PID: %lu", pi.dwProcessId);
         hProcess = pi.hProcess;
         dwProcessId = pi.dwProcessId;
@@ -176,9 +180,9 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         sei.lpFile = plugin->path;
         sei.lpDirectory = workDir;
         sei.nShow = SW_HIDE;
-        
+
         LOG_INFO("[Thread] Using ShellExecute for: %ls", plugin->path);
-        
+
         if (!ShellExecuteExW(&sei)) {
             DWORD error = GetLastError();
             LOG_ERROR("[Thread] ShellExecuteEx FAILED! Error: %lu", error);
@@ -187,7 +191,7 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             SetEvent(args->hReadyEvent);
             return 0;
         }
-        
+
         if (!sei.hProcess) {
             LOG_WARNING("[Thread] ShellExecute succeeded but no process handle");
             _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"No process");
@@ -195,12 +199,29 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             SetEvent(args->hReadyEvent);
             return 0;
         }
-        
+
         hProcess = sei.hProcess;
         dwProcessId = GetProcessId(sei.hProcess);
         LOG_INFO("[Thread] ShellExecute SUCCESS! PID: %lu", dwProcessId);
     }
-    
+
+    if (hProcess) {
+        if (!DuplicateHandle(GetCurrentProcess(), hProcess, GetCurrentProcess(),
+                             &hMonitorProcess, SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
+                             FALSE, 0)) {
+            DWORD dupError = GetLastError();
+            LOG_ERROR("[Thread] Failed to duplicate monitor handle: %lu", dupError);
+            if (dwProcessId != 0) {
+                TerminateProcessTree(dwProcessId, 0);
+            }
+            CloseHandle(hProcess);
+            _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Launch failed");
+            args->success = FALSE;
+            SetEvent(args->hReadyEvent);
+            return 0;
+        }
+    }
+
     /* Assign to Job Object for automatic cleanup */
     if (g_hJob && hProcess) {
         if (AssignProcessToJobObject(g_hJob, hProcess)) {
@@ -215,64 +236,47 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             }
         }
     }
-    
+
     LOG_INFO("[Thread] ========== LAUNCH SUCCESS ==========");
-    
+
     /* Store process info */
     plugin->pi.hProcess = hProcess;
     plugin->pi.hThread = NULL;
     plugin->pi.dwProcessId = dwProcessId;
     plugin->pi.dwThreadId = 0;
-    
+
     /* Signal success */
     plugin->isRunning = TRUE;
     args->success = TRUE;
     SetEvent(args->hReadyEvent);
-    
+
     /* If we have a process handle, wait for it to exit */
-    if (hProcess) {
+    if (hMonitorProcess) {
         LOG_INFO("[Thread] Monitoring process...");
         DWORD startTime = GetTickCount();
-        
-        DWORD monitorWaitResult = WaitForSingleObject(hProcess, INFINITE);
-        
+
+        DWORD monitorWaitResult = WaitForSingleObject(hMonitorProcess, INFINITE);
+
         DWORD runDuration = GetTickCount() - startTime;
         DWORD scriptExitCode = 0;
-        
+
         if (monitorWaitResult == WAIT_OBJECT_0) {
-            GetExitCodeProcess(hProcess, &scriptExitCode);
+            GetExitCodeProcess(hMonitorProcess, &scriptExitCode);
             LOG_INFO("[Thread] Script exited (Code: %lu, Duration: %lu ms)", scriptExitCode, runDuration);
         } else {
             LOG_WARNING("[Thread] Wait failed (Result: %lu, Error: %lu)", monitorWaitResult, GetLastError());
         }
-        
-        /* Handle process exit */
-        if (plugin->isRunning) {
-            if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
-                LOG_INFO("[Thread] Plugin exited: %ls", plugin->displayName);
-                
-                /* Clean up any child processes that may still be running */
-                /* This handles cases like: cmd.exe exits but PowerShell child is still running */
-                if (dwProcessId != 0) {
-                    TerminateProcessTree(dwProcessId, 0);
-                }
-                
-                HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
-                if (hProc) {
-                    CloseHandle(hProc);
-                }
-                memset(&plugin->pi, 0, sizeof(plugin->pi));
-                
-                /* Clear display when plugin exits normally */
-                PluginData_Clear();
-                
-                if (g_hNotifyWnd) {
-                    InvalidateRect(g_hNotifyWnd, NULL, TRUE);
-                }
-            }
+
+        /* Clean up any child processes that may still be running */
+        /* This handles cases like: cmd.exe exits but PowerShell child is still running */
+        if (dwProcessId != 0) {
+            TerminateProcessTree(dwProcessId, 0);
         }
+
+        PluginManager_HandleProcessExit(dwProcessId, displayName);
+        CloseHandle(hMonitorProcess);
     }
-    
+
     return 0;
 }
 
@@ -290,7 +294,7 @@ BOOL PluginProcess_Init(void) {
             g_hJob = NULL;
             return FALSE;
         }
-        
+
         /* Add Catime itself to the Job Object */
         /* This ensures: when Catime exits (normal or crash), Job handle closes, */
         /* triggering KILL_ON_JOB_CLOSE to terminate all plugin processes */
@@ -305,7 +309,7 @@ BOOL PluginProcess_Init(void) {
         } else {
             LOG_INFO("[Process] Catime added to Job Object");
         }
-        
+
         LOG_INFO("[Process] Job Object initialized (plugins will be killed on Catime exit/crash)");
         return TRUE;
     }
@@ -345,24 +349,24 @@ void PluginProcess_SetLastError(const wchar_t* errorMsg) {
 
 BOOL PluginProcess_Launch(PluginInfo* plugin) {
     if (!plugin) return FALSE;
-    
+
     g_lastLaunchError[0] = L'\0';  /* Clear last error */
-    
+
     LOG_INFO("[Process] Launching plugin: %ls", plugin->displayName);
-    
+
     /* Prepare launcher thread arguments */
     PluginLauncherArgs args = {0};
     args.plugin = plugin;
     args.hReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     args.success = FALSE;
     args.errorMsg[0] = L'\0';
-    
+
     if (!args.hReadyEvent) {
         LOG_ERROR("[Process] Failed to create sync event");
         wcscpy_s(g_lastLaunchError, 128, L"Internal error");
         return FALSE;
     }
-    
+
     /* Create launcher thread */
     HANDLE hThread = CreateThread(NULL, 0, PluginLauncherThread, &args, 0, NULL);
     if (!hThread) {
@@ -371,17 +375,17 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
         wcscpy_s(g_lastLaunchError, 128, L"Internal error");
         return FALSE;
     }
-    
+
     /* Wait for process creation */
     WaitForSingleObject(args.hReadyEvent, INFINITE);
     CloseHandle(args.hReadyEvent);
     CloseHandle(hThread);
-    
+
     /* Copy error message if failed */
     if (!args.success && args.errorMsg[0] != L'\0') {
         wcscpy_s(g_lastLaunchError, 128, args.errorMsg);
     }
-    
+
     return args.success;
 }
 
@@ -393,18 +397,18 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
 static void TerminateProcessTree(DWORD pid, int depth) {
     /* Safety: prevent infinite recursion and skip invalid PIDs */
     if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
-    
+
     /* First, find and terminate all child processes */
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot != INVALID_HANDLE_VALUE) {
         PROCESSENTRY32W pe = {0};
         pe.dwSize = sizeof(pe);
-        
+
         if (Process32FirstW(hSnapshot, &pe)) {
             do {
                 if (pe.th32ParentProcessID == pid && pe.th32ProcessID != pid) {
                     /* Found a child process - recurse first (depth-first termination) */
-                    LOG_INFO("[Process] %*sFound child PID: %lu (%ls)", 
+                    LOG_INFO("[Process] %*sFound child PID: %lu (%ls)",
                              depth * 2, "", pe.th32ProcessID, pe.szExeFile);
                     TerminateProcessTree(pe.th32ProcessID, depth + 1);
                 }
@@ -412,7 +416,7 @@ static void TerminateProcessTree(DWORD pid, int depth) {
         }
         CloseHandle(hSnapshot);
     }
-    
+
     /* Now terminate this process */
     HANDLE hProc = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
     if (hProc) {
@@ -430,32 +434,32 @@ static void TerminateProcessTree(DWORD pid, int depth) {
  */
 static void TerminateAllJobProcesses(void) {
     if (!g_hJob) return;
-    
+
     JOBOBJECT_BASIC_PROCESS_ID_LIST pidList;
     pidList.NumberOfAssignedProcesses = 0;
     pidList.NumberOfProcessIdsInList = 0;
-    
+
     /* First call to get count */
     DWORD returnLength = 0;
-    QueryInformationJobObject(g_hJob, JobObjectBasicProcessIdList, 
+    QueryInformationJobObject(g_hJob, JobObjectBasicProcessIdList,
                               &pidList, sizeof(pidList), &returnLength);
-    
+
     if (pidList.NumberOfAssignedProcesses <= 1) {
         /* Only Catime itself (or empty), nothing to terminate */
         return;
     }
-    
+
     /* Allocate buffer for all PIDs */
-    size_t bufSize = sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) + 
+    size_t bufSize = sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) +
                      (pidList.NumberOfAssignedProcesses * sizeof(ULONG_PTR));
-    JOBOBJECT_BASIC_PROCESS_ID_LIST* fullList = 
+    JOBOBJECT_BASIC_PROCESS_ID_LIST* fullList =
         (JOBOBJECT_BASIC_PROCESS_ID_LIST*)malloc(bufSize);
-    
+
     if (!fullList) return;
-    
+
     fullList->NumberOfAssignedProcesses = pidList.NumberOfAssignedProcesses;
     fullList->NumberOfProcessIdsInList = 0;
-    
+
     if (QueryInformationJobObject(g_hJob, JobObjectBasicProcessIdList,
                                   fullList, (DWORD)bufSize, &returnLength)) {
         /* Terminate all processes except Catime itself */
@@ -477,31 +481,31 @@ static void TerminateAllJobProcesses(void) {
 
 BOOL PluginProcess_Terminate(PluginInfo* plugin) {
     if (!plugin || !plugin->isRunning) return FALSE;
-    
+
     LOG_INFO("[Process] Terminating plugin: %ls", plugin->displayName);
-    
+
     /* Atomically mark as not running */
     if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) != TRUE) {
         LOG_INFO("[Process] Already terminated");
         return FALSE;
     }
-    
+
     /* Get and clear process handle atomically */
     HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
     HANDLE hThread = plugin->pi.hThread;
     DWORD pid = plugin->pi.dwProcessId;
     plugin->pi.hThread = NULL;
     memset(&plugin->pi, 0, sizeof(plugin->pi));
-    
+
     /* First: Terminate the entire process tree (catches child processes like PowerShell from .bat) */
     if (pid != 0) {
         LOG_INFO("[Process] Terminating process tree starting from PID: %lu", pid);
         TerminateProcessTree(pid, 0);
     }
-    
+
     /* Second: Terminate all processes in Job Object to catch any remaining orphans */
     TerminateAllJobProcesses();
-    
+
     if (hProc) {
         /* Ensure main process is terminated and wait for cleanup */
         TerminateProcess(hProc, 0);
@@ -509,11 +513,11 @@ BOOL PluginProcess_Terminate(PluginInfo* plugin) {
         CloseHandle(hProc);
         LOG_INFO("[Process] Main process handle closed");
     }
-    
+
     if (hThread) {
         CloseHandle(hThread);
     }
-    
+
     return TRUE;
 }
 
@@ -526,18 +530,18 @@ BOOL PluginProcess_IsAlive(PluginInfo* plugin) {
     if (!plugin || !plugin->isRunning) {
         return FALSE;
     }
-    
+
     HANDLE hProc = plugin->pi.hProcess;
     if (!hProc) {
         /* No handle but marked running - trust the flag */
         return plugin->isRunning;
     }
-    
+
     DWORD exitCode;
     if (!GetExitCodeProcess(hProc, &exitCode)) {
         return FALSE;
     }
-    
+
     if (exitCode != STILL_ACTIVE) {
         LOG_INFO("[Process] IsAlive: process has exited, updating state");
         /* Update state to reflect actual process status */

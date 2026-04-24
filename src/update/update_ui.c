@@ -263,13 +263,35 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 HDC hdc = lpDrawItem->hDC;
                 RECT rect = lpDrawItem->rcItem;
 
+                int paintWidth = rect.right - rect.left;
+                int paintHeight = rect.bottom - rect.top;
+                if (paintWidth <= 0 || paintHeight <= 0) {
+                    return TRUE;
+                }
+
                 HDC hdcMem = CreateCompatibleDC(hdc);
-                HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right - rect.left, rect.bottom - rect.top);
+                if (!hdcMem) {
+                    return TRUE;
+                }
+
+                HBITMAP hbmMem = CreateCompatibleBitmap(hdc, paintWidth, paintHeight);
+                if (!hbmMem) {
+                    DeleteDC(hdcMem);
+                    return TRUE;
+                }
+
                 HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
+                if (!hbmOld) {
+                    DeleteObject(hbmMem);
+                    DeleteDC(hdcMem);
+                    return TRUE;
+                }
 
                 HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
-                FillRect(hdcMem, &rect, hBrush);
-                DeleteObject(hBrush);
+                if (hBrush) {
+                    FillRect(hdcMem, &rect, hBrush);
+                    DeleteObject(hBrush);
+                }
 
                 if (g_notesDisplayText) {
                     int scrollPos = (int)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ScrollPos");
@@ -318,7 +340,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     }
                 }
 
-                BitBlt(hdc, 0, 0, rect.right - rect.left, rect.bottom - rect.top, hdcMem, 0, 0, SRCCOPY);
+                BitBlt(hdc, 0, 0, paintWidth, paintHeight, hdcMem, 0, 0, SRCCOPY);
 
                 SelectObject(hdcMem, hbmOld);
                 DeleteObject(hbmMem);

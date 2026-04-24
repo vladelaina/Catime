@@ -151,16 +151,26 @@ AnimationSourceType DetectAnimationSourceType(const char* name) {
 /**
  * @brief Build full path to animation resource
  */
-static void BuildAnimationPath(const char* name, char* path, size_t size) {
+static BOOL BuildAnimationPath(const char* name, char* path, size_t size) {
+    if (!name || !path || size == 0) return FALSE;
+
     char base[MAX_PATH] = {0};
     GetAnimationsFolderPath(base, sizeof(base));
     
     size_t len = strlen(base);
+    int pathLen = 0;
     if (len > 0 && (base[len-1] == '/' || base[len-1] == '\\')) {
-        snprintf(path, size, "%s%s", base, name);
+        pathLen = snprintf(path, size, "%s%s", base, name);
     } else {
-        snprintf(path, size, "%s\\%s", base, name);
+        pathLen = snprintf(path, size, "%s\\%s", base, name);
     }
+
+    if (pathLen < 0 || (size_t)pathLen >= size) {
+        path[0] = '\0';
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 /**
@@ -196,7 +206,9 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
     *count = 0;
     
     wchar_t wFolder[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8FolderPath, -1, wFolder, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8FolderPath, -1, wFolder, MAX_PATH) <= 0) {
+        return FALSE;
+    }
     
     AnimFile* files = (AnimFile*)malloc(sizeof(AnimFile) * maxCount);
     if (!files) return FALSE;
@@ -274,7 +286,9 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
         } else {
             /* Use decoder for other formats */
             char utf8Path[MAX_PATH] = {0};
-            WideCharToMultiByte(CP_UTF8, 0, files[i].path, -1, utf8Path, MAX_PATH, NULL, NULL);
+            if (WideCharToMultiByte(CP_UTF8, 0, files[i].path, -1, utf8Path, MAX_PATH, NULL, NULL) <= 0) {
+                continue;
+            }
             hIcon = DecodeStaticImage(utf8Path, cx, cy);
         }
         
@@ -312,10 +326,10 @@ BOOL IsValidAnimationSource(const char* name) {
     }
     
     char fullPath[MAX_PATH] = {0};
-    BuildAnimationPath(name, fullPath, sizeof(fullPath));
+    if (!BuildAnimationPath(name, fullPath, sizeof(fullPath))) return FALSE;
     
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, fullPath, -1, wPath, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, fullPath, -1, wPath, MAX_PATH) <= 0) return FALSE;
     
     DWORD attrs = GetFileAttributesW(wPath);
     if (attrs == INVALID_FILE_ATTRIBUTES) return FALSE;
@@ -397,7 +411,7 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
     }
     
     char fullPath[MAX_PATH] = {0};
-    BuildAnimationPath(name, fullPath, sizeof(fullPath));
+    if (!BuildAnimationPath(name, fullPath, sizeof(fullPath))) return FALSE;
     
     if (type == ANIM_SOURCE_GIF || type == ANIM_SOURCE_WEBP) {
         DecodedAnimation decoded;
@@ -517,4 +531,3 @@ BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
     
     return FALSE;
 }
-

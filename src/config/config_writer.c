@@ -418,13 +418,17 @@ void WriteConfig(const char* config_path) {
         const char* anim = GetCurrentAnimationName();
         if (anim && anim[0] != '\0') {
             char animPath[MAX_PATH];
+            int animPathLen = 0;
             if (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || 
                 _stricmp(anim, "__mem__") == 0 || _stricmp(anim, "__none__") == 0) {
-                snprintf(animPath, sizeof(animPath), "%s", anim);
+                animPathLen = snprintf(animPath, sizeof(animPath), "%s", anim);
             } else {
-                snprintf(animPath, sizeof(animPath), "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
+                animPathLen = snprintf(animPath, sizeof(animPath),
+                                       "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
             }
-            WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
+            if (animPathLen >= 0 && animPathLen < (int)sizeof(animPath)) {
+                WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
+            }
         }
     }
     
@@ -489,4 +493,3 @@ void WriteConfigScaleSteps(int normal_step, int fast_step) {
     WriteIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_NORMAL", normal_step, config_path);
     WriteIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_FAST", fast_step, config_path);
 }
-

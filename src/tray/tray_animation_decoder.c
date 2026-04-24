@@ -8,6 +8,22 @@
 #include <objbase.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+#define MAX_ANIMATION_PIXELS (4096u * 4096u)
+
+static BOOL CheckedImageBufferSize(UINT width, UINT height, UINT* stride, UINT* size) {
+    if (!stride || !size || width == 0 || height == 0) return FALSE;
+    if (width > MAX_ANIMATION_PIXELS / height) return FALSE;
+    if (width > UINT32_MAX / 4u) return FALSE;
+
+    UINT checkedStride = width * 4u;
+    if (height > UINT32_MAX / checkedStride) return FALSE;
+
+    *stride = checkedStride;
+    *size = height * checkedStride;
+    return TRUE;
+}
 
 /**
  * @brief Initialize decoded animation structure
@@ -269,7 +285,9 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
     if (!utf8Path || !anim) return FALSE;
 
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH) <= 0) {
+        return FALSE;
+    }
 
     HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     IWICImagingFactory* pFactory = NULL;
@@ -339,8 +357,15 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
     anim->canvasWidth = canvasWidth;
     anim->canvasHeight = canvasHeight;
 
-    UINT canvasStride = canvasWidth * 4;
-    UINT canvasSize = canvasHeight * canvasStride;
+    UINT canvasStride = 0;
+    UINT canvasSize = 0;
+    if (!CheckedImageBufferSize(canvasWidth, canvasHeight, &canvasStride, &canvasSize)) {
+        pDecoder->lpVtbl->Release(pDecoder);
+        pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return FALSE;
+    }
+
     anim->canvas = (BYTE*)malloc(canvasSize);
     if (!anim->canvas) {
         pDecoder->lpVtbl->Release(pDecoder);
@@ -449,8 +474,14 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
                                                         &GUID_WICPixelFormat32bppPBGRA, 
                                                         WICBitmapDitherTypeNone, NULL, 0.0, 
                                                         WICBitmapPaletteTypeCustom))) {
-                UINT frameStride = frameWidth * 4;
-                UINT frameBufferSize = frameHeight * frameStride;
+                UINT frameStride = 0;
+                UINT frameBufferSize = 0;
+                if (!CheckedImageBufferSize(frameWidth, frameHeight, &frameStride, &frameBufferSize)) {
+                    pConverter->lpVtbl->Release(pConverter);
+                    pFrame->lpVtbl->Release(pFrame);
+                    continue;
+                }
+
                 BYTE* frameBuffer = MemoryPool_Alloc(pool, frameBufferSize);
                 
                 if (frameBuffer) {

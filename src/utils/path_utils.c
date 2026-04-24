@@ -16,7 +16,10 @@ const char* GetFileNameU8(const char* path) {
     
     const char* lastBackslash = strrchr(path, '\\');
     const char* lastForwardSlash = strrchr(path, '/');
-    const char* separator = (lastBackslash > lastForwardSlash) ? lastBackslash : lastForwardSlash;
+    const char* separator = lastBackslash;
+    if (!separator || (lastForwardSlash && lastForwardSlash > separator)) {
+        separator = lastForwardSlash;
+    }
     
     return separator ? (separator + 1) : path;
 }
@@ -26,7 +29,10 @@ const wchar_t* GetFileNameW(const wchar_t* path) {
     
     const wchar_t* lastBackslash = wcsrchr(path, L'\\');
     const wchar_t* lastForwardSlash = wcsrchr(path, L'/');
-    const wchar_t* separator = (lastBackslash > lastForwardSlash) ? lastBackslash : lastForwardSlash;
+    const wchar_t* separator = lastBackslash;
+    if (!separator || (lastForwardSlash && lastForwardSlash > separator)) {
+        separator = lastForwardSlash;
+    }
     
     return separator ? (separator + 1) : path;
 }
@@ -65,7 +71,10 @@ BOOL ExtractDirectoryU8(const char* path, char* dir, size_t dirSize) {
     
     char* lastBackslash = strrchr(dir, '\\');
     char* lastForwardSlash = strrchr(dir, '/');
-    char* separator = (lastBackslash > lastForwardSlash) ? lastBackslash : lastForwardSlash;
+    char* separator = lastBackslash;
+    if (!separator || (lastForwardSlash && lastForwardSlash > separator)) {
+        separator = lastForwardSlash;
+    }
     
     if (separator) {
         *separator = '\0';
@@ -85,7 +94,10 @@ BOOL ExtractDirectoryW(const wchar_t* path, wchar_t* dir, size_t dirSize) {
     
     wchar_t* lastBackslash = wcsrchr(dir, L'\\');
     wchar_t* lastForwardSlash = wcsrchr(dir, L'/');
-    wchar_t* separator = (lastBackslash > lastForwardSlash) ? lastBackslash : lastForwardSlash;
+    wchar_t* separator = lastBackslash;
+    if (!separator || (lastForwardSlash && lastForwardSlash > separator)) {
+        separator = lastForwardSlash;
+    }
     
     if (separator) {
         *separator = L'\0';
@@ -230,4 +242,3 @@ BOOL PathStartsWith(const char* path, const char* prefix) {
     size_t prefixLen = strlen(prefix);
     return _strnicmp(path, prefix, prefixLen) == 0;
 }
-

@@ -396,7 +396,9 @@ static BOOL GetPluginOutputDirectory(wchar_t* buffer, size_t bufferSize) {
     }
 
     wchar_t fullPath[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, filePath, -1, fullPath, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, filePath, -1, fullPath, MAX_PATH) <= 0) {
+        return FALSE;
+    }
     wchar_t* lastSlash = wcsrchr(fullPath, L'\\');
     if (!lastSlash) {
         return FALSE;
@@ -866,7 +868,10 @@ void PluginData_ProcessPendingNotification(HWND hwnd) {
     } else if (notifyType == NOTIFICATION_TYPE_OS) {
         /* Convert to UTF-8 for tray notification */
         char msgUtf8[2048] = {0};
-        WideCharToMultiByte(CP_UTF8, 0, localNotify.message, -1, msgUtf8, sizeof(msgUtf8) - 1, NULL, NULL);
+        if (WideCharToMultiByte(CP_UTF8, 0, localNotify.message, -1, msgUtf8, sizeof(msgUtf8), NULL, NULL) <= 0) {
+            LOG_WARNING("PluginData: Failed to convert OS notification message to UTF-8");
+            return;
+        }
         extern void ShowTrayNotification(HWND hwnd, const char* message);
         ShowTrayNotification(hwnd, msgUtf8);
     }
