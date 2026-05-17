@@ -217,7 +217,7 @@ jobs:
       - name: Configure MSVC analyzer build
         shell: pwsh
         run: |
-          cmake -S . -B build-msvc -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-msvc -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Debug `
             -DCATIME_ENABLE_MSVC_ANALYZE=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
@@ -324,7 +324,7 @@ jobs:
       - name: Configure ASan smoke build
         shell: pwsh
         run: |
-          cmake -S . -B build-asan -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-asan -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Debug `
             -DCATIME_ENABLE_ASAN=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
@@ -450,7 +450,7 @@ jobs:
       - name: Configure Win32 release build
         shell: pwsh
         run: |
-          cmake -S . -B build-win32-baseline -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-win32-baseline -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Release `
             -DCATIME_ENABLE_BINARY_HARDENING=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
@@ -523,7 +523,7 @@ jobs:
       - name: Configure BinSkim release build
         shell: pwsh
         run: |
-          cmake -S . -B build-binskim -G "Visual Studio 17 2022" -A Win32 `
+          cmake -S . -B build-binskim -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Release `
             -DCATIME_ENABLE_BINARY_HARDENING=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
