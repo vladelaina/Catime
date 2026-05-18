@@ -14,10 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <windows.h>
 #include <time.h>
-#include <stdint.h>
 
 #define SECONDS_PER_MINUTE 60
 #define SECONDS_PER_HOUR 3600
@@ -25,36 +22,36 @@
 #define MILLISECONDS_PER_SECOND 1000.0
 #define DEFAULT_FALLBACK_TIME 60  /* 1 minute provides reasonable default when configuration is invalid */
 
-BOOL CLOCK_IS_PAUSED = FALSE;
-BOOL CLOCK_SHOW_CURRENT_TIME = FALSE;
-BOOL CLOCK_USE_24HOUR = TRUE;
-BOOL CLOCK_SHOW_SECONDS = TRUE;
-BOOL CLOCK_COUNT_UP = FALSE;
+bool CLOCK_IS_PAUSED = false;
+bool CLOCK_SHOW_CURRENT_TIME = false;
+bool CLOCK_USE_24HOUR = true;
+bool CLOCK_SHOW_SECONDS = true;
+bool CLOCK_COUNT_UP = false;
 char CLOCK_STARTUP_MODE[20] = "SHOW_TIME";
 
-int CLOCK_TOTAL_TIME = 0;
-int countdown_elapsed_time = 0;
-int countup_elapsed_time = 0;
+int32_t CLOCK_TOTAL_TIME = 0;
+int32_t countdown_elapsed_time = 0;
+int32_t countup_elapsed_time = 0;
 time_t CLOCK_LAST_TIME_UPDATE = 0;
-int last_displayed_second = -1;
+int32_t last_displayed_second = -1;
 
 static LARGE_INTEGER timer_frequency = {0};
 static LARGE_INTEGER timer_last_count = {0};
-static BOOL high_precision_timer_initialized = FALSE;
+static bool high_precision_timer_initialized = false;
 static int64_t s_suspend_mono_ms = 0;
 static int64_t s_suspend_tick_ms = 0;
-static BOOL s_suspend_snapshot_valid = FALSE;
+static bool s_suspend_snapshot_valid = false;
 
-BOOL countdown_message_shown = FALSE;
-int pomodoro_work_cycles = 0;
+bool countdown_message_shown = false;
+int32_t pomodoro_work_cycles = 0;
 
 TimeoutActionType CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
 char CLOCK_TIMEOUT_TEXT[50] = "";
 char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH] = "";
 char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH] = "";
 
-int time_options[MAX_TIME_OPTIONS] = {0};
-int time_options_count = 0;
+int32_t time_options[MAX_TIME_OPTIONS] = {0};
+int32_t time_options_count = 0;
 
 /* Absolute Time State Definitions (Milliseconds) */
 int64_t g_target_end_time = 0;
@@ -81,7 +78,7 @@ int64_t GetAbsoluteTimeMs(void) {
 void Timer_OnSystemSuspend(void) {
     s_suspend_mono_ms = GetAbsoluteTimeMs();
     s_suspend_tick_ms = (int64_t)GetTickCount64();
-    s_suspend_snapshot_valid = TRUE;
+    s_suspend_snapshot_valid = true;
 }
 
 void Timer_OnSystemResume(void) {
@@ -92,7 +89,7 @@ void Timer_OnSystemResume(void) {
     int64_t mono_delta = now_mono_ms - s_suspend_mono_ms;
     int64_t tick_delta = now_tick_ms - s_suspend_tick_ms;
 
-    s_suspend_snapshot_valid = FALSE;
+    s_suspend_snapshot_valid = false;
 
     if (mono_delta < 0) mono_delta = 0;
     if (tick_delta < 0) tick_delta = 0;
@@ -113,15 +110,10 @@ void Timer_OnSystemResume(void) {
 }
 
 /** Reset QPC baseline to prevent time jumps after pause/resume */
-BOOL InitializeHighPrecisionTimer(void) {
-    if (!QueryPerformanceFrequency(&timer_frequency)) {
-        return FALSE;
-    }
-    if (!QueryPerformanceCounter(&timer_last_count)) {
-        return FALSE;
-    }
-    high_precision_timer_initialized = TRUE;
-    return TRUE;
+void InitializeHighPrecisionTimer(void) {
+    if (!QueryPerformanceFrequency(&timer_frequency)) return;
+    if (!QueryPerformanceCounter(&timer_last_count)) return;
+    high_precision_timer_initialized = true;
 }
 
 /** Leading spaces stabilize width when hours/minutes disappear during countdown */
@@ -307,8 +299,8 @@ void ResetTimer(void) {
         g_target_end_time = now + ((int64_t)CLOCK_TOTAL_TIME * 1000);
     }
     
-    CLOCK_IS_PAUSED = FALSE;
-    countdown_message_shown = FALSE;
+    CLOCK_IS_PAUSED = false;
+    countdown_message_shown = false;
     g_pause_start_time = 0;
     
     InitializeHighPrecisionTimer();
@@ -317,7 +309,7 @@ void ResetTimer(void) {
 
 /** Reinitialize timing baseline on resume to prevent time jumps */
 void TogglePauseTimer(void) {
-    BOOL was_paused = CLOCK_IS_PAUSED;
+    bool was_paused = CLOCK_IS_PAUSED;
     CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
     
     int64_t now = GetAbsoluteTimeMs();

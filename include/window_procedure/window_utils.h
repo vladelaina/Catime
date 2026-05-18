@@ -150,7 +150,7 @@ void UpdateConfigWithRefresh(HWND hwnd, const char* key, const char* value);
 /**
  * @brief Toggle boolean config value
  */
-void ToggleConfigBool(HWND hwnd, const char* key, BOOL* currentValue, BOOL needsRedraw);
+void ToggleConfigBool(HWND hwnd, const char* key, bool* currentValue, bool needsRedraw);
 
 /**
  * @brief Write config and redraw

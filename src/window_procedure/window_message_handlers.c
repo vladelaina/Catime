@@ -574,12 +574,12 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     StopNotificationSound();
 
     /* Prevent countdown completion notification from triggering */
-    countdown_message_shown = TRUE;
+    countdown_message_shown = true;
 
     /* Reset timer flags */
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_IS_PAUSED = TRUE;
+    CLOCK_SHOW_CURRENT_TIME = false;
+    CLOCK_COUNT_UP = false;
+    CLOCK_IS_PAUSED = true;
 
     /* Stop internal timer */
     MainTimer_Stop();

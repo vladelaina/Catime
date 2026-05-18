@@ -28,8 +28,6 @@
 void InvalidateIniCache(void);
 
 extern wchar_t inputText[256];
-extern int elapsed_time;
-extern int message_shown;
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
 
@@ -38,14 +36,14 @@ extern char FONT_INTERNAL_NAME[MAX_PATH];
  * ============================================================================ */
 
 BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
-    BOOL wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
+    bool wasShowingTime = CLOCK_SHOW_CURRENT_TIME;
     
     TimerModeParams defaultParams = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE by default */
     if (!params) params = &defaultParams;
     
     CLOCK_SHOW_CURRENT_TIME = (mode == TIMER_MODE_SHOW_TIME);
     CLOCK_COUNT_UP = (mode == TIMER_MODE_COUNTUP);
-    CLOCK_IS_PAUSED = FALSE;
+    CLOCK_IS_PAUSED = false;
     
     if (mode == TIMER_MODE_COUNTDOWN || mode == TIMER_MODE_POMODORO) {
         CLOCK_TOTAL_TIME = params->totalSeconds;
@@ -256,11 +254,11 @@ void ResetTimerStateToDefaults(void) {
     countdown_elapsed_time = 0;
     countup_elapsed_time = 0;
     message_shown = FALSE;
-    countdown_message_shown = FALSE;
+    countdown_message_shown = false;
     
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    CLOCK_IS_PAUSED = FALSE;
+    CLOCK_COUNT_UP = false;
+    CLOCK_SHOW_CURRENT_TIME = false;
+    CLOCK_IS_PAUSED = false;
     
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;

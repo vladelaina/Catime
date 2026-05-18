@@ -84,7 +84,7 @@ LRESULT CmdCountUpReset(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CleanupBeforeTimerAction();
-    if (CLOCK_COUNT_UP) CLOCK_COUNT_UP = FALSE;
+    if (CLOCK_COUNT_UP) CLOCK_COUNT_UP = false;
     ResetTimer();
     MainTimer_Stop();
     ResetTimerWithInterval(hwnd);

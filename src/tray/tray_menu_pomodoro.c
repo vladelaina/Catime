@@ -17,8 +17,6 @@
 /* External variables */
 extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
-extern BOOL CLOCK_SHOW_CURRENT_TIME;
-extern BOOL CLOCK_COUNT_UP;
 extern int CLOCK_TOTAL_TIME;
 
 #define MAX_POMODORO_TIMES 10

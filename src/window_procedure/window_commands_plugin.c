@@ -25,10 +25,6 @@
 /* External function declarations */
 extern void GetActiveColor(char* outColor, size_t bufferSize);
 
-extern BOOL CLOCK_SHOW_CURRENT_TIME;
-extern BOOL CLOCK_COUNT_UP;
-extern BOOL CLOCK_IS_PAUSED;
-
 /* ============================================================================
  * Plugin Command Handlers
  * ============================================================================ */
@@ -43,12 +39,12 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         PluginData_Clear();
         
         /* Prevent countdown completion notification from triggering */
-        countdown_message_shown = TRUE;
+        countdown_message_shown = true;
         
         /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
-        CLOCK_COUNT_UP = FALSE;
-        CLOCK_IS_PAUSED = TRUE;
+        CLOCK_SHOW_CURRENT_TIME = false;
+        CLOCK_COUNT_UP = false;
+        CLOCK_IS_PAUSED = true;
         CLOCK_TOTAL_TIME = 0;
         countdown_elapsed_time = 0;
         MainTimer_Stop();
@@ -71,12 +67,12 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     StopNotificationSound();
     
     /* Prevent countdown completion notification from triggering */
-    countdown_message_shown = TRUE;
+    countdown_message_shown = true;
     
     /* Reset timer flags */
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_IS_PAUSED = TRUE;
+    CLOCK_SHOW_CURRENT_TIME = false;
+    CLOCK_COUNT_UP = false;
+    CLOCK_IS_PAUSED = true;
     
     /* Stop internal timer */
     MainTimer_Stop();
@@ -150,16 +146,16 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         PluginData_Clear();
         
         /* Prevent countdown completion notification from triggering */
-        countdown_message_shown = TRUE;
+        countdown_message_shown = true;
         
         if (hadCatimeTag) {
             /* Had <catime> tag - restore time display, keep timer */
             InvalidateRect(hwnd, NULL, TRUE);
         } else {
             /* No <catime> tag - switch to idle, don't reset timer to avoid 1-minute fallback */
-            CLOCK_SHOW_CURRENT_TIME = FALSE;
-            CLOCK_COUNT_UP = FALSE;
-            CLOCK_IS_PAUSED = TRUE;
+            CLOCK_SHOW_CURRENT_TIME = false;
+            CLOCK_COUNT_UP = false;
+            CLOCK_IS_PAUSED = true;
             CLOCK_TOTAL_TIME = 0;
             countdown_elapsed_time = 0;
             MainTimer_Stop();
@@ -173,14 +169,14 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     PluginData_SetActive(TRUE);
     
     /* Prevent countdown completion notification from triggering */
-    countdown_message_shown = TRUE;
+    countdown_message_shown = true;
     
     /* Check for <catime> tag */
     if (!PluginData_HasCatimeTag()) {
         MainTimer_Stop();
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
-        CLOCK_COUNT_UP = FALSE;
-        CLOCK_IS_PAUSED = FALSE;
+        CLOCK_SHOW_CURRENT_TIME = false;
+        CLOCK_COUNT_UP = false;
+        CLOCK_IS_PAUSED = false;
     }
     
     /* Check if animated gradient needs timer for smooth animation */
@@ -215,12 +211,12 @@ void HandlePluginExit(HWND hwnd) {
     PluginData_Clear();
     
     /* Prevent countdown completion notification from triggering */
-    countdown_message_shown = TRUE;
+    countdown_message_shown = true;
     
     /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_IS_PAUSED = TRUE;
+    CLOCK_SHOW_CURRENT_TIME = false;
+    CLOCK_COUNT_UP = false;
+    CLOCK_IS_PAUSED = true;
     CLOCK_TOTAL_TIME = 0;
     countdown_elapsed_time = 0;
     MainTimer_Stop();

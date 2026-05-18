@@ -304,9 +304,9 @@ void ShowWindowForPreview(HWND hwnd) {
 
             g_previewState.createdPreviewTimer = TRUE;
 
-            CLOCK_SHOW_CURRENT_TIME = FALSE;
-            CLOCK_COUNT_UP = FALSE;
-            CLOCK_IS_PAUSED = TRUE;
+            CLOCK_SHOW_CURRENT_TIME = false;
+            CLOCK_COUNT_UP = false;
+            CLOCK_IS_PAUSED = true;
 
             CLOCK_TOTAL_TIME = previewTime;
             countdown_elapsed_time = 0;
@@ -341,8 +341,8 @@ void RestoreWindowVisibility(HWND hwnd) {
         WriteLog(LOG_LEVEL_INFO, "Clearing preview timer that we created");
         CLOCK_TOTAL_TIME = 0;
         countdown_elapsed_time = 0;
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
-        CLOCK_COUNT_UP = FALSE;
+        CLOCK_SHOW_CURRENT_TIME = false;
+        CLOCK_COUNT_UP = false;
         
         /* Also clear g_target_end_time to avoid stale values */
         g_target_end_time = 0;
