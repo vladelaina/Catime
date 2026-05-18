@@ -272,10 +272,8 @@ int ParseInput(const char* input, int* total_seconds) {
     if (len > 0 && (input_copy[len - 1] == 't' || input_copy[len - 1] == 'T')) {
         input_copy[len - 1] = '\0';
         result = ParseAbsoluteTime(input_copy);
-    } else {
-        if (!TimeParser_ParseAdvanced(input, &result)) {
-            return 0;
-        }
+    } else if (!TimeParser_ParseAdvanced(input, &result)) {
+        return 0;
     }
 
     if (result <= 0 || result > INT_MAX) {
