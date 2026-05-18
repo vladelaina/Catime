@@ -601,6 +601,9 @@ function translateSupportElements() {
         if (td.textContent === 'catime打赏') {
             td.textContent = 'Tipping catime';
         }
+        if (td.textContent === '支持catime') {
+            td.textContent = 'Support catime';
+        }
         if (td.textContent === '软件好用，赞赞赞') {
             td.textContent = 'The software is great, praise!';
         }
