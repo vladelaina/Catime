@@ -30,13 +30,13 @@ static void CALLBACK MainTimerCallback(UINT uTimerID, UINT uMsg,
                                        DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
 
-    if (g_mainHwnd && IsWindow(g_mainHwnd)) {
-        /* Coalesce pending tick messages to avoid queue backlog under UI load. */
-        if (InterlockedCompareExchange(&g_tickMessagePending, 1, 0) == 0) {
-            if (!PostMessage(g_mainHwnd, CLOCK_WM_MAIN_TIMER_TICK, 0, 0)) {
-                InterlockedExchange(&g_tickMessagePending, 0);
-            }
-        }
+    if (!g_mainHwnd || !IsWindow(g_mainHwnd)) return;
+    
+    /* Coalesce pending tick messages to avoid queue backlog under UI load. */
+    if (InterlockedCompareExchange(&g_tickMessagePending, 1, 0) != 0) return;
+      
+    if (!PostMessage(g_mainHwnd, CLOCK_WM_MAIN_TIMER_TICK, 0, 0)) {
+        InterlockedExchange(&g_tickMessagePending, 0);
     }
 }
 
@@ -85,18 +85,18 @@ BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
         g_timerResolutionMs = 1;
     }
 
-    if (!StartMultimediaTimer()) {
-        /* Fallback to SetTimer */
-        if (g_timerResolutionMs > 0) {
-            timeEndPeriod(g_timerResolutionMs);
-            g_timerResolutionMs = 0;
-        }
-        g_highPrecisionActive = FALSE;
-        return StartSetTimerFallback();
+    if (StartMultimediaTimer()) {
+        g_highPrecisionActive = TRUE;
+        return TRUE;
     }
-
-    g_highPrecisionActive = TRUE;
-    return TRUE;
+    
+    /* Fallback to SetTimer */
+    if (g_timerResolutionMs > 0) {
+        timeEndPeriod(g_timerResolutionMs);
+        g_timerResolutionMs = 0;
+    }
+    g_highPrecisionActive = FALSE;
+    return StartSetTimerFallback();    
 }
 
 BOOL MainTimer_Start(HWND hwnd, UINT intervalMs) {
@@ -108,27 +108,26 @@ BOOL MainTimer_Start(HWND hwnd, UINT intervalMs) {
 
     UINT normalized = NormalizeInterval(intervalMs);
 
-    if (g_highPrecisionActive) {
-        if (g_mainTimerId == 0) {
-            g_timerInterval = normalized;
-            if (!StartMultimediaTimer()) {
-                g_highPrecisionActive = FALSE;
-                return StartSetTimerFallback();
-            }
-        } else if (normalized != g_timerInterval) {
-            g_timerInterval = normalized;
-            timeKillEvent(g_mainTimerId);
-            if (!StartMultimediaTimer()) {
-                g_highPrecisionActive = FALSE;
-                return StartSetTimerFallback();
-            }
-        }
-        KillTimer(g_mainHwnd, TIMER_ID_MAIN);
-        return TRUE;
+    if (!g_highPrecisionActive) {
+      g_timerInterval = normalized;
+      return StartSetTimerFallback();
     }
 
-    g_timerInterval = normalized;
-    return StartSetTimerFallback();
+    BOOL is_timeIntervalChanged = (normalized != g_timerInterval);
+    if (!g_mainTimerId || is_timeIntervalChanged) {
+       g_timerInterval = normalized;
+    }
+    
+    if (g_mainTimerId && is_timeIntervalChanged) {
+        timeKillEvent(g_mainTimerId);
+    }
+    if ((!g_mainTimerId || is_timeIntervalChanged) && !StartMultimediaTimer()) {
+        g_highPrecisionActive = FALSE;
+        return StartSetTimerFallback();
+    }
+
+    KillTimer(g_mainHwnd, TIMER_ID_MAIN);
+    return TRUE;
 }
 
 void MainTimer_Stop(void) {
