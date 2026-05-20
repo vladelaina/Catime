@@ -263,15 +263,15 @@ void ToggleShowTimeMode(HWND hwnd) {
         ResetTimerWithInterval(hwnd);
     } else {
         /* Turn off: switch to idle state (no display, no timer) */
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
-        CLOCK_COUNT_UP = FALSE;
-        CLOCK_IS_PAUSED = FALSE;
+        CLOCK_SHOW_CURRENT_TIME = false;
+        CLOCK_COUNT_UP = false;
+        CLOCK_IS_PAUSED = false;
         CLOCK_TOTAL_TIME = 0;
         countdown_elapsed_time = 0;
         countup_elapsed_time = 0;
 
         /* Mark as shown to prevent notification when entering idle state */
-        countdown_message_shown = TRUE;
+        countdown_message_shown = true;
 
         MainTimer_Stop();
         InvalidateRect(hwnd, NULL, TRUE);
@@ -302,7 +302,7 @@ void StartDefaultCountDown(HWND hwnd) {
 
     if (g_AppConfig.timer.default_start_time > 0) {
         /* Only reset countdown_message_shown when actually starting countdown */
-        countdown_message_shown = FALSE;
+        countdown_message_shown = false;
         TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
 
@@ -322,9 +322,9 @@ void StartPomodoroTimer(HWND hwnd) {
 
     InitializePomodoro();
 
-    CLOCK_SHOW_CURRENT_TIME = FALSE;
-    CLOCK_COUNT_UP = FALSE;
-    CLOCK_IS_PAUSED = FALSE;
+    CLOCK_SHOW_CURRENT_TIME = false;
+    CLOCK_COUNT_UP = false;
+    CLOCK_IS_PAUSED = false;
 
     /* Reset timer to set g_target_end_time for countdown display */
     ResetTimer();
@@ -356,7 +356,7 @@ void RestartCurrentTimer(HWND hwnd) {
 
     if (!CLOCK_SHOW_CURRENT_TIME) {
         message_shown = FALSE;
-        countdown_message_shown = FALSE;
+        countdown_message_shown = false;
 
         if (CLOCK_COUNT_UP) {
             countdown_elapsed_time = 0;
@@ -365,7 +365,7 @@ void RestartCurrentTimer(HWND hwnd) {
             countdown_elapsed_time = 0;
             elapsed_time = 0;
         }
-        CLOCK_IS_PAUSED = FALSE;
+        CLOCK_IS_PAUSED = false;
 
         /* Call ResetTimer() to properly reset g_target_end_time for countdown mode */
         ResetTimer();
@@ -411,7 +411,7 @@ void CleanupBeforeTimerAction(void) {
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
 
-    countdown_message_shown = FALSE;
+    countdown_message_shown = false;
 
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();

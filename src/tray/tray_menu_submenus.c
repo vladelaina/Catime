@@ -30,8 +30,6 @@
 #include "color/color_parser.h"
 
 /* External dependencies from main.c/config.c */
-extern BOOL CLOCK_SHOW_CURRENT_TIME;
-extern BOOL CLOCK_USE_24HOUR;
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];

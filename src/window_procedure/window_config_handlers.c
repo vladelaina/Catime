@@ -50,7 +50,7 @@ static BOOL LoadAndCompareInt(const char* section, const char* key, int* target,
     return FALSE;
 }
 
-static BOOL LoadAndCompareBool(const char* section, const char* key, BOOL* target, BOOL def) {
+static BOOL LoadAndCompareBool(const char* section, const char* key, bool* target, bool def) {
     BOOL temp = ReadConfigBool(section, key, def);
     if (temp != *target) {
         *target = temp;
@@ -148,7 +148,7 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
 }
 
 LRESULT HandleAppTimerChanged(HWND hwnd) {
-    BOOL changed = FALSE;
+    bool changed = false;
 
     /* Basic timer settings */
     changed |= LoadAndCompareBool(CFG_SECTION_TIMER, CFG_KEY_USE_24HOUR,
@@ -162,7 +162,7 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
     TimeFormatType newFormat = TimeFormatType_FromStr(formatBuf);
     if (newFormat != g_AppConfig.display.time_format.format) {
         g_AppConfig.display.time_format.format = newFormat;
-        changed = TRUE;
+        changed = true;
     }
 
     /* Milliseconds display */
@@ -171,7 +171,7 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
         g_AppConfig.display.time_format.show_milliseconds = newShowMs;
         MainTimer_Stop();
         ResetTimerWithInterval(hwnd);
-        changed = TRUE;
+        changed = true;
     }
 
     /* Timeout settings */

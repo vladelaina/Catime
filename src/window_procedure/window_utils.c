@@ -139,7 +139,7 @@ void UpdateConfigWithRefresh(HWND hwnd, const char* key, const char* value) {
     }
 }
 
-void ToggleConfigBool(HWND hwnd, const char* key, BOOL* currentValue, BOOL needsRedraw) {
+void ToggleConfigBool(HWND hwnd, const char* key, bool* currentValue, bool needsRedraw) {
     *currentValue = !(*currentValue);
     WriteConfigKeyValue(key, *currentValue ? "TRUE" : "FALSE");
     if (needsRedraw && hwnd) {

@@ -348,12 +348,6 @@ static void DropPrivileges(void) {
     }
 }
 
-extern int elapsed_time;
-extern int message_shown;
-extern int countdown_message_shown;
-extern int countdown_elapsed_time;
-extern int countup_elapsed_time;
-
 typedef enum {
     STARTUP_MODE_DEFAULT,
     STARTUP_MODE_COUNT_UP,
@@ -382,7 +376,7 @@ void HandleStartupMode(HWND hwnd) {
     
     switch (mode) {
         case STARTUP_MODE_COUNT_UP:
-            CLOCK_COUNT_UP = TRUE;
+            CLOCK_COUNT_UP = true;
             elapsed_time = 0;
             countup_elapsed_time = 0;
             
@@ -393,16 +387,16 @@ void HandleStartupMode(HWND hwnd) {
             ShowWindow(hwnd, SW_HIDE);
             MainTimer_Stop();
             elapsed_time = CLOCK_TOTAL_TIME;
-            CLOCK_IS_PAUSED = TRUE;
+            CLOCK_IS_PAUSED = true;
             
             message_shown = TRUE;
-            countdown_message_shown = TRUE;
+            countdown_message_shown = true;
             countdown_elapsed_time = 0;
             countup_elapsed_time = 0;
             break;
             
         case STARTUP_MODE_SHOW_TIME:
-            CLOCK_SHOW_CURRENT_TIME = TRUE;
+            CLOCK_SHOW_CURRENT_TIME = true;
             CLOCK_LAST_TIME_UPDATE = 0;
             break;
             
@@ -412,8 +406,8 @@ void HandleStartupMode(HWND hwnd) {
             
         case STARTUP_MODE_DEFAULT:
         default:
-            CLOCK_SHOW_CURRENT_TIME = FALSE;
-            CLOCK_COUNT_UP = FALSE;
+            CLOCK_SHOW_CURRENT_TIME = false;
+            CLOCK_COUNT_UP = false;
             countdown_elapsed_time = 0;
             
             if (CLOCK_TOTAL_TIME <= 0) {

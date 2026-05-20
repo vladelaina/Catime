@@ -239,8 +239,8 @@ static void HandleTimeoutActions(HWND hwnd) {
 
         case TIMEOUT_ACTION_SHOW_TIME:
             StopNotificationSound();
-            CLOCK_SHOW_CURRENT_TIME = TRUE;
-            CLOCK_COUNT_UP = FALSE;
+            CLOCK_SHOW_CURRENT_TIME = true;
+            CLOCK_COUNT_UP = false;
             /* Reset countdown state to prevent accidental completion trigger */
             CLOCK_TOTAL_TIME = 0;
             countdown_elapsed_time = 0;
@@ -252,14 +252,14 @@ static void HandleTimeoutActions(HWND hwnd) {
 
         case TIMEOUT_ACTION_COUNT_UP:
             StopNotificationSound();
-            CLOCK_COUNT_UP = TRUE;
-            CLOCK_SHOW_CURRENT_TIME = FALSE;
+            CLOCK_COUNT_UP = true;
+            CLOCK_SHOW_CURRENT_TIME = false;
             countup_elapsed_time = 0;
             elapsed_time = 0;
             g_start_time = GetAbsoluteTimeMs();
             message_shown = FALSE;
-            countdown_message_shown = FALSE;
-            CLOCK_IS_PAUSED = FALSE;
+            countdown_message_shown = false;
+            CLOCK_IS_PAUSED = false;
             ResetMillisecondAccumulator();
             MainTimer_Stop();
             MainTimer_Start(hwnd, GetTimerInterval());
@@ -355,8 +355,8 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
         ShowNotification(hwnd, cycle_complete_text);
         PlayNotificationSound(hwnd);
 
-        CLOCK_COUNT_UP = FALSE;
-        CLOCK_SHOW_CURRENT_TIME = FALSE;
+        CLOCK_COUNT_UP = false;
+        CLOCK_SHOW_CURRENT_TIME = false;
         message_shown = TRUE;
         InvalidateRect(hwnd, NULL, TRUE);
         MainTimer_Stop();
@@ -392,10 +392,9 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
     ResetTimerState(next_duration_sec);
     
     g_target_end_time += ((int64_t)next_duration_sec * 1000);
+
+    countdown_message_shown = false;
     
-    countdown_message_shown = FALSE;
-    
-    extern BOOL InitializeHighPrecisionTimer(void);
     InitializeHighPrecisionTimer();
     ResetMillisecondAccumulator();
     
@@ -513,7 +512,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
     
     if (!CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time >= CLOCK_TOTAL_TIME) {
         if (!countdown_message_shown) {
-            countdown_message_shown = TRUE;
+            countdown_message_shown = true;
             
             TrayAnimation_RecomputeTimerDelay();
             
@@ -564,7 +563,7 @@ void InitializePomodoro(void) {
     }
     
     countdown_elapsed_time = 0;
-    countdown_message_shown = FALSE;
+    countdown_message_shown = false;
     ResetMillisecondAccumulator();
 }
 
