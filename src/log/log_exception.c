@@ -48,6 +48,10 @@ static void SignalHandler(int signal) {
             "[FATAL] Fatal signal occurred: %s (signal number: %d)\n",
             signalDesc, signal);
         if (len > 0) {
+            if ((size_t)len >= sizeof(buffer)) {
+                len = (int)sizeof(buffer) - 1;
+                buffer[sizeof(buffer) - 2] = '\n';
+            }
             DWORD written;
             WriteFile(hLogFile, buffer, len, &written, NULL);
             FlushFileBuffers(hLogFile);

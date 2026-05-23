@@ -13,15 +13,15 @@
 #include "log/log_core.h"
 #include "log/log_system_info.h"
 #include "config.h"
-#include "../include/log.h"
+#include "log.h"
 #include "../../resource/resource.h"
 
 static const char* const LOG_LEVEL_STRINGS[LOG_LEVEL_MAX] = {
-    [LOG_LEVEL_DEBUG] = "DEBUG",
-    [LOG_LEVEL_INFO] ="INFO",
-    [LOG_LEVEL_WARNING] = "WARNING",
-    [LOG_LEVEL_ERROR] = "ERROR",
-    [LOG_LEVEL_FATAL] = "FATAL"
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "FATAL"
 };
 
 static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
@@ -49,7 +49,7 @@ static void EnsureLogCSInitialized(void) {
 }
 
 /**
- * @breif Get log file path
+ * @brief Get log file path
  */
 static void GetLogFilePath(void) {
     char configPath[MAX_PATH] = {0};
@@ -214,8 +214,16 @@ void WriteLog(LogLevel level, const char* format, ...) {
         return;
     }
 
+    if (level < LOG_LEVEL_DEBUG || level >= LOG_LEVEL_MAX) {
+        level = LOG_LEVEL_ERROR;
+    }
+
     if (level < minLogLevel) {
         return;
+    }
+
+    if (!format) {
+        format = "(null)";
     }
 
     EnterCriticalSection(&logCS);
@@ -250,20 +258,48 @@ void WriteLog(LogLevel level, const char* format, ...) {
 
     /* Format log message */
     char logBuffer[4096];
-    int offset = snprintf(logBuffer, sizeof(logBuffer), "[%s] [%s] ", timeStr, LOG_LEVEL_STRINGS[level]);
+    int prefixLength = snprintf(logBuffer, sizeof(logBuffer), "[%s] [%s] ", timeStr, LOG_LEVEL_STRINGS[level]);
+    size_t offset = 0;
+    if (prefixLength < 0) {
+        LeaveCriticalSection(&logCS);
+        return;
+    }
+    if ((size_t)prefixLength >= sizeof(logBuffer)) {
+        offset = sizeof(logBuffer) - 1;
+    } else {
+        offset = (size_t)prefixLength;
+    }
 
     va_list args;
     va_start(args, format);
-    offset += vsnprintf(logBuffer + offset, sizeof(logBuffer) - offset, format, args);
+    int messageLength = vsnprintf(logBuffer + offset, sizeof(logBuffer) - offset, format, args);
     va_end(args);
 
-    if (offset < (int)sizeof(logBuffer) - 1) {
+    if (messageLength < 0) {
+        const char fallback[] = "[log formatting error]";
+        size_t remaining = sizeof(logBuffer) - offset;
+        if (remaining > 0) {
+            int fallbackLength = snprintf(logBuffer + offset, remaining, "%s", fallback);
+            if (fallbackLength > 0) {
+                offset += (size_t)fallbackLength < remaining ? (size_t)fallbackLength : remaining - 1;
+            }
+        }
+    } else if ((size_t)messageLength >= sizeof(logBuffer) - offset) {
+        offset = sizeof(logBuffer) - 1;
+    } else {
+        offset += (size_t)messageLength;
+    }
+
+    if (offset < sizeof(logBuffer) - 1) {
         logBuffer[offset++] = '\n';
+    } else {
+        logBuffer[sizeof(logBuffer) - 2] = '\n';
+        offset = sizeof(logBuffer) - 1;
     }
 
     /* Write to file */
     DWORD written;
-    WriteFile(hLogFile, logBuffer, offset, &written, NULL);
+    WriteFile(hLogFile, logBuffer, (DWORD)offset, &written, NULL);
 
     /* Avoid per-line disk flush; flush periodically and on high-severity entries. */
     static int flushCounter = 0;
@@ -296,7 +332,6 @@ void CleanupLogSystem(void) {
 void SetMinimumLogLevel(LogLevel minLevel) {
     if (minLevel < 0 || minLevel >= LOG_LEVEL_MAX) {
         minLevel = LOG_LEVEL_DEBUG;
-        return;
     }
     minLogLevel = minLevel;
 }

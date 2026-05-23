@@ -14,10 +14,18 @@
 #endif
 
 #ifndef likely
+#if defined(__GNUC__) || defined(__clang__)
 #define likely(x)   __builtin_expect(!!(x), 1)
+#else
+#define likely(x)   (!!(x))
+#endif
 #endif
 #ifndef unlikely
+#if defined(__GNUC__) || defined(__clang__)
 #define unlikely(x) __builtin_expect(!!(x), 0)
+#else
+#define unlikely(x) (!!(x))
+#endif
 #endif
 
 #define KB  (1024.0)
@@ -82,7 +90,8 @@ static bool GetOSVersionInfo(OSVersionInfo* osVersion) {
     RtlGetVersionPtr pRtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hNtdll, "RtlGetVersion");
     if (unlikely(!pRtlGetVersion)) return false;
     
-    RTL_OSVERSIONINFOW rovi = {.dwOSVersionInfoSize = sizeof(rovi)};
+    RTL_OSVERSIONINFOW rovi = {0};
+    rovi.dwOSVersionInfoSize = sizeof(rovi);
     
     if (likely(pRtlGetVersion(&rovi) == 0)) {
         osVersion->major = rovi.dwMajorVersion;
