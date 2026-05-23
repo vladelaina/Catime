@@ -33,13 +33,6 @@ void LogUACStatus(void);
  */
 void LogAdminPrivileges(void);
 
-/**
- * Format byte size to human-readable string
- * @param bytes Size in bytes
- * @param buffer Output buffer
- * @param bufferSize Buffer size
- */
-void FormatBytes(ULONGLONG bytes, char* buffer, size_t bufferSize);
 
 #endif /* LOG_SYSTEM_INFO_H */
 

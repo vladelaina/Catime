@@ -12,28 +12,20 @@
 #include "log.h"
 #include "main/main_single_instance.h"
 
-static const SignalInfo SIGNAL_TABLE[] = {
-    {SIGFPE,   "Floating point exception"},
-    {SIGILL,   "Illegal instruction"},
-    {SIGSEGV,  "Segmentation fault/memory access error"},
-    {SIGTERM,  "Termination signal"},
-    {SIGABRT,  "Abnormal termination/abort"},
-    {SIGINT,   "User interrupt"},
-};
 
 /** Atomic flag prevents deadlock in crash handler */
 static volatile LONG inCrashHandler = 0;
 
 static const char* GetSignalDescription(int signal) {
-    const size_t tableSize = sizeof(SIGNAL_TABLE) / sizeof(SIGNAL_TABLE[0]);
-    
-    for (size_t i = 0; i < tableSize; i++) {
-        if (SIGNAL_TABLE[i].signal == signal) {
-            return SIGNAL_TABLE[i].description;
-        }
+    switch (signal) {
+        case SIGFPE:  return "Floating point exception";
+        case SIGILL:  return "Illegal instruction";
+        case SIGSEGV: return "Segmentation fault/memory access error";
+        case SIGTERM: return "Termination signal";
+        case SIGABRT: return "Abnormal termination/abort";
+        case SIGINT:  return "User interrupt";
+        default:      return "Unknown signal";
     }
-    
-    return "Unknown signal";
 }
 
 /**
