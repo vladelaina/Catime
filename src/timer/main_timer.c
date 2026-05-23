@@ -61,6 +61,31 @@ static BOOL StartMultimediaTimer(void) {
     return g_mainTimerId != 0;
 }
 
+static BOOL AcquireTimerResolution(void) {
+    if (g_timerResolutionMs > 0) return TRUE;
+
+    MMRESULT res = timeBeginPeriod(1);
+    if (res == TIMERR_NOERROR) {
+        g_timerResolutionMs = 1;
+        return TRUE;
+    }
+
+    res = timeBeginPeriod(2);
+    if (res == TIMERR_NOERROR) {
+        g_timerResolutionMs = 2;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static void ReleaseTimerResolution(void) {
+    if (g_timerResolutionMs > 0) {
+        timeEndPeriod(g_timerResolutionMs);
+        g_timerResolutionMs = 0;
+    }
+}
+
 BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
     if (!hwnd) return FALSE;
 
@@ -71,18 +96,10 @@ BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
     g_timerInterval = NormalizeInterval(intervalMs);
 
     /* Set system timer resolution to 1ms for precision */
-    MMRESULT res = timeBeginPeriod(1);
-    if (res != TIMERR_NOERROR) {
-        /* Try 2ms as fallback */
-        res = timeBeginPeriod(2);
-        if (res != TIMERR_NOERROR) {
-            /* Fall back to standard SetTimer */
-            g_highPrecisionActive = FALSE;
-            return StartSetTimerFallback();
-        }
-        g_timerResolutionMs = 2;
-    } else {
-        g_timerResolutionMs = 1;
+    if (!AcquireTimerResolution()) {
+        /* Fall back to standard SetTimer */
+        g_highPrecisionActive = FALSE;
+        return StartSetTimerFallback();
     }
 
     if (StartMultimediaTimer()) {
@@ -91,10 +108,7 @@ BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
     }
     
     /* Fallback to SetTimer */
-    if (g_timerResolutionMs > 0) {
-        timeEndPeriod(g_timerResolutionMs);
-        g_timerResolutionMs = 0;
-    }
+    ReleaseTimerResolution();
     g_highPrecisionActive = FALSE;
     return StartSetTimerFallback();    
 }
@@ -113,6 +127,11 @@ BOOL MainTimer_Start(HWND hwnd, UINT intervalMs) {
       return StartSetTimerFallback();
     }
 
+    if (!AcquireTimerResolution()) {
+        g_highPrecisionActive = FALSE;
+        return StartSetTimerFallback();
+    }
+
     BOOL is_timeIntervalChanged = (normalized != g_timerInterval);
     if (!g_mainTimerId || is_timeIntervalChanged) {
        g_timerInterval = normalized;
@@ -120,8 +139,10 @@ BOOL MainTimer_Start(HWND hwnd, UINT intervalMs) {
     
     if (g_mainTimerId && is_timeIntervalChanged) {
         timeKillEvent(g_mainTimerId);
+        g_mainTimerId = 0;
     }
     if ((!g_mainTimerId || is_timeIntervalChanged) && !StartMultimediaTimer()) {
+        ReleaseTimerResolution();
         g_highPrecisionActive = FALSE;
         return StartSetTimerFallback();
     }
@@ -135,6 +156,7 @@ void MainTimer_Stop(void) {
         timeKillEvent(g_mainTimerId);
         g_mainTimerId = 0;
     }
+    ReleaseTimerResolution();
 
     if (g_mainHwnd) {
         KillTimer(g_mainHwnd, TIMER_ID_MAIN);
@@ -150,7 +172,7 @@ void MainTimer_NotifyTickHandled(void) {
 void MainTimer_SetInterval(UINT intervalMs) {
     UINT normalized = NormalizeInterval(intervalMs);
     if (normalized == g_timerInterval) {
-        if (g_mainHwnd) {
+        if (g_mainHwnd && (g_mainTimerId == 0 || !g_highPrecisionActive)) {
             MainTimer_Start(g_mainHwnd, g_timerInterval);
         }
         return;
@@ -161,9 +183,11 @@ void MainTimer_SetInterval(UINT intervalMs) {
     if (g_highPrecisionActive && g_mainTimerId != 0) {
         /* Kill old timer and create new one with updated interval */
         timeKillEvent(g_mainTimerId);
+        g_mainTimerId = 0;
 
-        if (!StartMultimediaTimer()) {
+        if (!AcquireTimerResolution() || !StartMultimediaTimer()) {
             /* Fallback if recreation fails */
+            ReleaseTimerResolution();
             g_highPrecisionActive = FALSE;
             StartSetTimerFallback();
         }
@@ -174,11 +198,6 @@ void MainTimer_SetInterval(UINT intervalMs) {
 
 void MainTimer_Cleanup(void) {
     MainTimer_Stop();
-
-    if (g_timerResolutionMs > 0) {
-        timeEndPeriod(g_timerResolutionMs);
-        g_timerResolutionMs = 0;
-    }
 
     g_highPrecisionActive = FALSE;
     g_mainHwnd = NULL;

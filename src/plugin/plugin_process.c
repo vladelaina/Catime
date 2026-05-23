@@ -273,7 +273,9 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             TerminateProcessTree(dwProcessId, 0);
         }
 
-        PluginManager_HandleProcessExit(dwProcessId, displayName);
+        if (plugin->isRunning && plugin->pi.dwProcessId == dwProcessId) {
+            PluginManager_HandleProcessExit(dwProcessId, displayName);
+        }
         CloseHandle(hMonitorProcess);
     }
 
@@ -364,7 +366,13 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     /* Wait for process creation */
     WaitForSingleObject(args.hReadyEvent, INFINITE);
     CloseHandle(args.hReadyEvent);
-    CloseHandle(hThread);
+
+    if (args.success && plugin->isRunning && plugin->pi.dwProcessId != 0) {
+        plugin->pi.hThread = hThread;
+    } else {
+        WaitForSingleObject(hThread, INFINITE);
+        CloseHandle(hThread);
+    }
 
     /* Copy error message if failed */
     if (!args.success && args.errorMsg[0] != L'\0') {

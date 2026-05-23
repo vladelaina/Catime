@@ -41,6 +41,7 @@ static BOOL FallbackToPlaySound(HWND hwnd, const wchar_t* wFilePath);
 static BOOL FallbackToSystemBeep(HWND hwnd);
 static void ResetPlaybackState(void);
 static void StartPlaybackTimer(HWND hwnd, UINT timerId, UINT interval);
+static void ShutdownAudioEngine(void);
 
 /* ============================================================================
  * Utility functions
@@ -125,6 +126,13 @@ static BOOL InitializeAudioEngine(void) {
 
     g_engineInitialized = MA_TRUE;
     return TRUE;
+}
+
+static void ShutdownAudioEngine(void) {
+    if (g_engineInitialized && !g_soundInitialized) {
+        ma_engine_uninit(&g_audioEngine);
+        g_engineInitialized = MA_FALSE;
+    }
 }
 
 
@@ -316,6 +324,7 @@ static void CALLBACK AudioTimerCallback(HWND hwnd, UINT message, UINT_PTR idEven
                         ma_sound_uninit(&g_sound);
                         g_soundInitialized = MA_FALSE;
                     }
+                    ShutdownAudioEngine();
                     shouldStop = TRUE;
                 }
             } else {
@@ -370,6 +379,7 @@ void CleanupAudioResources(void) {
         ma_sound_uninit(&g_sound);
         g_soundInitialized = MA_FALSE;
     }
+    ShutdownAudioEngine();
 
     if (g_audioTimerId != 0 && g_audioCallbackHwnd != NULL) {
         KillTimer(g_audioCallbackHwnd, g_audioTimerId);

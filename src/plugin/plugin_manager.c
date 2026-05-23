@@ -803,6 +803,7 @@ void PluginManager_HandleProcessExit(DWORD processId, const wchar_t* displayName
 
     BOOL shouldClearDisplay = FALSE;
     HANDLE hProcessToClose = NULL;
+    HANDLE hThreadToClose = NULL;
 
     EnterCriticalSection(&g_pluginCS);
 
@@ -815,6 +816,7 @@ void PluginManager_HandleProcessExit(DWORD processId, const wchar_t* displayName
         if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
             LOG_INFO("[Thread] Plugin exited: %ls", displayName ? displayName : plugin->displayName);
             hProcessToClose = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
+            hThreadToClose = InterlockedExchangePointer((PVOID*)&plugin->pi.hThread, NULL);
             memset(&plugin->pi, 0, sizeof(plugin->pi));
             shouldClearDisplay = TRUE;
 
@@ -832,6 +834,9 @@ void PluginManager_HandleProcessExit(DWORD processId, const wchar_t* displayName
 
     if (hProcessToClose) {
         CloseHandle(hProcessToClose);
+    }
+    if (hThreadToClose) {
+        CloseHandle(hThreadToClose);
     }
 
     if (shouldClearDisplay) {

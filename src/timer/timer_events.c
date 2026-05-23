@@ -489,8 +489,15 @@ static void HandleCountdownCompletion(HWND hwnd) {
 static BOOL HandleMainTimer(HWND hwnd) {
     static DWORD s_lastRenderTime = 0;
     static DWORD s_lastTopmostCheck = 0;
+    static UINT s_lastDesiredInterval = 0;
     DWORD now_tick = GetTickCount();
     BOOL shouldRender = TRUE;
+    UINT desiredInterval = GetTimerInterval();
+
+    if (s_lastDesiredInterval != desiredInterval) {
+        s_lastDesiredInterval = desiredInterval;
+        MainTimer_SetInterval(desiredInterval);
+    }
 
     /* Throttle expensive topmost/taskbar overlap checks. */
     if (s_lastTopmostCheck == 0 || (now_tick - s_lastTopmostCheck) >= 100) {
