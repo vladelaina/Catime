@@ -1,5 +1,6 @@
 #include "drawing/drawing_image.h"
 #include "log.h"
+#include <limits.h>
 #include <string.h>
 
 /* GDI+ Flat API definitions for C compatibility */
@@ -53,6 +54,17 @@ static FuncGdipGetImageHeight pGdipGetImageHeight = NULL;
     } while (0)
 
 #define MAX_CACHED_IMAGES 16
+
+static BOOL ScaleUIntToInt(UINT value, float scale, int* outValue) {
+    double scaled;
+    if (!outValue || value == 0 || scale <= 0.0f) return FALSE;
+
+    scaled = (double)value * (double)scale;
+    if (scaled <= 0.0 || scaled > (double)INT_MAX) return FALSE;
+
+    *outValue = (int)scaled;
+    return TRUE;
+}
 
 typedef struct {
     BOOL inUse;
@@ -143,7 +155,7 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
     pGdipGetImageWidth((GpImage)bitmap, &w);
     pGdipGetImageHeight((GpImage)bitmap, &h);
 
-    if (w == 0 || h == 0) {
+    if (w == 0 || h == 0 || w > INT_MAX || h > INT_MAX) {
         pGdipDisposeImage((GpImage)bitmap);
         return NULL;
     }
@@ -245,8 +257,13 @@ BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wcha
             float scaleY = (float)height / imgH;
             float scale = (scaleX < scaleY) ? scaleX : scaleY;
 
-            int drawW = (int)(imgW * scale);
-            int drawH = (int)(imgH * scale);
+            int drawW = 0;
+            int drawH = 0;
+            if (!ScaleUIntToInt(imgW, scale, &drawW) ||
+                !ScaleUIntToInt(imgH, scale, &drawH)) {
+                pGdipDeleteGraphics(graphics);
+                return FALSE;
+            }
 
             // Draw from top-left (no centering)
             pGdipDrawImageRectI(graphics, (GpImage)entry->bitmap, x, y, drawW, drawH);

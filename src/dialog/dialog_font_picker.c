@@ -289,13 +289,16 @@ static void AddOrUpdateFontMap(const wchar_t* fontName, const char* fontPath) {
             return;
         }
     }
-    
+
     /* New file - add to map */
     if (g_fontMapCount >= g_fontMapCapacity) {
-        g_fontMapCapacity = g_fontMapCapacity == 0 ? 256 : g_fontMapCapacity * 2;
-        FontMapEntry* newMap = (FontMapEntry*)realloc(g_fontMap, g_fontMapCapacity * sizeof(FontMapEntry));
+        if (g_fontMapCapacity > INT_MAX / 2) return;
+        int newCapacity = g_fontMapCapacity <= 0 ? 256 : g_fontMapCapacity * 2;
+        if ((size_t)newCapacity > ((size_t)-1) / sizeof(FontMapEntry)) return;
+        FontMapEntry* newMap = (FontMapEntry*)realloc(g_fontMap, (size_t)newCapacity * sizeof(FontMapEntry));
         if (!newMap) return;
         g_fontMap = newMap;
+        g_fontMapCapacity = newCapacity;
     }
     
     wcscpy_s(g_fontMap[g_fontMapCount].fontName, LF_FACESIZE, fontName);
@@ -304,10 +307,10 @@ static void AddOrUpdateFontMap(const wchar_t* fontName, const char* fontPath) {
     g_fontMapCount++;
 }
 
-static int CALLBACK EnumFontFamiliesProc(const LOGFONTW* lpelf, const TEXTMETRICW* lpntm, 
+static int CALLBACK EnumFontFamiliesProc(const LOGFONTW* lpelf, const TEXTMETRICW* lpntm,
                                         DWORD fontType, LPARAM lParam) {
     (void)lpntm;
-    
+
     if (lParam && WaitForSingleObject((HANDLE)lParam, 0) == WAIT_OBJECT_0) {
         return 0;
     }
@@ -726,14 +729,14 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                 CloseHandle(g_fontEnumStopEvent);
                 g_fontEnumStopEvent = NULL;
             }
-            
+
             /* Clear checkmark index */
             g_currentFontIndex = -1;
             g_fontListReady = FALSE;
-            
+
             /* Cleanup font map memory */
             if (g_fontMap) {
-                LOG_INFO("FontPicker: Freeing font map (%d entries, %d bytes)", 
+                LOG_INFO("FontPicker: Freeing font map (%d entries, %d bytes)",
                          g_fontMapCount, g_fontMapCapacity * (int)sizeof(FontMapEntry));
             }
             ResetFontMap();

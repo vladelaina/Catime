@@ -343,6 +343,8 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        const MarkdownFontTag* fontTags, int fontTagCount,
                        COLORREF color, int fontSize, float fontScale, int gradientMode) {
     if (!IsFontLoadedSTB() || !text || !bits) return;
+    if (width <= 0 || height <= 0 ||
+        (size_t)width > ((size_t)-1) / (size_t)height / sizeof(DWORD)) return;
 
     /* Clear previous clickable regions before rendering */
     ClearClickableRegions();
@@ -491,7 +493,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                         } else {
                             lineColor = 0xFF000000 | (GetRValue(color) << 16) | (GetGValue(color) << 8) | GetBValue(color);
                         }
-                        pixels[lineY * width + x] = lineColor;
+                        pixels[(size_t)lineY * (size_t)width + (size_t)x] = lineColor;
                     }
                 }
                 currentY += lineMaxHeight;
@@ -527,7 +529,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                 for (int y = currentY; y < currentY + lineMaxHeight && y < height; y++) {
                     if (y >= 0) {
                         for (int x = barX; x < barX + barWidth && x >= 0 && x < width; x++) {
-                            pixels[y * width + x] = barColorDW;
+                            pixels[(size_t)y * (size_t)width + (size_t)x] = barColorDW;
                         }
                     }
                 }
@@ -789,7 +791,7 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                             // Draw horizontal line through character
                             for (int sx = currentX; sx < currentX + gm.advance && sx < width; sx++) {
                                 if (lineY >= 0 && lineY < height && sx >= 0) {
-                                    pixels[lineY * width + sx] = lineColor;
+                                    pixels[(size_t)lineY * (size_t)width + (size_t)sx] = lineColor;
                                 }
                             }
                         }

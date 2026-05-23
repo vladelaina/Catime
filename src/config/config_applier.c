@@ -266,6 +266,9 @@ void ApplyColorSettings(const ConfigSnapshot* snapshot) {
     
     const char* token = strtok(colorOptionsCopy, ",");
     while (token) {
+        if (COLOR_OPTIONS_COUNT >= ((size_t)-1) / sizeof(PredefinedColor) - 1) {
+            break;
+        }
         PredefinedColor* newOptions = realloc(COLOR_OPTIONS, sizeof(PredefinedColor) * (COLOR_OPTIONS_COUNT + 1));
         if (newOptions) {
             COLOR_OPTIONS = newOptions;

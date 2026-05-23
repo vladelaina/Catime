@@ -245,7 +245,12 @@ int PluginManager_ScanPlugins(void) {
         if (!Utf8ToWideFixed(PLUGIN_EXTENSIONS[ext], extPattern, 32)) {
             continue;
         }
-        _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginDir, extPattern);
+        int searchWritten = _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE,
+                                         L"%s\\%s", pluginDir, extPattern);
+        if (searchWritten < 0) {
+            LOG_WARNING("Plugin search path is too long");
+            continue;
+        }
 
         WIN32_FIND_DATAW findData;
         HANDLE hFind = FindFirstFileW(searchPath, &findData);
@@ -263,7 +268,12 @@ int PluginManager_ScanPlugins(void) {
                     wcsncpy(plugin->name, findData.cFileName, 63);
                     plugin->name[63] = L'\0';
                     ExtractDisplayName(findData.cFileName, plugin->displayName, 64);
-                    _snwprintf_s(plugin->path, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginDir, findData.cFileName);
+                    int pathWritten = _snwprintf_s(plugin->path, MAX_PATH, _TRUNCATE,
+                                                   L"%s\\%s", pluginDir, findData.cFileName);
+                    if (pathWritten < 0) {
+                        LOG_WARNING("Plugin path is too long: %ls", findData.cFileName);
+                        continue;
+                    }
 
                     plugin->isRunning = FALSE;
                     memset(&plugin->pi, 0, sizeof(plugin->pi));

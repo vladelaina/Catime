@@ -9,6 +9,7 @@
 #include "../resource/resource.h"
 #include "system_monitor.h"
 #include "log.h"
+#include <limits.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
@@ -223,7 +224,8 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
     
     for (size_t p = 0; p < sizeof(patterns) / sizeof(patterns[0]); ++p) {
         wchar_t wSearch[MAX_PATH] = {0};
-        _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s%s", wFolder, patterns[p]);
+        int searchWritten = _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s%s", wFolder, patterns[p]);
+        if (searchWritten < 0) continue;
         
         WIN32_FIND_DATAW ffd;
         HANDLE hFind = FindFirstFileW(wSearch, &ffd);
@@ -245,7 +247,12 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
                         hasNum = 1;
                         numVal = 0;
                         while (i < nameLen && iswdigit(ffd.cFileName[i])) {
-                            numVal = numVal * 10 + (ffd.cFileName[i] - L'0');
+                            int digit = (int)(ffd.cFileName[i] - L'0');
+                            if (numVal <= (INT_MAX - digit) / 10) {
+                                numVal = numVal * 10 + digit;
+                            } else {
+                                numVal = INT_MAX;
+                            }
                             i++;
                         }
                         break;
@@ -256,7 +263,9 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
                 files[fileCount].num = numVal;
                 wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
                 files[fileCount].name[nameLen] = L'\0';
-                _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE, L"%s\\%s", wFolder, ffd.cFileName);
+                int pathWritten = _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE,
+                                               L"%s\\%s", wFolder, ffd.cFileName);
+                if (pathWritten < 0) continue;
                 fileCount++;
                 
             } while (FindNextFileW(hFind, &ffd) && fileCount < maxCount);
@@ -337,7 +346,8 @@ BOOL IsValidAnimationSource(const char* name) {
     if (attrs & FILE_ATTRIBUTE_DIRECTORY) {
         /* Check if folder contains valid image files */
         wchar_t wSearch[MAX_PATH] = {0};
-        _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wPath);
+        int searchWritten = _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wPath);
+        if (searchWritten < 0) return FALSE;
         
         WIN32_FIND_DATAW ffd;
         HANDLE hFind = FindFirstFileW(wSearch, &ffd);

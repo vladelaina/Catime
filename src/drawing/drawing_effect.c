@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 #include <windows.h>
 #include "drawing/drawing_effect.h"
 
@@ -10,15 +11,56 @@ static unsigned char* g_effectBuffer2 = NULL;
 static unsigned char* g_effectBuffer3 = NULL;
 static int g_effectBufferSize = 0;
 
+static BOOL CalculateEffectBufferSize(int w, int h, int padding, int multiplier,
+                                      int* outGw, int* outGh,
+                                      int* outNeededSize, int* outAllocSize) {
+    int padTotal;
+    int gw;
+    int gh;
+    int neededSize;
+
+    if (!outGw || !outGh || !outNeededSize || !outAllocSize) return FALSE;
+    if (w <= 0 || h <= 0 || padding < 0 || multiplier <= 0) return FALSE;
+    if (padding > INT_MAX / 2) return FALSE;
+
+    padTotal = padding * 2;
+    if (w > INT_MAX - padTotal || h > INT_MAX - padTotal) return FALSE;
+
+    gw = w + padTotal;
+    gh = h + padTotal;
+    if (gw <= 0 || gh <= 0 || gw > INT_MAX / gh) return FALSE;
+
+    neededSize = gw * gh;
+    if (neededSize > INT_MAX / multiplier) return FALSE;
+
+    *outGw = gw;
+    *outGh = gh;
+    *outNeededSize = neededSize;
+    *outAllocSize = neededSize * multiplier;
+    return TRUE;
+}
+
+static BOOL CalculateBlurPixelCount(int w, int h, size_t* outPixelCount) {
+    if (!outPixelCount || w <= 0 || h <= 0) return FALSE;
+
+    size_t sw = (size_t)w;
+    size_t sh = (size_t)h;
+    if (sw > (size_t)-1 / sh) return FALSE;
+
+    *outPixelCount = sw * sh;
+    return TRUE;
+}
+
 /**
  * @brief Apply Optimized Box Blur (Sliding Window)
  * O(1) per pixel regardless of radius
  */
 void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* tempBuffer, int w, int h, int radius) {
-    if (w <= 0 || h <= 0) return;
-    
+    size_t pixelCount = 0;
+    if (!src || !dest || !tempBuffer || !CalculateBlurPixelCount(w, h, &pixelCount)) return;
+
     if (radius < 1) {
-        memcpy(dest, src, w * h);
+        memcpy(dest, src, pixelCount);
         return;
     }
 
@@ -112,12 +154,16 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
                       GlowColorCallback colorCb, void* userData) {
     /* 1. Dynamic Buffer Allocation */
     int padding = 12;
-    int gw = w + padding * 2;
-    int gh = h + padding * 2;
-    int neededSize = gw * gh;
+    int gw = 0;
+    int gh = 0;
+    int neededSize = 0;
+    int newSize = 0;
+
+    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+        return;
+    }
 
     if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        int newSize = neededSize * 2;
         if (g_effectBuffer1) free(g_effectBuffer1);
         if (g_effectBuffer2) free(g_effectBuffer2);
         if (g_effectBuffer3) free(g_effectBuffer3);
@@ -217,12 +263,16 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
                       GlowColorCallback colorCb, void* userData) {
     /* Dynamic Buffer Allocation */
     int padding = 4; /* Small padding for bevel */
-    int gw = w + padding * 2;
-    int gh = h + padding * 2;
-    int neededSize = gw * gh;
+    int gw = 0;
+    int gh = 0;
+    int neededSize = 0;
+    int newSize = 0;
+
+    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+        return;
+    }
 
     if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        int newSize = neededSize * 2;
         if (g_effectBuffer1) free(g_effectBuffer1);
         if (g_effectBuffer2) free(g_effectBuffer2);
         if (g_effectBuffer3) free(g_effectBuffer3);
@@ -390,14 +440,17 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
                       GlowColorCallback colorCb, void* userData) {
     /* 1. Dynamic Buffer Allocation */
     int padding = 20; /* Sufficient padding for wide glow */
-    int gw = w + padding * 2;
-    int gh = h + padding * 2;
-    int neededSize = gw * gh;
+    int gw = 0;
+    int gh = 0;
+    int neededSize = 0;
+    int newSize = 0;
+
+    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+        return;
+    }
 
     /* Ensure buffers are large enough */
     if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        int newSize = neededSize * 2;
-        
         if (g_effectBuffer1) free(g_effectBuffer1);
         if (g_effectBuffer2) free(g_effectBuffer2);
         if (g_effectBuffer3) free(g_effectBuffer3);
@@ -609,12 +662,16 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
     
     /* 1. Dynamic Buffer Allocation */
     int padding = 16;
-    int gw = w + padding * 2;
-    int gh = h + padding * 2;
-    int neededSize = gw * gh;
+    int gw = 0;
+    int gh = 0;
+    int neededSize = 0;
+    int newSize = 0;
+
+    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+        return;
+    }
 
     if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        int newSize = neededSize * 2;
         if (g_effectBuffer1) free(g_effectBuffer1);
         if (g_effectBuffer2) free(g_effectBuffer2);
         if (g_effectBuffer3) free(g_effectBuffer3);
@@ -888,16 +945,19 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
 
     /* 1. Dynamic Buffer Allocation (Extreme Memory Optimization) */
     int padding = 12;
-    int gw = w + padding * 2;
-    int gh = h + padding * 2;
-    int neededSize = gw * gh;
+    int gw = 0;
+    int gh = 0;
+    int neededSize = 0;
+    int newSize = 0;
+
+    if (!CalculateEffectBufferSize(w, h, padding, 1, &gw, &gh, &neededSize, &newSize)) {
+        return;
+    }
 
     /* Check if resize needed */
     if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
         /* Revert to standard 3-buffer allocation to maintain compatibility with other effects */
         /* Other effects assume if g_effectBufferSize is sufficient, ALL 3 buffers exist */
-        
-        int newSize = neededSize; 
         
         /* Free old buffers first, then allocate new ones to avoid realloc complexity */
         if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }

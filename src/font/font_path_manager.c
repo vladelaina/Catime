@@ -66,9 +66,10 @@ BOOL BuildFontConfigPath(const char* relativePath, char* outBuffer, size_t buffe
 
 BOOL BuildFullFontPath(const char* relativePath, char* outAbsolutePath, size_t bufferSize) {
     if (!relativePath || !outAbsolutePath || bufferSize == 0) return FALSE;
-    
+
     /* Check if path is already absolute (contains drive letter or starts with UNC) */
     if (strchr(relativePath, ':') || (strlen(relativePath) > 2 && relativePath[0] == '\\' && relativePath[1] == '\\')) {
+        if (strlen(relativePath) >= bufferSize) return FALSE;
         strncpy(outAbsolutePath, relativePath, bufferSize - 1);
         outAbsolutePath[bufferSize - 1] = '\0';
         return TRUE;
@@ -76,13 +77,14 @@ BOOL BuildFullFontPath(const char* relativePath, char* outAbsolutePath, size_t b
 
     wchar_t fontsFolderW[MAX_PATH] = {0};
     if (!GetFontsFolderW(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
-    
+
     wchar_t relativeW[MAX_PATH] = {0};
     if (!Utf8ToWide(relativePath, relativeW, MAX_PATH)) return FALSE;
-    
+
     wchar_t fullW[MAX_PATH] = {0};
-    _snwprintf_s(fullW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, relativeW);
-    
+    int written = _snwprintf_s(fullW, MAX_PATH, _TRUNCATE, L"%s\\%s", fontsFolderW, relativeW);
+    if (written < 0) return FALSE;
+
     return WideToUtf8(fullW, outAbsolutePath, bufferSize);
 }
 
@@ -145,12 +147,13 @@ const char* ExtractRelativePath(const char* fullConfigPath) {
  * @param resultCapacity Buffer size in wide characters
  * @return TRUE on first match
  */
-static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targetFileW, 
+static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targetFileW,
                                  wchar_t* resultPathW, size_t resultCapacity) {
     if (!folderPathW || !targetFileW || !resultPathW) return FALSE;
-    
+
     wchar_t searchPathW[MAX_PATH] = {0};
-    _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+    int searchWritten = _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
+    if (searchWritten < 0) return FALSE;
     
     WIN32_FIND_DATAW findDataW;
     HANDLE hFind = FindFirstFileW(searchPathW, &findDataW);
@@ -164,10 +167,11 @@ static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targ
             wcscmp(findDataW.cFileName, L"..") == 0) {
             continue;
         }
-        
+
         wchar_t fullItemPathW[MAX_PATH] = {0};
-        _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s", 
-                    folderPathW, findDataW.cFileName);
+        int itemWritten = _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s",
+                                       folderPathW, findDataW.cFileName);
+        if (itemWritten < 0) continue;
         
         if (!(findDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
             /* File: check if name matches */

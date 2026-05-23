@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <stdint.h>
 
 /* ============================================================================
  * Shared State (exported for plugin_exit.c)
@@ -37,6 +39,40 @@ static HANDLE g_hWatchStopEvent = NULL;
 static HANDLE g_hWatchWakeEvent = NULL;
 static HWND g_hNotifyWnd = NULL;
 static volatile BOOL g_isRunning = FALSE;
+
+static BOOL ParseNonNegativeIntLimitedA(const char* start, const char* end, int* outValue) {
+    int value = 0;
+    if (!start || !end || !outValue || start >= end) return FALSE;
+
+    while (start < end) {
+        int digit;
+        if (*start < '0' || *start > '9') return FALSE;
+        digit = *start - '0';
+        if (value > (INT_MAX - digit) / 10) return FALSE;
+        value = value * 10 + digit;
+        start++;
+    }
+
+    *outValue = value;
+    return TRUE;
+}
+
+static BOOL ParseNonNegativeIntLimitedW(const wchar_t* start, const wchar_t* end, int* outValue) {
+    int value = 0;
+    if (!start || !end || !outValue || start >= end) return FALSE;
+
+    while (start < end) {
+        int digit;
+        if (*start < L'0' || *start > L'9') return FALSE;
+        digit = (int)(*start - L'0');
+        if (value > (INT_MAX - digit) / 10) return FALSE;
+        value = value * 10 + digit;
+        start++;
+    }
+
+    *outValue = value;
+    return TRUE;
+}
 
 /* Cache for change detection */
 static char* g_lastContent = NULL;
@@ -94,14 +130,8 @@ static const char* ParseFpsTag(const char* content) {
         return content;  /* Invalid format */
     }
     
-    /* Extract fps value */
-    char numBuf[16] = {0};
-    size_t numLen = numEnd - numStart;
-    if (numLen >= sizeof(numBuf)) numLen = sizeof(numBuf) - 1;
-    strncpy(numBuf, numStart, numLen);
-    numBuf[numLen] = '\0';  /* Ensure null termination */
-    
-    int fps = atoi(numBuf);
+    int fps = 0;
+    ParseNonNegativeIntLimitedA(numStart, numEnd, &fps);
     if (fps > 0) {
         /* Convert fps to poll interval: interval = 1000 / fps */
         DWORD interval = 1000 / fps;
@@ -216,7 +246,7 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
             /* Check for timeout parameter (only for toast) */
             if (typeEnd < tagEnd && *typeEnd == L':') {
                 const wchar_t* timeoutStart = typeEnd + 1;
-                customTimeout = _wtoi(timeoutStart);
+                ParseNonNegativeIntLimitedW(timeoutStart, tagEnd, &customTimeout);
                 if (customTimeout < 0) customTimeout = 0;
                 if (customTimeout > 60000) customTimeout = 60000;  /* Max 60 seconds */
             }
@@ -291,7 +321,15 @@ static BOOL ParseContent(const char* content, size_t contentLen) {
     }
 
     /* Reallocate buffer if needed */
+    if (requiredLen > INT_MAX - 1) {
+        LeaveCriticalSection(&g_dataCS);
+        return FALSE;
+    }
     size_t requiredSize = (size_t)(requiredLen + 1);
+    if (requiredSize > SIZE_MAX / sizeof(wchar_t)) {
+        LeaveCriticalSection(&g_dataCS);
+        return FALSE;
+    }
     if (g_pluginDisplayText == NULL || g_pluginDisplayTextLen < requiredSize) {
         wchar_t* newBuf = (wchar_t*)realloc(g_pluginDisplayText, requiredSize * sizeof(wchar_t));
         if (!newBuf) {
@@ -721,7 +759,12 @@ void PluginData_SetText(const wchar_t* text) {
     
     EnterCriticalSection(&g_dataCS);
     
-    size_t textLen = wcslen(text) + 1;
+    size_t rawTextLen = wcslen(text);
+    if (rawTextLen > SIZE_MAX / sizeof(wchar_t) - 1) {
+        LeaveCriticalSection(&g_dataCS);
+        return;
+    }
+    size_t textLen = rawTextLen + 1;
     if (g_pluginDisplayText == NULL || g_pluginDisplayTextLen < textLen) {
         wchar_t* newBuf = (wchar_t*)realloc(g_pluginDisplayText, textLen * sizeof(wchar_t));
         if (newBuf) {

@@ -291,8 +291,21 @@ void CleanupDrawingRenderCache(void) {
     ClearMarkdownRenderCache();
 }
 
+static BOOL CalculatePixelCount(int width, int height, size_t* pixelCount) {
+    if (!pixelCount || width <= 0 || height <= 0) return FALSE;
+    if ((size_t)width > ((size_t)-1) / (size_t)height / sizeof(DWORD)) return FALSE;
+
+    *pixelCount = (size_t)width * (size_t)height;
+    return TRUE;
+}
+
 /** @note GM_ADVANCED + HALFTONE improve text quality on high-DPI displays */
 static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP* memBitmap, HBITMAP* oldBitmap, void** ppvBits) {
+    size_t pixelCount;
+    if (!rect || !CalculatePixelCount(rect->right, rect->bottom, &pixelCount)) {
+        return FALSE;
+    }
+
     *memDC = CreateCompatibleDC(hdc);
     if (!*memDC) {
         return FALSE;
@@ -337,9 +350,10 @@ static void FixAlphaChannel(void* bits, int width, int height) {
     if (!bits) return;
 
     DWORD* pixels = (DWORD*)bits;
-    int count = width * height;
+    size_t count;
+    if (!CalculatePixelCount(width, height, &count)) return;
 
-    for (int i = 0; i < count; i++) {
+    for (size_t i = 0; i < count; i++) {
         // Check if RGB is not black (0x00RRGGBB)
         if ((pixels[i] & 0x00FFFFFF) != 0) {
             // Only set Alpha to 255 if it's currently 0 (meaning it was drawn by GDI without alpha)
@@ -553,12 +567,21 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     // Manually clear background
     // Edit Mode: Alpha=5 to capture mouse click on background
     // Normal Mode: Alpha=0 for full transparency (clickable regions filled later)
-    int numPixels = rect.right * rect.bottom;
+    size_t numPixels = 0;
+    if (!CalculatePixelCount(rect.right, rect.bottom, &numPixels)) {
+        SelectObject(memDC, oldBitmap);
+        DeleteObject(memBitmap);
+        DeleteDC(memDC);
+        if (images) {
+            FreeMarkdownImages(images, imageCount);
+        }
+        return;
+    }
     DWORD* pixels = (DWORD*)pBits;
     DWORD clearColor = CLOCK_EDIT_MODE ? 0x05000000 : 0x00000000;
 
     // Simple loop is fast enough for small window
-    for (int i = 0; i < numPixels; i++) {
+    for (size_t i = 0; i < numPixels; i++) {
         pixels[i] = clearColor;
     }
 
@@ -724,23 +747,24 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
 
     if (needsAnimationTimer) {
         static UINT s_lastInterval = 0;
-        int pixelCount = rect.right * rect.bottom;
+        size_t pixelCount = 0;
+        CalculatePixelCount(rect.right, rect.bottom, &pixelCount);
 
         /* Holographic effect is significantly heavier (double Gaussian blur + per-pixel HSV)
          * and needs more aggressive throttling to prevent mouse lag */
         UINT newInterval;
         if (CLOCK_HOLOGRAPHIC_EFFECT) {
-            newInterval = (pixelCount < 30000) ? 50 :
-                          (pixelCount < 100000) ? 80 :
-                          (pixelCount < 300000) ? 120 : 200;
+            newInterval = (pixelCount < 30000u) ? 50 :
+                          (pixelCount < 100000u) ? 80 :
+                          (pixelCount < 300000u) ? 120 : 200;
         } else if (hasColorTagGradient) {
             /* Color tag gradient animation - use moderate interval */
-            newInterval = (pixelCount < 50000) ? 33 :
-                          (pixelCount < 200000) ? 50 : 80;
+            newInterval = (pixelCount < 50000u) ? 33 :
+                          (pixelCount < 200000u) ? 50 : 80;
         } else {
-            newInterval = (pixelCount < 50000) ? 33 :
-                          (pixelCount < 200000) ? 50 :
-                          (pixelCount < 500000) ? 80 : 120;
+            newInterval = (pixelCount < 50000u) ? 33 :
+                          (pixelCount < 200000u) ? 50 :
+                          (pixelCount < 500000u) ? 80 : 120;
         }
 
         if (newInterval != s_lastInterval) {
@@ -761,4 +785,3 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
         s_colorTagTimerActive = FALSE;
     }
 }
-

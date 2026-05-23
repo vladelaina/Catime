@@ -4,6 +4,7 @@
  */
 #include <windows.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "tray/tray.h"
 #include "language.h"
 #include "notification.h"
@@ -198,6 +199,11 @@ void ShowModalNotification(HWND hwnd, const wchar_t* message) {
     }
     
     size_t messageLen = wcslen(message) + 1;
+    if (messageLen > SIZE_MAX / sizeof(wchar_t)) {
+        free(params);
+        FallbackToTrayNotification(hwnd, message);
+        return;
+    }
     params->message = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
     if (!params->message) {
         free(params);
@@ -246,6 +252,11 @@ void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) 
     }
     
     size_t messageLen = wcslen(message) + 1;
+    if (messageLen > SIZE_MAX / sizeof(wchar_t)) {
+        free(notifData);
+        FallbackToTrayNotification(hwnd, message);
+        return;
+    }
     notifData->messageText = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
     if (!notifData->messageText) {
         free(notifData);

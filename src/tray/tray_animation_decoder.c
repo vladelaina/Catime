@@ -502,9 +502,15 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
                             } else {
                                 UINT offsetX = (canvasWidth > frameWidth) ? (canvasWidth - frameWidth) / 2 : 0;
                                 UINT offsetY = (canvasHeight > frameHeight) ? (canvasHeight - frameHeight) / 2 : 0;
-                                for (UINT y = 0; y < frameHeight && (offsetY + y) < canvasHeight; y++) {
+                                UINT copyWidth = (offsetX < canvasWidth) ? canvasWidth - offsetX : 0;
+                                if (copyWidth > frameWidth) {
+                                    copyWidth = frameWidth;
+                                }
+                                UINT copyBytes = copyWidth * 4;
+
+                                for (UINT y = 0; copyBytes > 0 && y < frameHeight && (offsetY + y) < canvasHeight; y++) {
                                     memcpy(anim->canvas + ((offsetY + y) * canvasStride) + (offsetX * 4),
-                                         frameBuffer + (y * frameStride), frameStride);
+                                         frameBuffer + (y * frameStride), copyBytes);
                                 }
                             }
                         }

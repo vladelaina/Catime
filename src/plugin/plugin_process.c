@@ -137,7 +137,15 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     if (interpreter) {
         /* Use CreateProcess with interpreter */
         wchar_t cmdLine[MAX_PATH * 2 + 256];
-        _snwprintf_s(cmdLine, MAX_PATH * 2 + 256, _TRUNCATE, L"%s \"%s\"", interpreter, plugin->path);
+        int written = _snwprintf_s(cmdLine, MAX_PATH * 2 + 256, _TRUNCATE,
+                                   L"%s \"%s\"", interpreter, plugin->path);
+        if (written < 0) {
+            LOG_ERROR("[Thread] Command line too long for plugin: %ls", plugin->path);
+            _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Path too long");
+            args->success = FALSE;
+            SetEvent(args->hReadyEvent);
+            return 0;
+        }
         LOG_INFO("[Thread] Command: %ls", cmdLine);
 
         STARTUPINFOW si = {0};

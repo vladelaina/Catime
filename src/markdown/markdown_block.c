@@ -4,6 +4,7 @@
  */
 
 #include "markdown/markdown_parser.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include "log.h"
@@ -168,7 +169,12 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
         // Extract number
         int num = 0;
         while (*p >= L'0' && *p <= L'9') {
-            num = num * 10 + (*p - L'0');
+            int digit = (int)(*p - L'0');
+            if (num <= (INT_MAX - digit) / 10) {
+                num = num * 10 + digit;
+            } else {
+                num = INT_MAX;
+            }
             p++;
         }
         p += 2;  // Skip ". "

@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <limits.h>
 
 /* ============================================================================
  * State
@@ -64,9 +66,19 @@ static DWORD WINAPI ExitCountdownThread(LPVOID lpParam) {
             size_t prefixLen = g_exitPrefix ? wcslen(g_exitPrefix) : 0;
             size_t suffixLen = g_exitSuffix ? wcslen(g_exitSuffix) : 0;
             size_t numLen = wcslen(countdownNum);
+            if (prefixLen > SIZE_MAX - numLen ||
+                prefixLen + numLen > SIZE_MAX - suffixLen ||
+                prefixLen + numLen + suffixLen > SIZE_MAX - 1) {
+                LeaveCriticalSection(g_dataCS);
+                return 0;
+            }
             size_t totalLen = prefixLen + numLen + suffixLen + 1;
-            
+
             if (g_pluginDisplayText == NULL || g_pluginDisplayTextLen < totalLen) {
+                if (totalLen > SIZE_MAX / sizeof(wchar_t)) {
+                    LeaveCriticalSection(g_dataCS);
+                    return 0;
+                }
                 wchar_t* newBuf = (wchar_t*)realloc(g_pluginDisplayText, totalLen * sizeof(wchar_t));
                 if (newBuf) {
                     g_pluginDisplayText = newBuf;
@@ -143,7 +155,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
     if (!text || !textLen) return FALSE;
 
     CleanupCompletedExitThreadHandle();
-    
+
     /* Cancel any existing countdown first to avoid race condition */
     if (g_exitInProgress) {
         PluginExit_Cancel();
@@ -177,13 +189,25 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
                 }
                 p++;
             }
-            
+
             if (validNumber) {
-                int parsed = _wtoi(numStart);
-                if (parsed > 0) {
-                    seconds = parsed;
-                } else {
-                    validNumber = FALSE;
+                int parsed = 0;
+                wchar_t* p = numStart;
+                while (p < end && *p >= L'0' && *p <= L'9') {
+                    int digit = (int)(*p - L'0');
+                    if (parsed > (INT_MAX - digit) / 10) {
+                        validNumber = FALSE;
+                        break;
+                    }
+                    parsed = parsed * 10 + digit;
+                    p++;
+                }
+                if (validNumber) {
+                    if (parsed > 0) {
+                        seconds = parsed;
+                    } else {
+                        validNumber = FALSE;
+                    }
                 }
             }
         }
@@ -200,6 +224,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
         g_exitPrefix = NULL;
     }
     if (prefixLen > 0) {
+        if (prefixLen > SIZE_MAX / sizeof(wchar_t) - 1) return FALSE;
         g_exitPrefix = (wchar_t*)malloc((prefixLen + 1) * sizeof(wchar_t));
         if (g_exitPrefix) {
             wcsncpy(g_exitPrefix, text, prefixLen);
@@ -217,6 +242,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
     }
     if (*suffixStart) {
         size_t suffixLen = wcslen(suffixStart);
+        if (suffixLen > SIZE_MAX / sizeof(wchar_t) - 1) return FALSE;
         g_exitSuffix = (wchar_t*)malloc((suffixLen + 1) * sizeof(wchar_t));
         if (g_exitSuffix) {
             wcsncpy(g_exitSuffix, suffixStart, suffixLen);
@@ -232,6 +258,11 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
     
     size_t suffixLen = wcslen(suffixStart);
     size_t numLen = wcslen(countdownNum);
+    if (prefixLen > SIZE_MAX - numLen ||
+        prefixLen + numLen > SIZE_MAX - suffixLen ||
+        prefixLen + numLen + suffixLen > SIZE_MAX - 1) {
+        return FALSE;
+    }
     size_t newLen = prefixLen + numLen + suffixLen + 1;
     
     if (newLen <= maxLen) {
@@ -245,7 +276,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
         ResetEvent(g_exitStopEvent);
     }
     g_exitInProgress = TRUE;
-    g_exitThread = CreateThread(NULL, 0, ExitCountdownThread, 
+    g_exitThread = CreateThread(NULL, 0, ExitCountdownThread,
                                 (LPVOID)(intptr_t)seconds, 0, NULL);
     if (!g_exitThread) {
         g_exitInProgress = FALSE;
@@ -262,7 +293,7 @@ void PluginExit_Cancel(void) {
     if (g_exitStopEvent) {
         SetEvent(g_exitStopEvent);
     }
-    
+
     /* Wait for thread */
     if (g_exitThread) {
         WaitForSingleObject(g_exitThread, INFINITE);
@@ -273,7 +304,7 @@ void PluginExit_Cancel(void) {
     if (g_exitStopEvent) {
         ResetEvent(g_exitStopEvent);
     }
-    
+
     /* Cleanup templates */
     if (g_exitPrefix) {
         free(g_exitPrefix);

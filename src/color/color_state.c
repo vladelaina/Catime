@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdint.h>
 #include "color/gradient.h"
 #include "color/color_state.h"
 #include "config.h"
@@ -35,6 +36,10 @@ static BOOL IsGradientColorString(const char* color) {
     return color && strchr(color, '_') != NULL;
 }
 
+static BOOL CanGrowColorOptions(void) {
+    return COLOR_OPTIONS_COUNT < SIZE_MAX / sizeof(PredefinedColor) - 1;
+}
+
 void AddColorOption(const char* hexColor) {
     if (!hexColor || !*hexColor) return;
 
@@ -46,6 +51,7 @@ void AddColorOption(const char* hexColor) {
         for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
             if (strcasecmp(COLOR_OPTIONS[i].hexColor, info->name) == 0) return;
         }
+        if (!CanGrowColorOptions()) return;
         PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
         if (newArray) {
             char* hexCopy = _strdup(info->name);
@@ -62,6 +68,7 @@ void AddColorOption(const char* hexColor) {
         for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
             if (strcasecmp(COLOR_OPTIONS[i].hexColor, hexColor) == 0) return;
         }
+        if (!CanGrowColorOptions()) return;
         PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
         if (newArray) {
             char* hexCopy = _strdup(hexColor);
@@ -87,6 +94,7 @@ void AddColorOption(const char* hexColor) {
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         if (strcasecmp(normalized, COLOR_OPTIONS[i].hexColor) == 0) return;
     }
+    if (!CanGrowColorOptions()) return;
     PredefinedColor* newArray = realloc(COLOR_OPTIONS, (COLOR_OPTIONS_COUNT + 1) * sizeof(PredefinedColor));
     if (newArray) {
         char* hexCopy = _strdup(normalized);

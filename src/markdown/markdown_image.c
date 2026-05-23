@@ -7,6 +7,7 @@
 #include "drawing/drawing_image.h"
 #include "plugin/plugin_data.h"
 #include "log.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -38,10 +39,12 @@ BOOL GetImageCacheDirectory(wchar_t* buffer, size_t bufferSize) {
 
     /* Build path: %TEMP%\Catime\images */
     wchar_t catimeDir[MAX_PATH];
-    _snwprintf_s(catimeDir, MAX_PATH, _TRUNCATE, L"%sCatime", tempDir);
+    int catimeWritten = _snwprintf_s(catimeDir, MAX_PATH, _TRUNCATE, L"%sCatime", tempDir);
+    if (catimeWritten < 0) return FALSE;
     CreateDirectoryW(catimeDir, NULL);
 
-    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%sCatime\\images", tempDir);
+    int imageDirWritten = _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%sCatime\\images", tempDir);
+    if (imageDirWritten < 0) return FALSE;
     CreateDirectoryW(buffer, NULL);
 
     return TRUE;
@@ -114,7 +117,8 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     GenerateCacheFilename(url, filename, 64);
 
     /* Build full cache path */
-    _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
+    int pathWritten = _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
+    if (pathWritten < 0) return FALSE;
 
     /* Check if already cached */
     if (GetFileAttributesW(localPath) != INVALID_FILE_ATTRIBUTES) {
@@ -204,7 +208,8 @@ BOOL IsImageCached(const wchar_t* url, wchar_t* localPath) {
     wchar_t filename[64];
     GenerateCacheFilename(url, filename, 64);
 
-    _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
+    int pathWritten = _snwprintf_s(localPath, MAX_PATH, _TRUNCATE, L"%s\\%s", cacheDir, filename);
+    if (pathWritten < 0) return FALSE;
 
     return (GetFileAttributesW(localPath) != INVALID_FILE_ATTRIBUTES);
 }
@@ -426,7 +431,10 @@ BOOL ResolveImagePath(MarkdownImage* image) {
     }
 
     wchar_t fullPath[MAX_PATH];
-    _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginsDir, path);
+    int written = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginsDir, path);
+    if (written < 0) {
+        return FALSE;
+    }
 
     image->resolvedPath = _wcsdup(fullPath);
     if (!image->resolvedPath) return FALSE;
@@ -465,6 +473,8 @@ int CountMarkdownImages(const wchar_t* input) {
 /**
  * @brief Parse size from ![WxH] or ![W] format
  */
+static BOOL ParsePositiveIntLimited(const wchar_t* text, size_t len, int* value);
+
 static void ParseImageSize(const wchar_t* sizeStr, size_t len, int* width, int* height) {
     *width = 0;
     *height = 0;
@@ -484,23 +494,44 @@ static void ParseImageSize(const wchar_t* sizeStr, size_t len, int* width, int* 
         /* WxH format */
         size_t wLen = xPos - sizeStr;
         if (wLen > 0 && wLen < 16) {
-            wchar_t widthStr[16] = {0};
-            wcsncpy(widthStr, sizeStr, wLen);
-            *width = _wtoi(widthStr);
+            ParsePositiveIntLimited(sizeStr, wLen, width);
         }
 
         size_t hLen = len - wLen - 1;
         if (hLen > 0 && hLen < 16) {
-            wchar_t heightStr[16] = {0};
-            wcsncpy(heightStr, xPos + 1, hLen);
-            *height = _wtoi(heightStr);
+            ParsePositiveIntLimited(xPos + 1, hLen, height);
         }
     } else if (len < 16) {
         /* Single number - treat as width, height auto */
-        wchar_t numStr[16] = {0};
-        wcsncpy(numStr, sizeStr, len);
-        *width = _wtoi(numStr);
+        ParsePositiveIntLimited(sizeStr, len, width);
     }
+}
+
+static BOOL ParsePositiveIntLimited(const wchar_t* text, size_t len, int* value) {
+    int result = 0;
+    if (!text || !value || len == 0) return FALSE;
+
+    for (size_t i = 0; i < len; i++) {
+        int digit;
+        if (text[i] < L'0' || text[i] > L'9') return FALSE;
+        digit = (int)(text[i] - L'0');
+        if (result > (INT_MAX - digit) / 10) return FALSE;
+        result = result * 10 + digit;
+    }
+
+    *value = result;
+    return result > 0;
+}
+
+static BOOL ScaleIntToInt(int value, float scale, int* outValue) {
+    double scaled;
+    if (!outValue || value <= 0 || scale <= 0.0f) return FALSE;
+
+    scaled = (double)value * (double)scale;
+    if (scaled <= 0.0 || scaled > (double)INT_MAX) return FALSE;
+
+    *outValue = (int)scaled;
+    return TRUE;
 }
 
 BOOL ExtractMarkdownImage(const wchar_t** src, MarkdownImage* images,
@@ -593,20 +624,30 @@ BOOL CalculateImageRenderSize(MarkdownImage* image, int maxWidth, int maxHeight,
     int targetW, targetH;
     if (image->specifiedWidth > 0 && image->specifiedHeight > 0) {
         /* User specified both dimensions */
-        targetW = (int)(image->specifiedWidth * scale);
-        targetH = (int)(image->specifiedHeight * scale);
+        if (!ScaleIntToInt(image->specifiedWidth, scale, &targetW) ||
+            !ScaleIntToInt(image->specifiedHeight, scale, &targetH)) {
+            return FALSE;
+        }
     } else if (image->specifiedWidth > 0) {
         /* User specified width only - calculate height from aspect ratio */
-        targetW = (int)(image->specifiedWidth * scale);
-        targetH = (int)(imgH * ((float)targetW / imgW));
+        double computedH;
+        if (!ScaleIntToInt(image->specifiedWidth, scale, &targetW)) return FALSE;
+        computedH = (double)imgH * ((double)targetW / (double)imgW);
+        if (computedH <= 0.0 || computedH > (double)INT_MAX) return FALSE;
+        targetH = (int)computedH;
     } else if (image->specifiedHeight > 0) {
         /* User specified height only - calculate width from aspect ratio */
-        targetH = (int)(image->specifiedHeight * scale);
-        targetW = (int)(imgW * ((float)targetH / imgH));
+        double computedW;
+        if (!ScaleIntToInt(image->specifiedHeight, scale, &targetH)) return FALSE;
+        computedW = (double)imgW * ((double)targetH / (double)imgH);
+        if (computedW <= 0.0 || computedW > (double)INT_MAX) return FALSE;
+        targetW = (int)computedW;
     } else {
         /* No size specified - use original image size with scale */
-        targetW = (int)(imgW * scale);
-        targetH = (int)(imgH * scale);
+        if (!ScaleIntToInt(imgW, scale, &targetW) ||
+            !ScaleIntToInt(imgH, scale, &targetH)) {
+            return FALSE;
+        }
     }
 
     /* Clamp to max bounds */
@@ -618,8 +659,10 @@ BOOL CalculateImageRenderSize(MarkdownImage* image, int maxWidth, int maxHeight,
     float scaleY = (float)targetH / imgH;
     float fitScale = (scaleX < scaleY) ? scaleX : scaleY;
 
-    *outWidth = (int)(imgW * fitScale);
-    *outHeight = (int)(imgH * fitScale);
+    if (!ScaleIntToInt(imgW, fitScale, outWidth) ||
+        !ScaleIntToInt(imgH, fitScale, outHeight)) {
+        return FALSE;
+    }
 
     return TRUE;
 }

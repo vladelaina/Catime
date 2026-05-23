@@ -5,6 +5,7 @@
 
 #include "markdown/markdown_parser.h"
 #include "utils/url_safety.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -21,8 +22,10 @@
     do { \
         if (!state) return FALSE; \
         if ((state)->count_field < (state)->capacity_field) return TRUE; \
+        if ((state)->capacity_field <= 0 || (state)->capacity_field > INT_MAX / 2) return FALSE; \
         int newCapacity = (state)->capacity_field * 2; \
-        type* newArray = (type*)realloc((state)->field, newCapacity * sizeof(type)); \
+        if ((size_t)newCapacity > ((size_t)-1) / sizeof(type)) return FALSE; \
+        type* newArray = (type*)realloc((state)->field, (size_t)newCapacity * sizeof(type)); \
         if (!newArray) return FALSE; \
         (state)->field = newArray; \
         (state)->capacity_field = newCapacity; \

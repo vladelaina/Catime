@@ -5,6 +5,7 @@
 
 #include "font/font_ttf_parser.h"
 #include "utils/string_convert.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -55,8 +56,22 @@ static inline WORD SwapWORD(WORD value) {
 }
 
 static inline DWORD SwapDWORD(DWORD value) {
-    return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) | 
+    return ((value & 0xFF) << 24) | ((value & 0xFF00) << 8) |
            ((value & 0xFF0000) >> 8) | ((value & 0xFF000000) >> 24);
+}
+
+static BOOL RangeInFile(DWORD offset, DWORD length, DWORD fileSize) {
+    return offset <= fileSize && length <= fileSize - offset;
+}
+
+static BOOL RangeInTable(DWORD relativeOffset, DWORD length, DWORD tableLength) {
+    return relativeOffset <= tableLength && length <= tableLength - relativeOffset;
+}
+
+static BOOL SeekFileOffset(HANDLE hFile, DWORD offset) {
+    LARGE_INTEGER distance;
+    distance.QuadPart = offset;
+    return SetFilePointerEx(hFile, distance, NULL, FILE_BEGIN);
 }
 
 /* ============================================================================
@@ -72,10 +87,10 @@ static inline DWORD SwapDWORD(DWORD value) {
  * @param outLength Output: table length
  * @return TRUE if table found
  */
-static BOOL FindTTFTable(HANDLE hFile, WORD numTables, DWORD targetTag, 
+static BOOL FindTTFTable(HANDLE hFile, WORD numTables, DWORD targetTag, DWORD fileSize,
                          DWORD* outOffset, DWORD* outLength) {
     if (hFile == INVALID_HANDLE_VALUE || !outOffset || !outLength) return FALSE;
-    
+
     for (WORD i = 0; i < numTables; i++) {
         TableRecord tableRecord;
         DWORD bytesRead;
@@ -88,10 +103,10 @@ static BOOL FindTTFTable(HANDLE hFile, WORD numTables, DWORD targetTag,
         if (tableRecord.tag == targetTag) {
             *outOffset = SwapDWORD(tableRecord.offset);
             *outLength = SwapDWORD(tableRecord.length);
-            return TRUE;
+            return RangeInFile(*outOffset, *outLength, fileSize);
         }
     }
-    
+
     return FALSE;
 }
 
@@ -145,7 +160,18 @@ static void ParseFontName(const char* stringData, size_t dataLength, BOOL isUnic
  */
 static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontNameSize) {
     if (hFile == INVALID_HANDLE_VALUE || !fontName || fontNameSize == 0) return FALSE;
-    
+
+    LARGE_INTEGER fileSizeLarge;
+    if (!GetFileSizeEx(hFile, &fileSizeLarge) ||
+        fileSizeLarge.QuadPart < 0 ||
+        fileSizeLarge.QuadPart > MAXDWORD) {
+        return FALSE;
+    }
+    DWORD fileSize = (DWORD)fileSizeLarge.QuadPart;
+    if (!RangeInFile(0, sizeof(FontDirectoryHeader), fileSize)) {
+        return FALSE;
+    }
+
     /* Read font directory header */
     FontDirectoryHeader fontHeader;
     DWORD bytesRead;
@@ -154,18 +180,31 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
         bytesRead != sizeof(FontDirectoryHeader)) {
         return FALSE;
     }
-    
+
     fontHeader.numTables = SwapWORD(fontHeader.numTables);
-    
+
+    if ((DWORD)fontHeader.numTables > (MAXDWORD - sizeof(FontDirectoryHeader)) / sizeof(TableRecord)) {
+        return FALSE;
+    }
+    DWORD tableDirectorySize = sizeof(FontDirectoryHeader) +
+                               (DWORD)fontHeader.numTables * sizeof(TableRecord);
+    if (!RangeInFile(0, tableDirectorySize, fileSize)) {
+        return FALSE;
+    }
+
     /* Locate 'name' table */
     DWORD nameTableOffset = 0, nameTableLength = 0;
-    if (!FindTTFTable(hFile, fontHeader.numTables, TTF_NAME_TABLE_TAG, 
+    if (!FindTTFTable(hFile, fontHeader.numTables, TTF_NAME_TABLE_TAG, fileSize,
                      &nameTableOffset, &nameTableLength)) {
         return FALSE;
     }
-    
+    if (nameTableLength < sizeof(NameTableHeader) ||
+        !RangeInFile(nameTableOffset, nameTableLength, fileSize)) {
+        return FALSE;
+    }
+
     /* Seek to name table */
-    if (SetFilePointer(hFile, nameTableOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+    if (!SeekFileOffset(hFile, nameTableOffset)) {
         return FALSE;
     }
     
@@ -175,10 +214,20 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
         bytesRead != sizeof(NameTableHeader)) {
         return FALSE;
     }
-    
+
     nameHeader.count = SwapWORD(nameHeader.count);
     nameHeader.stringOffset = SwapWORD(nameHeader.stringOffset);
-    
+
+    if ((DWORD)nameHeader.count > (MAXDWORD - sizeof(NameTableHeader)) / sizeof(NameRecord)) {
+        return FALSE;
+    }
+    DWORD recordsSize = (DWORD)nameHeader.count * sizeof(NameRecord);
+    if (!RangeInTable(sizeof(NameTableHeader), recordsSize, nameTableLength) ||
+        nameHeader.stringOffset < sizeof(NameTableHeader) + recordsSize ||
+        nameHeader.stringOffset > nameTableLength) {
+        return FALSE;
+    }
+
     /* Search for font family name (ID=1) */
     BOOL foundName = FALSE;
     WORD nameLength = 0, nameOffset = 0;
@@ -198,9 +247,14 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
         nameRecord.nameID = SwapWORD(nameRecord.nameID);
         nameRecord.length = SwapWORD(nameRecord.length);
         nameRecord.offset = SwapWORD(nameRecord.offset);
-        
+
         /* Look for family name (ID=1) */
         if (nameRecord.nameID == TTF_NAME_ID_FAMILY) {
+            DWORD stringDataLength = nameTableLength - nameHeader.stringOffset;
+            if (!RangeInTable(nameRecord.offset, nameRecord.length, stringDataLength)) {
+                continue;
+            }
+
             /* Prefer Windows Unicode (platform 3, encoding 1) */
             if (nameRecord.platformID == 3 && nameRecord.encodingID == 1) {
                 nameLength = nameRecord.length;
@@ -219,12 +273,16 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
     }
     
     if (!foundName) return FALSE;
-    
+
     /* Seek to string data */
-    DWORD stringDataOffset = nameTableOffset + sizeof(NameTableHeader) + 
-                            nameHeader.count * sizeof(NameRecord) + nameOffset;
-    
-    if (SetFilePointer(hFile, stringDataOffset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+    DWORD stringRelativeOffset = (DWORD)nameHeader.stringOffset + nameOffset;
+    if (!RangeInTable(stringRelativeOffset, nameLength, nameTableLength) ||
+        !RangeInFile(nameTableOffset + stringRelativeOffset, nameLength, fileSize)) {
+        return FALSE;
+    }
+    DWORD stringDataOffset = nameTableOffset + stringRelativeOffset;
+
+    if (!SeekFileOffset(hFile, stringDataOffset)) {
         return FALSE;
     }
     

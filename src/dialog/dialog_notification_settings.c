@@ -105,6 +105,7 @@ static void UpdatePreviewNotificationText(HWND hwndDlg, const wchar_t* newText) 
     PreviewNotificationData* data = (PreviewNotificationData*)GetWindowLongPtr(g_hwndPreviewNotification, GWLP_USERDATA);
     if (data && data->messageText) {
         size_t newLen = wcslen(newText) + 1;
+        if (newLen > ((size_t)-1) / sizeof(wchar_t)) return;
         wchar_t* newBuffer = (wchar_t*)realloc(data->messageText, newLen * sizeof(wchar_t));
         if (newBuffer) {
             data->messageText = newBuffer;

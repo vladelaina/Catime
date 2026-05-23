@@ -42,6 +42,17 @@ static int g_fontCacheAccessCounter = 0;
 /* Forward declaration for font cache cleanup */
 void ClearFontCacheSTB(void);
 
+static BOOL CalculateBitmapPixelCount(int width, int height, size_t* outPixelCount) {
+    if (!outPixelCount || width <= 0 || height <= 0) return FALSE;
+
+    size_t sw = (size_t)width;
+    size_t sh = (size_t)height;
+    if (sw > (size_t)-1 / sh) return FALSE;
+
+    *outPixelCount = sw * sh;
+    return TRUE;
+}
+
 /* Accessors for external modules */
 BOOL IsFontLoadedSTB(void) { return g_fontLoaded; }
 BOOL IsFallbackFontLoadedSTB(void) { return g_fallbackFontLoaded; }
@@ -213,11 +224,19 @@ BOOL InitFontSTB(const char* fontFilePath) {
 /**
  * @brief Blend a single character bitmap into the destination buffer
  */
-void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight, 
-                          int x_pos, int y_pos, 
+void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
+                          int x_pos, int y_pos,
                           const unsigned char* bitmap, int w, int h,
                           int r, int g, int b) {
     DWORD* pixels = (DWORD*)destBits;
+    size_t destPixelCount = 0;
+    size_t bitmapPixelCount = 0;
+
+    if (!pixels || !bitmap ||
+        !CalculateBitmapPixelCount(destWidth, destHeight, &destPixelCount) ||
+        !CalculateBitmapPixelCount(w, h, &bitmapPixelCount)) {
+        return;
+    }
 
     /* Determine active effect (supports live preview) */
     EffectType effect = GetActiveEffect();
@@ -258,7 +277,11 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
             int screen_y = y_pos + j;
 
             if (screen_x >= 0 && screen_x < destWidth && screen_y >= 0 && screen_y < destHeight) {
-                unsigned char alpha = bitmap[j * w + i];
+                size_t srcIndex = (size_t)j * (size_t)w + (size_t)i;
+                size_t destIndex = (size_t)screen_y * (size_t)destWidth + (size_t)screen_x;
+                if (srcIndex >= bitmapPixelCount || destIndex >= destPixelCount) continue;
+
+                unsigned char alpha = bitmap[srcIndex];
                 if (alpha == 0) continue;
 
                 /* Calculate premultiplied color values for UpdateLayeredWindow */
@@ -267,12 +290,12 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
                 DWORD finalB = (b * alpha) / 255;
                 DWORD finalA = (DWORD)alpha;
 
-                DWORD currentPixel = pixels[screen_y * destWidth + screen_x];
+                DWORD currentPixel = pixels[destIndex];
                 DWORD currentA = (currentPixel >> 24) & 0xFF;
-                
+
                 /* If new pixel is more opaque, overwrite */
                 if (alpha > currentA) {
-                    pixels[screen_y * destWidth + screen_x] = 
+                    pixels[destIndex] =
                         (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
                 }
             }
@@ -394,13 +417,21 @@ static void InitializeGradientLUT(const GradientInfo* info) {
     g_lutType = info->type;
 }
 
-void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
-                                int x_pos, int y_pos, 
+void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
+                                int x_pos, int y_pos,
                                 const unsigned char* bitmap, int w, int h,
                                 int startX, int totalWidth, int gradientType,
                                 int timeOffset) {
     DWORD* pixels = (DWORD*)destBits;
-    
+    size_t destPixelCount = 0;
+    size_t bitmapPixelCount = 0;
+
+    if (!pixels || !bitmap ||
+        !CalculateBitmapPixelCount(destWidth, destHeight, &destPixelCount) ||
+        !CalculateBitmapPixelCount(w, h, &bitmapPixelCount)) {
+        return;
+    }
+
     const GradientInfo* info = GetGradientInfo((GradientType)gradientType);
     // Allow isAnimated check to gate LUT logic
     if (!info && !IsGradientAnimated((GradientType)gradientType)) return;
@@ -515,8 +546,12 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         if (start_i >= end_i) continue;
 
         /* Pointers */
-        DWORD* destRow = pixels + (screen_y * destWidth) + (x_pos + start_i);
-        const unsigned char* srcRow = bitmap + (j * w) + start_i;
+        size_t destIndex = (size_t)screen_y * (size_t)destWidth + (size_t)(x_pos + start_i);
+        size_t srcIndex = (size_t)j * (size_t)w + (size_t)start_i;
+        if (destIndex >= destPixelCount || srcIndex >= bitmapPixelCount) continue;
+
+        DWORD* destRow = pixels + destIndex;
+        const unsigned char* srcRow = bitmap + srcIndex;
 
         /* Pre-calculate starting LUT index for this row if Animated */
         float currentLutIdxFloat = 0.0f;
@@ -760,7 +795,7 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
  */
 static BOOL ResolveFontTagPath(const wchar_t* fontPath, char* outPath, size_t pathSize) {
     if (!fontPath || !outPath || pathSize == 0) return FALSE;
-    
+
     wchar_t expandedPath[MAX_PATH];
     wchar_t resolvedPath[MAX_PATH];
     
@@ -769,10 +804,13 @@ static BOOL ResolveFontTagPath(const wchar_t* fontPath, char* outPath, size_t pa
         DWORD result = ExpandEnvironmentStringsW(fontPath, expandedPath, MAX_PATH);
         if (result == 0 || result > MAX_PATH) {
             LOG_WARNING("Failed to expand environment variables in font path: %ls", fontPath);
-            wcsncpy(expandedPath, fontPath, MAX_PATH - 1);
-            expandedPath[MAX_PATH - 1] = L'\0';
+            return FALSE;
         }
     } else {
+        if (wcslen(fontPath) >= MAX_PATH) {
+            LOG_WARNING("Font path is too long: %ls", fontPath);
+            return FALSE;
+        }
         wcsncpy(expandedPath, fontPath, MAX_PATH - 1);
         expandedPath[MAX_PATH - 1] = L'\0';
     }
@@ -791,16 +829,29 @@ static BOOL ResolveFontTagPath(const wchar_t* fontPath, char* outPath, size_t pa
     }
     
     if (isAbsolute) {
+        if (wcslen(expandedPath) >= MAX_PATH) {
+            LOG_WARNING("Resolved font path is too long: %ls", expandedPath);
+            return FALSE;
+        }
         wcsncpy(resolvedPath, expandedPath, MAX_PATH - 1);
         resolvedPath[MAX_PATH - 1] = L'\0';
     } else {
         /* Step 3: Resolve relative path against plugins directory */
         wchar_t pluginsDir[MAX_PATH];
         if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, pluginsDir))) {
-            _snwprintf_s(resolvedPath, MAX_PATH, _TRUNCATE, 
-                        L"%ls\\Catime\\resources\\plugins\\%ls", pluginsDir, expandedPath);
+            int written = _snwprintf_s(resolvedPath, MAX_PATH, _TRUNCATE,
+                                       L"%ls\\Catime\\resources\\plugins\\%ls",
+                                       pluginsDir, expandedPath);
+            if (written < 0) {
+                LOG_WARNING("Resolved font path is too long: %ls", expandedPath);
+                return FALSE;
+            }
         } else {
             /* Fallback: try current directory */
+            if (wcslen(expandedPath) >= MAX_PATH) {
+                LOG_WARNING("Font path is too long: %ls", expandedPath);
+                return FALSE;
+            }
             wcsncpy(resolvedPath, expandedPath, MAX_PATH - 1);
             resolvedPath[MAX_PATH - 1] = L'\0';
         }

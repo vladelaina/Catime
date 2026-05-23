@@ -168,6 +168,8 @@ BOOL HasClickableRegions(void) {
 
 void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
     if (g_initialized != INTERACTIVE_CS_INITIALIZED || !pixels) return;
+    if (width <= 0 || height <= 0 ||
+        (size_t)width > ((size_t)-1) / (size_t)height / sizeof(DWORD)) return;
     EnterCriticalSection(&g_interactiveCS);
     
     /* Fill each clickable region with minimal alpha so Windows sends mouse messages */
@@ -183,7 +185,7 @@ void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
         /* Fill region pixels with minimal alpha if they're transparent */
         for (int y = top; y < bottom; y++) {
             for (int x = left; x < right; x++) {
-                DWORD* pixel = &pixels[y * width + x];
+                DWORD* pixel = &pixels[(size_t)y * (size_t)width + (size_t)x];
                 /* Only set alpha if pixel is fully transparent */
                 if ((*pixel & 0xFF000000) == 0) {
                     *pixel = 0x01000000;  /* Minimal alpha, invisible */

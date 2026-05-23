@@ -79,6 +79,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     if (!mdTagStart || !mdTagEnd || mdTagEnd <= mdTagStart) {
         if (!hasRichTextTags) {
             size_t len = wcslen(input);
+            if (len > (SIZE_MAX / sizeof(wchar_t)) - 1) return FALSE;
             *displayText = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
             if (!*displayText) return FALSE;
             wcscpy_s(*displayText, len + 1, input);
@@ -179,6 +180,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     size_t afterLen = wcslen(afterStart);
     
     // Create a modifiable copy of just the markdown content for parsing
+    if (contentLen > (SIZE_MAX / sizeof(wchar_t)) - 1) return FALSE;
     wchar_t* mdContent = (wchar_t*)malloc((contentLen + 1) * sizeof(wchar_t));
     if (!mdContent) return FALSE;
     wcsncpy(mdContent, contentStart, contentLen);
