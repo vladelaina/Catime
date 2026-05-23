@@ -47,8 +47,6 @@ extern void HandleStartupMode(HWND hwnd);
 extern TextEffectType CLOCK_TEXT_EFFECT;
 
 extern wchar_t inputText[256];
-extern int time_options[];
-extern int time_options_count;
 extern size_t COLOR_OPTIONS_COUNT;
 extern PredefinedColor* COLOR_OPTIONS;
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];

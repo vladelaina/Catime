@@ -21,6 +21,7 @@
 #include "drag_scale.h"
 #include "tray/tray_animation_core.h"
 #include "utils/string_convert.h"
+#include "utils/url_safety.h"
 #include "log.h"
 #include "window/window_desktop_integration.h"
 
@@ -81,14 +82,49 @@ static inline void ResetTimerState(int newTotalTime) {
 
 typedef struct {
     TimeoutActionType action;
-    const char* command;
+    const wchar_t* executable;
+    const wchar_t* arguments;
 } SystemActionConfig;
 
 static const SystemActionConfig SYSTEM_ACTIONS[] = {
-    {TIMEOUT_ACTION_SLEEP,    "rundll32.exe powrprof.dll,SetSuspendState 0,1,0"},
-    {TIMEOUT_ACTION_SHUTDOWN, "shutdown /s /t 0"},
-    {TIMEOUT_ACTION_RESTART,  "shutdown /r /t 0"},
+    {TIMEOUT_ACTION_SLEEP,    L"rundll32.exe", L"rundll32.exe powrprof.dll,SetSuspendState 0,1,0"},
+    {TIMEOUT_ACTION_SHUTDOWN, L"shutdown.exe", L"shutdown.exe /s /t 0"},
+    {TIMEOUT_ACTION_RESTART,  L"shutdown.exe", L"shutdown.exe /r /t 0"},
 };
+
+static BOOL StartSystemActionProcess(const SystemActionConfig* config) {
+    if (!config || !config->executable || !config->arguments) {
+        return FALSE;
+    }
+
+    wchar_t commandLine[256];
+    wcsncpy(commandLine, config->arguments, _countof(commandLine) - 1);
+    commandLine[_countof(commandLine) - 1] = L'\0';
+
+    STARTUPINFOW startupInfo = {0};
+    startupInfo.cb = sizeof(startupInfo);
+
+    PROCESS_INFORMATION processInfo = {0};
+    BOOL started = CreateProcessW(
+        config->executable,
+        commandLine,
+        NULL,
+        NULL,
+        FALSE,
+        CREATE_NO_WINDOW,
+        NULL,
+        NULL,
+        &startupInfo,
+        &processInfo
+    );
+
+    if (started) {
+        CloseHandle(processInfo.hThread);
+        CloseHandle(processInfo.hProcess);
+    }
+
+    return started;
+}
 
 static BOOL ExecuteSystemAction(HWND hwnd, TimeoutActionType action) {
     for (size_t i = 0; i < sizeof(SYSTEM_ACTIONS) / sizeof(SYSTEM_ACTIONS[0]); i++) {
@@ -96,11 +132,10 @@ static BOOL ExecuteSystemAction(HWND hwnd, TimeoutActionType action) {
             ResetTimerState(0);
             MainTimer_Stop();
             ForceWindowRedraw(hwnd);
-            
-            int result = system(SYSTEM_ACTIONS[i].command);
-            if (result != 0) {
-                LOG_WARNING("System action '%s' failed (code: %d). May need administrator privileges.", 
-                           SYSTEM_ACTIONS[i].command, result);
+
+            if (!StartSystemActionProcess(&SYSTEM_ACTIONS[i])) {
+                LOG_WARNING("System action failed to start (error: %lu). May need administrator privileges.",
+                            GetLastError());
             }
             
             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
@@ -271,6 +306,10 @@ static void HandleTimeoutActions(HWND hwnd) {
                 wchar_t wUrl[MAX_PATH];
                 if (MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH) <= 0) {
                     LOG_WARNING("Failed to convert timeout website URL: %s", CLOCK_TIMEOUT_WEBSITE_URL);
+                    break;
+                }
+                if (!IsSafeOpenUrlW(wUrl)) {
+                    LOG_WARNING("Blocked unsafe timeout website URL: %s", CLOCK_TIMEOUT_WEBSITE_URL);
                     break;
                 }
                 HINSTANCE result = ShellExecuteW(NULL, L"open", wUrl, NULL, NULL, SW_NORMAL);

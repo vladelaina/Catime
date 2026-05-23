@@ -24,8 +24,6 @@
 #include <string.h>
 
 extern wchar_t inputText[256];
-extern int time_options[];
-extern int time_options_count;
 
 /* ============================================================================
  * Custom Countdown

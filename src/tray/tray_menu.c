@@ -33,12 +33,6 @@
 /* External dependencies needed for menu display logic */
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern BOOL CLOCK_EDIT_MODE;
-extern int CLOCK_TOTAL_TIME;
-extern int countdown_elapsed_time;
-
-/* Pomodoro globals */
-extern int time_options_count;
-extern int time_options[];
 
 /* Function to format time string (extern from tray_menu_pomodoro.c or similar) */
 extern void FormatPomodoroTime(int minutes, wchar_t* buffer, size_t size);

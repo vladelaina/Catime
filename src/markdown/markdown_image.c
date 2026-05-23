@@ -16,6 +16,9 @@
 #pragma comment(lib, "wininet.lib")
 #endif
 
+#define IMAGE_DOWNLOAD_TIMEOUT_MS 10000
+#define IMAGE_SHUTDOWN_WAIT_MS 15000
+
 /* ============================================================================
  * Path Resolution
  * ============================================================================ */
@@ -128,6 +131,11 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
         LOG_ERROR("Failed to open Internet session");
         return FALSE;
     }
+
+    DWORD timeoutMs = IMAGE_DOWNLOAD_TIMEOUT_MS;
+    InternetSetOptionW(hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
+    InternetSetOptionW(hInternet, INTERNET_OPTION_SEND_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
+    InternetSetOptionW(hInternet, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
 
     /* Open URL */
     HINTERNET hUrl = InternetOpenUrlW(hInternet, url, NULL, 0,
@@ -648,7 +656,11 @@ void ShutdownMarkdownImage(void) {
     InterlockedExchange(&g_downloadShutdown, 1);
 
     if (g_downloadIdleEvent && InterlockedCompareExchange(&g_activeDownloadCount, 0, 0) > 0) {
-        WaitForSingleObject(g_downloadIdleEvent, INFINITE);
+        DWORD waitResult = WaitForSingleObject(g_downloadIdleEvent, IMAGE_SHUTDOWN_WAIT_MS);
+        if (waitResult != WAIT_OBJECT_0) {
+            LOG_WARNING("Timed out waiting for markdown image downloads to finish");
+            return;
+        }
     }
 
     if (g_downloadCSInit == 2) {

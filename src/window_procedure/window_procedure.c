@@ -39,8 +39,6 @@
  * ============================================================================ */
 
 extern UINT WM_TASKBARCREATED;
-extern int time_options[];
-extern int time_options_count;
 extern BOOL PREVIOUS_TOPMOST_STATE;
 
 #define OPACITY_FULL 255
@@ -451,4 +449,3 @@ void ToggleWindowVisibility(HWND hwnd) {
         SetForegroundWindow(hwnd);
     }
 }
-

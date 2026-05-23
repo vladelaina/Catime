@@ -295,22 +295,7 @@ BOOL PluginProcess_Init(void) {
             return FALSE;
         }
 
-        /* Add Catime itself to the Job Object */
-        /* This ensures: when Catime exits (normal or crash), Job handle closes, */
-        /* triggering KILL_ON_JOB_CLOSE to terminate all plugin processes */
-        if (!AssignProcessToJobObject(g_hJob, GetCurrentProcess())) {
-            DWORD error = GetLastError();
-            /* Error 5 (Access Denied) means we're already in a job - that's OK on Windows 8+ */
-            if (error != 5) {
-                LOG_WARNING("[Process] Failed to add Catime to Job: %lu", error);
-            } else {
-                LOG_INFO("[Process] Catime already in a job (nested jobs supported on Win8+)");
-            }
-        } else {
-            LOG_INFO("[Process] Catime added to Job Object");
-        }
-
-        LOG_INFO("[Process] Job Object initialized (plugins will be killed on Catime exit/crash)");
+        LOG_INFO("[Process] Job Object initialized for plugin cleanup");
         return TRUE;
     }
     LOG_ERROR("[Process] Failed to create Job Object, error: %lu", GetLastError());
@@ -444,8 +429,8 @@ static void TerminateAllJobProcesses(void) {
     QueryInformationJobObject(g_hJob, JobObjectBasicProcessIdList,
                               &pidList, sizeof(pidList), &returnLength);
 
-    if (pidList.NumberOfAssignedProcesses <= 1) {
-        /* Only Catime itself (or empty), nothing to terminate */
+    if (pidList.NumberOfAssignedProcesses == 0) {
+        /* No plugin processes assigned */
         return;
     }
 
@@ -462,7 +447,7 @@ static void TerminateAllJobProcesses(void) {
 
     if (QueryInformationJobObject(g_hJob, JobObjectBasicProcessIdList,
                                   fullList, (DWORD)bufSize, &returnLength)) {
-        /* Terminate all processes except Catime itself */
+        /* Terminate assigned plugin processes; skip Catime defensively. */
         DWORD catimePid = GetCurrentProcessId();
         for (DWORD i = 0; i < fullList->NumberOfProcessIdsInList; i++) {
             DWORD childPid = (DWORD)fullList->ProcessIdList[i];

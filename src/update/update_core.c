@@ -20,6 +20,7 @@
 #endif
 
 #define MAX_HTTP_RESPONSE_SIZE (1024 * 1024)
+#define HTTP_TIMEOUT_MS 10000
 
 /* Thin wrappers using utils/string_convert.h */
 static inline wchar_t* LocalUtf8ToWideAlloc(const char* utf8Str) {
@@ -42,6 +43,11 @@ static BOOL InitHttpResources(HttpResources* res) {
         LOG_ERROR("Failed to create Internet session (error code: %lu)", GetLastError());
         return FALSE;
     }
+
+    DWORD timeoutMs = HTTP_TIMEOUT_MS;
+    InternetSetOptionW(res->hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
+    InternetSetOptionW(res->hInternet, INTERNET_OPTION_SEND_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
+    InternetSetOptionW(res->hInternet, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
 
     LOG_INFO("Internet session created successfully");
     return TRUE;

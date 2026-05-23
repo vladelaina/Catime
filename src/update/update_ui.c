@@ -238,6 +238,16 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     g_notesBlockquotes = NULL;
                 }
                 g_notesBlockquoteCount = 0;
+                if (g_notesColorTags) {
+                    free(g_notesColorTags);
+                    g_notesColorTags = NULL;
+                }
+                g_notesColorTagCount = 0;
+                if (g_notesFontTags) {
+                    free(g_notesFontTags);
+                    g_notesFontTags = NULL;
+                }
+                g_notesFontTagCount = 0;
                 if (g_notesDisplayText) {
                     free(g_notesDisplayText);
                     g_notesDisplayText = NULL;

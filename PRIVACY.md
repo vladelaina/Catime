@@ -41,7 +41,7 @@ Catime only saves the following information locally in `%LOCALAPPDATA%\Catime\`:
    * `plugins\` - Plugin output files
 
 4. **Plugin Data**
-   If you use the plugin feature, plugins may read/write data to `resources\plugins\output.txt`. Plugins run locally and Catime does **not** transmit any plugin data over the network.
+   If you use the plugin feature, plugins may read/write data to `resources\plugins\output.txt`. Plugins run locally. Catime does **not** upload plugin data, but if plugin or Markdown content references a remote image URL, Catime may request that image URL to display it.
 
 ### Network Access Information
 
@@ -51,6 +51,9 @@ Catime only accesses the internet in the following circumstances:
   Catime automatically checks for updates on startup and also supports manual update checking. The program connects to the GitHub API:
   `https://api.github.com/repos/vladelaina/Catime/releases/latest`
   It only sends basic HTTP requests and the user agent string `"Catime Update Checker"`, **without any personal data**.
+
+* **Remote Images in Plugin or Markdown Content**
+  If plugin or Markdown content references an `http://` or `https://` image URL, Catime may download that image to a local temporary cache so it can be displayed.
 
 ## Data Protection and Deletion
 
@@ -62,7 +65,7 @@ To completely remove data, you can manually delete the configuration files and l
 System permissions requested by Catime are only used to implement core functions:
 
 * **File System Access**: For reading and writing configuration and log files
-* **Network Access**: Only for update checking
+* **Network Access**: For update checking, and for loading remote images when plugin or Markdown content references `http://` or `https://` image URLs
 * **Reading System Information**: Recorded to local log files
 * **Startup Item Modification**: Only used when the "Start with System" feature is enabled
 
@@ -75,6 +78,3 @@ If there are significant changes, we will post notifications within the applicat
 If you have questions or suggestions about this privacy policy, please contact us through the GitHub project page.
 
 > Last Updated: November 28, 2025
-
-
-

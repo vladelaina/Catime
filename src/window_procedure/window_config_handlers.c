@@ -23,8 +23,6 @@
 
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
-extern int time_options[];
-extern int time_options_count;
 
 /* ============================================================================
  * Helper Functions

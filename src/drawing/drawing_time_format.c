@@ -11,9 +11,6 @@
 #include "config.h"
 #include "menu_preview.h"
 
-extern int countdown_elapsed_time;
-extern int countup_elapsed_time;
-
 /** Declared in drawing_timer_precision.c */
 extern int GetElapsedCentiseconds(void);
 extern int GetSystemCentiseconds(void);

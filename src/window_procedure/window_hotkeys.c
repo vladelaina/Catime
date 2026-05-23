@@ -26,8 +26,6 @@
 
 extern wchar_t inputText[256];
 extern HWND g_hwndInputDialog;
-extern int time_options_count;
-extern int time_options[];
 extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
 
 /* ============================================================================
@@ -228,4 +226,3 @@ void UnregisterGlobalHotkeys(HWND hwnd) {
         UnregisterHotKey(hwnd, g_hotkeyConfigs[i].id);
     }
 }
-
