@@ -38,7 +38,8 @@ typedef enum {
     LOG_LEVEL_INFO,
     LOG_LEVEL_WARNING,
     LOG_LEVEL_ERROR,
-    LOG_LEVEL_FATAL
+    LOG_LEVEL_FATAL,
+    LOG_LEVEL_MAX,
 } LogLevel;
 
 /**
@@ -50,22 +51,6 @@ typedef struct {
     DWORD minBuild;
     const char* name;
 } OSVersionInfo;
-
-/**
- * @brief CPU architecture mapping structure
- */
-typedef struct {
-    WORD archId;
-    const char* name;
-} CPUArchInfo;
-
-/**
- * @brief Signal information mapping structure
- */
-typedef struct {
-    int signal;
-    const char* description;
-} SignalInfo;
 
 /* ============================================================================
  * Public API - Core Log System
@@ -172,17 +157,6 @@ void LogAdminPrivileges(void);
  * @param bufferSize Size of the output buffer in bytes
  */
 void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize);
-
-/**
- * @brief Format bytes to human-readable size string
- * 
- * Converts byte counts to KB/MB/GB with appropriate precision.
- * 
- * @param bytes Number of bytes to format
- * @param buffer Output buffer for formatted string
- * @param bufferSize Size of output buffer
- */
-void FormatBytes(ULONGLONG bytes, char* buffer, size_t bufferSize);
 
 /* ============================================================================
  * Public API - Exception Handling

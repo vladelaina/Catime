@@ -3,6 +3,7 @@
  * @brief Core logging implementation with rotation
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -12,14 +13,15 @@
 #include "log/log_core.h"
 #include "log/log_system_info.h"
 #include "config.h"
+#include "../include/log.h"
 #include "../../resource/resource.h"
 
-static const char* const LOG_LEVEL_STRINGS[] = {
-    "DEBUG",
-    "INFO",
-    "WARNING",
-    "ERROR",
-    "FATAL"
+static const char* const LOG_LEVEL_STRINGS[LOG_LEVEL_MAX] = {
+    [LOG_LEVEL_DEBUG] = "DEBUG",
+    [LOG_LEVEL_INFO] ="INFO",
+    [LOG_LEVEL_WARNING] = "WARNING",
+    [LOG_LEVEL_ERROR] = "ERROR",
+    [LOG_LEVEL_FATAL] = "FATAL"
 };
 
 static wchar_t LOG_FILE_PATH[MAX_PATH] = {0};
@@ -46,7 +48,10 @@ static void EnsureLogCSInitialized(void) {
     }
 }
 
-void GetLogFilePath(wchar_t* logPath, size_t size) {
+/**
+ * @breif Get log file path
+ */
+static void GetLogFilePath(void) {
     char configPath[MAX_PATH] = {0};
     GetConfigPath(configPath, MAX_PATH);
     
@@ -56,10 +61,10 @@ void GetLogFilePath(wchar_t* logPath, size_t size) {
     const wchar_t* lastSeparator = wcsrchr(configPathW, L'\\');
     if (lastSeparator) {
         size_t dirLen = lastSeparator - configPathW + 1;
-        wcsncpy(logPath, configPathW, dirLen);
-        _snwprintf_s(logPath + dirLen, size - dirLen, _TRUNCATE, L"Catime_Logs.log");
+        wcsncpy(LOG_FILE_PATH, configPathW, dirLen);
+        _snwprintf_s(LOG_FILE_PATH + dirLen, MAX_PATH - dirLen, _TRUNCATE, L"Catime_Logs.log");
     } else {
-        _snwprintf_s(logPath, size, _TRUNCATE, L"Catime_Logs.log");
+        _snwprintf_s(LOG_FILE_PATH, MAX_PATH, _TRUNCATE, L"Catime_Logs.log");
     }
 }
 
@@ -87,7 +92,7 @@ static ULONGLONG GetLogFileSize(void) {
 /** Open log file with shared delete permission */
 static BOOL OpenLogFile(void) {
     if (hLogFile != INVALID_HANDLE_VALUE) {
-        return TRUE;
+        return true;
     }
 
     hLogFile = CreateFileW(
@@ -101,18 +106,18 @@ static BOOL OpenLogFile(void) {
     );
 
     if (hLogFile == INVALID_HANDLE_VALUE) {
-        return FALSE;
+        return false;
     }
 
     /* Write UTF-8 BOM */
     DWORD written;
     WriteFile(hLogFile, UTF8_BOM, 3, &written, NULL);
 
-    return TRUE;
+    return true;
 }
 
 /** Check if log file still exists and reopen if deleted */
-static BOOL EnsureLogFileOpen(void) {
+static bool EnsureLogFileOpen(void) {
     if (hLogFile == INVALID_HANDLE_VALUE) {
         return OpenLogFile();
     }
@@ -126,7 +131,7 @@ static BOOL EnsureLogFileOpen(void) {
         return OpenLogFile();
     }
 
-    return TRUE;
+    return true;
 }
 
 /** Rotation: .log → .log.1 → .log.2 → .log.3 (oldest deleted) */
@@ -150,26 +155,28 @@ static void RotateLogFiles(void) {
 static void CheckAndRotateLog(void) {
     ULONGLONG fileSize = GetLogFileSize();
 
-    if (fileSize >= LOG_MAX_FILE_SIZE) {
-        if (hLogFile != INVALID_HANDLE_VALUE) {
-            CloseHandle(hLogFile);
-            hLogFile = INVALID_HANDLE_VALUE;
-        }
+    if (fileSize < LOG_MAX_FILE_SIZE) {
+        return;
+    }
+    
+    if (hLogFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hLogFile);
+        hLogFile = INVALID_HANDLE_VALUE;
+    }
 
-        RotateLogFiles();
+    RotateLogFiles();
 
-        OpenLogFile();
-        if (hLogFile != INVALID_HANDLE_VALUE) {
-            WriteLog(LOG_LEVEL_INFO, "Log file rotated (size exceeded %d MB)",
-                     LOG_MAX_FILE_SIZE / (1024 * 1024));
-        }
+    OpenLogFile();
+    if (hLogFile != INVALID_HANDLE_VALUE) {
+        WriteLog(LOG_LEVEL_INFO, "Log file rotated (size exceeded %d MB)",
+                    LOG_MAX_FILE_SIZE / (1024 * 1024));
     }
 }
 
 BOOL InitializeLogSystem(void) {
     EnsureLogCSInitialized();
 
-    GetLogFilePath(LOG_FILE_PATH, MAX_PATH);
+    GetLogFilePath();
 
     wchar_t dirPath[MAX_PATH] = {0};
     wcsncpy(dirPath, LOG_FILE_PATH, MAX_PATH - 1);
@@ -287,6 +294,10 @@ void CleanupLogSystem(void) {
 }
 
 void SetMinimumLogLevel(LogLevel minLevel) {
+    if (minLevel < 0 || minLevel >= LOG_LEVEL_MAX) {
+        minLevel = LOG_LEVEL_DEBUG;
+        return;
+    }
     minLogLevel = minLevel;
 }
 

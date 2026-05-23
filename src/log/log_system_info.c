@@ -3,6 +3,7 @@
  * @brief System information collection implementation
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
 #include "log/log_system_info.h"
@@ -11,6 +12,17 @@
 #ifndef PROCESSOR_ARCHITECTURE_ARM64
 #define PROCESSOR_ARCHITECTURE_ARM64 12
 #endif
+
+#ifndef likely
+#define likely(x)   __builtin_expect(!!(x), 1)
+#endif
+#ifndef unlikely
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#endif
+
+#define KB  (1024.0)
+#define MB  (KB * 1024.0)
+#define GB  (MB * 1024.0)
 
 /** Easy to extend for future Windows versions */
 static const OSVersionInfo OS_VERSION_TABLE[] = {
@@ -25,14 +37,13 @@ static const OSVersionInfo OS_VERSION_TABLE[] = {
     {5,  0, 0,     "Windows 2000"},
 };
 
-static const CPUArchInfo CPU_ARCH_TABLE[] = {
-    {PROCESSOR_ARCHITECTURE_AMD64, "x64 (AMD64)"},
-    {PROCESSOR_ARCHITECTURE_INTEL, "x86 (Intel)"},
-    {PROCESSOR_ARCHITECTURE_ARM,   "ARM"},
-    {PROCESSOR_ARCHITECTURE_ARM64, "ARM64"},
-};
-
-static const char* GetOSVersionName(DWORD major, DWORD minor, DWORD build) {
+static const char* GetOSVersionName(const OSVersionInfo* osVersion) {
+    if (unlikely(!osVersion)){
+        return "Invalid OS version information";
+    }
+    const DWORD major = osVersion->major;
+    const DWORD minor = osVersion->minor;
+    const DWORD build = osVersion->minBuild;
     const size_t tableSize = sizeof(OS_VERSION_TABLE) / sizeof(OS_VERSION_TABLE[0]);
     
     for (size_t i = 0; i < tableSize; i++) {
@@ -48,59 +59,47 @@ static const char* GetOSVersionName(DWORD major, DWORD minor, DWORD build) {
 }
 
 static const char* GetCPUArchitectureName(WORD archId) {
-    const size_t tableSize = sizeof(CPU_ARCH_TABLE) / sizeof(CPU_ARCH_TABLE[0]);
-    
-    for (size_t i = 0; i < tableSize; i++) {
-        if (CPU_ARCH_TABLE[i].archId == archId) {
-            return CPU_ARCH_TABLE[i].name;
-        }
+    switch (archId) {
+        case PROCESSOR_ARCHITECTURE_AMD64: return "x64 (AMD64)";
+        case PROCESSOR_ARCHITECTURE_INTEL: return "x86 (Intel)";
+        case PROCESSOR_ARCHITECTURE_ARM:   return "ARM";
+        case PROCESSOR_ARCHITECTURE_ARM64: return "ARM64";
+        default: return "Unknown architecture";
     }
-    
-    return "Unknown architecture";
 }
 
 /** RtlGetVersion bypasses app manifest compatibility layer */
-static BOOL GetOSVersionInfo(DWORD* major, DWORD* minor, DWORD* build) {
-    if (!major || !minor || !build) {
-        return FALSE;
+static bool GetOSVersionInfo(OSVersionInfo* osVersion) {
+    if (unlikely(!osVersion)) {
+        return false;
     }
-    
-    *major = 0;
-    *minor = 0;
-    *build = 0;
-    
+        
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
     
-    if (!hNtdll) {
-        return FALSE;
-    }
+    if (unlikely(!hNtdll)) return false;
     
     RtlGetVersionPtr pRtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hNtdll, "RtlGetVersion");
-    if (!pRtlGetVersion) {
-        return FALSE;
+    if (unlikely(!pRtlGetVersion)) return false;
+    
+    RTL_OSVERSIONINFOW rovi = {.dwOSVersionInfoSize = sizeof(rovi)};
+    
+    if (likely(pRtlGetVersion(&rovi) == 0)) {
+        osVersion->major = rovi.dwMajorVersion;
+        osVersion->minor = rovi.dwMinorVersion;
+        osVersion->minBuild = rovi.dwBuildNumber;
+        return true;
     }
     
-    RTL_OSVERSIONINFOW rovi = {0};
-    rovi.dwOSVersionInfoSize = sizeof(rovi);
-    
-    if (pRtlGetVersion(&rovi) == 0) {
-        *major = rovi.dwMajorVersion;
-        *minor = rovi.dwMinorVersion;
-        *build = rovi.dwBuildNumber;
-        return TRUE;
-    }
-    
-    return FALSE;
+    return false;
 }
 
 void LogOSVersion(void) {
-    DWORD major = 0, minor = 0, build = 0;
-    
-    if (GetOSVersionInfo(&major, &minor, &build)) {
-        const char* osName = GetOSVersionName(major, minor, build);
+    OSVersionInfo osVersion = {0};
+    if (likely(GetOSVersionInfo(&osVersion))) {
+        osVersion.name = GetOSVersionName(&osVersion);
         WriteLog(LOG_LEVEL_INFO, "Operating System: %s (%lu.%lu) Build %lu", 
-                 osName, major, minor, build);
+                 osVersion.name, osVersion.major, osVersion.minor, osVersion.minBuild);
     } else {
         WriteLog(LOG_LEVEL_WARNING, "Unable to retrieve OS version information");
     }
@@ -114,11 +113,32 @@ void LogCPUArchitecture(void) {
     WriteLog(LOG_LEVEL_INFO, "CPU Architecture: %s", archName);
 }
 
+/**
+ * Format byte size to human-readable string
+ * @param bytes Size in bytes
+ * @param buffer Output buffer
+ * @param bufferSize Buffer size
+ */
+static void FormatBytes(DWORDLONG bytes, char* buffer, size_t bufferSize) {
+    if (unlikely(!buffer || bufferSize == 0)) return;
+    
+    
+    if (bytes >= GB) {
+        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%.2f GB", bytes / GB);
+    } else if (bytes >= MB) {
+        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%.2f MB", bytes / MB);
+    } else if (bytes >= KB) {
+        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%.2f KB", bytes / KB);
+    } else {
+        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%llu bytes", bytes);
+    }
+}
+
 void LogMemoryInfo(void) {
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
     
-    if (GlobalMemoryStatusEx(&memInfo)) {
+    if (likely(GlobalMemoryStatusEx(&memInfo))) {
         char totalStr[64] = {0};
         char usedStr[64] = {0};
         
@@ -133,7 +153,7 @@ void LogMemoryInfo(void) {
 }
 
 void LogUACStatus(void) {
-    BOOL uacEnabled = FALSE;
+    bool uacEnabled = false;
     HANDLE hToken;
     
     if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
@@ -164,25 +184,5 @@ void LogAdminPrivileges(void) {
     }
     
     WriteLog(LOG_LEVEL_INFO, "Administrator Privileges: %s", isAdmin ? "Yes" : "No");
-}
-
-void FormatBytes(ULONGLONG bytes, char* buffer, size_t bufferSize) {
-    if (!buffer || bufferSize == 0) {
-        return;
-    }
-    
-    const double KB = 1024.0;
-    const double MB = KB * 1024.0;
-    const double GB = MB * 1024.0;
-    
-    if (bytes >= GB) {
-        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%.2f GB", bytes / GB);
-    } else if (bytes >= MB) {
-        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%.2f MB", bytes / MB);
-    } else if (bytes >= KB) {
-        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%.2f KB", bytes / KB);
-    } else {
-        _snprintf_s(buffer, bufferSize, _TRUNCATE, "%llu bytes", bytes);
-    }
 }
 
