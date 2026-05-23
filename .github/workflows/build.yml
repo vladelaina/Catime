@@ -35,26 +35,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-
-      - name: Install MinGW compiler and CMake
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y mingw-w64 cmake
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: c-cpp
-          build-mode: manual
-
-      - name: Build for CodeQL
-        run: |
-          chmod +x build.sh
-          ./build.sh Debug
+          build-mode: none
 
       - name: Analyze with CodeQL
         uses: github/codeql-action/analyze@v4
@@ -204,7 +189,7 @@ jobs:
 
   msvc-analyze:
     name: quality / msvc-analyze
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -316,7 +301,7 @@ jobs:
 
   windows-asan-smoke:
     name: quality / windows-asan-smoke
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -442,7 +427,7 @@ jobs:
 
   win32-binary-baseline:
     name: quality / win32-binary-baseline
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -510,7 +495,7 @@ jobs:
 
   binskim:
     name: quality / binskim
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
