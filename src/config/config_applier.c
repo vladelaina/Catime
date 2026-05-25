@@ -74,6 +74,7 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     CLOCK_FONT_SCALE_FACTOR = snapshot->windowScale;
     PLUGIN_FONT_SCALE_FACTOR = snapshot->pluginScale;
     CLOCK_WINDOW_TOPMOST = snapshot->windowTopmost;
+    CLOCK_WINDOW_EFFECTIVE_TOPMOST = snapshot->windowTopmost;
     CLOCK_WINDOW_OPACITY = snapshot->windowOpacity;
 
     g_AppConfig.display.move_step_small = snapshot->moveStepSmall;
@@ -118,6 +119,7 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
 
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
+        RefreshWindowTopmostState(hwnd);
 
         /* Ensure animation timer is running if effects are active */
         /* Use adaptive interval based on window size to prevent mouse lag */

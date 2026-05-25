@@ -623,6 +623,9 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         case TIMER_ID_VISIBILITY_RETRY:
             return HandleRetryTimer(hwnd, TIMER_ID_VISIBILITY_RETRY, &visibility_retry, SetupVisibilityWindow);
 
+        case TIMER_ID_TOPMOST_APPLY_RETRY:
+            return HandleTopmostApplyRetry(hwnd);
+
         case TIMER_ID_FORCE_REDRAW:
             return HandleForceRedraw(hwnd);
 
