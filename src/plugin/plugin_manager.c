@@ -672,8 +672,6 @@ static BOOL RestartPluginInternal(int index) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
 
-    Sleep(100);
-
     return PluginManager_StartPlugin(index);
 }
 

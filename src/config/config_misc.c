@@ -374,9 +374,9 @@ UINT GetTimerInterval(void) {
         return 66; /* 15 FPS - sufficient for smooth gradient animation */
     }
     
-    /* Optimized balance: 50 FPS for milliseconds (2x more efficient than 100 FPS). */
+    /* 30 FPS is enough for centisecond display while reducing DWM wakeups. */
     if (GetActiveShowMilliseconds()) {
-        return 20;
+        return 33;
     }
 
     /* Active timers still tick internally at 10 FPS so completion actions and

@@ -47,7 +47,6 @@ static int ms_accumulator = 0;
 
 static inline void ForceWindowRedraw(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
-    UpdateWindow(hwnd);
 }
 
 static wchar_t* SafeUtf8ToWide(const char* utf8String, wchar_t* buffer, size_t bufferSize) {
@@ -242,7 +241,7 @@ static BOOL HandleForceRedraw(HWND hwnd) {
     KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
     EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
-    RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+    RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
     return TRUE;
 }
 

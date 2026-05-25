@@ -94,6 +94,7 @@ BOOL InitDWMFunctions(void) {
 /* Click-through state */
 static BOOL g_clickThroughEnabled = FALSE;
 static BOOL g_currentlyTransparent = FALSE;
+static BOOL g_clickThroughTimerActive = FALSE;
 
 /* Timer ID for mouse position checking */
 #define TIMER_ID_CLICK_THROUGH 201
@@ -153,7 +154,16 @@ void UpdateClickThroughState(HWND hwnd) {
 
 void SetClickThrough(HWND hwnd, BOOL enable) {
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-    
+
+    BOOL styleTransparent = (exStyle & WS_EX_TRANSPARENT) != 0;
+    if (g_clickThroughEnabled == enable &&
+        g_currentlyTransparent == enable &&
+        styleTransparent == enable &&
+        ((enable && g_clickThroughTimerActive) ||
+         (!enable && !g_clickThroughTimerActive))) {
+        return;
+    }
+
     if (enable) {
         /* Enable click-through with dynamic switching for clickable regions */
         exStyle |= WS_EX_TRANSPARENT;
@@ -161,7 +171,8 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
         g_currentlyTransparent = TRUE;
         
         /* Start timer to check mouse position */
-        SetTimer(hwnd, TIMER_ID_CLICK_THROUGH, CLICK_THROUGH_CHECK_INTERVAL, NULL);
+        g_clickThroughTimerActive = SetTimer(hwnd, TIMER_ID_CLICK_THROUGH,
+                                             CLICK_THROUGH_CHECK_INTERVAL, NULL) != 0;
         LOG_INFO("Click-through enabled (dynamic mode)");
     } else {
         exStyle &= ~WS_EX_TRANSPARENT;
@@ -170,6 +181,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
         
         /* Stop timer */
         KillTimer(hwnd, TIMER_ID_CLICK_THROUGH);
+        g_clickThroughTimerActive = FALSE;
         LOG_INFO("Click-through disabled");
     }
 

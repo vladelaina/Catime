@@ -64,15 +64,15 @@ static BOOL StartMultimediaTimer(void) {
 static BOOL AcquireTimerResolution(void) {
     if (g_timerResolutionMs > 0) return TRUE;
 
-    MMRESULT res = timeBeginPeriod(1);
+    MMRESULT res = timeBeginPeriod(2);
     if (res == TIMERR_NOERROR) {
-        g_timerResolutionMs = 1;
+        g_timerResolutionMs = 2;
         return TRUE;
     }
 
-    res = timeBeginPeriod(2);
+    res = timeBeginPeriod(1);
     if (res == TIMERR_NOERROR) {
-        g_timerResolutionMs = 2;
+        g_timerResolutionMs = 1;
         return TRUE;
     }
 

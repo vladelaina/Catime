@@ -40,6 +40,62 @@ static HANDLE g_hWatchWakeEvent = NULL;
 static HWND g_hNotifyWnd = NULL;
 static volatile BOOL g_isRunning = FALSE;
 
+#define PLUGIN_DATA_REDRAW_TIMER_ID 42424
+#define PLUGIN_DATA_REDRAW_MIN_INTERVAL_MS 100
+
+static DWORD g_lastPluginDataRedrawTick = 0;
+static volatile LONG g_pluginDataRedrawQueued = 0;
+static volatile LONG g_pluginDataRedrawTimerArmed = 0;
+
+static void CALLBACK PluginDataRedrawTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+    (void)msg;
+    (void)time;
+
+    if (id != PLUGIN_DATA_REDRAW_TIMER_ID) return;
+
+    KillTimer(hwnd, PLUGIN_DATA_REDRAW_TIMER_ID);
+    InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
+    g_lastPluginDataRedrawTick = GetTickCount();
+    InvalidateRect(hwnd, NULL, FALSE);
+}
+
+static void RequestPluginDataRedraw(HWND hwnd) {
+    if (!hwnd) return;
+    if (InterlockedCompareExchange(&g_pluginDataRedrawTimerArmed, 0, 0) != 0) return;
+
+    if (InterlockedCompareExchange(&g_pluginDataRedrawQueued, 1, 0) == 0) {
+        if (!PostMessage(hwnd, CLOCK_WM_PLUGIN_DATA_REDRAW, 0, 0)) {
+            InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+        }
+    }
+}
+
+void PluginData_HandleRedrawRequest(HWND hwnd) {
+    if (!hwnd) return;
+
+    InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+
+    DWORD now = GetTickCount();
+    DWORD elapsed = now - g_lastPluginDataRedrawTick;
+    if (g_lastPluginDataRedrawTick == 0 || elapsed >= PLUGIN_DATA_REDRAW_MIN_INTERVAL_MS) {
+        KillTimer(hwnd, PLUGIN_DATA_REDRAW_TIMER_ID);
+        InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
+        g_lastPluginDataRedrawTick = now;
+        InvalidateRect(hwnd, NULL, FALSE);
+        return;
+    }
+
+    if (!SetTimer(hwnd, PLUGIN_DATA_REDRAW_TIMER_ID,
+                  PLUGIN_DATA_REDRAW_MIN_INTERVAL_MS - elapsed,
+                  PluginDataRedrawTimerProc)) {
+        InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
+        g_lastPluginDataRedrawTick = now;
+        InvalidateRect(hwnd, NULL, FALSE);
+    } else {
+        InterlockedExchange(&g_pluginDataRedrawTimerArmed, 1);
+    }
+}
+
 static BOOL ParseNonNegativeIntLimitedA(const char* start, const char* end, int* outValue) {
     int value = 0;
     if (!start || !end || !outValue || start >= end) return FALSE;
@@ -537,7 +593,7 @@ static BOOL ProcessPluginOutputFile(const char* filePath, BOOL forceRefresh,
     LeaveCriticalSection(&g_dataCS);
 
     if (contentChanged && ParseContent(currentContent, bytesRead) && g_hNotifyWnd) {
-        InvalidateRect(g_hNotifyWnd, NULL, FALSE);
+        RequestPluginDataRedraw(g_hNotifyWnd);
     }
 
     free(currentContent);
@@ -628,6 +684,9 @@ void PluginData_Init(HWND hwnd) {
     g_pluginDisplayTextLen = 0;
     g_lastContent = NULL;
     g_lastContentSize = 0;
+    g_lastPluginDataRedrawTick = 0;
+    InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+    InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
     g_isRunning = TRUE;
     g_hWatchStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
     g_hWatchWakeEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
@@ -675,6 +734,12 @@ void PluginData_Shutdown(void) {
         CloseHandle(g_hWatchThread);
         g_hWatchThread = NULL;
     }
+    if (g_hNotifyWnd) {
+        KillTimer(g_hNotifyWnd, PLUGIN_DATA_REDRAW_TIMER_ID);
+    }
+    g_hNotifyWnd = NULL;
+    InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+    InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
     if (g_hWatchStopEvent) {
         CloseHandle(g_hWatchStopEvent);
         g_hWatchStopEvent = NULL;

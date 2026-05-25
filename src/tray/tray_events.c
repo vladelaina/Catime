@@ -20,7 +20,7 @@
 
 /* Timer for detecting mouse hover over tray icon */
 #define TRAY_HOVER_CHECK_TIMER_ID 42422
-#define TRAY_HOVER_CHECK_INTERVAL_MS 100
+#define TRAY_HOVER_CHECK_INTERVAL_MS 200
 
 static UINT_PTR g_hoverCheckTimer = 0;
 static HWND g_trayEventHwnd = NULL;
@@ -59,6 +59,9 @@ static void StartTrayHoverDetection(HWND hwnd) {
         g_trayEventHwnd = hwnd;
         g_hoverCheckTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID, 
                                      TRAY_HOVER_CHECK_INTERVAL_MS, TrayHoverCheckTimerProc);
+        if (!g_hoverCheckTimer) {
+            g_trayEventHwnd = NULL;
+        }
     }
 }
 
@@ -71,6 +74,7 @@ void StopTrayHoverDetection(void) {
         KillTimer(g_trayEventHwnd, TRAY_HOVER_CHECK_TIMER_ID);
         g_hoverCheckTimer = 0;
     }
+    g_trayEventHwnd = NULL;
     /* Also uninstall hook if still active */
     if (IsTrayMouseHookInstalled()) {
         UninstallTrayMouseHook();

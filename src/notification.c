@@ -334,7 +334,6 @@ void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) 
     SetLayeredWindowAttributes(hNotification, 0, 0, LWA_ALPHA);
     
     ShowWindow(hNotification, SW_SHOWNOACTIVATE);
-    UpdateWindow(hNotification);
     
     SetTimer(hNotification, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL);
     
@@ -573,7 +572,6 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         
         case WM_SIZING: {
             InvalidateRect(hwnd, NULL, TRUE);
-            UpdateWindow(hwnd);
             return TRUE;
         }
         
@@ -589,7 +587,6 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 }
             }
             InvalidateRect(hwnd, NULL, TRUE);
-            UpdateWindow(hwnd);
             return 0;
         }
         

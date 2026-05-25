@@ -576,7 +576,6 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
         if (SwitchFont(hInstance, foundFontPath)) {
             LOG_INFO("Font switched successfully: %s", foundFontPath);
             InvalidateRect(hwnd, NULL, TRUE);
-            UpdateWindow(hwnd);
         } else {
             LOG_ERROR("Failed to switch font: %s", foundFontPath);
         }

@@ -21,10 +21,10 @@
 #include <ctype.h>
 
 /* Constants:
- * - 10ms internal tick: High-frequency updates for smooth animations
+ * - 20ms internal tick: Smooth enough for tray animations with fewer wakeups
  * - 50ms tray update: 20 FPS balances smoothness with system tray refresh limitations
  */
-#define INTERNAL_TICK_INTERVAL_MS 10
+#define INTERNAL_TICK_INTERVAL_MS 20
 #define TRAY_UPDATE_INTERVAL_MS 50
 #define WM_TRAY_UPDATE_ICON (WM_USER + 100)
 #define MEMORY_POOL_SIZE (256 * 1024)
@@ -67,6 +67,16 @@ static BOOL g_pendingTrayUpdate = FALSE;
 
 static BOOL IsAnimCriticalSectionReady(void) {
     return InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZED;
+}
+
+static void ClearPendingTrayUpdate(void) {
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_pendingTrayUpdate = FALSE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_pendingTrayUpdate = FALSE;
+    }
 }
 
 /* Error recovery:
@@ -328,16 +338,14 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
  * @brief Update tray icon to current frame (UI thread only)
  */
 static void UpdateTrayIconToCurrentFrame(void) {
-    if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
-    if (IsTrayInteractionSuspended()) return;
-    
-    if (IsAnimCriticalSectionReady()) {
-        EnterCriticalSection(&g_animCriticalSection);
-        g_pendingTrayUpdate = FALSE;
-        LeaveCriticalSection(&g_animCriticalSection);
-    } else {
-        g_pendingTrayUpdate = FALSE;
+    if (!g_trayHwnd || !IsWindow(g_trayHwnd)) {
+        ClearPendingTrayUpdate();
+        return;
     }
+
+    ClearPendingTrayUpdate();
+
+    if (IsTrayInteractionSuspended()) return;
     
     LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
     int* currentIndex = g_isPreviewActive ? &g_previewIndex : &g_mainIndex;
@@ -359,9 +367,13 @@ static void UpdateTrayIconToCurrentFrame(void) {
             nid.uID = CLOCK_ID_TRAY_APP_ICON;
             nid.uFlags = NIF_ICON;
             nid.hIcon = hIcon;
-            Shell_NotifyIconW(NIM_MODIFY, &nid);
+            BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
             DestroyIcon(hIcon);
-            RecordSuccessfulUpdate();
+            if (success) {
+                RecordSuccessfulUpdate();
+            } else if (!g_isPreviewActive && RecordFailedUpdate()) {
+                FallbackToLogoIcon();
+            }
         }
         return;
     }
@@ -386,9 +398,13 @@ static void UpdateTrayIconToCurrentFrame(void) {
             nid.uID = CLOCK_ID_TRAY_APP_ICON;
             nid.uFlags = NIF_ICON;
             nid.hIcon = hIcon;
-            Shell_NotifyIconW(NIM_MODIFY, &nid);
+            BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
             DestroyIcon(hIcon);
-            RecordSuccessfulUpdate();
+            if (success) {
+                RecordSuccessfulUpdate();
+            } else if (!g_isPreviewActive && RecordFailedUpdate()) {
+                FallbackToLogoIcon();
+            }
         } else {
             WriteLog(LOG_LEVEL_ERROR, "Failed to create percent icon for %d%%", p);
         }
@@ -407,9 +423,13 @@ static void UpdateTrayIconToCurrentFrame(void) {
             nid.uID = CLOCK_ID_TRAY_APP_ICON;
             nid.uFlags = NIF_ICON;
             nid.hIcon = hIcon;
-            Shell_NotifyIconW(NIM_MODIFY, &nid);
+            BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
             DestroyIcon(hIcon);
-            RecordSuccessfulUpdate();
+            if (success) {
+                RecordSuccessfulUpdate();
+            } else if (!g_isPreviewActive && RecordFailedUpdate()) {
+                FallbackToLogoIcon();
+            }
         }
         return;
     }
@@ -465,20 +485,26 @@ static void UpdateTrayIconToCurrentFrame(void) {
  */
 static void RequestTrayIconUpdate(void) {
     if (!g_trayHwnd || !IsWindow(g_trayHwnd)) return;
+    if (IsTrayInteractionSuspended()) return;
     
+    BOOL alreadyPending = FALSE;
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
+        alreadyPending = g_pendingTrayUpdate;
         g_pendingTrayUpdate = TRUE;
         LeaveCriticalSection(&g_animCriticalSection);
     } else {
+        alreadyPending = g_pendingTrayUpdate;
         g_pendingTrayUpdate = TRUE;
     }
 
-    if (IsTrayInteractionSuspended()) {
+    if (alreadyPending) {
         return;
     }
     
-    PostMessage(g_trayHwnd, WM_TRAY_UPDATE_ICON, 0, 0);
+    if (!PostMessage(g_trayHwnd, WM_TRAY_UPDATE_ICON, 0, 0)) {
+        ClearPendingTrayUpdate();
+    }
 }
 
 /**
@@ -533,6 +559,7 @@ static void TrayAnimationTimerCallback(void* userData) {
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_trayHwnd = hwnd;
     g_baseFolderInterval = intervalMs > 0 ? intervalMs : 150;
+    g_pendingTrayUpdate = FALSE;
     
     /* Read folder interval from config */
     char config_path[MAX_PATH] = {0};
@@ -643,6 +670,7 @@ void StopTrayAnimation(HWND hwnd) {
 
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = 0;
+    g_pendingTrayUpdate = FALSE;
     g_trayHwnd = NULL;
 }
 
@@ -1161,7 +1189,14 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     const BuiltinAnimDef* def = GetBuiltinAnimDef(g_animationName);
     if (!def) return;
     
+    static char s_lastBuiltinName[MAX_PATH] = "";
+    static int s_lastValue = -1;
+    static COLORREF s_lastTextColor = CLR_INVALID;
+    static COLORREF s_lastBgColor = CLR_INVALID;
     HICON hIcon = NULL;
+    int value = -1;
+    COLORREF textColor = GetPercentIconTextColor();
+    COLORREF bgColor = GetPercentIconBgColor();
     
     /* Handle percent type (CPU, Memory, Battery) */
     if (def->type == ANIM_SOURCE_PERCENT) {
@@ -1171,11 +1206,25 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void) {
         }
         if (p < 0) p = 0;
         if (p > 100) p = 100;
+        value = p;
+        if (_stricmp(s_lastBuiltinName, g_animationName) == 0 &&
+            s_lastValue == value &&
+            s_lastTextColor == textColor &&
+            s_lastBgColor == bgColor) {
+            return;
+        }
         hIcon = CreatePercentIcon16(p);
     }
     /* Handle Caps Lock indicator */
     else if (def->type == ANIM_SOURCE_CAPSLOCK) {
-        hIcon = CreateCapsLockIcon(IsCapsLockOn());
+        value = IsCapsLockOn() ? 1 : 0;
+        if (_stricmp(s_lastBuiltinName, g_animationName) == 0 &&
+            s_lastValue == value &&
+            s_lastTextColor == textColor &&
+            s_lastBgColor == bgColor) {
+            return;
+        }
+        hIcon = CreateCapsLockIcon(value != 0);
     }
     else {
         return;
@@ -1189,7 +1238,13 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void) {
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON;
     nid.hIcon = hIcon;
-    Shell_NotifyIconW(NIM_MODIFY, &nid);
+    if (Shell_NotifyIconW(NIM_MODIFY, &nid)) {
+        strncpy(s_lastBuiltinName, g_animationName, sizeof(s_lastBuiltinName) - 1);
+        s_lastBuiltinName[sizeof(s_lastBuiltinName) - 1] = '\0';
+        s_lastValue = value;
+        s_lastTextColor = textColor;
+        s_lastBgColor = bgColor;
+    }
     
     DestroyIcon(hIcon);
 }

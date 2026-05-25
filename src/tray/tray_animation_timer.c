@@ -13,7 +13,7 @@
 
 /* Timer constants */
 #define TRAY_UPDATE_INTERVAL_MS 50
-#define SYSTEM_TIMER_RESOLUTION_MS 1
+#define SYSTEM_TIMER_RESOLUTION_MS 2
 
 /* Global timer state */
 static MMRESULT g_mmTimerId = 0;
@@ -159,7 +159,7 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
     /* Try to set system timer resolution */
     MMRESULT mmRes = timeBeginPeriod(SYSTEM_TIMER_RESOLUTION_MS);
     if (mmRes != TIMERR_NOERROR) {
-        mmRes = timeBeginPeriod(2);
+        mmRes = timeBeginPeriod(1);
         if (mmRes != TIMERR_NOERROR) {
             g_useHighPrecisionTimer = FALSE;
 
@@ -170,7 +170,7 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
             g_timerActive = TRUE;
             return TRUE;
         }
-        g_timerResolutionMs = 2;
+        g_timerResolutionMs = 1;
     } else {
         g_timerResolutionMs = SYSTEM_TIMER_RESOLUTION_MS;
     }
@@ -242,4 +242,3 @@ BOOL IsAnimationTimerActive(void) {
 BOOL IsUsingHighPrecisionTimer(void) {
     return g_useHighPrecisionTimer;
 }
-

@@ -66,6 +66,14 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance);
 void UpdateTrayIcon(HWND hwnd);
 
 /**
+ * @brief Apply a tray wheel opacity change on the UI thread
+ * @param hwnd Window handle
+ * @param wheelDirection Positive for wheel up, negative for wheel down
+ * @param ctrlPressed TRUE when fast opacity step should be used
+ */
+void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed);
+
+/**
  * @brief Tray tooltip timer callback
  * @param hwnd Window handle
  * @param msg Timer message

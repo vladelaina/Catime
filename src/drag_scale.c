@@ -24,7 +24,6 @@ static UINT_PTR g_configSaveTimer = 0;
 
 static inline void RefreshWindow(HWND hwnd, BOOL eraseBackground) {
     InvalidateRect(hwnd, NULL, eraseBackground);
-    UpdateWindow(hwnd);
 }
 
 static inline float ClampScaleFactor(float scale) {
@@ -102,7 +101,6 @@ void EndEditMode(HWND hwnd) {
         SetWindowTopmostTransient(hwnd, FALSE);
         
         InvalidateRect(hwnd, NULL, TRUE);
-        RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
         
         KillTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH);
     } else {

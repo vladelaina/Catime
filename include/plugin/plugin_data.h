@@ -72,6 +72,12 @@ BOOL PluginData_HasCatimeTag(void);
  */
 void PluginData_ProcessPendingNotification(HWND hwnd);
 
+/**
+ * @brief Handle coalesced plugin data redraw on the UI thread
+ * @param hwnd Main window handle
+ */
+void PluginData_HandleRedrawRequest(HWND hwnd);
+
 /** @brief Custom message ID for plugin notifications */
 #define WM_PLUGIN_NOTIFY (WM_APP + 200)
 

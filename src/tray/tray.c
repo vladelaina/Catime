@@ -18,7 +18,9 @@
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
 #define PERCENT_ICON_WARMUP_MS 120  /* Allow CPU/memory sampling to stabilize (first read often returns 0%) */
-#define ICON_RECT_CACHE_TIMEOUT_MS 100  /* Cache tray icon position for 100ms to reduce Shell API calls */
+#define ICON_RECT_CACHE_TIMEOUT_MS 250  /* Cache tray icon position to reduce Shell API calls */
+#define TRAY_OPACITY_SAVE_TIMER_ID 42423
+#define TRAY_OPACITY_SAVE_DELAY_MS 400
 
 /** @brief Global tray icon data for Shell_NotifyIcon */
 NOTIFYICONDATAW nid;
@@ -38,12 +40,14 @@ BOOL g_showingOpacityTip = FALSE;
 static RECT g_cachedIconRect = {0};
 static DWORD g_lastRectUpdateTime = 0;
 static volatile LONG g_trayInteractionSuspended = FALSE;
+static int g_pendingOpacityToSave = -1;
+static wchar_t g_lastTrayTooltip[256] = {0};
 
 extern void ReadPercentIconColorsConfig(void);
 
 /**
  * @brief Check if mouse is over tray icon (with caching)
- * @note Uses cached position to reduce Shell API calls, refreshes every 100ms
+ * @note Uses cached position to reduce Shell API calls.
  */
 static BOOL IsMouseOverTrayIconCached(POINT pt) {
     DWORD now = GetTickCount();
@@ -80,39 +84,13 @@ static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         
         /* Only process if mouse is over tray icon */
         if (IsMouseOverTrayIconCached(pMouseStruct->pt)) {
-            extern void WriteConfigWindowOpacity(int opacity);
-            extern int ReadConfigOpacityStepNormal(void);
-            extern int ReadConfigOpacityStepFast(void);
-
             int delta = GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData);
-
-            /* Check if Ctrl key is pressed for fast adjustment */
             BOOL ctrlPressed = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-            int step = ctrlPressed ? ReadConfigOpacityStepFast() : ReadConfigOpacityStepNormal();
-
-            if (delta > 0) {
-                CLOCK_WINDOW_OPACITY += step;
-            } else {
-                CLOCK_WINDOW_OPACITY -= step;
+            if (g_mainHwnd &&
+                PostMessage(g_mainHwnd, CLOCK_WM_TRAY_OPACITY_WHEEL,
+                            (WPARAM)(delta > 0 ? 1 : -1), (LPARAM)ctrlPressed)) {
+                return 1;
             }
-
-            if (CLOCK_WINDOW_OPACITY < 0) CLOCK_WINDOW_OPACITY = 0;
-            if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
-
-            if (g_mainHwnd) {
-                /* Force window update to reflect new opacity via UpdateLayeredWindow */
-                InvalidateRect(g_mainHwnd, NULL, TRUE);
-                UpdateWindow(g_mainHwnd);
-
-                /* Enter opacity tip mode and show opacity */
-                g_showingOpacityTip = TRUE;
-                wchar_t opacityTip[64];
-                _snwprintf_s(opacityTip, _countof(opacityTip), _TRUNCATE, L"Opacity: %d%%", CLOCK_WINDOW_OPACITY);
-                UpdateTrayTooltip(opacityTip);
-            }
-
-            WriteConfigWindowOpacity(CLOCK_WINDOW_OPACITY);
-            return 1;
         }
     }
 
@@ -297,7 +275,61 @@ void UpdateTrayTooltip(const wchar_t* tip) {
     n.uID = nid.uID;
     n.uFlags = NIF_TIP;
     wcsncpy_s(n.szTip, _countof(n.szTip), tip, _TRUNCATE);
-    Shell_NotifyIconW(NIM_MODIFY, &n);
+    if (wcscmp(g_lastTrayTooltip, n.szTip) == 0) {
+        return;
+    }
+    if (Shell_NotifyIconW(NIM_MODIFY, &n)) {
+        wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip), n.szTip);
+    }
+}
+
+static void CALLBACK TrayOpacitySaveTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+    (void)msg;
+    (void)time;
+
+    if (id != TRAY_OPACITY_SAVE_TIMER_ID) return;
+
+    KillTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID);
+    if (g_pendingOpacityToSave >= 0) {
+        extern void WriteConfigWindowOpacity(int opacity);
+        WriteConfigWindowOpacity(g_pendingOpacityToSave);
+        g_pendingOpacityToSave = -1;
+    }
+}
+
+void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
+    if (!hwnd) return;
+
+    extern int ReadConfigOpacityStepNormal(void);
+    extern int ReadConfigOpacityStepFast(void);
+
+    int step = ctrlPressed ? ReadConfigOpacityStepFast() : ReadConfigOpacityStepNormal();
+    if (step <= 0) step = 1;
+
+    int oldOpacity = CLOCK_WINDOW_OPACITY;
+    CLOCK_WINDOW_OPACITY += (wheelDirection > 0) ? step : -step;
+    if (CLOCK_WINDOW_OPACITY < 0) CLOCK_WINDOW_OPACITY = 0;
+    if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
+
+    g_showingOpacityTip = TRUE;
+    wchar_t opacityTip[64];
+    _snwprintf_s(opacityTip, _countof(opacityTip), _TRUNCATE,
+                 L"Opacity: %d%%", CLOCK_WINDOW_OPACITY);
+    UpdateTrayTooltip(opacityTip);
+
+    if (CLOCK_WINDOW_OPACITY == oldOpacity) {
+        return;
+    }
+
+    InvalidateRect(hwnd, NULL, FALSE);
+
+    g_pendingOpacityToSave = CLOCK_WINDOW_OPACITY;
+    if (!SetTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID, TRAY_OPACITY_SAVE_DELAY_MS,
+                  TrayOpacitySaveTimerProc)) {
+        extern void WriteConfigWindowOpacity(int opacity);
+        WriteConfigWindowOpacity(g_pendingOpacityToSave);
+        g_pendingOpacityToSave = -1;
+    }
 }
 
 /**
@@ -380,6 +412,9 @@ static HICON GetInitialPercentIcon(AnimationType type) {
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     g_mainHwnd = hwnd;
     g_hInstance = hInstance;
+    g_lastTrayTooltip[0] = L'\0';
+    SetRectEmpty(&g_cachedIconRect);
+    g_lastRectUpdateTime = 0;
 
     ReadPercentIconColorsConfig();
     SystemMonitor_Init();
@@ -405,7 +440,9 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
     wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
 
-    Shell_NotifyIconW(NIM_ADD, &nid);
+    if (Shell_NotifyIconW(NIM_ADD, &nid)) {
+        wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip), nid.szTip);
+    }
     if (destroyInitialIcon) {
         DestroyIcon(hInitial);
     }
@@ -427,6 +464,12 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
 void RemoveTrayIcon(void) {
     if (nid.hWnd) {
         KillTimer(nid.hWnd, TRAY_TIP_TIMER_ID);
+        KillTimer(nid.hWnd, TRAY_OPACITY_SAVE_TIMER_ID);
+        if (g_pendingOpacityToSave >= 0) {
+            extern void WriteConfigWindowOpacity(int opacity);
+            WriteConfigWindowOpacity(g_pendingOpacityToSave);
+            g_pendingOpacityToSave = -1;
+        }
     }
 
     /* Stop hover detection timer */
@@ -441,6 +484,9 @@ void RemoveTrayIcon(void) {
     SystemMonitor_Shutdown();
     Shell_NotifyIconW(NIM_DELETE, &nid);
     g_mainHwnd = NULL;
+    g_lastTrayTooltip[0] = L'\0';
+    SetRectEmpty(&g_cachedIconRect);
+    g_lastRectUpdateTime = 0;
 }
 
 /**

@@ -221,7 +221,6 @@ LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     InvalidateRect(hwnd, NULL, FALSE);
-    UpdateWindow(hwnd);
     return 0;
 }
 

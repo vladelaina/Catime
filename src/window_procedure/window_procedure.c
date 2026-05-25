@@ -202,6 +202,16 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
         return 0;
     }
 
+    if (msg == CLOCK_WM_TRAY_OPACITY_WHEEL) {
+        HandleTrayOpacityWheel(hwnd, (int)wp, (BOOL)lp);
+        return 0;
+    }
+
+    if (msg == CLOCK_WM_PLUGIN_DATA_REDRAW) {
+        PluginData_HandleRedrawRequest(hwnd);
+        return 0;
+    }
+
     /* Handle WM_MOUSEACTIVATE to prevent window activation in non-topmost mode */
     if (msg == WM_MOUSEACTIVATE) {
         if (!CLOCK_EDIT_MODE && !CLOCK_WINDOW_TOPMOST) {
