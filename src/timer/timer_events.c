@@ -499,7 +499,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
     }
 
     /* Throttle expensive topmost/taskbar overlap checks. */
-    if (s_lastTopmostCheck == 0 || (now_tick - s_lastTopmostCheck) >= 100) {
+    if (s_lastTopmostCheck == 0 || (now_tick - s_lastTopmostCheck) >= 500) {
         EnforceTopmostOverTaskbar(hwnd);
         s_lastTopmostCheck = now_tick;
     }

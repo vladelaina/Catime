@@ -253,6 +253,8 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
     return FALSE;
 }
 
+static void ReleaseRenderDibCache(void);
+
 static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits,
                               MarkdownLink* links, int linkCount,
                               const MarkdownHeading* headings, int headingCount,
@@ -289,6 +291,7 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
 
 void CleanupDrawingRenderCache(void) {
     ClearMarkdownRenderCache();
+    ReleaseRenderDibCache();
 }
 
 static BOOL CalculatePixelCount(int width, int height, size_t* pixelCount) {
@@ -299,12 +302,48 @@ static BOOL CalculatePixelCount(int width, int height, size_t* pixelCount) {
     return TRUE;
 }
 
+typedef struct {
+    HDC memDC;
+    HBITMAP memBitmap;
+    HBITMAP oldBitmap;
+    void* bits;
+    int width;
+    int height;
+} RenderDibCache;
+
+static RenderDibCache g_renderDibCache = {0};
+
+static void ReleaseRenderDibCache(void) {
+    if (g_renderDibCache.memDC && g_renderDibCache.oldBitmap) {
+        SelectObject(g_renderDibCache.memDC, g_renderDibCache.oldBitmap);
+    }
+    if (g_renderDibCache.memBitmap) {
+        DeleteObject(g_renderDibCache.memBitmap);
+    }
+    if (g_renderDibCache.memDC) {
+        DeleteDC(g_renderDibCache.memDC);
+    }
+    ZeroMemory(&g_renderDibCache, sizeof(g_renderDibCache));
+}
+
 /** @note GM_ADVANCED + HALFTONE improve text quality on high-DPI displays */
 static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP* memBitmap, HBITMAP* oldBitmap, void** ppvBits) {
     size_t pixelCount;
     if (!rect || !CalculatePixelCount(rect->right, rect->bottom, &pixelCount)) {
         return FALSE;
     }
+
+    if (g_renderDibCache.memDC &&
+        g_renderDibCache.width == rect->right &&
+        g_renderDibCache.height == rect->bottom) {
+        *memDC = g_renderDibCache.memDC;
+        *memBitmap = g_renderDibCache.memBitmap;
+        *oldBitmap = g_renderDibCache.oldBitmap;
+        *ppvBits = g_renderDibCache.bits;
+        return TRUE;
+    }
+
+    ReleaseRenderDibCache();
 
     *memDC = CreateCompatibleDC(hdc);
     if (!*memDC) {
@@ -327,6 +366,13 @@ static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP*
     }
 
     *oldBitmap = (HBITMAP)SelectObject(*memDC, *memBitmap);
+    if (!*oldBitmap) {
+        DeleteObject(*memBitmap);
+        DeleteDC(*memDC);
+        *memBitmap = NULL;
+        *memDC = NULL;
+        return FALSE;
+    }
 
     SetGraphicsMode(*memDC, GM_ADVANCED);
     SetBkMode(*memDC, TRANSPARENT);
@@ -337,6 +383,13 @@ static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP*
     SetMapMode(*memDC, MM_TEXT);
     SetICMMode(*memDC, ICM_ON);
     SetLayout(*memDC, 0);
+
+    g_renderDibCache.memDC = *memDC;
+    g_renderDibCache.memBitmap = *memBitmap;
+    g_renderDibCache.oldBitmap = *oldBitmap;
+    g_renderDibCache.bits = *ppvBits;
+    g_renderDibCache.width = rect->right;
+    g_renderDibCache.height = rect->bottom;
 
     return TRUE;
 }
@@ -569,9 +622,6 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     // Normal Mode: Alpha=0 for full transparency (clickable regions filled later)
     size_t numPixels = 0;
     if (!CalculatePixelCount(rect.right, rect.bottom, &numPixels)) {
-        SelectObject(memDC, oldBitmap);
-        DeleteObject(memBitmap);
-        DeleteDC(memDC);
         if (images) {
             FreeMarkdownImages(images, imageCount);
         }
@@ -689,9 +739,6 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
 
     HDC hdcScreen = GetDC(NULL);
     if (!hdcScreen) {
-        SelectObject(memDC, oldBitmap);
-        DeleteObject(memBitmap);
-        DeleteDC(memDC);
         return;
     }
     POINT ptSrc = {0, 0};
@@ -732,9 +779,8 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
 
     ReleaseDC(NULL, hdcScreen);
 
-    SelectObject(memDC, oldBitmap);
-    DeleteObject(memBitmap);
-    DeleteDC(memDC);
+    UNREFERENCED_PARAMETER(memBitmap);
+    UNREFERENCED_PARAMETER(oldBitmap);
 
     /* Dynamic timer interval adjustment based on current window size */
     /* This ensures smooth animation for small windows, reduced lag for large windows */

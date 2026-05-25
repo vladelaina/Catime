@@ -534,8 +534,12 @@ static BOOL SetIniValue(const char* section, const char* key, const char* value,
 
     IniEntry* entry = FindEntry(sec, key);
     if (entry) {
+        const char* newValue = value ? value : "";
+        if (entry->value && strcmp(entry->value, newValue) == 0) {
+            return TRUE;
+        }
         free(entry->value);
-        entry->value = StrDup(value ? value : "");
+        entry->value = StrDup(newValue);
     } else {
         entry = CreateEntry(sec, key, value);
     }

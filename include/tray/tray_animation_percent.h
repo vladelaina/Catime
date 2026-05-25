@@ -62,6 +62,11 @@ HICON CreatePercentIcon16(int percent);
 HICON CreateCapsLockIcon(BOOL capsOn);
 
 /**
+ * @brief Release cached generated percent/Caps Lock icons
+ */
+void CleanupPercentIconCache(void);
+
+/**
  * @brief Check current Caps Lock state
  * @return TRUE if Caps Lock is on
  */

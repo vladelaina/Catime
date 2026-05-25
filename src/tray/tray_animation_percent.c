@@ -10,6 +10,52 @@
 static COLORREF g_percentTextColor = RGB(0, 0, 0);
 static COLORREF g_percentBgColor = TRANSPARENT_BG_AUTO;
 
+typedef struct {
+    HICON icon;
+    COLORREF textColor;
+    COLORREF bgColor;
+    int cx;
+    int cy;
+    BOOL valid;
+} PercentIconCacheEntry;
+
+typedef struct {
+    HICON icon;
+    COLORREF textColor;
+    COLORREF bgColor;
+    int cx;
+    int cy;
+    BOOL capsOn;
+    BOOL valid;
+} CapsIconCacheEntry;
+
+static PercentIconCacheEntry g_percentIconCache[1000];
+static CapsIconCacheEntry g_capsIconCache[2];
+static COLORREF g_cachedThemeTextColor = CLR_INVALID;
+static DWORD g_lastThemeCheckTick = 0;
+
+static void ClearGeneratedIconCache(void) {
+    for (int i = 0; i < (int)_countof(g_percentIconCache); ++i) {
+        if (g_percentIconCache[i].icon) {
+            DestroyIcon(g_percentIconCache[i].icon);
+        }
+        ZeroMemory(&g_percentIconCache[i], sizeof(g_percentIconCache[i]));
+    }
+
+    for (int i = 0; i < (int)_countof(g_capsIconCache); ++i) {
+        if (g_capsIconCache[i].icon) {
+            DestroyIcon(g_capsIconCache[i].icon);
+        }
+        ZeroMemory(&g_capsIconCache[i], sizeof(g_capsIconCache[i]));
+    }
+}
+
+void CleanupPercentIconCache(void) {
+    ClearGeneratedIconCache();
+    g_cachedThemeTextColor = CLR_INVALID;
+    g_lastThemeCheckTick = 0;
+}
+
 /**
  * @brief Detect if Windows is using dark theme
  * @return TRUE if dark theme, FALSE if light theme
@@ -40,17 +86,27 @@ static BOOL IsSystemDarkTheme(void) {
  * @return Text color (white for dark theme, black for light theme)
  */
 static COLORREF GetThemeTextColor(void) {
-    if (IsSystemDarkTheme()) {
-        return RGB(255, 255, 255);  /* White text for dark theme */
-    } else {
-        return RGB(0, 0, 0);  /* Black text for light theme */
+    DWORD now = GetTickCount();
+    if (g_cachedThemeTextColor != CLR_INVALID && (now - g_lastThemeCheckTick) < 5000) {
+        return g_cachedThemeTextColor;
     }
+
+    g_cachedThemeTextColor = IsSystemDarkTheme()
+        ? RGB(255, 255, 255)
+        : RGB(0, 0, 0);
+    g_lastThemeCheckTick = now;
+    return g_cachedThemeTextColor;
 }
 
 /**
  * @brief Set percent icon colors
  */
 void SetPercentIconColors(COLORREF textColor, COLORREF bgColor) {
+    if (g_percentTextColor == textColor && g_percentBgColor == bgColor) {
+        return;
+    }
+
+    ClearGeneratedIconCache();
     g_percentTextColor = textColor;
     g_percentBgColor = bgColor;
 }
@@ -72,7 +128,7 @@ COLORREF GetPercentIconBgColor(void) {
 /**
  * @brief Create percent icon with text rendering
  */
-HICON CreatePercentIcon16(int percent) {
+static HICON CreatePercentIcon16Uncached(int percent) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (cx <= 0) cx = 16;
@@ -253,6 +309,42 @@ HICON CreatePercentIcon16(int percent) {
     return hIcon;
 }
 
+HICON CreatePercentIcon16(int percent) {
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    if (cx <= 0) cx = 16;
+    if (cy <= 0) cy = 16;
+
+    if (percent > 999) percent = 999;
+    if (percent < 0) percent = 0;
+
+    BOOL useTransparentBg = (g_percentBgColor == TRANSPARENT_BG_AUTO);
+    COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
+    COLORREF bgColor = g_percentBgColor;
+    PercentIconCacheEntry* entry = &g_percentIconCache[percent];
+
+    if (entry->valid && entry->icon &&
+        entry->textColor == textColor && entry->bgColor == bgColor &&
+        entry->cx == cx && entry->cy == cy) {
+        return CopyIcon(entry->icon);
+    }
+
+    HICON generated = CreatePercentIcon16Uncached(percent);
+    if (!generated) return NULL;
+
+    if (entry->icon) {
+        DestroyIcon(entry->icon);
+    }
+    entry->icon = generated;
+    entry->textColor = textColor;
+    entry->bgColor = bgColor;
+    entry->cx = cx;
+    entry->cy = cy;
+    entry->valid = TRUE;
+
+    return CopyIcon(entry->icon);
+}
+
 /**
  * @brief Check current Caps Lock state
  */
@@ -263,7 +355,7 @@ BOOL IsCapsLockOn(void) {
 /**
  * @brief Create Caps Lock indicator icon
  */
-HICON CreateCapsLockIcon(BOOL capsOn) {
+static HICON CreateCapsLockIconUncached(BOOL capsOn) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (cx <= 0) cx = 16;
@@ -434,5 +526,39 @@ HICON CreateCapsLockIcon(BOOL capsOn) {
     DeleteObject(hbmColor);
 
     return hIcon;
+}
+
+HICON CreateCapsLockIcon(BOOL capsOn) {
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    if (cx <= 0) cx = 16;
+    if (cy <= 0) cy = 16;
+
+    BOOL useTransparentBg = (g_percentBgColor == TRANSPARENT_BG_AUTO);
+    COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
+    COLORREF bgColor = g_percentBgColor;
+    CapsIconCacheEntry* entry = &g_capsIconCache[capsOn ? 1 : 0];
+
+    if (entry->valid && entry->icon &&
+        entry->textColor == textColor && entry->bgColor == bgColor &&
+        entry->cx == cx && entry->cy == cy && entry->capsOn == capsOn) {
+        return CopyIcon(entry->icon);
+    }
+
+    HICON generated = CreateCapsLockIconUncached(capsOn);
+    if (!generated) return NULL;
+
+    if (entry->icon) {
+        DestroyIcon(entry->icon);
+    }
+    entry->icon = generated;
+    entry->textColor = textColor;
+    entry->bgColor = bgColor;
+    entry->cx = cx;
+    entry->cy = cy;
+    entry->capsOn = capsOn;
+    entry->valid = TRUE;
+
+    return CopyIcon(entry->icon);
 }
 

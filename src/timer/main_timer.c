@@ -61,6 +61,10 @@ static BOOL StartMultimediaTimer(void) {
     return g_mainTimerId != 0;
 }
 
+static BOOL ShouldUseHighPrecision(UINT intervalMs) {
+    return intervalMs <= 33;
+}
+
 static BOOL AcquireTimerResolution(void) {
     if (g_timerResolutionMs > 0) return TRUE;
 
@@ -95,6 +99,11 @@ BOOL MainTimer_Init(HWND hwnd, UINT intervalMs) {
     g_mainHwnd = hwnd;
     g_timerInterval = NormalizeInterval(intervalMs);
 
+    if (!ShouldUseHighPrecision(g_timerInterval)) {
+        g_highPrecisionActive = FALSE;
+        return StartSetTimerFallback();
+    }
+
     /* Set system timer resolution to 1ms for precision */
     if (!AcquireTimerResolution()) {
         /* Fall back to standard SetTimer */
@@ -122,9 +131,19 @@ BOOL MainTimer_Start(HWND hwnd, UINT intervalMs) {
 
     UINT normalized = NormalizeInterval(intervalMs);
 
+    if (!ShouldUseHighPrecision(normalized)) {
+        if (g_mainTimerId != 0) {
+            timeKillEvent(g_mainTimerId);
+            g_mainTimerId = 0;
+        }
+        ReleaseTimerResolution();
+        g_highPrecisionActive = FALSE;
+        g_timerInterval = normalized;
+        return StartSetTimerFallback();
+    }
+
     if (!g_highPrecisionActive) {
-      g_timerInterval = normalized;
-      return StartSetTimerFallback();
+      return MainTimer_Init(hwnd, normalized);
     }
 
     if (!AcquireTimerResolution()) {
@@ -179,6 +198,19 @@ void MainTimer_SetInterval(UINT intervalMs) {
     }
 
     g_timerInterval = normalized;
+
+    if (!ShouldUseHighPrecision(g_timerInterval)) {
+        if (g_mainTimerId != 0) {
+            timeKillEvent(g_mainTimerId);
+            g_mainTimerId = 0;
+        }
+        ReleaseTimerResolution();
+        g_highPrecisionActive = FALSE;
+        if (g_mainHwnd) {
+            StartSetTimerFallback();
+        }
+        return;
+    }
 
     if (g_highPrecisionActive && g_mainTimerId != 0) {
         /* Kill old timer and create new one with updated interval */

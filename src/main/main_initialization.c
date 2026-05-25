@@ -446,12 +446,8 @@ BOOL InitializeSubsystems(void) {
     }
     LOG_INFO("COM initialization successful");
 
-    // Initialize GDI+ for image rendering
-    InitDrawingImage();
-
     // Initialize plugin manager
     PluginManager_Init();
-    PluginManager_ScanPlugins();
     LOG_INFO("Plugin manager initialized");
 
     return TRUE;

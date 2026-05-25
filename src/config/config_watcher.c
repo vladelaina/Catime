@@ -192,6 +192,7 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
         
         if (IsTargetFileChanged(buffer, bytes, wFileName)) {
             Sleep(DEBOUNCE_DELAY_MS);
+            InvalidateIniCache();
             NotifyConfigChanges(g_targetHwnd);
         }
     }

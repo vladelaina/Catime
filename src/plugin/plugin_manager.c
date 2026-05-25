@@ -34,6 +34,9 @@ static volatile int g_activePluginIndex = -1;
 static BOOL RestartPluginInternal(int index);
 static BOOL GetFileModTime(const wchar_t* path, FILETIME* modTime);
 static void StopPluginInternal(int index);
+static void StartHotReloadIfNeeded(void);
+static void StopHotReloadThread(void);
+static void StopHotReloadIfIdle(void);
 
 static BOOL Utf8ToWideFixed(const char* src, wchar_t* dest, int destCount) {
     if (!src || !dest || destCount <= 0) return FALSE;
@@ -131,6 +134,65 @@ static DWORD WINAPI HotReloadThread(LPVOID lpParam) {
     return 0;
 }
 
+static BOOL AnyPluginRunningLocked(void) {
+    for (int i = 0; i < g_pluginCount; i++) {
+        if (g_plugins[i].isRunning) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void StartHotReloadIfNeeded(void) {
+    if (g_hHotReloadThread) return;
+
+    g_hotReloadRunning = TRUE;
+    g_hHotReloadStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (!g_hHotReloadStopEvent) {
+        g_hotReloadRunning = FALSE;
+        LOG_WARNING("Failed to create hot-reload stop event");
+        return;
+    }
+
+    g_hHotReloadThread = CreateThread(NULL, 0, HotReloadThread, NULL, 0, NULL);
+    if (!g_hHotReloadThread) {
+        LOG_WARNING("Failed to start hot-reload thread");
+        CloseHandle(g_hHotReloadStopEvent);
+        g_hHotReloadStopEvent = NULL;
+        g_hotReloadRunning = FALSE;
+    }
+}
+
+static void StopHotReloadThread(void) {
+    if (g_hHotReloadThread) {
+        g_hotReloadRunning = FALSE;
+        if (g_hHotReloadStopEvent) {
+            SetEvent(g_hHotReloadStopEvent);
+        }
+        WaitForSingleObject(g_hHotReloadThread, INFINITE);
+        CloseHandle(g_hHotReloadThread);
+        g_hHotReloadThread = NULL;
+    }
+    if (g_hHotReloadStopEvent) {
+        CloseHandle(g_hHotReloadStopEvent);
+        g_hHotReloadStopEvent = NULL;
+    }
+}
+
+static void StopHotReloadIfIdle(void) {
+    BOOL hasRunningPlugin = FALSE;
+
+    if (!g_pluginManagerInitialized || !g_hHotReloadThread) return;
+
+    EnterCriticalSection(&g_pluginCS);
+    hasRunningPlugin = AnyPluginRunningLocked();
+    LeaveCriticalSection(&g_pluginCS);
+
+    if (!hasRunningPlugin) {
+        StopHotReloadThread();
+    }
+}
+
 /**
  * @brief Extract display name from plugin filename (keep extension)
  */
@@ -148,38 +210,13 @@ void PluginManager_Init(void) {
     /* Initialize process management */
     PluginProcess_Init();
 
-    /* Start hot-reload monitoring thread */
-    g_hotReloadRunning = TRUE;
-    g_hHotReloadStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
-    g_hHotReloadThread = CreateThread(NULL, 0, HotReloadThread, NULL, 0, NULL);
-    if (!g_hHotReloadThread) {
-        LOG_WARNING("Failed to start hot-reload thread");
-        if (g_hHotReloadStopEvent) {
-            CloseHandle(g_hHotReloadStopEvent);
-            g_hHotReloadStopEvent = NULL;
-        }
-    }
-
     LOG_INFO("Plugin manager initialized");
 }
 
 void PluginManager_Shutdown(void) {
     if (!g_pluginManagerInitialized) return;
 
-    /* Stop hot-reload thread */
-    if (g_hHotReloadThread) {
-        g_hotReloadRunning = FALSE;
-        if (g_hHotReloadStopEvent) {
-            SetEvent(g_hHotReloadStopEvent);
-        }
-        WaitForSingleObject(g_hHotReloadThread, INFINITE);
-        CloseHandle(g_hHotReloadThread);
-        g_hHotReloadThread = NULL;
-    }
-    if (g_hHotReloadStopEvent) {
-        CloseHandle(g_hHotReloadStopEvent);
-        g_hHotReloadStopEvent = NULL;
-    }
+    StopHotReloadThread();
 
     EnterCriticalSection(&g_pluginCS);
 
@@ -559,6 +596,9 @@ BOOL PluginManager_StartPlugin(int index) {
     /* Plugin is trusted, launch directly */
     BOOL result = LaunchPluginInternal(index);
     LeaveCriticalSection(&g_pluginCS);
+    if (result) {
+        StartHotReloadIfNeeded();
+    }
     return result;
 }
 
@@ -646,6 +686,9 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
 
     BOOL result = LaunchPluginInternal(index);
     LeaveCriticalSection(&g_pluginCS);
+    if (result) {
+        StartHotReloadIfNeeded();
+    }
     return result;
 }
 
@@ -701,6 +744,7 @@ BOOL PluginManager_StopPlugin(int index) {
     LOG_INFO("Stopped plugin: %ls", plugin->displayName);
 
     LeaveCriticalSection(&g_pluginCS);
+    StopHotReloadIfIdle();
     return TRUE;
 }
 
@@ -778,6 +822,7 @@ void PluginManager_StopAllPlugins(void) {
     g_activePluginIndex = -1;
     g_lastRunningPluginIndex = -1;
     LeaveCriticalSection(&g_pluginCS);
+    StopHotReloadThread();
 }
 
 BOOL PluginManager_OpenPluginFolder(void) {
@@ -853,5 +898,6 @@ void PluginManager_HandleProcessExit(DWORD processId, const wchar_t* displayName
         if (hwnd) {
             InvalidateRect(hwnd, NULL, TRUE);
         }
+        StopHotReloadIfIdle();
     }
 }

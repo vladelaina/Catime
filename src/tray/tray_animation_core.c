@@ -585,6 +585,8 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
         g_memoryPool = MemoryPool_Create(MEMORY_POOL_SIZE);
     }
     
+    LoadedAnimation_Free(&g_mainAnimation);
+    LoadedAnimation_Free(&g_previewAnimation);
     LoadedAnimation_Init(&g_mainAnimation);
     LoadedAnimation_Init(&g_previewAnimation);
     g_pendingPreviewName[0] = '\0';
@@ -653,6 +655,7 @@ void StopTrayAnimation(HWND hwnd) {
 
     LoadedAnimation_Free(&g_mainAnimation);
     LoadedAnimation_Free(&g_previewAnimation);
+    CleanupPercentIconCache();
 
     if (g_memoryPool) {
         MemoryPool_Destroy(g_memoryPool);
@@ -754,7 +757,10 @@ BOOL SetCurrentAnimationName(const char* name) {
 
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy);
+    if (!LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy)) {
+        LoadedAnimation_Free(&newMain);
+        return FALSE;
+    }
 
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
@@ -815,7 +821,10 @@ void PreviewAnimationFromFile(HWND hwnd, const char* filePath) {
 
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    LoadAnimationFromPath(filePath, &newPreview, g_memoryPool, cx, cy);
+    if (!LoadAnimationFromPath(filePath, &newPreview, g_memoryPool, cx, cy)) {
+        LoadedAnimation_Free(&newPreview);
+        return;
+    }
 
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
@@ -1044,6 +1053,8 @@ void PreloadAnimationFromConfig(void) {
     
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
+    LoadedAnimation_Free(&g_mainAnimation);
+    LoadedAnimation_Init(&g_mainAnimation);
     LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
 }
 
@@ -1107,7 +1118,10 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
 
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy);
+    if (!LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy)) {
+        LoadedAnimation_Free(&newMain);
+        return;
+    }
 
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);

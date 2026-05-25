@@ -60,6 +60,28 @@ typedef struct {
     wchar_t currentFontRelPath[MAX_PATH];
 } FontScanContext;
 
+typedef struct {
+    UINT id;
+    wchar_t relativePath[MAX_PATH];
+} FontMenuIdMapEntry;
+
+static FontMenuIdMapEntry g_fontMenuIdMap[MAX_FONT_ENTRIES];
+static int g_fontMenuIdMapCount = 0;
+
+static void ResetFontMenuIdMap(void) {
+    ZeroMemory(g_fontMenuIdMap, sizeof(g_fontMenuIdMap));
+    g_fontMenuIdMapCount = 0;
+}
+
+static void RememberFontMenuId(UINT id, const wchar_t* relativePath) {
+    if (!relativePath || g_fontMenuIdMapCount >= MAX_FONT_ENTRIES) return;
+
+    g_fontMenuIdMap[g_fontMenuIdMapCount].id = id;
+    wcsncpy(g_fontMenuIdMap[g_fontMenuIdMapCount].relativePath, relativePath, MAX_PATH - 1);
+    g_fontMenuIdMap[g_fontMenuIdMapCount].relativePath[MAX_PATH - 1] = L'\0';
+    g_fontMenuIdMapCount++;
+}
+
 /* ============================================================================
  * Path Helpers
  * ============================================================================ */
@@ -361,7 +383,9 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, FontEntry* entries, int co
             } else {
                 UINT flags = MF_STRING;
                 if (entry->isCurrentFont) flags |= MF_CHECKED;
-                AppendMenuW(hCurrent, flags, (*fontId)++, entry->displayName);
+                UINT id = (UINT)(*fontId)++;
+                AppendMenuW(hCurrent, flags, id, entry->displayName);
+                RememberFontMenuId(id, entry->relativePath);
             }
             
             token = nextToken;
@@ -384,6 +408,7 @@ void BuildFontSubmenu(HMENU hMenu) {
         WriteLog(LOG_LEVEL_ERROR, "Failed to create font submenu");
         return;
     }
+    ResetFontMenuIdMap();
     
     int g_advancedFontId = CMD_FONT_SELECTION_BASE;
     
@@ -460,7 +485,14 @@ void BuildFontSubmenu(HMENU hMenu) {
 BOOL GetFontPathFromMenuId(UINT id, char* outPath, size_t outPathSize) {
     if (!outPath || outPathSize == 0) return FALSE;
     if (id < CMD_FONT_SELECTION_BASE) return FALSE;
-    
+
+    for (int i = 0; i < g_fontMenuIdMapCount; i++) {
+        if (g_fontMenuIdMap[i].id == id) {
+            return WideCharToMultiByte(CP_UTF8, 0, g_fontMenuIdMap[i].relativePath, -1,
+                                       outPath, (int)outPathSize, NULL, NULL) > 0;
+        }
+    }
+
     /* Scan fonts folder */
     FontEntry* entries = (FontEntry*)malloc(MAX_FONT_ENTRIES * sizeof(FontEntry));
     if (!entries) return FALSE;

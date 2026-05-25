@@ -675,6 +675,59 @@ static DWORD WINAPI FileWatcherThread(LPVOID lpParam) {
     return 0;
 }
 
+static BOOL EnsureWatcherEvents(void) {
+    if (!g_hWatchStopEvent) {
+        g_hWatchStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+        if (!g_hWatchStopEvent) return FALSE;
+    }
+    if (!g_hWatchWakeEvent) {
+        g_hWatchWakeEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
+        if (!g_hWatchWakeEvent) {
+            if (!g_hWatchThread && g_hWatchStopEvent) {
+                CloseHandle(g_hWatchStopEvent);
+                g_hWatchStopEvent = NULL;
+            }
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static BOOL StartWatcherThreadIfNeeded(void) {
+    if (g_hWatchThread) return TRUE;
+    if (!EnsureWatcherEvents()) {
+        LOG_ERROR("PluginData: Failed to create watcher events");
+        return FALSE;
+    }
+
+    ResetEvent(g_hWatchStopEvent);
+    ResetEvent(g_hWatchWakeEvent);
+    g_isRunning = TRUE;
+    g_hWatchThread = CreateThread(NULL, 0, FileWatcherThread, NULL, 0, NULL);
+    if (!g_hWatchThread) {
+        g_isRunning = FALSE;
+        LOG_ERROR("PluginData: Failed to start watcher thread");
+        return FALSE;
+    }
+
+    LOG_INFO("PluginData: Watcher started");
+    return TRUE;
+}
+
+static void StopWatcherThreadIfIdle(void) {
+    if (!g_hWatchThread) return;
+
+    g_isRunning = FALSE;
+    if (g_hWatchStopEvent) {
+        SetEvent(g_hWatchStopEvent);
+    }
+    WakeWatcherThread();
+    WaitForSingleObject(g_hWatchThread, INFINITE);
+    CloseHandle(g_hWatchThread);
+    g_hWatchThread = NULL;
+    LOG_INFO("PluginData: Watcher stopped");
+}
+
 void PluginData_Init(HWND hwnd) {
     InitializeCriticalSection(&g_dataCS);
     g_pluginDataInitialized = TRUE;
@@ -687,21 +740,7 @@ void PluginData_Init(HWND hwnd) {
     g_lastPluginDataRedrawTick = 0;
     InterlockedExchange(&g_pluginDataRedrawQueued, 0);
     InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
-    g_isRunning = TRUE;
-    g_hWatchStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
-    g_hWatchWakeEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
-    if (!g_hWatchStopEvent || !g_hWatchWakeEvent) {
-        LOG_ERROR("PluginData: Failed to create watcher events");
-        if (g_hWatchStopEvent) {
-            CloseHandle(g_hWatchStopEvent);
-            g_hWatchStopEvent = NULL;
-        }
-        if (g_hWatchWakeEvent) {
-            CloseHandle(g_hWatchWakeEvent);
-            g_hWatchWakeEvent = NULL;
-        }
-        g_isRunning = FALSE;
-    }
+    g_isRunning = FALSE;
 
     /* Initialize exit subsystem */
     PluginExit_Init(hwnd, &g_dataCS);
@@ -712,28 +751,14 @@ void PluginData_Init(HWND hwnd) {
         EnsureOutputDirExists(outputPath);
     }
 
-    g_hWatchThread = g_isRunning ? CreateThread(NULL, 0, FileWatcherThread, NULL, 0, NULL) : NULL;
-    if (g_hWatchThread) {
-        LOG_INFO("PluginData: Initialized");
-    } else {
-        LOG_ERROR("PluginData: Failed to start watcher thread");
-    }
+    LOG_INFO("PluginData: Initialized");
 }
 
 void PluginData_Shutdown(void) {
     if (!g_pluginDataInitialized) return;
     
     /* Stop watcher thread */
-    if (g_hWatchThread) {
-        g_isRunning = FALSE;
-        if (g_hWatchStopEvent) {
-            SetEvent(g_hWatchStopEvent);
-        }
-        WakeWatcherThread();
-        WaitForSingleObject(g_hWatchThread, INFINITE);
-        CloseHandle(g_hWatchThread);
-        g_hWatchThread = NULL;
-    }
+    StopWatcherThreadIfIdle();
     if (g_hNotifyWnd) {
         KillTimer(g_hNotifyWnd, PLUGIN_DATA_REDRAW_TIMER_ID);
     }
@@ -816,6 +841,7 @@ void PluginData_Clear(void) {
     /* Clear any pending notification to prevent stale notifications */
     g_pendingNotify.pending = FALSE;
     LeaveCriticalSection(&g_dataCS);
+    StopWatcherThreadIfIdle();
 }
 
 void PluginData_SetText(const wchar_t* text) {
@@ -859,6 +885,7 @@ void PluginData_SetText(const wchar_t* text) {
     
     // Force file watcher to re-read on next cycle
     InterlockedExchange(&g_forceNextUpdate, TRUE);
+    StartWatcherThreadIfNeeded();
     WakeWatcherThread();
 }
 
@@ -886,6 +913,7 @@ void PluginData_SetActive(BOOL active) {
     LOG_INFO("PluginData: Mode %s", active ? "ACTIVE" : "INACTIVE");
 
     if (active) {
+        StartWatcherThreadIfNeeded();
         WakeWatcherThread();
 
         // If activating, immediately read the file content (don't wait for watcher)
@@ -910,6 +938,8 @@ void PluginData_SetActive(BOOL active) {
                 CloseHandle(hFile);
             }
         }
+    } else {
+        StopWatcherThreadIfIdle();
     }
 }
 

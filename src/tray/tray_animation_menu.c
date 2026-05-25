@@ -51,6 +51,28 @@ typedef struct {
     int capacity;
 } AnimScanContext;
 
+typedef struct {
+    UINT id;
+    char relativePath[MAX_PATH];
+} AnimMenuIdMapEntry;
+
+static AnimMenuIdMapEntry g_animMenuIdMap[MAX_ANIM_ENTRIES];
+static int g_animMenuIdMapCount = 0;
+
+static void ResetAnimationMenuIdMap(void) {
+    ZeroMemory(g_animMenuIdMap, sizeof(g_animMenuIdMap));
+    g_animMenuIdMapCount = 0;
+}
+
+static void RememberAnimationMenuId(UINT id, const char* relativePath) {
+    if (!relativePath || g_animMenuIdMapCount >= MAX_ANIM_ENTRIES) return;
+
+    g_animMenuIdMap[g_animMenuIdMapCount].id = id;
+    strncpy(g_animMenuIdMap[g_animMenuIdMapCount].relativePath, relativePath, MAX_PATH - 1);
+    g_animMenuIdMap[g_animMenuIdMapCount].relativePath[MAX_PATH - 1] = '\0';
+    g_animMenuIdMapCount++;
+}
+
 /* ============================================================================
  * Path Helpers
  * ============================================================================ */
@@ -288,7 +310,9 @@ static void BuildAnimationMenuFromEntries(HMENU hRootMenu, AnimEntry* entries, i
                 }
                 
                 if (*nextId < CLOCK_IDM_ANIMATIONS_END) {
-                    AppendMenuW(hCurrent, flags, (*nextId)++, wName);
+                    UINT id = (*nextId)++;
+                    AppendMenuW(hCurrent, flags, id, wName);
+                    RememberAnimationMenuId(id, entry->relativePath);
                 }
             }
             
@@ -308,6 +332,7 @@ static void BuildAnimationMenuFromEntries(HMENU hRootMenu, AnimEntry* entries, i
  */
 void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
     if (!hMenu) return;
+    ResetAnimationMenuIdMap();
     
     /* Builtin options */
     int builtinCount = 0;
@@ -364,6 +389,12 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     }
     
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_END) {
+        for (int i = 0; i < g_animMenuIdMapCount; i++) {
+            if (g_animMenuIdMap[i].id == id) {
+                return SetCurrentAnimationName(g_animMenuIdMap[i].relativePath);
+            }
+        }
+
         /* Scan folder to find animation at this ID */
         AnimEntry* entries = (AnimEntry*)malloc(MAX_ANIM_ENTRIES * sizeof(AnimEntry));
         if (!entries) return FALSE;
@@ -439,6 +470,14 @@ BOOL GetAnimationNameFromMenuId(UINT id, char* outPath, size_t outPathSize) {
     }
     
     if (id >= CLOCK_IDM_ANIMATIONS_BASE && id < CLOCK_IDM_ANIMATIONS_END) {
+        for (int i = 0; i < g_animMenuIdMapCount; i++) {
+            if (g_animMenuIdMap[i].id == id) {
+                strncpy(outPath, g_animMenuIdMap[i].relativePath, outPathSize - 1);
+                outPath[outPathSize - 1] = '\0';
+                return TRUE;
+            }
+        }
+
         AnimEntry* entries = (AnimEntry*)malloc(MAX_ANIM_ENTRIES * sizeof(AnimEntry));
         if (!entries) return FALSE;
         

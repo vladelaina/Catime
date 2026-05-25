@@ -713,6 +713,11 @@ typedef struct {
  */
 BOOL WriteIniMultipleAtomic(const char* filePath, const IniKeyValue* updates, size_t count);
 
+/**
+ * @brief Drop the in-process INI cache after external config changes
+ */
+void InvalidateIniCache(void);
+
 /* ============================================================================
  * First-run and font license tracking
  * ============================================================================ */

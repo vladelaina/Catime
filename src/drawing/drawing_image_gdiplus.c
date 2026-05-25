@@ -201,6 +201,12 @@ void InitDrawingImage(void) {
     }
 }
 
+static BOOL EnsureDrawingImageInitialized(void) {
+    if (!g_gdiplusToken) {
+        InitDrawingImage();
+    }
+    return g_gdiplusToken != 0;
+}
 
 void ShutdownDrawingImage(void) {
     for (int i = 0; i < MAX_CACHED_IMAGES; i++) {
@@ -218,7 +224,8 @@ void ShutdownDrawingImage(void) {
 }
 
 BOOL GetImageDimensions(const wchar_t* imagePath, int* outWidth, int* outHeight) {
-    if (!g_gdiplusToken || !imagePath || !outWidth || !outHeight) return FALSE;
+    if (!imagePath || !outWidth || !outHeight) return FALSE;
+    if (!EnsureDrawingImageInitialized()) return FALSE;
     if (!pGdipGetImageWidth || !pGdipGetImageHeight) return FALSE;
     
     *outWidth = 0;
@@ -235,7 +242,8 @@ BOOL GetImageDimensions(const wchar_t* imagePath, int* outWidth, int* outHeight)
 }
 
 BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wchar_t* imagePath) {
-    if (!g_gdiplusToken || !hdc || !imagePath) return FALSE;
+    if (!hdc || !imagePath) return FALSE;
+    if (!EnsureDrawingImageInitialized()) return FALSE;
     if (!pGdipCreateBitmapFromFile || !pGdipCreateFromHDC || !pGdipDeleteGraphics || 
         !pGdipGetImageWidth || !pGdipGetImageHeight || !pGdipDrawImageRectI) return FALSE;
 

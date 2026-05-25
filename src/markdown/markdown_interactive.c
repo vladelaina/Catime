@@ -128,6 +128,8 @@ void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
 
 void UpdateRegionPositions(int windowX, int windowY) {
     if (g_initialized != INTERACTIVE_CS_INITIALIZED) return;
+    if (g_windowOffsetX == windowX && g_windowOffsetY == windowY) return;
+
     EnterCriticalSection(&g_interactiveCS);
     
     /* Just store window position - regions are in window coords */
@@ -139,7 +141,8 @@ void UpdateRegionPositions(int windowX, int windowY) {
 
 const ClickableRegion* GetClickableRegionAt(POINT pt) {
     if (g_initialized != INTERACTIVE_CS_INITIALIZED) return NULL;
-    
+    if (g_regionCount <= 0) return NULL;
+
     const ClickableRegion* result = NULL;
     EnterCriticalSection(&g_interactiveCS);
     

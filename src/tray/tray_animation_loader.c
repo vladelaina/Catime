@@ -68,11 +68,49 @@ static const int g_builtinAnimCount = sizeof(g_builtinAnims) / sizeof(g_builtinA
  */
 void LoadedAnimation_Init(LoadedAnimation* anim) {
     if (!anim) return;
-    memset(anim->icons, 0, sizeof(anim->icons));
+    anim->icons = NULL;
+    anim->ownsIcons = NULL;
     anim->count = 0;
-    memset(anim->delays, 0, sizeof(anim->delays));
+    anim->capacity = 0;
+    anim->delays = NULL;
     anim->isAnimated = FALSE;
     anim->sourceType = ANIM_SOURCE_UNKNOWN;
+}
+
+static BOOL LoadedAnimation_Reserve(LoadedAnimation* anim, int capacity) {
+    if (!anim || capacity <= 0) return FALSE;
+    if (capacity <= anim->capacity) return TRUE;
+
+    HICON* newIcons = (HICON*)calloc((size_t)capacity, sizeof(HICON));
+    BOOL* newOwnsIcons = (BOOL*)calloc((size_t)capacity, sizeof(BOOL));
+    UINT* newDelays = (UINT*)calloc((size_t)capacity, sizeof(UINT));
+    if (!newIcons || !newOwnsIcons || !newDelays) {
+        free(newIcons);
+        free(newOwnsIcons);
+        free(newDelays);
+        return FALSE;
+    }
+
+    if (anim->count > 0) {
+        memcpy(newIcons, anim->icons, (size_t)anim->count * sizeof(HICON));
+        if (anim->ownsIcons) {
+            memcpy(newOwnsIcons, anim->ownsIcons, (size_t)anim->count * sizeof(BOOL));
+        } else {
+            for (int i = 0; i < anim->count; i++) {
+                newOwnsIcons[i] = TRUE;
+            }
+        }
+        memcpy(newDelays, anim->delays, (size_t)anim->count * sizeof(UINT));
+    }
+
+    free(anim->icons);
+    free(anim->ownsIcons);
+    free(anim->delays);
+    anim->icons = newIcons;
+    anim->ownsIcons = newOwnsIcons;
+    anim->delays = newDelays;
+    anim->capacity = capacity;
+    return TRUE;
 }
 
 /**
@@ -82,13 +120,20 @@ void LoadedAnimation_Free(LoadedAnimation* anim) {
     if (!anim) return;
     
     for (int i = 0; i < anim->count; i++) {
-        if (anim->icons[i]) {
+        if (anim->icons[i] && (!anim->ownsIcons || anim->ownsIcons[i])) {
             DestroyIcon(anim->icons[i]);
             anim->icons[i] = NULL;
         }
     }
     
+    free(anim->icons);
+    free(anim->ownsIcons);
+    free(anim->delays);
+    anim->icons = NULL;
+    anim->ownsIcons = NULL;
+    anim->delays = NULL;
     anim->count = 0;
+    anim->capacity = 0;
     anim->isAnimated = FALSE;
     anim->sourceType = ANIM_SOURCE_UNKNOWN;
 }
@@ -102,6 +147,34 @@ static BOOL EndsWithIgnoreCase(const char* str, const char* suffix) {
     size_t lsuf = strlen(suffix);
     if (lsuf > ls) return FALSE;
     return _stricmp(str + (ls - lsuf), suffix) == 0;
+}
+
+static BOOL MoveDecodedAnimationToLoaded(DecodedAnimation* decoded, LoadedAnimation* anim) {
+    if (!decoded || !anim || decoded->count <= 0) return FALSE;
+    if (!LoadedAnimation_Reserve(anim, decoded->count)) return FALSE;
+
+    for (int i = 0; i < decoded->count; i++) {
+        anim->icons[i] = decoded->icons[i];
+        anim->ownsIcons[i] = TRUE;
+        anim->delays[i] = decoded->delays[i];
+        decoded->icons[i] = NULL;
+    }
+    anim->count = decoded->count;
+    anim->isAnimated = (anim->count > 1);
+    return TRUE;
+}
+
+static BOOL LoadedAnimation_SetSingleIcon(LoadedAnimation* anim, HICON hIcon, BOOL ownsIcon) {
+    if (!anim || !hIcon) return FALSE;
+    if (!LoadedAnimation_Reserve(anim, 1)) {
+        if (ownsIcon) DestroyIcon(hIcon);
+        return FALSE;
+    }
+    anim->icons[0] = hIcon;
+    anim->ownsIcons[0] = ownsIcon;
+    anim->count = 1;
+    anim->isAnimated = FALSE;
+    return TRUE;
 }
 
 const BuiltinAnimDef* GetBuiltinAnimDef(const char* name) {
@@ -200,20 +273,20 @@ static int CompareAnimFile(const void* a, const void* b) {
 /**
  * @brief Load icons from folder with natural sorting
  */
-BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons, 
-                         int* count, int maxCount) {
-    if (!utf8FolderPath || !icons || !count || maxCount <= 0) return FALSE;
-    
-    *count = 0;
+BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim) {
+    if (!utf8FolderPath || !anim) return FALSE;
+
+    anim->count = 0;
     
     wchar_t wFolder[MAX_PATH] = {0};
     if (MultiByteToWideChar(CP_UTF8, 0, utf8FolderPath, -1, wFolder, MAX_PATH) <= 0) {
         return FALSE;
     }
     
-    AnimFile* files = (AnimFile*)malloc(sizeof(AnimFile) * maxCount);
+    int fileCapacity = 64;
+    AnimFile* files = (AnimFile*)malloc(sizeof(AnimFile) * (size_t)fileCapacity);
     if (!files) return FALSE;
-    
+
     int fileCount = 0;
     
     /* Scan for all supported image formats */
@@ -232,7 +305,13 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
         if (hFind != INVALID_HANDLE_VALUE) {
             do {
                 if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-                if (fileCount >= maxCount) break;
+                if (fileCount >= fileCapacity) {
+                    int newCapacity = fileCapacity * 2;
+                    AnimFile* newFiles = (AnimFile*)realloc(files, sizeof(AnimFile) * (size_t)newCapacity);
+                    if (!newFiles) break;
+                    files = newFiles;
+                    fileCapacity = newCapacity;
+                }
                 
                 const wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
                 if (!dot) continue;
@@ -268,12 +347,17 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
                 if (pathWritten < 0) continue;
                 fileCount++;
                 
-            } while (FindNextFileW(hFind, &ffd) && fileCount < maxCount);
+            } while (FindNextFileW(hFind, &ffd));
             FindClose(hFind);
         }
     }
     
     if (fileCount == 0) {
+        free(files);
+        return FALSE;
+    }
+
+    if (!LoadedAnimation_Reserve(anim, fileCount)) {
         free(files);
         return FALSE;
     }
@@ -302,12 +386,13 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons,
         }
         
         if (hIcon) {
-            icons[(*count)++] = hIcon;
+            anim->icons[anim->count++] = hIcon;
+            anim->ownsIcons[anim->count - 1] = TRUE;
         }
     }
     
     free(files);
-    return (*count > 0);
+    return (anim->count > 0);
 }
 
 /**
@@ -390,10 +475,7 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
     
     if (type == ANIM_SOURCE_LOGO) {
         HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
-        if (hIcon) {
-            anim->icons[0] = hIcon;
-            anim->count = 1;
-            anim->isAnimated = FALSE;
+        if (LoadedAnimation_SetSingleIcon(anim, hIcon, FALSE)) {
             return TRUE;
         }
         return FALSE;
@@ -428,18 +510,9 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
         DecodedAnimation_Init(&decoded);
         
         if (DecodeAnimatedImage(fullPath, &decoded, pool, iconWidth, iconHeight)) {
-            /* Copy to LoadedAnimation */
-            int copyCount = decoded.count < MAX_ANIMATION_FRAMES ? decoded.count : MAX_ANIMATION_FRAMES;
-            for (int i = 0; i < copyCount; i++) {
-                anim->icons[i] = decoded.icons[i];
-                anim->delays[i] = decoded.delays[i];
-                decoded.icons[i] = NULL;
-            }
-            anim->count = copyCount;
-            anim->isAnimated = (copyCount > 1);
-            
+            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, anim);
             DecodedAnimation_Free(&decoded);
-            return TRUE;
+            return moved;
         }
         
         DecodedAnimation_Free(&decoded);
@@ -448,17 +521,14 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
     
     if (type == ANIM_SOURCE_STATIC) {
         HICON hIcon = DecodeStaticImage(fullPath, iconWidth, iconHeight);
-        if (hIcon) {
-            anim->icons[0] = hIcon;
-            anim->count = 1;
-            anim->isAnimated = FALSE;
+        if (LoadedAnimation_SetSingleIcon(anim, hIcon, TRUE)) {
             return TRUE;
         }
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_FOLDER) {
-        if (LoadIconsFromFolder(fullPath, anim->icons, &anim->count, MAX_ANIMATION_FRAMES)) {
+        if (LoadIconsFromFolder(fullPath, anim)) {
             anim->isAnimated = (anim->count > 1);
             return TRUE;
         }
@@ -483,10 +553,7 @@ BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
     /* Handle special types if path happens to be one of them (unlikely but safe) */
     if (type == ANIM_SOURCE_LOGO) {
         HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
-        if (hIcon) {
-            anim->icons[0] = hIcon;
-            anim->count = 1;
-            anim->isAnimated = FALSE;
+        if (LoadedAnimation_SetSingleIcon(anim, hIcon, FALSE)) {
             return TRUE;
         }
         return FALSE;
@@ -503,17 +570,9 @@ BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
         DecodedAnimation_Init(&decoded);
         
         if (DecodeAnimatedImage(path, &decoded, pool, iconWidth, iconHeight)) {
-            int copyCount = decoded.count < MAX_ANIMATION_FRAMES ? decoded.count : MAX_ANIMATION_FRAMES;
-            for (int i = 0; i < copyCount; i++) {
-                anim->icons[i] = decoded.icons[i];
-                anim->delays[i] = decoded.delays[i];
-                decoded.icons[i] = NULL;
-            }
-            anim->count = copyCount;
-            anim->isAnimated = (copyCount > 1);
-            
+            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, anim);
             DecodedAnimation_Free(&decoded);
-            return TRUE;
+            return moved;
         }
         
         DecodedAnimation_Free(&decoded);
@@ -522,17 +581,14 @@ BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
     
     if (type == ANIM_SOURCE_STATIC) {
         HICON hIcon = DecodeStaticImage(path, iconWidth, iconHeight);
-        if (hIcon) {
-            anim->icons[0] = hIcon;
-            anim->count = 1;
-            anim->isAnimated = FALSE;
+        if (LoadedAnimation_SetSingleIcon(anim, hIcon, TRUE)) {
             return TRUE;
         }
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_FOLDER) {
-        if (LoadIconsFromFolder(path, anim->icons, &anim->count, MAX_ANIMATION_FRAMES)) {
+        if (LoadIconsFromFolder(path, anim)) {
             anim->isAnimated = (anim->count > 1);
             return TRUE;
         }

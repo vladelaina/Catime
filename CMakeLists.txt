@@ -187,7 +187,6 @@ target_link_libraries(catime PRIVATE
     comdlg32
     uuid
     wininet
-    winhttp
     winmm
     comctl32
     dwmapi

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <limits.h>
 
 #define MAX_ANIMATION_PIXELS (4096u * 4096u)
 
@@ -378,8 +379,14 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
     /* Allocate frame arrays */
     UINT frameCount = 0;
     pDecoder->lpVtbl->GetFrameCount(pDecoder, &frameCount);
-    if (frameCount == 0 || frameCount > 2048) frameCount = 2048;
-    
+    if (frameCount == 0 || frameCount > (UINT)INT_MAX) {
+        DecodedAnimation_Free(anim);
+        pDecoder->lpVtbl->Release(pDecoder);
+        pFactory->lpVtbl->Release(pFactory);
+        if (SUCCEEDED(hrInit)) CoUninitialize();
+        return FALSE;
+    }
+
     anim->icons = (HICON*)calloc(frameCount, sizeof(HICON));
     anim->delays = (UINT*)calloc(frameCount, sizeof(UINT));
     if (!anim->icons || !anim->delays) {
@@ -393,7 +400,7 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
     UINT prevDisposal = 0;
     UINT prevLeft = 0, prevTop = 0, prevWidth = 0, prevHeight = 0;
 
-    for (UINT i = 0; i < frameCount && anim->count < 2048; ++i) {
+    for (UINT i = 0; i < frameCount; ++i) {
         IWICBitmapFrameDecode* pFrame = NULL;
         if (FAILED(pDecoder->lpVtbl->GetFrame(pDecoder, i, &pFrame)) || !pFrame) continue;
 

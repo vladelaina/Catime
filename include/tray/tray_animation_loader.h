@@ -13,9 +13,6 @@
 #include "tray_animation_decoder.h"
 #include "utils/memory_pool.h"
 
-/* Maximum frames per animation (64 provides smooth motion at 150ms interval = 9.6s loop) */
-#define MAX_ANIMATION_FRAMES 2048
-
 /**
  * @brief Animation source types
  */
@@ -34,9 +31,11 @@ typedef enum {
  * @brief Loaded animation frames
  */
 typedef struct {
-    HICON icons[MAX_ANIMATION_FRAMES];
+    HICON* icons;
+    BOOL* ownsIcons;
     int count;
-    UINT delays[MAX_ANIMATION_FRAMES];
+    int capacity;
+    UINT* delays;
     BOOL isAnimated;
     AnimationSourceType sourceType;
 } LoadedAnimation;
@@ -113,13 +112,10 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
 /**
  * @brief Load icons from folder (naturally sorted)
  * @param utf8FolderPath Full path to folder
- * @param icons Output array
- * @param count Output count
- * @param maxCount Maximum icons to load
+ * @param anim Output animation structure
  * @return TRUE if any icons loaded
  */
-BOOL LoadIconsFromFolder(const char* utf8FolderPath, HICON* icons, 
-                         int* count, int maxCount);
+BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim);
 
 /**
  * @brief Check if file/folder exists and is valid animation source

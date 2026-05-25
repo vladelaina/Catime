@@ -37,6 +37,7 @@ typedef struct {
 typedef struct {
     BOOL hasBaseline;
     ULONGLONG lastTick;
+    ULONGLONG lastPollAttemptTick;
     NetInterfaceCounter lastCounters[MAX_TRACKED_INTERFACES];
     DWORD lastCounterCount;
     float cachedUpBps;
@@ -376,8 +377,8 @@ static void SampleNetworkSpeed(void) {
     SetNetworkBaseline(currentCounters, currentCount, now);
 }
 
-/** Centralized refresh called by all getters */
-static void RefreshCacheIfNeeded(void) {
+/** Refresh CPU/memory cache only. Network is sampled lazily by its own getter. */
+static void RefreshBasicCacheIfNeeded(void) {
     if (!ShouldRefresh()) {
         return;
     }
@@ -393,13 +394,23 @@ static void RefreshCacheIfNeeded(void) {
         g_state.memory.cachedPercent = memTmp;
     }
 
-    SampleNetworkSpeed();
     /* Baseline creation requires an immediate follow-up sample to avoid startup 0%. */
     if (cpuStatus == CPU_SAMPLE_BASELINE_ONLY) {
         g_state.lastUpdateTick = 0;
     } else {
         g_state.lastUpdateTick = GetMonotonicTickMs();
     }
+}
+
+static void RefreshNetworkCacheIfNeeded(void) {
+    ULONGLONG now = GetMonotonicTickMs();
+    if (g_state.network.lastPollAttemptTick != 0 &&
+        (now - g_state.network.lastPollAttemptTick) < g_state.updateIntervalMs) {
+        return;
+    }
+
+    g_state.network.lastPollAttemptTick = now;
+    SampleNetworkSpeed();
 }
 
 static inline LONG IsMonitorInitialized(void) {
@@ -468,7 +479,7 @@ void SystemMonitor_ForceRefresh(void) {
         return;
     }
     g_state.lastUpdateTick = 0;
-    RefreshCacheIfNeeded();
+    RefreshBasicCacheIfNeeded();
     ReleaseSRWLockExclusive(&g_stateLock);
 }
 
@@ -483,7 +494,7 @@ BOOL SystemMonitor_GetCpuUsage(float* outPercent) {
         ReleaseSRWLockExclusive(&g_stateLock);
         return FALSE;
     }
-    RefreshCacheIfNeeded();
+    RefreshBasicCacheIfNeeded();
     *outPercent = g_state.cpu.cachedPercent;
     ReleaseSRWLockExclusive(&g_stateLock);
     return TRUE;
@@ -500,7 +511,7 @@ BOOL SystemMonitor_GetMemoryUsage(float* outPercent) {
         ReleaseSRWLockExclusive(&g_stateLock);
         return FALSE;
     }
-    RefreshCacheIfNeeded();
+    RefreshBasicCacheIfNeeded();
     *outPercent = g_state.memory.cachedPercent;
     ReleaseSRWLockExclusive(&g_stateLock);
     return TRUE;
@@ -519,7 +530,7 @@ BOOL SystemMonitor_GetUsage(float* outCpuPercent, float* outMemPercent) {
         ReleaseSRWLockExclusive(&g_stateLock);
         return FALSE;
     }
-    RefreshCacheIfNeeded();
+    RefreshBasicCacheIfNeeded();
     
     *outCpuPercent = g_state.cpu.cachedPercent;
     *outMemPercent = g_state.memory.cachedPercent;
@@ -540,7 +551,7 @@ BOOL SystemMonitor_GetNetSpeed(float* outUpBytesPerSec, float* outDownBytesPerSe
         ReleaseSRWLockExclusive(&g_stateLock);
         return FALSE;
     }
-    RefreshCacheIfNeeded();
+    RefreshNetworkCacheIfNeeded();
     
     if (!g_state.network.sampleAvailable) {
         ReleaseSRWLockExclusive(&g_stateLock);
