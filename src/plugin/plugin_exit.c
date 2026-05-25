@@ -192,15 +192,15 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
 
             if (validNumber) {
                 int parsed = 0;
-                wchar_t* p = numStart;
-                while (p < end && *p >= L'0' && *p <= L'9') {
-                    int digit = (int)(*p - L'0');
+                wchar_t* parsePtr = numStart;
+                while (parsePtr < end && *parsePtr >= L'0' && *parsePtr <= L'9') {
+                    int digit = (int)(*parsePtr - L'0');
                     if (parsed > (INT_MAX - digit) / 10) {
                         validNumber = FALSE;
                         break;
                     }
                     parsed = parsed * 10 + digit;
-                    p++;
+                    parsePtr++;
                 }
                 if (validNumber) {
                     if (parsed > 0) {
