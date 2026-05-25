@@ -384,7 +384,7 @@ void HandleStartupMode(HWND hwnd) {
             break;
             
         case STARTUP_MODE_NO_DISPLAY:
-            ShowWindow(hwnd, SW_HIDE);
+            HideWindowIntentionally(hwnd);
             MainTimer_Stop();
             elapsed_time = CLOCK_TOTAL_TIME;
             CLOCK_IS_PAUSED = true;

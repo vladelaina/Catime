@@ -24,6 +24,7 @@ LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleShowWindow(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp);

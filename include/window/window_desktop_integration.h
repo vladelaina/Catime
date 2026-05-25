@@ -72,6 +72,36 @@ BOOL RefreshWindowTopmostState(HWND hwnd);
 void EnsureWindowVisibleWithTopmostState(HWND hwnd);
 
 /**
+ * @brief Hide the main window as an intentional application action
+ * @param hwnd Window handle
+ *
+ * @details Marks the hidden state as deliberate so external visibility
+ * recovery does not immediately undo tray/startup/preview hides.
+ */
+void HideWindowIntentionally(HWND hwnd);
+
+/**
+ * @brief React to external visibility changes for topmost mode
+ * @param hwnd Window handle
+ * @param pwp WM_WINDOWPOSCHANGED payload, or NULL for timer retry
+ * @return TRUE if handled, FALSE otherwise
+ */
+BOOL HandleTopmostVisibilityChange(HWND hwnd, const WINDOWPOS* pwp);
+
+/**
+ * @brief Schedule recovery after a hide notification without WINDOWPOS data
+ * @param hwnd Window handle
+ * @return TRUE if a restore retry was scheduled, FALSE otherwise
+ */
+BOOL HandleTopmostHiddenEvent(HWND hwnd);
+
+/**
+ * @brief Mark the main window as visible after a show notification
+ * @param hwnd Window handle
+ */
+void HandleTopmostShownEvent(HWND hwnd);
+
+/**
  * @brief Handle system minimize command under topmost policy
  * @param hwnd Window handle
  * @param sysCommand WM_SYSCOMMAND command value (masked or raw)

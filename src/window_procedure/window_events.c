@@ -104,6 +104,7 @@ void HandleWindowDestroy(HWND hwnd) {
     MainTimer_Cleanup();
     
     KillTimer(hwnd, TIMER_ID_TOPMOST_ENFORCE);
+    KillTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE);
     KillTimer(hwnd, GetClickThroughTimerId());
     LOG_INFO("Timers stopped");
     

@@ -351,7 +351,7 @@ void RestoreWindowVisibility(HWND hwnd) {
     }
 
     if (!g_previewState.wasWindowVisible) {
-        ShowWindow(hwnd, SW_HIDE);
+        HideWindowIntentionally(hwnd);
     } else {
         InvalidateRect(hwnd, NULL, TRUE);
     }

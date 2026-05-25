@@ -626,6 +626,10 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
         case TIMER_ID_TOPMOST_APPLY_RETRY:
             return HandleTopmostApplyRetry(hwnd);
 
+        case TIMER_ID_TOPMOST_VISIBILITY_RESTORE:
+            KillTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE);
+            return HandleTopmostVisibilityChange(hwnd, NULL);
+
         case TIMER_ID_FORCE_REDRAW:
             return HandleForceRedraw(hwnd);
 

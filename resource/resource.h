@@ -80,6 +80,7 @@
 #define TIMER_ID_TRAY_ANIMATION 2004         /**< Tray animation fallback timer */
 #define TIMER_ID_CI_EXIT 2005                /**< CI smoke-mode auto-exit timer */
 #define TIMER_ID_TOPMOST_APPLY_RETRY 2006    /**< Retry failed topmost/non-topmost application */
+#define TIMER_ID_TOPMOST_VISIBILITY_RESTORE 42425 /**< Restore topmost window after external hide */
 #define TRAY_TIP_TIMER_ID 42421              /**< Tray tooltip update timer */
 
 /** @brief Timer interval constants */

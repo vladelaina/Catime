@@ -59,6 +59,7 @@ static LRESULT CmdExit(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
     (void)lp;
     /* Route all exits through WM_DESTROY cleanup path to keep shutdown ordering consistent. */
+    HideWindowIntentionally(hwnd);
     DestroyWindow(hwnd);
     return 0;
 }

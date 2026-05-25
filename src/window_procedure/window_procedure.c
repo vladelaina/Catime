@@ -158,6 +158,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {CLOCK_WM_TRAYICON, HandleTrayIcon},
     {WM_COMMAND, HandleCommand},
     {WM_WINDOWPOSCHANGED, HandleWindowPosChanged},
+    {WM_SHOWWINDOW, HandleShowWindow},
     {WM_DISPLAYCHANGE, HandleDisplayChange},
     {WM_MENUSELECT, HandleMenuSelect},
     {WM_MEASUREITEM, HandleMeasureItem},
@@ -453,7 +454,7 @@ void ToggleTopmost(HWND hwnd) {
 
 void ToggleWindowVisibility(HWND hwnd) {
     if (IsWindowVisible(hwnd)) {
-        ShowWindow(hwnd, SW_HIDE);
+        HideWindowIntentionally(hwnd);
     } else {
         EnsureWindowVisibleWithTopmostState(hwnd);
         SetForegroundWindow(hwnd);

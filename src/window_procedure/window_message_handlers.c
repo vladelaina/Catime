@@ -27,6 +27,7 @@
 #include "drawing.h"
 #include "menu_preview.h"
 #include "window/window_visual_effects.h"
+#include "window/window_desktop_integration.h"
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
 #include "plugin/plugin_data.h"
@@ -207,15 +208,25 @@ LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleWindowPosChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
-    UNREFERENCED_PARAMETER(hwnd);
     (void)wp;
     const WINDOWPOS* pwp = (const WINDOWPOS*)lp;
+    HandleTopmostVisibilityChange(hwnd, pwp);
     if (!(pwp->flags & SWP_NOSIZE)) {
         if (CLOCK_EDIT_MODE) {
             // Region update logic removed - relying on UpdateLayeredWindow alpha channel
         }
     }
     return 0;
+}
+
+LRESULT HandleShowWindow(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (wp) {
+        HandleTopmostShownEvent(hwnd);
+    } else {
+        HandleTopmostHiddenEvent(hwnd);
+    }
+    return DefWindowProc(hwnd, WM_SHOWWINDOW, wp, lp);
 }
 
 LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
@@ -252,6 +263,7 @@ LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleClose(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     SaveWindowSettings(hwnd);
+    HideWindowIntentionally(hwnd);
     DestroyWindow(hwnd);
     return 0;
 }

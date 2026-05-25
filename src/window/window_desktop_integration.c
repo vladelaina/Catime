@@ -6,6 +6,8 @@
 #include "window/window_desktop_integration.h"
 #include "window/window_core.h"
 #include "config.h"
+#include "timer/timer.h"
+#include "plugin/plugin_data.h"
 #include "log.h"
 #include "../../resource/resource.h"
 
@@ -35,6 +37,7 @@ static int s_topmostApplyRetriesRemaining = 0;
 static BOOL s_topmostApplyRetryActive = FALSE;
 static BOOL s_topmostApplyRetryTarget = TRUE;
 static DWORD s_topmostApplyRetryCooldownUntil = 0;
+static BOOL s_windowIntentionallyHidden = FALSE;
 
 static BOOL IsTopmostRetryCoolingDown(BOOL targetTopmost) {
     DWORD now = GetTickCount();
@@ -167,6 +170,36 @@ static BOOL ScheduleTopmostApplyRetry(HWND hwnd, BOOL targetTopmost) {
 
     if (!SetTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY, TOPMOST_APPLY_RETRY_INTERVAL_MS, NULL)) {
         LOG_WARNING("Failed to schedule topmost apply retry (err=%lu)", GetLastError());
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL WindowShouldBeVisibleForCurrentMode(void) {
+    if (CLOCK_EDIT_MODE || CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP ||
+        PluginData_IsActive()) {
+        return TRUE;
+    }
+
+    return (CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME);
+}
+
+static BOOL ShouldRecoverTopmostVisibility(HWND hwnd) {
+    return IsValidWindowHandle(hwnd, "ShouldRecoverTopmostVisibility") &&
+           CLOCK_WINDOW_EFFECTIVE_TOPMOST &&
+           !s_windowIntentionallyHidden &&
+           WindowShouldBeVisibleForCurrentMode();
+}
+
+static BOOL ScheduleTopmostVisibilityRestore(HWND hwnd, const char* reason) {
+    if (!ShouldRecoverTopmostVisibility(hwnd)) {
+        return FALSE;
+    }
+
+    LOG_WARNING("Topmost window visibility changed externally; scheduling restore (%s)",
+                reason ? reason : "unknown");
+    if (!SetTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE, 100, NULL)) {
+        LOG_WARNING("Failed to schedule topmost visibility restore (err=%lu)", GetLastError());
         return FALSE;
     }
     return TRUE;
@@ -306,6 +339,7 @@ BOOL RefreshWindowTopmostState(HWND hwnd) {
 void EnsureWindowVisibleWithTopmostState(HWND hwnd) {
     if (!IsValidWindowHandle(hwnd, "EnsureWindowVisibleWithTopmostState")) return;
 
+    s_windowIntentionallyHidden = FALSE;
     ShowWindowNoActivateIfNeeded(hwnd);
 
     RefreshWindowTopmostState(hwnd);
@@ -314,6 +348,56 @@ void EnsureWindowVisibleWithTopmostState(HWND hwnd) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     }
+}
+
+void HideWindowIntentionally(HWND hwnd) {
+    if (!IsValidWindowHandle(hwnd, "HideWindowIntentionally")) return;
+
+    s_windowIntentionallyHidden = TRUE;
+    ShowWindow(hwnd, SW_HIDE);
+}
+
+BOOL HandleTopmostVisibilityChange(HWND hwnd, const WINDOWPOS* pwp) {
+    if (!IsValidWindowHandle(hwnd, "HandleTopmostVisibilityChange")) return FALSE;
+
+    if (pwp && (pwp->flags & SWP_SHOWWINDOW)) {
+        s_windowIntentionallyHidden = FALSE;
+        return FALSE;
+    }
+
+    BOOL hiddenByWindowPos = pwp && (pwp->flags & SWP_HIDEWINDOW);
+    BOOL hiddenNow = !IsWindowVisible(hwnd) || IsIconic(hwnd);
+
+    if (pwp && !hiddenByWindowPos) {
+        return FALSE;
+    }
+
+    if (!ShouldRecoverTopmostVisibility(hwnd)) {
+        return FALSE;
+    }
+
+    if (!hiddenByWindowPos && !hiddenNow) {
+        return FALSE;
+    }
+
+    if (pwp) {
+        return ScheduleTopmostVisibilityRestore(hwnd, "window-pos-hide");
+    }
+
+    LOG_INFO("Restoring topmost window visibility after external hide");
+    EnsureWindowVisibleWithTopmostState(hwnd);
+    InvalidateRect(hwnd, NULL, TRUE);
+    return TRUE;
+}
+
+BOOL HandleTopmostHiddenEvent(HWND hwnd) {
+    if (!IsValidWindowHandle(hwnd, "HandleTopmostHiddenEvent")) return FALSE;
+    return ScheduleTopmostVisibilityRestore(hwnd, "show-window-hide");
+}
+
+void HandleTopmostShownEvent(HWND hwnd) {
+    if (!IsValidWindowHandle(hwnd, "HandleTopmostShownEvent")) return;
+    s_windowIntentionallyHidden = FALSE;
 }
 
 BOOL HandleTopmostMinimizeCommand(HWND hwnd, UINT sysCommand) {
@@ -369,7 +453,12 @@ BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
 
     /* Only enforce if topmost mode is enabled */
     if (!CLOCK_WINDOW_EFFECTIVE_TOPMOST) return FALSE;
-    
+
+    if ((!IsWindowVisible(hwnd) || IsIconic(hwnd)) &&
+        ScheduleTopmostVisibilityRestore(hwnd, "topmost-enforce-hidden")) {
+        return TRUE;
+    }
+
     /* Get our window position */
     RECT rcWindow;
     if (!GetWindowRect(hwnd, &rcWindow)) return FALSE;
