@@ -110,7 +110,7 @@ void TrayAnimation_ClearCurrentName(void);
  * 
  * @details
  * Called from tray tooltip update timer.
- * Only updates if current animation is __cpu__ or __mem__.
+ * Only updates if current animation is a generated builtin icon.
  */
 void TrayAnimation_UpdatePercentIconIfNeeded(void);
 
@@ -132,4 +132,3 @@ void PreviewAnimationFromFile(HWND hwnd, const char* filePath);
 extern BOOL g_isPreviewActive;
 
 #endif /* TRAY_ANIMATION_CORE_H */
-

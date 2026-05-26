@@ -5,6 +5,8 @@
 
 #include "tray/tray_animation_percent.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Default colors: auto-theme detection with black text */
 static COLORREF g_percentTextColor = RGB(0, 0, 0);
@@ -33,6 +35,51 @@ static PercentIconCacheEntry g_percentIconCache[1000];
 static CapsIconCacheEntry g_capsIconCache[2];
 static COLORREF g_cachedThemeTextColor = CLR_INVALID;
 static DWORD g_lastThemeCheckTick = 0;
+
+static DWORD ColorRefToDibRgb(COLORREF color) {
+    return ((DWORD)GetBValue(color)) |
+           ((DWORD)GetGValue(color) << 8) |
+           ((DWORD)GetRValue(color) << 16);
+}
+
+static void FillTransparentIconBackground(void* pvBits, int cx, int cy, DWORD marker) {
+    DWORD* pixels = (DWORD*)pvBits;
+    for (int i = 0; i < cx * cy; i++) {
+        pixels[i] = marker;
+    }
+}
+
+static void RepairTransparentIconAlpha(void* pvBits, int cx, int cy, DWORD marker) {
+    DWORD* pixels = (DWORD*)pvBits;
+    for (int i = 0; i < cx * cy; i++) {
+        if ((pixels[i] & 0x00FFFFFFu) != marker) {
+            pixels[i] |= 0xFF000000u;
+        } else {
+            pixels[i] = 0x00000000u;
+        }
+    }
+}
+
+static void MakeIconFullyOpaque(void* pvBits, int cx, int cy) {
+    DWORD* pixels = (DWORD*)pvBits;
+    for (int i = 0; i < cx * cy; i++) {
+        pixels[i] |= 0xFF000000u;
+    }
+}
+
+static HBITMAP CreateInitializedMaskBitmap(int cx, int cy, BYTE value) {
+    if (cx <= 0 || cy <= 0) return NULL;
+
+    SIZE_T stride = (SIZE_T)(((cx + 15) / 16) * 2);
+    SIZE_T size = stride * (SIZE_T)cy;
+    BYTE* maskBits = (BYTE*)malloc(size);
+    if (!maskBits) return NULL;
+
+    memset(maskBits, value, size);
+    HBITMAP hMask = CreateBitmap(cx, cy, 1, 1, maskBits);
+    free(maskBits);
+    return hMask;
+}
 
 static void ClearGeneratedIconCache(void) {
     for (int i = 0; i < (int)_countof(g_percentIconCache); ++i) {
@@ -143,6 +190,8 @@ static HICON CreatePercentIcon16Uncached(int percent) {
     COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
     COLORREF bgColor = g_percentBgColor;
 
+    DWORD transparentMarker = ColorRefToDibRgb(textColor) ^ 0x00010101u;
+
     /* Create DIB section for color bitmap */
     BITMAPINFO bi;
     ZeroMemory(&bi, sizeof(bi));
@@ -181,11 +230,7 @@ static HICON CreatePercentIcon16Uncached(int percent) {
     }
 
     if (useTransparentBg) {
-        /* Transparent background: fill with transparent pixels (alpha=0) */
-        DWORD* pixels = (DWORD*)pvBits;
-        for (int i = 0; i < cx * cy; i++) {
-            pixels[i] = 0x00000000;  /* Fully transparent */
-        }
+        FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
     } else {
         /* Solid background: use configured color */
         RECT rc = {0, 0, cx, cy};
@@ -223,6 +268,12 @@ static HICON CreatePercentIcon16Uncached(int percent) {
 
     TextOutW(mem, x, y, txt, txtLen);
 
+    if (useTransparentBg) {
+        RepairTransparentIconAlpha(pvBits, cx, cy, transparentMarker);
+    } else {
+        MakeIconFullyOpaque(pvBits, cx, cy);
+    }
+
     /* Cleanup font */
     if (oldf) SelectObject(mem, oldf);
     if (hFont) DeleteObject(hFont);
@@ -230,7 +281,7 @@ static HICON CreatePercentIcon16Uncached(int percent) {
     SelectObject(mem, old);
 
     /* Create mask bitmap based on text rendering */
-    HBITMAP hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+    HBITMAP hbmMask = CreateInitializedMaskBitmap(cx, cy, useTransparentBg ? 0xFF : 0x00);
     if (!hbmMask) {
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);
@@ -365,6 +416,7 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
     BOOL useTransparentBg = (g_percentBgColor == TRANSPARENT_BG_AUTO);
     COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
     COLORREF bgColor = g_percentBgColor;
+    DWORD transparentMarker = ColorRefToDibRgb(textColor) ^ 0x00010101u;
 
     /* Create DIB section for color bitmap */
     BITMAPINFO bi;
@@ -404,11 +456,7 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
     }
 
     if (useTransparentBg) {
-        /* Transparent background: fill with transparent pixels (alpha=0) */
-        DWORD* pixels = (DWORD*)pvBits;
-        for (int i = 0; i < cx * cy; i++) {
-            pixels[i] = 0x00000000;
-        }
+        FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
     } else {
         /* Solid background: use configured color */
         RECT rc = {0, 0, cx, cy};
@@ -443,6 +491,12 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
 
     TextOutW(mem, x, y, txt, 1);
 
+    if (useTransparentBg) {
+        RepairTransparentIconAlpha(pvBits, cx, cy, transparentMarker);
+    } else {
+        MakeIconFullyOpaque(pvBits, cx, cy);
+    }
+
     /* Cleanup font */
     if (oldf) SelectObject(mem, oldf);
     if (hFont) DeleteObject(hFont);
@@ -450,7 +504,7 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
     SelectObject(mem, old);
 
     /* Create mask bitmap */
-    HBITMAP hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
+    HBITMAP hbmMask = CreateInitializedMaskBitmap(cx, cy, useTransparentBg ? 0xFF : 0x00);
     if (!hbmMask) {
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);

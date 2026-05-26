@@ -13,6 +13,55 @@
 
 #define MAX_ANIMATION_PIXELS (4096u * 4096u)
 
+static HBITMAP CreateAlphaIconMask(const BYTE* bgraPixels, int cx, int cy) {
+    if (!bgraPixels || cx <= 0 || cy <= 0) return NULL;
+
+    SIZE_T stride = (SIZE_T)(((cx + 15) / 16) * 2);
+    SIZE_T size = stride * (SIZE_T)cy;
+    BYTE* maskBits = (BYTE*)calloc(size, 1);
+    if (!maskBits) return NULL;
+
+    HBITMAP hMask = CreateBitmap(cx, cy, 1, 1, maskBits);
+    free(maskBits);
+    if (!hMask) return NULL;
+
+    HDC hdcMask = CreateCompatibleDC(NULL);
+    if (!hdcMask) return hMask;
+
+    HGDIOBJ oldMask = SelectObject(hdcMask, hMask);
+    if (!oldMask) {
+        DeleteDC(hdcMask);
+        return hMask;
+    }
+
+    for (int y = 0; y < cy; y++) {
+        const BYTE* row = bgraPixels + ((SIZE_T)y * (SIZE_T)cx * 4u);
+        for (int x = 0; x < cx; x++) {
+            BYTE alpha = row[(SIZE_T)x * 4u + 3u];
+            if (alpha == 0) {
+                SetPixel(hdcMask, x, y, RGB(255, 255, 255));
+            }
+        }
+    }
+
+    SelectObject(hdcMask, oldMask);
+    DeleteDC(hdcMask);
+    return hMask;
+}
+
+static HBITMAP CreateOpaqueIconMask(int cx, int cy) {
+    if (cx <= 0 || cy <= 0) return NULL;
+
+    SIZE_T stride = (SIZE_T)(((cx + 15) / 16) * 2);
+    SIZE_T size = stride * (SIZE_T)cy;
+    BYTE* maskBits = (BYTE*)calloc(size, 1);
+    if (!maskBits) return NULL;
+
+    HBITMAP hMask = CreateBitmap(cx, cy, 1, 1, maskBits);
+    free(maskBits);
+    return hMask;
+}
+
 static BOOL CheckedImageBufferSize(UINT width, UINT height, UINT* stride, UINT* size) {
     if (!stride || !size || width == 0 || height == 0) return FALSE;
     if (width > MAX_ANIMATION_PIXELS / height) return FALSE;
@@ -213,26 +262,9 @@ HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                         ZeroMemory(&ii, sizeof(ii));
                         ii.fIcon = TRUE;
                         ii.hbmColor = hbmColor;
-                        ii.hbmMask = CreateBitmap(cx, cy, 1, 1, NULL);
-                        
-                        if (ii.hbmMask) {
-                            HDC hdcMem = GetDC(NULL);
-                            if (hdcMem) {
-                                HDC hdcColor = CreateCompatibleDC(hdcMem);
-                                HDC hdcMask = CreateCompatibleDC(hdcMem);
-                                if (hdcColor && hdcMask) {
-                                    SelectObject(hdcColor, hbmColor);
-                                    SelectObject(hdcMask, ii.hbmMask);
-
-                                    BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, BLACKNESS);
-                                    SetBkColor(hdcColor, RGB(0, 0, 0));
-                                    BitBlt(hdcMask, 0, 0, cx, cy, hdcColor, 0, 0, SRCCOPY);
-                                    BitBlt(hdcMask, 0, 0, cx, cy, NULL, 0, 0, DSTINVERT);
-                                }
-                                if (hdcColor) DeleteDC(hdcColor);
-                                if (hdcMask) DeleteDC(hdcMask);
-                                ReleaseDC(NULL, hdcMem);
-                            }
+                        ii.hbmMask = CreateAlphaIconMask((const BYTE*)pvBits, cx, cy);
+                        if (!ii.hbmMask) {
+                            ii.hbmMask = CreateOpaqueIconMask(cx, cy);
                         }
 
                         hIcon = CreateIconIndirect(&ii);
@@ -570,7 +602,7 @@ HICON DecodeStaticImage(const char* utf8Path, int iconWidth, int iconHeight) {
 
     const wchar_t* ext = wcsrchr(wPath, L'.');
     if (ext && _wcsicmp(ext, L".ico") == 0) {
-        return (HICON)LoadImageW(NULL, wPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE);
+        return (HICON)LoadImageW(NULL, wPath, IMAGE_ICON, iconWidth, iconHeight, LR_LOADFROMFILE);
     }
 
     HRESULT hrInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);

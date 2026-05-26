@@ -419,8 +419,9 @@ void WriteConfig(const char* config_path) {
         if (anim && anim[0] != '\0') {
             char animPath[MAX_PATH];
             int animPathLen = 0;
-            if (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 || 
-                _stricmp(anim, "__mem__") == 0 || _stricmp(anim, "__none__") == 0) {
+            if (_stricmp(anim, "__logo__") == 0 || _stricmp(anim, "__cpu__") == 0 ||
+                _stricmp(anim, "__mem__") == 0 || _stricmp(anim, "__battery__") == 0 ||
+                _stricmp(anim, "__capslock__") == 0 || _stricmp(anim, "__none__") == 0) {
                 animPathLen = snprintf(animPath, sizeof(animPath), "%s", anim);
             } else {
                 animPathLen = snprintf(animPath, sizeof(animPath),

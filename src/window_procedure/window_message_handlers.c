@@ -715,6 +715,8 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
             menuItem == CLOCK_IDM_ANIMATIONS_USE_CPU ||
             menuItem == CLOCK_IDM_ANIMATIONS_USE_MEM ||
+            menuItem == CLOCK_IDM_ANIMATIONS_USE_BATTERY ||
+            menuItem == CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK ||
             menuItem == CLOCK_IDM_ANIMATIONS_USE_NONE ||
             (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_END)) {
             isAnimationPreview = TRUE;

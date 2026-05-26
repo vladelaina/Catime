@@ -675,6 +675,8 @@ LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
         cmd == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_CPU ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_MEM ||
+        cmd == CLOCK_IDM_ANIMATIONS_USE_BATTERY ||
+        cmd == CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_NONE;
 
     if (isAnimationSelectionCommand) {

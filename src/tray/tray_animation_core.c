@@ -110,8 +110,6 @@ static BOOL BuildAnimationConfigPath(const char* name, char* animPath, size_t an
 }
 static DWORD WINAPI PreviewWorkerThread(LPVOID param);
 
-extern BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim, void* pool, int cx, int cy);
-
 static BOOL ShouldRunTrayAnimationTimer(void) {
     const LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
     return currentAnim->isAnimated && currentAnim->count > 1;
@@ -621,7 +619,15 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     /* Load frames */
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+    if (!LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy) &&
+        _stricmp(g_animationName, "__logo__") != 0) {
+        WriteLog(LOG_LEVEL_WARNING, "Failed to load tray animation '%s', falling back to logo", g_animationName);
+        LoadedAnimation_Free(&g_mainAnimation);
+        strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
+        g_animationName[sizeof(g_animationName) - 1] = '\0';
+        WriteIniString("Animation", "ANIMATION_PATH", "__logo__", config_path);
+        LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+    }
     
     if (g_mainAnimation.count > 0) {
         UpdateTrayIconToCurrentFrame();
@@ -1055,7 +1061,15 @@ void PreloadAnimationFromConfig(void) {
     int cy = GetSystemMetrics(SM_CYSMICON);
     LoadedAnimation_Free(&g_mainAnimation);
     LoadedAnimation_Init(&g_mainAnimation);
-    LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+    if (!LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy) &&
+        _stricmp(g_animationName, "__logo__") != 0) {
+        WriteLog(LOG_LEVEL_WARNING, "Failed to preload tray animation '%s', falling back to logo", g_animationName);
+        LoadedAnimation_Free(&g_mainAnimation);
+        strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
+        g_animationName[sizeof(g_animationName) - 1] = '\0';
+        WriteIniString("Animation", "ANIMATION_PATH", "__logo__", config_path);
+        LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+    }
 }
 
 /**
@@ -1119,6 +1133,21 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (!LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy)) {
+        char config_path[MAX_PATH] = {0};
+        GetConfigPath(config_path, sizeof(config_path));
+        WriteLog(LOG_LEVEL_WARNING, "Failed to apply tray animation '%s', falling back to logo", name);
+        LoadedAnimation_Free(&newMain);
+        if (LoadAnimationByName("__logo__", &newMain, g_memoryPool, cx, cy)) {
+            strncpy(name, "__logo__", sizeof(name) - 1);
+            name[sizeof(name) - 1] = '\0';
+            WriteIniString("Animation", "ANIMATION_PATH", "__logo__", config_path);
+        } else {
+            LoadedAnimation_Free(&newMain);
+            return;
+        }
+    }
+
+    if (_stricmp(g_animationName, name) == 0) {
         LoadedAnimation_Free(&newMain);
         return;
     }

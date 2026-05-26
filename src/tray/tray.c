@@ -104,6 +104,7 @@ typedef enum {
     ANIM_TYPE_CPU,
     ANIM_TYPE_MEMORY,
     ANIM_TYPE_BATTERY,
+    ANIM_TYPE_CAPSLOCK,
     ANIM_TYPE_NONE
 } AnimationType;
 
@@ -137,6 +138,7 @@ static AnimationType GetAnimationType(const char* animName) {
     if (_stricmp(animName, "__cpu__") == 0) return ANIM_TYPE_CPU;
     if (_stricmp(animName, "__mem__") == 0) return ANIM_TYPE_MEMORY;
     if (_stricmp(animName, "__battery__") == 0) return ANIM_TYPE_BATTERY;
+    if (_stricmp(animName, "__capslock__") == 0) return ANIM_TYPE_CAPSLOCK;
     if (_stricmp(animName, "__none__") == 0) return ANIM_TYPE_NONE;
     return ANIM_TYPE_CUSTOM;
 }
@@ -404,6 +406,18 @@ static HICON GetInitialPercentIcon(AnimationType type) {
     return CreatePercentIcon16(percent);
 }
 
+static HICON GetInitialDynamicBuiltinIcon(AnimationType type) {
+    if (IsPercentIcon(type)) {
+        return GetInitialPercentIcon(type);
+    }
+
+    if (type == ANIM_TYPE_CAPSLOCK) {
+        return CreateCapsLockIcon(IsCapsLockOn());
+    }
+
+    return NULL;
+}
+
 /**
  * @brief Initialize and add tray icon
  * @param hwnd Window handle for callbacks
@@ -423,7 +437,7 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     const char* animName = GetCurrentAnimationName();
     AnimationType type = GetAnimationType(animName);
     BOOL destroyInitialIcon = FALSE;
-    HICON hInitial = GetInitialPercentIcon(type);
+    HICON hInitial = GetInitialDynamicBuiltinIcon(type);
     if (hInitial) {
         destroyInitialIcon = TRUE;
     } else {

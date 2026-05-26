@@ -33,7 +33,7 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName);
  * 
  * @details
  * Routes menu ID to animation name and activates it.
- * Supports builtin (__logo__, __cpu__, __mem__) and custom animations.
+ * Supports builtin (__logo__, __cpu__, __mem__, __battery__, __capslock__, __none__) and custom animations.
  */
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id);
 
@@ -52,4 +52,3 @@ void OpenAnimationsFolder(void);
 BOOL GetAnimationNameFromMenuId(UINT id, char* outPath, size_t outPathSize);
 
 #endif /* TRAY_ANIMATION_MENU_H */
-

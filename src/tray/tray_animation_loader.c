@@ -291,8 +291,8 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim) {
     
     /* Scan for all supported image formats */
     const wchar_t* patterns[] = {
-        L"\\*.ico", L"\\*.png", L"\\*.bmp", L"\\*.jpg", 
-        L"\\*.jpeg", L"\\*.webp", L"\\*.tif", L"\\*.tiff"
+        L"\\*.ico", L"\\*.png", L"\\*.bmp", L"\\*.jpg",
+        L"\\*.jpeg", L"\\*.gif", L"\\*.webp", L"\\*.tif", L"\\*.tiff"
     };
     
     for (size_t p = 0; p < sizeof(patterns) / sizeof(patterns[0]); ++p) {
@@ -374,8 +374,7 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim) {
         const wchar_t* ext = wcsrchr(files[i].path, L'.');
         
         if (ext && _wcsicmp(ext, L".ico") == 0) {
-            hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, 0, 0, 
-                                      LR_LOADFROMFILE | LR_DEFAULTSIZE);
+            hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, cx, cy, LR_LOADFROMFILE);
         } else {
             /* Use decoder for other formats */
             char utf8Path[MAX_PATH] = {0};
@@ -560,6 +559,12 @@ BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
     }
     
     if (type == ANIM_SOURCE_PERCENT) {
+        anim->count = 0;
+        anim->isAnimated = FALSE;
+        return TRUE;
+    }
+
+    if (type == ANIM_SOURCE_CAPSLOCK) {
         anim->count = 0;
         anim->isAnimated = FALSE;
         return TRUE;

@@ -110,6 +110,18 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
                          MemoryPool* pool, int iconWidth, int iconHeight);
 
 /**
+ * @brief Load animation frames from an absolute file or folder path
+ * @param path Absolute path to a file/folder or builtin animation name
+ * @param anim Output structure
+ * @param pool Memory pool for temporary buffers (optional)
+ * @param iconWidth Target icon width
+ * @param iconHeight Target icon height
+ * @return TRUE on success, FALSE on failure
+ */
+BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
+                           MemoryPool* pool, int iconWidth, int iconHeight);
+
+/**
  * @brief Load icons from folder (naturally sorted)
  * @param utf8FolderPath Full path to folder
  * @param anim Output animation structure
@@ -127,7 +139,7 @@ BOOL IsValidAnimationSource(const char* name);
 /**
  * @brief Check if name is a builtin animation (not custom file/folder)
  * @param name Animation identifier
- * @return TRUE for __logo__, __cpu__, __mem__, __battery__, __none__
+ * @return TRUE for __logo__, __cpu__, __mem__, __battery__, __capslock__, __none__
  * 
  * @note Add new builtin types here to avoid scattered checks
  */
