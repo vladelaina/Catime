@@ -157,6 +157,11 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
         InvalidateRect(hwnd, NULL, TRUE);
         return 0;
     }
+    if (wp == TIMER_ID_DISPLAY_RESTORE) {
+        KillTimer(hwnd, TIMER_ID_DISPLAY_RESTORE);
+        RestoreWindowPositionAfterSystemChange(hwnd);
+        return 0;
+    }
     if (wp == IDT_MENU_DEBOUNCE) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
         CancelPreview(hwnd);
@@ -231,7 +236,26 @@ LRESULT HandleShowWindow(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    BeginSystemPositionChangeGuard(hwnd);
     InvalidateRect(hwnd, NULL, FALSE);
+    return 0;
+}
+
+LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp;
+    BeginSystemPositionChangeGuard(hwnd);
+
+    RECT* suggested = (RECT*)lp;
+    if (suggested) {
+        SetWindowPos(hwnd, NULL,
+                     suggested->left,
+                     suggested->top,
+                     suggested->right - suggested->left,
+                     suggested->bottom - suggested->top,
+                     SWP_NOZORDER | SWP_NOACTIVATE);
+    }
+
+    InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
 
@@ -328,6 +352,9 @@ LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
             RECT rect;
             GetWindowRect(hwnd, &rect);
             SetWindowPos(hwnd, NULL, rect.left + dx, rect.top + dy, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+            CLOCK_WINDOW_POS_X = rect.left + dx;
+            CLOCK_WINDOW_POS_Y = rect.top + dy;
+            ScheduleConfigSave(hwnd);
             return 0;
         }
     }

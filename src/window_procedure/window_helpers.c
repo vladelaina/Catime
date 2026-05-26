@@ -336,25 +336,8 @@ void RecalculateWindowSize(HWND hwnd) {
     int newWidth = (int)(textSize.cx * defaultScale);
     int newHeight = (int)(textSize.cy * defaultScale);
     
-    /* Recalculate position based on new window size for special values */
-    int configPosX = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_X, CLOCK_WINDOW_POS_X);
-    if (configPosX == -2 || configPosX == -1) {
-        POINT pt = {0, 0};
-        HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
-        MONITORINFO mi = {0};
-        mi.cbSize = sizeof(mi);
-        GetMonitorInfo(hMon, &mi);
-        int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
-        
-        if (configPosX == -2) {
-            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (newWidth / 2);
-            if (CLOCK_WINDOW_POS_X + newWidth > mi.rcMonitor.right) {
-                CLOCK_WINDOW_POS_X = mi.rcMonitor.right - newWidth - 20;
-            }
-        } else {
-            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (screenWidth - newWidth) / 2;
-        }
-    }
+    ResolveConfiguredWindowPosition(newWidth, newHeight,
+                                    &CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
     
     SetWindowPos(hwnd, NULL, 
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,

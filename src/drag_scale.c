@@ -198,6 +198,9 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     SetWindowPos(hwnd, NULL, 
         newX, newY, newWidth, newHeight,
         SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+
+    CLOCK_WINDOW_POS_X = newX;
+    CLOCK_WINDOW_POS_Y = newY;
     
     RefreshWindow(hwnd, FALSE);
     return TRUE;

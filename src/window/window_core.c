@@ -24,6 +24,8 @@
 #define COLOR_KEY_BLACK RGB(0, 0, 0)
 #define ALPHA_OPAQUE 255
 #define DEFAULT_TRAY_ANIMATION_SPEED_MS 150  /* 150ms balances smoothness with CPU usage (6.7 FPS) */
+#define SYSTEM_POSITION_GUARD_MS 3000
+#define WINDOW_VISIBLE_MARGIN 20
 
 /* ============================================================================
  * Global window state (definitions)
@@ -35,6 +37,7 @@ int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
+static DWORD g_systemPositionGuardUntil = 0;
 
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
@@ -80,6 +83,50 @@ static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
     RefreshWindowTopmostState(hwnd);
 }
 
+static BOOL IsSpecialWindowPositionX(int posX) {
+    return posX == DEFAULT_WINDOW_POS_X || posX == -1 || posX == -2;
+}
+
+static void GetPrimaryMonitorInfo(MONITORINFO* mi) {
+    if (!mi) return;
+
+    POINT pt = {0, 0};
+    HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
+    mi->cbSize = sizeof(*mi);
+    if (!GetMonitorInfo(hMon, mi)) {
+        mi->rcMonitor.left = 0;
+        mi->rcMonitor.top = 0;
+        mi->rcMonitor.right = GetSystemMetrics(SM_CXSCREEN);
+        mi->rcMonitor.bottom = GetSystemMetrics(SM_CYSCREEN);
+        mi->rcWork = mi->rcMonitor;
+    }
+}
+
+static void ClampWindowPositionToMonitor(int width, int height, int* x, int* y) {
+    if (!x || !y || width <= 0 || height <= 0) return;
+
+    RECT rc = {*x, *y, *x + width, *y + height};
+    HMONITOR hMon = MonitorFromRect(&rc, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = {0};
+    mi.cbSize = sizeof(mi);
+    if (!GetMonitorInfo(hMon, &mi)) {
+        GetPrimaryMonitorInfo(&mi);
+    }
+
+    if (*x + WINDOW_VISIBLE_MARGIN > mi.rcMonitor.right) {
+        *x = mi.rcMonitor.right - WINDOW_VISIBLE_MARGIN;
+    }
+    if (*x + width - WINDOW_VISIBLE_MARGIN < mi.rcMonitor.left) {
+        *x = mi.rcMonitor.left - width + WINDOW_VISIBLE_MARGIN;
+    }
+    if (*y + WINDOW_VISIBLE_MARGIN > mi.rcMonitor.bottom) {
+        *y = mi.rcMonitor.bottom - WINDOW_VISIBLE_MARGIN;
+    }
+    if (*y + height - WINDOW_VISIBLE_MARGIN < mi.rcMonitor.top) {
+        *y = mi.rcMonitor.top - height + WINDOW_VISIBLE_MARGIN;
+    }
+}
+
 /* ============================================================================
  * Public API
  * ============================================================================ */
@@ -106,26 +153,8 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
     int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
 
-    /* Auto-position logic - use primary monitor dimensions */
-    if (CLOCK_WINDOW_POS_X == -2 || CLOCK_WINDOW_POS_X == -1) {
-        POINT pt = {0, 0};
-        HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
-        MONITORINFO mi = {0};
-        mi.cbSize = sizeof(mi);
-        GetMonitorInfo(hMon, &mi);
-        int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
-        
-        if (CLOCK_WINDOW_POS_X == -2) {
-            /* Golden ratio: 0.618 from left of primary monitor */
-            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (initialWidth / 2);
-            if (CLOCK_WINDOW_POS_X + initialWidth > mi.rcMonitor.right) {
-                CLOCK_WINDOW_POS_X = mi.rcMonitor.right - initialWidth - 20;
-            }
-        } else {
-            /* Center on primary monitor */
-            CLOCK_WINDOW_POS_X = mi.rcMonitor.left + (screenWidth - initialWidth) / 2;
-        }
-    }
+    ResolveConfiguredWindowPosition(initialWidth, initialHeight,
+                                    &CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
 
     HWND hwnd = CreateWindowExW(
         exStyle,
@@ -154,6 +183,11 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
 
 void SaveWindowSettings(HWND hwnd) {
     if (!hwnd) return;
+
+    if (IsSystemPositionChangeGuardActive() && !CLOCK_EDIT_MODE) {
+        LOG_INFO("Skipping window settings save during system position guard");
+        return;
+    }
 
     RECT rect;
     if (!GetWindowRect(hwnd, &rect)) {
@@ -186,6 +220,88 @@ void SaveWindowSettings(HWND hwnd) {
     } else {
         LOG_WARNING("Failed to save window settings");
     }
+}
+
+void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY) {
+    if (!outX || !outY) return;
+
+    int posX = CLOCK_WINDOW_POS_X;
+    int posY = CLOCK_WINDOW_POS_Y;
+    char configPath[MAX_PATH] = {0};
+    GetConfigPath(configPath, MAX_PATH);
+
+    int configPosX = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X",
+                                CLOCK_WINDOW_POS_X, configPath);
+    int configPosY = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y",
+                                CLOCK_WINDOW_POS_Y, configPath);
+
+    MONITORINFO mi = {0};
+    GetPrimaryMonitorInfo(&mi);
+    int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
+
+    if (IsSpecialWindowPositionX(configPosX)) {
+        if (configPosX == -1) {
+            posX = mi.rcMonitor.left + (screenWidth - width) / 2;
+        } else {
+            posX = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (width / 2);
+            if (posX + width > mi.rcMonitor.right) {
+                posX = mi.rcMonitor.right - width - WINDOW_VISIBLE_MARGIN;
+            }
+        }
+    } else {
+        posX = configPosX;
+    }
+
+    if (configPosY == DEFAULT_WINDOW_POS_Y) {
+        posY = mi.rcMonitor.top;
+    } else {
+        posY = configPosY;
+    }
+
+    ClampWindowPositionToMonitor(width, height, &posX, &posY);
+
+    *outX = posX;
+    *outY = posY;
+}
+
+void BeginSystemPositionChangeGuard(HWND hwnd) {
+    g_systemPositionGuardUntil = GetTickCount() + SYSTEM_POSITION_GUARD_MS;
+    if (hwnd && IsWindow(hwnd)) {
+        KillTimer(hwnd, TIMER_ID_DISPLAY_RESTORE);
+        SetTimer(hwnd, TIMER_ID_DISPLAY_RESTORE, 750, NULL);
+    }
+}
+
+BOOL IsSystemPositionChangeGuardActive(void) {
+    if (g_systemPositionGuardUntil == 0) return FALSE;
+    if ((LONG)(GetTickCount() - g_systemPositionGuardUntil) < 0) return TRUE;
+    g_systemPositionGuardUntil = 0;
+    return FALSE;
+}
+
+void RestoreWindowPositionAfterSystemChange(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) return;
+    if (CLOCK_EDIT_MODE) return;
+
+    RECT rect;
+    if (!GetWindowRect(hwnd, &rect)) return;
+
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+    int posX = CLOCK_WINDOW_POS_X;
+    int posY = CLOCK_WINDOW_POS_Y;
+
+    ResolveConfiguredWindowPosition(width, height, &posX, &posY);
+
+    if (posX != rect.left || posY != rect.top) {
+        SetWindowPos(hwnd, NULL, posX, posY, 0, 0,
+                     SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        LOG_INFO("Restored window position after system display change: (%d, %d)", posX, posY);
+    }
+
+    CLOCK_WINDOW_POS_X = posX;
+    CLOCK_WINDOW_POS_Y = posY;
+    InvalidateRect(hwnd, NULL, FALSE);
 }
 
 BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {

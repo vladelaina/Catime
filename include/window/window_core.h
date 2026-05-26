@@ -70,6 +70,35 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow);
 void SaveWindowSettings(HWND hwnd);
 
 /**
+ * @brief Resolve configured or default window position for a given size
+ * @param width Desired window width
+ * @param height Desired window height
+ * @param outX Resolved screen X
+ * @param outY Resolved screen Y
+ */
+void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY);
+
+/**
+ * @brief Begin a short guard window after system-driven display changes
+ * @param hwnd Window handle
+ *
+ * @details Prevents temporary fullscreen/display/DPI repositioning from being
+ *          persisted as the user's saved window position.
+ */
+void BeginSystemPositionChangeGuard(HWND hwnd);
+
+/**
+ * @brief Check whether system-driven position changes are currently guarded
+ */
+BOOL IsSystemPositionChangeGuardActive(void);
+
+/**
+ * @brief Restore the window to the saved/configured position after display changes
+ * @param hwnd Window handle
+ */
+void RestoreWindowPositionAfterSystemChange(HWND hwnd);
+
+/**
  * @brief Display file selection dialog
  * @param hwnd Parent window handle
  * @param filePath Output buffer (wide string, pre-allocated)

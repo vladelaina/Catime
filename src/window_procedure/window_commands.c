@@ -351,34 +351,9 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
     RECT windowRect;
     GetWindowRect(hwnd, &windowRect);
     int windowWidth = windowRect.right - windowRect.left;
-    
-    POINT pt = {0, 0};
-    HMONITOR hMon = MonitorFromPoint(pt, MONITOR_DEFAULTTOPRIMARY);
-    MONITORINFO mi = {0};
-    mi.cbSize = sizeof(mi);
-    GetMonitorInfo(hMon, &mi);
-    int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
-    
+    int windowHeight = windowRect.bottom - windowRect.top;
     int posX, posY;
-    
-    /* Handle special X position values */
-#if DEFAULT_WINDOW_POS_X == -2
-    posX = mi.rcMonitor.left + (int)(screenWidth * 0.618f) - (windowWidth / 2);
-    if (posX + windowWidth > mi.rcMonitor.right) {
-        posX = mi.rcMonitor.right - windowWidth - 20;
-    }
-#elif DEFAULT_WINDOW_POS_X == -1
-    posX = mi.rcMonitor.left + (screenWidth - windowWidth) / 2;
-#else
-    posX = mi.rcMonitor.left + DEFAULT_WINDOW_POS_X;
-#endif
-
-    /* Handle special Y position value (-1 = top of monitor) */
-#if DEFAULT_WINDOW_POS_Y < 0
-    posY = mi.rcMonitor.top;
-#else
-    posY = mi.rcMonitor.top + DEFAULT_WINDOW_POS_Y;
-#endif
+    ResolveConfiguredWindowPosition(windowWidth, windowHeight, &posX, &posY);
     
     CLOCK_WINDOW_POS_X = posX;
     CLOCK_WINDOW_POS_Y = posY;

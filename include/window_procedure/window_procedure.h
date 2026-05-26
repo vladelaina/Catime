@@ -14,6 +14,11 @@
 #include "../resource/resource.h"
 #include "config.h"
 
+/* Older MinGW headers may not define the Windows 8.1+ DPI message. */
+#ifndef WM_DPICHANGED
+#define WM_DPICHANGED 0x02E0
+#endif
+
 /* ============================================================================
  * Custom Window Messages
  * ============================================================================ */
