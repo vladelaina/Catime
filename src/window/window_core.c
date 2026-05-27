@@ -84,7 +84,7 @@ static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
 }
 
 static BOOL IsSpecialWindowPositionX(int posX) {
-    return posX == DEFAULT_WINDOW_POS_X || posX == -1 || posX == -2;
+    return posX == DEFAULT_WINDOW_POS_X || posX == -1;
 }
 
 static void GetPrimaryMonitorInfo(MONITORINFO* mi) {
@@ -225,8 +225,8 @@ void SaveWindowSettings(HWND hwnd) {
 void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY) {
     if (!outX || !outY) return;
 
-    int posX = CLOCK_WINDOW_POS_X;
-    int posY = CLOCK_WINDOW_POS_Y;
+    int posX;
+    int posY;
     char configPath[MAX_PATH] = {0};
     GetConfigPath(configPath, MAX_PATH);
 
