@@ -127,7 +127,7 @@ static BOOL BuildPomodoroOptionsFromInput(char* inputUtf8, int* times,
     }
 
     *count = 0;
-    char* token = strtok(inputUtf8, POMODORO_OPTIONS_TOKEN_DELIMITERS);
+    const char* token = strtok(inputUtf8, POMODORO_OPTIONS_TOKEN_DELIMITERS);
     while (token) {
         if (*count >= MAX_POMODORO_TIMES) {
             return FALSE;

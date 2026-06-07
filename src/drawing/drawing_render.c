@@ -951,7 +951,7 @@ static void PreparePaintMarkdownImagesForFrame(MarkdownImage* images, int imageC
 static BOOL EnsurePaintMarkdownImageCapacity(MarkdownImage** images,
                                              int* imageCapacity,
                                              BOOL* heapAllocated,
-                                             MarkdownImage* stackImages) {
+                                             const MarkdownImage* stackImages) {
     if (!images || !*images || !imageCapacity || !heapAllocated || !stackImages) {
         return FALSE;
     }

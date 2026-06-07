@@ -283,8 +283,7 @@ static BOOL ClipTextBitmapToDestination(int x, int y,
     long long srcRight = clipRight - left;
     long long srcBottom = clipBottom - top;
 
-    if (srcLeft < 0 || srcTop < 0 ||
-        srcRight > (long long)bitmapWidth || srcBottom > (long long)bitmapHeight ||
+    if (srcRight > (long long)bitmapWidth || srcBottom > (long long)bitmapHeight ||
         srcLeft > (long long)INT_MAX || srcTop > (long long)INT_MAX ||
         srcRight > (long long)INT_MAX || srcBottom > (long long)INT_MAX) {
         return FALSE;
@@ -917,8 +916,9 @@ void BlendCharBitmapGradientSTBWithInfo(void* destBits, int destWidth, int destH
                                         int x_pos, int y_pos,
                                         const unsigned char* bitmap, int w, int h,
                                         int startX, int totalWidth,
-                                        const GradientInfo* info,
+                                        const GradientInfo* gradientInfo,
                                         int timeOffset, EffectType effect) {
+    const GradientInfo* info = gradientInfo;
     DWORD* pixels = (DWORD*)destBits;
     size_t destPixelCount = 0;
     size_t bitmapPixelCount = 0;
@@ -1679,9 +1679,8 @@ stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath) {
     }
     
     /* Find slot: empty or LRU */
-    int minLRU = INT_MAX;
-
     if (targetSlot < 0) {
+        int minLRU = INT_MAX;
         for (int i = 0; i < MAX_CACHED_FONTS; i++) {
             if (!g_fontCache[i].isLoaded) {
                 targetSlot = i;

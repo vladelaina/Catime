@@ -710,14 +710,13 @@ void RenderMarkdownSTBMeasured(void* bits, int width, int height, const wchar_t*
                 
                 long long hrLeft = (long long)blockLeftX;
                 int hrWidth = maxLineWidth;
-                
-                const GradientInfo* hrGradInfo = frameGradientInfo;
 
                 if (lineY64 >= 0 && lineY64 < (long long)height && hrWidth > 0) {
                     int lineY = (int)lineY64;
                     int drawStart = 0;
                     int drawEnd = 0;
                     if (CalculateVisibleSpan(hrLeft, hrWidth, width, &drawStart, &drawEnd)) {
+                        const GradientInfo* hrGradInfo = frameGradientInfo;
                         long long animOffsetFixed = (hrGradInfo &&
                                                      hrGradInfo->palette &&
                                                      hrGradInfo->paletteCount > 2)
@@ -733,7 +732,7 @@ void RenderMarkdownSTBMeasured(void* bits, int width, int height, const wchar_t*
                         for (int offset = drawStart; offset < drawEnd; offset++) {
                             int x = (int)(hrLeft + (long long)offset);
                             DWORD lineColor;
-                            if (hrGradInfo && hrWidth > 0) {
+                            if (hrGradInfo) {
                                 COLORREF sample = SampleGlobalGradientFixed(hrGradInfo, gradientPosition);
                                 lineColor = 0xFF000000 |
                                             (GetRValue(sample) << 16) |

@@ -183,7 +183,7 @@ static size_t GetCachedPixelsAfterReservedRelease(const CachedImageEntry* reserv
     return g_cachedImagePixels - reservedEntry->pixelCount;
 }
 
-static BOOL EvictCachedImagesForPixelBudget(CachedImageEntry* reservedEntry,
+static BOOL EvictCachedImagesForPixelBudget(const CachedImageEntry* reservedEntry,
                                             size_t newPixelCount) {
     if (newPixelCount > MAX_SINGLE_CACHED_IMAGE_PIXELS ||
         newPixelCount > MAX_TOTAL_CACHED_IMAGE_PIXELS) {
@@ -378,6 +378,7 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
         return NULL;
     }
 
+    CachedImageEntry* replacementSlot = NULL;
     CachedImageEntry* freeSlot = NULL;
     CachedImageEntry* lruSlot = NULL;
     for (int i = 0; i < MAX_CACHED_IMAGES; i++) {
@@ -415,8 +416,7 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
                 return entry;
             }
 
-            ReleaseCachedImageEntry(entry);
-            freeSlot = entry;
+            replacementSlot = entry;
             break;
         }
 
@@ -427,7 +427,8 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
         }
     }
 
-    CachedImageEntry* target = freeSlot ? freeSlot : lruSlot;
+    CachedImageEntry* target = replacementSlot ? replacementSlot :
+                               (freeSlot ? freeSlot : lruSlot);
     if (!target) {
         return NULL;
     }
@@ -437,7 +438,6 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
             RecordImageLoadFailure(cachePath, NULL, FALSE, now);
             return NULL;
         }
-        hasFileInfo = TRUE;
     }
 
     if (fileInfo.isDirectory) {
@@ -452,10 +452,6 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
     if (!IsImageFileSizeAllowed(cachePath, fileInfo.fileSizeBytes)) {
         RecordImageLoadFailure(cachePath, &fileInfo.lastWriteTime, TRUE, now);
         return NULL;
-    }
-
-    if (target->inUse) {
-        ReleaseCachedImageEntry(target);
     }
 
     GpBitmap bitmap = NULL;
@@ -488,6 +484,9 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
     }
 
     ClearImageLoadFailure(cachePath);
+    if (target->inUse) {
+        ReleaseCachedImageEntry(target);
+    }
     target->inUse = TRUE;
     target->bitmap = bitmap;
     target->width = w;
@@ -611,7 +610,7 @@ BOOL GetImageDimensions(const wchar_t* imagePath, int* outWidth, int* outHeight)
         return FALSE;
     }
 
-    CachedImageEntry* entry = GetCachedImageEntry(imagePath);
+    const CachedImageEntry* entry = GetCachedImageEntry(imagePath);
     if (!entry) {
         UnlockImageState();
         return FALSE;

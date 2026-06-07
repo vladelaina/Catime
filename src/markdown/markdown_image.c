@@ -557,7 +557,6 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     }
     if (!TrackDownloadHandle(hInternet)) {
         InternetCloseHandle(hInternet);
-        hInternet = NULL;
         return FALSE;
     }
     if (IsDownloadShutdownRequested()) {
@@ -582,7 +581,6 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     }
     if (!TrackDownloadHandle(hUrl)) {
         InternetCloseHandle(hUrl);
-        hUrl = NULL;
         CloseTrackedDownloadHandle(&hInternet);
         return FALSE;
     }
