@@ -80,7 +80,7 @@ BOOL TimeParser_Validate(const char* input) {
 
     for (size_t i = 0; i < len; i++) {
         int c = tolower((unsigned char)input[i]);
-        if (isdigit(input[i])) {
+        if (isdigit((unsigned char)input[i])) {
             digit_count++;
         } else if (c == ' ' || c == '\t') {
             continue;
