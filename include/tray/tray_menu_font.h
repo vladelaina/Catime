@@ -3,11 +3,23 @@
 
 #include <windows.h>
 
+#define FONT_MENU_MAX_ENTRIES 200
+
 /**
- * @brief Build font submenu with recursive folder scanning
+ * @brief Build font submenu from cached recursive folder scan
  * @param hMenu Parent menu handle
  */
 void BuildFontSubmenu(HMENU hMenu);
+
+/**
+ * @brief Request a background refresh of the font menu cache
+ */
+void FontMenu_RequestScanAsync(void);
+
+/**
+ * @brief Stop background font menu scanning and clear cached state
+ */
+void FontMenu_Shutdown(void);
 
 /**
  * @brief Get font path from menu ID

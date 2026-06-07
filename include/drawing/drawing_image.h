@@ -3,6 +3,11 @@
 
 #include <windows.h>
 
+typedef struct ImageRenderContext {
+    void* graphics;
+    BOOL stateLocked;
+} ImageRenderContext;
+
 // Initialize GDI+ subsystem
 void InitDrawingImage(void);
 
@@ -20,6 +25,26 @@ void ShutdownDrawingImage(void);
  * @return TRUE on success
  */
 BOOL RenderImageGDIPlus(HDC hdc, int x, int y, int width, int height, const wchar_t* imagePath);
+
+/**
+ * @brief Begin a temporary image render context for drawing multiple images to the same HDC
+ * @param hdc Target Device Context
+ * @param ctx Context to initialize
+ * @return TRUE on success
+ */
+BOOL BeginImageRenderContext(HDC hdc, ImageRenderContext* ctx);
+
+/**
+ * @brief End a temporary image render context
+ * @param ctx Context initialized by BeginImageRenderContext
+ */
+void EndImageRenderContext(ImageRenderContext* ctx);
+
+/**
+ * @brief Render an image using a context created for the current HDC
+ */
+BOOL RenderImageGDIPlusWithContext(ImageRenderContext* ctx, int x, int y,
+                                   int width, int height, const wchar_t* imagePath);
 
 /**
  * @brief Get image dimensions

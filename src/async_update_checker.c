@@ -2,18 +2,22 @@
  * @file async_update_checker.c
  * @brief Non-blocking update checks via background thread
  * 
- * Thread detachment prevents concurrent checks (idempotent).
- * 1s timeout balances clean exit vs shutdown responsiveness.
+ * Thread handle retention prevents concurrent checks and lets final teardown
+ * wait for the worker before global resources are released.
  */
 #include <windows.h>
 #include <process.h>
+#include <stdlib.h>
 #include "async_update_checker.h"
 #include "update_checker.h"
+#include "update/update_internal.h"
 #include "log.h"
 
-/* 1s timeout balances clean shutdown with responsiveness (mentioned in file header) */
+/* Short wait keeps WM_DESTROY responsive; final teardown gets a longer budget. */
 #define THREAD_WAIT_TIMEOUT_MS 1000
+#define FINAL_THREAD_WAIT_TIMEOUT_MS 3000
 #define ERROR_MSG_BUFFER_SIZE 256
+#define UPDATE_THREAD_START_FAILURE_COOLDOWN_MS 2000
 
 typedef struct {
     HWND hwnd;
@@ -22,16 +26,41 @@ typedef struct {
 
 static HANDLE g_hUpdateThread = NULL;
 static volatile LONG g_updateThreadRunning = 0;
+static SRWLOCK g_updateThreadLock = SRWLOCK_INIT;
+static DWORD g_updateLastStartFailureTick = 0;
 
 /* ============================================================================
  * Internal helpers
  * ============================================================================ */
 
-static void ResetThreadState(void) {
+static void ResetThreadStateLocked(void) {
     InterlockedExchange(&g_updateThreadRunning, 0);
     if (g_hUpdateThread) {
         CloseHandle(g_hUpdateThread);
         g_hUpdateThread = NULL;
+    }
+}
+
+static BOOL IsUpdateThreadStartFailureCoolingDown(DWORD now) {
+    return g_updateLastStartFailureTick != 0 &&
+           (DWORD)(now - g_updateLastStartFailureTick) <
+               UPDATE_THREAD_START_FAILURE_COOLDOWN_MS;
+}
+
+static void MarkUpdateThreadStartFailure(DWORD now) {
+    g_updateLastStartFailureTick = now ? now : 1;
+}
+
+static void CleanupCompletedUpdateThreadLocked(void) {
+    if (!g_hUpdateThread) {
+        return;
+    }
+
+    DWORD waitResult = WaitForSingleObject(g_hUpdateThread, 0);
+    if (waitResult == WAIT_OBJECT_0) {
+        ResetThreadStateLocked();
+    } else if (waitResult == WAIT_FAILED) {
+        LOG_WARNING("Update thread status check failed: %lu", GetLastError());
     }
 }
 
@@ -54,7 +83,8 @@ static void HandleThreadCreationFailure(UpdateThreadParams* params) {
     LOG_ERROR("Thread creation failed (error %lu): %s", errorCode, errorMsg);
     
     free(params);
-    ResetThreadState();
+    MarkUpdateThreadStartFailure(GetTickCount());
+    ResetThreadStateLocked();
 }
 
 /* ============================================================================
@@ -74,9 +104,7 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     BOOL silentCheck = threadParams->silentCheck;
     free(threadParams);
     
-    LOG_INFO("Update check started (silent: %s)", silentCheck ? "yes" : "no");
-    CheckForUpdateSilent(hwnd, silentCheck);
-    LOG_INFO("Update check completed");
+    CheckForUpdateInternal(hwnd, silentCheck);
 
     InterlockedExchange(&g_updateThreadRunning, 0);
     _endthreadex(0);
@@ -88,47 +116,86 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
  * ============================================================================ */
 
 void CleanupUpdateThread(void) {
+    AcquireSRWLockExclusive(&g_updateThreadLock);
+    CleanupCompletedUpdateThreadLocked();
     if (!g_hUpdateThread) {
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
         return;
     }
-    
+
+    RequestUpdateCheckCancel();
+
     DWORD waitResult = WaitForSingleObject(g_hUpdateThread, THREAD_WAIT_TIMEOUT_MS);
-    
+
     switch (waitResult) {
         case WAIT_TIMEOUT:
-            LOG_WARNING("Thread cleanup timeout, closing handle while thread finishes in background");
-            CloseHandle(g_hUpdateThread);
-            g_hUpdateThread = NULL;
-            LOG_INFO("Thread handle cleaned up");
+            LOG_WARNING("Update thread cleanup timeout, keeping handle for final teardown");
+            ReleaseSRWLockExclusive(&g_updateThreadLock);
             return;
         case WAIT_OBJECT_0:
-            LOG_INFO("Thread ended normally");
             break;
         default:
             LOG_WARNING("Unexpected wait result: %lu", waitResult);
             break;
     }
 
-    ResetThreadState();
-    LOG_INFO("Thread resources cleaned up");
+    ResetThreadStateLocked();
+    ReleaseSRWLockExclusive(&g_updateThreadLock);
+}
+
+void CleanupUpdateThreadBlocking(void) {
+    AcquireSRWLockExclusive(&g_updateThreadLock);
+    CleanupCompletedUpdateThreadLocked();
+    if (!g_hUpdateThread) {
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
+        return;
+    }
+
+    RequestUpdateCheckCancel();
+
+    DWORD waitResult = WaitForSingleObject(g_hUpdateThread, FINAL_THREAD_WAIT_TIMEOUT_MS);
+    if (waitResult == WAIT_TIMEOUT) {
+        LOG_WARNING("Final update thread cleanup timeout, abandoning worker during process teardown");
+        ResetThreadStateLocked();
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
+        return;
+    }
+    if (waitResult != WAIT_OBJECT_0) {
+        LOG_WARNING("Unexpected final update thread wait result: %lu", waitResult);
+    }
+
+    ResetThreadStateLocked();
+    ReleaseSRWLockExclusive(&g_updateThreadLock);
 }
 
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
+    AcquireSRWLockExclusive(&g_updateThreadLock);
+    CleanupCompletedUpdateThreadLocked();
+    DWORD now = GetTickCount();
+    if (IsUpdateThreadStartFailureCoolingDown(now)) {
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
+        return;
+    }
+
     if (InterlockedCompareExchange(&g_updateThreadRunning, 1, 0) != 0) {
-        LOG_INFO("Update check already running, skipping request");
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
         return;
     }
 
     if (g_hUpdateThread) {
-        CloseHandle(g_hUpdateThread);
-        g_hUpdateThread = NULL;
+        InterlockedExchange(&g_updateThreadRunning, 0);
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
+        return;
     }
 
     UpdateThreadParams* threadParams = PrepareThreadParams(hwnd, silentCheck);
     if (!threadParams) {
+        MarkUpdateThreadStartFailure(now);
         InterlockedExchange(&g_updateThreadRunning, 0);
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
         return;
     }
+    ResetUpdateCheckCancel();
     HANDLE hThread = (HANDLE)_beginthreadex(
         NULL,
         0,
@@ -139,9 +206,10 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     );
     
     if (hThread) {
-        LOG_INFO("Update check thread created (handle: 0x%p)", hThread);
         g_hUpdateThread = hThread;
+        g_updateLastStartFailureTick = 0;
     } else {
         HandleThreadCreationFailure(threadParams);
     }
+    ReleaseSRWLockExclusive(&g_updateThreadLock);
 }

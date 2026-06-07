@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <windows.h>
 
 /* ============================================================================
@@ -28,6 +30,9 @@
 #define INI_MAX_KEY_LENGTH      256
 #define INI_MAX_VALUE_LENGTH    2048
 #define INI_INITIAL_CAPACITY    64
+#define INI_MAX_PARSE_LINES     8192
+#define INI_MAX_PARSE_ENTRIES   2048
+#define INI_CACHE_STAT_THROTTLE_MS 100
 
 /* ============================================================================
  * Internal data structures
@@ -48,6 +53,7 @@ typedef struct IniEntry {
 typedef struct IniSection {
     char* name;
     IniEntry* entries;
+    IniEntry* lastEntry;
     struct IniSection* next;
 } IniSection;
 
@@ -56,9 +62,11 @@ typedef struct IniSection {
  */
 typedef struct {
     IniSection* sections;
+    IniSection* lastSection;
     char filePath[MAX_PATH];
     BOOL dirty;                 /* TRUE if modified since last save */
     FILETIME lastWriteTime;     /* For change detection */
+    ULONGLONG lastStatCheckTick;/* Last file timestamp check */
 } IniFile;
 
 /* ============================================================================
@@ -73,10 +81,20 @@ static HANDLE g_ConfigWriteMutex = NULL;
 #define INI_CS_UNINITIALIZED 0
 #define INI_CS_INITIALIZING  1
 #define INI_CS_INITIALIZED   2
+#define INI_WAIT_SPIN_LIMIT 64
+#define CONFIG_WRITE_LOCK_TIMEOUT_MS 2000
 
 /* ============================================================================
  * Thread safety
  * ============================================================================ */
+
+static void WaitWhileIniCSInitializing(void) {
+    DWORD spins = 0;
+    while (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 0, 0) ==
+           INI_CS_INITIALIZING) {
+        Sleep(spins++ < INI_WAIT_SPIN_LIMIT ? 0 : 1);
+    }
+}
 
 static void EnsureCriticalSectionInitialized(void) {
     if (InterlockedCompareExchange(&g_IniCriticalSectionInitialized,
@@ -86,10 +104,7 @@ static void EnsureCriticalSectionInitialized(void) {
         InterlockedExchange(&g_IniCriticalSectionInitialized, INI_CS_INITIALIZED);
     }
 
-    while (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 0, 0) ==
-           INI_CS_INITIALIZING) {
-        Sleep(0);
-    }
+    WaitWhileIniCSInitializing();
 }
 
 static void AcquireIniLock(void) {
@@ -103,17 +118,47 @@ static void ReleaseIniLock(void) {
 
 /* Global mutex for cross-process synchronization */
 static HANDLE GetConfigWriteMutex(void) {
-    if (g_ConfigWriteMutex == NULL) {
-        g_ConfigWriteMutex = CreateMutexW(NULL, FALSE, L"CatimeConfigWriteMutex");
+    HANDLE mutex = (HANDLE)InterlockedCompareExchangePointer(
+        (PVOID volatile*)&g_ConfigWriteMutex, NULL, NULL);
+    if (mutex) {
+        return mutex;
     }
-    return g_ConfigWriteMutex;
+
+    HANDLE newMutex = CreateMutexW(NULL, FALSE, L"CatimeConfigWriteMutex");
+    if (!newMutex) {
+        return NULL;
+    }
+
+    HANDLE existing = (HANDLE)InterlockedCompareExchangePointer(
+        (PVOID volatile*)&g_ConfigWriteMutex, newMutex, NULL);
+    if (existing) {
+        CloseHandle(newMutex);
+        return existing;
+    }
+
+    return newMutex;
 }
 
-static void AcquireConfigWriteLock(void) {
+static BOOL AcquireConfigWriteLock(void) {
     HANDLE h = GetConfigWriteMutex();
-    if (h) {
-        WaitForSingleObject(h, INFINITE);
+    if (!h) {
+        LOG_WARNING("Config write mutex unavailable");
+        return FALSE;
     }
+
+    DWORD waitResult = WaitForSingleObject(h, CONFIG_WRITE_LOCK_TIMEOUT_MS);
+    if (waitResult == WAIT_OBJECT_0 || waitResult == WAIT_ABANDONED) {
+        return TRUE;
+    }
+
+    if (waitResult == WAIT_TIMEOUT) {
+        LOG_WARNING("Timed out waiting for config write mutex after %lu ms",
+                    (DWORD)CONFIG_WRITE_LOCK_TIMEOUT_MS);
+    } else {
+        LOG_WARNING("Failed waiting for config write mutex (result=%lu, error=%lu)",
+                    waitResult, GetLastError());
+    }
+    return FALSE;
 }
 
 static void ReleaseConfigWriteLock(void) {
@@ -162,11 +207,25 @@ static BOOL StrEqualNoCase(const char* a, const char* b) {
  * File utilities with UTF-8 path support
  * ============================================================================ */
 
+static BOOL Utf8PathToWide(const char* utf8Path, wchar_t* wPath, size_t wPathSize) {
+    if (!wPath || wPathSize == 0) return FALSE;
+
+    wPath[0] = L'\0';
+    if (!utf8Path || wPathSize > INT_MAX) return FALSE;
+
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1,
+                            wPath, (int)wPathSize) <= 0) {
+        wPath[0] = L'\0';
+        return FALSE;
+    }
+    return TRUE;
+}
+
 static FILE* OpenFileUtf8(const char* utf8Path, const wchar_t* mode) {
     if (!utf8Path || !mode) return NULL;
 
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+    if (!Utf8PathToWide(utf8Path, wPath, MAX_PATH)) return NULL;
 
     return _wfopen(wPath, mode);
 }
@@ -175,7 +234,7 @@ static BOOL GetFileTimeUtf8(const char* utf8Path, FILETIME* ft) {
     if (!utf8Path || !ft) return FALSE;
 
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+    if (!Utf8PathToWide(utf8Path, wPath, MAX_PATH)) return FALSE;
 
     HANDLE hFile = CreateFileW(wPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -186,11 +245,15 @@ static BOOL GetFileTimeUtf8(const char* utf8Path, FILETIME* ft) {
     return result;
 }
 
+static ULONGLONG GetIniCacheTickMs(void) {
+    return GetTickCount64();
+}
+
 static BOOL DeleteFileUtf8(const char* utf8Path) {
     if (!utf8Path) return FALSE;
 
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+    if (!Utf8PathToWide(utf8Path, wPath, MAX_PATH)) return FALSE;
 
     return DeleteFileW(wPath);
 }
@@ -199,8 +262,10 @@ static BOOL MoveFileUtf8(const char* utf8From, const char* utf8To) {
     if (!utf8From || !utf8To) return FALSE;
 
     wchar_t wFrom[MAX_PATH] = {0}, wTo[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8From, -1, wFrom, MAX_PATH);
-    MultiByteToWideChar(CP_UTF8, 0, utf8To, -1, wTo, MAX_PATH);
+    if (!Utf8PathToWide(utf8From, wFrom, MAX_PATH) ||
+        !Utf8PathToWide(utf8To, wTo, MAX_PATH)) {
+        return FALSE;
+    }
 
     return MoveFileExW(wFrom, wTo, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
 }
@@ -209,7 +274,7 @@ static BOOL FileExistsUtf8(const char* utf8Path) {
     if (!utf8Path) return FALSE;
 
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+    if (!Utf8PathToWide(utf8Path, wPath, MAX_PATH)) return FALSE;
 
     return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
 }
@@ -278,10 +343,15 @@ static IniSection* CreateSection(IniFile* ini, const char* name) {
     /* Add to end of list to preserve order */
     if (!ini->sections) {
         ini->sections = section;
+        ini->lastSection = section;
     } else {
-        IniSection* last = ini->sections;
-        while (last->next) last = last->next;
+        IniSection* last = ini->lastSection;
+        if (!last) {
+            last = ini->sections;
+            while (last->next) last = last->next;
+        }
         last->next = section;
+        ini->lastSection = section;
     }
 
     return section;
@@ -315,13 +385,47 @@ static IniEntry* CreateEntry(IniSection* section, const char* key, const char* v
     /* Add to end of list to preserve order */
     if (!section->entries) {
         section->entries = entry;
+        section->lastEntry = entry;
     } else {
-        IniEntry* last = section->entries;
-        while (last->next) last = last->next;
+        IniEntry* last = section->lastEntry;
+        if (!last) {
+            last = section->entries;
+            while (last->next) last = last->next;
+        }
         last->next = entry;
+        section->lastEntry = entry;
     }
 
     return entry;
+}
+
+static IniFile* CloneIniFile(const IniFile* src) {
+    if (!src) return NULL;
+
+    IniFile* clone = (IniFile*)calloc(1, sizeof(IniFile));
+    if (!clone) return NULL;
+
+    strncpy(clone->filePath, src->filePath, MAX_PATH - 1);
+    clone->dirty = src->dirty;
+    clone->lastWriteTime = src->lastWriteTime;
+    clone->lastStatCheckTick = src->lastStatCheckTick;
+
+    for (const IniSection* section = src->sections; section; section = section->next) {
+        IniSection* newSection = CreateSection(clone, section->name);
+        if (!newSection) {
+            FreeIniFile(clone);
+            return NULL;
+        }
+
+        for (const IniEntry* entry = section->entries; entry; entry = entry->next) {
+            if (!CreateEntry(newSection, entry->key, entry->value)) {
+                FreeIniFile(clone);
+                return NULL;
+            }
+        }
+    }
+
+    return clone;
 }
 
 /* ============================================================================
@@ -347,6 +451,13 @@ static void SkipBOM(FILE* f) {
     if (c1 != EOF) ungetc(c1, f);
 }
 
+static void DiscardRestOfLine(FILE* f) {
+    int ch;
+    while ((ch = fgetc(f)) != EOF && ch != '\n') {
+        /* Discard an overlong physical line so partial keys are not parsed. */
+    }
+}
+
 /**
  * @brief Parse INI file from disk into memory structure
  */
@@ -357,6 +468,7 @@ static IniFile* ParseIniFile(const char* filePath) {
     if (!ini) return NULL;
 
     strncpy(ini->filePath, filePath, MAX_PATH - 1);
+    ini->lastStatCheckTick = GetIniCacheTickMs();
 
     FILE* f = OpenFileUtf8(filePath, L"rb");
     if (!f) {
@@ -369,10 +481,26 @@ static IniFile* ParseIniFile(const char* filePath) {
 
     char line[INI_MAX_LINE_LENGTH];
     IniSection* currentSection = NULL;
+    DWORD parsedLines = 0;
+    DWORD parsedEntries = 0;
 
     while (fgets(line, sizeof(line), f)) {
-        /* Remove newline */
+        if (++parsedLines > INI_MAX_PARSE_LINES) {
+            LOG_WARNING("INI parse line limit reached for %s (%lu lines)",
+                        filePath, parsedLines - 1);
+            break;
+        }
+
+        /* Reject overlong physical lines instead of parsing truncated prefixes. */
         size_t len = strlen(line);
+        if (len > 0 && line[len - 1] != '\n' && !feof(f)) {
+            DiscardRestOfLine(f);
+            LOG_WARNING("INI line too long in %s at line %lu; skipped",
+                        filePath, parsedLines);
+            continue;
+        }
+
+        /* Remove newline */
         while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r')) {
             line[--len] = '\0';
         }
@@ -408,11 +536,23 @@ static IniFile* ParseIniFile(const char* filePath) {
             IniEntry* entry = FindEntry(currentSection, key);
             if (entry) {
                 /* Update existing */
+                char* newValue = StrDup(value);
+                if (!newValue) {
+                    continue;
+                }
                 free(entry->value);
-                entry->value = StrDup(value);
+                entry->value = newValue;
             } else {
+                if (parsedEntries >= INI_MAX_PARSE_ENTRIES) {
+                    LOG_WARNING("INI parse entry limit reached for %s (%lu entries)",
+                                filePath, parsedEntries);
+                    break;
+                }
+
                 /* Create new */
-                CreateEntry(currentSection, key, value);
+                if (CreateEntry(currentSection, key, value)) {
+                    parsedEntries++;
+                }
             }
         }
     }
@@ -434,23 +574,45 @@ static BOOL WriteIniToFile(IniFile* ini, const char* filePath) {
     FILE* f = OpenFileUtf8(filePath, L"wb");
     if (!f) return FALSE;
 
+    BOOL success = TRUE;
     for (IniSection* section = ini->sections; section; section = section->next) {
         /* Write section header */
-        fprintf(f, "[%s]\n", section->name);
+        if (fprintf(f, "[%s]\n", section->name) < 0) {
+            success = FALSE;
+            break;
+        }
 
         /* Write entries */
         for (IniEntry* entry = section->entries; entry; entry = entry->next) {
-            fprintf(f, "%s=%s\n", entry->key, entry->value);
+            if (fprintf(f, "%s=%s\n", entry->key, entry->value) < 0) {
+                success = FALSE;
+                break;
+            }
+        }
+        if (!success) {
+            break;
         }
 
         /* Blank line between sections */
         if (section->next) {
-            fprintf(f, "\n");
+            if (fprintf(f, "\n") < 0) {
+                success = FALSE;
+                break;
+            }
         }
     }
 
-    fclose(f);
-    return TRUE;
+    if (ferror(f)) {
+        success = FALSE;
+    }
+    if (fclose(f) != 0) {
+        success = FALSE;
+    }
+
+    if (!success) {
+        LOG_ERROR("Failed to write config file: %s", filePath);
+    }
+    return success;
 }
 
 /**
@@ -467,6 +629,7 @@ static BOOL WriteIniAtomically(IniFile* ini) {
     }
 
     if (!WriteIniToFile(ini, tempPath)) {
+        DeleteFileUtf8(tempPath);
         return FALSE;
     }
 
@@ -477,6 +640,7 @@ static BOOL WriteIniAtomically(IniFile* ini) {
 
     ini->dirty = FALSE;
     GetFileTimeUtf8(ini->filePath, &ini->lastWriteTime);
+    ini->lastStatCheckTick = GetIniCacheTickMs();
 
     return TRUE;
 }
@@ -505,6 +669,65 @@ static IniFile* EnsureIniLoaded(const char* filePath) {
     return g_ConfigIni;
 }
 
+static BOOL IsZeroFileTime(const FILETIME* ft) {
+    return ft && ft->dwLowDateTime == 0 && ft->dwHighDateTime == 0;
+}
+
+static BOOL ReloadIniCacheFromDisk(const char* filePath) {
+    IniFile* reloaded = ParseIniFile(filePath);
+    if (!reloaded) {
+        return FALSE;
+    }
+
+    if (g_ConfigIni) {
+        FreeIniFile(g_ConfigIni);
+    }
+    g_ConfigIni = reloaded;
+    return TRUE;
+}
+
+static BOOL RefreshCleanIniCacheIfChangedInternal(const char* filePath, BOOL forceStatCheck) {
+    IniFile* ini = EnsureIniLoaded(filePath);
+    if (!ini) {
+        return FALSE;
+    }
+
+    if (ini->dirty) {
+        return TRUE;
+    }
+
+    ULONGLONG now = GetIniCacheTickMs();
+    if (!forceStatCheck &&
+        ini->lastStatCheckTick != 0 &&
+        now - ini->lastStatCheckTick < INI_CACHE_STAT_THROTTLE_MS) {
+        return TRUE;
+    }
+
+    FILETIME currentWriteTime;
+    if (!GetFileTimeUtf8(filePath, &currentWriteTime)) {
+        if (IsZeroFileTime(&ini->lastWriteTime)) {
+            ini->lastStatCheckTick = now;
+            return TRUE;
+        }
+        return ReloadIniCacheFromDisk(filePath);
+    }
+
+    if (CompareFileTime(&ini->lastWriteTime, &currentWriteTime) == 0) {
+        ini->lastStatCheckTick = now;
+        return TRUE;
+    }
+
+    return ReloadIniCacheFromDisk(filePath);
+}
+
+static BOOL RefreshCleanIniCacheIfChanged(const char* filePath) {
+    return RefreshCleanIniCacheIfChangedInternal(filePath, FALSE);
+}
+
+static BOOL RefreshCleanIniCacheForWrite(const char* filePath) {
+    return RefreshCleanIniCacheIfChangedInternal(filePath, TRUE);
+}
+
 /**
  * @brief Get value from INI (internal, must hold lock)
  */
@@ -522,10 +745,8 @@ static const char* GetIniValue(const char* section, const char* key, const char*
 /**
  * @brief Set value in INI (internal, must hold lock)
  */
-static BOOL SetIniValue(const char* section, const char* key, const char* value, const char* filePath) {
-    IniFile* ini = EnsureIniLoaded(filePath);
-    if (!ini) return FALSE;
-
+static BOOL SetIniValueInMemory(IniFile* ini, const char* section, const char* key, const char* value) {
+    if (!ini || !section || !key) return FALSE;
     IniSection* sec = FindSection(ini, section);
     if (!sec) {
         sec = CreateSection(ini, section);
@@ -538,8 +759,12 @@ static BOOL SetIniValue(const char* section, const char* key, const char* value,
         if (entry->value && strcmp(entry->value, newValue) == 0) {
             return TRUE;
         }
+        char* newValueCopy = StrDup(newValue);
+        if (!newValueCopy) {
+            return FALSE;
+        }
         free(entry->value);
-        entry->value = StrDup(newValue);
+        entry->value = newValueCopy;
     } else {
         entry = CreateEntry(sec, key, value);
     }
@@ -549,6 +774,34 @@ static BOOL SetIniValue(const char* section, const char* key, const char* value,
     }
 
     return entry != NULL;
+}
+
+static BOOL IniValueMatches(IniFile* ini, const char* section,
+                            const char* key, const char* value) {
+    if (!ini || !section || !key) return FALSE;
+
+    IniSection* sec = FindSection(ini, section);
+    IniEntry* entry = sec ? FindEntry(sec, key) : NULL;
+    const char* currentValue = entry ? entry->value : NULL;
+    return currentValue && strcmp(currentValue, value ? value : "") == 0;
+}
+
+static BOOL IniUpdatesMatch(IniFile* ini, const IniKeyValue* updates,
+                            size_t count) {
+    if (!ini || !updates) return FALSE;
+
+    for (size_t i = 0; i < count; i++) {
+        if (!updates[i].section || !updates[i].key || !updates[i].value) {
+            continue;
+        }
+
+        if (!IniValueMatches(ini, updates[i].section,
+                             updates[i].key, updates[i].value)) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
 }
 
 /* ============================================================================
@@ -571,7 +824,9 @@ DWORD ReadIniString(const char* section, const char* key, const char* defaultVal
 
     AcquireIniLock();
 
-    const char* value = GetIniValue(section, key, filePath);
+    const char* value = RefreshCleanIniCacheIfChanged(filePath)
+        ? GetIniValue(section, key, filePath)
+        : NULL;
     const char* result = value ? value : (defaultValue ? defaultValue : "");
 
     strncpy(returnValue, result, returnSize - 1);
@@ -584,6 +839,30 @@ DWORD ReadIniString(const char* section, const char* key, const char* defaultVal
     return len;
 }
 
+BOOL ReadIniStringExact(const char* section, const char* key, const char* defaultValue,
+                        char* returnValue, DWORD returnSize, const char* filePath) {
+    if (!returnValue || returnSize == 0) return FALSE;
+
+    AcquireIniLock();
+
+    const char* value = RefreshCleanIniCacheIfChanged(filePath)
+        ? GetIniValue(section, key, filePath)
+        : NULL;
+    const char* result = value ? value : (defaultValue ? defaultValue : "");
+    size_t resultLen = strlen(result);
+
+    if (resultLen >= returnSize) {
+        returnValue[0] = '\0';
+        ReleaseIniLock();
+        return FALSE;
+    }
+
+    memcpy(returnValue, result, resultLen + 1);
+
+    ReleaseIniLock();
+    return TRUE;
+}
+
 /**
  * @brief Write string value to INI file
  */
@@ -591,15 +870,59 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
                     const char* filePath) {
     if (!section || !key || !filePath) return FALSE;
 
+    /*
+     * Avoid taking the cross-process write mutex for clean no-op writes.
+     * If the cache is dirty, fall through so the existing flush path can run.
+     */
     AcquireIniLock();
-    AcquireConfigWriteLock();
-
-    BOOL result = SetIniValue(section, key, value, filePath);
-
-    /* Immediately flush to disk for compatibility with existing behavior */
-    if (result && g_ConfigIni) {
-        result = WriteIniAtomically(g_ConfigIni);
+    IniFile* currentIni = RefreshCleanIniCacheForWrite(filePath) ? g_ConfigIni : NULL;
+    if (currentIni && !currentIni->dirty) {
+        if (IniValueMatches(currentIni, section, key, value)) {
+            ReleaseIniLock();
+            return TRUE;
+        }
     }
+    ReleaseIniLock();
+
+    if (!AcquireConfigWriteLock()) {
+        return FALSE;
+    }
+    AcquireIniLock();
+
+    if (!RefreshCleanIniCacheForWrite(filePath)) {
+        ReleaseConfigWriteLock();
+        ReleaseIniLock();
+        return FALSE;
+    }
+
+    if (g_ConfigIni && !g_ConfigIni->dirty &&
+        IniValueMatches(g_ConfigIni, section, key, value)) {
+        ReleaseConfigWriteLock();
+        ReleaseIniLock();
+        return TRUE;
+    }
+
+    IniFile* pendingIni = CloneIniFile(g_ConfigIni);
+    if (!pendingIni) {
+        ReleaseConfigWriteLock();
+        ReleaseIniLock();
+        return FALSE;
+    }
+
+    BOOL result = SetIniValueInMemory(pendingIni, section, key, value);
+
+    /* Flush only when SetIniValue actually changed the cached INI. */
+    if (result && pendingIni->dirty) {
+        result = WriteIniAtomically(pendingIni);
+    }
+
+    if (result) {
+        FreeIniFile(g_ConfigIni);
+        g_ConfigIni = pendingIni;
+        pendingIni = NULL;
+    }
+
+    FreeIniFile(pendingIni);
 
     ReleaseConfigWriteLock();
     ReleaseIniLock();
@@ -614,13 +937,17 @@ int ReadIniInt(const char* section, const char* key, int defaultValue,
                const char* filePath) {
     AcquireIniLock();
 
-    const char* value = GetIniValue(section, key, filePath);
+    const char* value = RefreshCleanIniCacheIfChanged(filePath)
+        ? GetIniValue(section, key, filePath)
+        : NULL;
 
     int result = defaultValue;
     if (value && *value) {
         char* end;
+        errno = 0;
         long parsed = strtol(value, &end, 10);
-        if (end != value) {
+        if (end != value && errno != ERANGE &&
+            parsed >= (long)INT_MIN && parsed <= (long)INT_MAX) {
             result = (int)parsed;
         }
     }
@@ -647,7 +974,9 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
                  const char* filePath) {
     AcquireIniLock();
 
-    const char* value = GetIniValue(section, key, filePath);
+    const char* value = RefreshCleanIniCacheIfChanged(filePath)
+        ? GetIniValue(section, key, filePath)
+        : NULL;
 
     BOOL result = defaultValue;
     if (value && *value) {
@@ -711,25 +1040,66 @@ BOOL UpdateConfigBoolAtomic(const char* section, const char* key, BOOL value) {
 BOOL WriteIniMultipleAtomic(const char* filePath, const IniKeyValue* updates, size_t count) {
     if (!filePath || !updates || count == 0) return FALSE;
 
+    /*
+     * Fast path for clean no-op batches. This avoids taking the cross-process
+     * write mutex when a full/section save is replaying values already in cache.
+     */
     AcquireIniLock();
-    AcquireConfigWriteLock();
+    IniFile* currentIni = RefreshCleanIniCacheForWrite(filePath) ? g_ConfigIni : NULL;
+    if (currentIni && !currentIni->dirty) {
+        if (IniUpdatesMatch(currentIni, updates, count)) {
+            ReleaseIniLock();
+            return TRUE;
+        }
+    }
+    ReleaseIniLock();
 
-    IniFile* ini = EnsureIniLoaded(filePath);
-    if (!ini) {
+    if (!AcquireConfigWriteLock()) {
+        return FALSE;
+    }
+    AcquireIniLock();
+
+    if (!RefreshCleanIniCacheForWrite(filePath)) {
+        ReleaseConfigWriteLock();
+        ReleaseIniLock();
+        return FALSE;
+    }
+    if (g_ConfigIni && !g_ConfigIni->dirty &&
+        IniUpdatesMatch(g_ConfigIni, updates, count)) {
+        ReleaseConfigWriteLock();
+        ReleaseIniLock();
+        return TRUE;
+    }
+
+    IniFile* pendingIni = CloneIniFile(g_ConfigIni);
+    if (!pendingIni) {
         ReleaseConfigWriteLock();
         ReleaseIniLock();
         return FALSE;
     }
 
     /* Apply all updates */
+    BOOL result = TRUE;
     for (size_t i = 0; i < count; i++) {
         if (updates[i].section && updates[i].key && updates[i].value) {
-            SetIniValue(updates[i].section, updates[i].key, updates[i].value, filePath);
+            if (!SetIniValueInMemory(pendingIni, updates[i].section, updates[i].key, updates[i].value)) {
+                result = FALSE;
+                break;
+            }
         }
     }
 
-    /* Single atomic write */
-    BOOL result = WriteIniAtomically(ini);
+    if (result && pendingIni->dirty) {
+        result = WriteIniAtomically(pendingIni);
+    }
+
+    if (result) {
+        FreeIniFile(g_ConfigIni);
+        g_ConfigIni = pendingIni;
+        pendingIni = NULL;
+    }
+
+    FreeIniFile(pendingIni);
 
     ReleaseConfigWriteLock();
     ReleaseIniLock();
@@ -741,8 +1111,10 @@ BOOL WriteIniMultipleAtomic(const char* filePath, const IniKeyValue* updates, si
  * @brief Force flush any cached changes to disk
  */
 void FlushConfigToDisk(void) {
+    if (!AcquireConfigWriteLock()) {
+        return;
+    }
     AcquireIniLock();
-    AcquireConfigWriteLock();
 
     if (g_ConfigIni && g_ConfigIni->dirty) {
         WriteIniAtomically(g_ConfigIni);
@@ -767,10 +1139,7 @@ void InvalidateIniCache(void) {
 }
 
 void ShutdownIniCache(void) {
-    while (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 0, 0) ==
-           INI_CS_INITIALIZING) {
-        Sleep(0);
-    }
+    WaitWhileIniCSInitializing();
 
     if (InterlockedCompareExchange(&g_IniCriticalSectionInitialized, 0, 0) ==
         INI_CS_INITIALIZED) {
@@ -787,8 +1156,9 @@ void ShutdownIniCache(void) {
         g_ConfigIni = NULL;
     }
 
-    if (g_ConfigWriteMutex) {
-        CloseHandle(g_ConfigWriteMutex);
-        g_ConfigWriteMutex = NULL;
+    HANDLE mutex = (HANDLE)InterlockedExchangePointer(
+        (PVOID volatile*)&g_ConfigWriteMutex, NULL);
+    if (mutex) {
+        CloseHandle(mutex);
     }
 }

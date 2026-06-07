@@ -56,6 +56,14 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
                          MemoryPool* pool, int iconWidth, int iconHeight);
 
 /**
+ * @brief Decode animated image with cooperative cancellation
+ * @param cancelEvent Optional event; signaled event aborts frame decoding
+ */
+BOOL DecodeAnimatedImageWithCancel(const char* utf8Path, DecodedAnimation* anim,
+                                   MemoryPool* pool, int iconWidth, int iconHeight,
+                                   HANDLE cancelEvent);
+
+/**
  * @brief Decode static image to single icon
  * @param utf8Path File path
  * @param iconWidth Target width
@@ -63,6 +71,17 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
  * @return HICON or NULL on failure
  */
 HICON DecodeStaticImage(const char* utf8Path, int iconWidth, int iconHeight);
+
+/**
+ * @brief Decode static image with an existing WIC factory
+ * @param pFactory WIC factory instance for non-ICO formats
+ * @param wPath UTF-16 file path
+ * @param iconWidth Target width
+ * @param iconHeight Target height
+ * @return HICON or NULL on failure
+ */
+HICON DecodeStaticImageWithFactory(IWICImagingFactory* pFactory, const wchar_t* wPath,
+                                   int iconWidth, int iconHeight);
 
 /**
  * @brief Create icon from WIC bitmap source

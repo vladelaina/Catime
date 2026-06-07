@@ -14,6 +14,10 @@
 #include "../../resource/resource.h"
 #include <strsafe.h>
 #include <commctrl.h>
+#include <stdlib.h>
+#include <wchar.h>
+
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 /* Global dialog handles for modeless dialogs */
 static HWND g_hwndUpdateDialog = NULL;
@@ -22,13 +26,97 @@ static HWND g_hwndExitMsgDialog = NULL;
 
 /* Store version info for modeless update dialog */
 static VersionInfo g_updateVersionInfo = {0};
+static char g_dialogCurrentVersion[64] = {0};
+static char g_dialogLatestVersion[64] = {0};
+static char g_dialogDownloadUrl[URL_BUFFER_SIZE] = {0};
+static char g_dialogReleaseNotes[NOTES_BUFFER_SIZE] = {0};
 
 /* Store download URL copy for async update */
 static char g_downloadUrlCopy[512] = {0};
+static SRWLOCK g_downloadUrlLock = SRWLOCK_INIT;
+
+/* Release notes markdown state owned by the modeless update dialog. */
+static wchar_t* g_notesDisplayText = NULL;
+static MarkdownLink* g_notesLinks = NULL;
+static int g_notesLinkCount = 0;
+static MarkdownHeading* g_notesHeadings = NULL;
+static int g_notesHeadingCount = 0;
+static MarkdownStyle* g_notesStyles = NULL;
+static int g_notesStyleCount = 0;
+static MarkdownListItem* g_notesListItems = NULL;
+static int g_notesListItemCount = 0;
+static MarkdownBlockquote* g_notesBlockquotes = NULL;
+static int g_notesBlockquoteCount = 0;
+static MarkdownColorTag* g_notesColorTags = NULL;
+static int g_notesColorTagCount = 0;
+static MarkdownFontTag* g_notesFontTags = NULL;
+static int g_notesFontTagCount = 0;
+static int g_textHeight = 0;
+
+typedef struct {
+    HDC hdc;
+    HBITMAP bitmap;
+    HBITMAP oldBitmap;
+    int width;
+    int height;
+} NotesPaintBuffer;
+
+static NotesPaintBuffer g_notesPaintBuffer = {0};
+
+#define UPDATE_NOTES_MAX_PAINT_PIXELS (4096u * 4096u)
+#define UPDATE_NOTES_PAINT_SHRINK_THRESHOLD_MULTIPLIER 4u
 
 /* Thin wrappers using utils/string_convert.h */
 static inline wchar_t* LocalUtf8ToWideAlloc(const char* utf8Str) {
     return Utf8ToWideAlloc(utf8Str);
+}
+
+static void CopyUpdateString(char* dest, size_t destSize, const char* src) {
+    if (!dest || destSize == 0) {
+        return;
+    }
+
+    if (!src) {
+        dest[0] = '\0';
+        return;
+    }
+
+    strncpy(dest, src, destSize - 1);
+    dest[destSize - 1] = '\0';
+}
+
+static BOOL CopyPendingUpdateDownloadUrl(char* dest, size_t destSize) {
+    if (!dest || destSize == 0) return FALSE;
+
+    AcquireSRWLockShared(&g_downloadUrlLock);
+    CopyUpdateString(dest, destSize, g_downloadUrlCopy);
+    ReleaseSRWLockShared(&g_downloadUrlLock);
+
+    return dest[0] != '\0';
+}
+
+static BOOL IsValidUpdateDialogParentWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static HWND GetUpdateDialogParent(HWND hwndDlg) {
+    HWND hwndParent = hwndDlg ? GetParent(hwndDlg) : NULL;
+    return IsValidUpdateDialogParentWindow(hwndParent) ? hwndParent : NULL;
 }
 
 /** @brief Initialize dialog (center, localize) */
@@ -78,7 +166,7 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
             return TRUE;
             
         case WM_DESTROY:
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_EXIT_MSG);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_EXIT_MSG, hwndDlg);
             g_hwndExitMsgDialog = NULL;
             /* Exit program after dialog is destroyed */
             if (g_shouldExitAfterDialog) {
@@ -91,26 +179,128 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
 }
 
 /** @brief Update available dialog */
-INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static wchar_t* g_notesDisplayText = NULL;
-    static MarkdownLink* g_notesLinks = NULL;
-    static int g_notesLinkCount = 0;
-    static MarkdownHeading* g_notesHeadings = NULL;
-    static int g_notesHeadingCount = 0;
-    static MarkdownStyle* g_notesStyles = NULL;
-    static int g_notesStyleCount = 0;
-    static MarkdownListItem* g_notesListItems = NULL;
-    static int g_notesListItemCount = 0;
-    static MarkdownBlockquote* g_notesBlockquotes = NULL;
-    static int g_notesBlockquoteCount = 0;
-    static MarkdownColorTag* g_notesColorTags = NULL;
-    static int g_notesColorTagCount = 0;
-    static MarkdownFontTag* g_notesFontTags = NULL;
-    static int g_notesFontTagCount = 0;
-    static int g_textHeight = 0;
+static void ReleaseUpdateNotesPaintBuffer(void) {
+    if (g_notesPaintBuffer.hdc && g_notesPaintBuffer.oldBitmap) {
+        SelectObject(g_notesPaintBuffer.hdc, g_notesPaintBuffer.oldBitmap);
+    }
+    if (g_notesPaintBuffer.bitmap) {
+        DeleteObject(g_notesPaintBuffer.bitmap);
+    }
+    if (g_notesPaintBuffer.hdc) {
+        DeleteDC(g_notesPaintBuffer.hdc);
+    }
+    ZeroMemory(&g_notesPaintBuffer, sizeof(g_notesPaintBuffer));
+}
 
+static BOOL EnsureUpdateNotesPaintBuffer(HDC hdc, int width, int height, HDC* outHdc) {
+    if (!hdc || !outHdc || width <= 0 || height <= 0) return FALSE;
+    if ((size_t)width > (size_t)UPDATE_NOTES_MAX_PAINT_PIXELS / (size_t)height) {
+        ReleaseUpdateNotesPaintBuffer();
+        return FALSE;
+    }
+
+    if (g_notesPaintBuffer.hdc &&
+        g_notesPaintBuffer.width >= width &&
+        g_notesPaintBuffer.height >= height) {
+        size_t requestedPixels = (size_t)width * (size_t)height;
+        size_t cachedPixels = (size_t)g_notesPaintBuffer.width * (size_t)g_notesPaintBuffer.height;
+        if (requestedPixels > 0 &&
+            cachedPixels / UPDATE_NOTES_PAINT_SHRINK_THRESHOLD_MULTIPLIER <= requestedPixels) {
+            *outHdc = g_notesPaintBuffer.hdc;
+            return TRUE;
+        }
+    }
+
+    if (g_notesPaintBuffer.hdc &&
+        g_notesPaintBuffer.width == width &&
+        g_notesPaintBuffer.height == height) {
+        *outHdc = g_notesPaintBuffer.hdc;
+        return TRUE;
+    }
+
+    ReleaseUpdateNotesPaintBuffer();
+
+    HDC memDC = CreateCompatibleDC(hdc);
+    if (!memDC) {
+        return FALSE;
+    }
+
+    HBITMAP bitmap = CreateCompatibleBitmap(hdc, width, height);
+    if (!bitmap) {
+        DeleteDC(memDC);
+        return FALSE;
+    }
+
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
+    if (!oldBitmap) {
+        DeleteObject(bitmap);
+        DeleteDC(memDC);
+        return FALSE;
+    }
+
+    g_notesPaintBuffer.hdc = memDC;
+    g_notesPaintBuffer.bitmap = bitmap;
+    g_notesPaintBuffer.oldBitmap = oldBitmap;
+    g_notesPaintBuffer.width = width;
+    g_notesPaintBuffer.height = height;
+
+    *outHdc = memDC;
+    return TRUE;
+}
+
+static void CleanupUpdateNotesState(HWND hwndDlg) {
+    HWND hwndNotes = hwndDlg ? GetDlgItem(hwndDlg, IDC_UPDATE_NOTES) : NULL;
+    if (hwndNotes) {
+        RemoveProp(hwndNotes, L"ScrollPos");
+        RemoveProp(hwndNotes, L"ScrollMax");
+        RemoveProp(hwndNotes, L"ScrollPage");
+        RemoveProp(hwndNotes, L"ThumbDragging");
+        RemoveProp(hwndNotes, L"DragStartY");
+        RemoveProp(hwndNotes, L"DragStartScrollPos");
+        RemoveProp(hwndNotes, L"ThumbHovered");
+        RemoveProp(hwndNotes, L"MarkdownLinks");
+        RemoveProp(hwndNotes, L"LinkCount");
+    }
+
+    FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
+    g_notesLinks = NULL;
+    g_notesLinkCount = 0;
+
+    free(g_notesHeadings);
+    g_notesHeadings = NULL;
+    g_notesHeadingCount = 0;
+
+    free(g_notesStyles);
+    g_notesStyles = NULL;
+    g_notesStyleCount = 0;
+
+    free(g_notesListItems);
+    g_notesListItems = NULL;
+    g_notesListItemCount = 0;
+
+    free(g_notesBlockquotes);
+    g_notesBlockquotes = NULL;
+    g_notesBlockquoteCount = 0;
+
+    free(g_notesColorTags);
+    g_notesColorTags = NULL;
+    g_notesColorTagCount = 0;
+
+    free(g_notesFontTags);
+    g_notesFontTags = NULL;
+    g_notesFontTagCount = 0;
+
+    free(g_notesDisplayText);
+    g_notesDisplayText = NULL;
+    g_textHeight = 0;
+
+    ReleaseUpdateNotesPaintBuffer();
+}
+
+INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
+            CleanupUpdateNotesState(NULL);
             Dialog_RegisterInstance(DIALOG_INSTANCE_UPDATE, hwndDlg);
             g_hwndUpdateDialog = hwndDlg;
             
@@ -177,7 +367,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     if (hdc) {
                         HFONT hFont = (HFONT)SendMessage(hwndNotes, WM_GETFONT, 0, 0);
                         if (!hFont) hFont = GetStockObject(DEFAULT_GUI_FONT);
-                        HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                        HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
 
                         RECT rect;
                         GetClientRect(hwndNotes, &rect);
@@ -193,7 +383,9 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                                                     g_notesBlockquotes, g_notesBlockquoteCount,
                                                                     drawRect);
 
-                        SelectObject(hdc, hOldFont);
+                        if (hOldFont) {
+                            SelectObject(hdc, hOldFont);
+                        }
                         ReleaseDC(hwndNotes, hdc);
 
                         int clientHeight = rect.bottom - rect.top;
@@ -215,48 +407,10 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDYES || LOWORD(wParam) == IDNO) {
-                FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
-                g_notesLinks = NULL;
-                g_notesLinkCount = 0;
-                if (g_notesHeadings) {
-                    free(g_notesHeadings);
-                    g_notesHeadings = NULL;
-                }
-                g_notesHeadingCount = 0;
-                if (g_notesStyles) {
-                    free(g_notesStyles);
-                    g_notesStyles = NULL;
-                }
-                g_notesStyleCount = 0;
-                if (g_notesListItems) {
-                    free(g_notesListItems);
-                    g_notesListItems = NULL;
-                }
-                g_notesListItemCount = 0;
-                if (g_notesBlockquotes) {
-                    free(g_notesBlockquotes);
-                    g_notesBlockquotes = NULL;
-                }
-                g_notesBlockquoteCount = 0;
-                if (g_notesColorTags) {
-                    free(g_notesColorTags);
-                    g_notesColorTags = NULL;
-                }
-                g_notesColorTagCount = 0;
-                if (g_notesFontTags) {
-                    free(g_notesFontTags);
-                    g_notesFontTags = NULL;
-                }
-                g_notesFontTagCount = 0;
-                if (g_notesDisplayText) {
-                    free(g_notesDisplayText);
-                    g_notesDisplayText = NULL;
-                }
-                g_textHeight = 0;
-                
                 /* Store the result and notify parent before destroying */
-                HWND hwndParent = GetParent(hwndDlg);
+                HWND hwndParent = GetUpdateDialogParent(hwndDlg);
                 int result = LOWORD(wParam);
+                CleanupUpdateNotesState(hwndDlg);
                 DestroyWindow(hwndDlg);
                 
                 /* If user chose to update, trigger the update process */
@@ -272,36 +426,20 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             if (lpDrawItem->CtlID == IDC_UPDATE_NOTES) {
                 HDC hdc = lpDrawItem->hDC;
                 RECT rect = lpDrawItem->rcItem;
+                RECT localRect = {0, 0, rect.right - rect.left, rect.bottom - rect.top};
 
-                int paintWidth = rect.right - rect.left;
-                int paintHeight = rect.bottom - rect.top;
+                int paintWidth = localRect.right - localRect.left;
+                int paintHeight = localRect.bottom - localRect.top;
                 if (paintWidth <= 0 || paintHeight <= 0) {
                     return TRUE;
                 }
 
-                HDC hdcMem = CreateCompatibleDC(hdc);
-                if (!hdcMem) {
+                HDC hdcMem = NULL;
+                if (!EnsureUpdateNotesPaintBuffer(hdc, paintWidth, paintHeight, &hdcMem)) {
                     return TRUE;
                 }
 
-                HBITMAP hbmMem = CreateCompatibleBitmap(hdc, paintWidth, paintHeight);
-                if (!hbmMem) {
-                    DeleteDC(hdcMem);
-                    return TRUE;
-                }
-
-                HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
-                if (!hbmOld) {
-                    DeleteObject(hbmMem);
-                    DeleteDC(hdcMem);
-                    return TRUE;
-                }
-
-                HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
-                if (hBrush) {
-                    FillRect(hdcMem, &rect, hBrush);
-                    DeleteObject(hBrush);
-                }
+                FillRect(hdcMem, &localRect, GetSysColorBrush(COLOR_BTNFACE));
 
                 if (g_notesDisplayText) {
                     int scrollPos = (int)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ScrollPos");
@@ -316,15 +454,15 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     if (!hFont) {
                         hFont = GetStockObject(DEFAULT_GUI_FONT);
                     }
-                    HFONT hOldFont = (HFONT)SelectObject(hdcMem, hFont);
+                    HFONT hOldFont = hFont ? (HFONT)SelectObject(hdcMem, hFont) : NULL;
 
-                    RECT drawRect = rect;
+                    RECT drawRect = localRect;
                     drawRect.left += 5;
                     drawRect.top += 5;
                     drawRect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
 
-                    POINT oldOrg;
-                    SetViewportOrgEx(hdcMem, 0, -scrollPos, &oldOrg);
+                    POINT oldOrg = {0, 0};
+                    BOOL viewportChanged = SetViewportOrgEx(hdcMem, 0, -scrollPos, &oldOrg);
 
                     RenderMarkdownText(hdcMem, g_notesDisplayText, g_notesLinks, g_notesLinkCount,
                                        g_notesHeadings, g_notesHeadingCount,
@@ -333,13 +471,17 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                        g_notesBlockquotes, g_notesBlockquoteCount,
                                        drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
 
-                    SetViewportOrgEx(hdcMem, oldOrg.x, oldOrg.y, NULL);
+                    if (viewportChanged) {
+                        SetViewportOrgEx(hdcMem, oldOrg.x, oldOrg.y, NULL);
+                    }
 
-                    SelectObject(hdcMem, hOldFont);
+                    if (hOldFont) {
+                        SelectObject(hdcMem, hOldFont);
+                    }
 
                     if (scrollMax > scrollPage) {
                         RECT thumbRect;
-                        CalculateScrollbarThumbRect(rect, scrollPos, scrollMax, scrollPage, &thumbRect);
+                        CalculateScrollbarThumbRect(localRect, scrollPos, scrollMax, scrollPage, &thumbRect);
 
                         if (!IsRectEmpty(&thumbRect)) {
                             COLORREF thumbColor = thumbDragging ? MODERN_SCROLLBAR_THUMB_DRAG_COLOR :
@@ -350,11 +492,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     }
                 }
 
-                BitBlt(hdc, 0, 0, paintWidth, paintHeight, hdcMem, 0, 0, SRCCOPY);
-
-                SelectObject(hdcMem, hbmOld);
-                DeleteObject(hbmMem);
-                DeleteDC(hdcMem);
+                BitBlt(hdc, rect.left, rect.top, paintWidth, paintHeight, hdcMem, 0, 0, SRCCOPY);
 
                 return TRUE;
             }
@@ -363,93 +501,20 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
-                FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
-                g_notesLinks = NULL;
-                g_notesLinkCount = 0;
-                if (g_notesHeadings) {
-                    free(g_notesHeadings);
-                    g_notesHeadings = NULL;
-                }
-                g_notesHeadingCount = 0;
-                if (g_notesStyles) {
-                    free(g_notesStyles);
-                    g_notesStyles = NULL;
-                }
-                g_notesStyleCount = 0;
-                if (g_notesListItems) {
-                    free(g_notesListItems);
-                    g_notesListItems = NULL;
-                }
-                g_notesListItemCount = 0;
-                if (g_notesBlockquotes) {
-                    free(g_notesBlockquotes);
-                    g_notesBlockquotes = NULL;
-                }
-                g_notesBlockquoteCount = 0;
-                if (g_notesColorTags) {
-                    free(g_notesColorTags);
-                    g_notesColorTags = NULL;
-                }
-                g_notesColorTagCount = 0;
-                if (g_notesFontTags) {
-                    free(g_notesFontTags);
-                    g_notesFontTags = NULL;
-                }
-                g_notesFontTagCount = 0;
-                if (g_notesDisplayText) {
-                    free(g_notesDisplayText);
-                    g_notesDisplayText = NULL;
-                }
-                g_textHeight = 0;
+                CleanupUpdateNotesState(hwndDlg);
                 DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
 
         case WM_CLOSE:
-            FreeMarkdownLinks(g_notesLinks, g_notesLinkCount);
-            g_notesLinks = NULL;
-            g_notesLinkCount = 0;
-            if (g_notesHeadings) {
-                free(g_notesHeadings);
-                g_notesHeadings = NULL;
-            }
-            g_notesHeadingCount = 0;
-            if (g_notesStyles) {
-                free(g_notesStyles);
-                g_notesStyles = NULL;
-            }
-            g_notesStyleCount = 0;
-            if (g_notesListItems) {
-                free(g_notesListItems);
-                g_notesListItems = NULL;
-            }
-            g_notesListItemCount = 0;
-            if (g_notesBlockquotes) {
-                free(g_notesBlockquotes);
-                g_notesBlockquotes = NULL;
-            }
-            g_notesBlockquoteCount = 0;
-            if (g_notesColorTags) {
-                free(g_notesColorTags);
-                g_notesColorTags = NULL;
-            }
-            g_notesColorTagCount = 0;
-            if (g_notesFontTags) {
-                free(g_notesFontTags);
-                g_notesFontTags = NULL;
-            }
-            g_notesFontTagCount = 0;
-            if (g_notesDisplayText) {
-                free(g_notesDisplayText);
-                g_notesDisplayText = NULL;
-            }
-            g_textHeight = 0;
+            CleanupUpdateNotesState(hwndDlg);
             DestroyWindow(hwndDlg);
             return TRUE;
-            
+
         case WM_DESTROY:
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_UPDATE);
+            CleanupUpdateNotesState(hwndDlg);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_UPDATE, hwndDlg);
             g_hwndUpdateDialog = NULL;
             break;
     }
@@ -486,7 +551,7 @@ INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
             return TRUE;
             
         case WM_DESTROY:
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_UPDATE_ERROR);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_UPDATE_ERROR, hwndDlg);
             break;
     }
     return FALSE;
@@ -537,7 +602,7 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
             return TRUE;
             
         case WM_DESTROY:
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_NO_UPDATE);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_NO_UPDATE, hwndDlg);
             g_hwndNoUpdateDialog = NULL;
             break;
     }
@@ -550,7 +615,11 @@ void ShowExitMessageDialog(HWND hwnd) {
         SetForegroundWindow(existing);
         return;
     }
-    
+
+    if (!IsValidUpdateDialogParentWindow(hwnd)) {
+        return;
+    }
+
     HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_EXIT_DIALOG), hwnd, ExitMsgDlgProc);
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
@@ -564,20 +633,28 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* la
         SetForegroundWindow(existing);
         return IDNO;
     }
-    
-    /* Store version info for modeless dialog */
-    g_updateVersionInfo.currentVersion = currentVersion;
-    g_updateVersionInfo.latestVersion = latestVersion;
-    g_updateVersionInfo.downloadUrl = downloadUrl;
-    g_updateVersionInfo.releaseNotes = releaseNotes;
-    
-    /* Store download URL copy for async update handling */
-    if (downloadUrl) {
-        strncpy(g_downloadUrlCopy, downloadUrl, sizeof(g_downloadUrlCopy) - 1);
-        g_downloadUrlCopy[sizeof(g_downloadUrlCopy) - 1] = '\0';
+
+    if (!IsValidUpdateDialogParentWindow(hwnd)) {
+        return IDNO;
     }
-    
-    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_UPDATE_DIALOG), 
+
+    CopyUpdateString(g_dialogCurrentVersion, sizeof(g_dialogCurrentVersion), currentVersion);
+    CopyUpdateString(g_dialogLatestVersion, sizeof(g_dialogLatestVersion), latestVersion);
+    CopyUpdateString(g_dialogDownloadUrl, sizeof(g_dialogDownloadUrl), downloadUrl);
+    CopyUpdateString(g_dialogReleaseNotes, sizeof(g_dialogReleaseNotes), releaseNotes);
+
+    /* Store version info for modeless dialog */
+    g_updateVersionInfo.currentVersion = g_dialogCurrentVersion;
+    g_updateVersionInfo.latestVersion = g_dialogLatestVersion;
+    g_updateVersionInfo.downloadUrl = g_dialogDownloadUrl;
+    g_updateVersionInfo.releaseNotes = g_dialogReleaseNotes;
+
+    /* Store download URL copy for async update handling */
+    AcquireSRWLockExclusive(&g_downloadUrlLock);
+    CopyUpdateString(g_downloadUrlCopy, sizeof(g_downloadUrlCopy), downloadUrl);
+    ReleaseSRWLockExclusive(&g_downloadUrlLock);
+
+    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_UPDATE_DIALOG),
                           hwnd, UpdateDlgProc);
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
@@ -612,14 +689,15 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
         SetForegroundWindow(existing);
         return;
     }
-    
-    /* Store version for modeless dialog */
-    if (currentVersion) {
-        strncpy(g_noUpdateVersion, currentVersion, sizeof(g_noUpdateVersion) - 1);
-        g_noUpdateVersion[sizeof(g_noUpdateVersion) - 1] = '\0';
+
+    if (!IsValidUpdateDialogParentWindow(hwnd)) {
+        return;
     }
-    
-    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_NO_UPDATE_DIALOG), 
+
+    /* Store version for modeless dialog */
+    CopyUpdateString(g_noUpdateVersion, sizeof(g_noUpdateVersion), currentVersion);
+
+    HWND hwndDlg = CreateDialogW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_NO_UPDATE_DIALOG),
                    hwnd, NoUpdateDlgProc);
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
@@ -631,10 +709,14 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
  * @return Pointer to stored download URL, or NULL if none
  */
 const char* GetPendingUpdateDownloadUrl(void) {
-    if (g_downloadUrlCopy[0] != '\0') {
-        return g_downloadUrlCopy;
-    }
-    return NULL;
+#if defined(_MSC_VER)
+    __declspec(thread) static char urlSnapshot[sizeof(g_downloadUrlCopy)] = {0};
+#elif defined(__GNUC__)
+    static __thread char urlSnapshot[sizeof(g_downloadUrlCopy)] = {0};
+#else
+    static char urlSnapshot[sizeof(g_downloadUrlCopy)] = {0};
+#endif
+    return CopyPendingUpdateDownloadUrl(urlSnapshot, sizeof(urlSnapshot)) ? urlSnapshot : NULL;
 }
 
 /**
@@ -642,8 +724,9 @@ const char* GetPendingUpdateDownloadUrl(void) {
  * @param hwnd Parent window handle
  */
 void TriggerUpdateDownload(HWND hwnd) {
-    const char* url = GetPendingUpdateDownloadUrl();
-    if (url && url[0] != '\0') {
+    char url[sizeof(g_downloadUrlCopy)] = {0};
+
+    if (CopyPendingUpdateDownloadUrl(url, sizeof(url))) {
         LOG_INFO("User chose to update now (from modeless dialog)");
 
         if (!IsSafeOpenUrlA(url)) {
@@ -673,39 +756,47 @@ void TriggerUpdateDownload(HWND hwnd) {
 static char g_storedCurrentVersion[64] = {0};
 static char g_storedLatestVersion[64] = {0};
 static char g_storedDownloadUrl[512] = {0};
-static char g_storedReleaseNotes[16384] = {0};
+static char g_storedReleaseNotes[NOTES_BUFFER_SIZE] = {0};
 static BOOL g_storedHasUpdate = FALSE;
+static SRWLOCK g_storedUpdateLock = SRWLOCK_INIT;
 
 void StoreUpdateResult(BOOL hasUpdate, const char* currentVersion, const char* latestVersion,
                        const char* downloadUrl, const char* releaseNotes) {
+    AcquireSRWLockExclusive(&g_storedUpdateLock);
     g_storedHasUpdate = hasUpdate;
-    
-    if (currentVersion) {
-        strncpy(g_storedCurrentVersion, currentVersion, sizeof(g_storedCurrentVersion) - 1);
-        g_storedCurrentVersion[sizeof(g_storedCurrentVersion) - 1] = '\0';
-    }
-    
-    if (latestVersion) {
-        strncpy(g_storedLatestVersion, latestVersion, sizeof(g_storedLatestVersion) - 1);
-        g_storedLatestVersion[sizeof(g_storedLatestVersion) - 1] = '\0';
-    }
-    
-    if (downloadUrl) {
-        strncpy(g_storedDownloadUrl, downloadUrl, sizeof(g_storedDownloadUrl) - 1);
-        g_storedDownloadUrl[sizeof(g_storedDownloadUrl) - 1] = '\0';
-    }
-    
-    if (releaseNotes) {
-        strncpy(g_storedReleaseNotes, releaseNotes, sizeof(g_storedReleaseNotes) - 1);
-        g_storedReleaseNotes[sizeof(g_storedReleaseNotes) - 1] = '\0';
-    }
+    CopyUpdateString(g_storedCurrentVersion, sizeof(g_storedCurrentVersion), currentVersion);
+    CopyUpdateString(g_storedLatestVersion, sizeof(g_storedLatestVersion), latestVersion);
+    CopyUpdateString(g_storedDownloadUrl, sizeof(g_storedDownloadUrl), downloadUrl);
+    CopyUpdateString(g_storedReleaseNotes, sizeof(g_storedReleaseNotes), releaseNotes);
+    ReleaseSRWLockExclusive(&g_storedUpdateLock);
 }
 
 void ShowStoredUpdateDialog(HWND hwnd) {
-    ShowUpdateNotification(hwnd, g_storedCurrentVersion, g_storedLatestVersion,
-                          g_storedDownloadUrl, g_storedReleaseNotes);
+    char currentVersion[64];
+    char latestVersion[64];
+    char downloadUrl[URL_BUFFER_SIZE];
+    char* releaseNotes = (char*)malloc(NOTES_BUFFER_SIZE);
+    const char* releaseNotesToShow = releaseNotes ? releaseNotes : "";
+
+    AcquireSRWLockShared(&g_storedUpdateLock);
+    CopyUpdateString(currentVersion, sizeof(currentVersion), g_storedCurrentVersion);
+    CopyUpdateString(latestVersion, sizeof(latestVersion), g_storedLatestVersion);
+    CopyUpdateString(downloadUrl, sizeof(downloadUrl), g_storedDownloadUrl);
+    if (releaseNotes) {
+        CopyUpdateString(releaseNotes, NOTES_BUFFER_SIZE, g_storedReleaseNotes);
+    }
+    ReleaseSRWLockShared(&g_storedUpdateLock);
+
+    ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl, releaseNotesToShow);
+    free(releaseNotes);
 }
 
 void ShowStoredNoUpdateDialog(HWND hwnd) {
-    ShowNoUpdateDialog(hwnd, g_storedCurrentVersion);
+    char currentVersion[64];
+
+    AcquireSRWLockShared(&g_storedUpdateLock);
+    CopyUpdateString(currentVersion, sizeof(currentVersion), g_storedCurrentVersion);
+    ReleaseSRWLockShared(&g_storedUpdateLock);
+
+    ShowNoUpdateDialog(hwnd, currentVersion);
 }

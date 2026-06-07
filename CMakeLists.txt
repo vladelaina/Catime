@@ -20,10 +20,10 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Collect all source files
-file(GLOB_RECURSE SOURCES "src/*.c")
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.c")
 
 # Collect all header files
-file(GLOB_RECURSE HEADERS "include/*.h")
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "include/*.h")
 
 # Collect resource files
 set(RESOURCE_FILES)

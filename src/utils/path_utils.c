@@ -7,6 +7,22 @@
 #include <string.h>
 #include <wchar.h>
 
+static BOOL IsPathSeparatorU8(char c) {
+    return c == '\\' || c == '/';
+}
+
+static BOOL IsPathSeparatorW(wchar_t c) {
+    return c == L'\\' || c == L'/';
+}
+
+static BOOL IsPathBoundaryU8(char c) {
+    return c == '\0' || IsPathSeparatorU8(c);
+}
+
+static BOOL IsPathBoundaryW(wchar_t c) {
+    return c == L'\0' || IsPathSeparatorW(c);
+}
+
 /* ============================================================================
  * Filename extraction
  * ============================================================================ */
@@ -39,9 +55,11 @@ const wchar_t* GetFileNameW(const wchar_t* path) {
 
 BOOL ExtractFileNameU8(const char* path, char* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return FALSE;
+    name[0] = '\0';
     
     const char* filename = GetFileNameU8(path);
     if (!filename) return FALSE;
+    if (strlen(filename) >= nameSize) return FALSE;
     
     strncpy(name, filename, nameSize - 1);
     name[nameSize - 1] = '\0';
@@ -50,9 +68,11 @@ BOOL ExtractFileNameU8(const char* path, char* name, size_t nameSize) {
 
 BOOL ExtractFileNameW(const wchar_t* path, wchar_t* name, size_t nameSize) {
     if (!path || !name || nameSize == 0) return FALSE;
+    name[0] = L'\0';
     
     const wchar_t* filename = GetFileNameW(path);
     if (!filename) return FALSE;
+    if (wcslen(filename) >= nameSize) return FALSE;
     
     wcsncpy(name, filename, nameSize - 1);
     name[nameSize - 1] = L'\0';
@@ -65,6 +85,10 @@ BOOL ExtractFileNameW(const wchar_t* path, wchar_t* name, size_t nameSize) {
 
 BOOL ExtractDirectoryU8(const char* path, char* dir, size_t dirSize) {
     if (!path || !dir || dirSize == 0) return FALSE;
+    dir[0] = '\0';
+
+    size_t pathLen = strlen(path);
+    if (pathLen >= dirSize) return FALSE;
     
     strncpy(dir, path, dirSize - 1);
     dir[dirSize - 1] = '\0';
@@ -79,6 +103,7 @@ BOOL ExtractDirectoryU8(const char* path, char* dir, size_t dirSize) {
     if (separator) {
         *separator = '\0';
     } else {
+        if (dirSize < 2) return FALSE;
         dir[0] = '.';
         dir[1] = '\0';
     }
@@ -88,6 +113,10 @@ BOOL ExtractDirectoryU8(const char* path, char* dir, size_t dirSize) {
 
 BOOL ExtractDirectoryW(const wchar_t* path, wchar_t* dir, size_t dirSize) {
     if (!path || !dir || dirSize == 0) return FALSE;
+    dir[0] = L'\0';
+
+    size_t pathLen = wcslen(path);
+    if (pathLen >= dirSize) return FALSE;
     
     wcsncpy(dir, path, dirSize - 1);
     dir[dirSize - 1] = L'\0';
@@ -102,6 +131,7 @@ BOOL ExtractDirectoryW(const wchar_t* path, wchar_t* dir, size_t dirSize) {
     if (separator) {
         *separator = L'\0';
     } else {
+        if (dirSize < 2) return FALSE;
         wcscpy_s(dir, dirSize, L".");
     }
     
@@ -116,17 +146,21 @@ BOOL PathJoinU8(char* base, size_t baseSize, const char* component) {
     if (!base || !component || baseSize == 0) return FALSE;
     
     size_t len = strlen(base);
+    if (len >= baseSize) return FALSE;
+
+    size_t componentLen = strlen(component);
+    size_t separatorLen = 0;
     
-    /* Add separator if needed */
-    if (len > 0 && base[len - 1] != '\\' && base[len - 1] != '/') {
-        if (len + 1 >= baseSize) return FALSE;
+    if (len > 0 && !IsPathSeparatorU8(base[len - 1])) {
+        separatorLen = 1;
+    }
+
+    if (componentLen >= baseSize - len - separatorLen) return FALSE;
+
+    if (separatorLen) {
         base[len] = '\\';
         base[len + 1] = '\0';
-        len++;
     }
-    
-    /* Append component */
-    if (len + strlen(component) >= baseSize) return FALSE;
     strcat_s(base, baseSize, component);
 
     return TRUE;
@@ -136,17 +170,21 @@ BOOL PathJoinW(wchar_t* base, size_t baseSize, const wchar_t* component) {
     if (!base || !component || baseSize == 0) return FALSE;
     
     size_t len = wcslen(base);
+    if (len >= baseSize) return FALSE;
+
+    size_t componentLen = wcslen(component);
+    size_t separatorLen = 0;
     
-    /* Add separator if needed */
-    if (len > 0 && base[len - 1] != L'\\' && base[len - 1] != L'/') {
-        if (len + 1 >= baseSize) return FALSE;
+    if (len > 0 && !IsPathSeparatorW(base[len - 1])) {
+        separatorLen = 1;
+    }
+
+    if (componentLen >= baseSize - len - separatorLen) return FALSE;
+
+    if (separatorLen) {
         base[len] = L'\\';
         base[len + 1] = L'\0';
-        len++;
     }
-    
-    /* Append component */
-    if (len + wcslen(component) >= baseSize) return FALSE;
     wcscat_s(base, baseSize, component);
 
     return TRUE;
@@ -159,15 +197,21 @@ BOOL PathJoinW(wchar_t* base, size_t baseSize, const wchar_t* component) {
 BOOL GetRelativePathU8(const char* root, const char* target, 
                        char* relative, size_t relativeSize) {
     if (!root || !target || !relative || relativeSize == 0) return FALSE;
+    relative[0] = '\0';
     
     size_t rootLen = strlen(root);
     
     /* Check if target starts with root (case-insensitive) */
     if (_strnicmp(target, root, rootLen) != 0) return FALSE;
+    if (rootLen > 0 && !IsPathSeparatorU8(root[rootLen - 1]) &&
+        !IsPathBoundaryU8(target[rootLen])) {
+        return FALSE;
+    }
     
     /* Skip root prefix and leading separators */
     const char* rel = target + rootLen;
-    while (*rel == '\\' || *rel == '/') rel++;
+    while (IsPathSeparatorU8(*rel)) rel++;
+    if (strlen(rel) >= relativeSize) return FALSE;
     
     strncpy(relative, rel, relativeSize - 1);
     relative[relativeSize - 1] = '\0';
@@ -178,15 +222,21 @@ BOOL GetRelativePathU8(const char* root, const char* target,
 BOOL GetRelativePathW(const wchar_t* root, const wchar_t* target,
                       wchar_t* relative, size_t relativeSize) {
     if (!root || !target || !relative || relativeSize == 0) return FALSE;
+    relative[0] = L'\0';
     
     size_t rootLen = wcslen(root);
     
     /* Check if target starts with root (case-insensitive) */
     if (_wcsnicmp(target, root, rootLen) != 0) return FALSE;
+    if (rootLen > 0 && !IsPathSeparatorW(root[rootLen - 1]) &&
+        !IsPathBoundaryW(target[rootLen])) {
+        return FALSE;
+    }
     
     /* Skip root prefix and leading separators */
     const wchar_t* rel = target + rootLen;
-    while (*rel == L'\\' || *rel == L'/') rel++;
+    while (IsPathSeparatorW(*rel)) rel++;
+    if (wcslen(rel) >= relativeSize) return FALSE;
     
     wcsncpy(relative, rel, relativeSize - 1);
     relative[relativeSize - 1] = L'\0';

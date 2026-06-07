@@ -47,6 +47,14 @@ void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback c
 BOOL PlayNotificationSound(HWND hwnd);
 
 /**
+ * @brief Plays a specific notification sound without changing global config
+ * @param hwnd Window handle for timer ownership/callbacks
+ * @param soundFile UTF-8 path, "SYSTEM_BEEP", or empty for silent success
+ * @return TRUE on success (including beep fallback), FALSE on catastrophic failure
+ */
+BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile);
+
+/**
  * @brief Pauses audio playback without losing position
  * @return TRUE if paused, FALSE if not playing or backend unsupported
  * 

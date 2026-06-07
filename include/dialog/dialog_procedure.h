@@ -36,7 +36,7 @@
  *       This file only provides documentation and includes.
  *
  *       For implementation details, see:
- *       - dialog_input.h for DlgProc, g_hwndInputDialog, g_pomodoroSelectedIndex
+ *       - dialog_input.h for DlgProc, g_hwndInputDialog
  *       - dialog_info.h for ShowAboutDialog, AboutDlgProc, ShowFontLicenseDialog
  *       - dialog_error.h for ShowErrorDialog
  *       - dialog_pomodoro.h for ShowPomodoroLoopDialog, ShowPomodoroComboDialog

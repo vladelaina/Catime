@@ -14,13 +14,22 @@
  * @param pluginPath Full path to plugin file (must not be NULL)
  * @param pluginName Display name of plugin (must not be NULL)
  * @param pluginIndex Index of plugin in plugin list
+ * @param pluginHash SHA256 hash captured before showing the dialog
  * 
  * Results are sent via WM_DIALOG_PLUGIN_SECURITY message:
  * - wParam = IDYES (trust and remember)
  * - wParam = IDOK (run once)
  * - wParam = IDCANCEL (cancelled)
  */
-void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const char* pluginName, int pluginIndex);
+void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath,
+                              const char* pluginName, int pluginIndex,
+                              const char* pluginHash);
+
+/**
+ * @brief Check whether a plugin security dialog is already open
+ * @return TRUE if an existing modeless security dialog is active
+ */
+BOOL IsPluginSecurityDialogOpen(void);
 
 /**
  * @brief Get pending plugin path (for result handling)

@@ -46,5 +46,5 @@ int safe_strncat(char* dest, const char* src, size_t dest_size) {
     }
     dest[dest_len + copy_len] = '\0';
     
-    return (src_len < remaining) ? (int)(dest_len + src_len) : -1;
+    return (src_len <= remaining) ? (int)(dest_len + src_len) : -1;
 }

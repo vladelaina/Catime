@@ -9,6 +9,7 @@
 #ifndef UPDATE_CHECKER_H
 #define UPDATE_CHECKER_H
 
+#include <stddef.h>
 #include <windows.h>
 
 /**
@@ -31,6 +32,34 @@ void CheckForUpdate(HWND hwnd);
  * @warning Blocks UI thread (use async_update_checker.h instead)
  */
 void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck);
+
+/**
+ * @brief Request cancellation of an in-flight update check
+ *
+ * Closes active WinINet handles so a background check can leave blocking
+ * network calls during shutdown.
+ */
+void RequestUpdateCheckCancel(void);
+
+/**
+ * @brief Clear any previous cancellation before starting a new update check
+ */
+void ResetUpdateCheckCancel(void);
+
+/**
+ * @brief Release update checker synchronization and tracked network resources
+ *
+ * Must be called only after update worker threads have stopped.
+ */
+void CleanupUpdateCheckResources(void);
+
+/**
+ * @brief Get the latest known update availability status
+ * @param versionBuffer Optional output buffer for the latest version string
+ * @param bufferSize Size of versionBuffer in bytes
+ * @return TRUE if a newer version is known, FALSE otherwise
+ */
+BOOL GetNewVersionStatus(char* versionBuffer, size_t bufferSize);
 
 /**
  * @brief Compare semantic version strings

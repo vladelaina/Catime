@@ -108,8 +108,11 @@ LRESULT CmdRestartTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
  * ============================================================================ */
 
 LRESULT CmdTimeFormat(HWND hwnd, TimeFormatType format) {
-    WriteConfigTimeFormat(format);
-    InvalidateRect(hwnd, NULL, TRUE);
+    TimeFormatType previousFormat = g_AppConfig.display.time_format.format;
+    if (WriteConfigTimeFormat(format) &&
+        previousFormat != g_AppConfig.display.time_format.format) {
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
     return 0;
 }
 
@@ -152,7 +155,6 @@ static const TimeoutActionEntry TIMEOUT_ACTIONS[] = {
 
 LRESULT CmdSetTimeoutAction(HWND hwnd, TimeoutActionType action) {
     (void)hwnd;
-    CLOCK_TIMEOUT_ACTION = action;
     
     for (size_t i = 0; i < sizeof(TIMEOUT_ACTIONS)/sizeof(TIMEOUT_ACTIONS[0]); i++) {
         if (TIMEOUT_ACTIONS[i].action == action) {
@@ -247,7 +249,10 @@ LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
-    if (index >= 0 && index < time_options_count && time_options[index] > 0) {
+    int timeOptionsCount = time_options_count;
+    if (timeOptionsCount < 0) timeOptionsCount = 0;
+    if (timeOptionsCount > MAX_TIME_OPTIONS) timeOptionsCount = MAX_TIME_OPTIONS;
+    if (index >= 0 && index < timeOptionsCount && time_options[index] > 0) {
         CleanupBeforeTimerAction();
         StartCountdownWithTime(hwnd, time_options[index]);
     }
@@ -265,7 +270,13 @@ BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index) {
  * ============================================================================ */
 
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
-    if (selectedIndex < 0 || selectedIndex >= g_AppConfig.pomodoro.times_count) {
+    int timesCount = g_AppConfig.pomodoro.times_count;
+    if (timesCount < 0) timesCount = 0;
+    if (timesCount > (int)_countof(g_AppConfig.pomodoro.times)) {
+        timesCount = (int)_countof(g_AppConfig.pomodoro.times);
+    }
+    if (selectedIndex < 0 || selectedIndex >= timesCount ||
+        g_AppConfig.pomodoro.times[selectedIndex] <= 0) {
         return FALSE;
     }
 

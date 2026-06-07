@@ -2,7 +2,7 @@
  * @file tray_animation_menu.h
  * @brief Animation menu building and command handling
  * 
- * Recursively scans animations folder and builds hierarchical menu.
+ * Uses a cached recursive scan of the animations folder and builds a hierarchical menu.
  * Maps menu IDs to animation paths for command routing.
  */
 
@@ -18,12 +18,22 @@
  * @param currentAnimationName Current animation for checkmark
  * 
  * @details
- * Recursively scans animations folder.
+ * Uses the latest cached animations folder scan.
  * Folders first, then files (natural sorted).
  * Leaf folders and files become clickable items.
  * Branch folders become submenus.
  */
 void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName);
+
+/**
+ * @brief Request a background refresh of the animation menu cache
+ */
+void AnimationMenu_RequestScanAsync(void);
+
+/**
+ * @brief Stop background animation menu scanning and clear cached state
+ */
+void AnimationMenu_Shutdown(void);
 
 /**
  * @brief Handle animation menu command

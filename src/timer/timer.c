@@ -276,10 +276,36 @@ int ParseInput(const char* input, int* total_seconds) {
     return 1;
 }
 
-void WriteConfigDefaultStartTime(int seconds) {
+BOOL WriteConfigDefaultStartTime(int seconds) {
+    if (seconds <= 0) {
+        return FALSE;
+    }
+
+    char secondsStr[32];
+    if (snprintf(secondsStr, sizeof(secondsStr), "%d", seconds) < 0) {
+        return FALSE;
+    }
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", seconds, config_path);
+
+    char currentValue[32] = {0};
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "",
+                  currentValue, sizeof(currentValue), config_path);
+
+    BOOL runtimeMatches = g_AppConfig.timer.default_start_time == seconds;
+    BOOL configMatches = strcmp(currentValue, secondsStr) == 0;
+    if (runtimeMatches && configMatches) {
+        return TRUE;
+    }
+
+    if (!configMatches &&
+        !WriteIniInt(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", seconds, config_path)) {
+        return FALSE;
+    }
+
+    g_AppConfig.timer.default_start_time = seconds;
+    return TRUE;
 }
 
 /** Fallback to DEFAULT_FALLBACK_TIME if countdown has invalid total time */

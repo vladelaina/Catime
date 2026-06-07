@@ -21,6 +21,164 @@
 
 #define MAX_HTTP_RESPONSE_SIZE (1024 * 1024)
 #define HTTP_TIMEOUT_MS 10000
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+
+#define UPDATE_HTTP_CS_UNINITIALIZED 0
+#define UPDATE_HTTP_CS_INITIALIZING  1
+#define UPDATE_HTTP_CS_INITIALIZED   2
+#define UPDATE_HTTP_WAIT_SPIN_LIMIT 64
+
+static CRITICAL_SECTION g_updateHttpCS;
+static volatile LONG g_updateHttpCSInitialized = UPDATE_HTTP_CS_UNINITIALIZED;
+static volatile LONG g_updateCancelRequested = 0;
+static HINTERNET g_activeInternet = NULL;
+static HINTERNET g_activeConnect = NULL;
+
+static BOOL IsValidUpdateNotifyWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static BOOL PostUpdateCheckResult(HWND hwnd, WPARAM result, LPARAM flags) {
+    if (!IsValidUpdateNotifyWindow(hwnd)) {
+        return FALSE;
+    }
+
+    return PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, result, flags) != 0;
+}
+
+static void WaitWhileUpdateHttpCSInitializing(void) {
+    DWORD spins = 0;
+    while (InterlockedCompareExchange(&g_updateHttpCSInitialized, 0, 0) ==
+           UPDATE_HTTP_CS_INITIALIZING) {
+        Sleep(spins++ < UPDATE_HTTP_WAIT_SPIN_LIMIT ? 0 : 1);
+    }
+}
+
+static void EnsureUpdateHttpCSInitialized(void) {
+    if (InterlockedCompareExchange(&g_updateHttpCSInitialized,
+                                   UPDATE_HTTP_CS_INITIALIZING,
+                                   UPDATE_HTTP_CS_UNINITIALIZED) == UPDATE_HTTP_CS_UNINITIALIZED) {
+        InitializeCriticalSection(&g_updateHttpCS);
+        InterlockedExchange(&g_updateHttpCSInitialized, UPDATE_HTTP_CS_INITIALIZED);
+    }
+
+    WaitWhileUpdateHttpCSInitializing();
+}
+
+static BOOL IsUpdateCancelRequested(void) {
+    return InterlockedCompareExchange(&g_updateCancelRequested, 0, 0) != 0;
+}
+
+static void TrackInternetHandle(HINTERNET handle) {
+    EnsureUpdateHttpCSInitialized();
+    EnterCriticalSection(&g_updateHttpCS);
+    g_activeInternet = handle;
+    LeaveCriticalSection(&g_updateHttpCS);
+}
+
+static void TrackConnectHandle(HINTERNET handle) {
+    EnsureUpdateHttpCSInitialized();
+    EnterCriticalSection(&g_updateHttpCS);
+    g_activeConnect = handle;
+    LeaveCriticalSection(&g_updateHttpCS);
+}
+
+static void CloseTrackedInternetHandle(HINTERNET* handlePtr) {
+    if (!handlePtr || !*handlePtr) return;
+
+    HINTERNET handle = *handlePtr;
+    BOOL shouldClose = FALSE;
+
+    EnsureUpdateHttpCSInitialized();
+    EnterCriticalSection(&g_updateHttpCS);
+    if (g_activeConnect == handle) {
+        g_activeConnect = NULL;
+        shouldClose = TRUE;
+    } else if (g_activeInternet == handle) {
+        g_activeInternet = NULL;
+        shouldClose = TRUE;
+    }
+    LeaveCriticalSection(&g_updateHttpCS);
+
+    if (shouldClose) {
+        InternetCloseHandle(handle);
+    }
+    *handlePtr = NULL;
+}
+
+void RequestUpdateCheckCancel(void) {
+    HINTERNET connectHandle = NULL;
+    HINTERNET internetHandle = NULL;
+
+    InterlockedExchange(&g_updateCancelRequested, 1);
+
+    EnsureUpdateHttpCSInitialized();
+    EnterCriticalSection(&g_updateHttpCS);
+    connectHandle = g_activeConnect;
+    internetHandle = g_activeInternet;
+    g_activeConnect = NULL;
+    g_activeInternet = NULL;
+    LeaveCriticalSection(&g_updateHttpCS);
+
+    if (connectHandle) {
+        InternetCloseHandle(connectHandle);
+    }
+    if (internetHandle) {
+        InternetCloseHandle(internetHandle);
+    }
+}
+
+void ResetUpdateCheckCancel(void) {
+    InterlockedExchange(&g_updateCancelRequested, 0);
+}
+
+void CleanupUpdateCheckResources(void) {
+    HINTERNET connectHandle = NULL;
+    HINTERNET internetHandle = NULL;
+
+    InterlockedExchange(&g_updateCancelRequested, 1);
+    WaitWhileUpdateHttpCSInitializing();
+
+    if (InterlockedCompareExchange(&g_updateHttpCSInitialized, 0, 0) !=
+        UPDATE_HTTP_CS_INITIALIZED) {
+        return;
+    }
+
+    EnterCriticalSection(&g_updateHttpCS);
+    connectHandle = g_activeConnect;
+    internetHandle = g_activeInternet;
+    g_activeConnect = NULL;
+    g_activeInternet = NULL;
+    LeaveCriticalSection(&g_updateHttpCS);
+
+    if (connectHandle) {
+        InternetCloseHandle(connectHandle);
+    }
+    if (internetHandle) {
+        InternetCloseHandle(internetHandle);
+    }
+
+    /*
+     * Keep the HTTP critical section alive until process exit. The final
+     * update-thread cleanup uses a finite wait; if WinINet does not return in
+     * time, a late worker may still run its normal handle cleanup path.
+     */
+}
 
 /* Thin wrappers using utils/string_convert.h */
 static inline wchar_t* LocalUtf8ToWideAlloc(const char* utf8Str) {
@@ -43,13 +201,18 @@ static BOOL InitHttpResources(HttpResources* res) {
         LOG_ERROR("Failed to create Internet session (error code: %lu)", GetLastError());
         return FALSE;
     }
+    TrackInternetHandle(res->hInternet);
+
+    if (IsUpdateCancelRequested()) {
+        CloseTrackedInternetHandle(&res->hInternet);
+        return FALSE;
+    }
 
     DWORD timeoutMs = HTTP_TIMEOUT_MS;
     InternetSetOptionW(res->hInternet, INTERNET_OPTION_CONNECT_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
     InternetSetOptionW(res->hInternet, INTERNET_OPTION_SEND_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
     InternetSetOptionW(res->hInternet, INTERNET_OPTION_RECEIVE_TIMEOUT, &timeoutMs, sizeof(timeoutMs));
 
-    LOG_INFO("Internet session created successfully");
     return TRUE;
 }
 
@@ -61,11 +224,18 @@ static BOOL ConnectToGitHub(HttpResources* res) {
     res->hConnect = InternetOpenUrlW(res->hInternet, wUrl, NULL, 0,
                                      INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
     if (!res->hConnect) {
-        LOG_ERROR("Failed to connect to GitHub API (error code: %lu)", GetLastError());
+        if (!IsUpdateCancelRequested()) {
+            LOG_ERROR("Failed to connect to GitHub API (error code: %lu)", GetLastError());
+        }
+        return FALSE;
+    }
+    TrackConnectHandle(res->hConnect);
+
+    if (IsUpdateCancelRequested()) {
+        CloseTrackedInternetHandle(&res->hConnect);
         return FALSE;
     }
 
-    LOG_INFO("Successfully connected to GitHub API");
     return TRUE;
 }
 
@@ -78,20 +248,41 @@ static BOOL ReadHttpResponse(HttpResources* res) {
         return FALSE;
     }
 
-    DWORD totalBytes = 0;
-    DWORD bytesRead = 0;
-    BOOL readOk = TRUE;
+    size_t totalBytes = 0;
+    const size_t maxBufferSize = (size_t)MAX_HTTP_RESPONSE_SIZE + 1;
 
-    while ((readOk = InternetReadFile(res->hConnect, res->buffer + totalBytes,
-                                      bufferSize - totalBytes - 1, &bytesRead)) && bytesRead > 0) {
-        totalBytes += bytesRead;
+    for (;;) {
+        if (IsUpdateCancelRequested()) {
+            return FALSE;
+        }
 
-        if (totalBytes >= bufferSize - 256) {
-            size_t newSize = bufferSize * 2;
-            if (newSize > MAX_HTTP_RESPONSE_SIZE) {
+        if (totalBytes >= MAX_HTTP_RESPONSE_SIZE) {
+            char overflowByte = '\0';
+            DWORD overflowRead = 0;
+            if (!InternetReadFile(res->hConnect, &overflowByte, 1, &overflowRead)) {
+                if (!IsUpdateCancelRequested()) {
+                    LOG_ERROR("Failed while reading HTTP response (error code: %lu)", GetLastError());
+                }
+                return FALSE;
+            }
+            if (overflowRead > 0) {
                 LOG_ERROR("HTTP response exceeded maximum allowed size (%d bytes)", MAX_HTTP_RESPONSE_SIZE);
                 return FALSE;
             }
+            break;
+        }
+
+        size_t writableBytes = bufferSize - totalBytes - 1;
+        if (writableBytes == 0) {
+            size_t newSize = bufferSize * 2;
+            if (newSize > maxBufferSize) {
+                newSize = maxBufferSize;
+            }
+            if (newSize <= bufferSize) {
+                LOG_ERROR("HTTP response exceeded maximum allowed size (%d bytes)", MAX_HTTP_RESPONSE_SIZE);
+                return FALSE;
+            }
+
             char* newBuffer = (char*)realloc(res->buffer, newSize);
             if (!newBuffer) {
                 LOG_ERROR("Buffer expansion failed (current size: %zu)", bufferSize);
@@ -99,16 +290,34 @@ static BOOL ReadHttpResponse(HttpResources* res) {
             }
             res->buffer = newBuffer;
             bufferSize = newSize;
+            writableBytes = bufferSize - totalBytes - 1;
         }
+
+        size_t remainingAllowed = (size_t)MAX_HTTP_RESPONSE_SIZE - totalBytes;
+        if (writableBytes > remainingAllowed) {
+            writableBytes = remainingAllowed;
+        }
+
+        DWORD bytesRead = 0;
+        if (!InternetReadFile(res->hConnect, res->buffer + totalBytes,
+                              (DWORD)writableBytes, &bytesRead)) {
+            if (!IsUpdateCancelRequested()) {
+                LOG_ERROR("Failed while reading HTTP response (error code: %lu)", GetLastError());
+            }
+            return FALSE;
+        }
+        if (bytesRead == 0) {
+            break;
+        }
+
+        totalBytes += bytesRead;
     }
 
-    if (!readOk) {
-        LOG_ERROR("Failed while reading HTTP response (error code: %lu)", GetLastError());
+    if (IsUpdateCancelRequested()) {
         return FALSE;
     }
 
     res->buffer[totalBytes] = '\0';
-    LOG_INFO("Successfully read API response (%lu bytes)", totalBytes);
     return TRUE;
 }
 
@@ -119,23 +328,38 @@ static void CleanupHttpResources(HttpResources* res) {
         res->buffer = NULL;
     }
     if (res->hConnect) {
-        InternetCloseHandle(res->hConnect);
-        res->hConnect = NULL;
+        CloseTrackedInternetHandle(&res->hConnect);
     }
     if (res->hInternet) {
-        InternetCloseHandle(res->hInternet);
-        res->hInternet = NULL;
+        CloseTrackedInternetHandle(&res->hInternet);
     }
 }
 
-char g_newVersionString[32] = {0};
-BOOL g_isNewVersionAvailable = FALSE;
+static char g_newVersionString[32] = {0};
+static BOOL g_isNewVersionAvailable = FALSE;
+static SRWLOCK g_newVersionLock = SRWLOCK_INIT;
+
+static void SetNewVersionStatus(BOOL available, const char* version) {
+    AcquireSRWLockExclusive(&g_newVersionLock);
+    g_isNewVersionAvailable = available;
+    if (available && version) {
+        strncpy_s(g_newVersionString, sizeof(g_newVersionString), version, _TRUNCATE);
+    } else {
+        g_newVersionString[0] = '\0';
+    }
+    ReleaseSRWLockExclusive(&g_newVersionLock);
+}
 
 BOOL GetNewVersionStatus(char* versionBuffer, size_t bufferSize) {
-    if (g_isNewVersionAvailable && versionBuffer) {
+    AcquireSRWLockShared(&g_newVersionLock);
+    BOOL available = g_isNewVersionAvailable;
+    if (available && versionBuffer && bufferSize > 0) {
         strncpy_s(versionBuffer, bufferSize, g_newVersionString, _TRUNCATE);
+    } else if (versionBuffer && bufferSize > 0) {
+        versionBuffer[0] = '\0';
     }
-    return g_isNewVersionAvailable;
+    ReleaseSRWLockShared(&g_newVersionLock);
+    return available;
 }
 
 /**
@@ -143,12 +367,15 @@ BOOL GetNewVersionStatus(char* versionBuffer, size_t bufferSize) {
  * @param silentCheck TRUE=only show if update found, FALSE=show all results
  */
 void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
-    LOG_INFO("Starting update check (silent mode: %s)", silentCheck ? "yes" : "no");
+    if (!IsValidUpdateNotifyWindow(hwnd)) {
+        LOG_WARNING("Update check skipped: invalid notification window");
+        return;
+    }
 
     HttpResources res;
 
     if (!InitHttpResources(&res)) {
-        if (!silentCheck) {
+        if (!silentCheck && !IsUpdateCancelRequested()) {
             ShowUpdateErrorDialog(hwnd,
                 GetLocalizedString(NULL, L"Could not create Internet connection"));
         }
@@ -157,7 +384,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
 
     if (!ConnectToGitHub(&res)) {
         CleanupHttpResources(&res);
-        if (!silentCheck) {
+        if (!silentCheck && !IsUpdateCancelRequested()) {
             ShowUpdateErrorDialog(hwnd,
                 GetLocalizedString(NULL, L"Could not connect to update server"));
         }
@@ -166,7 +393,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
 
     if (!ReadHttpResponse(&res)) {
         CleanupHttpResources(&res);
-        if (!silentCheck) {
+        if (!silentCheck && !IsUpdateCancelRequested()) {
             ShowUpdateErrorDialog(hwnd,
                 GetLocalizedString(NULL, L"Failed to read server response"));
         }
@@ -175,12 +402,23 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
 
     char latestVersion[VERSION_BUFFER_SIZE] = {0};
     char downloadUrl[URL_BUFFER_SIZE] = {0};
-    char releaseNotes[NOTES_BUFFER_SIZE] = {0};
+    char* releaseNotes = (char*)malloc(NOTES_BUFFER_SIZE);
+    if (!releaseNotes) {
+        CleanupHttpResources(&res);
+        LOG_ERROR("Failed to allocate release notes buffer");
+        if (!silentCheck && !IsUpdateCancelRequested()) {
+            ShowUpdateErrorDialog(hwnd,
+                GetLocalizedString(NULL, L"Could not parse version information"));
+        }
+        return;
+    }
+    releaseNotes[0] = '\0';
 
     if (!ParseGitHubRelease(res.buffer, latestVersion, sizeof(latestVersion),
-                           downloadUrl, sizeof(downloadUrl), releaseNotes, sizeof(releaseNotes))) {
+                           downloadUrl, sizeof(downloadUrl), releaseNotes, NOTES_BUFFER_SIZE)) {
+        free(releaseNotes);
         CleanupHttpResources(&res);
-        if (!silentCheck) {
+        if (!silentCheck && !IsUpdateCancelRequested()) {
             ShowUpdateErrorDialog(hwnd,
                 GetLocalizedString(NULL, L"Could not parse version information"));
         }
@@ -189,36 +427,36 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
 
     CleanupHttpResources(&res);
 
-    LOG_INFO("GitHub latest version: %s, download URL: %s", latestVersion, downloadUrl);
+    if (IsUpdateCancelRequested()) {
+        free(releaseNotes);
+        return;
+    }
 
     const char* currentVersion = CATIME_VERSION;
-    LOG_INFO("Current version: %s", currentVersion);
 
     int versionCompare = CompareVersions(latestVersion, currentVersion);
     if (versionCompare > 0) {
-        LOG_INFO("New version found! Current: %s, Latest: %s", currentVersion, latestVersion);
-
-        strncpy_s(g_newVersionString, sizeof(g_newVersionString), latestVersion, _TRUNCATE);
-        g_isNewVersionAvailable = TRUE;
+        SetNewVersionStatus(TRUE, latestVersion);
 
         StoreUpdateResult(TRUE, currentVersion, latestVersion, downloadUrl, releaseNotes);
-        PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 1, silentCheck ? 1 : 0);
+        PostUpdateCheckResult(hwnd, 1, silentCheck ? 1 : 0);
     } else {
-        LOG_INFO("Already using latest version: %s", currentVersion);
-        g_isNewVersionAvailable = FALSE;
+        SetNewVersionStatus(FALSE, NULL);
         if (!silentCheck) {
             StoreUpdateResult(FALSE, currentVersion, NULL, NULL, NULL);
-            PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 0, 0);
+            PostUpdateCheckResult(hwnd, 0, 0);
         }
     }
 
-    LOG_INFO("Update check completed");
+    free(releaseNotes);
 }
 
 void CheckForUpdate(HWND hwnd) {
+    ResetUpdateCheckCancel();
     CheckForUpdateInternal(hwnd, FALSE);
 }
 
 void CheckForUpdateSilent(HWND hwnd, BOOL silentCheck) {
+    ResetUpdateCheckCancel();
     CheckForUpdateInternal(hwnd, silentCheck);
 }

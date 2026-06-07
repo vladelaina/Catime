@@ -56,14 +56,14 @@ static void SignalHandler(int signal) {
             WriteFile(hLogFile, buffer, len, &written, NULL);
             FlushFileBuffers(hLogFile);
         }
-        CloseHandle(hLogFile);
     }
 
-    /* Release global mutex before crash exit to prevent zombie mutex */
+    /* Release global mutex before crash exit to let a new instance start.
+     * The handle is process-owned global state; do not close it here.
+     */
     HANDLE hMutex = GetGlobalMutexHandle();
     if (hMutex) {
         ReleaseMutex(hMutex);
-        CloseHandle(hMutex);
     }
 
     /* Don't show MessageBox - just log to file and exit silently

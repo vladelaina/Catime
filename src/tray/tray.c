@@ -15,12 +15,14 @@
 #include "system_monitor.h"
 #include "config.h"
 #include "tray/tray_events.h"
+#include "tray/tray_menu_submenus.h"
+#include "log.h"
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
-#define PERCENT_ICON_WARMUP_MS 120  /* Allow CPU/memory sampling to stabilize (first read often returns 0%) */
 #define ICON_RECT_CACHE_TIMEOUT_MS 250  /* Cache tray icon position to reduce Shell API calls */
 #define TRAY_OPACITY_SAVE_TIMER_ID 42423
 #define TRAY_OPACITY_SAVE_DELAY_MS 400
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 /** @brief Global tray icon data for Shell_NotifyIcon */
 NOTIFYICONDATAW nid;
@@ -32,6 +34,7 @@ UINT WM_TASKBARCREATED = 0;
 static HHOOK g_mouseHook = NULL;
 static HWND g_mainHwnd = NULL;
 static HINSTANCE g_hInstance = NULL;
+static BOOL g_trayIconActive = FALSE;
 
 /** @brief Opacity tooltip mode flag */
 BOOL g_showingOpacityTip = FALSE;
@@ -45,11 +48,61 @@ static wchar_t g_lastTrayTooltip[256] = {0};
 
 extern void ReadPercentIconColorsConfig(void);
 
+static void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
+                                 BOOL preloadAnimation,
+                                 BOOL startBackgroundWork,
+                                 BOOL useAnimationInitialIcon);
+static void RemoveTrayIconInternal(BOOL finalCleanup);
+
+static BOOL IsValidTrayMainWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static HWND GetValidTrayMainWindow(void) {
+    HWND hwnd = g_mainHwnd;
+    if (!IsValidTrayMainWindow(hwnd)) {
+        g_mainHwnd = NULL;
+        return NULL;
+    }
+    return hwnd;
+}
+
+static BOOL IsTrayIconActiveForWindow(HWND hwnd) {
+    return IsValidTrayMainWindow(hwnd) &&
+           g_trayIconActive &&
+           nid.hWnd == hwnd &&
+           nid.uID == CLOCK_ID_TRAY_APP_ICON;
+}
+
+BOOL IsTrayIconActive(HWND hwnd) {
+    return IsTrayIconActiveForWindow(hwnd);
+}
+
 /**
  * @brief Check if mouse is over tray icon (with caching)
  * @note Uses cached position to reduce Shell API calls.
  */
 static BOOL IsMouseOverTrayIconCached(POINT pt) {
+    if (!g_trayIconActive || !nid.hWnd) {
+        SetRectEmpty(&g_cachedIconRect);
+        return FALSE;
+    }
+
     DWORD now = GetTickCount();
     
     /* Refresh cache if expired */
@@ -86,8 +139,9 @@ static LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (IsMouseOverTrayIconCached(pMouseStruct->pt)) {
             int delta = GET_WHEEL_DELTA_WPARAM(pMouseStruct->mouseData);
             BOOL ctrlPressed = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
-            if (g_mainHwnd &&
-                PostMessage(g_mainHwnd, CLOCK_WM_TRAY_OPACITY_WHEEL,
+            HWND hwndMain = GetValidTrayMainWindow();
+            if (hwndMain &&
+                PostMessage(hwndMain, CLOCK_WM_TRAY_OPACITY_WHEEL,
                             (WPARAM)(delta > 0 ? 1 : -1), (LPARAM)ctrlPressed)) {
                 return 1;
             }
@@ -178,10 +232,22 @@ static BOOL IsStaticImageFile(const char* filename) {
  */
 static void GetSystemMetricsWithWarmup(float* cpu, float* mem) {
     SystemMonitor_GetUsage(cpu, mem);
-    
+
+    static AnimationType s_lastWarmupType = ANIM_TYPE_CUSTOM;
+    static BOOL s_warmupAttempted = FALSE;
     AnimationType type = GetAnimationType(GetCurrentAnimationName());
-    if (IsPercentIcon(type)) {
-        float chosen = (type == ANIM_TYPE_CPU) ? *cpu : *mem;
+    if (type != s_lastWarmupType) {
+        s_lastWarmupType = type;
+        s_warmupAttempted = FALSE;
+    }
+
+    if (type != ANIM_TYPE_CPU && type != ANIM_TYPE_MEMORY) {
+        return;
+    }
+
+    float chosen = (type == ANIM_TYPE_CPU) ? *cpu : *mem;
+    if (!s_warmupAttempted) {
+        s_warmupAttempted = TRUE;
         if ((int)(chosen + 0.5f) == 0) {
             SystemMonitor_ForceRefresh();
             SystemMonitor_GetUsage(cpu, mem);
@@ -271,10 +337,15 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
 
 /** @brief Update tray icon tooltip */
 void UpdateTrayTooltip(const wchar_t* tip) {
+    HWND owner = GetValidTrayMainWindow();
+    if (!tip || !owner || !IsTrayIconActiveForWindow(owner)) {
+        return;
+    }
+
     NOTIFYICONDATAW n = {0};
     n.cbSize = sizeof(n);
-    n.hWnd = nid.hWnd;
-    n.uID = nid.uID;
+    n.hWnd = owner;
+    n.uID = CLOCK_ID_TRAY_APP_ICON;
     n.uFlags = NIF_TIP;
     wcsncpy_s(n.szTip, _countof(n.szTip), tip, _TRUNCATE);
     if (wcscmp(g_lastTrayTooltip, n.szTip) == 0) {
@@ -285,22 +356,52 @@ void UpdateTrayTooltip(const wchar_t* tip) {
     }
 }
 
-static void CALLBACK TrayOpacitySaveTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
-    (void)msg;
-    (void)time;
-
-    if (id != TRAY_OPACITY_SAVE_TIMER_ID) return;
-
-    KillTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID);
+static void FlushPendingTrayOpacitySave(void) {
     if (g_pendingOpacityToSave >= 0) {
-        extern void WriteConfigWindowOpacity(int opacity);
-        WriteConfigWindowOpacity(g_pendingOpacityToSave);
+        char configPath[MAX_PATH];
+        GetConfigPath(configPath, sizeof(configPath));
+        if (!WriteIniInt(INI_SECTION_DISPLAY, "WINDOW_OPACITY",
+                         g_pendingOpacityToSave, configPath)) {
+            LOG_WARNING("Failed to save tray opacity: %d", g_pendingOpacityToSave);
+            return;
+        }
         g_pendingOpacityToSave = -1;
     }
 }
 
+static void DiscardPendingTrayOpacitySave(void) {
+    g_pendingOpacityToSave = -1;
+}
+
+static void CompleteTrayOpacityFeedback(HWND hwnd, BOOL refreshTooltip) {
+    FlushPendingTrayOpacitySave();
+
+    if (g_showingOpacityTip) {
+        g_showingOpacityTip = FALSE;
+        if (refreshTooltip && hwnd && nid.hWnd) {
+            TrayTipTimerProc(hwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
+        }
+    }
+}
+
+static void CALLBACK TrayOpacitySaveTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
+    (void)msg;
+    (void)time;
+
+    if (id != TRAY_OPACITY_SAVE_TIMER_ID || !IsValidTrayMainWindow(hwnd)) return;
+
+    KillTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID);
+    CompleteTrayOpacityFeedback(hwnd, TRUE);
+    if (g_pendingOpacityToSave >= 0 &&
+        !SetTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID,
+                  TRAY_OPACITY_SAVE_DELAY_MS, TrayOpacitySaveTimerProc)) {
+        LOG_WARNING("Failed to reschedule tray opacity save retry (error=%lu)",
+                    GetLastError());
+    }
+}
+
 void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
-    if (!hwnd) return;
+    if (!IsValidTrayMainWindow(hwnd)) return;
 
     extern int ReadConfigOpacityStepNormal(void);
     extern int ReadConfigOpacityStepFast(void);
@@ -319,18 +420,14 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
                  L"Opacity: %d%%", CLOCK_WINDOW_OPACITY);
     UpdateTrayTooltip(opacityTip);
 
-    if (CLOCK_WINDOW_OPACITY == oldOpacity) {
-        return;
+    if (CLOCK_WINDOW_OPACITY != oldOpacity) {
+        InvalidateRect(hwnd, NULL, FALSE);
+        g_pendingOpacityToSave = CLOCK_WINDOW_OPACITY;
     }
 
-    InvalidateRect(hwnd, NULL, FALSE);
-
-    g_pendingOpacityToSave = CLOCK_WINDOW_OPACITY;
     if (!SetTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID, TRAY_OPACITY_SAVE_DELAY_MS,
                   TrayOpacitySaveTimerProc)) {
-        extern void WriteConfigWindowOpacity(int opacity);
-        WriteConfigWindowOpacity(g_pendingOpacityToSave);
-        g_pendingOpacityToSave = -1;
+        CompleteTrayOpacityFeedback(hwnd, TRUE);
     }
 }
 
@@ -339,7 +436,13 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
  * @note Updates tooltip with CPU, memory, network, and animation speed
  */
 void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
-    (void)hwnd; (void)msg; (void)id; (void)time;
+    (void)time;
+
+    if (msg != WM_TIMER ||
+        id != TRAY_TIP_TIMER_ID ||
+        !IsTrayIconActiveForWindow(hwnd)) {
+        return;
+    }
 
     if (IsTrayInteractionSuspended()) {
         return;
@@ -365,7 +468,7 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     }
 
     UpdateTrayTooltip(tip);
-    TrayAnimation_UpdatePercentIconIfNeeded();
+    TrayAnimation_UpdatePercentIconWithMetrics(cpu, mem);
 }
 
 /**
@@ -394,8 +497,6 @@ static HICON GetInitialPercentIcon(AnimationType type) {
     } else {
         float cpu = 0.0f, mem = 0.0f;
         SystemMonitor_ForceRefresh();
-        Sleep(PERCENT_ICON_WARMUP_MS);
-        SystemMonitor_ForceRefresh();
         SystemMonitor_GetUsage(&cpu, &mem);
         percent = (type == ANIM_TYPE_CPU) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
     }
@@ -423,29 +524,44 @@ static HICON GetInitialDynamicBuiltinIcon(AnimationType type) {
  * @param hwnd Window handle for callbacks
  * @param hInstance App instance for icon resources
  */
-void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
+static void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
+                                 BOOL preloadAnimation,
+                                 BOOL startBackgroundWork,
+                                 BOOL useAnimationInitialIcon) {
+    if (!IsValidTrayMainWindow(hwnd)) {
+        LOG_WARNING("InitTrayIconInternal called with invalid main window");
+        return;
+    }
+
     g_mainHwnd = hwnd;
     g_hInstance = hInstance;
     g_lastTrayTooltip[0] = L'\0';
     SetRectEmpty(&g_cachedIconRect);
     g_lastRectUpdateTime = 0;
 
-    ReadPercentIconColorsConfig();
-    SystemMonitor_Init();
-    PreloadAnimationFromConfig();
+    if (startBackgroundWork) {
+        ReadPercentIconColorsConfig();
+        SystemMonitor_Init();
+    }
+    if (preloadAnimation) {
+        PreloadAnimationFromConfig();
+    }
     
-    const char* animName = GetCurrentAnimationName();
-    AnimationType type = GetAnimationType(animName);
     BOOL destroyInitialIcon = FALSE;
-    HICON hInitial = GetInitialDynamicBuiltinIcon(type);
-    if (hInitial) {
-        destroyInitialIcon = TRUE;
-    } else {
-        hInitial = GetInitialAnimationHicon();
-        destroyInitialIcon = (hInitial && animName && _stricmp(animName, "__none__") == 0);
+    HICON hInitial = NULL;
+    if (useAnimationInitialIcon) {
+        const char* animName = GetCurrentAnimationName();
+        AnimationType type = GetAnimationType(animName);
+        hInitial = GetInitialDynamicBuiltinIcon(type);
+        if (hInitial) {
+            destroyInitialIcon = TRUE;
+        } else {
+            hInitial = GetInitialAnimationHicon();
+        }
     }
     
     memset(&nid, 0, sizeof(nid));
+    g_trayIconActive = FALSE;
     nid.cbSize = sizeof(nid);
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
     nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
@@ -455,7 +571,11 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
     wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
 
     if (Shell_NotifyIconW(NIM_ADD, &nid)) {
+        g_trayIconActive = TRUE;
         wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip), nid.szTip);
+    } else {
+        LOG_WARNING("Failed to add tray icon (error=%lu)", GetLastError());
+        ZeroMemory(&nid, sizeof(nid));
     }
     if (destroyInitialIcon) {
         DestroyIcon(hInitial);
@@ -469,21 +589,25 @@ void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
         RegisterTaskbarCreatedMessage();
     }
     
-    SetTimer(hwnd, TRAY_TIP_TIMER_ID, TOOLTIP_UPDATE_INTERVAL_MS, (TIMERPROC)TrayTipTimerProc);
+    if (startBackgroundWork && g_trayIconActive) {
+        if (!SetTimer(hwnd, TRAY_TIP_TIMER_ID, TOOLTIP_UPDATE_INTERVAL_MS, (TIMERPROC)TrayTipTimerProc)) {
+            LOG_WARNING("Failed to start tray tooltip timer (error=%lu)", GetLastError());
+        }
+    }
 
     /* Mouse hook is now installed on-demand when mouse hovers over tray icon */
 }
 
-/** @brief Remove tray icon and cleanup */
-void RemoveTrayIcon(void) {
-    if (nid.hWnd) {
+void InitTrayIcon(HWND hwnd, HINSTANCE hInstance) {
+    InitTrayIconInternal(hwnd, hInstance, TRUE, TRUE, TRUE);
+}
+
+static void RemoveTrayIconInternal(BOOL finalCleanup) {
+    if (g_trayIconActive && nid.hWnd) {
         KillTimer(nid.hWnd, TRAY_TIP_TIMER_ID);
         KillTimer(nid.hWnd, TRAY_OPACITY_SAVE_TIMER_ID);
-        if (g_pendingOpacityToSave >= 0) {
-            extern void WriteConfigWindowOpacity(int opacity);
-            WriteConfigWindowOpacity(g_pendingOpacityToSave);
-            g_pendingOpacityToSave = -1;
-        }
+        CompleteTrayOpacityFeedback(nid.hWnd, FALSE);
+        DiscardPendingTrayOpacitySave();
     }
 
     /* Stop hover detection timer */
@@ -495,12 +619,62 @@ void RemoveTrayIcon(void) {
         g_mouseHook = NULL;
     }
 
-    SystemMonitor_Shutdown();
-    Shell_NotifyIconW(NIM_DELETE, &nid);
+    if (finalCleanup) {
+        SystemMonitor_Shutdown();
+        CleanupTraySubmenuResources();
+    }
+    if (g_trayIconActive && nid.hWnd) {
+        Shell_NotifyIconW(NIM_DELETE, &nid);
+    }
+    g_trayIconActive = FALSE;
+    ZeroMemory(&nid, sizeof(nid));
     g_mainHwnd = NULL;
     g_lastTrayTooltip[0] = L'\0';
     SetRectEmpty(&g_cachedIconRect);
     g_lastRectUpdateTime = 0;
+    DiscardPendingTrayOpacitySave();
+}
+
+/** @brief Remove tray icon and cleanup */
+void RemoveTrayIcon(void) {
+    RemoveTrayIconInternal(TRUE);
+}
+
+static BOOL IsUtf8ContinuationByte(unsigned char ch) {
+    return (ch & 0xC0u) == 0x80u;
+}
+
+static size_t FindUtf8PrefixForWideCapacity(const char* text, size_t wideCapacity) {
+    if (!text || wideCapacity <= 1) return 0;
+
+    size_t bytes = 0;
+    size_t chars = 0;
+    while (text[bytes] && chars < wideCapacity - 1) {
+        size_t charBytes = 1;
+        unsigned char ch = (unsigned char)text[bytes];
+        if ((ch & 0x80u) == 0) {
+            charBytes = 1;
+        } else if ((ch & 0xE0u) == 0xC0u) {
+            charBytes = 2;
+        } else if ((ch & 0xF0u) == 0xE0u) {
+            charBytes = 3;
+        } else if ((ch & 0xF8u) == 0xF0u) {
+            charBytes = 4;
+        } else {
+            break;
+        }
+
+        for (size_t i = 1; i < charBytes; i++) {
+            if (!IsUtf8ContinuationByte((unsigned char)text[bytes + i])) {
+                return bytes;
+            }
+        }
+
+        bytes += charBytes;
+        chars++;
+    }
+
+    return bytes;
 }
 
 /**
@@ -510,18 +684,33 @@ void RemoveTrayIcon(void) {
  */
 void ShowTrayNotification(HWND hwnd, const char* message) {
     if (!message) return;
+    HWND owner = IsValidTrayMainWindow(hwnd) ? hwnd : GetValidTrayMainWindow();
+    if (!owner || !IsTrayIconActiveForWindow(owner)) {
+        return;
+    }
 
     NOTIFYICONDATAW nid_notify = {0};
     nid_notify.cbSize = sizeof(NOTIFYICONDATAW);
-    nid_notify.hWnd = hwnd;
+    nid_notify.hWnd = owner;
     nid_notify.uID = CLOCK_ID_TRAY_APP_ICON;
     nid_notify.uFlags = NIF_INFO;
     nid_notify.dwInfoFlags = NIIF_NONE;
     nid_notify.uTimeout = 3000;
 
-    if (MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo,
-                            (int)_countof(nid_notify.szInfo)) <= 0) {
-        return;
+    int converted = MultiByteToWideChar(CP_UTF8, 0, message, -1, nid_notify.szInfo,
+                                        (int)_countof(nid_notify.szInfo));
+    if (converted <= 0) {
+        size_t bytes = FindUtf8PrefixForWideCapacity(message, _countof(nid_notify.szInfo));
+        if (bytes == 0 || bytes > (size_t)INT_MAX) {
+            return;
+        }
+        converted = MultiByteToWideChar(CP_UTF8, 0, message, (int)bytes,
+                                        nid_notify.szInfo,
+                                        (int)_countof(nid_notify.szInfo) - 1);
+        if (converted <= 0) {
+            return;
+        }
+        nid_notify.szInfo[converted] = L'\0';
     }
     nid_notify.szInfoTitle[0] = L'\0';
 
@@ -530,8 +719,29 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
 
 /** @brief Recreate tray icon after taskbar restart */
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
-    RemoveTrayIcon();
-    InitTrayIcon(hwnd, hInstance);
+    StopTrayHoverDetection();
+
+    if (g_trayIconActive && nid.hWnd) {
+        Shell_NotifyIconW(NIM_DELETE, &nid);
+    }
+    g_trayIconActive = FALSE;
+    ZeroMemory(&nid, sizeof(nid));
+    InitTrayIconInternal(hwnd, hInstance, FALSE, FALSE, FALSE);
+    if (!IsTrayIconActive(hwnd)) {
+        KillTimer(hwnd, TRAY_TIP_TIMER_ID);
+        KillTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID);
+        CompleteTrayOpacityFeedback(hwnd, FALSE);
+        DiscardPendingTrayOpacitySave();
+        if (TrayAnimation_IsRunning()) {
+            StopTrayAnimation(hwnd);
+        }
+        return;
+    }
+    if (TrayAnimation_IsRunning()) {
+        TrayAnimation_RefreshCurrentIcon();
+    } else {
+        StartTrayAnimation(hwnd, TRAY_ANIMATION_DEFAULT_INTERVAL_MS);
+    }
 }
 
 /** @brief Update tray icon by recreation */
@@ -584,8 +794,9 @@ void SetTrayInteractionSuspended(BOOL suspended) {
         g_showingOpacityTip = FALSE;
     }
 
-    if (g_mainHwnd) {
-        TrayTipTimerProc(g_mainHwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
+    HWND hwndMain = GetValidTrayMainWindow();
+    if (hwndMain) {
+        TrayTipTimerProc(hwndMain, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
     }
 }
 
@@ -605,8 +816,9 @@ void UninstallTrayMouseHook(void) {
     /* Reset opacity tip mode when mouse leaves */
     if (g_showingOpacityTip) {
         g_showingOpacityTip = FALSE;
-        if (g_mainHwnd) {
-            TrayTipTimerProc(g_mainHwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
+        HWND hwndMain = GetValidTrayMainWindow();
+        if (hwndMain) {
+            TrayTipTimerProc(hwndMain, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
         }
     }
 }

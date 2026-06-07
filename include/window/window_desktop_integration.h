@@ -145,5 +145,11 @@ BOOL EnforceTopmostOverTaskbar(HWND hwnd);
  */
 BOOL HandleTopmostApplyRetry(HWND hwnd);
 
+/**
+ * @brief Clear desktop-integration retry timers and internal retry state
+ * @param hwnd Window handle being torn down, or NULL to reset state only
+ */
+void CleanupWindowDesktopIntegrationState(HWND hwnd);
+
 #endif /* WINDOW_DESKTOP_INTEGRATION_H */
 

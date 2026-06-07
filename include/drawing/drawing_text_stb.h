@@ -9,6 +9,7 @@
 #include <windows.h>
 #include "../../libs/stb/stb_truetype.h"
 #include "color/gradient.h"
+#include "menu_preview.h"
 
 #define GRADIENT_LUT_SIZE 512
 
@@ -24,6 +25,16 @@ BOOL InitFontSTB(const char* fontFilePath);
  */
 void CleanupFontSTB(void);
 
+/**
+ * @brief Hold STB font mappings stable while reading fontinfo/cache pointers.
+ */
+BOOL BeginFontUseSTB(void);
+
+/**
+ * @brief Release a lock acquired by BeginFontUseSTB.
+ */
+void EndFontUseSTB(void);
+
 /* ============================================================================
  * Font Cache for <font:> Tags (Max 4 cached fonts)
  * ============================================================================ */
@@ -34,11 +45,16 @@ void CleanupFontSTB(void);
  * @brief Cached font entry
  */
 typedef struct {
-    wchar_t fontName[64];
+    wchar_t fontName[MAX_PATH];
+    wchar_t resolvedPath[MAX_PATH];
     stbtt_fontinfo fontInfo;
     unsigned char* fontBuffer;
     HANDLE hFile;
     HANDLE hMapping;
+    FILETIME lastWriteTime;
+    ULONGLONG fileSize;
+    DWORD lastValidateTick;
+    BOOL fileInfoValid;
     BOOL isLoaded;
 } CachedFont;
 
@@ -86,6 +102,15 @@ typedef struct {
     int kern;
 } GlyphMetrics;
 
+/**
+ * @brief Get cached glyph metrics for a <font:> cached font.
+ * @note Internal helper; caller should already hold BeginFontUseSTB().
+ */
+BOOL GetCachedFontCharMetricsSTB(const stbtt_fontinfo* fontInfo,
+                                 wchar_t c,
+                                 float scale,
+                                 GlyphMetrics* out);
+
 /* Accessors for Global Font State */
 BOOL IsFontLoadedSTB(void);
 BOOL IsFallbackFontLoadedSTB(void);
@@ -95,15 +120,45 @@ stbtt_fontinfo* GetFallbackFontInfoSTB(void);
 /* Shared Helper Functions */
 void GetCharMetricsSTB(wchar_t c, wchar_t nextC, float scale, float fallbackScale, GlyphMetrics* out);
 
-void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight, 
-                        int x_pos, int y_pos, 
+BOOL IsGlyphBitmapVisibleSTB(const stbtt_fontinfo* fontInfo,
+                             int glyphIndex,
+                             float scaleX,
+                             float scaleY,
+                             int originX,
+                             int originY,
+                             int destWidth,
+                             int destHeight,
+                             EffectType effect,
+                             int extraMargin);
+
+void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
+                        int x_pos, int y_pos,
                         const unsigned char* bitmap, int w, int h,
                         int r, int g, int b);
 
-void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight, 
-                                int x_pos, int y_pos, 
+void BlendCharBitmapSTBWithEffect(void* destBits, int destWidth, int destHeight,
+                                  int x_pos, int y_pos,
+                                  const unsigned char* bitmap, int w, int h,
+                                  int r, int g, int b,
+                                  EffectType effect, int timeOffset);
+
+void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
+                                int x_pos, int y_pos,
                                 const unsigned char* bitmap, int w, int h,
                                 int startX, int totalWidth, int gradientType,
                                 int timeOffset);
+
+void BlendCharBitmapGradientSTBWithEffect(void* destBits, int destWidth, int destHeight,
+                                          int x_pos, int y_pos,
+                                          const unsigned char* bitmap, int w, int h,
+                                          int startX, int totalWidth, int gradientType,
+                                          int timeOffset, EffectType effect);
+
+void BlendCharBitmapGradientSTBWithInfo(void* destBits, int destWidth, int destHeight,
+                                        int x_pos, int y_pos,
+                                        const unsigned char* bitmap, int w, int h,
+                                        int startX, int totalWidth,
+                                        const GradientInfo* gradientInfo,
+                                        int timeOffset, EffectType effect);
 
 #endif // DRAWING_TEXT_STB_H

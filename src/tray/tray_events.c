@@ -16,21 +16,52 @@
 #include "drawing.h"
 #include "audio_player.h"
 #include "config.h"
+#include "log.h"
 #include "../resource/resource.h"
+#include <wchar.h>
 
 /* Timer for detecting mouse hover over tray icon */
 #define TRAY_HOVER_CHECK_TIMER_ID 42422
 #define TRAY_HOVER_CHECK_INTERVAL_MS 200
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 static UINT_PTR g_hoverCheckTimer = 0;
 static HWND g_trayEventHwnd = NULL;
+
+static BOOL IsValidTrayEventWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
 
 /**
  * @brief Timer callback to check if mouse is over tray icon
  * @note Installs hook when mouse enters, uninstalls when mouse leaves
  */
 static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
-    (void)hwnd; (void)msg; (void)id; (void)time;
+    (void)time;
+
+    if (msg != WM_TIMER ||
+        id != TRAY_HOVER_CHECK_TIMER_ID ||
+        !g_trayEventHwnd ||
+        hwnd != g_trayEventHwnd ||
+        !IsValidTrayEventWindow(g_trayEventHwnd) ||
+        !IsTrayIconActive(g_trayEventHwnd)) {
+        return;
+    }
 
     if (IsTrayInteractionSuspended()) {
         return;
@@ -55,13 +86,28 @@ static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, D
  * @brief Start tray hover detection timer
  */
 static void StartTrayHoverDetection(HWND hwnd) {
+    if (!IsValidTrayEventWindow(hwnd) || !IsTrayIconActive(hwnd)) {
+        return;
+    }
+
+    if (g_hoverCheckTimer &&
+        g_trayEventHwnd == hwnd &&
+        IsValidTrayEventWindow(g_trayEventHwnd)) {
+        return;
+    }
+
+    if (g_hoverCheckTimer && IsValidTrayEventWindow(g_trayEventHwnd)) {
+        KillTimer(g_trayEventHwnd, TRAY_HOVER_CHECK_TIMER_ID);
+    }
+
+    g_hoverCheckTimer = 0;
+    g_trayEventHwnd = hwnd;
+    g_hoverCheckTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID,
+                                 TRAY_HOVER_CHECK_INTERVAL_MS, TrayHoverCheckTimerProc);
     if (!g_hoverCheckTimer) {
-        g_trayEventHwnd = hwnd;
-        g_hoverCheckTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID, 
-                                     TRAY_HOVER_CHECK_INTERVAL_MS, TrayHoverCheckTimerProc);
-        if (!g_hoverCheckTimer) {
-            g_trayEventHwnd = NULL;
-        }
+        LOG_WARNING("Tray hover detection timer creation failed (error=%lu)",
+                    GetLastError());
+        g_trayEventHwnd = NULL;
     }
 }
 
@@ -70,10 +116,10 @@ static void StartTrayHoverDetection(HWND hwnd) {
  * @note Called when tray icon is removed
  */
 void StopTrayHoverDetection(void) {
-    if (g_hoverCheckTimer && g_trayEventHwnd) {
+    if (g_hoverCheckTimer && IsValidTrayEventWindow(g_trayEventHwnd)) {
         KillTimer(g_trayEventHwnd, TRAY_HOVER_CHECK_TIMER_ID);
-        g_hoverCheckTimer = 0;
     }
+    g_hoverCheckTimer = 0;
     g_trayEventHwnd = NULL;
     /* Also uninstall hook if still active */
     if (IsTrayMouseHookInstalled()) {
@@ -95,6 +141,7 @@ static inline void OpenUrlInBrowser(const wchar_t* url) {
  * @param hwnd Window handle
  */
 static inline void ForceWindowRedraw(HWND hwnd) {
+    if (!IsValidTrayEventWindow(hwnd)) return;
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
@@ -111,7 +158,10 @@ static inline void RestartTimerWithInterval(HWND hwnd, UINT timerId, UINT interv
     }
 
     KillTimer(hwnd, timerId);
-    SetTimer(hwnd, timerId, interval, NULL);
+    if (!SetTimer(hwnd, timerId, interval, NULL)) {
+        LOG_WARNING("Failed to restart timer %u with interval %u ms (error=%lu)",
+                    timerId, interval, GetLastError());
+    }
 }
 
 /**
@@ -131,7 +181,11 @@ static inline BOOL IsTimerActive(void) {
  * @note Hover detection is done via timer polling, not message-based
  */
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
-    (void)uID;
+    if (uID != CLOCK_ID_TRAY_APP_ICON ||
+        !IsValidTrayEventWindow(hwnd) ||
+        !IsTrayIconActive(hwnd)) {
+        return;
+    }
 
     /* Start hover detection timer on first tray message */
     StartTrayHoverDetection(hwnd);

@@ -5,12 +5,14 @@
 
 #include "config/config_applier.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "config/config_plugin_security.h"
 #include "language.h"
-#include "timer/timer.h"
 #include "window.h"
 #include "font.h"
 #include "color/color.h"
+#include "drawing/drawing_effect.h"
+#include "drawing/drawing_render.h"
 #include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
@@ -18,6 +20,7 @@
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <ctype.h>
 
 /* Global text effect */
 extern TextEffectType CLOCK_TEXT_EFFECT;
@@ -37,6 +40,82 @@ static int LanguageNameToEnum(const char* langName) {
 /* ============================================================================
  * Public API Implementation
  * ============================================================================ */
+
+static void ApplyDefaultPomodoroTimes(void) {
+    static const int defaultTimes[] = {
+        DEFAULT_POMODORO_WORK,
+        DEFAULT_POMODORO_SHORT_BREAK,
+        DEFAULT_POMODORO_WORK,
+        DEFAULT_POMODORO_LONG_BREAK
+    };
+
+    int count = (int)_countof(defaultTimes);
+    if (count > (int)_countof(g_AppConfig.pomodoro.times)) {
+        count = (int)_countof(g_AppConfig.pomodoro.times);
+    }
+
+    ZeroMemory(g_AppConfig.pomodoro.times, sizeof(g_AppConfig.pomodoro.times));
+    memcpy(g_AppConfig.pomodoro.times, defaultTimes, (size_t)count * sizeof(defaultTimes[0]));
+    g_AppConfig.pomodoro.times_count = count;
+    g_AppConfig.pomodoro.work_time = g_AppConfig.pomodoro.times[0];
+    g_AppConfig.pomodoro.short_break = g_AppConfig.pomodoro.times[1];
+    g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
+}
+
+static int ClampPomodoroLoopCountForApply(int loopCount) {
+    if (loopCount < MIN_POMODORO_LOOP_COUNT) {
+        return MIN_POMODORO_LOOP_COUNT;
+    }
+    if (loopCount > MAX_POMODORO_LOOP_COUNT) {
+        return MAX_POMODORO_LOOP_COUNT;
+    }
+    return loopCount;
+}
+
+static void ApplyDefaultQuickCountdownOptions(void) {
+    static const int defaultOptions[] = {
+        DEFAULT_QUICK_COUNTDOWN_1,
+        DEFAULT_QUICK_COUNTDOWN_2,
+        DEFAULT_QUICK_COUNTDOWN_3
+    };
+
+    int count = (int)_countof(defaultOptions);
+    if (count > MAX_TIME_OPTIONS) {
+        count = MAX_TIME_OPTIONS;
+    }
+
+    ZeroMemory(time_options, sizeof(time_options));
+    for (int i = 0; i < count; i++) {
+        time_options[i] = defaultOptions[i];
+    }
+    time_options_count = count;
+}
+
+static void ApplyQuickCountdownOptions(const ConfigSnapshot* snapshot) {
+    int optionsCount = snapshot->timeOptionsCount;
+    if (optionsCount <= 0 || optionsCount > MAX_TIME_OPTIONS) {
+        LOG_WARNING("Invalid quick countdown options count %d while applying config, using defaults",
+                    optionsCount);
+        ApplyDefaultQuickCountdownOptions();
+        return;
+    }
+
+    for (int i = 0; i < optionsCount; i++) {
+        if (snapshot->timeOptions[i] <= 0 ||
+            snapshot->timeOptions[i] > MAX_TIME_OPTION_SECONDS) {
+            LOG_WARNING("Invalid quick countdown preset %d while applying config, using defaults",
+                        snapshot->timeOptions[i]);
+            ApplyDefaultQuickCountdownOptions();
+            return;
+        }
+    }
+
+    ZeroMemory(time_options, sizeof(time_options));
+    for (int i = 0; i < optionsCount; i++) {
+        time_options[i] = snapshot->timeOptions[i];
+    }
+    time_options_count = optionsCount;
+}
 
 void ApplyGeneralSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
@@ -59,15 +138,11 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     
     CLOCK_BASE_FONT_SIZE = snapshot->baseFontSize;
     
-    LOG_INFO("ApplyDisplaySettings: Setting FONT_FILE_NAME from snapshot");
-    LOG_INFO("ApplyDisplaySettings:   From snapshot: '%s'", snapshot->fontFileName);
     strncpy(FONT_FILE_NAME, snapshot->fontFileName, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-    LOG_INFO("ApplyDisplaySettings:   Now FONT_FILE_NAME = '%s'", FONT_FILE_NAME);
     
     strncpy(FONT_INTERNAL_NAME, snapshot->fontInternalName, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
-    LOG_INFO("ApplyDisplaySettings:   FONT_INTERNAL_NAME = '%s'", FONT_INTERNAL_NAME);
     
     /* Apply non-position settings first */
     CLOCK_WINDOW_SCALE = snapshot->windowScale;
@@ -83,10 +158,15 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.display.opacity_step_fast = snapshot->opacityStepFast;
     g_AppConfig.display.scale_step_normal = snapshot->scaleStepNormal;
     g_AppConfig.display.scale_step_fast = snapshot->scaleStepFast;
+    TextEffectType previousTextEffect = CLOCK_TEXT_EFFECT;
     CLOCK_TEXT_EFFECT = (TextEffectType)snapshot->textEffect;
     g_AppConfig.display.text_effect = snapshot->textEffect;
 
-    HWND hwnd = FindWindowW(L"CatimeWindowClass", L"Catime");
+    if (previousTextEffect != TEXT_EFFECT_NONE && CLOCK_TEXT_EFFECT == TEXT_EFFECT_NONE) {
+        CleanupDrawingEffects();
+    }
+
+    HWND hwnd = FindCurrentProcessMainWindow();
     if (hwnd) {
         /* Force apply mode: always use config values (used during reset) */
         if (g_ForceApplyConfig) {
@@ -121,29 +201,7 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
         RefreshWindowTopmostState(hwnd);
 
-        /* Ensure animation timer is running if effects are active */
-        /* Use adaptive interval based on window size to prevent mouse lag */
-        if (CLOCK_LIQUID_EFFECT || CLOCK_HOLOGRAPHIC_EFFECT || 
-            CLOCK_NEON_EFFECT || CLOCK_GLOW_EFFECT || CLOCK_GLASS_EFFECT) {
-            RECT rect;
-            GetClientRect(hwnd, &rect);
-            int pixels = rect.right * rect.bottom;
-            
-            /* Holographic effect needs more aggressive throttling */
-            UINT interval;
-            if (CLOCK_HOLOGRAPHIC_EFFECT) {
-                interval = (pixels < 30000) ? 50 : 
-                           (pixels < 100000) ? 80 : 
-                           (pixels < 300000) ? 120 : 200;
-            } else {
-                interval = (pixels < 50000) ? 33 : 
-                           (pixels < 200000) ? 50 : 
-                           (pixels < 500000) ? 80 : 120;
-            }
-            SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL); 
-        } else {
-            KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
-        }
+        UpdateDrawingRenderAnimationTimer(hwnd, FALSE);
 
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
@@ -178,11 +236,7 @@ void ApplyTimerSettings(const ConfigSnapshot* snapshot) {
     strncpy(CLOCK_TIMEOUT_WEBSITE_URL, snapshot->timeoutWebsiteUrl, MAX_PATH - 1);
     CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
     
-    /* Quick countdown presets */
-    time_options_count = snapshot->timeOptionsCount;
-    for (int i = 0; i < snapshot->timeOptionsCount && i < MAX_TIME_OPTIONS; i++) {
-        time_options[i] = snapshot->timeOptions[i];
-    }
+    ApplyQuickCountdownOptions(snapshot);
     
     /* Startup mode */
     strncpy(CLOCK_STARTUP_MODE, snapshot->startupMode, sizeof(CLOCK_STARTUP_MODE) - 1);
@@ -191,19 +245,41 @@ void ApplyTimerSettings(const ConfigSnapshot* snapshot) {
 
 void ApplyPomodoroSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
-    
-    g_AppConfig.pomodoro.times_count = snapshot->pomodoroTimesCount;
-    for (int i = 0; i < snapshot->pomodoroTimesCount && i < 10; i++) {
+
+    int loopCount = ClampPomodoroLoopCountForApply(snapshot->pomodoroLoopCount);
+    int timesCount = snapshot->pomodoroTimesCount;
+    if (timesCount <= 0 || timesCount > (int)_countof(g_AppConfig.pomodoro.times)) {
+        LOG_WARNING("Invalid Pomodoro times count %d while applying config, using defaults",
+                    timesCount);
+        ApplyDefaultPomodoroTimes();
+        g_AppConfig.pomodoro.loop_count = loopCount;
+        return;
+    }
+
+    for (int i = 0; i < timesCount; i++) {
+        if (snapshot->pomodoroTimes[i] <= 0 ||
+            snapshot->pomodoroTimes[i] > MAX_POMODORO_OPTION_SECONDS) {
+            LOG_WARNING("Invalid Pomodoro interval %d while applying config, using defaults",
+                        snapshot->pomodoroTimes[i]);
+            ApplyDefaultPomodoroTimes();
+            g_AppConfig.pomodoro.loop_count = loopCount;
+            return;
+        }
+    }
+
+    g_AppConfig.pomodoro.times_count = timesCount;
+    ZeroMemory(g_AppConfig.pomodoro.times, sizeof(g_AppConfig.pomodoro.times));
+    for (int i = 0; i < timesCount; i++) {
         g_AppConfig.pomodoro.times[i] = snapshot->pomodoroTimes[i];
     }
     
-    if (g_AppConfig.pomodoro.times_count > 0) {
+    if (timesCount > 0) {
         g_AppConfig.pomodoro.work_time = g_AppConfig.pomodoro.times[0];
-        if (g_AppConfig.pomodoro.times_count > 1) g_AppConfig.pomodoro.short_break = g_AppConfig.pomodoro.times[1];
-        if (g_AppConfig.pomodoro.times_count > 2) g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
+        if (timesCount > 1) g_AppConfig.pomodoro.short_break = g_AppConfig.pomodoro.times[1];
+        if (timesCount > 2) g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
     }
     
-    g_AppConfig.pomodoro.loop_count = snapshot->pomodoroLoopCount;
+    g_AppConfig.pomodoro.loop_count = loopCount;
 }
 
 void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
@@ -234,11 +310,13 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
             const char* localAppData = getenv("LOCALAPPDATA");
             if (localAppData && localAppData[0] != '\0') {
                 char resolved[MAX_PATH] = {0};
-                snprintf(resolved, sizeof(resolved), "%s%s",
-                         localAppData,
-                         g_AppConfig.notification.sound.sound_file + tokenLen);
-                strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
-                g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
+                int written = snprintf(resolved, sizeof(resolved), "%s%s",
+                                       localAppData,
+                                       g_AppConfig.notification.sound.sound_file + tokenLen);
+                if (written >= 0 && (size_t)written < sizeof(resolved)) {
+                    strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
+                    g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
+                }
             }
         }
     }
@@ -248,41 +326,10 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
 
 void ApplyColorSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
-    
-    /* Free existing color options */
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
-        if (COLOR_OPTIONS && COLOR_OPTIONS[i].hexColor) {
-            free((void*)COLOR_OPTIONS[i].hexColor);
-        }
-    }
-    if (COLOR_OPTIONS) {
-        free(COLOR_OPTIONS);
-        COLOR_OPTIONS = NULL;
-    }
-    COLOR_OPTIONS_COUNT = 0;
-    
-    /* Parse new color options */
-    char colorOptionsCopy[2048];
-    strncpy(colorOptionsCopy, snapshot->colorOptions, sizeof(colorOptionsCopy) - 1);
-    colorOptionsCopy[sizeof(colorOptionsCopy) - 1] = '\0';
-    
-    const char* token = strtok(colorOptionsCopy, ",");
-    while (token) {
-        if (COLOR_OPTIONS_COUNT >= ((size_t)-1) / sizeof(PredefinedColor) - 1) {
-            break;
-        }
-        PredefinedColor* newOptions = realloc(COLOR_OPTIONS, sizeof(PredefinedColor) * (COLOR_OPTIONS_COUNT + 1));
-        if (newOptions) {
-            COLOR_OPTIONS = newOptions;
-            size_t tokenLen = strlen(token);
-            char* hexCopy = (char*)malloc(tokenLen + 1);
-            if (hexCopy) {
-                memcpy(hexCopy, token, tokenLen + 1);
-                COLOR_OPTIONS[COLOR_OPTIONS_COUNT].hexColor = hexCopy;
-                COLOR_OPTIONS_COUNT++;
-            }
-        }
-        token = strtok(NULL, ",");
+
+    if (!ReplaceColorOptionsFromConfigValue(snapshot->colorOptions) &&
+        !ReplaceColorOptionsFromConfigValue(DEFAULT_COLOR_OPTIONS_INI)) {
+        LOG_WARNING("Failed to apply color options from config and defaults");
     }
 }
 
@@ -300,9 +347,18 @@ void ApplyHotkeySettings(const ConfigSnapshot* snapshot) {
 
 void ApplyRecentFilesSettings(const ConfigSnapshot* snapshot) {
     if (!snapshot) return;
-    
-    g_AppConfig.recent_files.count = snapshot->recentFilesCount;
-    for (int i = 0; i < snapshot->recentFilesCount && i < MAX_RECENT_FILES; i++) {
+
+    int recentFilesCount = snapshot->recentFilesCount;
+    if (recentFilesCount < 0) {
+        recentFilesCount = 0;
+    }
+    if (recentFilesCount > MAX_RECENT_FILES) {
+        recentFilesCount = MAX_RECENT_FILES;
+    }
+
+    ZeroMemory(g_AppConfig.recent_files.files, sizeof(g_AppConfig.recent_files.files));
+    g_AppConfig.recent_files.count = recentFilesCount;
+    for (int i = 0; i < recentFilesCount; i++) {
         memcpy(&g_AppConfig.recent_files.files[i], &snapshot->recentFiles[i], sizeof(RecentFile));
     }
     
@@ -315,8 +371,6 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
         LOG_WARNING("ApplyConfigSnapshot called with NULL snapshot");
         return;
     }
-    
-    LOG_INFO("Applying configuration snapshot");
     
     /* Apply in logical order - validation has already been done */
     ApplyGeneralSettings(snapshot);
@@ -341,6 +395,4 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) {
     
     /* Update timestamp for config reload detection */
     g_AppConfig.last_config_time = time(NULL);
-    
-    LOG_INFO("Configuration snapshot applied successfully");
 }

@@ -294,7 +294,7 @@ AnimationSpeedMetric GetAnimationSpeedMetric(void);
  *
  * @details Updates [Animation] ANIMATION_SPEED_METRIC in config file
  */
-void WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric);
+BOOL WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric);
 
 /**
  * @brief Map utilization percent to animation speed scale
@@ -413,7 +413,14 @@ void WriteConfigTimeoutAction(const char* action);
  * @brief Write quick countdown values
  * @param options Comma-separated times (e.g., "5,10,15")
  */
-void WriteConfigTimeOptions(const char* options);
+BOOL WriteConfigTimeOptions(const char* options);
+
+/**
+ * @brief Write default countdown duration and set startup mode to countdown atomically
+ * @param seconds Duration (>0)
+ * @return TRUE on success, FALSE on write failure
+ */
+BOOL WriteConfigDefaultCountdownStartup(int seconds);
 
 /**
  * @brief Load recent files with validation
@@ -474,18 +481,18 @@ void WriteConfig(const char* config_path);
  * @param short_break Short break (seconds)
  * @param long_break Long break (seconds)
  */
-void WriteConfigPomodoroTimes(int work, int short_break, int long_break);
+BOOL WriteConfigPomodoroTimes(int work, int short_break, int long_break);
 
 /**
  * @brief Write Pomodoro settings (4-parameter version)
  */
-void WriteConfigPomodoroSettings(int work, int short_break, int long_break, int long_break2);
+BOOL WriteConfigPomodoroSettings(int work, int short_break, int long_break, int long_break2);
 
 /**
  * @brief Write Pomodoro loop count (1-99)
  * @param loop_count Cycles before long break
  */
-void WriteConfigPomodoroLoopCount(int loop_count);
+BOOL WriteConfigPomodoroLoopCount(int loop_count);
 
 /**
  * @brief Set timeout action to open file
@@ -511,7 +518,7 @@ void WriteConfigTimeoutWebsite(const char* url);
  * @param times Time array (seconds)
  * @param count Array size
  */
-void WriteConfigPomodoroTimeOptions(const int* times, int count);
+BOOL WriteConfigPomodoroTimeOptions(const int* times, int count);
 
 /* ============================================================================
  * Notification configuration functions
@@ -527,7 +534,7 @@ void WriteConfigNotificationTimeout(int timeout_ms);
  * @brief Write notification opacity (auto-clamped to 1-100)
  * @param opacity Opacity (100 = fully opaque)
  */
-void WriteConfigNotificationOpacity(int opacity);
+BOOL WriteConfigNotificationOpacity(int opacity);
 
 /**
  * @brief Write notification messages atomically (placeholder support)
@@ -571,6 +578,21 @@ void WriteConfigNotificationSound(const char* sound_file);
  * @param volume Volume (0=mute, 100=max)
  */
 void WriteConfigNotificationVolume(int volume);
+
+/**
+ * @brief Write full notification settings in one atomic INI update
+ * @param timeout_msg Timeout message (UTF-8)
+ * @param timeout_ms Duration in milliseconds (0 disables timeout notification)
+ * @param opacity Opacity (1-100)
+ * @param type Notification display type
+ * @param disabled TRUE to suppress all notifications
+ * @param sound_file Path, "SYSTEM_BEEP", or empty (UTF-8)
+ * @param volume Volume (0-100)
+ */
+void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
+                                     int opacity, NotificationType type,
+                                     BOOL disabled, const char* sound_file,
+                                     int volume);
 
 /**
  * @brief Write notification window position and size
@@ -622,9 +644,10 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 void ReadCustomCountdownHotkey(WORD* hotkey);
 
 /**
- * @brief Write all 12 hotkeys atomically (0 = "None")
+ * @brief Write all hotkeys atomically (0 = "None")
  */
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
+                        WORD customCountdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
                         WORD pauseResumeHotkey, WORD restartTimerHotkey, WORD toggleMillisecondsHotkey,
@@ -637,7 +660,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
  * 
  * @note Prefer specific Write* functions when available
  */
-void WriteConfigKeyValue(const char* key, const char* value);
+BOOL WriteConfigKeyValue(const char* key, const char* value);
 
 /**
  * @brief Check if shortcut prompt shown (one-time dialog)
@@ -665,6 +688,13 @@ DWORD ReadIniString(const char* section, const char* key, const char* defaultVal
                   char* returnValue, DWORD returnSize, const char* filePath);
 
 /**
+ * @brief Read INI string only if the complete value fits the output buffer
+ * @return TRUE if the complete selected value was copied, FALSE on error/truncation
+ */
+BOOL ReadIniStringExact(const char* section, const char* key, const char* defaultValue,
+                  char* returnValue, DWORD returnSize, const char* filePath);
+
+/**
  * @brief Write INI string with UTF-8 support (NOT atomic)
  * @return TRUE on success
  */
@@ -688,6 +718,12 @@ BOOL ReadIniBool(const char* section, const char* key, BOOL defaultValue,
  */
 BOOL WriteIniInt(const char* section, const char* key, int value,
                const char* filePath);
+
+/**
+ * @brief Write INI boolean (NOT atomic)
+ */
+BOOL WriteIniBool(const char* section, const char* key, BOOL value,
+                const char* filePath);
 
 /**
  * @brief Key-value pair for batch INI updates
@@ -785,7 +821,7 @@ const char* TimeoutActionType_ToStr(TimeoutActionType val);
  * @brief Write time format (updates UI immediately)
  * @param format Format type
  */
-void WriteConfigTimeFormat(TimeFormatType format);
+BOOL WriteConfigTimeFormat(TimeFormatType format);
 
 /**
  * @brief Write centiseconds display setting (affects timer interval)
@@ -793,7 +829,7 @@ void WriteConfigTimeFormat(TimeFormatType format);
  * 
  * @details Changes timer frequency for performance (10ms vs 1000ms)
  */
-void WriteConfigShowMilliseconds(BOOL showMilliseconds);
+BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
 
 /**
  * @brief Get timer interval based on centiseconds setting
@@ -813,7 +849,7 @@ void ResetTimerWithInterval(HWND hwnd);
  * @brief Write startup mode to config and update in-memory state
  * @param mode "DEFAULT", "COUNT_UP", "SHOW_TIME", "NO_DISPLAY", or "POMODORO"
  */
-void WriteConfigStartupMode(const char* mode);
+BOOL WriteConfigStartupMode(const char* mode);
 
 /**
  * @brief Write window opacity setting

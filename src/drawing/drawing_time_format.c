@@ -3,6 +3,7 @@
  * @brief Time component retrieval and formatting implementation
  */
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <windows.h>
@@ -260,7 +261,10 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
             } else if (strcmp(CLOCK_TIMEOUT_TEXT, "0") == 0) {
                 buffer[0] = L'\0';
             } else if (strlen(CLOCK_TIMEOUT_TEXT) > 0) {
-                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_TEXT, -1, buffer, (int)bufferSize);
+                if (bufferSize > (size_t)INT_MAX ||
+                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_TEXT, -1, buffer, (int)bufferSize) <= 0) {
+                    buffer[0] = L'\0';
+                }
             } else {
                 buffer[0] = L'\0';
             }

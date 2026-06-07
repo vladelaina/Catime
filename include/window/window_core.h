@@ -64,6 +64,12 @@ extern TextEffectType CLOCK_TEXT_EFFECT;
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow);
 
 /**
+ * @brief Find the Catime main window owned by this process
+ * @return Main window handle, or NULL if not found
+ */
+HWND FindCurrentProcessMainWindow(void);
+
+/**
  * @brief Persist current window position and scale to configuration file
  * @param hwnd Window handle
  */
@@ -85,7 +91,7 @@ void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY
  * @details Prevents temporary fullscreen/display/DPI repositioning from being
  *          persisted as the user's saved window position.
  */
-void BeginSystemPositionChangeGuard(HWND hwnd);
+BOOL BeginSystemPositionChangeGuard(HWND hwnd);
 
 /**
  * @brief Check whether system-driven position changes are currently guarded

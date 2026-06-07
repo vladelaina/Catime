@@ -11,6 +11,7 @@
 
 #include <windows.h>
 #include "config.h"
+#include "color/gradient.h"
 #include "drawing/drawing_timer_precision.h"
 #include "drawing/drawing_time_format.h"
 #include "drawing/drawing_render.h"
@@ -39,11 +40,16 @@
  * @brief Rendering context (reduces parameter passing)
  */
 typedef struct {
-    const char* fontFileName;
-    const char* fontInternalName;
+    char fontFileName[MAX_PATH];
+    char fontInternalName[MAX_PATH];
+    char absoluteFontPath[MAX_PATH];
+    BOOL fontPathResolved;
     COLORREF textColor;
     float fontScaleFactor;
+    int renderFontSize;
     int gradientMode;
+    BOOL hasGradient;
+    GradientInfoSnapshot gradientSnapshot;
 } RenderContext;
 
 /* ============================================================================

@@ -71,7 +71,7 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
 
 /**
  * @brief Render Holographic/Prism Dispersion effect
- * @param timeOffset Time-based offset for animation
+ * @param timeOffset Reserved for signature compatibility; currently unused
  */
 void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int x_pos, int y_pos,

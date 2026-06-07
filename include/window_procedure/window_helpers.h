@@ -35,24 +35,6 @@ typedef struct {
 BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params);
 
 /* ============================================================================
- * Input Validation Framework
- * ============================================================================ */
-
-/** Validator returns TRUE if input valid, writes to output buffer */
-typedef BOOL (*InputValidator)(const char* input, void* output);
-
-/**
- * @brief Show input dialog with validation retry loop
- */
-BOOL ValidatedInputLoop(HWND hwnd, UINT dialogId, 
-                        InputValidator validator, void* output);
-
-/**
- * @brief Time input validator wrapper
- */
-BOOL ValidatedTimeInputLoop(HWND hwnd, UINT dialogId, int* outSeconds);
-
-/* ============================================================================
  * Input Dialog System
  * ============================================================================ */
 

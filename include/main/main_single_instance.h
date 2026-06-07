@@ -23,9 +23,9 @@ HWND FindExistingInstanceWindow(void);
 BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex);
 
 /**
- * Get global mutex handle for emergency cleanup
+ * Get borrowed global mutex handle for emergency cleanup
  * Used in crash handlers where normal cleanup path is not available
- * @return Global mutex handle or NULL if not created yet
+ * @return Global mutex handle or NULL if not created yet. Caller must not close it.
  */
 HANDLE GetGlobalMutexHandle(void);
 

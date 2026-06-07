@@ -18,4 +18,12 @@
  */
 BOOL ShowSystemFontDialog(HWND hwndParent);
 
+/**
+ * @brief Stop any pending font picker enumeration and release cached state
+ *
+ * @details Intended for application shutdown. Uses a finite wait so shutdown
+ *          cannot hang on a slow system font enumeration.
+ */
+void CleanupSystemFontDialogResources(void);
+
 #endif /* DIALOG_FONT_PICKER_H */

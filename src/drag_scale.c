@@ -21,6 +21,28 @@ static BOOL g_editModeForcedTopmost = FALSE;
 static BOOL g_editModeTopmostOverride = FALSE;
 
 static UINT_PTR g_configSaveTimer = 0;
+static HWND g_configSaveTimerHwnd = NULL;
+
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+
+static BOOL IsValidDragScaleWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
 
 static inline void RefreshWindow(HWND hwnd, BOOL eraseBackground) {
     InvalidateRect(hwnd, NULL, eraseBackground);
@@ -37,25 +59,53 @@ static inline int CalculateCenteredPosition(int originalPos, int originalSize, i
 }
 
 static VOID CALLBACK ConfigSaveTimerProc(HWND hwnd, UINT msg, UINT_PTR idEvent, DWORD dwTime) {
-    (void)msg;
     (void)dwTime;
-    
-    if (idEvent == TIMER_ID_CONFIG_SAVE) {
-        SaveWindowSettings(hwnd);
-        KillTimer(hwnd, TIMER_ID_CONFIG_SAVE);
-        g_configSaveTimer = 0;
+
+    if (msg != WM_TIMER ||
+        idEvent != TIMER_ID_CONFIG_SAVE ||
+        hwnd != g_configSaveTimerHwnd ||
+        !IsValidDragScaleWindow(hwnd)) {
+        return;
     }
+
+    KillTimer(hwnd, TIMER_ID_CONFIG_SAVE);
+    g_configSaveTimer = 0;
+    g_configSaveTimerHwnd = NULL;
+    SaveWindowSettings(hwnd);
 }
 
 /* Debouncing: Only save after operations stop for CONFIG_SAVE_DELAY_MS */
 void ScheduleConfigSave(HWND hwnd) {
+    if (!IsValidDragScaleWindow(hwnd)) return;
+
     if (g_configSaveTimer != 0) {
-        KillTimer(hwnd, TIMER_ID_CONFIG_SAVE);
+        HWND timerHwnd = g_configSaveTimerHwnd ? g_configSaveTimerHwnd : hwnd;
+        if (IsValidDragScaleWindow(timerHwnd)) {
+            KillTimer(timerHwnd, TIMER_ID_CONFIG_SAVE);
+        }
+        g_configSaveTimer = 0;
+        g_configSaveTimerHwnd = NULL;
     }
     
     g_configSaveTimer = SetTimer(hwnd, TIMER_ID_CONFIG_SAVE, 
                                  CONFIG_SAVE_DELAY_MS, 
                                  (TIMERPROC)ConfigSaveTimerProc);
+    if (g_configSaveTimer) {
+        g_configSaveTimerHwnd = hwnd;
+    } else {
+        SaveWindowSettings(hwnd);
+    }
+}
+
+void CancelScheduledConfigSave(HWND hwnd) {
+    if (g_configSaveTimer == 0) return;
+
+    HWND timerHwnd = g_configSaveTimerHwnd ? g_configSaveTimerHwnd : hwnd;
+    if (IsValidDragScaleWindow(timerHwnd)) {
+        KillTimer(timerHwnd, TIMER_ID_CONFIG_SAVE);
+    }
+    g_configSaveTimer = 0;
+    g_configSaveTimerHwnd = NULL;
 }
 
 void StartDragWindow(HWND hwnd) {
@@ -93,9 +143,12 @@ void EndEditMode(HWND hwnd) {
 
     SetBlurBehind(hwnd, FALSE);
     SetClickThrough(hwnd, TRUE);
+    CancelScheduledConfigSave(hwnd);
     SaveWindowSettings(hwnd);
     
-    WriteConfigColor(CLOCK_TEXT_COLOR);
+    if (!WriteConfigColor(CLOCK_TEXT_COLOR)) {
+        LOG_WARNING("EndEditMode: failed to persist text color");
+    }
     
     if (g_editModeForcedTopmost && !g_editModeTopmostOverride && !PREVIOUS_TOPMOST_STATE) {
         SetWindowTopmostTransient(hwnd, FALSE);
@@ -124,6 +177,7 @@ void EndDragWindow(HWND hwnd) {
     ReleaseCapture();
     
     RefreshWindow(hwnd, TRUE);
+    ScheduleConfigSave(hwnd);
 }
 
 /* SWP_NOREDRAW + UpdateWindow maintains smooth dragging */
@@ -203,5 +257,6 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     CLOCK_WINDOW_POS_Y = newY;
     
     RefreshWindow(hwnd, FALSE);
+    ScheduleConfigSave(hwnd);
     return TRUE;
 }

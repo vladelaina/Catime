@@ -30,16 +30,23 @@
 void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck);
 
 /**
- * @brief Clean up update checker thread resources with timeout
+ * @brief Request update checker cancellation and reap completed thread resources
  * 
- * Waits for background update check thread to complete (max 1 second)
- * and releases all associated resources. Safe to call even if no
- * thread is running.
+ * Waits briefly for the background update check thread to complete and releases
+ * resources if it has exited. Safe to call even if no thread is running.
  * 
  * @note Should be called during application shutdown
- * @note Blocking call with 1 second timeout
+ * @note Blocking call with short timeout
  * @see CheckForUpdateAsync
  */
 void CleanupUpdateThread(void);
+
+/**
+ * @brief Request update checker cancellation and wait briefly for thread exit
+ *
+ * Use during final process teardown. If WinINet does not return promptly, the
+ * thread handle is abandoned so shutdown cannot hang indefinitely.
+ */
+void CleanupUpdateThreadBlocking(void);
 
 #endif

@@ -64,6 +64,9 @@ void DrawRoundedRect(HDC hdc, RECT rect, int radius, COLORREF color);
 BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t versionMaxLen,
                        char* downloadUrl, size_t urlMaxLen, char* releaseNotes, size_t notesMaxLen);
 
+/* update_core.c */
+void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck);
+
 /* update_ui.c */
 int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion,
                           const char* downloadUrl, const char* releaseNotes);

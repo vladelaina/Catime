@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 #include "color/color_parser.h"
 #include "color/gradient.h"
 
@@ -49,11 +50,19 @@ static const CSSColor CSS_COLORS[] = {
  * ============================================================================ */
 
 void ColorRefToHex(COLORREF color, char* output, size_t size) {
+    if (!output || size == 0) return;
+
     snprintf(output, size, "#%02X%02X%02X",
              GetRValue(color), GetGValue(color), GetBValue(color));
 }
 
 void ReplaceBlackColor(const char* color, char* output, size_t output_size) {
+    if (!output || output_size == 0) return;
+    if (!color) {
+        output[0] = '\0';
+        return;
+    }
+
     if (color && strcasecmp(color, "#000000") == 0) {
         strncpy(output, NEAR_BLACK_COLOR, output_size);
     } else {
@@ -96,10 +105,62 @@ static BOOL ParseHexColor(const char* hex, char* output, size_t size) {
     return FALSE;
 }
 
+static const char* SkipAsciiSpace(const char* p) {
+    while (*p && isspace((unsigned char)*p)) {
+        p++;
+    }
+    return p;
+}
+
+static BOOL ParseRgbComponent(const char** cursor, int* value) {
+    char* end = NULL;
+    errno = 0;
+    long parsed = strtol(*cursor, &end, 10);
+    if (end == *cursor || errno == ERANGE || parsed < 0 || parsed > 255) {
+        return FALSE;
+    }
+    *cursor = end;
+    *value = (int)parsed;
+    return TRUE;
+}
+
+static BOOL ConsumeRgbSeparator(const char** cursor, const char* sep) {
+    const char* p = *cursor;
+
+    if (strcmp(sep, " ") == 0) {
+        if (!isspace((unsigned char)*p)) {
+            return FALSE;
+        }
+        *cursor = SkipAsciiSpace(p);
+        return TRUE;
+    }
+
+    p = SkipAsciiSpace(p);
+    size_t sepLen = strlen(sep);
+    if (strncmp(p, sep, sepLen) != 0) {
+        return FALSE;
+    }
+    p += sepLen;
+    *cursor = SkipAsciiSpace(p);
+    return TRUE;
+}
+
 static BOOL TryParseRGBWithSeparator(const char* str, const char* sep, int* r, int* g, int* b) {
-    char format[32];
-    snprintf(format, sizeof(format), "%%d%s%%d%s%%d", sep, sep);
-    return (sscanf(str, format, r, g, b) == 3);
+    const char* p = SkipAsciiSpace(str);
+
+    if (!ParseRgbComponent(&p, r) ||
+        !ConsumeRgbSeparator(&p, sep) ||
+        !ParseRgbComponent(&p, g) ||
+        !ConsumeRgbSeparator(&p, sep) ||
+        !ParseRgbComponent(&p, b)) {
+        return FALSE;
+    }
+
+    p = SkipAsciiSpace(p);
+    if (*p == ')') {
+        p = SkipAsciiSpace(p + 1);
+    }
+    return *p == '\0';
 }
 
 /** Multiple separators for international keyboards */
@@ -109,7 +170,10 @@ static BOOL ParseRGBColor(const char* rgb_input, char* output, size_t size) {
     
     if (strncmp(rgb_str, "rgb", 3) == 0) {
         rgb_str += 3;
-        while (*rgb_str && (*rgb_str == '(' || isspace(*rgb_str))) rgb_str++;
+        while (*rgb_str &&
+               (*rgb_str == '(' || isspace((unsigned char)*rgb_str))) {
+            rgb_str++;
+        }
     }
     
     static const char* separators[] = {",", "，", ";", "；", " ", "|"};
@@ -126,9 +190,9 @@ static BOOL ParseRGBColor(const char* rgb_input, char* output, size_t size) {
 }
 
 void normalizeColor(const char* input, char* output, size_t output_size) {
-    if (!input || !output) return;
+    if (!input || !output || output_size == 0) return;
     
-    while (isspace(*input)) input++;
+    while (isspace((unsigned char)*input)) input++;
     
     char lower[COLOR_BUFFER_SIZE];
     strncpy(lower, input, sizeof(lower) - 1);

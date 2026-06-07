@@ -33,9 +33,14 @@ BOOL MainTimer_Start(HWND hwnd, UINT intervalMs);
 void MainTimer_Stop(void);
 
 /**
+ * @brief Check whether a queued high-precision tick belongs to the active timer generation
+ */
+BOOL MainTimer_ShouldHandleTick(LONG generation);
+
+/**
  * @brief Mark one queued high-precision tick message as handled
  */
-void MainTimer_NotifyTickHandled(void);
+void MainTimer_NotifyTickHandled(LONG generation);
 
 /**
  * @brief Update timer interval (e.g., when switching to/from milliseconds mode)
@@ -53,5 +58,10 @@ void MainTimer_Cleanup(void);
  * @return TRUE if using multimedia timer
  */
 BOOL MainTimer_IsHighPrecision(void);
+
+/**
+ * @brief Check if any main timer backend is currently active
+ */
+BOOL MainTimer_IsRunning(void);
 
 #endif /* MAIN_TIMER_H */

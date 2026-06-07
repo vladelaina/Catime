@@ -24,6 +24,7 @@
 #include "tray/tray_animation_loader.h"
 #include "tray/tray_animation_menu.h"
 #include "startup.h"
+#include "update_checker.h"
 #include "utils/string_convert.h"
 #include "utils/string_format.h"
 #include "color/gradient.h"
@@ -36,6 +37,10 @@ extern char CLOCK_TIMEOUT_FILE_PATH[MAX_PATH];
 extern int current_pomodoro_time_index;
 extern POMODORO_PHASE current_pomodoro_phase;
 extern void GetConfigPath(char* path, size_t size);
+
+static HBITMAP s_hRedDot = NULL;
+static int s_redDotCx = 0;
+static int s_redDotCy = 0;
 
 /* Function to read timeout action (extracted from tray_menu.c) */
 void ReadTimeoutActionFromConfig() {
@@ -52,22 +57,14 @@ void ReadTimeoutActionFromConfig() {
     char value[32] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", 
                   value, sizeof(value), configPath);
-    
-    if (strcmp(value, "MESSAGE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    } else if (strcmp(value, "LOCK") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-    } else if (strcmp(value, "OPEN_FILE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-    } else if (strcmp(value, "SHOW_TIME") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
-    } else if (strcmp(value, "COUNT_UP") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
-    } else if (strcmp(value, "OPEN_WEBSITE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-    } else {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+
+    TimeoutActionType parsedAction = TimeoutActionType_FromStr(value);
+    if (parsedAction == TIMEOUT_ACTION_SHUTDOWN ||
+        parsedAction == TIMEOUT_ACTION_RESTART ||
+        parsedAction == TIMEOUT_ACTION_SLEEP) {
+        parsedAction = TIMEOUT_ACTION_MESSAGE;
     }
+    CLOCK_TIMEOUT_ACTION = parsedAction;
     
     /* Hot-reload file path and website URL */
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", 
@@ -82,6 +79,7 @@ void ReadTimeoutActionFromConfig() {
  */
 void BuildTimeoutActionSubmenu(HMENU hMenu) {
     HMENU hTimeoutMenu = CreatePopupMenu();
+    if (!hTimeoutMenu) return;
     
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_MESSAGE ? MF_CHECKED : MF_UNCHECKED), 
                CLOCK_IDM_SHOW_MESSAGE, 
@@ -102,32 +100,38 @@ void BuildTimeoutActionSubmenu(HMENU hMenu) {
     AppendMenuW(hTimeoutMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hFileMenu = CreatePopupMenu();
+    if (hFileMenu) {
+        int recentFilesCount = g_AppConfig.recent_files.count;
+        if (recentFilesCount < 0) recentFilesCount = 0;
+        if (recentFilesCount > MAX_RECENT_FILES) recentFilesCount = MAX_RECENT_FILES;
+        for (int i = 0; i < recentFilesCount; i++) {
+            wchar_t wFileName[MAX_PATH];
+            Utf8ToWide(g_AppConfig.recent_files.files[i].name, wFileName, MAX_PATH);
 
-    for (int i = 0; i < g_AppConfig.recent_files.count; i++) {
-        wchar_t wFileName[MAX_PATH];
-        Utf8ToWide(g_AppConfig.recent_files.files[i].name, wFileName, MAX_PATH);
-        
-        wchar_t truncatedName[MAX_PATH];
-        TruncateFileName(wFileName, truncatedName, 25);
-        
-        BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE && 
-                             strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 && 
-                             strcmp(g_AppConfig.recent_files.files[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
-        
-        AppendMenuW(hFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : 0), 
-                   CLOCK_IDM_RECENT_FILE_1 + i, truncatedName);
+            wchar_t truncatedName[MAX_PATH];
+            TruncateFileName(wFileName, truncatedName, 25);
+
+            BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE &&
+                                 strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 &&
+                                 strcmp(g_AppConfig.recent_files.files[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0);
+
+            AppendMenuW(hFileMenu, MF_STRING | (isCurrentFile ? MF_CHECKED : 0),
+                       CLOCK_IDM_RECENT_FILE_1 + i, truncatedName);
+        }
+
+        if (recentFilesCount > 0) {
+            AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
+        }
+
+        AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
+                   GetLocalizedString(NULL, L"Browse..."));
+
+        if (!AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED),
+                         (UINT_PTR)hFileMenu,
+                         GetLocalizedString(NULL, L"Open File/Software"))) {
+            DestroyMenu(hFileMenu);
+        }
     }
-               
-    if (g_AppConfig.recent_files.count > 0) {
-        AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);
-    }
-
-    AppendMenuW(hFileMenu, MF_STRING, CLOCK_IDM_BROWSE_FILE,
-               GetLocalizedString(NULL, L"Browse..."));
-
-    AppendMenuW(hTimeoutMenu, MF_POPUP | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE ? MF_CHECKED : MF_UNCHECKED), 
-               (UINT_PTR)hFileMenu, 
-               GetLocalizedString(NULL, L"Open File/Software"));
 
     AppendMenuW(hTimeoutMenu, MF_STRING | (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_OPEN_WEBSITE,
@@ -151,8 +155,10 @@ void BuildTimeoutActionSubmenu(HMENU hMenu) {
                CLOCK_IDM_SLEEP,
                GetLocalizedString(NULL, L"Sleep"));
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu, 
-                GetLocalizedString(NULL, L"Timeout Action"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeoutMenu,
+                     GetLocalizedString(NULL, L"Timeout Action"))) {
+        DestroyMenu(hTimeoutMenu);
+    }
 }
 
 /**
@@ -162,46 +168,50 @@ void BuildTimeoutActionSubmenu(HMENU hMenu) {
 void BuildPresetManagementSubmenu(HMENU hMenu) {
     
     HMENU hTimeOptionsMenu = CreatePopupMenu();
+    if (!hTimeOptionsMenu) return;
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDC_MODIFY_TIME_OPTIONS,
                 GetLocalizedString(NULL, L"Modify Quick Countdown Options"));
     
     HMENU hStartupSettingsMenu = CreatePopupMenu();
-    
-    /* Use in-memory variable instead of reading config file each time */
-    AppendMenuW(hStartupSettingsMenu, MF_STRING |
-                (strcmp(CLOCK_STARTUP_MODE, "DEFAULT") == 0 ? MF_CHECKED : 0),
-                CLOCK_IDC_SET_COUNTDOWN_TIME,
-                GetLocalizedString(NULL, L"Countdown"));
-    
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0 ? MF_CHECKED : 0),
-                CLOCK_IDC_START_COUNT_UP,
-                GetLocalizedString(NULL, L"Stopwatch"));
-    
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(CLOCK_STARTUP_MODE, "POMODORO") == 0 ? MF_CHECKED : 0),
-                CLOCK_IDC_START_POMODORO,
-                GetLocalizedString(NULL, L"Pomodoro"));
-    
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
-                CLOCK_IDC_START_SHOW_TIME,
-                GetLocalizedString(NULL, L"Show Current Time"));
-    
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-                (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
-                CLOCK_IDC_START_NO_DISPLAY,
-                GetLocalizedString(NULL, L"No Display"));
-    
-    AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
+    if (hStartupSettingsMenu) {
+        /* Use in-memory variable instead of reading config file each time */
+        AppendMenuW(hStartupSettingsMenu, MF_STRING |
+                    (strcmp(CLOCK_STARTUP_MODE, "DEFAULT") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDC_SET_COUNTDOWN_TIME,
+                    GetLocalizedString(NULL, L"Countdown"));
 
-    AppendMenuW(hStartupSettingsMenu, MF_STRING | 
-            (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
-            CLOCK_IDC_AUTO_START,
-            GetLocalizedString(NULL, L"Start with Windows"));
+        AppendMenuW(hStartupSettingsMenu, MF_STRING |
+                    (strcmp(CLOCK_STARTUP_MODE, "COUNT_UP") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDC_START_COUNT_UP,
+                    GetLocalizedString(NULL, L"Stopwatch"));
 
-    AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
-                GetLocalizedString(NULL, L"Startup Settings"));
+        AppendMenuW(hStartupSettingsMenu, MF_STRING |
+                    (strcmp(CLOCK_STARTUP_MODE, "POMODORO") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDC_START_POMODORO,
+                    GetLocalizedString(NULL, L"Pomodoro"));
+
+        AppendMenuW(hStartupSettingsMenu, MF_STRING |
+                    (strcmp(CLOCK_STARTUP_MODE, "SHOW_TIME") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDC_START_SHOW_TIME,
+                    GetLocalizedString(NULL, L"Show Current Time"));
+
+        AppendMenuW(hStartupSettingsMenu, MF_STRING |
+                    (strcmp(CLOCK_STARTUP_MODE, "NO_DISPLAY") == 0 ? MF_CHECKED : 0),
+                    CLOCK_IDC_START_NO_DISPLAY,
+                    GetLocalizedString(NULL, L"No Display"));
+
+        AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
+
+        AppendMenuW(hStartupSettingsMenu, MF_STRING |
+                (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDC_AUTO_START,
+                GetLocalizedString(NULL, L"Start with Windows"));
+
+        if (!AppendMenuW(hTimeOptionsMenu, MF_POPUP, (UINT_PTR)hStartupSettingsMenu,
+                         GetLocalizedString(NULL, L"Startup Settings"))) {
+            DestroyMenu(hStartupSettingsMenu);
+        }
+    }
 
     AppendMenuW(hTimeOptionsMenu, MF_STRING, CLOCK_IDM_NOTIFICATION_SETTINGS,
                 GetLocalizedString(NULL, L"Notification Settings"));
@@ -212,8 +222,10 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
                 CLOCK_IDM_TOPMOST,
                 GetLocalizedString(NULL, L"Always on Top"));
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
-                GetLocalizedString(NULL, L"Preset Management"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
+                     GetLocalizedString(NULL, L"Preset Management"))) {
+        DestroyMenu(hTimeOptionsMenu);
+    }
 }
 
 /**
@@ -222,6 +234,7 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
  */
 void BuildFormatSubmenu(HMENU hMenu) {
     HMENU hFormatMenu = CreatePopupMenu();
+    if (!hFormatMenu) return;
     
     AppendMenuW(hFormatMenu, MF_STRING | (g_AppConfig.display.time_format.format == TIME_FORMAT_DEFAULT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_DEFAULT,
@@ -241,8 +254,10 @@ void BuildFormatSubmenu(HMENU hMenu) {
                 CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS,
                 GetLocalizedString(NULL, L"Show Milliseconds"));
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
-                GetLocalizedString(NULL, L"Format"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
+                     GetLocalizedString(NULL, L"Format"))) {
+        DestroyMenu(hFormatMenu);
+    }
 }
 
 /**
@@ -251,6 +266,7 @@ void BuildFormatSubmenu(HMENU hMenu) {
  */
 void BuildColorSubmenu(HMENU hMenu) {
     HMENU hColorSubMenu = CreatePopupMenu();
+    if (!hColorSubMenu) return;
 
     for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
@@ -272,16 +288,22 @@ void BuildColorSubmenu(HMENU hMenu) {
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
 
     HMENU hCustomizeMenu = CreatePopupMenu();
-    AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE, 
-                GetLocalizedString(NULL, L"Color Value"));
-    AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_PANEL, 
-                GetLocalizedString(NULL, L"Color Panel"));
+    if (hCustomizeMenu) {
+        AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_VALUE,
+                    GetLocalizedString(NULL, L"Color Value"));
+        AppendMenuW(hCustomizeMenu, MF_STRING, CLOCK_IDC_COLOR_PANEL,
+                    GetLocalizedString(NULL, L"Color Panel"));
 
-    AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu, 
-                GetLocalizedString(NULL, L"Customize"));
+        if (!AppendMenuW(hColorSubMenu, MF_POPUP, (UINT_PTR)hCustomizeMenu,
+                         GetLocalizedString(NULL, L"Customize"))) {
+            DestroyMenu(hCustomizeMenu);
+        }
+    }
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu, 
-                GetLocalizedString(NULL, L"Color"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hColorSubMenu,
+                     GetLocalizedString(NULL, L"Color"))) {
+        DestroyMenu(hColorSubMenu);
+    }
 }
 
 /**
@@ -290,6 +312,7 @@ void BuildColorSubmenu(HMENU hMenu) {
  */
 void BuildStyleSubmenu(HMENU hMenu) {
     HMENU hStyleMenu = CreatePopupMenu();
+    if (!hStyleMenu) return;
     
     AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_GLOW_EFFECT ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_GLOW_EFFECT,
@@ -311,8 +334,10 @@ void BuildStyleSubmenu(HMENU hMenu) {
                 CLOCK_IDM_LIQUID_EFFECT,
                 GetLocalizedString(NULL, L"Liquid Flow"));
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu, 
-                GetLocalizedString(NULL, L"Style"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu,
+                     GetLocalizedString(NULL, L"Style"))) {
+        DestroyMenu(hStyleMenu);
+    }
 }
 
 /**
@@ -321,6 +346,7 @@ void BuildStyleSubmenu(HMENU hMenu) {
  */
 void BuildAnimationSubmenu(HMENU hMenu) {
     HMENU hAnimMenu = CreatePopupMenu();
+    if (!hAnimMenu) return;
     {
         const char* currentAnim = GetCurrentAnimationName();
         BuildAnimationMenu(hAnimMenu, currentAnim);
@@ -332,22 +358,28 @@ void BuildAnimationSubmenu(HMENU hMenu) {
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
 
         HMENU hAnimSpeedMenu = CreatePopupMenu();
-        AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
-        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_ORIGINAL ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_ANIM_SPEED_ORIGINAL, GetLocalizedString(NULL, L"Original Speed"));
-        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(NULL, L"By Memory Usage"));
-        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(NULL, L"By CPU Usage"));
-        AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_TIMER ? MF_CHECKED : MF_UNCHECKED),
-                    CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(NULL, L"By Countdown Progress"));
-        AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
-                    GetLocalizedString(NULL, L"Animation Speed Metric"));
+        if (hAnimSpeedMenu) {
+            AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
+            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_ORIGINAL ? MF_CHECKED : MF_UNCHECKED),
+                        CLOCK_IDM_ANIM_SPEED_ORIGINAL, GetLocalizedString(NULL, L"Original Speed"));
+            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
+                        CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(NULL, L"By Memory Usage"));
+            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),
+                        CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(NULL, L"By CPU Usage"));
+            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_TIMER ? MF_CHECKED : MF_UNCHECKED),
+                        CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(NULL, L"By Countdown Progress"));
+            if (!AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
+                             GetLocalizedString(NULL, L"Animation Speed Metric"))) {
+                DestroyMenu(hAnimSpeedMenu);
+            }
+        }
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(NULL, L"Open animations folder"));
     }
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(NULL, L"Tray Icon"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(NULL, L"Tray Icon"))) {
+        DestroyMenu(hAnimMenu);
+    }
 }
 
 /**
@@ -356,9 +388,9 @@ void BuildAnimationSubmenu(HMENU hMenu) {
  */
 void BuildPluginsSubmenu(HMENU hMenu) {
     HMENU hPluginsMenu = CreatePopupMenu();
+    if (!hPluginsMenu) return;
 
-    // Sync scan - fast enough for small plugin folders, ensures new plugins appear immediately
-    PluginManager_ScanPlugins();
+    PluginManager_RequestScanAsync();
     int pluginCount = PluginManager_GetPluginCount();
 
     int activePluginIndex = PluginManager_GetActivePluginIndex();
@@ -397,15 +429,28 @@ void BuildPluginsSubmenu(HMENU hMenu) {
     AppendMenuW(hPluginsMenu, MF_STRING, CLOCK_IDM_PLUGINS_OPEN_DIR, 
                 GetLocalizedString(NULL, L"Open plugins folder"));
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPluginsMenu, 
-                GetLocalizedString(NULL, L"Plugins"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPluginsMenu,
+                     GetLocalizedString(NULL, L"Plugins"))) {
+        DestroyMenu(hPluginsMenu);
+    }
 }
 
-static HBITMAP CreateMenuDotBitmap(DWORD color, int divisor, int minDotSize, int maxDotSize) {
+static void GetMenuDotBitmapSize(int* outCx, int* outCy) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    if (cx == 0) cx = 16;
-    if (cy == 0) cy = 16;
+    if (cx <= 0) cx = 16;
+    if (cy <= 0) cy = 16;
+    if (cx > 256) cx = 256;
+    if (cy > 256) cy = 256;
+    if (outCx) *outCx = cx;
+    if (outCy) *outCy = cy;
+}
+
+static HBITMAP CreateMenuDotBitmap(int cx, int cy, DWORD color,
+                                   int divisor, int minDotSize, int maxDotSize) {
+    if (cx <= 0 || cy <= 0) {
+        return NULL;
+    }
 
     BITMAPINFO bmi = {0};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
@@ -417,9 +462,12 @@ static HBITMAP CreateMenuDotBitmap(DWORD color, int divisor, int minDotSize, int
 
     void* pBits = NULL;
     HBITMAP hDot = CreateDIBSection(NULL, &bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-    if (!hDot) return NULL;
+    if (!hDot || !pBits) {
+        if (hDot) DeleteObject(hDot);
+        return NULL;
+    }
 
-    memset(pBits, 0, cx * cy * 4);
+    memset(pBits, 0, (size_t)cx * (size_t)cy * sizeof(DWORD));
 
     int dotSize = (cx < cy ? cx : cy) / divisor;
     if (dotSize < minDotSize) dotSize = minDotSize;
@@ -443,15 +491,39 @@ static HBITMAP CreateMenuDotBitmap(DWORD color, int divisor, int minDotSize, int
 }
 
 static HBITMAP GetRedDotBitmap(void) {
-    static HBITMAP s_hRedDot = NULL;
+    int cx = 0;
+    int cy = 0;
+    GetMenuDotBitmapSize(&cx, &cy);
+
+    if (s_hRedDot && (s_redDotCx != cx || s_redDotCy != cy)) {
+        DeleteObject(s_hRedDot);
+        s_hRedDot = NULL;
+        s_redDotCx = 0;
+        s_redDotCy = 0;
+    }
+
     if (!s_hRedDot) {
-        s_hRedDot = CreateMenuDotBitmap(0xFFE51123, 3, 5, 6);
+        s_hRedDot = CreateMenuDotBitmap(cx, cy, 0xFFE51123, 3, 5, 6);
+        if (s_hRedDot) {
+            s_redDotCx = cx;
+            s_redDotCy = cy;
+        }
     }
     return s_hRedDot;
 }
 
+void CleanupTraySubmenuResources(void) {
+    if (s_hRedDot) {
+        DeleteObject(s_hRedDot);
+        s_hRedDot = NULL;
+    }
+    s_redDotCx = 0;
+    s_redDotCy = 0;
+}
+
 void BuildHelpSubmenu(HMENU hMenu) {
     HMENU hAboutMenu = CreatePopupMenu();
+    if (!hAboutMenu) return;
     wchar_t supportLabel[96];
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(NULL, L"About"));
@@ -463,15 +535,15 @@ void BuildHelpSubmenu(HMENU hMenu) {
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));
 
-    extern BOOL g_isNewVersionAvailable;
-    extern char g_newVersionString[32];
-    
-    if (g_isNewVersionAvailable) {
+    char newVersion[32] = {0};
+    BOOL isNewVersionAvailable = GetNewVersionStatus(newVersion, sizeof(newVersion));
+
+    if (isNewVersionAvailable) {
         wchar_t updateText[64];
         wchar_t wNewVersion[32] = L"?";
         wchar_t wCurrentVersion[32] = L"?";
 
-        MultiByteToWideChar(CP_UTF8, 0, g_newVersionString, -1, wNewVersion, 32);
+        MultiByteToWideChar(CP_UTF8, 0, newVersion, -1, wNewVersion, 32);
         MultiByteToWideChar(CP_UTF8, 0, CATIME_VERSION, -1, wCurrentVersion, 32);
 
         _snwprintf_s(updateText, 64, _TRUNCATE, L"v%s -> v%s", wCurrentVersion, wNewVersion);
@@ -488,22 +560,28 @@ void BuildHelpSubmenu(HMENU hMenu) {
     }
 
     HMENU hLangMenu = CreatePopupMenu();
-    
+    if (hLangMenu) {
 #define X(Enum, Code, Native, Eng, ConfigKey, ResId, MenuId, ...) \
-    AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == Enum ? MF_CHECKED : MF_UNCHECKED), \
-                MenuId, Native);
+        AppendMenuW(hLangMenu, MF_STRING | (CURRENT_LANGUAGE == Enum ? MF_CHECKED : MF_UNCHECKED), \
+                    MenuId, Native);
 #include "language_def.h"
-    LANGUAGE_LIST
+        LANGUAGE_LIST
 #undef X
 
-    AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, L"Language");
+        if (!AppendMenuW(hAboutMenu, MF_POPUP, (UINT_PTR)hLangMenu, L"Language")) {
+            DestroyMenu(hLangMenu);
+        }
+    }
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_POSITION, GetLocalizedString(NULL, L"Reset Position"));
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_RESET_ALL, GetLocalizedString(NULL, L"Reset"));
 
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, GetLocalizedString(NULL, L"Help"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAboutMenu, GetLocalizedString(NULL, L"Help"))) {
+        DestroyMenu(hAboutMenu);
+        return;
+    }
                 
-    if (g_isNewVersionAvailable) {
+    if (isNewVersionAvailable) {
         int count = GetMenuItemCount(hMenu);
         if (count > 0) {
             HBITMAP hDot = GetRedDotBitmap();

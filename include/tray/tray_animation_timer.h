@@ -2,8 +2,8 @@
  * @file tray_animation_timer.h
  * @brief High-precision animation timer with adaptive frame rate
  * 
- * Uses multimedia timer (timeSetEvent) for 10ms precision.
- * Separate internal tick (10ms) from tray update (50ms) to prevent Explorer throttling.
+ * Uses multimedia timer (timeSetEvent) with interval-aware precision.
+ * Separate internal tick from tray update to prevent Explorer throttling.
  * Adaptive frame rate adjusts to system load.
  */
 
@@ -70,8 +70,7 @@ BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl);
  * @return TRUE on success, FALSE if unavailable (use SetTimer fallback)
  * 
  * @details
- * Attempts to use multimedia timer for best precision.
- * Sets system timer resolution to 1ms.
+ * Attempts to use multimedia timer with precision matched to the internal tick.
  * Callback executes in worker thread - use thread-safe operations only.
  */
 BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,

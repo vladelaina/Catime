@@ -14,6 +14,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <math.h>
 
 /* ============================================================================
  * Helper functions
@@ -23,13 +26,145 @@ static inline BOOL FileExistsUtf8(const char* utf8Path) {
     if (!utf8Path || !*utf8Path) return FALSE;
     
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH) == 0) {
+        return FALSE;
+    }
     return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
 }
 
 /* Helper to get pointer to field in ConfigSnapshot using offset */
 static inline void* GetFieldPtr(ConfigSnapshot* snapshot, size_t offset) {
     return (char*)snapshot + offset;
+}
+
+static BOOL ParsePositiveSecondsToken(const char* token, int* seconds) {
+    if (!token || !seconds) return FALSE;
+
+    while (isspace((unsigned char)*token)) token++;
+    if (*token == '\0') return FALSE;
+
+    errno = 0;
+    char* end = NULL;
+    long parsed = strtol(token, &end, 10);
+    if (end == token || errno == ERANGE ||
+        parsed <= 0 || parsed > MAX_TIME_OPTION_SECONDS || parsed > INT_MAX) {
+        return FALSE;
+    }
+
+    while (end && isspace((unsigned char)*end)) end++;
+    if (end && *end != '\0') return FALSE;
+
+    *seconds = (int)parsed;
+    return TRUE;
+}
+
+static BOOL ParseConfigFloatStrict(const char* text, float* value) {
+    if (!text || !value) return FALSE;
+
+    while (isspace((unsigned char)*text)) text++;
+    if (*text == '\0') return FALSE;
+
+    errno = 0;
+    char* end = NULL;
+    float parsed = strtof(text, &end);
+    if (end == text || errno == ERANGE || !isfinite(parsed)) {
+        return FALSE;
+    }
+
+    while (end && isspace((unsigned char)*end)) end++;
+    if (end && *end != '\0') return FALSE;
+
+    *value = parsed;
+    return TRUE;
+}
+
+static void SetDefaultQuickCountdownOptions(ConfigSnapshot* snapshot) {
+    if (!snapshot) return;
+    memset(snapshot->timeOptions, 0, sizeof(snapshot->timeOptions));
+    snapshot->timeOptionsCount = DEFAULT_QUICK_COUNTDOWN_COUNT;
+    snapshot->timeOptions[0] = DEFAULT_QUICK_COUNTDOWN_1;
+    snapshot->timeOptions[1] = DEFAULT_QUICK_COUNTDOWN_2;
+    snapshot->timeOptions[2] = DEFAULT_QUICK_COUNTDOWN_3;
+}
+
+static BOOL ParseQuickCountdownOptions(char* optionsStr, int* parsedOptions,
+                                       int* parsedCount) {
+    if (!optionsStr || !parsedOptions || !parsedCount) {
+        return FALSE;
+    }
+
+    *parsedCount = 0;
+    char* cursor = optionsStr;
+    while (cursor) {
+        char* next = strchr(cursor, ',');
+        if (next) {
+            *next = '\0';
+            next++;
+        }
+
+        if (*parsedCount >= MAX_TIME_OPTIONS) {
+            LOG_WARNING("Too many countdown presets in config; maximum is %d",
+                        MAX_TIME_OPTIONS);
+            return FALSE;
+        }
+
+        int seconds = 0;
+        if (!ParsePositiveSecondsToken(cursor, &seconds)) {
+            LOG_WARNING("Invalid countdown preset in config: '%s'", cursor);
+            return FALSE;
+        }
+
+        parsedOptions[*parsedCount] = seconds;
+        (*parsedCount)++;
+        cursor = next;
+    }
+
+    return *parsedCount > 0;
+}
+
+static void SetDefaultPomodoroTimeOptions(ConfigSnapshot* snapshot) {
+    if (!snapshot) return;
+    memset(snapshot->pomodoroTimes, 0, sizeof(snapshot->pomodoroTimes));
+    snapshot->pomodoroTimesCount = DEFAULT_POMODORO_TIMES_COUNT;
+    snapshot->pomodoroTimes[0] = DEFAULT_POMODORO_WORK;
+    snapshot->pomodoroTimes[1] = DEFAULT_POMODORO_SHORT_BREAK;
+    snapshot->pomodoroTimes[2] = DEFAULT_POMODORO_WORK;
+    snapshot->pomodoroTimes[3] = DEFAULT_POMODORO_LONG_BREAK;
+}
+
+static BOOL ParsePomodoroTimeOptions(char* optionsStr, int* parsedOptions,
+                                     int* parsedCount) {
+    if (!optionsStr || !parsedOptions || !parsedCount) {
+        return FALSE;
+    }
+
+    *parsedCount = 0;
+    char* cursor = optionsStr;
+    while (cursor) {
+        char* next = strchr(cursor, ',');
+        if (next) {
+            *next = '\0';
+            next++;
+        }
+
+        if (*parsedCount >= MAX_POMODORO_TIMES) {
+            LOG_WARNING("Too many Pomodoro intervals in config; maximum is %d",
+                        MAX_POMODORO_TIMES);
+            return FALSE;
+        }
+
+        int seconds = 0;
+        if (!ParsePositiveSecondsToken(cursor, &seconds)) {
+            LOG_WARNING("Invalid Pomodoro interval in config: '%s'", cursor);
+            return FALSE;
+        }
+
+        parsedOptions[*parsedCount] = seconds;
+        (*parsedCount)++;
+        cursor = next;
+    }
+
+    return *parsedCount > 0;
 }
 
 /* Enum-string mappings (reused from config_core.c) */
@@ -135,7 +270,12 @@ static void LoadConfigItem(const ConfigItemMeta* meta, const char* config_path, 
         case CONFIG_TYPE_FLOAT:
             ReadIniString(meta->section, meta->key, meta->defaultValue,
                          buffer, sizeof(buffer), config_path);
-            *(float*)fieldPtr = (float)atof(buffer);
+            if (!ParseConfigFloatStrict(buffer, (float*)fieldPtr)) {
+                float defaultValue = 0.0f;
+                if (ParseConfigFloatStrict(meta->defaultValue, &defaultValue)) {
+                    *(float*)fieldPtr = defaultValue;
+                }
+            }
             break;
             
         case CONFIG_TYPE_ENUM: {
@@ -194,43 +334,37 @@ static void ProcessFontPath(ConfigSnapshot* snapshot, const char* config_path) {
     
     /* Set font internal name */
     if (isFontsFolderFont) {
+        BOOL resolvedFontName = FALSE;
         wchar_t wConfigPath[MAX_PATH] = {0};
-        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
-        
-        wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
-        if (lastSep) {
-            *lastSep = L'\0';
-            
-            wchar_t wActualFontFileName[MAX_PATH] = {0};
-            MultiByteToWideChar(CP_UTF8, 0, actualFontFileName, -1, wActualFontFileName, MAX_PATH);
-            
-            wchar_t wFontPath[MAX_PATH] = {0};
-            _snwprintf_s(wFontPath, MAX_PATH, _TRUNCATE, L"%s\\resources\\fonts\\%s", 
-                        wConfigPath, wActualFontFileName);
-            
-            if (GetFileAttributesW(wFontPath) != INVALID_FILE_ATTRIBUTES) {
-                char fontPath[MAX_PATH];
-                WideCharToMultiByte(CP_UTF8, 0, wFontPath, -1, fontPath, MAX_PATH, NULL, NULL);
-                if (!GetFontNameFromFile(fontPath, snapshot->fontInternalName, 
-                                        sizeof(snapshot->fontInternalName))) {
-                    char* lastSlash = strrchr(actualFontFileName, '\\');
-                    const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
-                    strncpy(snapshot->fontInternalName, filenameOnly, 
-                           sizeof(snapshot->fontInternalName) - 1);
-                    snapshot->fontInternalName[sizeof(snapshot->fontInternalName) - 1] = '\0';
-                    char* dot = strrchr(snapshot->fontInternalName, '.');
-                    if (dot) *dot = '\0';
+
+        if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) > 0) {
+            wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+            if (lastSep) {
+                *lastSep = L'\0';
+
+                wchar_t wActualFontFileName[MAX_PATH] = {0};
+                if (MultiByteToWideChar(CP_UTF8, 0, actualFontFileName, -1,
+                                        wActualFontFileName, MAX_PATH) > 0) {
+                    wchar_t wFontPath[MAX_PATH] = {0};
+                    int fontPathWritten = _snwprintf_s(wFontPath, MAX_PATH, _TRUNCATE,
+                                                       L"%s\\resources\\fonts\\%s",
+                                                       wConfigPath, wActualFontFileName);
+
+                    if (fontPathWritten >= 0 &&
+                        GetFileAttributesW(wFontPath) != INVALID_FILE_ATTRIBUTES) {
+                        char fontPath[MAX_PATH] = {0};
+                        if (WideCharToMultiByte(CP_UTF8, 0, wFontPath, -1,
+                                                fontPath, MAX_PATH, NULL, NULL) > 0 &&
+                            GetFontNameFromFile(fontPath, snapshot->fontInternalName,
+                                                sizeof(snapshot->fontInternalName))) {
+                            resolvedFontName = TRUE;
+                        }
+                    }
                 }
-            } else {
-                char* lastSlash = strrchr(actualFontFileName, '\\');
-                const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
-                strncpy(snapshot->fontInternalName, filenameOnly, 
-                       sizeof(snapshot->fontInternalName) - 1);
-                snapshot->fontInternalName[sizeof(snapshot->fontInternalName) - 1] = '\0';
-                char* dot = strrchr(snapshot->fontInternalName, '.');
-                if (dot) *dot = '\0';
             }
-        } else {
+        }
+
+        if (!resolvedFontName) {
             char* lastSlash = strrchr(actualFontFileName, '\\');
             const char* filenameOnly = lastSlash ? (lastSlash + 1) : actualFontFileName;
             strncpy(snapshot->fontInternalName, filenameOnly, 
@@ -292,37 +426,54 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
     ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", 
                  FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
                  snapshot->fontFileName, sizeof(snapshot->fontFileName), config_path);
-    LOG_INFO("ConfigLoader: Read FONT_FILE_NAME from INI: '%s'", snapshot->fontFileName);
     ProcessFontPath(snapshot, config_path);
-    LOG_INFO("ConfigLoader: After ProcessFontPath, fontFileName = '%s'", snapshot->fontFileName);
     
     /* Website URL - now stored as UTF-8 char */
     ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "",
                  snapshot->timeoutWebsiteUrl, MAX_PATH, config_path);
     
     /* Parse time options (comma-separated array) */
-    char timeOptionsStr[256] = {0};
-    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300",
-                 timeOptionsStr, sizeof(timeOptionsStr), config_path);
-    
-    snapshot->timeOptionsCount = 0;
-    char* token = strtok(timeOptionsStr, ",");
-    while (token && snapshot->timeOptionsCount < MAX_TIME_OPTIONS) {
-        while (*token == ' ') token++;
-        snapshot->timeOptions[snapshot->timeOptionsCount++] = atoi(token);
-        token = strtok(NULL, ",");
+    char timeOptionsStr[TIME_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
+    BOOL timeOptionsComplete = ReadIniStringExact(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS",
+                                                  DEFAULT_TIME_OPTIONS_INI,
+                                                  timeOptionsStr,
+                                                  sizeof(timeOptionsStr), config_path);
+    int parsedTimeOptions[MAX_TIME_OPTIONS] = {0};
+    int parsedTimeOptionsCount = 0;
+    if (timeOptionsComplete &&
+        ParseQuickCountdownOptions(timeOptionsStr, parsedTimeOptions,
+                                   &parsedTimeOptionsCount)) {
+        snapshot->timeOptionsCount = parsedTimeOptionsCount;
+        memcpy(snapshot->timeOptions, parsedTimeOptions,
+               (size_t)parsedTimeOptionsCount * sizeof(parsedTimeOptions[0]));
+    } else {
+        if (!timeOptionsComplete) {
+            LOG_WARNING("Countdown presets config is too long, using defaults");
+        }
+        SetDefaultQuickCountdownOptions(snapshot);
     }
     
     /* Parse Pomodoro time options (comma-separated array) */
-    char pomodoroTimeOptions[256] = {0};
-    ReadIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600",
-                 pomodoroTimeOptions, sizeof(pomodoroTimeOptions), config_path);
-    
-    snapshot->pomodoroTimesCount = 0;
-    token = strtok(pomodoroTimeOptions, ",");
-    while (token && snapshot->pomodoroTimesCount < 10) {
-        snapshot->pomodoroTimes[snapshot->pomodoroTimesCount++] = atoi(token);
-        token = strtok(NULL, ",");
+    char pomodoroTimeOptions[POMODORO_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
+    BOOL pomodoroOptionsComplete = ReadIniStringExact(INI_SECTION_POMODORO,
+                                                      "POMODORO_TIME_OPTIONS",
+                                                      DEFAULT_POMODORO_OPTIONS_INI,
+                                                      pomodoroTimeOptions,
+                                                      sizeof(pomodoroTimeOptions),
+                                                      config_path);
+    int parsedPomodoroTimes[MAX_POMODORO_TIMES] = {0};
+    int parsedPomodoroTimesCount = 0;
+    if (pomodoroOptionsComplete &&
+        ParsePomodoroTimeOptions(pomodoroTimeOptions, parsedPomodoroTimes,
+                                 &parsedPomodoroTimesCount)) {
+        snapshot->pomodoroTimesCount = parsedPomodoroTimesCount;
+        memcpy(snapshot->pomodoroTimes, parsedPomodoroTimes,
+               (size_t)parsedPomodoroTimesCount * sizeof(parsedPomodoroTimes[0]));
+    } else {
+        if (!pomodoroOptionsComplete) {
+            LOG_WARNING("Pomodoro intervals config is too long, using defaults");
+        }
+        SetDefaultPomodoroTimeOptions(snapshot);
     }
     
     /* Read Recent Files section (dynamic keys) */

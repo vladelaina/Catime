@@ -32,11 +32,12 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
     /* Handle all animations (builtin + custom) via unified lookup */
     char animName[MAX_PATH];
     if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
-        StartAnimationPreview(animName);
+        StartPreview(PREVIEW_TYPE_ANIMATION, animName, hwnd);
         return TRUE;
     }
 
-    if (menuId >= CMD_FONT_SELECTION_BASE && menuId < CMD_FONT_SELECTION_END) {
+    if (menuId >= CMD_FONT_SELECTION_BASE &&
+        menuId < CMD_FONT_SELECTION_BASE + FONT_MENU_MAX_ENTRIES) {
         char fontPath[MAX_PATH];
         if (GetFontPathFromMenuId(menuId, fontPath, sizeof(fontPath))) {
             StartPreview(PREVIEW_TYPE_FONT, fontPath, hwnd);

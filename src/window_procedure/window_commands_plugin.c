@@ -25,6 +25,10 @@
 /* External function declarations */
 extern void GetActiveColor(char* outColor, size_t bufferSize);
 
+#if CLOCK_IDM_PLUGINS_BASE + MAX_PLUGINS > CLOCK_IDM_PLUGINS_SETTINGS_BASE
+#error "Plugin menu command range overlaps plugin settings command range"
+#endif
+
 /* ============================================================================
  * Plugin Command Handlers
  * ============================================================================ */
@@ -37,10 +41,10 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     if (PluginManager_IsPluginRunning(pluginIndex)) {
         PluginManager_StopPlugin(pluginIndex);
         PluginData_Clear();
-        
+
         /* Prevent countdown completion notification from triggering */
         countdown_message_shown = true;
-        
+
         /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
         CLOCK_SHOW_CURRENT_TIME = false;
         CLOCK_COUNT_UP = false;
@@ -62,21 +66,21 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     }
 
     /* Plugin is trusted - proceed with state change and launch */
-    
+
     /* Stop notification sound */
     StopNotificationSound();
-    
+
     /* Prevent countdown completion notification from triggering */
     countdown_message_shown = true;
-    
+
     /* Reset timer flags */
     CLOCK_SHOW_CURRENT_TIME = false;
     CLOCK_COUNT_UP = false;
     CLOCK_IS_PAUSED = true;
-    
+
     /* Stop internal timer */
     MainTimer_Stop();
-    
+
     /* Reset Pomodoro if active */
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
 
@@ -93,34 +97,33 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
         _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo.displayName);
         PluginData_SetText(loadingText);
     }
-    
+
     /* Start plugin */
     BOOL startResult = PluginManager_StartPlugin(pluginIndex);
-    
+
     if (!startResult) {
         /* Launch failed - show error */
         LOG_ERROR("Plugin failed to start: %ls", hasPluginInfo ? pluginInfo.displayName : L"unknown");
-        
+
         const wchar_t* errorMsg = PluginProcess_GetLastError();
         if (errorMsg && errorMsg[0] != L'\0') {
-            PluginData_SetText(errorMsg);
+            PluginData_SetStatusText(errorMsg);
         } else {
-            PluginData_SetText(L"FAIL");
+            PluginData_SetStatusText(L"FAIL");
         }
-        PluginData_SetActive(TRUE);
     }
-    
+
     /* Check if animated gradient needs timer for smooth animation */
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
-    if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+    if (IsGradientNameAnimated(activeColor)) {
         MainTimer_Start(hwnd, 66);  /* 15 FPS for smooth animation */
     }
-    
+
     /* Ensure window visible and consistent with topmost policy */
     EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
-    
+
     return TRUE;
 }
 
@@ -131,7 +134,7 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
     /* Check if already in show file mode */
     BOOL isShowFileMode = PluginData_IsActive();
     BOOL anyPluginRunning = FALSE;
-    
+
     int pluginCount = PluginManager_GetPluginCount();
     for (int i = 0; i < pluginCount; i++) {
         if (PluginManager_IsPluginRunning(i)) {
@@ -139,15 +142,15 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
             break;
         }
     }
-    
+
     if (isShowFileMode && !anyPluginRunning) {
         /* Toggle off */
         BOOL hadCatimeTag = PluginData_HasCatimeTag();
         PluginData_Clear();
-        
+
         /* Prevent countdown completion notification from triggering */
         countdown_message_shown = true;
-        
+
         if (hadCatimeTag) {
             /* Had <catime> tag - restore time display, keep timer */
             InvalidateRect(hwnd, NULL, TRUE);
@@ -163,14 +166,14 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         }
         return TRUE;
     }
-    
+
     /* Toggle on - activate show file mode */
     PluginManager_StopAllPlugins();
     PluginData_SetActive(TRUE);
-    
+
     /* Prevent countdown completion notification from triggering */
     countdown_message_shown = true;
-    
+
     /* Check for <catime> tag */
     if (!PluginData_HasCatimeTag()) {
         MainTimer_Stop();
@@ -178,17 +181,17 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
         CLOCK_COUNT_UP = false;
         CLOCK_IS_PAUSED = false;
     }
-    
+
     /* Check if animated gradient needs timer for smooth animation */
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
-    if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+    if (IsGradientNameAnimated(activeColor)) {
         MainTimer_Start(hwnd, 66);  /* 15 FPS for smooth animation */
     }
-    
+
     EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
-    
+
     return TRUE;
 }
 
@@ -203,16 +206,16 @@ static BOOL HandleShowPluginFile(HWND hwnd) {
 void HandlePluginExit(HWND hwnd) {
     /* Cancel any pending exit countdown */
     PluginExit_Cancel();
-    
+
     /* Stop all plugins */
     PluginManager_StopAllPlugins();
-    
+
     /* Clear plugin data */
     PluginData_Clear();
-    
+
     /* Prevent countdown completion notification from triggering */
     countdown_message_shown = true;
-    
+
     /* Switch to idle state - don't reset timer to avoid 1-minute fallback */
     CLOCK_SHOW_CURRENT_TIME = false;
     CLOCK_COUNT_UP = false;
@@ -221,7 +224,7 @@ void HandlePluginExit(HWND hwnd) {
     countdown_elapsed_time = 0;
     MainTimer_Stop();
     InvalidateRect(hwnd, NULL, TRUE);
-    
+
     LOG_INFO("Plugin exit completed via <exit> tag");
 }
 
@@ -231,7 +234,7 @@ void HandlePluginExit(HWND hwnd) {
 
 BOOL HandlePluginCommand(HWND hwnd, UINT cmd) {
     /* Plugin start/stop */
-    if (cmd >= CLOCK_IDM_PLUGINS_BASE && cmd < CLOCK_IDM_PLUGINS_SETTINGS_BASE) {
+    if (cmd >= CLOCK_IDM_PLUGINS_BASE && cmd < CLOCK_IDM_PLUGINS_BASE + MAX_PLUGINS) {
         int pluginIndex = cmd - CLOCK_IDM_PLUGINS_BASE;
         return HandlePluginToggle(hwnd, pluginIndex);
     }

@@ -8,6 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strsafe.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 
 static const PreReleaseType PRE_RELEASE_TYPES[] = {
     {"alpha", 5, 1},
@@ -17,24 +20,82 @@ static const PreReleaseType PRE_RELEASE_TYPES[] = {
 
 static const int PRE_RELEASE_TYPE_COUNT = sizeof(PRE_RELEASE_TYPES) / sizeof(PreReleaseType);
 
+static BOOL ParseNonNegativeIntBounded(const char* text, int* value, const char** endOut) {
+    if (!text || !value) return FALSE;
+
+    while (isspace((unsigned char)*text)) text++;
+    if (!isdigit((unsigned char)*text)) return FALSE;
+
+    errno = 0;
+    char* end = NULL;
+    long parsed = strtol(text, &end, 10);
+    if (end == text || errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
+        return FALSE;
+    }
+
+    *value = (int)parsed;
+    if (endOut) {
+        *endOut = end;
+    }
+    return TRUE;
+}
+
+static BOOL ParseVersionCore(const char* version, int* major, int* minor, int* patch) {
+    if (!version || !major || !minor || !patch) return FALSE;
+
+    const char* cursor = version;
+    int parsedMajor = 0;
+    int parsedMinor = 0;
+    int parsedPatch = 0;
+
+    if (!ParseNonNegativeIntBounded(cursor, &parsedMajor, &cursor) || *cursor != '.') {
+        return FALSE;
+    }
+    cursor++;
+
+    if (!ParseNonNegativeIntBounded(cursor, &parsedMinor, &cursor) || *cursor != '.') {
+        return FALSE;
+    }
+    cursor++;
+
+    if (!ParseNonNegativeIntBounded(cursor, &parsedPatch, &cursor)) {
+        return FALSE;
+    }
+
+    while (isspace((unsigned char)*cursor)) cursor++;
+    if (*cursor != '\0' && *cursor != '-') {
+        return FALSE;
+    }
+
+    *major = parsedMajor;
+    *minor = parsedMinor;
+    *patch = parsedPatch;
+    return TRUE;
+}
+
 /**
  * @brief Extract string field from GitHub JSON response
  * @param fieldName Field to extract (e.g., "tag_name", "body")
  * @return TRUE if field found and extracted
  */
 static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char* output, size_t maxLen) {
-    if (!json || !fieldName || !output || maxLen == 0) return FALSE;
-    
+    if (!output || maxLen == 0) return FALSE;
+    output[0] = '\0';
+    if (!json || !fieldName) return FALSE;
+
     char pattern[128];
-    snprintf(pattern, sizeof(pattern), "\"%s\":", fieldName);
-    
+    int patternLen = snprintf(pattern, sizeof(pattern), "\"%s\":", fieldName);
+    if (patternLen < 0 || (size_t)patternLen >= sizeof(pattern)) {
+        return FALSE;
+    }
+
     const char* fieldPos = strstr(json, pattern);
     if (!fieldPos) {
         LOG_ERROR("JSON field not found: %s", fieldName);
         return FALSE;
     }
-    
-    const char* valueStart = strchr(fieldPos + strlen(pattern), '\"');
+
+    const char* valueStart = strchr(fieldPos + patternLen, '\"');
     if (!valueStart) return FALSE;
     valueStart++;
     
@@ -63,13 +124,14 @@ static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char
 
 /** @brief Process JSON escape sequences (\n, \r, \", \\) */
 static void ProcessJsonEscapes(const char* input, char* output, size_t maxLen) {
-    if (!input || !output || maxLen == 0) return;
-    
+    if (!output || maxLen == 0) return;
+    output[0] = '\0';
+    if (!input) return;
+
     size_t writePos = 0;
-    size_t inputLen = strlen(input);
-    
-    for (size_t i = 0; i < inputLen && writePos < maxLen - 1; i++) {
-        if (input[i] == '\\' && i + 1 < inputLen) {
+
+    for (size_t i = 0; input[i] != '\0' && writePos < maxLen - 1; i++) {
+        if (input[i] == '\\' && input[i + 1] != '\0') {
             switch (input[i + 1]) {
                 case 'n':
                     output[writePos++] = '\r';
@@ -114,7 +176,15 @@ static void ParsePreReleaseInfo(const char* preRelease, int* outType, int* outNu
         const PreReleaseType* type = &PRE_RELEASE_TYPES[i];
         if (strncmp(preRelease, type->prefix, type->prefixLen) == 0) {
             *outType = type->priority;
-            sscanf(preRelease + type->prefixLen, "%d", outNum);
+            const char* suffix = preRelease + type->prefixLen;
+            int parsedNum = 0;
+            const char* end = NULL;
+            if (ParseNonNegativeIntBounded(suffix, &parsedNum, &end)) {
+                while (end && isspace((unsigned char)*end)) end++;
+                if (end && *end == '\0') {
+                    *outNum = parsedNum;
+                }
+            }
             return;
         }
     }
@@ -172,9 +242,12 @@ int CompareVersions(const char* version1, const char* version2) {
     int major1 = 0, minor1 = 0, patch1 = 0;
     int major2 = 0, minor2 = 0, patch2 = 0;
     
-    // Parse major.minor.patch
-    sscanf(version1, "%d.%d.%d", &major1, &minor1, &patch1);
-    sscanf(version2, "%d.%d.%d", &major2, &minor2, &patch2);
+    if (!ParseVersionCore(version1, &major1, &minor1, &patch1)) {
+        major1 = minor1 = patch1 = 0;
+    }
+    if (!ParseVersionCore(version2, &major2, &minor2, &patch2)) {
+        major2 = minor2 = patch2 = 0;
+    }
     
     if (major1 != major2) return (major1 > major2) ? 1 : -1;
     if (minor1 != minor2) return (minor1 > minor2) ? 1 : -1;
@@ -195,6 +268,10 @@ int CompareVersions(const char* version1, const char* version2) {
  */
 BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t versionMaxLen,
                                char* downloadUrl, size_t urlMaxLen, char* releaseNotes, size_t notesMaxLen) {
+    if (latestVersion && versionMaxLen > 0) latestVersion[0] = '\0';
+    if (downloadUrl && urlMaxLen > 0) downloadUrl[0] = '\0';
+    if (releaseNotes && notesMaxLen > 0) releaseNotes[0] = '\0';
+
     if (!ExtractJsonStringField(jsonResponse, "tag_name", latestVersion, versionMaxLen)) {
         return FALSE;
     }
@@ -207,13 +284,18 @@ BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t ve
         return FALSE;
     }
     
-    char rawNotes[NOTES_BUFFER_SIZE];
-    if (ExtractJsonStringField(jsonResponse, "body", rawNotes, sizeof(rawNotes))) {
+    char* rawNotes = (char*)malloc(NOTES_BUFFER_SIZE);
+    if (!rawNotes) {
+        return FALSE;
+    }
+
+    if (ExtractJsonStringField(jsonResponse, "body", rawNotes, NOTES_BUFFER_SIZE)) {
         ProcessJsonEscapes(rawNotes, releaseNotes, notesMaxLen);
     } else {
         LOG_WARNING("Release notes not found, using default text");
         StringCbCopyA(releaseNotes, notesMaxLen, "No release notes available.");
     }
-    
+
+    free(rawNotes);
     return TRUE;
 }

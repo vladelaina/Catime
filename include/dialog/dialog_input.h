@@ -84,22 +84,14 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 extern wchar_t inputText[256];
 
 /**
- * @brief Active input dialog handle
+ * @brief Active custom countdown input dialog handle
  *
  * @details
- * For IsDialogMessage(), preventing duplicates.
- * NULL when closed.
+ * Used by the countdown hotkey to foreground the custom countdown dialog
+ * only. Other configuration dialogs reuse DlgProc but must not overwrite
+ * this handle.
  */
 extern HWND g_hwndInputDialog;
-
-/**
- * @brief Selected pomodoro time index for editing
- *
- * @details
- * Used to display current value when opening pomodoro time dialog.
- * Set to -1 when not in use.
- */
-extern int g_pomodoroSelectedIndex;
 
 #endif /* DIALOG_INPUT_H */
 

@@ -13,6 +13,11 @@
  * ============================================================================ */
 
 /**
+ * @brief Handle combined config reload after config.ini changes
+ */
+LRESULT HandleAppConfigChanged(HWND hwnd);
+
+/**
  * @brief Handle WM_APP_DISPLAY_CHANGED
  */
 LRESULT HandleAppDisplayChanged(HWND hwnd);

@@ -11,10 +11,31 @@
 #include <strsafe.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <math.h>
+
+#define NOTIFICATION_DIALOG_MAX_TIMEOUT_MS 60000
 
 /* ============================================================================
  * Notification Display Dialog
  * ============================================================================ */
+
+static BOOL ConvertNotificationInputToUtf8(const wchar_t* source, char* dest, size_t destSize) {
+    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
+        return FALSE;
+    }
+
+    dest[0] = '\0';
+    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
+    if (required <= 0 || (size_t)required > destSize) {
+        return FALSE;
+    }
+
+    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
+                               (int)destSize, NULL, NULL) > 0;
+}
 
 void ShowNotificationDisplayDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_NOTIFICATION_DISP)) {
@@ -31,6 +52,53 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
     }
+}
+
+static BOOL ParseTimeoutMsInput(const char* text, int* timeoutMs) {
+    if (!text || !timeoutMs) return FALSE;
+
+    while (isspace((unsigned char)*text)) text++;
+    if (*text == '\0') return FALSE;
+
+    errno = 0;
+    char* end = NULL;
+    double seconds = strtod(text, &end);
+    if (end == text || errno == ERANGE || !isfinite(seconds) || seconds < 0.0) {
+        return FALSE;
+    }
+
+    while (end && isspace((unsigned char)*end)) end++;
+    if (end && *end != '\0') return FALSE;
+
+    double ms = seconds * 1000.0;
+    if (ms > (double)NOTIFICATION_DIALOG_MAX_TIMEOUT_MS) {
+        return FALSE;
+    }
+
+    int roundedMs = (int)(ms + 0.5);
+    if (roundedMs > 0 && roundedMs < 100) roundedMs = 100;
+    *timeoutMs = roundedMs;
+    return TRUE;
+}
+
+static BOOL ParseOpacityInput(const char* text, int* opacity) {
+    if (!text || !opacity) return FALSE;
+
+    while (isspace((unsigned char)*text)) text++;
+    if (*text == '\0') return FALSE;
+
+    errno = 0;
+    char* end = NULL;
+    long parsed = strtol(text, &end, 10);
+    if (end == text || errno == ERANGE || parsed < 1 || parsed > 100 || parsed > INT_MAX) {
+        return FALSE;
+    }
+
+    while (end && isspace((unsigned char)*end)) end++;
+    if (end && *end != '\0') return FALSE;
+
+    *opacity = (int)parsed;
+    return TRUE;
 }
 
 INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -98,21 +166,28 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                     }
                 }
 
-                WideCharToMultiByte(CP_UTF8, 0, wtimeStr, -1, timeStr, sizeof(timeStr), NULL, NULL);
-                WideCharToMultiByte(CP_UTF8, 0, wopacityStr, -1, opacityStr, sizeof(opacityStr), NULL, NULL);
+                if (!ConvertNotificationInputToUtf8(wtimeStr, timeStr, sizeof(timeStr))) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+                    return TRUE;
+                }
+                if (!ConvertNotificationInputToUtf8(wopacityStr, opacityStr, sizeof(opacityStr))) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+                    return TRUE;
+                }
 
-                float timeInSeconds = strtof(timeStr, NULL);
-                int timeInMs = (int)(timeInSeconds * 1000.0f);
-
-                if (timeInMs > 0 && timeInMs < 100) timeInMs = 100;
-
-                int opacity = atoi(opacityStr);
-
-                if (opacity < 1) opacity = 1;
-                if (opacity > 100) opacity = 100;
+                int timeInMs = 0;
+                int opacity = 0;
+                if (!ParseTimeoutMsInput(timeStr, &timeInMs)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+                    return TRUE;
+                }
+                if (!ParseOpacityInput(opacityStr, &opacity)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+                    return TRUE;
+                }
 
                 extern void WriteConfigNotificationTimeout(int timeout_ms);
-                extern void WriteConfigNotificationOpacity(int opacity);
+                extern BOOL WriteConfigNotificationOpacity(int opacity);
                 WriteConfigNotificationTimeout(timeInMs);
                 WriteConfigNotificationOpacity(opacity);
 
@@ -143,9 +218,9 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                 if (hEditTime) Dialog_UnsubclassEdit(hEditTime, ctx);
                 if (hEditOpacity) Dialog_UnsubclassEdit(hEditOpacity, ctx);
 
-                Dialog_FreeContext(ctx);
+                Dialog_DestroyContext(hwndDlg);
             }
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_NOTIFICATION_DISP);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_NOTIFICATION_DISP, hwndDlg);
             break;
     }
 

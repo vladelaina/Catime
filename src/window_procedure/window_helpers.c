@@ -27,7 +27,6 @@
 /* Defined in config_ini.c; kept as a file-scope forward declaration until a shared header exists. */
 void InvalidateIniCache(void);
 
-extern wchar_t inputText[256];
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
 
@@ -67,64 +66,22 @@ BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
 }
 
 /* ============================================================================
- * Input Validation Framework
- * ============================================================================ */
-
-static BOOL ValidateTimeInput(const char* input, void* output) {
-    return ParseInput(input, (int*)output);
-}
-
-BOOL ValidatedInputLoop(HWND hwnd, UINT dialogId, 
-                        InputValidator validator, void* output) {
-    while (1) {
-        memset(inputText, 0, sizeof(inputText));
-        DialogBoxParamW(GetModuleHandle(NULL), MAKEINTRESOURCEW(dialogId), 
-                       hwnd, DlgProc, (LPARAM)dialogId);
-        
-        if (inputText[0] == L'\0' || isAllSpacesOnly(inputText)) {
-            return FALSE;
-        }
-        
-        Utf8String us = ToUtf8(inputText);
-        if (!us.valid) {
-            ShowErrorDialog(hwnd);
-            continue;
-        }
-        char inputTextA[256];
-        strcpy_s(inputTextA, sizeof(inputTextA), us.buf);
-        
-        if (validator(inputTextA, output)) {
-            return TRUE;
-        } else {
-            ShowErrorDialog(hwnd);
-        }
-    }
-}
-
-BOOL ValidatedTimeInputLoop(HWND hwnd, UINT dialogId, int* outSeconds) {
-    int result = 0;
-    if (ValidatedInputLoop(hwnd, dialogId, ValidateTimeInput, &result)) {
-        if (outSeconds) *outSeconds = result;
-        return TRUE;
-    }
-    return FALSE;
-}
-
-/* ============================================================================
  * Input Dialog System
  * ============================================================================ */
 
 INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    static wchar_t* result;
-    static size_t maxLen;
-    
+    InputBoxParams* params = (InputBoxParams*)GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+
     switch (uMsg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_INPUT, hwndDlg);
-            InputBoxParams* params = (InputBoxParams*)lParam;
-            result = params->result;
-            maxLen = params->maxLen;
-            
+            Dialog_RegisterInstance(DIALOG_INSTANCE_INPUT_BOX, hwndDlg);
+            params = (InputBoxParams*)lParam;
+            if (!params || !params->result || params->maxLen == 0 || params->maxLen > INT_MAX) {
+                EndDialog(hwndDlg, FALSE);
+                return TRUE;
+            }
+            SetWindowLongPtr(hwndDlg, GWLP_USERDATA, (LONG_PTR)params);
+
             SetWindowTextW(hwndDlg, params->title);
             SetDlgItemTextW(hwndDlg, IDC_STATIC_PROMPT, params->prompt);
             SetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, params->defaultText);
@@ -147,7 +104,11 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDOK:
-                    GetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, result, (int)maxLen);
+                    if (!params || !params->result || params->maxLen == 0 || params->maxLen > INT_MAX) {
+                        EndDialog(hwndDlg, FALSE);
+                        return TRUE;
+                    }
+                    GetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, params->result, (int)params->maxLen);
                     EndDialog(hwndDlg, TRUE);
                     return TRUE;
                 
@@ -162,7 +123,8 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             return TRUE;
             
         case WM_DESTROY:
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_INPUT);
+            SetWindowLongPtr(hwndDlg, GWLP_USERDATA, 0);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_INPUT_BOX, hwndDlg);
             break;
     }
     
@@ -190,6 +152,12 @@ BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
  * ============================================================================ */
 
 BOOL ShowFilePicker(HWND hwnd, char* selectedPath, size_t bufferSize) {
+    if (!selectedPath || bufferSize == 0 || bufferSize > INT_MAX) {
+        return FALSE;
+    }
+
+    selectedPath[0] = '\0';
+
     wchar_t szFile[MAX_PATH] = {0};
     
     OPENFILENAMEW ofn = {0};
@@ -202,7 +170,16 @@ BOOL ShowFilePicker(HWND hwnd, char* selectedPath, size_t bufferSize) {
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
     
     if (GetOpenFileNameW(&ofn)) {
-        WideCharToMultiByte(CP_UTF8, 0, szFile, -1, selectedPath, (int)bufferSize, NULL, NULL);
+        int required = WideCharToMultiByte(CP_UTF8, 0, szFile, -1, NULL, 0, NULL, NULL);
+        if (required <= 0 || (size_t)required > bufferSize) {
+            return FALSE;
+        }
+
+        if (WideCharToMultiByte(CP_UTF8, 0, szFile, -1, selectedPath,
+                                (int)bufferSize, NULL, NULL) <= 0) {
+            selectedPath[0] = '\0';
+            return FALSE;
+        }
         return TRUE;
     }
     return FALSE;
@@ -278,7 +255,11 @@ void ResetConfigurationFile(void) {
     
     /* Delete the config file - ReadConfig will recreate it */
     wchar_t wconfig_path[MAX_PATH];
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    if (config_path[0] == '\0' ||
+        MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH) == 0) {
+        LOG_WARNING("Failed to convert config path for reset");
+        return;
+    }
     DeleteFileW(wconfig_path);
 }
 
@@ -296,16 +277,15 @@ void ReloadDefaultFont(void) {
 }
 
 void RecalculateWindowSize(HWND hwnd) {
-    
-    CLOCK_WINDOW_SCALE = 1.0f;
-    CLOCK_FONT_SCALE_FACTOR = 1.0f;
-    PLUGIN_FONT_SCALE_FACTOR = 1.0f;
-    
     HDC hdc = GetDC(hwnd);
     if (!hdc) return;
     
     wchar_t fontNameW[256];
-    MultiByteToWideChar(CP_UTF8, 0, FONT_INTERNAL_NAME, -1, fontNameW, 256);
+    int fontNameLen = MultiByteToWideChar(CP_UTF8, 0, FONT_INTERNAL_NAME, -1,
+                                          fontNameW, (int)(sizeof(fontNameW) / sizeof(fontNameW[0])));
+    if (fontNameLen <= 0) {
+        lstrcpynW(fontNameW, L"Segoe UI", (int)(sizeof(fontNameW) / sizeof(fontNameW[0])));
+    }
     
     HFONT hFont = CreateFontW(
         -CLOCK_BASE_FONT_SIZE, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
@@ -313,28 +293,43 @@ void RecalculateWindowSize(HWND hwnd) {
         CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE, fontNameW
     );
-    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+    HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
     
     char time_text[50];
     FormatTime(CLOCK_TOTAL_TIME, time_text);
     
     wchar_t time_textW[50];
-    MultiByteToWideChar(CP_UTF8, 0, time_text, -1, time_textW, 50);
-    
-    SIZE textSize;
-    GetTextExtentPoint32(hdc, time_textW, (int)wcslen(time_textW), &textSize);
-    
-    SelectObject(hdc, hOldFont);
-    DeleteObject(hFont);
+    int timeTextLen = MultiByteToWideChar(CP_UTF8, 0, time_text, -1,
+                                          time_textW, (int)(sizeof(time_textW) / sizeof(time_textW[0])));
+    if (timeTextLen <= 0) {
+        lstrcpynW(time_textW, L"00:00", (int)(sizeof(time_textW) / sizeof(time_textW[0])));
+        timeTextLen = lstrlenW(time_textW) + 1;
+    }
+
+    SIZE textSize = { CLOCK_BASE_FONT_SIZE * 4, CLOCK_BASE_FONT_SIZE };
+    int visibleChars = timeTextLen > 0 ? timeTextLen - 1 : lstrlenW(time_textW);
+    GetTextExtentPoint32W(hdc, time_textW, visibleChars, &textSize);
+
+    if (hOldFont) SelectObject(hdc, hOldFont);
+    if (hFont) DeleteObject(hFont);
     ReleaseDC(hwnd, hdc);
     
     int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+    if (screenHeight <= 0) {
+        return;
+    }
+
     float defaultScale = (screenHeight * 0.03f) / 20.0f;
-    CLOCK_WINDOW_SCALE = defaultScale;
-    CLOCK_FONT_SCALE_FACTOR = defaultScale;
     
     int newWidth = (int)(textSize.cx * defaultScale);
     int newHeight = (int)(textSize.cy * defaultScale);
+    if (newWidth <= 0 || newHeight <= 0) {
+        return;
+    }
+
+    CLOCK_WINDOW_SCALE = defaultScale;
+    CLOCK_FONT_SCALE_FACTOR = defaultScale;
+    PLUGIN_FONT_SCALE_FACTOR = 1.0f;
     
     ResolveConfiguredWindowPosition(newWidth, newHeight,
                                     &CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
@@ -351,25 +346,6 @@ void RecalculateWindowSize(HWND hwnd) {
  * ============================================================================ */
 
 void SetTimeoutAction(const char* action) {
-    if (strcmp(action, "MESSAGE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-    } else if (strcmp(action, "LOCK") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_LOCK;
-    } else if (strcmp(action, "SHUTDOWN") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHUTDOWN;
-    } else if (strcmp(action, "RESTART") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_RESTART;
-    } else if (strcmp(action, "OPEN_FILE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-    } else if (strcmp(action, "SHOW_TIME") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SHOW_TIME;
-    } else if (strcmp(action, "COUNT_UP") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_COUNT_UP;
-    } else if (strcmp(action, "OPEN_WEBSITE") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-    } else if (strcmp(action, "SLEEP") == 0) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_SLEEP;
-    }
     WriteConfigTimeoutAction(action);
 }
 

@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include "log.h"
 
 #define BULLET_POINT L"• "
 
@@ -26,6 +25,7 @@ static BOOL CalculateDisplayBufferCapacity(size_t textLen, size_t* capacity) {
     if (textLen > (SIZE_MAX - 1024) / 2) return FALSE;
 
     *capacity = textLen * 2 + 1024;
+    if (*capacity > SIZE_MAX / sizeof(wchar_t)) return FALSE;
     return TRUE;
 }
 
@@ -58,13 +58,14 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *fontTags = NULL;
     *fontTagCount = 0;
 
-    if (wcslen(input) == 0) return FALSE;
+    if (*input == L'\0') return FALSE;
 
     // Skip BOM if present (double safety)
     if (*input == 0xFEFF) {
         input++;
-        if (wcslen(input) == 0) return FALSE;
+        if (*input == L'\0') return FALSE;
     }
+    size_t inputLen = wcslen(input);
 
     // Check for <md> tag - only parse content inside tags
     const wchar_t* mdTagStart = wcsstr(input, L"<md>");
@@ -78,7 +79,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     // If no <md> tags and no rich text tags, return plain text
     if (!mdTagStart || !mdTagEnd || mdTagEnd <= mdTagStart) {
         if (!hasRichTextTags) {
-            size_t len = wcslen(input);
+            size_t len = inputLen;
             if (len > (SIZE_MAX / sizeof(wchar_t)) - 1) return FALSE;
             *displayText = (wchar_t*)malloc((len + 1) * sizeof(wchar_t));
             if (!*displayText) return FALSE;
@@ -87,8 +88,6 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         }
         
         // Has rich text tags but no <md> - parse only color/font tags
-        size_t inputLen = wcslen(input);
-        
         ParseState state = {0};
         state.currentPos = 0;
         
@@ -136,18 +135,22 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
         *dest = L'\0';
         
         *displayText = state.displayText;
+        *links = state.links;
+        *linkCount = state.linkCount;
+        *headings = state.headings;
+        *headingCount = state.headingCount;
+        *styles = state.styles;
+        *styleCount = state.styleCount;
+        *listItems = state.listItems;
+        *listItemCount = state.listItemCount;
+        *blockquotes = state.blockquotes;
+        *blockquoteCount = state.blockquoteCount;
         *colorTags = state.colorTags;
         *colorTagCount = state.colorTagCount;
         *fontTags = state.fontTags;
         *fontTagCount = state.fontTagCount;
-        
-        // Allocate empty arrays for other elements
-        *links = NULL; *linkCount = 0;
-        *headings = NULL; *headingCount = 0;
-        *styles = NULL; *styleCount = 0;
-        *listItems = NULL; *listItemCount = 0;
-        *blockquotes = NULL; *blockquoteCount = 0;
-        
+
+        DetachParseState(&state);
         return TRUE;
     }
     
@@ -177,7 +180,9 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     
     const wchar_t* afterStart = mdTagEnd + 5;  // Skip "</md>"
     // Don't skip newlines - preserve user's line breaks after </md>
-    size_t afterLen = wcslen(afterStart);
+    size_t afterOffset = (size_t)(afterStart - input);
+    if (afterOffset > inputLen) return FALSE;
+    size_t afterLen = inputLen - afterOffset;
     
     // Create a modifiable copy of just the markdown content for parsing
     if (contentLen > (SIZE_MAX / sizeof(wchar_t)) - 1) return FALSE;
@@ -450,10 +455,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
     *fontTags = state.fontTags;
     *fontTagCount = state.fontTagCount;
 
-    LOG_INFO("MD Parse Done: DisplayText len %d, Links %d, Headings %d, Styles %d, ColorTags %d, FontTags %d", 
-             wcslen(state.displayText), state.linkCount, state.headingCount, state.styleCount,
-             state.colorTagCount, state.fontTagCount);
-
+    DetachParseState(&state);
     free(mdContent);  // Free temporary markdown content buffer
     return TRUE;
 }

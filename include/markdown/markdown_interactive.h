@@ -22,7 +22,7 @@ typedef enum {
 typedef struct {
     ClickableType type;
     RECT rect;              /* Screen coordinates */
-    wchar_t* url;           /* For links: URL to open */
+    wchar_t* url;           /* For links: owned URL copy */
     int checkboxIndex;      /* For checkboxes: index in output file */
     BOOL isChecked;         /* For checkboxes: current state */
 } ClickableRegion;
@@ -67,17 +67,17 @@ void UpdateRegionPositions(int windowX, int windowY);
 /**
  * @brief Check if a point is in any clickable region
  * @param pt Point in screen coordinates
- * @return Pointer to region or NULL
+ * @return TRUE when a clickable region contains the point
  */
-const ClickableRegion* GetClickableRegionAt(POINT pt);
+BOOL IsClickableRegionAt(POINT pt);
 
 /**
- * @brief Handle click on a region
- * @param region The clicked region
+ * @brief Handle click at a screen point if it hits a clickable region
+ * @param pt Point in screen coordinates
  * @param hwnd Window handle for redraw
  * @return TRUE if handled
  */
-BOOL HandleRegionClick(const ClickableRegion* region, HWND hwnd);
+BOOL HandleRegionClickAt(POINT pt, HWND hwnd);
 
 /**
  * @brief Toggle checkbox in output file

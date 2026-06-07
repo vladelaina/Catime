@@ -23,11 +23,14 @@ typedef struct {
     const char* hexColor;
 } PredefinedColor;
 
+/** @brief Maximum saved palette entries shown in the dynamic color menu */
+#define MAX_COLOR_OPTIONS 256
+
 /* ============================================================================
  * Global state variables (use accessors instead of direct access)
  * ============================================================================ */
 
-/** @brief Dynamically allocated palette (supports unlimited colors) */
+/** @brief Dynamically allocated palette */
 extern PredefinedColor* COLOR_OPTIONS;
 
 /** @brief Palette size (tracked separately due to reallocation) */
@@ -69,17 +72,43 @@ void AddColorOption(const char* hexColor);
  */
 void ClearColorOptions(void);
 
+/**
+ * @brief Safely replace the runtime palette from a config string
+ * @param color_options Comma-separated color/gradient list
+ * @return TRUE if a non-empty validated palette replaced the current one
+ *
+ * @details Parses into temporary storage first. The active palette is left
+ * unchanged if parsing produces no valid colors or memory allocation fails.
+ */
+BOOL ReplaceColorOptionsFromConfigValue(const char* color_options);
+
 /* ============================================================================
  * Configuration Persistence
  * ============================================================================ */
 
 /**
+ * @brief Normalize a color value before persisting or previewing
+ * @param color_input Color string to normalize
+ * @param outValue Output buffer for normalized value
+ * @param outSize Output buffer size
+ * @return TRUE on success, FALSE if the input is invalid or too large
+ */
+BOOL NormalizeColorConfigValue(const char* color_input, char* outValue, size_t outSize);
+
+/**
  * @brief Persists current color to config (auto-normalized)
  * @param color_input Color string to save
+ * @return TRUE if the runtime state and config are synchronized
  * 
  * @details Immediate write ensures persistence even on crash.
  */
-void WriteConfigColor(const char* color_input);
+BOOL WriteConfigColor(const char* color_input);
+
+/**
+ * @brief Persist and apply the quick color palette atomically
+ * @param color_options Comma-separated color/gradient list
+ * @return TRUE if config and runtime palette are synchronized
+ */
+BOOL WriteConfigColorOptions(const char* color_options);
 
 #endif /* COLOR_STATE_H */
-

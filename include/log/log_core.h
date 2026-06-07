@@ -9,8 +9,8 @@
 #include <windows.h>
 
 /**
- * Get log file handle (for crash handler)
- * @return HANDLE or INVALID_HANDLE_VALUE
+ * Get borrowed log file handle (for crash handler)
+ * @return HANDLE or INVALID_HANDLE_VALUE. Caller must not close it.
  */
 HANDLE GetLogFileHandle(void);
 

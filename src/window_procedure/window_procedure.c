@@ -95,6 +95,7 @@ typedef struct {
 } AppMessageDispatchEntry;
 
 static const AppMessageDispatchEntry APP_MESSAGE_DISPATCH_TABLE[] = {
+    {WM_APP_CONFIG_CHANGED, HandleAppConfigChanged},
     {WM_APP_DISPLAY_CHANGED, HandleAppDisplayChanged},
     {WM_APP_TIMER_CHANGED, HandleAppTimerChanged},
     {WM_APP_POMODORO_CHANGED, HandleAppPomodoroChanged},
@@ -153,6 +154,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_MOUSEWHEEL, HandleMouseWheel},
     {WM_MOUSEMOVE, HandleMouseMove},
     {WM_PAINT, HandlePaint},
+    {WM_ERASEBKGND, HandleEraseBkgnd},
     {WM_TIMER, HandleTimer},
     {WM_DESTROY, HandleDestroy},
     {CLOCK_WM_TRAYICON, HandleTrayIcon},
@@ -224,6 +226,10 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     /* Handle WM_NCHITTEST for click-through in non-edit mode */
     if (msg == WM_NCHITTEST) {
         if (!CLOCK_EDIT_MODE) {
+            if (!HasClickableRegions()) {
+                return HTTRANSPARENT;  /* Pass through */
+            }
+
             POINT pt = { GET_X_LPARAM(lp), GET_Y_LPARAM(lp) };
 
             /* Update region positions based on current window position */
@@ -232,8 +238,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
             UpdateRegionPositions(rcWindow.left, rcWindow.top);
 
             /* Check if cursor is over a clickable region */
-            const ClickableRegion* region = GetClickableRegionAt(pt);
-            if (region) {
+            if (IsClickableRegionAt(pt)) {
                 return HTCLIENT;  /* Allow click */
             }
             return HTTRANSPARENT;  /* Pass through */
@@ -344,9 +349,6 @@ void StartPomodoroTimer(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
-#define TIMER_ID_TRANSITION_END 100
-extern BOOL g_IsTransitioning;
-
 void ToggleEditMode(HWND hwnd) {
     if (CLOCK_EDIT_MODE) {
         EndEditMode(hwnd);
@@ -397,7 +399,10 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 
     /* countdown_message_shown is reset inside StartCountdownWithTime/StartDefaultCountDown */
     int zeroBased = index - 1;
-    if (zeroBased < time_options_count) {
+    int timeOptionsCount = time_options_count;
+    if (timeOptionsCount < 0) timeOptionsCount = 0;
+    if (timeOptionsCount > MAX_TIME_OPTIONS) timeOptionsCount = MAX_TIME_OPTIONS;
+    if (zeroBased < timeOptionsCount && time_options[zeroBased] > 0) {
         StartCountdownWithTime(hwnd, time_options[zeroBased]);
     } else {
         StartDefaultCountDown(hwnd);
@@ -438,9 +443,12 @@ BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
 }
 
 void ToggleMilliseconds(HWND hwnd) {
-
-    BOOL newState = !g_AppConfig.display.time_format.show_milliseconds;
-    WriteConfigShowMilliseconds(newState);
+    BOOL previousState = g_AppConfig.display.time_format.show_milliseconds;
+    BOOL newState = !previousState;
+    if (!WriteConfigShowMilliseconds(newState) ||
+        previousState == g_AppConfig.display.time_format.show_milliseconds) {
+        return;
+    }
 
     /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
     ResetTimerWithInterval(hwnd);

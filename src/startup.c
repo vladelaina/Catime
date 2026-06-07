@@ -71,9 +71,12 @@ static const size_t STARTUP_MODE_COUNT = sizeof(STARTUP_MODE_CONFIGS) / sizeof(S
 
 /** PathCombineW prevents buffer overflows vs sprintf */
 static BOOL GetStartupShortcutPath(wchar_t* output, size_t outputSize) {
-    wchar_t startupFolder[MAX_PATH];
+    if (!output || outputSize == 0 || outputSize > (size_t)MAXDWORD) return FALSE;
+    output[0] = L'\0';
+    if (outputSize < MAX_PATH) return FALSE;
+
+    wchar_t startupFolder[MAX_PATH] = {0};
     HRESULT hr;
-    UNREFERENCED_PARAMETER(outputSize);
     
     hr = SHGetFolderPathW(NULL, CSIDL_STARTUP, NULL, 0, startupFolder);
     if (FAILED(hr)) {
@@ -90,12 +93,34 @@ static BOOL GetStartupShortcutPath(wchar_t* output, size_t outputSize) {
 }
 
 static BOOL GetExecutablePath(wchar_t* output, size_t outputSize) {
+    if (!output || outputSize == 0 || outputSize > (size_t)MAXDWORD) return FALSE;
+    output[0] = L'\0';
+
     DWORD result = GetModuleFileNameW(NULL, output, (DWORD)outputSize);
     if (result == 0 || result >= outputSize) {
+        output[0] = L'\0';
         LOG_ERROR("Failed to get executable path");
         return FALSE;
     }
     return TRUE;
+}
+
+static BOOL EnsureComInitializedForShortcut(BOOL* shouldUninitialize) {
+    if (!shouldUninitialize) return FALSE;
+
+    *shouldUninitialize = FALSE;
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (SUCCEEDED(hr)) {
+        *shouldUninitialize = TRUE;
+        return TRUE;
+    }
+
+    if (hr == RPC_E_CHANGED_MODE) {
+        return TRUE;
+    }
+
+    LOG_ERROR("Failed to initialize COM for startup shortcut, hr=0x%08X", (unsigned int)hr);
+    return FALSE;
 }
 
 static BOOL InitComShellLink(ComShellLink* link) {
@@ -158,7 +183,10 @@ static BOOL ReadStartupModeConfig(char* modeName, size_t modeNameSize) {
     
     GetConfigPath(configPath, MAX_PATH);
     
-    MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wconfigPath, MAX_PATH) == 0) {
+        LOG_WARNING("Failed to convert config path for reading startup mode");
+        return FALSE;
+    }
     
     configFile = _wfopen(wconfigPath, L"r");
     if (!configFile) {
@@ -246,6 +274,7 @@ BOOL CreateShortcut(void) {
     wchar_t exePath[MAX_PATH];
     HRESULT hr;
     BOOL success = FALSE;
+    BOOL shouldUninitializeCom = FALSE;
     
     LOG_INFO("Creating startup shortcut");
     
@@ -256,8 +285,15 @@ BOOL CreateShortcut(void) {
     if (!GetStartupShortcutPath(startupPath, MAX_PATH)) {
         return FALSE;
     }
+
+    if (!EnsureComInitializedForShortcut(&shouldUninitializeCom)) {
+        return FALSE;
+    }
     
     if (!InitComShellLink(&link)) {
+        if (shouldUninitializeCom) {
+            CoUninitialize();
+        }
         return FALSE;
     }
     
@@ -265,12 +301,20 @@ BOOL CreateShortcut(void) {
     if (FAILED(hr)) {
         LOG_ERROR("Failed to set shortcut path, hr=0x%08X", (unsigned int)hr);
         CleanupComShellLink(&link);
+        if (shouldUninitializeCom) {
+            CoUninitialize();
+        }
         return FALSE;
     }
     
     hr = link.shellLink->lpVtbl->SetArguments(link.shellLink, STARTUP_CMD_ARG);
     if (FAILED(hr)) {
-        LOG_WARNING("Failed to set shortcut arguments, hr=0x%08X", (unsigned int)hr);
+        LOG_ERROR("Failed to set shortcut arguments, hr=0x%08X", (unsigned int)hr);
+        CleanupComShellLink(&link);
+        if (shouldUninitializeCom) {
+            CoUninitialize();
+        }
+        return FALSE;
     }
     
     hr = link.persistFile->lpVtbl->Save(link.persistFile, startupPath, TRUE);
@@ -282,6 +326,9 @@ BOOL CreateShortcut(void) {
     }
     
     CleanupComShellLink(&link);
+    if (shouldUninitializeCom) {
+        CoUninitialize();
+    }
     return success;
 }
 

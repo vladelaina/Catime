@@ -9,10 +9,26 @@
 #include "config.h"
 #include "../resource/resource.h"
 #include <string.h>
+#include <limits.h>
 
 /* ============================================================================
  * Notification Messages Dialog
  * ============================================================================ */
+
+static BOOL ConvertNotificationMessageToUtf8(const wchar_t* source, char* dest, size_t destSize) {
+    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
+        return FALSE;
+    }
+
+    dest[0] = '\0';
+    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
+    if (required <= 0 || (size_t)required > destSize) {
+        return FALSE;
+    }
+
+    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
+                               (int)destSize, NULL, NULL) > 0;
+}
 
 void ShowNotificationMessagesDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_NOTIFICATION_MSG)) {
@@ -45,10 +61,10 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
-            wchar_t wideText[100];
+            wchar_t wideText[100] = {0};
 
             MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1,
-                               wideText, sizeof(wideText)/sizeof(wchar_t));
+                                wideText, sizeof(wideText)/sizeof(wchar_t));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
 
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1,
@@ -86,8 +102,10 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
                 char timeout_msg[256] = {0};
 
-                WideCharToMultiByte(CP_UTF8, 0, wTimeout, -1,
-                                    timeout_msg, sizeof(timeout_msg), NULL, NULL);
+                if (!ConvertNotificationMessageToUtf8(wTimeout, timeout_msg, sizeof(timeout_msg))) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
+                    return TRUE;
+                }
 
                 extern void WriteConfigNotificationMessages(const char* timeout);
                 WriteConfigNotificationMessages(timeout_msg);
@@ -117,9 +135,9 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
                 if (hEdit1) Dialog_UnsubclassEdit(hEdit1, ctx);
 
-                Dialog_FreeContext(ctx);
+                Dialog_DestroyContext(hwndDlg);
             }
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_NOTIFICATION_MSG);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_NOTIFICATION_MSG, hwndDlg);
             break;
     }
 

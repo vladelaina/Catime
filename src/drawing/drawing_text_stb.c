@@ -9,6 +9,7 @@
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <windows.h>
 #include <shlobj.h>  /* For SHGetFolderPathW */
 
@@ -19,6 +20,10 @@
 static unsigned char* g_fontBuffer = NULL;
 static stbtt_fontinfo g_fontInfo;
 static char g_currentFontPath[MAX_PATH] = {0};
+static FILETIME g_currentFontLastWriteTime = {0};
+static ULONGLONG g_currentFontFileSize = 0;
+static DWORD g_currentFontLastValidateTick = 0;
+static BOOL g_currentFontFileInfoValid = FALSE;
 static BOOL g_fontLoaded = FALSE;
 
 /* Fallback font state (Segoe UI Emoji) */
@@ -39,8 +44,191 @@ static CachedFont g_fontCache[MAX_CACHED_FONTS] = {0};
 static int g_fontCacheLRU[MAX_CACHED_FONTS] = {0};  /* LRU counter for eviction */
 static int g_fontCacheAccessCounter = 0;
 
-/* Forward declaration for font cache cleanup */
-void ClearFontCacheSTB(void);
+#define FONT_TAG_GLYPH_METRICS_CACHE_SIZE 256
+
+typedef struct {
+    BOOL valid;
+    wchar_t c;
+    int index;
+    int advanceUnits;
+} FontTagGlyphMetricsCacheEntry;
+
+static FontTagGlyphMetricsCacheEntry
+    g_fontTagGlyphMetricsCache[MAX_CACHED_FONTS][FONT_TAG_GLYPH_METRICS_CACHE_SIZE] = {0};
+
+#define MAX_FAILED_FONT_CACHE 256
+#define FONT_FAILURE_RETRY_MS 5000
+#define MAX_MAPPED_FONT_BYTES (64ull * 1024ull * 1024ull)
+#define MAIN_FONT_FILE_RECHECK_MS 1000u
+
+typedef struct {
+    wchar_t fontName[MAX_PATH];
+    DWORD lastFailureTick;
+} FailedFontCacheEntry;
+
+static FailedFontCacheEntry g_failedFontCache[MAX_FAILED_FONT_CACHE] = {0};
+
+#define GLYPH_METRICS_CACHE_SIZE 512
+
+typedef struct {
+    BOOL valid;
+    wchar_t c;
+    wchar_t nextC;
+    int index;
+    BOOL isFallback;
+    int advanceUnits;
+    int kernUnits;
+} GlyphMetricsCacheEntry;
+
+static GlyphMetricsCacheEntry g_glyphMetricsCache[GLYPH_METRICS_CACHE_SIZE] = {0};
+
+static INIT_ONCE g_fontStateLockOnce = INIT_ONCE_STATIC_INIT;
+static CRITICAL_SECTION g_fontStateCS;
+
+/* Forward declarations for cleanup paths that already hold g_fontStateCS */
+static void ClearFontCacheSTBLocked(void);
+static void CleanupFontSTBLocked(void);
+
+static BOOL CALLBACK InitFontStateLock(PINIT_ONCE initOnce, PVOID parameter, PVOID* context) {
+    (void)initOnce;
+    (void)parameter;
+    (void)context;
+    InitializeCriticalSection(&g_fontStateCS);
+    return TRUE;
+}
+
+static void ClearGlyphMetricsCacheLocked(void) {
+    ZeroMemory(g_glyphMetricsCache, sizeof(g_glyphMetricsCache));
+}
+
+static DWORD GetGlyphMetricsCacheSlot(wchar_t c, wchar_t nextC) {
+    DWORD hash = (DWORD)c * 2654435761u;
+    hash ^= ((DWORD)nextC * 2246822519u) + (hash << 6) + (hash >> 2);
+    return hash & (GLYPH_METRICS_CACHE_SIZE - 1);
+}
+
+static DWORD GetFontTagGlyphMetricsCacheSlot(wchar_t c) {
+    return ((DWORD)c * 2654435761u) & (FONT_TAG_GLYPH_METRICS_CACHE_SIZE - 1);
+}
+
+static void ClearFontTagGlyphMetricsCacheSlotLocked(int slot) {
+    if (slot < 0 || slot >= MAX_CACHED_FONTS) return;
+    ZeroMemory(g_fontTagGlyphMetricsCache[slot],
+               sizeof(g_fontTagGlyphMetricsCache[slot]));
+}
+
+static void CompactFontCacheLRULocked(void) {
+    BOOL used[MAX_CACHED_FONTS] = {0};
+    int compactedCount = 0;
+
+    for (int rank = 1; rank <= MAX_CACHED_FONTS; ++rank) {
+        int nextSlot = -1;
+        int nextLRU = INT_MAX;
+
+        for (int i = 0; i < MAX_CACHED_FONTS; ++i) {
+            if (!g_fontCache[i].isLoaded || used[i]) continue;
+            if (nextSlot < 0 || g_fontCacheLRU[i] < nextLRU) {
+                nextSlot = i;
+                nextLRU = g_fontCacheLRU[i];
+            }
+        }
+
+        if (nextSlot < 0) break;
+
+        used[nextSlot] = TRUE;
+        g_fontCacheLRU[nextSlot] = rank;
+        compactedCount = rank;
+    }
+
+    g_fontCacheAccessCounter = compactedCount;
+}
+
+static int TouchFontCacheSlotLocked(int slot) {
+    if (slot < 0 || slot >= MAX_CACHED_FONTS) return 0;
+
+    if (g_fontCacheAccessCounter >= INT_MAX - MAX_CACHED_FONTS) {
+        CompactFontCacheLRULocked();
+    }
+
+    g_fontCacheLRU[slot] = ++g_fontCacheAccessCounter;
+    return g_fontCacheLRU[slot];
+}
+
+static void ApplyCachedGlyphMetrics(const GlyphMetricsCacheEntry* entry,
+                                    float scale,
+                                    float fallbackScale,
+                                    GlyphMetrics* out) {
+    out->index = entry->index;
+    out->isFallback = entry->isFallback;
+    out->advance = (int)(entry->advanceUnits * (entry->isFallback ? fallbackScale : scale));
+    out->kern = (int)(entry->kernUnits * scale);
+}
+
+BOOL BeginFontUseSTB(void) {
+    if (!InitOnceExecuteOnce(&g_fontStateLockOnce, InitFontStateLock, NULL, NULL)) {
+        return FALSE;
+    }
+    EnterCriticalSection(&g_fontStateCS);
+    return TRUE;
+}
+
+void EndFontUseSTB(void) {
+    LeaveCriticalSection(&g_fontStateCS);
+}
+
+static void ReleaseMappedFont(unsigned char* buffer, HANDLE hFile, HANDLE hMapping) {
+    if (buffer) {
+        UnmapViewOfFile(buffer);
+    }
+    if (hMapping) {
+        CloseHandle(hMapping);
+    }
+    if (hFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hFile);
+    }
+}
+
+static BOOL InitFontInfoFromBuffer(stbtt_fontinfo* fontInfo,
+                                   const unsigned char* buffer,
+                                   const char* pathForLog) {
+    if (!fontInfo || !buffer) return FALSE;
+
+    int fontOffset = stbtt_GetFontOffsetForIndex(buffer, 0);
+    if (fontOffset < 0) {
+        LOG_WARNING("Font has no usable face at index 0: %s",
+                    pathForLog ? pathForLog : "(unknown)");
+        return FALSE;
+    }
+
+    if (!stbtt_InitFont(fontInfo, buffer, fontOffset)) {
+        LOG_WARNING("Failed to init STB font: %s",
+                    pathForLog ? pathForLog : "(unknown)");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL InitFontInfoFromBufferW(stbtt_fontinfo* fontInfo,
+                                    const unsigned char* buffer,
+                                    const wchar_t* pathForLog) {
+    if (!fontInfo || !buffer) return FALSE;
+
+    int fontOffset = stbtt_GetFontOffsetForIndex(buffer, 0);
+    if (fontOffset < 0) {
+        LOG_WARNING("Font has no usable face at index 0: %ls",
+                    pathForLog ? pathForLog : L"(unknown)");
+        return FALSE;
+    }
+
+    if (!stbtt_InitFont(fontInfo, buffer, fontOffset)) {
+        LOG_WARNING("Failed to init STB font: %ls",
+                    pathForLog ? pathForLog : L"(unknown)");
+        return FALSE;
+    }
+
+    return TRUE;
+}
 
 static BOOL CalculateBitmapPixelCount(int width, int height, size_t* outPixelCount) {
     if (!outPixelCount || width <= 0 || height <= 0) return FALSE;
@@ -53,27 +241,226 @@ static BOOL CalculateBitmapPixelCount(int width, int height, size_t* outPixelCou
     return TRUE;
 }
 
+typedef struct {
+    int srcLeft;
+    int srcTop;
+    int srcRight;
+    int srcBottom;
+    int destLeft;
+    int destTop;
+} TextBitmapClip;
+
+static BOOL ClipTextBitmapToDestination(int x, int y,
+                                        int bitmapWidth, int bitmapHeight,
+                                        int destWidth, int destHeight,
+                                        TextBitmapClip* clip) {
+    if (!clip || bitmapWidth <= 0 || bitmapHeight <= 0 ||
+        destWidth <= 0 || destHeight <= 0) {
+        return FALSE;
+    }
+
+    long long left = (long long)x;
+    long long top = (long long)y;
+    long long right = left + (long long)bitmapWidth;
+    long long bottom = top + (long long)bitmapHeight;
+
+    if (right <= 0 || bottom <= 0 ||
+        left >= (long long)destWidth || top >= (long long)destHeight) {
+        return FALSE;
+    }
+
+    long long clipLeft = (left < 0) ? 0 : left;
+    long long clipTop = (top < 0) ? 0 : top;
+    long long clipRight = (right > (long long)destWidth) ? (long long)destWidth : right;
+    long long clipBottom = (bottom > (long long)destHeight) ? (long long)destHeight : bottom;
+
+    if (clipLeft >= clipRight || clipTop >= clipBottom) {
+        return FALSE;
+    }
+
+    long long srcLeft = clipLeft - left;
+    long long srcTop = clipTop - top;
+    long long srcRight = clipRight - left;
+    long long srcBottom = clipBottom - top;
+
+    if (srcLeft < 0 || srcTop < 0 ||
+        srcRight > (long long)bitmapWidth || srcBottom > (long long)bitmapHeight ||
+        srcLeft > (long long)INT_MAX || srcTop > (long long)INT_MAX ||
+        srcRight > (long long)INT_MAX || srcBottom > (long long)INT_MAX) {
+        return FALSE;
+    }
+
+    clip->srcLeft = (int)srcLeft;
+    clip->srcTop = (int)srcTop;
+    clip->srcRight = (int)srcRight;
+    clip->srcBottom = (int)srcBottom;
+    clip->destLeft = (int)clipLeft;
+    clip->destTop = (int)clipTop;
+    return TRUE;
+}
+
+static int ClampTextInt64(long long value) {
+    if (value > (long long)INT_MAX) return INT_MAX;
+    if (value < (long long)INT_MIN) return INT_MIN;
+    return (int)value;
+}
+
+static int AddTextIntClamped(int value, int delta) {
+    return ClampTextInt64((long long)value + (long long)delta);
+}
+
+static int MulTextIntClamped(int value, int factor) {
+    return ClampTextInt64((long long)value * (long long)factor);
+}
+
+static BOOL IsFontMappingSizeAllowed(HANDLE hFile, const wchar_t* pathForLog) {
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile, &fileSize) ||
+        fileSize.QuadPart <= 0 ||
+        (ULONGLONG)fileSize.QuadPart > MAX_MAPPED_FONT_BYTES) {
+        LOG_WARNING("Font file too large or unreadable for mapping: %ls (limit %llu bytes)",
+                    pathForLog ? pathForLog : L"(unknown)",
+                    (ULONGLONG)MAX_MAPPED_FONT_BYTES);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL GetFontFileInfoFromHandle(HANDLE hFile,
+                                      FILETIME* lastWriteTime,
+                                      ULONGLONG* fileSizeOut) {
+    if (lastWriteTime) {
+        ZeroMemory(lastWriteTime, sizeof(*lastWriteTime));
+    }
+    if (fileSizeOut) {
+        *fileSizeOut = 0;
+    }
+    if (hFile == INVALID_HANDLE_VALUE) return FALSE;
+
+    BY_HANDLE_FILE_INFORMATION info;
+    if (!GetFileInformationByHandle(hFile, &info)) {
+        return FALSE;
+    }
+    if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        return FALSE;
+    }
+
+    ULONGLONG fileSize = ((ULONGLONG)info.nFileSizeHigh << 32) |
+                         (ULONGLONG)info.nFileSizeLow;
+    if (fileSize == 0 || fileSize > MAX_MAPPED_FONT_BYTES) {
+        return FALSE;
+    }
+
+    if (lastWriteTime) {
+        *lastWriteTime = info.ftLastWriteTime;
+    }
+    if (fileSizeOut) {
+        *fileSizeOut = fileSize;
+    }
+    return TRUE;
+}
+
+static BOOL GetFontFileInfoFromPathW(const wchar_t* path,
+                                     FILETIME* lastWriteTime,
+                                     ULONGLONG* fileSizeOut) {
+    if (lastWriteTime) {
+        ZeroMemory(lastWriteTime, sizeof(*lastWriteTime));
+    }
+    if (fileSizeOut) {
+        *fileSizeOut = 0;
+    }
+    if (!path || !*path) return FALSE;
+
+    WIN32_FILE_ATTRIBUTE_DATA attrs;
+    if (!GetFileAttributesExW(path, GetFileExInfoStandard, &attrs)) {
+        return FALSE;
+    }
+    if (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        return FALSE;
+    }
+
+    ULONGLONG fileSize = ((ULONGLONG)attrs.nFileSizeHigh << 32) |
+                         (ULONGLONG)attrs.nFileSizeLow;
+    if (fileSize == 0 || fileSize > MAX_MAPPED_FONT_BYTES) {
+        return FALSE;
+    }
+
+    if (lastWriteTime) {
+        *lastWriteTime = attrs.ftLastWriteTime;
+    }
+    if (fileSizeOut) {
+        *fileSizeOut = fileSize;
+    }
+    return TRUE;
+}
+
+static BOOL GetFontFileInfoFromPathUtf8(const char* path,
+                                        FILETIME* lastWriteTime,
+                                        ULONGLONG* fileSizeOut) {
+    if (lastWriteTime) {
+        ZeroMemory(lastWriteTime, sizeof(*lastWriteTime));
+    }
+    if (fileSizeOut) {
+        *fileSizeOut = 0;
+    }
+    if (!path || !*path) return FALSE;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH) == 0) {
+        return FALSE;
+    }
+
+    return GetFontFileInfoFromPathW(wPath, lastWriteTime, fileSizeOut);
+}
+
+static BOOL IsCurrentMainFontFileStillCurrentLocked(const char* fontFilePath) {
+    if (!g_fontLoaded ||
+        !g_currentFontFileInfoValid ||
+        strcmp(g_currentFontPath, fontFilePath) != 0) {
+        return FALSE;
+    }
+
+    DWORD now = GetTickCount();
+    if (g_currentFontLastValidateTick != 0 &&
+        (DWORD)(now - g_currentFontLastValidateTick) < MAIN_FONT_FILE_RECHECK_MS) {
+        return TRUE;
+    }
+    g_currentFontLastValidateTick = now;
+
+    FILETIME lastWriteTime;
+    ULONGLONG fileSize = 0;
+    if (!GetFontFileInfoFromPathUtf8(fontFilePath, &lastWriteTime, &fileSize)) {
+        return FALSE;
+    }
+
+    return fileSize == g_currentFontFileSize &&
+           CompareFileTime(&lastWriteTime, &g_currentFontLastWriteTime) == 0;
+}
+
 /* Accessors for external modules */
 BOOL IsFontLoadedSTB(void) { return g_fontLoaded; }
 BOOL IsFallbackFontLoadedSTB(void) { return g_fallbackFontLoaded; }
 stbtt_fontinfo* GetMainFontInfoSTB(void) { return &g_fontInfo; }
 stbtt_fontinfo* GetFallbackFontInfoSTB(void) { return &g_fallbackFontInfo; }
 
-/* Helper to map file into memory */
-static unsigned char* LoadFontMapping(const char* path, HANDLE* phFile, HANDLE* phMapping) {
+static unsigned char* LoadFontMappingW(const wchar_t* path, HANDLE* phFile, HANDLE* phMapping) {
     HANDLE hFile = INVALID_HANDLE_VALUE;
     HANDLE hMapping = NULL;
     void* pView = NULL;
-    
-    /* Convert UTF-8 path to Wide Char for Windows Unicode support */
-    wchar_t wPath[MAX_PATH];
-    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH) == 0) {
-        /* Fallback if conversion fails */
+
+    if (!path || !phFile || !phMapping) return NULL;
+    *phFile = INVALID_HANDLE_VALUE;
+    *phMapping = NULL;
+
+    hFile = CreateFileW(path, GENERIC_READ,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
         return NULL;
     }
-
-    hFile = CreateFileW(wPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
+    if (!IsFontMappingSizeAllowed(hFile, path)) {
+        CloseHandle(hFile);
         return NULL;
     }
 
@@ -97,41 +484,52 @@ static unsigned char* LoadFontMapping(const char* path, HANDLE* phFile, HANDLE* 
     return (unsigned char*)pView;
 }
 
+/* Helper to map a UTF-8 file path into memory */
+static unsigned char* LoadFontMapping(const char* path, HANDLE* phFile, HANDLE* phMapping) {
+    if (!path || !phFile || !phMapping) return NULL;
+    *phFile = INVALID_HANDLE_VALUE;
+    *phMapping = NULL;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wPath, MAX_PATH) == 0) {
+        return NULL;
+    }
+
+    return LoadFontMappingW(wPath, phFile, phMapping);
+}
+
 void CleanupFontSTB(void) {
+    if (!BeginFontUseSTB()) return;
+
+    CleanupFontSTBLocked();
+
+    EndFontUseSTB();
+}
+
+static void CleanupFontSTBLocked(void) {
     /* Cleanup main font */
-    if (g_fontBuffer) {
-        UnmapViewOfFile(g_fontBuffer);
-        g_fontBuffer = NULL;
-    }
-    if (g_hFontMapping) {
-        CloseHandle(g_hFontMapping);
-        g_hFontMapping = NULL;
-    }
-    if (g_hFontFile != INVALID_HANDLE_VALUE) {
-        CloseHandle(g_hFontFile);
-        g_hFontFile = INVALID_HANDLE_VALUE;
-    }
-    
+    ReleaseMappedFont(g_fontBuffer, g_hFontFile, g_hFontMapping);
+    g_fontBuffer = NULL;
+    g_hFontFile = INVALID_HANDLE_VALUE;
+    g_hFontMapping = NULL;
+
     /* Cleanup fallback font */
-    if (g_fallbackFontBuffer) {
-        UnmapViewOfFile(g_fallbackFontBuffer);
-        g_fallbackFontBuffer = NULL;
-    }
-    if (g_hFallbackFontMapping) {
-        CloseHandle(g_hFallbackFontMapping);
-        g_hFallbackFontMapping = NULL;
-    }
-    if (g_hFallbackFontFile != INVALID_HANDLE_VALUE) {
-        CloseHandle(g_hFallbackFontFile);
-        g_hFallbackFontFile = INVALID_HANDLE_VALUE;
-    }
+    ReleaseMappedFont(g_fallbackFontBuffer, g_hFallbackFontFile, g_hFallbackFontMapping);
+    g_fallbackFontBuffer = NULL;
+    g_hFallbackFontFile = INVALID_HANDLE_VALUE;
+    g_hFallbackFontMapping = NULL;
     
     /* Cleanup font cache */
-    ClearFontCacheSTB();
+    ClearFontCacheSTBLocked();
+    ClearGlyphMetricsCacheLocked();
     
     g_fontLoaded = FALSE;
     g_fallbackFontLoaded = FALSE;
     memset(g_currentFontPath, 0, sizeof(g_currentFontPath));
+    ZeroMemory(&g_currentFontLastWriteTime, sizeof(g_currentFontLastWriteTime));
+    g_currentFontFileSize = 0;
+    g_currentFontLastValidateTick = 0;
+    g_currentFontFileInfoValid = FALSE;
     
     /* Also cleanup effect buffers */
     CleanupDrawingEffects();
@@ -140,8 +538,10 @@ void CleanupFontSTB(void) {
 BOOL InitFontSTB(const char* fontFilePath) {
     if (!fontFilePath) return FALSE;
 
-    /* If already loaded same font, skip */
-    if (g_fontLoaded && strcmp(g_currentFontPath, fontFilePath) == 0) {
+    if (!BeginFontUseSTB()) return FALSE;
+
+    if (IsCurrentMainFontFileStillCurrentLocked(fontFilePath)) {
+        EndFontUseSTB();
         return TRUE;
     }
 
@@ -151,25 +551,38 @@ BOOL InitFontSTB(const char* fontFilePath) {
     // Load to temp buffer (view) first
     unsigned char* newBuffer = LoadFontMapping(fontFilePath, &hNewFile, &hNewMapping);
     if (!newBuffer) {
+        EndFontUseSTB();
+        return FALSE;
+    }
+
+    FILETIME newLastWriteTime;
+    ULONGLONG newFileSize = 0;
+    if (!GetFontFileInfoFromHandle(hNewFile, &newLastWriteTime, &newFileSize)) {
+        ReleaseMappedFont(newBuffer, hNewFile, hNewMapping);
+        EndFontUseSTB();
         return FALSE;
     }
 
     stbtt_fontinfo newInfo;
-    if (!stbtt_InitFont(&newInfo, newBuffer, stbtt_GetFontOffsetForIndex(newBuffer, 0))) {
-        UnmapViewOfFile(newBuffer);
-        CloseHandle(hNewMapping);
-        CloseHandle(hNewFile);
+    if (!InitFontInfoFromBuffer(&newInfo, newBuffer, fontFilePath)) {
+        ReleaseMappedFont(newBuffer, hNewFile, hNewMapping);
+        EndFontUseSTB();
         return FALSE;
     }
 
     // Success - now replace the global state
-    CleanupFontSTB();
+    CleanupFontSTBLocked();
     
     g_fontBuffer = newBuffer;
     g_fontInfo = newInfo;
     g_hFontFile = hNewFile;
     g_hFontMapping = hNewMapping;
     strncpy(g_currentFontPath, fontFilePath, MAX_PATH - 1);
+    g_currentFontPath[MAX_PATH - 1] = '\0';
+    g_currentFontLastWriteTime = newLastWriteTime;
+    g_currentFontFileSize = newFileSize;
+    g_currentFontLastValidateTick = GetTickCount();
+    g_currentFontFileInfoValid = TRUE;
     g_fontLoaded = TRUE;
     
     LOG_INFO("STB Font loaded successfully: %s", fontFilePath);
@@ -202,22 +615,20 @@ BOOL InitFontSTB(const char* fontFilePath) {
     }
 
     if (fallbackBuffer) {
-        if (stbtt_InitFont(&g_fallbackFontInfo, fallbackBuffer, stbtt_GetFontOffsetForIndex(fallbackBuffer, 0))) {
+        if (InitFontInfoFromBuffer(&g_fallbackFontInfo, fallbackBuffer, fallbackPath)) {
             g_fallbackFontBuffer = fallbackBuffer;
             g_hFallbackFontFile = hFallbackFile;
             g_hFallbackFontMapping = hFallbackMapping;
             g_fallbackFontLoaded = TRUE;
             LOG_INFO("STB Fallback Font loaded: %s", fallbackPath);
         } else {
-            UnmapViewOfFile(fallbackBuffer);
-            CloseHandle(hFallbackMapping);
-            CloseHandle(hFallbackFile);
-            LOG_WARNING("Failed to init STB info for fallback font");
+            ReleaseMappedFont(fallbackBuffer, hFallbackFile, hFallbackMapping);
         }
     } else {
         LOG_WARNING("Failed to load fallback font (Emoji/Symbol)");
     }
-    
+
+    EndFontUseSTB();
     return TRUE;
 }
 
@@ -228,27 +639,24 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
                           int x_pos, int y_pos,
                           const unsigned char* bitmap, int w, int h,
                           int r, int g, int b) {
+    BlendCharBitmapSTBWithEffect(destBits, destWidth, destHeight,
+                                 x_pos, y_pos, bitmap, w, h, r, g, b,
+                                 GetActiveEffect(), (int)GetTickCount());
+}
+
+void BlendCharBitmapSTBWithEffect(void* destBits, int destWidth, int destHeight,
+                                  int x_pos, int y_pos,
+                                  const unsigned char* bitmap, int w, int h,
+                                  int r, int g, int b,
+                                  EffectType effect, int timeOffset) {
     DWORD* pixels = (DWORD*)destBits;
-    size_t destPixelCount = 0;
-    size_t bitmapPixelCount = 0;
+    size_t pixelCount = 0;
 
     if (!pixels || !bitmap ||
-        !CalculateBitmapPixelCount(destWidth, destHeight, &destPixelCount) ||
-        !CalculateBitmapPixelCount(w, h, &bitmapPixelCount)) {
+        !CalculateBitmapPixelCount(destWidth, destHeight, &pixelCount) ||
+        !CalculateBitmapPixelCount(w, h, &pixelCount)) {
         return;
     }
-
-    /* Determine active effect (supports live preview) */
-    EffectType effect = GetActiveEffect();
-    
-    /* 
-     * FIX: Use raw GetTickCount() instead of % 10000.
-     * The previous modulo 10000 caused a visual "jump" every 10 seconds because
-     * 9999 -> 0 is a discontinuity in the phase calculation.
-     * The internal effect functions use sin() or bitwise masking which handles
-     * large numbers naturally and continuously.
-     */
-    int timeOffset = (int)GetTickCount();
 
     /* Render glow or glass effect if enabled */
     if (effect == EFFECT_TYPE_GLOW) {
@@ -271,42 +679,75 @@ void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
         return;
     }
 
-    for (int j = 0; j < h; ++j) {
-        for (int i = 0; i < w; ++i) {
-            int screen_x = x_pos + i;
-            int screen_y = y_pos + j;
+    TextBitmapClip clip;
+    if (!ClipTextBitmapToDestination(x_pos, y_pos, w, h, destWidth, destHeight, &clip)) {
+        return;
+    }
 
-            if (screen_x >= 0 && screen_x < destWidth && screen_y >= 0 && screen_y < destHeight) {
-                size_t srcIndex = (size_t)j * (size_t)w + (size_t)i;
-                size_t destIndex = (size_t)screen_y * (size_t)destWidth + (size_t)screen_x;
-                if (srcIndex >= bitmapPixelCount || destIndex >= destPixelCount) continue;
+    for (int j = clip.srcTop; j < clip.srcBottom; ++j) {
+        int destY = clip.destTop + (j - clip.srcTop);
+        DWORD* destRow = pixels + (size_t)destY * (size_t)destWidth + (size_t)clip.destLeft;
+        const unsigned char* srcRow = bitmap + (size_t)j * (size_t)w + (size_t)clip.srcLeft;
 
-                unsigned char alpha = bitmap[srcIndex];
-                if (alpha == 0) continue;
-
-                /* Calculate premultiplied color values for UpdateLayeredWindow */
-                DWORD finalR = (r * alpha) / 255;
-                DWORD finalG = (g * alpha) / 255;
-                DWORD finalB = (b * alpha) / 255;
-                DWORD finalA = (DWORD)alpha;
-
-                DWORD currentPixel = pixels[destIndex];
-                DWORD currentA = (currentPixel >> 24) & 0xFF;
-
-                /* If new pixel is more opaque, overwrite */
-                if (alpha > currentA) {
-                    pixels[destIndex] =
-                        (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
-                }
+        for (int i = clip.srcLeft; i < clip.srcRight; ++i) {
+            unsigned char alpha = *srcRow++;
+            if (alpha == 0) {
+                destRow++;
+                continue;
             }
+
+            /* Calculate premultiplied color values for UpdateLayeredWindow */
+            DWORD finalR = (r * alpha) / 255;
+            DWORD finalG = (g * alpha) / 255;
+            DWORD finalB = (b * alpha) / 255;
+            DWORD finalA = (DWORD)alpha;
+
+            DWORD currentPixel = *destRow;
+            DWORD currentA = (currentPixel >> 24) & 0xFF;
+
+            /* If new pixel is more opaque, overwrite */
+            if (alpha > currentA) {
+                *destRow = (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
+            }
+            destRow++;
         }
     }
 }
 
 /* Pre-calculated gradient LUT to reduce CPU usage */
 #define LUT_SIZE GRADIENT_LUT_SIZE
+#define GRADIENT_FIXED_ONE (1LL << 32)
 static COLORREF g_gradientLUT[LUT_SIZE];
 static GradientType g_lutType = GRADIENT_NONE;
+static char g_lutName[GRADIENT_NAME_BUFFER];
+
+static long long GradientPositionFixed(long long x, int startX, int totalWidth) {
+    if (totalWidth <= 0) return 0;
+
+    long long offset = x - (long long)startX;
+    if (offset <= 0) return 0;
+    if (offset >= (long long)totalWidth) return GRADIENT_FIXED_ONE;
+
+    return (offset * GRADIENT_FIXED_ONE) / (long long)totalWidth;
+}
+
+static int InterpolateGradientChannelFixed(int from, int to, long long position) {
+    if (position <= 0) return from;
+    if (position >= GRADIENT_FIXED_ONE) return to;
+
+    long long weighted = (long long)from * (GRADIENT_FIXED_ONE - position) +
+                         (long long)to * position;
+    return (int)(weighted / GRADIENT_FIXED_ONE);
+}
+
+static void AdvanceGradientPositionFixed(long long* position, long long step) {
+    if (!position || step <= 0 || *position >= GRADIENT_FIXED_ONE) return;
+
+    *position += step;
+    if (*position > GRADIENT_FIXED_ONE) {
+        *position = GRADIENT_FIXED_ONE;
+    }
+}
 
 /* Context for gradient glow callback */
 typedef struct {
@@ -314,7 +755,38 @@ typedef struct {
     int startX;
     int totalWidth;
     int timeOffset;
+    BOOL isAnimated;
+    int startR;
+    int startG;
+    int startB;
+    int endR;
+    int endG;
+    int endB;
 } GlowGradientContext;
+
+static void InitGlowGradientContext(GlowGradientContext* ctx,
+                                    const GradientInfo* info,
+                                    int startX,
+                                    int totalWidth,
+                                    int timeOffset) {
+    if (!ctx) return;
+
+    ZeroMemory(ctx, sizeof(*ctx));
+    ctx->info = info;
+    ctx->startX = startX;
+    ctx->totalWidth = totalWidth;
+    ctx->timeOffset = timeOffset;
+    ctx->isAnimated = info ? info->isAnimated : FALSE;
+
+    if (info) {
+        ctx->startR = GetRValue(info->startColor);
+        ctx->startG = GetGValue(info->startColor);
+        ctx->startB = GetBValue(info->startColor);
+        ctx->endR = GetRValue(info->endColor);
+        ctx->endG = GetGValue(info->endColor);
+        ctx->endB = GetBValue(info->endColor);
+    }
+}
 
 /**
  * @brief Callback to calculate gradient color for glow effect
@@ -322,49 +794,48 @@ typedef struct {
 static void GetGlowGradientColor(int x, int y, int* r, int* g, int* b, void* userData) {
     GlowGradientContext* ctx = (GlowGradientContext*)userData;
     (void)y;
-    
-    if (!ctx->info) return;
 
-    if (ctx->info->isAnimated) {
-        /* Animated Gradient Logic (using LUT) */
-        int rowStartX = x - ctx->startX;
-        float currentLutIdxFloat = 0.0f;
-        
+    if (!ctx || !ctx->info || !r || !g || !b) return;
+
+    if (ctx->isAnimated) {
+        long long lutPosition = 0;
         if (ctx->totalWidth > 0) {
-            currentLutIdxFloat = ((float)rowStartX / (float)ctx->totalWidth) * LUT_SIZE;
+            lutPosition = ((long long)(x - ctx->startX) * (long long)LUT_SIZE) /
+                          (long long)ctx->totalWidth;
         }
-        
-        int lutIdx = (int)currentLutIdxFloat - ctx->timeOffset;
-        
+
+        int lutIdx = (int)lutPosition - ctx->timeOffset;
+
         /* Wrap around */
         lutIdx = lutIdx & (LUT_SIZE - 1);
-        
+
         COLORREF c = g_gradientLUT[lutIdx];
         *r = GetRValue(c);
         *g = GetGValue(c);
         *b = GetBValue(c);
     } else {
-        /* Static Gradient Logic */
-        float t = 0.0f;
-        if (ctx->totalWidth > 0) {
-            t = (float)(x - ctx->startX) / (float)ctx->totalWidth;
-        }
-        
-        if (t < 0.0f) t = 0.0f;
-        else if (t > 1.0f) t = 1.0f;
-
-        int r1 = GetRValue(ctx->info->startColor);
-        int g1 = GetGValue(ctx->info->startColor);
-        int b1 = GetBValue(ctx->info->startColor);
-        
-        int r2 = GetRValue(ctx->info->endColor);
-        int g2 = GetGValue(ctx->info->endColor);
-        int b2 = GetBValue(ctx->info->endColor);
-        
-        *r = (int)(r1 + (r2 - r1) * t);
-        *g = (int)(g1 + (g2 - g1) * t);
-        *b = (int)(b1 + (b2 - b1) * t);
+        long long position = GradientPositionFixed(x, ctx->startX, ctx->totalWidth);
+        *r = InterpolateGradientChannelFixed(ctx->startR, ctx->endR, position);
+        *g = InterpolateGradientChannelFixed(ctx->startG, ctx->endG, position);
+        *b = InterpolateGradientChannelFixed(ctx->startB, ctx->endB, position);
     }
+}
+
+static void SetGradientLUTKey(const GradientInfo* info) {
+    g_lutType = info ? info->type : GRADIENT_NONE;
+    g_lutName[0] = '\0';
+    if (info && info->type == GRADIENT_CUSTOM && info->name) {
+        strncpy(g_lutName, info->name, sizeof(g_lutName) - 1);
+        g_lutName[sizeof(g_lutName) - 1] = '\0';
+    }
+}
+
+static BOOL GradientLUTMatches(const GradientInfo* info) {
+    if (!info || g_lutType != info->type) return FALSE;
+    if (info->type == GRADIENT_CUSTOM) {
+        return info->name && strcmp(g_lutName, info->name) == 0;
+    }
+    return TRUE;
 }
 
 static void InitializeGradientLUT(const GradientInfo* info) {
@@ -387,7 +858,7 @@ static void InitializeGradientLUT(const GradientInfo* info) {
             int b = (int)(b1 + (b2 - b1) * t);
             g_gradientLUT[i] = RGB(r, g, b);
         }
-        g_lutType = info->type;
+        SetGradientLUTKey(info);
         return;
     }
     
@@ -414,7 +885,7 @@ static void InitializeGradientLUT(const GradientInfo* info) {
         
         g_gradientLUT[i] = RGB(r, g, b);
     }
-    g_lutType = info->type;
+    SetGradientLUTKey(info);
 }
 
 void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
@@ -422,6 +893,32 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
                                 const unsigned char* bitmap, int w, int h,
                                 int startX, int totalWidth, int gradientType,
                                 int timeOffset) {
+    BlendCharBitmapGradientSTBWithEffect(destBits, destWidth, destHeight,
+                                         x_pos, y_pos, bitmap, w, h,
+                                         startX, totalWidth, gradientType,
+                                         timeOffset, GetActiveEffect());
+}
+
+void BlendCharBitmapGradientSTBWithEffect(void* destBits, int destWidth, int destHeight,
+                                          int x_pos, int y_pos,
+                                          const unsigned char* bitmap, int w, int h,
+                                          int startX, int totalWidth, int gradientType,
+                                          int timeOffset, EffectType effect) {
+    GradientInfoSnapshot snapshot;
+    if (!GetGradientInfoSnapshot((GradientType)gradientType, &snapshot)) return;
+
+    BlendCharBitmapGradientSTBWithInfo(destBits, destWidth, destHeight,
+                                       x_pos, y_pos, bitmap, w, h,
+                                       startX, totalWidth, &snapshot.info,
+                                       timeOffset, effect);
+}
+
+void BlendCharBitmapGradientSTBWithInfo(void* destBits, int destWidth, int destHeight,
+                                        int x_pos, int y_pos,
+                                        const unsigned char* bitmap, int w, int h,
+                                        int startX, int totalWidth,
+                                        const GradientInfo* info,
+                                        int timeOffset, EffectType effect) {
     DWORD* pixels = (DWORD*)destBits;
     size_t destPixelCount = 0;
     size_t bitmapPixelCount = 0;
@@ -432,9 +929,7 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
         return;
     }
 
-    const GradientInfo* info = GetGradientInfo((GradientType)gradientType);
-    // Allow isAnimated check to gate LUT logic
-    if (!info && !IsGradientAnimated((GradientType)gradientType)) return;
+    if (!info) return;
 
     int r1 = 0, g1 = 0, b1 = 0;
     int r2 = 0, g2 = 0, b2 = 0;
@@ -442,25 +937,14 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
     /* Animation parameters */
     float lutStep = 0.0f;
     
-    if (info && info->isAnimated) {
-        BOOL needLutUpdate = (g_lutType != (GradientType)gradientType);
-        
-        /* Check for custom gradient updates */
-        if ((GradientType)gradientType == GRADIENT_CUSTOM) {
-            static uint32_t lastCustomVer = 0;
-            uint32_t currVer = GetCustomGradientVersion();
-            if (currVer != lastCustomVer) {
-                needLutUpdate = TRUE;
-                lastCustomVer = currVer;
-            }
-        }
-
+    if (info->isAnimated) {
+        BOOL needLutUpdate = !GradientLUTMatches(info);
         if (needLutUpdate) InitializeGradientLUT(info);
 
         if (totalWidth > 0) {
             lutStep = (float)LUT_SIZE / (float)totalWidth;
         }
-    } else if (info) {
+    } else {
         r1 = GetRValue(info->startColor);
         g1 = GetGValue(info->startColor);
         b1 = GetBValue(info->startColor);
@@ -471,83 +955,72 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
     }
 
     /* Render glow effect if enabled - use gradient start color as base but use callback for per-pixel color */
-    EffectType effect = GetActiveEffect();
-
-    if (effect == EFFECT_TYPE_GLOW && info) {
+    if (effect == EFFECT_TYPE_GLOW) {
         int glowR = GetRValue(info->startColor);
         int glowG = GetGValue(info->startColor);
         int glowB = GetBValue(info->startColor);
         
-        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
-        RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+        GlowGradientContext ctx;
+        InitGlowGradientContext(&ctx, info, startX, totalWidth, timeOffset);
+        RenderGlowEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
                          glowR, glowG, glowB, GetGlowGradientColor, &ctx);
-    } else if (effect == EFFECT_TYPE_GLASS && info) {
+    } else if (effect == EFFECT_TYPE_GLASS) {
         int glassR = GetRValue(info->startColor);
         int glassG = GetGValue(info->startColor);
         int glassB = GetBValue(info->startColor);
         
-        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
-        RenderGlassEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+        GlowGradientContext ctx;
+        InitGlowGradientContext(&ctx, info, startX, totalWidth, timeOffset);
+        RenderGlassEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
                          glassR, glassG, glassB, GetGlowGradientColor, &ctx);
         /* 
            CRITICAL: Return early to prevent solid gradient overwriting the glass effect.
         */
         return;
-    } else if (effect == EFFECT_TYPE_NEON && info) {
+    } else if (effect == EFFECT_TYPE_NEON) {
         int neonR = GetRValue(info->startColor);
         int neonG = GetGValue(info->startColor);
         int neonB = GetBValue(info->startColor);
         
-        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
-        RenderNeonEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+        GlowGradientContext ctx;
+        InitGlowGradientContext(&ctx, info, startX, totalWidth, timeOffset);
+        RenderNeonEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
                          neonR, neonG, neonB, GetGlowGradientColor, &ctx);
         /* Neon replaces solid text */
         return;
-    } else if (effect == EFFECT_TYPE_HOLOGRAPHIC && info) {
+    } else if (effect == EFFECT_TYPE_HOLOGRAPHIC) {
         int holoR = GetRValue(info->startColor);
         int holoG = GetGValue(info->startColor);
         int holoB = GetBValue(info->startColor);
         
-        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
-        RenderHolographicEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+        GlowGradientContext ctx;
+        InitGlowGradientContext(&ctx, info, startX, totalWidth, timeOffset);
+        RenderHolographicEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
                                 holoR, holoG, holoB, GetGlowGradientColor, &ctx, timeOffset);
         /* Critical: Return early */
         return;
-    } else if (effect == EFFECT_TYPE_LIQUID && info) {
+    } else if (effect == EFFECT_TYPE_LIQUID) {
         int liquidR = GetRValue(info->startColor);
         int liquidG = GetGValue(info->startColor);
         int liquidB = GetBValue(info->startColor);
         
-        GlowGradientContext ctx = { info, startX, totalWidth, timeOffset };
-        RenderLiquidEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, 
+        GlowGradientContext ctx;
+        InitGlowGradientContext(&ctx, info, startX, totalWidth, timeOffset);
+        RenderLiquidEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
                            liquidR, liquidG, liquidB, GetGlowGradientColor, &ctx, timeOffset);
         /* Critical: Return early */
         return;
     }
 
-    for (int j = 0; j < h; ++j) {
-        /* Compute clipping for Y */
-        int screen_y = y_pos + j;
-        if (screen_y < 0 || screen_y >= destHeight) {
-            /* Skip this row, but must advance gradient state if Animated */
-            if (info && info->isAnimated) {
-                // logic handled by row start calc
-            }
-            continue;
-        }
+    TextBitmapClip clip;
+    if (!ClipTextBitmapToDestination(x_pos, y_pos, w, h, destWidth, destHeight, &clip)) {
+        return;
+    }
 
-        /* Compute clipping for X */
-        int start_i = 0;
-        int end_i = w;
-        
-        if (x_pos < 0) start_i = -x_pos;
-        if (x_pos + w > destWidth) end_i = destWidth - x_pos;
-        
-        if (start_i >= end_i) continue;
-
-        /* Pointers */
-        size_t destIndex = (size_t)screen_y * (size_t)destWidth + (size_t)(x_pos + start_i);
-        size_t srcIndex = (size_t)j * (size_t)w + (size_t)start_i;
+    for (int j = clip.srcTop; j < clip.srcBottom; ++j) {
+        int destY = clip.destTop + (j - clip.srcTop);
+        size_t destIndex = (size_t)destY * (size_t)destWidth + (size_t)clip.destLeft;
+        size_t srcIndex = (size_t)j * (size_t)w + (size_t)clip.srcLeft;
         if (destIndex >= destPixelCount || srcIndex >= bitmapPixelCount) continue;
 
         DWORD* destRow = pixels + destIndex;
@@ -555,25 +1028,33 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
 
         /* Pre-calculate starting LUT index for this row if Animated */
         float currentLutIdxFloat = 0.0f;
-        if (info && info->isAnimated) {
-            int rowStartX = (x_pos + start_i) - startX;
+        if (info->isAnimated) {
+            long long rowStartX = (long long)clip.destLeft - (long long)startX;
             if (totalWidth > 0) {
                 currentLutIdxFloat = ((float)rowStartX / (float)totalWidth) * LUT_SIZE;
             }
         }
 
-        for (int i = start_i; i < end_i; ++i) {
+        long long currentGradientFixed = 0;
+        long long gradientFixedStep = 0;
+        if (!info->isAnimated && totalWidth > 0) {
+            currentGradientFixed = GradientPositionFixed(clip.destLeft, startX, totalWidth);
+            gradientFixedStep = GRADIENT_FIXED_ONE / (long long)totalWidth;
+        }
+
+        for (int i = clip.srcLeft; i < clip.srcRight; ++i) {
             unsigned char alpha = *srcRow++;
-            
+
             if (alpha == 0) {
-                if (info && info->isAnimated) currentLutIdxFloat += lutStep;
+                if (info->isAnimated) currentLutIdxFloat += lutStep;
+                else AdvanceGradientPositionFixed(&currentGradientFixed, gradientFixedStep);
                 destRow++;
                 continue;
             }
 
             int r, g, b;
 
-            if (info && info->isAnimated) {
+            if (info->isAnimated) {
                 /* Optimized LUT Lookup */
                 int lutIdx = (int)currentLutIdxFloat - timeOffset;
                 currentLutIdxFloat += lutStep;
@@ -586,16 +1067,10 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
                 g = GetGValue(c);
                 b = GetBValue(c);
             } else {
-                /* Standard Logic */
-                float t = 0.0f;
-                if (totalWidth > 0) {
-                    t = (float)((x_pos + i) - startX) / (float)totalWidth;
-                }
-                if (t < 0.0f) t = 0.0f; else if (t > 1.0f) t = 1.0f;
-
-                r = (int)(r1 + (r2 - r1) * t);
-                g = (int)(g1 + (g2 - g1) * t);
-                b = (int)(b1 + (b2 - b1) * t);
+                r = InterpolateGradientChannelFixed(r1, r2, currentGradientFixed);
+                g = InterpolateGradientChannelFixed(g1, g2, currentGradientFixed);
+                b = InterpolateGradientChannelFixed(b1, b2, currentGradientFixed);
+                AdvanceGradientPositionFixed(&currentGradientFixed, gradientFixedStep);
             }
 
             /* Blend */
@@ -616,24 +1091,45 @@ void BlendCharBitmapGradientSTB(void* destBits, int destWidth, int destHeight,
 }
 
 void GetCharMetricsSTB(wchar_t c, wchar_t nextC, float scale, float fallbackScale, GlyphMetrics* out) {
+    if (!out) return;
+
     out->index = 0;
     out->isFallback = FALSE;
     out->advance = 0;
     out->kern = 0;
 
     if (c == L'\n' || c == L'\r') return;
-    
+
+    wchar_t cacheNextC = (nextC == L'\n' || nextC == L'\r') ? 0 : nextC;
+    if (c == L'\t') {
+        cacheNextC = 0;
+    }
+
+    DWORD cacheSlot = GetGlyphMetricsCacheSlot(c, cacheNextC);
+    GlyphMetricsCacheEntry* cached = &g_glyphMetricsCache[cacheSlot];
+    if (cached->valid && cached->c == c && cached->nextC == cacheNextC) {
+        ApplyCachedGlyphMetrics(cached, scale, fallbackScale, out);
+        return;
+    }
+
     if (c == L'\t') {
         // Tab = 4 spaces
         int spaceIdx = stbtt_FindGlyphIndex(&g_fontInfo, ' ');
         int adv, lsb;
         stbtt_GetGlyphHMetrics(&g_fontInfo, spaceIdx, &adv, &lsb);
-        out->advance = (int)(adv * scale * 4);
+        cached->valid = TRUE;
+        cached->c = c;
+        cached->nextC = cacheNextC;
+        cached->index = spaceIdx;
+        cached->isFallback = FALSE;
+        cached->advanceUnits = adv * 4;
+        cached->kernUnits = 0;
+        ApplyCachedGlyphMetrics(cached, scale, fallbackScale, out);
         return;
     }
 
     out->index = stbtt_FindGlyphIndex(&g_fontInfo, (int)c);
-    
+
     if (out->index == 0 && g_fallbackFontLoaded && c != L' ') {
         int fallbackIndex = stbtt_FindGlyphIndex(&g_fallbackFontInfo, (int)c);
         if (fallbackIndex != 0) {
@@ -642,26 +1138,119 @@ void GetCharMetricsSTB(wchar_t c, wchar_t nextC, float scale, float fallbackScal
         }
     }
 
-    int adv, lsb;
+    int adv = 0;
+    int lsb = 0;
+    int kern = 0;
     if (out->isFallback) {
         stbtt_GetGlyphHMetrics(&g_fallbackFontInfo, out->index, &adv, &lsb);
-        out->advance = (int)(adv * fallbackScale);
     } else {
         stbtt_GetGlyphHMetrics(&g_fontInfo, out->index, &adv, &lsb);
-        out->advance = (int)(adv * scale);
-        
+
         // Kerning
-        if (nextC && nextC != L'\n' && nextC != L'\r') {
-            int nextIdx = stbtt_FindGlyphIndex(&g_fontInfo, (int)nextC);
+        if (cacheNextC) {
+            int nextIdx = stbtt_FindGlyphIndex(&g_fontInfo, (int)cacheNextC);
             if (nextIdx != 0) {
-                out->kern = (int)(stbtt_GetGlyphKernAdvance(&g_fontInfo, out->index, nextIdx) * scale);
+                kern = stbtt_GetGlyphKernAdvance(&g_fontInfo, out->index, nextIdx);
             }
         }
     }
+
+    cached->valid = TRUE;
+    cached->c = c;
+    cached->nextC = cacheNextC;
+    cached->index = out->index;
+    cached->isFallback = out->isFallback;
+    cached->advanceUnits = adv;
+    cached->kernUnits = kern;
+    ApplyCachedGlyphMetrics(cached, scale, fallbackScale, out);
+}
+
+BOOL GetCachedFontCharMetricsSTB(const stbtt_fontinfo* fontInfo,
+                                 wchar_t c,
+                                 float scale,
+                                 GlyphMetrics* out) {
+    if (!fontInfo || !out) return FALSE;
+
+    out->index = 0;
+    out->isFallback = FALSE;
+    out->advance = 0;
+    out->kern = 0;
+
+    int fontSlot = -1;
+    for (int i = 0; i < MAX_CACHED_FONTS; ++i) {
+        if (g_fontCache[i].isLoaded && fontInfo == &g_fontCache[i].fontInfo) {
+            fontSlot = i;
+            break;
+        }
+    }
+    if (fontSlot < 0) {
+        return FALSE;
+    }
+
+    DWORD cacheSlot = GetFontTagGlyphMetricsCacheSlot(c);
+    FontTagGlyphMetricsCacheEntry* cached =
+        &g_fontTagGlyphMetricsCache[fontSlot][cacheSlot];
+    if (cached->valid && cached->c == c) {
+        out->index = cached->index;
+        out->advance = (int)(cached->advanceUnits * scale);
+        return TRUE;
+    }
+
+    int glyphIndex = stbtt_FindGlyphIndex(fontInfo, (int)c);
+    int advanceUnits = 0;
+    if (glyphIndex != 0) {
+        int lsb = 0;
+        stbtt_GetGlyphHMetrics(fontInfo, glyphIndex, &advanceUnits, &lsb);
+    }
+
+    cached->valid = TRUE;
+    cached->c = c;
+    cached->index = glyphIndex;
+    cached->advanceUnits = advanceUnits;
+
+    out->index = glyphIndex;
+    out->advance = (int)(advanceUnits * scale);
+    return TRUE;
+}
+
+BOOL IsGlyphBitmapVisibleSTB(const stbtt_fontinfo* fontInfo,
+                             int glyphIndex,
+                             float scaleX,
+                             float scaleY,
+                             int originX,
+                             int originY,
+                             int destWidth,
+                             int destHeight,
+                             EffectType effect,
+                             int extraMargin) {
+    if (!fontInfo || glyphIndex == 0 || destWidth <= 0 || destHeight <= 0) {
+        return FALSE;
+    }
+
+    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    stbtt_GetGlyphBitmapBox(fontInfo, glyphIndex, scaleX, scaleY, &x0, &y0, &x1, &y1);
+    if (x1 <= x0 || y1 <= y0) {
+        return FALSE;
+    }
+
+    int margin = extraMargin;
+    if (effect != EFFECT_TYPE_NONE) {
+        margin += 24;
+    }
+
+    int left = AddTextIntClamped(AddTextIntClamped(originX, x0), -margin);
+    int top = AddTextIntClamped(AddTextIntClamped(originY, y0), -margin);
+    int right = AddTextIntClamped(AddTextIntClamped(originX, x1), margin);
+    int bottom = AddTextIntClamped(AddTextIntClamped(originY, y1), margin);
+
+    return right > 0 && bottom > 0 && left < destWidth && top < destHeight;
 }
 
 BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) {
-    if (!g_fontLoaded || !text) return FALSE;
+    if (!BeginFontUseSTB()) return FALSE;
+    BOOL result = FALSE;
+
+    if (!g_fontLoaded || !text) goto done;
 
     float scale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)fontSize);
     float fallbackScale = g_fallbackFontLoaded ? stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)fontSize) : 0;
@@ -682,7 +1271,7 @@ BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) 
 
         GlyphMetrics gm;
         GetCharMetricsSTB(text[i], (i < len - 1) ? text[i+1] : 0, scale, fallbackScale, &gm);
-        curLineWidth += gm.advance + gm.kern;
+        curLineWidth = AddTextIntClamped(curLineWidth, gm.advance + gm.kern);
     }
     if (curLineWidth > maxWidth) maxWidth = curLineWidth;
 
@@ -691,16 +1280,20 @@ BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) 
     int lineHeight = (int)((ascent - descent + lineGap) * scale);
 
     if (width) *width = maxWidth;
-    if (height) *height = lineCount * lineHeight;
-    
-    return TRUE;
+    if (height) *height = MulTextIntClamped(lineCount, lineHeight);
+    result = TRUE;
+
+done:
+    EndFontUseSTB();
+    return result;
 }
 
-void RenderTextSTB(void* bits, int width, int height, const wchar_t* text, 
+void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
                    COLORREF color, int fontSize, float fontScale, BOOL editMode) {
     UNREFERENCED_PARAMETER(editMode);
 
-    if (!g_fontLoaded || !text || !bits) return;
+    if (!BeginFontUseSTB()) return;
+    if (!g_fontLoaded || !text || !bits) goto done;
 
     float scale = stbtt_ScaleForPixelHeight(&g_fontInfo, (float)(fontSize * fontScale));
     float fallbackScale = g_fallbackFontLoaded ? stbtt_ScaleForPixelHeight(&g_fallbackFontInfo, (float)(fontSize * fontScale)) : 0;
@@ -713,19 +1306,23 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
     int r = GetRValue(color);
     int g = GetGValue(color);
     int b = GetBValue(color);
+    EffectType effect = GetActiveEffect();
+    int timeOffset = (int)GetTickCount();
 
     // Pre-calculate line widths for centering
     // We can do a quick pass or re-use Measure logic per line
     size_t len = wcslen(text);
     int currentY = 0;
     
-    // Calculate total text height to vertically center the whole block
-    int totalTextHeight = 0;
-    {
-        int w, h;
-        MeasureTextSTB(text, (int)(fontSize * fontScale), &w, &h);
-        totalTextHeight = h;
+    // Calculate total text height to vertically center the whole block.
+    // Width metrics are computed per line below, so only line count is needed here.
+    int lineCount = 1;
+    for (size_t i = 0; i < len; i++) {
+        if (text[i] == L'\n') {
+            lineCount++;
+        }
     }
+    int totalTextHeight = MulTextIntClamped(lineCount, lineHeight);
     
     int startY = (height - totalTextHeight) / 2;
     int currentLineStart = 0;
@@ -739,11 +1336,13 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
                 if (text[j] == L'\r') continue;
                 GlyphMetrics gm;
                 GetCharMetricsSTB(text[j], (j < i - 1) ? text[j+1] : 0, scale, fallbackScale, &gm);
-                lineWidth += gm.advance + gm.kern;
+                lineWidth = AddTextIntClamped(lineWidth, gm.advance + gm.kern);
             }
-            
+
             int currentX = (width - lineWidth) / 2;
-            int lineY = startY + currentY * lineHeight + baselineOffset;
+            int lineY = AddTextIntClamped(AddTextIntClamped(startY,
+                                                            MulTextIntClamped(currentY, lineHeight)),
+                                          baselineOffset);
 
             // Render line
             for (size_t j = currentLineStart; j < i; j++) {
@@ -755,25 +1354,39 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
                 if (gm.index != 0 && text[j] != L' ' && text[j] != L'\t') {
                     int w, h, xoff, yoff;
                     unsigned char* bitmap = NULL;
-                    
-                    if (gm.isFallback) {
-                        bitmap = stbtt_GetGlyphBitmap(&g_fallbackFontInfo, fallbackScale, fallbackScale, gm.index, &w, &h, &xoff, &yoff);
-                    } else {
-                        bitmap = stbtt_GetGlyphBitmap(&g_fontInfo, scale, scale, gm.index, &w, &h, &xoff, &yoff);
+
+                    const stbtt_fontinfo* glyphFontInfo = gm.isFallback ? &g_fallbackFontInfo : &g_fontInfo;
+                    float glyphScale = gm.isFallback ? fallbackScale : scale;
+                    if (!IsGlyphBitmapVisibleSTB(glyphFontInfo, gm.index, glyphScale, glyphScale,
+                                                 currentX, lineY, width, height,
+                                                 effect, 0)) {
+                        currentX = AddTextIntClamped(currentX, gm.advance + gm.kern);
+                        continue;
                     }
-                    
+
+                    bitmap = stbtt_GetGlyphBitmap(glyphFontInfo, glyphScale, glyphScale,
+                                                  gm.index, &w, &h, &xoff, &yoff);
+
                     if (bitmap) {
-                        BlendCharBitmapSTB(bits, width, height, currentX + xoff, lineY + yoff, bitmap, w, h, r, g, b);
+                        int glyphX = AddTextIntClamped(currentX, xoff);
+                        int glyphY = AddTextIntClamped(lineY, yoff);
+                        BlendCharBitmapSTBWithEffect(bits, width, height,
+                                                     glyphX, glyphY,
+                                                     bitmap, w, h, r, g, b,
+                                                     effect, timeOffset);
                         stbtt_FreeBitmap(bitmap, NULL);
                     }
                 }
-                currentX += gm.advance + gm.kern;
+                currentX = AddTextIntClamped(currentX, gm.advance + gm.kern);
             }
             
             currentY++;
             currentLineStart = i + 1;
         }
     }
+
+done:
+    EndFontUseSTB();
 }
 
 /* ============================================================================
@@ -789,12 +1402,13 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
  * - Relative paths: fonts/custom.ttf (resolved relative to plugins directory)
  * 
  * @param fontPath Font path from <font:> tag (wide string)
- * @param outPath Output buffer for resolved path (narrow string)
+ * @param outPath Output buffer for resolved path (wide string)
  * @param pathSize Buffer size
  * @return TRUE if path resolved and file exists
  */
-static BOOL ResolveFontTagPath(const wchar_t* fontPath, char* outPath, size_t pathSize) {
+static BOOL ResolveFontTagPath(const wchar_t* fontPath, wchar_t* outPath, size_t pathSize) {
     if (!fontPath || !outPath || pathSize == 0) return FALSE;
+    outPath[0] = L'\0';
 
     wchar_t expandedPath[MAX_PATH];
     wchar_t resolvedPath[MAX_PATH];
@@ -863,33 +1477,157 @@ static BOOL ResolveFontTagPath(const wchar_t* fontPath, char* outPath, size_t pa
         LOG_WARNING("Font file not found: %ls", resolvedPath);
         return FALSE;
     }
-    
-    /* Step 5: Convert to narrow string for STB */
-    if (WideCharToMultiByte(CP_UTF8, 0, resolvedPath, -1, outPath, (int)pathSize, NULL, NULL) == 0) {
-        LOG_WARNING("Failed to convert font path to UTF-8: %ls", resolvedPath);
+
+    /* Step 5: Return wide path directly to avoid UTF-8 round trip before CreateFileW. */
+    if (wcslen(resolvedPath) >= pathSize) {
+        LOG_WARNING("Resolved font path is too long: %ls", resolvedPath);
         return FALSE;
     }
-    
+    wcsncpy(outPath, resolvedPath, pathSize - 1);
+    outPath[pathSize - 1] = L'\0';
+
     return TRUE;
 }
 
 void ClearFontCacheSTB(void) {
-    for (int i = 0; i < MAX_CACHED_FONTS; i++) {
-        if (g_fontCache[i].isLoaded) {
-            if (g_fontCache[i].fontBuffer) {
-                UnmapViewOfFile(g_fontCache[i].fontBuffer);
-            }
-            if (g_fontCache[i].hMapping) {
-                CloseHandle(g_fontCache[i].hMapping);
-            }
-            if (g_fontCache[i].hFile != INVALID_HANDLE_VALUE) {
-                CloseHandle(g_fontCache[i].hFile);
-            }
-        }
-        ZeroMemory(&g_fontCache[i], sizeof(CachedFont));
-        g_fontCacheLRU[i] = 0;
+    if (!BeginFontUseSTB()) return;
+
+    ClearFontCacheSTBLocked();
+
+    EndFontUseSTB();
+}
+
+static void ReleaseCachedFontSlotLocked(int slot) {
+    if (slot < 0 || slot >= MAX_CACHED_FONTS) return;
+
+    if (g_fontCache[slot].isLoaded) {
+        ReleaseMappedFont(g_fontCache[slot].fontBuffer,
+                          g_fontCache[slot].hFile,
+                          g_fontCache[slot].hMapping);
     }
+    ZeroMemory(&g_fontCache[slot], sizeof(CachedFont));
+    g_fontCacheLRU[slot] = 0;
+    ClearFontTagGlyphMetricsCacheSlotLocked(slot);
+}
+
+static void ClearFontCacheSTBLocked(void) {
+    for (int i = 0; i < MAX_CACHED_FONTS; i++) {
+        ReleaseCachedFontSlotLocked(i);
+    }
+    ZeroMemory(g_failedFontCache, sizeof(g_failedFontCache));
     g_fontCacheAccessCounter = 0;
+}
+
+static BOOL IsCachedFontSlotCurrentLocked(int slot) {
+    if (slot < 0 || slot >= MAX_CACHED_FONTS) return FALSE;
+
+    CachedFont* entry = &g_fontCache[slot];
+    if (!entry->isLoaded || !entry->fileInfoValid || entry->resolvedPath[0] == L'\0') {
+        return FALSE;
+    }
+
+    DWORD now = GetTickCount();
+    if (entry->lastValidateTick != 0 &&
+        (DWORD)(now - entry->lastValidateTick) < MAIN_FONT_FILE_RECHECK_MS) {
+        return TRUE;
+    }
+    entry->lastValidateTick = now;
+
+    FILETIME lastWriteTime;
+    ULONGLONG fileSize = 0;
+    if (!GetFontFileInfoFromPathW(entry->resolvedPath, &lastWriteTime, &fileSize)) {
+        return FALSE;
+    }
+
+    return entry->fileSize == fileSize &&
+           CompareFileTime(&entry->lastWriteTime, &lastWriteTime) == 0;
+}
+
+static BOOL CopyFontCacheKeyW(const wchar_t* fontPath, wchar_t* outPath) {
+    if (!outPath) return FALSE;
+    outPath[0] = L'\0';
+    if (!fontPath || fontPath[0] == L'\0') return FALSE;
+
+    size_t len = 0;
+    while (len < MAX_PATH && fontPath[len] != L'\0') {
+        len++;
+    }
+    if (len >= MAX_PATH) {
+        return FALSE;
+    }
+
+    memcpy(outPath, fontPath, (len + 1) * sizeof(wchar_t));
+    return TRUE;
+}
+
+static BOOL IsRecentFontFailureCached(const wchar_t* fontPath) {
+    wchar_t cacheKey[MAX_PATH] = {0};
+    if (!CopyFontCacheKeyW(fontPath, cacheKey)) return FALSE;
+
+    DWORD now = GetTickCount();
+    for (int i = 0; i < MAX_FAILED_FONT_CACHE; i++) {
+        if (g_failedFontCache[i].fontName[0] == L'\0') continue;
+        if (wcscmp(g_failedFontCache[i].fontName, cacheKey) != 0) continue;
+
+        if (now - g_failedFontCache[i].lastFailureTick < FONT_FAILURE_RETRY_MS) {
+            return TRUE;
+        }
+
+        ZeroMemory(&g_failedFontCache[i], sizeof(g_failedFontCache[i]));
+        return FALSE;
+    }
+
+    return FALSE;
+}
+
+static void RemoveFailedFontCacheEntry(const wchar_t* fontPath) {
+    wchar_t cacheKey[MAX_PATH] = {0};
+    if (!CopyFontCacheKeyW(fontPath, cacheKey)) return;
+
+    for (int i = 0; i < MAX_FAILED_FONT_CACHE; i++) {
+        if (g_failedFontCache[i].fontName[0] != L'\0' &&
+            wcscmp(g_failedFontCache[i].fontName, cacheKey) == 0) {
+            ZeroMemory(&g_failedFontCache[i], sizeof(g_failedFontCache[i]));
+            return;
+        }
+    }
+}
+
+static void RecordFailedFontCacheEntry(const wchar_t* fontPath) {
+    wchar_t cacheKey[MAX_PATH] = {0};
+    if (!CopyFontCacheKeyW(fontPath, cacheKey)) return;
+
+    DWORD now = GetTickCount();
+    int target = -1;
+    DWORD oldestAge = 0;
+
+    for (int i = 0; i < MAX_FAILED_FONT_CACHE; i++) {
+        if (g_failedFontCache[i].fontName[0] == L'\0') {
+            target = i;
+            break;
+        }
+
+        if (wcscmp(g_failedFontCache[i].fontName, cacheKey) == 0) {
+            target = i;
+            break;
+        }
+
+        DWORD age = now - g_failedFontCache[i].lastFailureTick;
+        if (age >= FONT_FAILURE_RETRY_MS) {
+            target = i;
+            break;
+        }
+
+        if (target < 0 || age > oldestAge) {
+            target = i;
+            oldestAge = age;
+        }
+    }
+
+    if (target < 0) return;
+
+    memcpy(g_failedFontCache[target].fontName, cacheKey, sizeof(cacheKey));
+    g_failedFontCache[target].lastFailureTick = now;
 }
 
 /**
@@ -906,83 +1644,107 @@ void ClearFontCacheSTB(void) {
  */
 stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath) {
     if (!fontPath || fontPath[0] == L'\0') return NULL;
-    
+
+    wchar_t cacheKey[MAX_PATH] = {0};
+    if (!CopyFontCacheKeyW(fontPath, cacheKey)) {
+        LOG_WARNING("Font cache key is too long: %ls", fontPath);
+        return NULL;
+    }
+
+    int targetSlot = -1;
+
     /* Search cache for existing font (by original path for cache key) */
     for (int i = 0; i < MAX_CACHED_FONTS; i++) {
-        if (g_fontCache[i].isLoaded && wcscmp(g_fontCache[i].fontName, fontPath) == 0) {
-            /* Update LRU counter */
-            g_fontCacheLRU[i] = ++g_fontCacheAccessCounter;
-            return &g_fontCache[i].fontInfo;
+        if (g_fontCache[i].isLoaded && wcscmp(g_fontCache[i].fontName, cacheKey) == 0) {
+            if (IsCachedFontSlotCurrentLocked(i)) {
+                TouchFontCacheSlotLocked(i);
+                return &g_fontCache[i].fontInfo;
+            }
+            ReleaseCachedFontSlotLocked(i);
+            targetSlot = i;
+            break;
         }
     }
-    
+
+    if (IsRecentFontFailureCached(cacheKey)) {
+        return NULL;
+    }
+
     /* Font not in cache, resolve path and load it */
-    char resolvedPath[MAX_PATH];
-    if (!ResolveFontTagPath(fontPath, resolvedPath, sizeof(resolvedPath))) {
+    wchar_t resolvedPath[MAX_PATH];
+    if (!ResolveFontTagPath(fontPath, resolvedPath, _countof(resolvedPath))) {
+        RecordFailedFontCacheEntry(cacheKey);
         LOG_WARNING("Font path resolution failed: %ls", fontPath);
         return NULL;
     }
     
     /* Find slot: empty or LRU */
-    int targetSlot = -1;
     int minLRU = INT_MAX;
-    
-    for (int i = 0; i < MAX_CACHED_FONTS; i++) {
-        if (!g_fontCache[i].isLoaded) {
-            targetSlot = i;
-            break;
-        }
-        if (g_fontCacheLRU[i] < minLRU) {
-            minLRU = g_fontCacheLRU[i];
-            targetSlot = i;
+
+    if (targetSlot < 0) {
+        for (int i = 0; i < MAX_CACHED_FONTS; i++) {
+            if (!g_fontCache[i].isLoaded) {
+                targetSlot = i;
+                break;
+            }
+            if (g_fontCacheLRU[i] < minLRU) {
+                minLRU = g_fontCacheLRU[i];
+                targetSlot = i;
+            }
         }
     }
     
     if (targetSlot < 0) targetSlot = 0;
-    
-    /* Evict if necessary */
-    if (g_fontCache[targetSlot].isLoaded) {
-        if (g_fontCache[targetSlot].fontBuffer) {
-            UnmapViewOfFile(g_fontCache[targetSlot].fontBuffer);
-        }
-        if (g_fontCache[targetSlot].hMapping) {
-            CloseHandle(g_fontCache[targetSlot].hMapping);
-        }
-        if (g_fontCache[targetSlot].hFile != INVALID_HANDLE_VALUE) {
-            CloseHandle(g_fontCache[targetSlot].hFile);
-        }
-        ZeroMemory(&g_fontCache[targetSlot], sizeof(CachedFont));
-    }
-    
+
     /* Load new font */
     HANDLE hFile = INVALID_HANDLE_VALUE;
     HANDLE hMapping = NULL;
-    unsigned char* buffer = LoadFontMapping(resolvedPath, &hFile, &hMapping);
-    
+    unsigned char* buffer = LoadFontMappingW(resolvedPath, &hFile, &hMapping);
+
     if (!buffer) {
-        LOG_WARNING("Failed to load font file: %s", resolvedPath);
+        RecordFailedFontCacheEntry(cacheKey);
+        LOG_WARNING("Failed to load font file: %ls", resolvedPath);
         return NULL;
     }
-    
-    if (!stbtt_InitFont(&g_fontCache[targetSlot].fontInfo, buffer, 
-                        stbtt_GetFontOffsetForIndex(buffer, 0))) {
-        UnmapViewOfFile(buffer);
-        CloseHandle(hMapping);
-        CloseHandle(hFile);
-        LOG_WARNING("Failed to init STB font: %s", resolvedPath);
+
+    FILETIME lastWriteTime;
+    ULONGLONG fileSize = 0;
+    if (!GetFontFileInfoFromHandle(hFile, &lastWriteTime, &fileSize)) {
+        ReleaseMappedFont(buffer, hFile, hMapping);
+        RecordFailedFontCacheEntry(cacheKey);
         return NULL;
     }
-    
+
+    stbtt_fontinfo newFontInfo;
+    if (!InitFontInfoFromBufferW(&newFontInfo, buffer, resolvedPath)) {
+        ReleaseMappedFont(buffer, hFile, hMapping);
+        RecordFailedFontCacheEntry(cacheKey);
+        return NULL;
+    }
+
+    /* Evict only after the replacement font is known to be usable. */
+    if (g_fontCache[targetSlot].isLoaded) {
+        ReleaseCachedFontSlotLocked(targetSlot);
+    }
+
     /* Store in cache (use original path as cache key) */
-    wcsncpy(g_fontCache[targetSlot].fontName, fontPath, 63);
-    g_fontCache[targetSlot].fontName[63] = L'\0';
+    RemoveFailedFontCacheEntry(cacheKey);
+    memcpy(g_fontCache[targetSlot].fontName, cacheKey, sizeof(cacheKey));
+    wcscpy_s(g_fontCache[targetSlot].resolvedPath,
+             _countof(g_fontCache[targetSlot].resolvedPath),
+             resolvedPath);
+    g_fontCache[targetSlot].fontInfo = newFontInfo;
     g_fontCache[targetSlot].fontBuffer = buffer;
     g_fontCache[targetSlot].hFile = hFile;
     g_fontCache[targetSlot].hMapping = hMapping;
+    g_fontCache[targetSlot].lastWriteTime = lastWriteTime;
+    g_fontCache[targetSlot].fileSize = fileSize;
+    g_fontCache[targetSlot].lastValidateTick = GetTickCount();
+    g_fontCache[targetSlot].fileInfoValid = TRUE;
     g_fontCache[targetSlot].isLoaded = TRUE;
-    g_fontCacheLRU[targetSlot] = ++g_fontCacheAccessCounter;
-    
-    LOG_INFO("Cached font loaded: %ls -> %s", fontPath, resolvedPath);
-    
+    TouchFontCacheSlotLocked(targetSlot);
+
+    LOG_INFO("Cached font loaded: %ls -> %ls", fontPath, resolvedPath);
+
     return &g_fontCache[targetSlot].fontInfo;
 }

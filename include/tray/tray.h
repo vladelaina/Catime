@@ -91,6 +91,13 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 void UpdateTrayTooltip(const wchar_t* tip);
 
 /**
+ * @brief Check whether the tray icon is currently registered for a window
+ * @param hwnd Main window handle
+ * @return TRUE if Shell_NotifyIcon(NIM_ADD) succeeded for this window
+ */
+BOOL IsTrayIconActive(HWND hwnd);
+
+/**
  * @brief Install mouse hook for tray wheel events
  * @note Called when mouse enters tray icon area (NIN_POPUPOPEN)
  */

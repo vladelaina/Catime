@@ -55,6 +55,21 @@ static IDropTargetVtbl vtbl = {
 };
 
 static OleDropTarget g_dropTarget;
+static BOOL g_oleInitialized = FALSE;
+static BOOL g_dropTargetRegistered = FALSE;
+static HWND g_registeredDropTargetHwnd = NULL;
+
+#define DROP_PREVIEW_SCAN_ENTRY_BUDGET 512u
+#define DROP_PREVIEW_SCAN_DEPTH_LIMIT 8u
+
+typedef struct {
+    int fontCount;
+    int animCount;
+    wchar_t fontPath[MAX_PATH];
+    wchar_t animPath[MAX_PATH];
+    DWORD scannedEntries;
+    BOOL truncated;
+} ResourceScanResult;
 
 /* ============================================================================
  * Helper Functions
@@ -76,54 +91,116 @@ static BOOL IsAnimationFile(const wchar_t* filename) {
             _wcsicmp(ext, L".tiff") == 0);
 }
 
-static void ScanDirectoryForResources(const wchar_t* dirPath, int* fontCount, int* animCount, 
-                                    wchar_t* lastFontPath, wchar_t* lastAnimPath) {
+static BOOL QueryDropFilePathExactW(HDROP hDrop, UINT index,
+                                    wchar_t* outPath, UINT outPathCount) {
+    if (!hDrop || !outPath || outPathCount == 0) return FALSE;
+    outPath[0] = L'\0';
+
+    UINT pathLen = DragQueryFileW(hDrop, index, NULL, 0);
+    if (pathLen == 0 || pathLen >= outPathCount) {
+        return FALSE;
+    }
+
+    UINT copied = DragQueryFileW(hDrop, index, outPath, outPathCount);
+    if (copied != pathLen) {
+        outPath[0] = L'\0';
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL IsResourceScanResolved(const ResourceScanResult* scan) {
+    return scan->truncated || (scan->fontCount > 1 && scan->animCount > 1);
+}
+
+static void RecordScannedResource(ResourceScanResult* scan, const wchar_t* filePath) {
+    if (IsFontFile(filePath)) {
+        if (scan->fontCount == 0) {
+            wcscpy_s(scan->fontPath, MAX_PATH, filePath);
+        }
+        if (scan->fontCount < 2) scan->fontCount++;
+    } else if (IsAnimationFile(filePath)) {
+        if (scan->animCount == 0) {
+            wcscpy_s(scan->animPath, MAX_PATH, filePath);
+        }
+        if (scan->animCount < 2) scan->animCount++;
+    }
+}
+
+static void ScanDirectoryForResourcesLimited(const wchar_t* dirPath, ResourceScanResult* scan, unsigned depth) {
+    if (!dirPath || !scan || IsResourceScanResolved(scan)) return;
+    if (depth >= DROP_PREVIEW_SCAN_DEPTH_LIMIT) {
+        scan->truncated = TRUE;
+        return;
+    }
+
     WIN32_FIND_DATAW findData;
     wchar_t searchPath[MAX_PATH];
-    
-    swprintf_s(searchPath, MAX_PATH, L"%s\\*", dirPath);
-    
+
+    if (_snwprintf_s(searchPath, MAX_PATH, _TRUNCATE, L"%s\\*", dirPath) < 0) {
+        scan->truncated = TRUE;
+        return;
+    }
+
     HANDLE hFind = FindFirstFileW(searchPath, &findData);
     if (hFind == INVALID_HANDLE_VALUE) return;
-    
+
     do {
         if (wcscmp(findData.cFileName, L".") == 0 || wcscmp(findData.cFileName, L"..") == 0) {
             continue;
         }
-        
-        wchar_t fullPath[MAX_PATH];
-        swprintf_s(fullPath, MAX_PATH, L"%s\\%s", dirPath, findData.cFileName);
-        
-        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            ScanDirectoryForResources(fullPath, fontCount, animCount, lastFontPath, lastAnimPath);
-        } else {
-            if (IsFontFile(fullPath)) {
-                if (*fontCount == 0 && lastFontPath) wcscpy_s(lastFontPath, MAX_PATH, fullPath);
-                (*fontCount)++;
-            } else if (IsAnimationFile(fullPath)) {
-                if (*animCount == 0 && lastAnimPath) wcscpy_s(lastAnimPath, MAX_PATH, fullPath);
-                (*animCount)++;
-            }
+
+        if (scan->scannedEntries >= DROP_PREVIEW_SCAN_ENTRY_BUDGET) {
+            scan->truncated = TRUE;
+            break;
         }
-    } while (FindNextFileW(hFind, &findData));
-    
+        scan->scannedEntries++;
+
+        wchar_t fullPath[MAX_PATH];
+        if (_snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", dirPath, findData.cFileName) < 0) {
+            scan->truncated = TRUE;
+            break;
+        }
+
+        BOOL isDirectory = (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        if (isDirectory) {
+            if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+                ScanDirectoryForResourcesLimited(fullPath, scan, depth + 1);
+            }
+        } else {
+            RecordScannedResource(scan, fullPath);
+        }
+    } while (!IsResourceScanResolved(scan) && FindNextFileW(hFind, &findData));
+
     FindClose(hFind);
 }
 
+static void ScanDropPathForResources(const wchar_t* filePath, ResourceScanResult* scan) {
+    if (!filePath || !scan || IsResourceScanResolved(scan)) return;
+
+    DWORD attrs = GetFileAttributesW(filePath);
+    if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+        ScanDirectoryForResourcesLimited(filePath, scan, 0);
+    } else {
+        RecordScannedResource(scan, filePath);
+    }
+}
+
 static void RestoreOriginalState(OleDropTarget* target, BOOL reloadOriginal) {
+    BOOL restoredPreview = target->isPreviewingFont || target->isPreviewingAnim;
+
     if (target->isPreviewingFont) {
         if (reloadOriginal) {
             CancelFontPreview();
-            LOG_INFO("Restored original font");
         } else {
-            /* Unload preview font but skip reloading original 
+            /* Unload preview font but skip reloading original
              * (because we expect HandleDropFiles to load a new one immediately)
              */
             UnloadCurrentFontResource();
             IS_PREVIEWING = FALSE;
             PREVIEW_FONT_NAME[0] = '\0';
             PREVIEW_INTERNAL_NAME[0] = '\0';
-            LOG_INFO("Unloaded preview font (skipping reload for drop)");
         }
         target->isPreviewingFont = FALSE;
     }
@@ -136,13 +213,12 @@ static void RestoreOriginalState(OleDropTarget* target, BOOL reloadOriginal) {
          * ONLY if we are NOT applying?
          * But SetCurrentAnimationName overwrites anyway.
          * Let's just cancel to be safe/clean.
-         */
+        */
         CancelAnimationPreview();
         target->isPreviewingAnim = FALSE;
-        LOG_INFO("Restored original animation");
     }
-    
-    if ((target->isPreviewingFont || target->isPreviewingAnim) && reloadOriginal) {
+
+    if (restoredPreview && reloadOriginal) {
         /* Force repaint if we restored anything */
         InvalidateRect(target->hwnd, NULL, TRUE);
     }
@@ -150,21 +226,22 @@ static void RestoreOriginalState(OleDropTarget* target, BOOL reloadOriginal) {
 
 static void StartPreview(OleDropTarget* target, const wchar_t* filePath) {
     char pathUtf8[MAX_PATH];
-    WideCharToMultiByte(CP_UTF8, 0, filePath, -1, pathUtf8, MAX_PATH, NULL, NULL);
+    if (!WideCharToMultiByte(CP_UTF8, 0, filePath, -1, pathUtf8, MAX_PATH, NULL, NULL)) {
+        return;
+    }
 
     if (!target->isPreviewingFont && IsFontFile(filePath)) {
         /* Preview font */
         if (PreviewFont(GetModuleHandle(NULL), pathUtf8)) {
             target->isPreviewingFont = TRUE;
             InvalidateRect(target->hwnd, NULL, TRUE);
-            LOG_INFO("Previewing font: %s", pathUtf8);
         }
     } 
     else if (!target->isPreviewingAnim && IsAnimationFile(filePath)) {
         /* Preview animation */
-        PreviewAnimationFromFile(target->hwnd, pathUtf8);
-        target->isPreviewingAnim = TRUE;
-        LOG_INFO("Previewing animation: %s", pathUtf8);
+        if (PreviewAnimationFromFile(target->hwnd, pathUtf8)) {
+            target->isPreviewingAnim = TRUE;
+        }
     }
 }
 
@@ -173,6 +250,10 @@ static void StartPreview(OleDropTarget* target, const wchar_t* filePath) {
  * ============================================================================ */
 
 STDMETHODIMP QueryInterface(IDropTarget* this, REFIID riid, void** ppvObject) {
+    if (!ppvObject) {
+        return E_POINTER;
+    }
+
     if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_IDropTarget)) {
         *ppvObject = this;
         AddRef(this);
@@ -206,48 +287,41 @@ STDMETHODIMP DragEnter(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeySta
         HDROP hDrop = (HDROP)stg.hGlobal;
         UINT count = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
         
-        int fontCount = 0;
-        int animCount = 0;
-        wchar_t fontPath[MAX_PATH] = {0};
-        wchar_t animPath[MAX_PATH] = {0};
-        
-        /* Count resources including those in subdirectories */
+        ResourceScanResult scan = {0};
+
+        /* Preview scanning runs on the drag UI path, so keep it bounded. */
         for (UINT i = 0; i < count; i++) {
             wchar_t filePath[MAX_PATH];
-            if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
-                DWORD attrs = GetFileAttributesW(filePath);
-                if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-                    ScanDirectoryForResources(filePath, &fontCount, &animCount, fontPath, animPath);
-                } else {
-                    if (IsFontFile(filePath)) {
-                        if (fontCount == 0) wcscpy_s(fontPath, MAX_PATH, filePath);
-                        fontCount++;
-                    } else if (IsAnimationFile(filePath)) {
-                        if (animCount == 0) wcscpy_s(animPath, MAX_PATH, filePath);
-                        animCount++;
-                    }
-                }
+            if (!QueryDropFilePathExactW(hDrop, i, filePath, MAX_PATH)) {
+                scan.truncated = TRUE;
+                break;
             }
+            ScanDropPathForResources(filePath, &scan);
+            if (IsResourceScanResolved(&scan)) break;
         }
-        
-        /* Second pass: Apply previews only if unambiguous (count == 1) */
-        if (fontCount == 1) {
-            StartPreview(target, fontPath);
+
+        /* Apply previews only when the bounded scan proved the drop is unambiguous. */
+        if (!scan.truncated && scan.fontCount == 1) {
+            StartPreview(target, scan.fontPath);
         }
-        
-        if (animCount == 1) {
-            StartPreview(target, animPath);
+
+        if (!scan.truncated && scan.animCount == 1) {
+            StartPreview(target, scan.animPath);
         }
-        
-        /* Update validity flag for DragOver */
-        target->isValidDrop = (fontCount > 0 || animCount > 0);
+
+        if (scan.truncated) {
+            LOG_DEBUG("Drag preview resource scan truncated after %lu entries", scan.scannedEntries);
+        }
+
+        /* If the preview scan was truncated, still allow dropping; Drop does the full import. */
+        target->isValidDrop = (scan.truncated || scan.fontCount > 0 || scan.animCount > 0);
         
         ReleaseStgMedium(&stg);
         
         if (target->isValidDrop) {
              *pdwEffect = DROPEFFECT_COPY;
         } else {
-             *pdwEffect = DROPEFFECT_MOVE;
+             *pdwEffect = DROPEFFECT_NONE;
         }
     } else {
         target->isValidDrop = FALSE;
@@ -263,7 +337,7 @@ STDMETHODIMP DragOver(IDropTarget* this, DWORD grfKeyState, POINTL pt, DWORD* pd
     if (target->isValidDrop) {
         *pdwEffect = DROPEFFECT_COPY;
     } else {
-        *pdwEffect = DROPEFFECT_MOVE;
+        *pdwEffect = DROPEFFECT_NONE;
     }
     
     return S_OK;
@@ -278,48 +352,39 @@ STDMETHODIMP DragLeave(IDropTarget* this) {
 STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     (void)grfKeyState; (void)pt;
     OleDropTarget* target = (OleDropTarget*)this;
-    
-    /* Determine if we will likely apply a font (skip reload) */
-    BOOL willApplyFont = FALSE;
+    BOOL hadFontPreview = target->isPreviewingFont;
     FORMATETC fmt = {CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
     STGMEDIUM stg;
-    
-    /* Peek at data to count fonts */
-    if (pDataObj->lpVtbl->GetData(pDataObj, &fmt, &stg) == S_OK) {
-        HDROP hDrop = (HDROP)stg.hGlobal;
-        UINT count = DragQueryFileW(hDrop, 0xFFFFFFFF, NULL, 0);
-        int fontCount = 0;
-        int animCount = 0; /* Unused here but required for helper */
-        
-        for (UINT i = 0; i < count; i++) {
-            wchar_t filePath[MAX_PATH];
-            if (DragQueryFileW(hDrop, i, filePath, MAX_PATH)) {
-                DWORD attrs = GetFileAttributesW(filePath);
-                if (attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY)) {
-                    /* Pass NULL for paths as we only care about counts here */
-                    ScanDirectoryForResources(filePath, &fontCount, &animCount, NULL, NULL);
-                } else {
-                    if (IsFontFile(filePath)) fontCount++;
-                }
-            }
-        }
-        if (fontCount == 1) willApplyFont = TRUE;
-        ReleaseStgMedium(&stg);
+
+    if (!target->isValidDrop) {
+        RestoreOriginalState(target, TRUE);
+        *pdwEffect = DROPEFFECT_NONE;
+        return S_OK;
     }
 
-    /* Restore state (skip reload if we are about to apply new font) */
-    RestoreOriginalState(target, !willApplyFont);
-    
+    /* Release preview-owned resources before moving dropped files. */
+    RestoreOriginalState(target, FALSE);
+
     /* Process Drop */
     if (pDataObj->lpVtbl->GetData(pDataObj, &fmt, &stg) == S_OK) {
         HDROP hDrop = (HDROP)stg.hGlobal;
-        HandleDropFiles(target->hwnd, hDrop);
+        DropImportResult result = HandleDropFiles(target->hwnd, hDrop);
         ReleaseStgMedium(&stg);
-        *pdwEffect = DROPEFFECT_COPY;
+        if (hadFontPreview && !result.fontApplied) {
+            CancelFontPreview();
+            InvalidateRect(target->hwnd, NULL, TRUE);
+        }
+        *pdwEffect = (result.movedCount > 0 || result.fontApplied || result.animationApplied)
+            ? DROPEFFECT_COPY
+            : DROPEFFECT_NONE;
     } else {
+        if (hadFontPreview) {
+            CancelFontPreview();
+            InvalidateRect(target->hwnd, NULL, TRUE);
+        }
         *pdwEffect = DROPEFFECT_NONE;
     }
-    
+
     return S_OK;
 }
 
@@ -328,10 +393,28 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
  * ============================================================================ */
 
 void InitializeOleDropTarget(HWND hwnd) {
-    if (OleInitialize(NULL) != S_OK) {
-        LOG_ERROR("OleInitialize failed");
+    if (!hwnd || !IsWindow(hwnd)) {
+        LOG_WARNING("InitializeOleDropTarget called with invalid window handle");
         return;
     }
+
+    if (g_dropTargetRegistered) {
+        if (g_registeredDropTargetHwnd == hwnd) {
+            return;
+        }
+
+        CleanupOleDropTarget(g_registeredDropTargetHwnd);
+    } else if (g_oleInitialized) {
+        OleUninitialize();
+        g_oleInitialized = FALSE;
+    }
+
+    HRESULT hr = OleInitialize(NULL);
+    if (FAILED(hr)) {
+        LOG_ERROR("OleInitialize failed (hr=0x%08lX)", (unsigned long)hr);
+        return;
+    }
+    g_oleInitialized = TRUE;
 
     g_dropTarget.lpVtbl = &vtbl;
     g_dropTarget.refCount = 1;
@@ -340,14 +423,45 @@ void InitializeOleDropTarget(HWND hwnd) {
     g_dropTarget.isPreviewingAnim = FALSE;
     g_dropTarget.isValidDrop = FALSE;
 
-    if (RegisterDragDrop(hwnd, (IDropTarget*)&g_dropTarget) != S_OK) {
-        LOG_ERROR("RegisterDragDrop failed");
-    } else {
-        LOG_INFO("OLE Drag & Drop registered successfully");
+    hr = RegisterDragDrop(hwnd, (IDropTarget*)&g_dropTarget);
+    if (FAILED(hr)) {
+        LOG_ERROR("RegisterDragDrop failed (hr=0x%08lX)", (unsigned long)hr);
+        OleUninitialize();
+        g_oleInitialized = FALSE;
+        g_registeredDropTargetHwnd = NULL;
+        return;
     }
+
+    g_dropTargetRegistered = TRUE;
+    g_registeredDropTargetHwnd = hwnd;
 }
 
 void CleanupOleDropTarget(HWND hwnd) {
-    RevokeDragDrop(hwnd);
-    OleUninitialize();
+    if (g_dropTargetRegistered) {
+        HWND registeredHwnd = g_registeredDropTargetHwnd;
+        if (!registeredHwnd) {
+            registeredHwnd = hwnd;
+        }
+
+        if (!hwnd || hwnd == registeredHwnd) {
+            RestoreOriginalState(&g_dropTarget, TRUE);
+            g_dropTarget.isValidDrop = FALSE;
+
+            HRESULT hr = RevokeDragDrop(registeredHwnd);
+            if (FAILED(hr)) {
+                LOG_WARNING("RevokeDragDrop failed (hr=0x%08lX)", (unsigned long)hr);
+            }
+        } else {
+            LOG_WARNING("CleanupOleDropTarget called for non-registered window");
+            return;
+        }
+
+        g_dropTargetRegistered = FALSE;
+        g_registeredDropTargetHwnd = NULL;
+    }
+
+    if (g_oleInitialized) {
+        OleUninitialize();
+        g_oleInitialized = FALSE;
+    }
 }

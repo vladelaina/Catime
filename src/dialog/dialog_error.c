@@ -15,8 +15,61 @@ static HWND g_hwndErrorDialog = NULL;
 static HWND g_hwndErrorParent = NULL;
 static int g_errorEditControlId = 0;
 
-/* Original button window procedure for subclassing */
-static WNDPROC g_origButtonProc = NULL;
+#define ERROR_BUTTON_ORIG_PROC_PROP L"Catime.ErrorDialog.OrigButtonProc"
+
+static LRESULT CALLBACK ErrorButtonSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+static void ClearErrorDialogRefocusState(void) {
+    g_hwndErrorParent = NULL;
+    g_errorEditControlId = 0;
+}
+
+static WNDPROC GetErrorButtonOrigProc(HWND hwndButton) {
+    return (WNDPROC)(LONG_PTR)GetPropW(hwndButton, ERROR_BUTTON_ORIG_PROC_PROP);
+}
+
+static BOOL SubclassErrorButton(HWND hwndButton) {
+    if (!hwndButton) {
+        return FALSE;
+    }
+
+    if (GetErrorButtonOrigProc(hwndButton)) {
+        return TRUE;
+    }
+
+    SetLastError(0);
+    WNDPROC origProc = (WNDPROC)SetWindowLongPtr(hwndButton, GWLP_WNDPROC,
+                                                 (LONG_PTR)ErrorButtonSubclassProc);
+    if (!origProc) {
+        DWORD error = GetLastError();
+        if (error != 0) {
+            return FALSE;
+        }
+        return FALSE;
+    }
+
+    if (!SetPropW(hwndButton, ERROR_BUTTON_ORIG_PROC_PROP,
+                  (HANDLE)(LONG_PTR)origProc)) {
+        SetWindowLongPtr(hwndButton, GWLP_WNDPROC, (LONG_PTR)origProc);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void UnsubclassErrorButton(HWND hwndButton) {
+    if (!hwndButton) {
+        return;
+    }
+
+    WNDPROC origProc = GetErrorButtonOrigProc(hwndButton);
+    if (!origProc) {
+        return;
+    }
+
+    SetWindowLongPtr(hwndButton, GWLP_WNDPROC, (LONG_PTR)origProc);
+    RemovePropW(hwndButton, ERROR_BUTTON_ORIG_PROC_PROP);
+}
 
 /* Subclass procedure for OK button to handle Enter key */
 static LRESULT CALLBACK ErrorButtonSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -29,7 +82,12 @@ static LRESULT CALLBACK ErrorButtonSubclassProc(HWND hwnd, UINT msg, WPARAM wPar
             return 0;
         }
     }
-    return CallWindowProc(g_origButtonProc, hwnd, msg, wParam, lParam);
+
+    WNDPROC origProc = GetErrorButtonOrigProc(hwnd);
+    if (!origProc) {
+        return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+    return CallWindowProc(origProc, hwnd, msg, wParam, lParam);
 }
 
 void ShowErrorDialog(HWND hwndParent) {
@@ -52,6 +110,8 @@ void ShowErrorDialog(HWND hwndParent) {
     
     if (g_hwndErrorDialog) {
         ShowWindow(g_hwndErrorDialog, SW_SHOW);
+    } else {
+        ClearErrorDialogRefocusState();
     }
 }
 
@@ -75,6 +135,8 @@ void ShowErrorDialogWithRefocus(HWND hwndParent, int editControlId) {
     
     if (g_hwndErrorDialog) {
         ShowWindow(g_hwndErrorDialog, SW_SHOW);
+    } else {
+        ClearErrorDialogRefocusState();
     }
 }
 
@@ -99,8 +161,7 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             {
                 HWND hwndOK = GetDlgItem(hwndDlg, IDOK);
                 if (hwndOK) {
-                    g_origButtonProc = (WNDPROC)SetWindowLongPtr(hwndOK, GWLP_WNDPROC, 
-                                                                  (LONG_PTR)ErrorButtonSubclassProc);
+                    SubclassErrorButton(hwndOK);
                     SetFocus(hwndOK);
                 }
             }
@@ -120,15 +181,9 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             
         case WM_DESTROY:
             /* Restore original button procedure before destruction */
-            {
-                HWND hwndOK = GetDlgItem(hwndDlg, IDOK);
-                if (hwndOK && g_origButtonProc) {
-                    SetWindowLongPtr(hwndOK, GWLP_WNDPROC, (LONG_PTR)g_origButtonProc);
-                    g_origButtonProc = NULL;
-                }
-            }
+            UnsubclassErrorButton(GetDlgItem(hwndDlg, IDOK));
             
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_ERROR);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_ERROR, hwndDlg);
             g_hwndErrorDialog = NULL;
             
             /* Refocus to parent edit control if specified */
@@ -140,8 +195,7 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 }
             }
             
-            g_hwndErrorParent = NULL;
-            g_errorEditControlId = 0;
+            ClearErrorDialogRefocusState();
             break;
     }
     return FALSE;

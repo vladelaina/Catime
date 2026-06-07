@@ -12,6 +12,7 @@
 #define MARKDOWN_IMAGE_H
 
 #include <windows.h>
+#include "drawing/drawing_image.h"
 
 /**
  * @brief Parsed markdown image ![alt](path)
@@ -21,6 +22,11 @@ typedef struct {
     wchar_t* resolvedPath;   /* Resolved local path (for rendering) */
     int specifiedWidth;      /* Width from ![WxH], 0 if not specified */
     int specifiedHeight;     /* Height from ![WxH], 0 if not specified */
+    int intrinsicWidth;      /* Cached source image width, 0 if unknown */
+    int intrinsicHeight;     /* Cached source image height, 0 if unknown */
+    FILETIME resolvedLastWriteTime; /* Last write time for resolvedPath */
+    ULONGLONG resolvedFileSize; /* File size for resolvedPath */
+    BOOL resolvedFileInfoValid; /* TRUE when resolved file metadata is known */
     int startPos;            /* Position in display text */
     int endPos;              /* End position in display text */
     RECT imageRect;          /* Rendered rectangle (for click detection) */
@@ -28,6 +34,8 @@ typedef struct {
     BOOL isDownloaded;       /* TRUE if network image is cached locally */
     BOOL isDownloading;      /* TRUE if download in progress */
     BOOL downloadFailed;     /* TRUE if download failed */
+    BOOL downloadRetryScheduled; /* TRUE if downloadRetryTick is valid */
+    DWORD downloadRetryTick; /* Tick count when failed network image may retry */
 } MarkdownImage;
 
 /**
@@ -77,12 +85,41 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath);
 void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd);
 
 /**
+ * @brief Check if a network image URL is currently downloading
+ * @param url HTTP/HTTPS URL
+ * @return TRUE if a background download is active for this URL
+ */
+BOOL IsMarkdownImageDownloadInProgress(const wchar_t* url);
+
+/**
+ * @brief Get retry time for a recently failed network image URL
+ * @param url HTTP/HTTPS URL
+ * @param retryTick Output GetTickCount() value when retry is allowed
+ * @return TRUE if URL is still inside the failure retry window
+ */
+BOOL GetMarkdownImageDownloadRetryTick(const wchar_t* url, DWORD* retryTick);
+
+/**
  * @brief Check if image is cached locally
  * @param url Network URL
  * @param localPath Output local path if cached
  * @return TRUE if cached
  */
 BOOL IsImageCached(const wchar_t* url, wchar_t* localPath);
+
+/**
+ * @brief Check whether an image path points to a non-empty regular file
+ * @param path Local image path
+ * @return TRUE if usable by the image renderer
+ */
+BOOL IsMarkdownImageFileUsable(const wchar_t* path);
+
+/**
+ * @brief Revalidate a resolved image file and clear cached dimensions on change
+ * @param image Image with a resolvedPath
+ * @return TRUE if the resolved file is still usable
+ */
+BOOL RefreshMarkdownImageResolvedFileState(MarkdownImage* image);
 
 /**
  * @brief Get plugins directory path
@@ -104,6 +141,13 @@ BOOL GetImageCacheDirectory(wchar_t* buffer, size_t bufferSize);
  * @brief Shutdown async download bookkeeping and release synchronization state
  */
 void ShutdownMarkdownImage(void);
+
+/**
+ * @brief Free per-image path resources without freeing the image array itself
+ * @param images Image array
+ * @param imageCount Image count
+ */
+void FreeMarkdownImageEntries(MarkdownImage* images, int imageCount);
 
 /**
  * @brief Free image resources
@@ -134,7 +178,27 @@ BOOL CalculateImageRenderSize(MarkdownImage* image, int maxWidth, int maxHeight,
  * @param maxHeight Maximum height constraint
  * @return Actual height used
  */
-int RenderMarkdownImage(HDC hdc, MarkdownImage* image, int x, int y, 
+int RenderMarkdownImage(HDC hdc, MarkdownImage* image, int x, int y,
                         int maxWidth, int maxHeight);
+
+/**
+ * @brief Render image using dimensions already calculated by CalculateImageRenderSize
+ * @param hdc Device context
+ * @param image Image with resolved path
+ * @param x X position
+ * @param y Y position
+ * @param actualWidth Render width
+ * @param actualHeight Render height
+ * @return Actual height used
+ */
+int RenderMarkdownImageSized(HDC hdc, MarkdownImage* image, int x, int y,
+                             int actualWidth, int actualHeight);
+
+/**
+ * @brief Render image using dimensions already calculated and a shared render context
+ */
+int RenderMarkdownImageSizedWithContext(ImageRenderContext* renderCtx,
+                                        MarkdownImage* image, int x, int y,
+                                        int actualWidth, int actualHeight);
 
 #endif // MARKDOWN_IMAGE_H

@@ -12,9 +12,11 @@
 #include "color/color.h"
 #include "tray/tray_animation_core.h"
 #include "utils/string_safe.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 /* ============================================================================
  * Helper: Check if color is a gradient (contains underscore)
@@ -22,6 +24,36 @@
 
 static BOOL IsGradientColor(const char* color) {
     return color && strchr(color, '_') != NULL;
+}
+
+static BOOL AppendConfigListToken(char* dest, size_t destSize,
+                                  const char* token, BOOL* isFirst,
+                                  const char* listName) {
+    if (!dest || destSize == 0 || !token || !isFirst) {
+        return FALSE;
+    }
+
+    size_t destLen = strnlen(dest, destSize);
+    if (destLen >= destSize) {
+        return FALSE;
+    }
+
+    size_t sepLen = *isFirst ? 0 : 1;
+    size_t tokenLen = strlen(token);
+    size_t remaining = destSize - destLen - 1;
+    if (sepLen > remaining || tokenLen > remaining - sepLen) {
+        LOG_WARNING("%s too long to write completely; dropping remaining entries",
+                    listName ? listName : "Config list");
+        return FALSE;
+    }
+
+    if (sepLen) {
+        dest[destLen++] = ',';
+    }
+    memcpy(dest + destLen, token, tokenLen);
+    dest[destLen + tokenLen] = '\0';
+    *isFirst = FALSE;
+    return TRUE;
 }
 
 /* ============================================================================
@@ -69,16 +101,42 @@ static const char* LanguageToString(AppLanguage lang) {
     return GetLanguageConfigKey(lang);
 }
 
+static BOOL EnsureConfigItemCapacity(int idx, int itemCapacity, int needed,
+                                     const char* context) {
+    if (idx < 0 || itemCapacity < 0 || needed < 0 ||
+        idx > itemCapacity - needed) {
+        LOG_ERROR("Config write item capacity exceeded while collecting %s (idx=%d needed=%d capacity=%d)",
+                  context ? context : "configuration",
+                  idx, needed, itemCapacity);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL ConfigIniValueMatches(const char* config_path, const char* section,
+                                  const char* key, const char* expected) {
+    char current[2048] = {0};
+    if (!config_path || !section || !key) {
+        return FALSE;
+    }
+
+    ReadIniString(section, key, "", current, sizeof(current), config_path);
+    return strcmp(current, expected ? expected : "") == 0;
+}
+
 /* ============================================================================
  * Public API Implementation
  * ============================================================================ */
 
-BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
-    if (!items || !count) return FALSE;
+BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) {
+    if (!items || itemCapacity <= 0 || !count) return FALSE;
     
     int idx = 0;
+    *count = 0;
     
     /* General section */
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 3, "General")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_GENERAL, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CONFIG_VERSION", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, CATIME_VERSION, sizeof(items[idx].value));
@@ -95,6 +153,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     idx++;
     
     /* Display section */
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 17, "Display")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_TEXT_COLOR", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, CLOCK_TEXT_COLOR, sizeof(items[idx].value));
@@ -181,6 +240,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     idx++;
 
     /* Timer section */
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 11, "Timer")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_DEFAULT_START_TIME", sizeof(items[idx].key));
     snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.timer.default_start_time);
@@ -230,7 +290,10 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     safe_strncpy(items[idx].section, INI_SECTION_TIMER, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_TIME_OPTIONS", sizeof(items[idx].key));
     items[idx].value[0] = '\0';
-    for (int i = 0; i < time_options_count; i++) {
+    int timeOptionsCount = time_options_count;
+    if (timeOptionsCount < 0) timeOptionsCount = 0;
+    if (timeOptionsCount > MAX_TIME_OPTIONS) timeOptionsCount = MAX_TIME_OPTIONS;
+    for (int i = 0; i < timeOptionsCount; i++) {
         char buffer[16];
         snprintf(buffer, sizeof(buffer), "%d", time_options[i]);
         if (i > 0) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
@@ -244,10 +307,16 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     idx++;
     
     /* Pomodoro section */
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 2, "Pomodoro")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_POMODORO, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "POMODORO_TIME_OPTIONS", sizeof(items[idx].key));
     items[idx].value[0] = '\0';
-    for (int i = 0; i < g_AppConfig.pomodoro.times_count; i++) {
+    int pomodoroTimesCount = g_AppConfig.pomodoro.times_count;
+    if (pomodoroTimesCount < 0) pomodoroTimesCount = 0;
+    if (pomodoroTimesCount > (int)_countof(g_AppConfig.pomodoro.times)) {
+        pomodoroTimesCount = (int)_countof(g_AppConfig.pomodoro.times);
+    }
+    for (int i = 0; i < pomodoroTimesCount; i++) {
         char buffer[16];
         snprintf(buffer, sizeof(buffer), "%d", g_AppConfig.pomodoro.times[i]);
         if (i > 0) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
@@ -261,6 +330,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     idx++;
     
     /* Notification section */
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 11, "Notification")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_MESSAGE_TEXT", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, g_AppConfig.notification.messages.timeout_message, sizeof(items[idx].value));
@@ -331,6 +401,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
         "HOTKEY_TOGGLE_MILLISECONDS", "HOTKEY_TOPMOST"
     };
     
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 14, "Hotkeys")) return FALSE;
     for (int i = 0; i < 14; i++) {
         safe_strncpy(items[idx].section, INI_SECTION_HOTKEYS, sizeof(items[idx].section));
         safe_strncpy(items[idx].key, hotkeyNames[i], sizeof(items[idx].key));
@@ -339,10 +410,14 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     }
     
     /* Recent files */
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, MAX_RECENT_FILES, "Recent files")) return FALSE;
+    int recentFilesCount = g_AppConfig.recent_files.count;
+    if (recentFilesCount < 0) recentFilesCount = 0;
+    if (recentFilesCount > MAX_RECENT_FILES) recentFilesCount = MAX_RECENT_FILES;
     for (int i = 0; i < MAX_RECENT_FILES; i++) {
         safe_strncpy(items[idx].section, INI_SECTION_RECENTFILES, sizeof(items[idx].section));
         snprintf(items[idx].key, sizeof(items[idx].key), "CLOCK_RECENT_FILE_%d", i + 1);
-        if (i < g_AppConfig.recent_files.count) {
+        if (i < recentFilesCount) {
             safe_strncpy(items[idx].value, g_AppConfig.recent_files.files[i].path, sizeof(items[idx].value));
         } else {
             safe_strncpy(items[idx].value, "", sizeof(items[idx].value));
@@ -351,27 +426,34 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
     }
     
     /* Colors - write single colors first, then gradients */
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 1, "Colors")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_COLORS, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "COLOR_OPTIONS", sizeof(items[idx].key));
     items[idx].value[0] = '\0';
     BOOL firstColor = TRUE;
+    BOOL colorOptionsFull = TRUE;
     /* First pass: single colors */
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+    for (size_t i = 0; colorOptionsFull && i < COLOR_OPTIONS_COUNT; i++) {
         if (!IsGradientColor(COLOR_OPTIONS[i].hexColor)) {
-            if (!firstColor) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
-            safe_strncat(items[idx].value, COLOR_OPTIONS[i].hexColor, sizeof(items[idx].value));
-            firstColor = FALSE;
+            colorOptionsFull = AppendConfigListToken(
+                items[idx].value, sizeof(items[idx].value),
+                COLOR_OPTIONS[i].hexColor, &firstColor, "COLOR_OPTIONS");
         }
     }
     /* Second pass: gradient colors */
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+    for (size_t i = 0; colorOptionsFull && i < COLOR_OPTIONS_COUNT; i++) {
         if (IsGradientColor(COLOR_OPTIONS[i].hexColor)) {
-            if (!firstColor) safe_strncat(items[idx].value, ",", sizeof(items[idx].value));
-            safe_strncat(items[idx].value, COLOR_OPTIONS[i].hexColor, sizeof(items[idx].value));
-            firstColor = FALSE;
+            colorOptionsFull = AppendConfigListToken(
+                items[idx].value, sizeof(items[idx].value),
+                COLOR_OPTIONS[i].hexColor, &firstColor, "COLOR_OPTIONS");
         }
     }
-    idx++;
+    if (colorOptionsFull && !firstColor) {
+        idx++;
+    } else {
+        LOG_WARNING("Skipping COLOR_OPTIONS write because the palette cannot fit in the config buffer");
+        ZeroMemory(&items[idx], sizeof(items[idx]));
+    }
     
     *count = idx;
     return TRUE;
@@ -379,42 +461,45 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int* count) {
 
 BOOL WriteConfigItems(const char* config_path, const ConfigWriteItem* items, int count) {
     if (!config_path || !items || count <= 0) return FALSE;
-    
-    for (int i = 0; i < count; i++) {
-        WriteIniString(items[i].section, items[i].key, items[i].value, config_path);
+
+    IniKeyValue* updates = (IniKeyValue*)calloc((size_t)count, sizeof(IniKeyValue));
+    if (!updates) {
+        return FALSE;
     }
-    
-    return TRUE;
+
+    for (int i = 0; i < count; i++) {
+        updates[i].section = items[i].section;
+        updates[i].key = items[i].key;
+        updates[i].value = items[i].value;
+    }
+
+    BOOL result = WriteIniMultipleAtomic(config_path, updates, (size_t)count);
+    free(updates);
+
+    return result;
 }
 
 void WriteConfig(const char* config_path) {
     if (!config_path) return;
-    
-    ConfigWriteItem items[150];
-    int count = 0;
-    
-    if (!CollectCurrentConfig(items, &count)) {
+
+    ConfigWriteItem* items = (ConfigWriteItem*)calloc(CONFIG_WRITE_ITEM_CAPACITY,
+                                                      sizeof(ConfigWriteItem));
+    if (!items) {
         return;
     }
-    
-    /* Write all items */
-    WriteConfigItems(config_path, items, count);
-    
-    /* Preserve FIRST_RUN flag */
-    char currentFirstRun[32] = {0};
-    ReadIniString(INI_SECTION_GENERAL, "FIRST_RUN", "FALSE", 
-                 currentFirstRun, sizeof(currentFirstRun), config_path);
-    WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", currentFirstRun, config_path);
-    
-    /* Write animation settings - preserve existing config to avoid overwriting user choice during startup */
+
+    int count = 0;
+
+    if (!CollectCurrentConfig(items, CONFIG_WRITE_ITEM_CAPACITY, &count)) {
+        free(items);
+        return;
+    }
+
+    /* Preserve existing animation config; only add current animation when the key is missing. */
     char existingAnimPath[MAX_PATH] = {0};
     ReadIniString("Animation", "ANIMATION_PATH", "", existingAnimPath, sizeof(existingAnimPath), config_path);
-    
-    if (existingAnimPath[0] != '\0') {
-        /* Preserve existing animation config from file */
-        WriteIniString("Animation", "ANIMATION_PATH", existingAnimPath, config_path);
-    } else {
-        /* Only write current animation if no config exists */
+
+    if (existingAnimPath[0] == '\0' && count < CONFIG_WRITE_ITEM_CAPACITY) {
         const char* anim = GetCurrentAnimationName();
         if (anim && anim[0] != '\0') {
             char animPath[MAX_PATH];
@@ -428,45 +513,91 @@ void WriteConfig(const char* config_path) {
                                        "%%LOCALAPPDATA%%\\Catime\\resources\\animations\\%s", anim);
             }
             if (animPathLen >= 0 && animPathLen < (int)sizeof(animPath)) {
-                WriteIniString("Animation", "ANIMATION_PATH", animPath, config_path);
+                safe_strncpy(items[count].section, "Animation", sizeof(items[count].section));
+                safe_strncpy(items[count].key, "ANIMATION_PATH", sizeof(items[count].key));
+                safe_strncpy(items[count].value, animPath, sizeof(items[count].value));
+                count++;
             }
         }
     }
-    
-    WriteAnimationSpeedToConfig(config_path);
+
+    if (!CollectAnimationSpeedConfigItems(items, CONFIG_WRITE_ITEM_CAPACITY, &count)) {
+        LOG_WARNING("Skipping animation speed config during full config write");
+    }
+
+    WriteConfigItems(config_path, items, count);
+    free(items);
 }
 
 void WriteConfigSection(const char* config_path, const char* section) {
-    /* Selective section update - collect only items from specified section */
-    ConfigWriteItem allItems[150];
-    int allCount = 0;
-    
-    if (!CollectCurrentConfig(allItems, &allCount)) {
+    if (!config_path || !section) {
         return;
     }
-    
-    /* Filter items by section */
+
+    /* Selective section update - collect only items from specified section */
+    ConfigWriteItem* allItems = (ConfigWriteItem*)calloc(CONFIG_WRITE_ITEM_CAPACITY,
+                                                         sizeof(ConfigWriteItem));
+    if (!allItems) {
+        return;
+    }
+
+    int allCount = 0;
+
+    if (!CollectCurrentConfig(allItems, CONFIG_WRITE_ITEM_CAPACITY, &allCount)) {
+        free(allItems);
+        return;
+    }
+
+    IniKeyValue* updates = (IniKeyValue*)calloc(CONFIG_WRITE_ITEM_CAPACITY,
+                                                sizeof(*updates));
+    if (!updates) {
+        free(allItems);
+        return;
+    }
+    size_t updateCount = 0;
+
     for (int i = 0; i < allCount; i++) {
         if (strcmp(allItems[i].section, section) == 0) {
-            WriteIniString(allItems[i].section, allItems[i].key, 
-                          allItems[i].value, config_path);
+            updates[updateCount].section = allItems[i].section;
+            updates[updateCount].key = allItems[i].key;
+            updates[updateCount].value = allItems[i].value;
+            updateCount++;
         }
     }
+
+    if (updateCount > 0) {
+        WriteIniMultipleAtomic(config_path, updates, updateCount);
+    }
+
+    free(updates);
+    free(allItems);
 }
 
 void WriteConfigWindowOpacity(int opacity) {
     if (opacity < 0) opacity = 0;
     if (opacity > 100) opacity = 100;
 
-    if (CLOCK_WINDOW_OPACITY == opacity) {
+    char opacityStr[32];
+    if (snprintf(opacityStr, sizeof(opacityStr), "%d", opacity) < 0) {
+        return;
+    }
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    BOOL runtimeMatches = (CLOCK_WINDOW_OPACITY == opacity);
+    BOOL configMatches = ConfigIniValueMatches(config_path, INI_SECTION_DISPLAY,
+                                               "WINDOW_OPACITY", opacityStr);
+    if (runtimeMatches && configMatches) {
+        return;
+    }
+
+    if (!configMatches &&
+        !WriteIniInt(INI_SECTION_DISPLAY, "WINDOW_OPACITY", opacity, config_path)) {
         return;
     }
 
     CLOCK_WINDOW_OPACITY = opacity;
-    
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniInt(INI_SECTION_DISPLAY, "WINDOW_OPACITY", opacity, config_path);
 }
 
 void WriteConfigMoveSteps(int small_step, int large_step) {
@@ -475,13 +606,39 @@ void WriteConfigMoveSteps(int small_step, int large_step) {
     if (large_step < 1) large_step = 1;
     if (large_step > 500) large_step = 500;
 
-    g_AppConfig.display.move_step_small = small_step;
-    g_AppConfig.display.move_step_large = large_step;
+    char smallStepStr[32];
+    char largeStepStr[32];
+    if (snprintf(smallStepStr, sizeof(smallStepStr), "%d", small_step) < 0 ||
+        snprintf(largeStepStr, sizeof(largeStepStr), "%d", large_step) < 0) {
+        return;
+    }
 
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    WriteIniInt(INI_SECTION_DISPLAY, "MOVE_STEP_SMALL", small_step, config_path);
-    WriteIniInt(INI_SECTION_DISPLAY, "MOVE_STEP_LARGE", large_step, config_path);
+
+    BOOL runtimeMatches =
+        g_AppConfig.display.move_step_small == small_step &&
+        g_AppConfig.display.move_step_large == large_step;
+    BOOL configMatches =
+        ConfigIniValueMatches(config_path, INI_SECTION_DISPLAY,
+                              "MOVE_STEP_SMALL", smallStepStr) &&
+        ConfigIniValueMatches(config_path, INI_SECTION_DISPLAY,
+                              "MOVE_STEP_LARGE", largeStepStr);
+    if (runtimeMatches && configMatches) {
+        return;
+    }
+
+    const IniKeyValue updates[] = {
+        {INI_SECTION_DISPLAY, "MOVE_STEP_SMALL", smallStepStr},
+        {INI_SECTION_DISPLAY, "MOVE_STEP_LARGE", largeStepStr},
+    };
+    if (!configMatches &&
+        !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
+        return;
+    }
+
+    g_AppConfig.display.move_step_small = small_step;
+    g_AppConfig.display.move_step_large = large_step;
 }
 
 void WriteConfigScaleSteps(int normal_step, int fast_step) {
@@ -490,11 +647,37 @@ void WriteConfigScaleSteps(int normal_step, int fast_step) {
     if (fast_step < 1) fast_step = 1;
     if (fast_step > 100) fast_step = 100;
 
-    g_AppConfig.display.scale_step_normal = normal_step;
-    g_AppConfig.display.scale_step_fast = fast_step;
+    char normalStepStr[32];
+    char fastStepStr[32];
+    if (snprintf(normalStepStr, sizeof(normalStepStr), "%d", normal_step) < 0 ||
+        snprintf(fastStepStr, sizeof(fastStepStr), "%d", fast_step) < 0) {
+        return;
+    }
 
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    WriteIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_NORMAL", normal_step, config_path);
-    WriteIniInt(INI_SECTION_DISPLAY, "SCALE_STEP_FAST", fast_step, config_path);
+
+    BOOL runtimeMatches =
+        g_AppConfig.display.scale_step_normal == normal_step &&
+        g_AppConfig.display.scale_step_fast == fast_step;
+    BOOL configMatches =
+        ConfigIniValueMatches(config_path, INI_SECTION_DISPLAY,
+                              "SCALE_STEP_NORMAL", normalStepStr) &&
+        ConfigIniValueMatches(config_path, INI_SECTION_DISPLAY,
+                              "SCALE_STEP_FAST", fastStepStr);
+    if (runtimeMatches && configMatches) {
+        return;
+    }
+
+    const IniKeyValue updates[] = {
+        {INI_SECTION_DISPLAY, "SCALE_STEP_NORMAL", normalStepStr},
+        {INI_SECTION_DISPLAY, "SCALE_STEP_FAST", fastStepStr},
+    };
+    if (!configMatches &&
+        !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
+        return;
+    }
+
+    g_AppConfig.display.scale_step_normal = normal_step;
+    g_AppConfig.display.scale_step_fast = fast_step;
 }

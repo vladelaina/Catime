@@ -59,6 +59,9 @@
 #ifndef WM_APP_COLORS_CHANGED
 #define WM_APP_COLORS_CHANGED (WM_APP + 58)
 #endif
+#ifndef WM_APP_CONFIG_CHANGED
+#define WM_APP_CONFIG_CHANGED (WM_APP + 59)
+#endif
 
 #ifndef COPYDATA_ID_CLI_TEXT
 #define COPYDATA_ID_CLI_TEXT 0x10010001
@@ -74,7 +77,7 @@
  * 
  * @details Table-driven architecture:
  * - MESSAGE_DISPATCH_TABLE (27 entries)
- * - APP_MESSAGE_DISPATCH_TABLE (9 config reload entries)
+ * - APP_MESSAGE_DISPATCH_TABLE (config reload entries)
  * - COMMAND_DISPATCH_TABLE (80+ menu entries)
  * 
  * Flow: WM_TASKBARCREATED → DispatchAppMessage → MESSAGE_DISPATCH_TABLE → DefWindowProc

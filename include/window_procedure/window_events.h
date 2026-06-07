@@ -16,7 +16,6 @@
  * 
  * @details
  * Setup: parent enablement, click-through, topmost.
- * Logs all steps for diagnostics.
  */
 BOOL HandleWindowCreate(HWND hwnd);
 

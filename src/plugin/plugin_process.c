@@ -16,16 +16,182 @@
 static HANDLE g_hJob = NULL;
 static HWND g_hNotifyWnd = NULL;
 
+#define JOB_PROCESS_STACK_CAPACITY 16
+#define PROCESS_TREE_STACK_CAPACITY 256
+#define PLUGIN_LAUNCH_READY_TIMEOUT_MS 5000
+#define PLUGIN_LAUNCH_START_FAILURE_COOLDOWN_MS 2000
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+
+#define PLUGIN_LAUNCH_READY_PENDING 0
+#define PLUGIN_LAUNCH_READY_SIGNALED 1
+#define PLUGIN_LAUNCH_READY_ABANDONED 2
+
 /* Forward declarations */
 static void TerminateProcessTree(DWORD pid, int depth);
 
+typedef struct {
+    DWORD processId;
+    DWORD parentProcessId;
+} ProcessTreeEntry;
+
+static BOOL GrowProcessTreeSnapshot(ProcessTreeEntry** entries,
+                                    DWORD* capacity,
+                                    DWORD count,
+                                    ProcessTreeEntry* stackEntries) {
+    if (*capacity == 0 || *capacity > ((DWORD)~(DWORD)0) / 2) {
+        return FALSE;
+    }
+
+    DWORD newCapacity = *capacity * 2;
+    size_t newSize = (size_t)newCapacity * sizeof(ProcessTreeEntry);
+    if (newSize / sizeof(ProcessTreeEntry) != newCapacity) {
+        return FALSE;
+    }
+
+    if (*entries == stackEntries) {
+        ProcessTreeEntry* newEntries = (ProcessTreeEntry*)malloc(newSize);
+        if (!newEntries) return FALSE;
+
+        memcpy(newEntries, stackEntries, (size_t)count * sizeof(ProcessTreeEntry));
+        *entries = newEntries;
+    } else {
+        ProcessTreeEntry* newEntries = (ProcessTreeEntry*)realloc(*entries, newSize);
+        if (!newEntries) return FALSE;
+
+        *entries = newEntries;
+    }
+
+    *capacity = newCapacity;
+    return TRUE;
+}
+
+static BOOL GetJobProcessIdListBufferSize(DWORD processCount, size_t* bufferSize) {
+    if (!bufferSize) return FALSE;
+
+    size_t extraProcessIds = processCount > 0 ? (size_t)(processCount - 1) : 0;
+    if (extraProcessIds >
+        (((size_t)-1) - sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST)) / sizeof(ULONG_PTR)) {
+        return FALSE;
+    }
+
+    size_t size = sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) +
+                  extraProcessIds * sizeof(ULONG_PTR);
+    if (size > (size_t)((DWORD)~(DWORD)0)) {
+        return FALSE;
+    }
+
+    *bufferSize = size;
+    return TRUE;
+}
+
+static void CloseMonitorThreadHandle(HANDLE hThread, BOOL waitForExit) {
+    if (!hThread) return;
+
+    if (waitForExit) {
+        DWORD threadId = GetThreadId(hThread);
+        if (threadId != 0 && threadId != GetCurrentThreadId()) {
+            DWORD waitResult = WaitForSingleObject(hThread, 2000);
+            if (waitResult == WAIT_TIMEOUT) {
+                LOG_WARNING("[Process] Monitor thread did not exit before handle close");
+            } else if (waitResult == WAIT_FAILED) {
+                LOG_WARNING("[Process] Failed waiting for monitor thread: %lu", GetLastError());
+            }
+        }
+    } else if (WaitForSingleObject(hThread, 0) == WAIT_TIMEOUT) {
+        LOG_DEBUG("[Process] Closing monitor thread handle before thread has fully returned");
+    }
+    CloseHandle(hThread);
+}
+
+static void ClearPluginProcessHandles(PluginInfo* plugin, BOOL waitForMonitorThread) {
+    if (!plugin) return;
+
+    HANDLE hProcToClose = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
+    HANDLE hThreadToClose = InterlockedExchangePointer((PVOID*)&plugin->pi.hThread, NULL);
+    if (hProcToClose) {
+        CloseHandle(hProcToClose);
+    }
+    if (hThreadToClose) {
+        CloseMonitorThreadHandle(hThreadToClose, waitForMonitorThread);
+    }
+    memset(&plugin->pi, 0, sizeof(plugin->pi));
+}
+
 /* Structure to pass data to the launcher thread */
 typedef struct {
-    PluginInfo* plugin;
-    HANDLE hReadyEvent;
+    HANDLE hReadySignalEvent;
+    HANDLE hJob;
     BOOL success;
     wchar_t errorMsg[128];  /* Error message for display */
+    volatile LONG readyState;
+    PluginInfo pluginSnapshot;
 } PluginLauncherArgs;
+
+static void ClosePluginLaunchJobHandle(PluginLauncherArgs* args) {
+    if (!args || !args->hJob) return;
+
+    CloseHandle(args->hJob);
+    args->hJob = NULL;
+}
+
+static BOOL SignalPluginLaunchReady(PluginLauncherArgs* args) {
+    if (!args) return FALSE;
+
+    HANDLE signalEvent = args->hReadySignalEvent;
+    LONG previous = InterlockedCompareExchange(&args->readyState,
+                                               PLUGIN_LAUNCH_READY_SIGNALED,
+                                               PLUGIN_LAUNCH_READY_PENDING);
+    if (previous != PLUGIN_LAUNCH_READY_PENDING) {
+        return FALSE;
+    }
+
+    if (signalEvent) {
+        if (!SetEvent(signalEvent)) {
+            LOG_WARNING("[Process] Failed to signal plugin launch ready event: %lu",
+                        GetLastError());
+        }
+        CloseHandle(signalEvent);
+    }
+    return TRUE;
+}
+
+static BOOL IsValidPluginNotifyWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static void ReleaseAbandonedPluginLaunchArgs(PluginLauncherArgs* args) {
+    if (!args) return;
+
+    ClosePluginLaunchJobHandle(args);
+    if (args->hReadySignalEvent) {
+        CloseHandle(args->hReadySignalEvent);
+        args->hReadySignalEvent = NULL;
+    }
+    free(args);
+}
+
+static DWORD FinishPluginLaunchFailure(PluginLauncherArgs* args) {
+    ClosePluginLaunchJobHandle(args);
+    if (!SignalPluginLaunchReady(args)) {
+        ReleaseAbandonedPluginLaunchArgs(args);
+    }
+    return 0;
+}
 
 /**
  * @brief Get interpreter command for script file
@@ -110,16 +276,9 @@ static const wchar_t* GetInterpreterName(const wchar_t* path) {
  */
 static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     PluginLauncherArgs* args = (PluginLauncherArgs*)lpParam;
-    PluginInfo* plugin = args->plugin;
-    wchar_t displayName[64];
-    wcsncpy(displayName, plugin->displayName, 63);
-    displayName[63] = L'\0';
+    PluginInfo* plugin = &args->pluginSnapshot;
 
     args->errorMsg[0] = L'\0';  /* Clear error message */
-
-    LOG_INFO("[Thread] ========== LAUNCH START ==========");
-    LOG_INFO("[Thread] Plugin name: %ls", plugin->displayName);
-    LOG_INFO("[Thread] Plugin path: %ls", plugin->path);
 
     /* Extract working directory from plugin path */
     wchar_t workDir[MAX_PATH];
@@ -127,7 +286,6 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     workDir[MAX_PATH - 1] = L'\0';
     wchar_t* lastSlash = wcsrchr(workDir, L'\\');
     if (lastSlash) *lastSlash = L'\0';
-    LOG_INFO("[Thread] Work directory: %ls", workDir);
 
     HANDLE hProcess = NULL;
     HANDLE hMonitorProcess = NULL;
@@ -143,10 +301,8 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             LOG_ERROR("[Thread] Command line too long for plugin: %ls", plugin->path);
             _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Path too long");
             args->success = FALSE;
-            SetEvent(args->hReadyEvent);
-            return 0;
+            return FinishPluginLaunchFailure(args);
         }
-        LOG_INFO("[Thread] Command: %ls", cmdLine);
 
         STARTUPINFOW si = {0};
         si.cb = sizeof(si);
@@ -171,11 +327,9 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             }
 
             args->success = FALSE;
-            SetEvent(args->hReadyEvent);
-            return 0;
+            return FinishPluginLaunchFailure(args);
         }
 
-        LOG_INFO("[Thread] CreateProcess SUCCESS! PID: %lu", pi.dwProcessId);
         hProcess = pi.hProcess;
         dwProcessId = pi.dwProcessId;
         if (pi.hThread) CloseHandle(pi.hThread);
@@ -189,33 +343,36 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         sei.lpDirectory = workDir;
         sei.nShow = SW_HIDE;
 
-        LOG_INFO("[Thread] Using ShellExecute for: %ls", plugin->path);
-
         if (!ShellExecuteExW(&sei)) {
             DWORD error = GetLastError();
             LOG_ERROR("[Thread] ShellExecuteEx FAILED! Error: %lu", error);
             _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Launch failed");
             args->success = FALSE;
-            SetEvent(args->hReadyEvent);
-            return 0;
+            return FinishPluginLaunchFailure(args);
         }
 
         if (!sei.hProcess) {
             LOG_WARNING("[Thread] ShellExecute succeeded but no process handle");
             _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"No process");
             args->success = FALSE;
-            SetEvent(args->hReadyEvent);
-            return 0;
+            return FinishPluginLaunchFailure(args);
         }
 
         hProcess = sei.hProcess;
         dwProcessId = GetProcessId(sei.hProcess);
-        LOG_INFO("[Thread] ShellExecute SUCCESS! PID: %lu", dwProcessId);
+        if (dwProcessId == 0) {
+            DWORD pidError = GetLastError();
+            LOG_ERROR("[Thread] Failed to get ShellExecute process id: %lu", pidError);
+            CloseHandle(hProcess);
+            _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Launch failed");
+            args->success = FALSE;
+            return FinishPluginLaunchFailure(args);
+        }
     }
 
     if (hProcess) {
         if (!DuplicateHandle(GetCurrentProcess(), hProcess, GetCurrentProcess(),
-                             &hMonitorProcess, SYNCHRONIZE | PROCESS_QUERY_LIMITED_INFORMATION,
+                             &hMonitorProcess, SYNCHRONIZE,
                              FALSE, 0)) {
             DWORD dupError = GetLastError();
             LOG_ERROR("[Thread] Failed to duplicate monitor handle: %lu", dupError);
@@ -225,27 +382,20 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             CloseHandle(hProcess);
             _snwprintf_s(args->errorMsg, 128, _TRUNCATE, L"Launch failed");
             args->success = FALSE;
-            SetEvent(args->hReadyEvent);
-            return 0;
+            return FinishPluginLaunchFailure(args);
         }
     }
 
     /* Assign to Job Object for automatic cleanup */
-    if (g_hJob && hProcess) {
-        if (AssignProcessToJobObject(g_hJob, hProcess)) {
-            LOG_INFO("[Thread] Process assigned to Job Object");
-        } else {
+    if (args->hJob && hProcess) {
+        if (!AssignProcessToJobObject(args->hJob, hProcess)) {
             DWORD jobError = GetLastError();
-            if (jobError == 5) {
-                /* Process already in a job - on Windows 8+, processes can be in multiple jobs */
-                LOG_INFO("[Thread] Process already in a job (OK - will terminate via StopPlugin)");
-            } else {
+            if (jobError != 5) {
                 LOG_WARNING("[Thread] Failed to assign to Job: %lu (will terminate via StopPlugin)", jobError);
             }
         }
     }
-
-    LOG_INFO("[Thread] ========== LAUNCH SUCCESS ==========");
+    ClosePluginLaunchJobHandle(args);
 
     /* Store process info */
     plugin->pi.hProcess = hProcess;
@@ -256,22 +406,26 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
     /* Signal success */
     plugin->isRunning = TRUE;
     args->success = TRUE;
-    SetEvent(args->hReadyEvent);
+
+    if (!SignalPluginLaunchReady(args)) {
+        if (dwProcessId != 0) {
+            TerminateProcessTree(dwProcessId, 0);
+        }
+        if (hMonitorProcess) {
+            CloseHandle(hMonitorProcess);
+        }
+        if (hProcess) {
+            CloseHandle(hProcess);
+        }
+        ReleaseAbandonedPluginLaunchArgs(args);
+        return 0;
+    }
 
     /* If we have a process handle, wait for it to exit */
     if (hMonitorProcess) {
-        LOG_INFO("[Thread] Monitoring process...");
-        DWORD startTime = GetTickCount();
-
         DWORD monitorWaitResult = WaitForSingleObject(hMonitorProcess, INFINITE);
 
-        DWORD runDuration = GetTickCount() - startTime;
-        DWORD scriptExitCode = 0;
-
-        if (monitorWaitResult == WAIT_OBJECT_0) {
-            GetExitCodeProcess(hMonitorProcess, &scriptExitCode);
-            LOG_INFO("[Thread] Script exited (Code: %lu, Duration: %lu ms)", scriptExitCode, runDuration);
-        } else {
+        if (monitorWaitResult != WAIT_OBJECT_0) {
             LOG_WARNING("[Thread] Wait failed (Result: %lu, Error: %lu)", monitorWaitResult, GetLastError());
         }
 
@@ -281,8 +435,8 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
             TerminateProcessTree(dwProcessId, 0);
         }
 
-        if (plugin->isRunning && plugin->pi.dwProcessId == dwProcessId) {
-            PluginManager_HandleProcessExit(dwProcessId, displayName);
+        if (dwProcessId != 0) {
+            PluginManager_HandleProcessExit(dwProcessId);
         }
         CloseHandle(hMonitorProcess);
     }
@@ -291,6 +445,8 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
 }
 
 BOOL PluginProcess_Init(void) {
+    g_hNotifyWnd = NULL;
+
     g_hJob = CreateJobObject(NULL, NULL);
     if (g_hJob) {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli = {0};
@@ -305,7 +461,6 @@ BOOL PluginProcess_Init(void) {
             return FALSE;
         }
 
-        LOG_INFO("[Process] Job Object initialized for plugin cleanup");
         return TRUE;
     }
     LOG_ERROR("[Process] Failed to create Job Object, error: %lu", GetLastError());
@@ -313,15 +468,27 @@ BOOL PluginProcess_Init(void) {
 }
 
 void PluginProcess_Shutdown(void) {
+    g_hNotifyWnd = NULL;
+
     if (g_hJob) {
         CloseHandle(g_hJob);
         g_hJob = NULL;
     }
-    LOG_INFO("[Process] Process management shutdown");
 }
 
 /* Last error message from plugin launch */
 static wchar_t g_lastLaunchError[128] = {0};
+static DWORD g_lastLaunchStartFailureTick = 0;
+
+static BOOL IsPluginLaunchStartFailureCoolingDown(DWORD now) {
+    return g_lastLaunchStartFailureTick != 0 &&
+           (DWORD)(now - g_lastLaunchStartFailureTick) <
+               PLUGIN_LAUNCH_START_FAILURE_COOLDOWN_MS;
+}
+
+static void MarkPluginLaunchStartFailure(DWORD now) {
+    g_lastLaunchStartFailureTick = now ? now : 1;
+}
 
 /**
  * @brief Get last launch error message
@@ -346,36 +513,106 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     if (!plugin) return FALSE;
 
     g_lastLaunchError[0] = L'\0';  /* Clear last error */
-
-    LOG_INFO("[Process] Launching plugin: %ls", plugin->displayName);
+    DWORD now = GetTickCount();
+    if (IsPluginLaunchStartFailureCoolingDown(now)) {
+        wcscpy_s(g_lastLaunchError, 128, L"Internal error");
+        return FALSE;
+    }
 
     /* Prepare launcher thread arguments */
-    PluginLauncherArgs args = {0};
-    args.plugin = plugin;
-    args.hReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    args.success = FALSE;
-    args.errorMsg[0] = L'\0';
+    PluginLauncherArgs* args = (PluginLauncherArgs*)calloc(1, sizeof(PluginLauncherArgs));
+    if (!args) {
+        LOG_ERROR("[Process] Failed to allocate launcher args");
+        MarkPluginLaunchStartFailure(now);
+        wcscpy_s(g_lastLaunchError, 128, L"Internal error");
+        return FALSE;
+    }
 
-    if (!args.hReadyEvent) {
+    args->pluginSnapshot = *plugin;
+    args->success = FALSE;
+    args->errorMsg[0] = L'\0';
+    args->readyState = PLUGIN_LAUNCH_READY_PENDING;
+
+    HANDLE hReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (!hReadyEvent) {
         LOG_ERROR("[Process] Failed to create sync event");
+        free(args);
+        MarkPluginLaunchStartFailure(now);
+        wcscpy_s(g_lastLaunchError, 128, L"Internal error");
+        return FALSE;
+    }
+
+    if (g_hJob &&
+        !DuplicateHandle(GetCurrentProcess(), g_hJob,
+                         GetCurrentProcess(), &args->hJob,
+                         0, FALSE, DUPLICATE_SAME_ACCESS)) {
+        LOG_ERROR("[Process] Failed to duplicate Job Object handle: %lu", GetLastError());
+        CloseHandle(hReadyEvent);
+        free(args);
+        MarkPluginLaunchStartFailure(now);
+        wcscpy_s(g_lastLaunchError, 128, L"Internal error");
+        return FALSE;
+    }
+
+    if (!DuplicateHandle(GetCurrentProcess(), hReadyEvent,
+                         GetCurrentProcess(), &args->hReadySignalEvent,
+                         0, FALSE, DUPLICATE_SAME_ACCESS)) {
+        LOG_ERROR("[Process] Failed to duplicate sync event handle: %lu", GetLastError());
+        ClosePluginLaunchJobHandle(args);
+        CloseHandle(hReadyEvent);
+        free(args);
+        MarkPluginLaunchStartFailure(now);
         wcscpy_s(g_lastLaunchError, 128, L"Internal error");
         return FALSE;
     }
 
     /* Create launcher thread */
-    HANDLE hThread = CreateThread(NULL, 0, PluginLauncherThread, &args, 0, NULL);
+    HANDLE hThread = CreateThread(NULL, 0, PluginLauncherThread, args, 0, NULL);
     if (!hThread) {
         LOG_ERROR("[Process] Failed to create launcher thread");
-        CloseHandle(args.hReadyEvent);
+        ClosePluginLaunchJobHandle(args);
+        CloseHandle(hReadyEvent);
+        CloseHandle(args->hReadySignalEvent);
+        free(args);
+        MarkPluginLaunchStartFailure(now);
         wcscpy_s(g_lastLaunchError, 128, L"Internal error");
         return FALSE;
     }
 
-    /* Wait for process creation */
-    WaitForSingleObject(args.hReadyEvent, INFINITE);
-    CloseHandle(args.hReadyEvent);
+    g_lastLaunchStartFailureTick = 0;
 
-    if (args.success && plugin->isRunning && plugin->pi.dwProcessId != 0) {
+    /* Wait for process creation */
+    DWORD readyWait = WaitForSingleObject(hReadyEvent, PLUGIN_LAUNCH_READY_TIMEOUT_MS);
+    CloseHandle(hReadyEvent);
+    hReadyEvent = NULL;
+
+    if (readyWait != WAIT_OBJECT_0) {
+        LONG previous = InterlockedCompareExchange(&args->readyState,
+                                                   PLUGIN_LAUNCH_READY_ABANDONED,
+                                                   PLUGIN_LAUNCH_READY_PENDING);
+        if (previous == PLUGIN_LAUNCH_READY_PENDING) {
+            if (readyWait == WAIT_TIMEOUT) {
+                LOG_ERROR("[Process] Plugin launch timed out: %ls", plugin->displayName);
+                wcscpy_s(g_lastLaunchError, 128, L"Launch timed out");
+            } else {
+                LOG_ERROR("[Process] Plugin launch wait failed (wait=%lu, error=%lu)",
+                          readyWait, GetLastError());
+                wcscpy_s(g_lastLaunchError, 128, L"Launch failed");
+            }
+            CloseHandle(hThread);
+            return FALSE;
+        }
+        if (previous != PLUGIN_LAUNCH_READY_SIGNALED) {
+            LOG_ERROR("[Process] Unexpected plugin launch state after wait failure: %ld",
+                      previous);
+            CloseHandle(hThread);
+            return FALSE;
+        }
+    }
+
+    if (args->success && args->pluginSnapshot.isRunning &&
+        args->pluginSnapshot.pi.dwProcessId != 0) {
+        *plugin = args->pluginSnapshot;
         plugin->pi.hThread = hThread;
     } else {
         WaitForSingleObject(hThread, INFINITE);
@@ -383,23 +620,29 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     }
 
     /* Copy error message if failed */
-    if (!args.success && args.errorMsg[0] != L'\0') {
-        wcscpy_s(g_lastLaunchError, 128, args.errorMsg);
+    if (!args->success && args->errorMsg[0] != L'\0') {
+        wcscpy_s(g_lastLaunchError, 128, args->errorMsg);
     }
 
-    return args.success;
+    BOOL success = args->success;
+    free(args);
+    return success;
 }
 
-/**
- * @brief Recursively terminate a process and all its descendants
- * @param pid Process ID to terminate
- * @param depth Current recursion depth (for logging and safety)
- */
-static void TerminateProcessTree(DWORD pid, int depth) {
+static void TerminateSingleProcess(DWORD pid) {
+    HANDLE hProc = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
+    if (hProc) {
+        TerminateProcess(hProc, 0);
+        /* Brief wait to ensure termination */
+        WaitForSingleObject(hProc, 500);
+        CloseHandle(hProc);
+    }
+}
+
+static void TerminateProcessTreeSlow(DWORD pid, int depth) {
     /* Safety: prevent infinite recursion and skip invalid PIDs */
     if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
 
-    /* First, find and terminate all child processes */
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot != INVALID_HANDLE_VALUE) {
         PROCESSENTRY32W pe = {0};
@@ -409,23 +652,78 @@ static void TerminateProcessTree(DWORD pid, int depth) {
             do {
                 if (pe.th32ParentProcessID == pid && pe.th32ProcessID != pid) {
                     /* Found a child process - recurse first (depth-first termination) */
-                    LOG_INFO("[Process] %*sFound child PID: %lu (%ls)",
-                             depth * 2, "", pe.th32ProcessID, pe.szExeFile);
-                    TerminateProcessTree(pe.th32ProcessID, depth + 1);
+                    TerminateProcessTreeSlow(pe.th32ProcessID, depth + 1);
                 }
             } while (Process32NextW(hSnapshot, &pe));
         }
         CloseHandle(hSnapshot);
     }
 
-    /* Now terminate this process */
-    HANDLE hProc = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
-    if (hProc) {
-        LOG_INFO("[Process] %*sTerminating PID: %lu", depth * 2, "", pid);
-        TerminateProcess(hProc, 0);
-        /* Brief wait to ensure termination */
-        WaitForSingleObject(hProc, 500);
-        CloseHandle(hProc);
+    TerminateSingleProcess(pid);
+}
+
+static void TerminateProcessTreeFromSnapshot(const ProcessTreeEntry* entries,
+                                             DWORD count,
+                                             DWORD pid,
+                                             int depth) {
+    if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
+
+    for (DWORD i = 0; i < count; i++) {
+        if (entries[i].parentProcessId == pid && entries[i].processId != pid) {
+            TerminateProcessTreeFromSnapshot(entries, count, entries[i].processId, depth + 1);
+        }
+    }
+
+    TerminateSingleProcess(pid);
+}
+
+/**
+ * @brief Recursively terminate a process and all its descendants
+ * @param pid Process ID to terminate
+ * @param depth Current recursion depth (for logging and safety)
+ */
+static void TerminateProcessTree(DWORD pid, int depth) {
+    if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
+
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hSnapshot == INVALID_HANDLE_VALUE) {
+        TerminateSingleProcess(pid);
+        return;
+    }
+
+    DWORD capacity = PROCESS_TREE_STACK_CAPACITY;
+    DWORD count = 0;
+    ProcessTreeEntry stackEntries[PROCESS_TREE_STACK_CAPACITY];
+    ProcessTreeEntry* entries = stackEntries;
+
+    BOOL snapshotComplete = TRUE;
+    PROCESSENTRY32W pe = {0};
+    pe.dwSize = sizeof(pe);
+
+    if (Process32FirstW(hSnapshot, &pe)) {
+        do {
+            if (count >= capacity) {
+                if (!GrowProcessTreeSnapshot(&entries, &capacity, count, stackEntries)) {
+                    snapshotComplete = FALSE;
+                    break;
+                }
+            }
+
+            entries[count].processId = pe.th32ProcessID;
+            entries[count].parentProcessId = pe.th32ParentProcessID;
+            count++;
+        } while (Process32NextW(hSnapshot, &pe));
+    }
+
+    CloseHandle(hSnapshot);
+
+    if (snapshotComplete) {
+        TerminateProcessTreeFromSnapshot(entries, count, pid, depth);
+    } else {
+        TerminateProcessTreeSlow(pid, depth);
+    }
+    if (entries != stackEntries) {
+        free(entries);
     }
 }
 
@@ -450,11 +748,21 @@ static void TerminateAllJobProcesses(void) {
         return;
     }
 
-    /* Allocate buffer for all PIDs */
-    size_t bufSize = sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) +
-                     (pidList.NumberOfAssignedProcesses * sizeof(ULONG_PTR));
+    /* Allocate buffer for all PIDs; most plugin jobs fit in the stack path. */
+    size_t bufSize = 0;
+    if (!GetJobProcessIdListBufferSize(pidList.NumberOfAssignedProcesses, &bufSize)) {
+        return;
+    }
+
+    union {
+        JOBOBJECT_BASIC_PROCESS_ID_LIST list;
+        BYTE bytes[sizeof(JOBOBJECT_BASIC_PROCESS_ID_LIST) +
+                   ((JOB_PROCESS_STACK_CAPACITY - 1) * sizeof(ULONG_PTR))];
+    } stackList;
     JOBOBJECT_BASIC_PROCESS_ID_LIST* fullList =
-        (JOBOBJECT_BASIC_PROCESS_ID_LIST*)malloc(bufSize);
+        (pidList.NumberOfAssignedProcesses <= JOB_PROCESS_STACK_CAPACITY)
+            ? (JOBOBJECT_BASIC_PROCESS_ID_LIST*)stackList.bytes
+            : (JOBOBJECT_BASIC_PROCESS_ID_LIST*)malloc(bufSize);
 
     if (!fullList) return;
 
@@ -470,60 +778,44 @@ static void TerminateAllJobProcesses(void) {
             if (childPid != catimePid && childPid != 0) {
                 HANDLE hChild = OpenProcess(PROCESS_TERMINATE, FALSE, childPid);
                 if (hChild) {
-                    LOG_INFO("[Process] Terminating orphan process PID: %lu", childPid);
                     TerminateProcess(hChild, 0);
                     CloseHandle(hChild);
                 }
             }
         }
     }
-    free(fullList);
+    if (fullList != (JOBOBJECT_BASIC_PROCESS_ID_LIST*)stackList.bytes) {
+        free(fullList);
+    }
 }
 
-BOOL PluginProcess_Terminate(PluginInfo* plugin) {
+BOOL PluginProcess_TerminateDetached(PluginInfo* plugin) {
     if (!plugin || !plugin->isRunning) return FALSE;
 
-    LOG_INFO("[Process] Terminating plugin: %ls", plugin->displayName);
-
-    /* Atomically mark as not running */
-    if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) != TRUE) {
-        LOG_INFO("[Process] Already terminated");
-        return FALSE;
-    }
-
-    /* Get and clear process handle atomically */
-    HANDLE hProc = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
+    HANDLE hProc = plugin->pi.hProcess;
     HANDLE hThread = plugin->pi.hThread;
     DWORD pid = plugin->pi.dwProcessId;
-    plugin->pi.hThread = NULL;
+    plugin->isRunning = FALSE;
     memset(&plugin->pi, 0, sizeof(plugin->pi));
 
-    /* First: Terminate the entire process tree (catches child processes like PowerShell from .bat) */
     if (pid != 0) {
-        LOG_INFO("[Process] Terminating process tree starting from PID: %lu", pid);
         TerminateProcessTree(pid, 0);
     }
 
-    /* Second: Terminate all processes in Job Object to catch any remaining orphans */
-    TerminateAllJobProcesses();
-
     if (hProc) {
-        /* Ensure main process is terminated and wait for cleanup */
         TerminateProcess(hProc, 0);
         WaitForSingleObject(hProc, 2000);
         CloseHandle(hProc);
-        LOG_INFO("[Process] Main process handle closed");
     }
 
     if (hThread) {
-        CloseHandle(hThread);
+        CloseMonitorThreadHandle(hThread, TRUE);
     }
 
     return TRUE;
 }
 
 void PluginProcess_TerminateAllOrphans(void) {
-    LOG_INFO("[Process] Cleaning up orphaned processes before new plugin start");
     TerminateAllJobProcesses();
 }
 
@@ -540,18 +832,19 @@ BOOL PluginProcess_IsAlive(PluginInfo* plugin) {
 
     DWORD exitCode;
     if (!GetExitCodeProcess(hProc, &exitCode)) {
+        DWORD error = GetLastError();
+        LOG_WARNING("[Process] GetExitCodeProcess failed for plugin pid %lu: %lu",
+                    plugin->pi.dwProcessId, error);
+        if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
+            ClearPluginProcessHandles(plugin, FALSE);
+        }
         return FALSE;
     }
 
     if (exitCode != STILL_ACTIVE) {
-        LOG_INFO("[Process] IsAlive: process has exited, updating state");
         /* Update state to reflect actual process status */
         if (InterlockedCompareExchange((volatile LONG*)&plugin->isRunning, FALSE, TRUE) == TRUE) {
-            HANDLE hProcToClose = InterlockedExchangePointer((PVOID*)&plugin->pi.hProcess, NULL);
-            if (hProcToClose) {
-                CloseHandle(hProcToClose);
-            }
-            memset(&plugin->pi, 0, sizeof(plugin->pi));
+            ClearPluginProcessHandles(plugin, FALSE);
         }
         return FALSE;
     }
@@ -559,9 +852,14 @@ BOOL PluginProcess_IsAlive(PluginInfo* plugin) {
 }
 
 void PluginProcess_SetNotifyWindow(HWND hwnd) {
-    g_hNotifyWnd = hwnd;
+    g_hNotifyWnd = IsValidPluginNotifyWindow(hwnd) ? hwnd : NULL;
 }
 
 HWND PluginProcess_GetNotifyWindow(void) {
-    return g_hNotifyWnd;
+    HWND hwnd = g_hNotifyWnd;
+    if (!IsValidPluginNotifyWindow(hwnd)) {
+        g_hNotifyWnd = NULL;
+        return NULL;
+    }
+    return hwnd;
 }

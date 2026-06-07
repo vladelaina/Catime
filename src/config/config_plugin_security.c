@@ -6,29 +6,55 @@
 #include "config/config_plugin_security.h"
 #include "config.h"
 #include "log.h"
+#include "utils/string_convert.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <string.h>
 #include <stdio.h>
 #include <shlobj.h>
+#include <stdlib.h>
 
 /* Plugin trust section name */
 #define INI_SECTION_PLUGIN_TRUST "PluginTrust"
 
 /* Thread safety: Critical section to protect g_AppConfig.plugin_trust */
 static CRITICAL_SECTION g_pluginTrustCS;
+static CRITICAL_SECTION g_pluginTrustMutationCS;
 static volatile LONG g_pluginTrustCSInitialized = 0;
 
 #define PLUGIN_TRUST_CS_UNINITIALIZED 0
 #define PLUGIN_TRUST_CS_INITIALIZING 1
 #define PLUGIN_TRUST_CS_INITIALIZED 2
+#define PLUGIN_HASH_READ_BUFFER_SIZE (64 * 1024)
+#define PLUGIN_HASH_MAX_FILE_BYTES (64ull * 1024ull * 1024ull)
+#define PLUGIN_TRUST_VALUE_BUFFER_SIZE (MAX_PATH + 65 + 2)
+#define PLUGIN_TRUST_WAIT_SPIN_LIMIT 64
+
+static int ClampPluginTrustCount(int count) {
+    if (count < 0) {
+        return 0;
+    }
+    if (count > MAX_TRUSTED_PLUGINS) {
+        return MAX_TRUSTED_PLUGINS;
+    }
+    return count;
+}
 
 /**
  * @brief Initialize plugin trust critical section (thread-safe)
  * Uses InterlockedCompareExchange for atomic initialization
  */
+static void WaitWhilePluginTrustCSInitializing(void) {
+    DWORD spins = 0;
+    while (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) ==
+           PLUGIN_TRUST_CS_INITIALIZING) {
+        Sleep(spins++ < PLUGIN_TRUST_WAIT_SPIN_LIMIT ? 0 : 1);
+    }
+}
+
 static void EnsurePluginTrustCSInitialized(void) {
-    if (g_pluginTrustCSInitialized == PLUGIN_TRUST_CS_INITIALIZED) {
+    if (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) ==
+        PLUGIN_TRUST_CS_INITIALIZED) {
         return;
     }
 
@@ -36,13 +62,12 @@ static void EnsurePluginTrustCSInitialized(void) {
                                    PLUGIN_TRUST_CS_INITIALIZING,
                                    PLUGIN_TRUST_CS_UNINITIALIZED) == PLUGIN_TRUST_CS_UNINITIALIZED) {
         InitializeCriticalSection(&g_pluginTrustCS);
+        InitializeCriticalSection(&g_pluginTrustMutationCS);
         InterlockedExchange(&g_pluginTrustCSInitialized, PLUGIN_TRUST_CS_INITIALIZED);
         return;
     }
 
-    while (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) == PLUGIN_TRUST_CS_INITIALIZING) {
-        Sleep(0);
-    }
+    WaitWhilePluginTrustCSInitializing();
 }
 
 /**
@@ -58,19 +83,75 @@ static void EnsurePluginTrustCSInitialized(void) {
  * @param bufferSize Size of output buffer
  * @return TRUE if compression was applied
  */
-static BOOL CompressPath(const char* fullPath, char* compressedPath, size_t bufferSize) {
-    if (!fullPath || !compressedPath || bufferSize == 0) return FALSE;
-    
-    char localAppData[MAX_PATH];
-    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppData))) {
-        size_t len = strlen(localAppData);
-        if (_strnicmp(fullPath, localAppData, len) == 0) {
-            snprintf(compressedPath, bufferSize, "%%LOCALAPPDATA%%%s", fullPath + len);
-            return TRUE;
+static void CopyPluginTrustPathFallback(const char* src, char* dest, size_t destSize) {
+    if (!dest || destSize == 0) return;
+    dest[0] = '\0';
+    if (!src) return;
+
+    strncpy(dest, src, destSize - 1);
+    dest[destSize - 1] = '\0';
+}
+
+static BOOL PluginTrustPathsEqual(const char* a, const char* b) {
+    if (!a || !b) return FALSE;
+
+    wchar_t aWide[MAX_PATH];
+    wchar_t bWide[MAX_PATH];
+    if (Utf8ToWide(a, aWide, MAX_PATH) &&
+        Utf8ToWide(b, bWide, MAX_PATH)) {
+        return _wcsicmp(aWide, bWide) == 0;
+    }
+
+    return _stricmp(a, b) == 0;
+}
+
+static BOOL IsValidPluginTrustHash(const char* hash) {
+    if (!hash || strlen(hash) != 64) {
+        return FALSE;
+    }
+
+    for (int i = 0; i < 64; i++) {
+        char c = hash[i];
+        if (!((c >= '0' && c <= '9') ||
+              (c >= 'a' && c <= 'f') ||
+              (c >= 'A' && c <= 'F'))) {
+            return FALSE;
         }
     }
-    
+
+    return TRUE;
+}
+
+static BOOL CompressPath(const char* fullPath, char* compressedPath, size_t bufferSize) {
+    if (!fullPath || !compressedPath || bufferSize == 0) return FALSE;
+
+    compressedPath[0] = '\0';
+
+    wchar_t fullPathWide[MAX_PATH];
+    wchar_t localAppData[MAX_PATH];
+    if (Utf8ToWide(fullPath, fullPathWide, MAX_PATH) &&
+        SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppData))) {
+        size_t len = wcslen(localAppData);
+        if (_wcsnicmp(fullPathWide, localAppData, len) == 0 &&
+            (fullPathWide[len] == L'\0' || fullPathWide[len] == L'\\')) {
+            wchar_t compressedWide[MAX_PATH];
+            int written = _snwprintf_s(compressedWide, MAX_PATH, _TRUNCATE,
+                                       L"%%LOCALAPPDATA%%%ls", fullPathWide + len);
+            if (written >= 0 &&
+                WideToUtf8(compressedWide, compressedPath, bufferSize)) {
+                return TRUE;
+            }
+            LOG_WARNING("Compressed plugin trust path too long, storing full path instead: %s", fullPath);
+            compressedPath[0] = '\0';
+        }
+    }
+
     /* No compression, copy as-is */
+    if (strlen(fullPath) >= bufferSize) {
+        LOG_ERROR("Plugin trust path too long to store: %s", fullPath);
+        return FALSE;
+    }
+
     strncpy(compressedPath, fullPath, bufferSize - 1);
     compressedPath[bufferSize - 1] = '\0';
     return FALSE;
@@ -85,18 +166,28 @@ static BOOL CompressPath(const char* fullPath, char* compressedPath, size_t buff
  */
 static BOOL ExpandPath(const char* compressedPath, char* expandedPath, size_t bufferSize) {
     if (!compressedPath || !expandedPath || bufferSize == 0) return FALSE;
-    
-    DWORD result = ExpandEnvironmentStringsA(compressedPath, expandedPath, (DWORD)bufferSize);
-    if (result == 0) {
-        LOG_ERROR("Failed to expand path: %s (error: %lu)", compressedPath, GetLastError());
-        strncpy(expandedPath, compressedPath, bufferSize - 1);
-        expandedPath[bufferSize - 1] = '\0';
+
+    wchar_t compressedWide[MAX_PATH];
+    wchar_t expandedWide[MAX_PATH];
+    if (!Utf8ToWide(compressedPath, compressedWide, MAX_PATH)) {
+        CopyPluginTrustPathFallback(compressedPath, expandedPath, bufferSize);
         return FALSE;
     }
-    if (result > bufferSize) {
+
+    DWORD result = ExpandEnvironmentStringsW(compressedWide, expandedWide, MAX_PATH);
+    if (result == 0) {
+        LOG_ERROR("Failed to expand path: %s (error: %lu)", compressedPath, GetLastError());
+        CopyPluginTrustPathFallback(compressedPath, expandedPath, bufferSize);
+        return FALSE;
+    }
+    if (result > MAX_PATH) {
         LOG_WARNING("Path expansion buffer too small (need %lu bytes): %s", result, compressedPath);
-        strncpy(expandedPath, compressedPath, bufferSize - 1);
-        expandedPath[bufferSize - 1] = '\0';
+        CopyPluginTrustPathFallback(compressedPath, expandedPath, bufferSize);
+        return FALSE;
+    }
+    if (!WideToUtf8(expandedWide, expandedPath, bufferSize)) {
+        LOG_WARNING("Expanded plugin trust path is too long: %s", compressedPath);
+        CopyPluginTrustPathFallback(compressedPath, expandedPath, bufferSize);
         return FALSE;
     }
     return TRUE;
@@ -104,15 +195,33 @@ static BOOL ExpandPath(const char* compressedPath, char* expandedPath, size_t bu
 
 static BOOL CalculateFileSHA256(const char* filePath, char* hashHex) {
     if (!filePath || !hashHex) return FALSE;
-    
+
+    wchar_t filePathWide[MAX_PATH];
+    if (!Utf8ToWide(filePath, filePathWide, MAX_PATH)) {
+        LOG_ERROR("Failed to convert plugin path for hashing: %s", filePath);
+        return FALSE;
+    }
+
     /* Open file */
-    HANDLE hFile = CreateFileA(filePath, GENERIC_READ, FILE_SHARE_READ, NULL, 
-                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE hFile = CreateFileW(filePathWide, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+                               NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
         LOG_ERROR("Failed to open file for hashing: %s (error: %lu)", filePath, GetLastError());
         return FALSE;
     }
-    
+
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(hFile, &fileSize) ||
+        fileSize.QuadPart < 0 ||
+        (ULONGLONG)fileSize.QuadPart > PLUGIN_HASH_MAX_FILE_BYTES) {
+        LOG_ERROR("Plugin file too large or unreadable for hashing: %s (limit %llu bytes)",
+                  filePath, (ULONGLONG)PLUGIN_HASH_MAX_FILE_BYTES);
+        CloseHandle(hFile);
+        return FALSE;
+    }
+
     /* Get crypto provider */
     HCRYPTPROV hProv = 0;
     if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
@@ -131,12 +240,20 @@ static BOOL CalculateFileSHA256(const char* filePath, char* hashHex) {
     }
     
     /* Read and hash file */
-    BYTE buffer[4096];
+    BYTE* buffer = (BYTE*)malloc(PLUGIN_HASH_READ_BUFFER_SIZE);
+    if (!buffer) {
+        LOG_ERROR("Failed to allocate plugin hash buffer (%u bytes)",
+                  (unsigned)PLUGIN_HASH_READ_BUFFER_SIZE);
+        CryptDestroyHash(hHash);
+        CryptReleaseContext(hProv, 0);
+        CloseHandle(hFile);
+        return FALSE;
+    }
     DWORD bytesRead;
     BOOL success = TRUE;
-    
+
     while (TRUE) {
-        if (!ReadFile(hFile, buffer, sizeof(buffer), &bytesRead, NULL)) {
+        if (!ReadFile(hFile, buffer, PLUGIN_HASH_READ_BUFFER_SIZE, &bytesRead, NULL)) {
             LOG_ERROR("ReadFile failed (error: %lu)", GetLastError());
             success = FALSE;
             break;
@@ -176,6 +293,7 @@ static BOOL CalculateFileSHA256(const char* filePath, char* hashHex) {
     }
     
     /* Cleanup */
+    free(buffer);
     CryptDestroyHash(hHash);
     CryptReleaseContext(hProv, 0);
     CloseHandle(hFile);
@@ -190,39 +308,46 @@ static BOOL CalculateFileSHA256(const char* filePath, char* hashHex) {
  */
 BOOL IsPluginTrusted(const char* pluginPath) {
     if (!pluginPath) return FALSE;
-    
-    /* Calculate current hash */
+
+    /* Thread-safe access to trust list */
+    EnsurePluginTrustCSInitialized();
+    EnterCriticalSection(&g_pluginTrustCS);
+
+    BOOL hasTrustEntry = FALSE;
+    char expectedHash[65] = {0};
+    int trustCount = ClampPluginTrustCount(g_AppConfig.plugin_trust.count);
+
+    /* Check trust list (use case-insensitive comparison for Windows paths) */
+    for (int i = 0; i < trustCount; i++) {
+        /* Expand stored path if it contains environment variables */
+        char expandedPath[MAX_PATH];
+        ExpandPath(g_AppConfig.plugin_trust.entries[i].path, expandedPath, sizeof(expandedPath));
+
+        if (PluginTrustPathsEqual(expandedPath, pluginPath)) {
+            strncpy(expectedHash, g_AppConfig.plugin_trust.entries[i].sha256, sizeof(expectedHash) - 1);
+            expectedHash[sizeof(expectedHash) - 1] = '\0';
+            hasTrustEntry = TRUE;
+            break;
+        }
+    }
+
+    LeaveCriticalSection(&g_pluginTrustCS);
+
+    if (!hasTrustEntry) {
+        return FALSE;
+    }
+
     char currentHash[65];
     if (!CalculateFileSHA256(pluginPath, currentHash)) {
         return FALSE;
     }
-    
-    /* Thread-safe access to trust list */
-    EnsurePluginTrustCSInitialized();
-    EnterCriticalSection(&g_pluginTrustCS);
-    
-    BOOL isTrusted = FALSE;
-    
-    /* Check trust list (use case-insensitive comparison for Windows paths) */
-    for (int i = 0; i < g_AppConfig.plugin_trust.count; i++) {
-        /* Expand stored path if it contains environment variables */
-        char expandedPath[MAX_PATH];
-        ExpandPath(g_AppConfig.plugin_trust.entries[i].path, expandedPath, sizeof(expandedPath));
-        
-        if (_stricmp(expandedPath, pluginPath) == 0) {
-            /* Path matches, check hash */
-            if (strcmp(g_AppConfig.plugin_trust.entries[i].sha256, currentHash) == 0) {
-                isTrusted = TRUE;
-            } else {
-                LOG_WARNING("Plugin hash mismatch: %s (file may have been modified)", pluginPath);
-                isTrusted = FALSE;
-            }
-            break;
-        }
+
+    if (strcmp(expectedHash, currentHash) == 0) {
+        return TRUE;
     }
-    
-    LeaveCriticalSection(&g_pluginTrustCS);
-    return isTrusted;
+
+    LOG_WARNING("Plugin hash mismatch: %s (file may have been modified)", pluginPath);
+    return FALSE;
 }
 
 /**
@@ -232,91 +357,106 @@ BOOL IsPluginTrusted(const char* pluginPath) {
  */
 BOOL TrustPlugin(const char* pluginPath) {
     if (!pluginPath) return FALSE;
-    
-    /* Thread-safe access to trust list */
+
+    char currentHash[65];
+    if (!CalculateFileSHA256(pluginPath, currentHash)) {
+        return FALSE;
+    }
+
+    return TrustPluginWithVerifiedHash(pluginPath, currentHash);
+}
+
+BOOL TrustPluginWithVerifiedHash(const char* pluginPath, const char* verifiedHash) {
+    if (!pluginPath || !IsValidPluginTrustHash(verifiedHash)) {
+        return FALSE;
+    }
+
     EnsurePluginTrustCSInitialized();
+    EnterCriticalSection(&g_pluginTrustMutationCS);
+
+    PluginTrustState updatedTrust;
+    char key[32] = {0};
+    char value[PLUGIN_TRUST_VALUE_BUFFER_SIZE] = {0};
+    BOOL foundExisting = FALSE;
+
     EnterCriticalSection(&g_pluginTrustCS);
-    
+    updatedTrust = g_AppConfig.plugin_trust;
+    updatedTrust.count = ClampPluginTrustCount(updatedTrust.count);
+
     /* Check if already trusted (use case-insensitive comparison for Windows paths) */
-    for (int i = 0; i < g_AppConfig.plugin_trust.count; i++) {
+    for (int i = 0; i < updatedTrust.count; i++) {
         /* Expand stored path if it contains environment variables */
         char expandedPath[MAX_PATH];
-        ExpandPath(g_AppConfig.plugin_trust.entries[i].path, expandedPath, sizeof(expandedPath));
-        
-        if (_stricmp(expandedPath, pluginPath) == 0) {
-            /* Update hash */
-            if (!CalculateFileSHA256(pluginPath, g_AppConfig.plugin_trust.entries[i].sha256)) {
-                LeaveCriticalSection(&g_pluginTrustCS);
-                return FALSE;
-            }
-            
-            /* Write to config with compressed path */
-            char key[32];
-            snprintf(key, sizeof(key), "PLUGIN_%d", i);
-            
+        ExpandPath(updatedTrust.entries[i].path, expandedPath, sizeof(expandedPath));
+
+        if (PluginTrustPathsEqual(expandedPath, pluginPath)) {
             char compressedPath[MAX_PATH];
             CompressPath(expandedPath, compressedPath, sizeof(compressedPath));
-            
-            /* Update in-memory path to compressed form */
-            strncpy(g_AppConfig.plugin_trust.entries[i].path, compressedPath, sizeof(g_AppConfig.plugin_trust.entries[i].path) - 1);
-            g_AppConfig.plugin_trust.entries[i].path[sizeof(g_AppConfig.plugin_trust.entries[i].path) - 1] = '\0';
-            
-            char value[MAX_PATH + 65 + 2];
-            snprintf(value, sizeof(value), "%s|%s", 
-                    compressedPath,
-                    g_AppConfig.plugin_trust.entries[i].sha256);
-            
-            if (!UpdateConfigKeyValueAtomic(INI_SECTION_PLUGIN_TRUST, key, value)) {
-                LOG_ERROR("Failed to update plugin trust config for: %s", pluginPath);
+            if (compressedPath[0] == '\0') {
                 LeaveCriticalSection(&g_pluginTrustCS);
+                LeaveCriticalSection(&g_pluginTrustMutationCS);
                 return FALSE;
             }
-            LeaveCriticalSection(&g_pluginTrustCS);
-            return TRUE;
+
+            strncpy(updatedTrust.entries[i].path, compressedPath,
+                    sizeof(updatedTrust.entries[i].path) - 1);
+            updatedTrust.entries[i].path[sizeof(updatedTrust.entries[i].path) - 1] = '\0';
+            strncpy(updatedTrust.entries[i].sha256, verifiedHash,
+                    sizeof(updatedTrust.entries[i].sha256) - 1);
+            updatedTrust.entries[i].sha256[sizeof(updatedTrust.entries[i].sha256) - 1] = '\0';
+
+            snprintf(key, sizeof(key), "PLUGIN_%d", i);
+            snprintf(value, sizeof(value), "%s|%s",
+                     updatedTrust.entries[i].path,
+                     updatedTrust.entries[i].sha256);
+            foundExisting = TRUE;
+            break;
         }
     }
-    
-    /* Add new entry */
-    if (g_AppConfig.plugin_trust.count >= MAX_TRUSTED_PLUGINS) {
-        LOG_ERROR("Maximum trusted plugins limit reached (%d)", MAX_TRUSTED_PLUGINS);
-        LeaveCriticalSection(&g_pluginTrustCS);
-        return FALSE;
+
+    if (!foundExisting) {
+        if (updatedTrust.count >= MAX_TRUSTED_PLUGINS) {
+            LOG_ERROR("Maximum trusted plugins limit reached (%d)", MAX_TRUSTED_PLUGINS);
+            LeaveCriticalSection(&g_pluginTrustCS);
+            LeaveCriticalSection(&g_pluginTrustMutationCS);
+            return FALSE;
+        }
+
+        int index = updatedTrust.count;
+        PluginTrustEntry* entry = &updatedTrust.entries[index];
+
+        char compressedPath[MAX_PATH];
+        CompressPath(pluginPath, compressedPath, sizeof(compressedPath));
+        if (compressedPath[0] == '\0') {
+            LeaveCriticalSection(&g_pluginTrustCS);
+            LeaveCriticalSection(&g_pluginTrustMutationCS);
+            return FALSE;
+        }
+        strncpy(entry->path, compressedPath, sizeof(entry->path) - 1);
+        entry->path[sizeof(entry->path) - 1] = '\0';
+
+        strncpy(entry->sha256, verifiedHash, sizeof(entry->sha256) - 1);
+        entry->sha256[sizeof(entry->sha256) - 1] = '\0';
+
+        updatedTrust.count++;
+
+        snprintf(key, sizeof(key), "PLUGIN_%d", index);
+        snprintf(value, sizeof(value), "%s|%s", entry->path, entry->sha256);
     }
-    
-    int index = g_AppConfig.plugin_trust.count;
-    PluginTrustEntry* entry = &g_AppConfig.plugin_trust.entries[index];
-    
-    /* Store path in compressed form */
-    char compressedPath[MAX_PATH];
-    CompressPath(pluginPath, compressedPath, sizeof(compressedPath));
-    strncpy(entry->path, compressedPath, sizeof(entry->path) - 1);
-    entry->path[sizeof(entry->path) - 1] = '\0';
-    
-    /* Calculate and store hash */
-    if (!CalculateFileSHA256(pluginPath, entry->sha256)) {
-        LeaveCriticalSection(&g_pluginTrustCS);
-        return FALSE;
-    }
-    
-    g_AppConfig.plugin_trust.count++;
-    
-    /* Write to config */
-    char key[32];
-    snprintf(key, sizeof(key), "PLUGIN_%d", index);
-    
-    char value[MAX_PATH + 65 + 2];
-    snprintf(value, sizeof(value), "%s|%s", entry->path, entry->sha256);
-    
+
+    LeaveCriticalSection(&g_pluginTrustCS);
+
     if (!UpdateConfigKeyValueAtomic(INI_SECTION_PLUGIN_TRUST, key, value)) {
         LOG_ERROR("Failed to write plugin trust config for: %s", pluginPath);
-        /* Rollback: decrease count since write failed */
-        g_AppConfig.plugin_trust.count--;
-        LeaveCriticalSection(&g_pluginTrustCS);
+        LeaveCriticalSection(&g_pluginTrustMutationCS);
         return FALSE;
     }
-    
-    LOG_INFO("Plugin trusted: %s", pluginPath);
+
+    EnterCriticalSection(&g_pluginTrustCS);
+    g_AppConfig.plugin_trust = updatedTrust;
     LeaveCriticalSection(&g_pluginTrustCS);
+
+    LeaveCriticalSection(&g_pluginTrustMutationCS);
     return TRUE;
 }
 
@@ -327,60 +467,97 @@ BOOL TrustPlugin(const char* pluginPath) {
  */
 BOOL UntrustPlugin(const char* pluginPath) {
     if (!pluginPath) return FALSE;
-    
-    /* Thread-safe access to trust list */
+
+    IniKeyValue* updates = (IniKeyValue*)calloc(MAX_TRUSTED_PLUGINS + 1,
+                                                sizeof(*updates));
+    char (*keyStorage)[32] = (char (*)[32])calloc(MAX_TRUSTED_PLUGINS + 1,
+                                                  sizeof(*keyStorage));
+    char (*valueStorage)[PLUGIN_TRUST_VALUE_BUFFER_SIZE] =
+        (char (*)[PLUGIN_TRUST_VALUE_BUFFER_SIZE])calloc(MAX_TRUSTED_PLUGINS + 1,
+                                                         sizeof(*valueStorage));
+    if (!updates || !keyStorage || !valueStorage) {
+        free(valueStorage);
+        free(keyStorage);
+        free(updates);
+        LOG_ERROR("Failed to allocate plugin trust update buffers");
+        return FALSE;
+    }
+
     EnsurePluginTrustCSInitialized();
+    EnterCriticalSection(&g_pluginTrustMutationCS);
     EnterCriticalSection(&g_pluginTrustCS);
-    
+
+    PluginTrustState updatedTrust = g_AppConfig.plugin_trust;
+    int trustCount = ClampPluginTrustCount(updatedTrust.count);
+    updatedTrust.count = trustCount;
+
     /* Find and remove entry (use case-insensitive comparison for Windows paths) */
-    for (int i = 0; i < g_AppConfig.plugin_trust.count; i++) {
+    for (int i = 0; i < trustCount; i++) {
         /* Expand stored path if it contains environment variables */
         char expandedPath[MAX_PATH];
-        ExpandPath(g_AppConfig.plugin_trust.entries[i].path, expandedPath, sizeof(expandedPath));
-        
-        if (_stricmp(expandedPath, pluginPath) == 0) {
+        ExpandPath(updatedTrust.entries[i].path, expandedPath, sizeof(expandedPath));
+
+        if (PluginTrustPathsEqual(expandedPath, pluginPath)) {
             /* Shift remaining entries */
-            for (int j = i; j < g_AppConfig.plugin_trust.count - 1; j++) {
-                g_AppConfig.plugin_trust.entries[j] = g_AppConfig.plugin_trust.entries[j + 1];
+            for (int j = i; j < trustCount - 1; j++) {
+                updatedTrust.entries[j] = updatedTrust.entries[j + 1];
             }
-            g_AppConfig.plugin_trust.count--;
-            
-            /* Rewrite all entries to config */
-            BOOL writeSuccess = TRUE;
-            for (int j = 0; j < g_AppConfig.plugin_trust.count; j++) {
-                char key[32];
-                snprintf(key, sizeof(key), "PLUGIN_%d", j);
-                
-                char value[MAX_PATH + 65 + 2];
-                snprintf(value, sizeof(value), "%s|%s", 
-                        g_AppConfig.plugin_trust.entries[j].path,
-                        g_AppConfig.plugin_trust.entries[j].sha256);
-                
-                if (!UpdateConfigKeyValueAtomic(INI_SECTION_PLUGIN_TRUST, key, value)) {
-                    LOG_ERROR("Failed to rewrite plugin trust entry %d during untrust operation", j);
-                    writeSuccess = FALSE;
-                }
+            ZeroMemory(&updatedTrust.entries[trustCount - 1],
+                       sizeof(updatedTrust.entries[trustCount - 1]));
+            updatedTrust.count = trustCount - 1;
+
+            size_t updateCount = 0;
+
+            for (int j = 0; j < updatedTrust.count; j++) {
+                snprintf(keyStorage[updateCount], sizeof(keyStorage[updateCount]), "PLUGIN_%d", j);
+                snprintf(valueStorage[updateCount], sizeof(valueStorage[updateCount]), "%s|%s",
+                         updatedTrust.entries[j].path,
+                         updatedTrust.entries[j].sha256);
+                updates[updateCount].section = INI_SECTION_PLUGIN_TRUST;
+                updates[updateCount].key = keyStorage[updateCount];
+                updates[updateCount].value = valueStorage[updateCount];
+                updateCount++;
             }
-            
-            /* Remove the now-unused last key by writing empty string */
-            char lastKey[32];
-            snprintf(lastKey, sizeof(lastKey), "PLUGIN_%d", g_AppConfig.plugin_trust.count);
-            if (!UpdateConfigKeyValueAtomic(INI_SECTION_PLUGIN_TRUST, lastKey, "")) {
-                LOG_ERROR("Failed to clear last plugin trust entry during untrust operation");
-                writeSuccess = FALSE;
-            }
-            
-            if (writeSuccess) {
-                LOG_INFO("Plugin untrusted: %s", pluginPath);
-            } else {
-                LOG_WARNING("Plugin untrusted in memory: %s (config update had errors, will be corrected on next load)", pluginPath);
-            }
+
+            snprintf(keyStorage[updateCount], sizeof(keyStorage[updateCount]),
+                     "PLUGIN_%d", updatedTrust.count);
+            valueStorage[updateCount][0] = '\0';
+            updates[updateCount].section = INI_SECTION_PLUGIN_TRUST;
+            updates[updateCount].key = keyStorage[updateCount];
+            updates[updateCount].value = valueStorage[updateCount];
+            updateCount++;
+
+            char configPath[MAX_PATH];
+            GetConfigPath(configPath, sizeof(configPath));
+
             LeaveCriticalSection(&g_pluginTrustCS);
+            BOOL writeSuccess = WriteIniMultipleAtomic(configPath, updates, updateCount);
+            if (!writeSuccess) {
+                LOG_ERROR("Failed to rewrite plugin trust config during untrust operation");
+                LeaveCriticalSection(&g_pluginTrustMutationCS);
+                free(valueStorage);
+                free(keyStorage);
+                free(updates);
+                return FALSE;
+            }
+
+            EnterCriticalSection(&g_pluginTrustCS);
+            g_AppConfig.plugin_trust = updatedTrust;
+            LeaveCriticalSection(&g_pluginTrustCS);
+
+            LeaveCriticalSection(&g_pluginTrustMutationCS);
+            free(valueStorage);
+            free(keyStorage);
+            free(updates);
             return TRUE;
         }
     }
-    
+
     LeaveCriticalSection(&g_pluginTrustCS);
+    LeaveCriticalSection(&g_pluginTrustMutationCS);
+    free(valueStorage);
+    free(keyStorage);
+    free(updates);
     return FALSE;
 }
 
@@ -389,14 +566,15 @@ BOOL UntrustPlugin(const char* pluginPath) {
  * WARNING: Must be called only after all threads that might use it have stopped
  */
 void CleanupPluginTrustCS(void) {
-    while (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) == PLUGIN_TRUST_CS_INITIALIZING) {
-        Sleep(0);
-    }
+    WaitWhilePluginTrustCSInitializing();
 
     if (InterlockedCompareExchange(&g_pluginTrustCSInitialized, 0, 0) == PLUGIN_TRUST_CS_INITIALIZED) {
+        EnterCriticalSection(&g_pluginTrustMutationCS);
         EnterCriticalSection(&g_pluginTrustCS);
         LeaveCriticalSection(&g_pluginTrustCS);
+        LeaveCriticalSection(&g_pluginTrustMutationCS);
         DeleteCriticalSection(&g_pluginTrustCS);
+        DeleteCriticalSection(&g_pluginTrustMutationCS);
         InterlockedExchange(&g_pluginTrustCSInitialized, PLUGIN_TRUST_CS_UNINITIALIZED);
     }
 }
@@ -405,16 +583,19 @@ void CleanupPluginTrustCS(void) {
  * @brief Load plugin trust state from config
  */
 void LoadPluginTrustFromConfig(void) {
-    /* Thread-safe access to trust list */
-    EnsurePluginTrustCSInitialized();
-    EnterCriticalSection(&g_pluginTrustCS);
-    
-    /* Clear existing trust list for security */
-    memset(&g_AppConfig.plugin_trust, 0, sizeof(g_AppConfig.plugin_trust));
-    
+    PluginTrustState loadedTrust = {0};
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
+
+    EnsurePluginTrustCSInitialized();
+    EnterCriticalSection(&g_pluginTrustMutationCS);
+
+    /* Clear existing trust list before file I/O so stale trust is not retained. */
+    EnterCriticalSection(&g_pluginTrustCS);
+    memset(&g_AppConfig.plugin_trust, 0, sizeof(g_AppConfig.plugin_trust));
+    LeaveCriticalSection(&g_pluginTrustCS);
+
     for (int i = 0; i < MAX_TRUSTED_PLUGINS; i++) {
         char key[32];
         snprintf(key, sizeof(key), "PLUGIN_%d", i);
@@ -443,20 +624,20 @@ void LoadPluginTrustFromConfig(void) {
                     
                     if (validHash) {
                         /* Defensive check: ensure we don't overflow (though loop limit prevents this) */
-                        if (g_AppConfig.plugin_trust.count >= MAX_TRUSTED_PLUGINS) {
+                        if (loadedTrust.count >= MAX_TRUSTED_PLUGINS) {
                             LOG_ERROR("Plugin trust list overflow during load (max: %d)", MAX_TRUSTED_PLUGINS);
                             break;
                         }
-                        
-                        PluginTrustEntry* entry = &g_AppConfig.plugin_trust.entries[g_AppConfig.plugin_trust.count];
-                        
+
+                        PluginTrustEntry* entry = &loadedTrust.entries[loadedTrust.count];
+
                         strncpy(entry->path, value, sizeof(entry->path) - 1);
                         entry->path[sizeof(entry->path) - 1] = '\0';
-                        
+
                         strncpy(entry->sha256, hash, sizeof(entry->sha256) - 1);
                         entry->sha256[sizeof(entry->sha256) - 1] = '\0';
-                        
-                        g_AppConfig.plugin_trust.count++;
+
+                        loadedTrust.count++;
                     }
                 }
             }
@@ -465,9 +646,11 @@ void LoadPluginTrustFromConfig(void) {
             break;
         }
     }
-    
-    LOG_INFO("Loaded %d trusted plugins from config", g_AppConfig.plugin_trust.count);
+
+    EnterCriticalSection(&g_pluginTrustCS);
+    g_AppConfig.plugin_trust = loadedTrust;
     LeaveCriticalSection(&g_pluginTrustCS);
+    LeaveCriticalSection(&g_pluginTrustMutationCS);
 }
 
 /**

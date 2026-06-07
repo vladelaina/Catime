@@ -96,7 +96,7 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             return TRUE;
         
         case WM_DESTROY:
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_CLI_HELP);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_CLI_HELP, hwndDlg);
             if (hwndDlg == g_cliHelpDialog) {
                 g_cliHelpDialog = NULL;
                 HWND hMainWnd = GetParent(hwndDlg);

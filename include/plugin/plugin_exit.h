@@ -13,12 +13,12 @@
  * @param hwnd Window handle for notifications
  * @param dataCS Critical section for data synchronization
  */
-void PluginExit_Init(HWND hwnd, CRITICAL_SECTION* dataCS);
+BOOL PluginExit_Init(HWND hwnd, CRITICAL_SECTION* dataCS);
 
 /**
  * @brief Shutdown exit subsystem
  */
-void PluginExit_Shutdown(void);
+BOOL PluginExit_Shutdown(void);
 
 /**
  * @brief Parse <exit> tag and start countdown if found

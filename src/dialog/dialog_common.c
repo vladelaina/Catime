@@ -24,8 +24,8 @@
  * Global State
  * ============================================================================ */
 
-/** Global edit proc for compatibility with legacy code */
-static WNDPROC g_wpOrigEditProc = NULL;
+/** Per-edit property storing the original window procedure while subclassed */
+#define DIALOG_EDIT_ORIG_PROC_PROP L"Catime.Dialog.OrigEditProc"
 
 /** Dialog instance registry */
 static HWND g_dialogInstances[DIALOG_INSTANCE_COUNT] = {0};
@@ -60,6 +60,14 @@ void Dialog_SetContext(HWND hwndDlg, DialogContext* ctx) {
     SetWindowLongPtr(hwndDlg, GWLP_USERDATA, (LONG_PTR)ctx);
 }
 
+void Dialog_DestroyContext(HWND hwndDlg) {
+    DialogContext* ctx = Dialog_GetContext(hwndDlg);
+    if (!ctx) return;
+
+    SetWindowLongPtr(hwndDlg, GWLP_USERDATA, 0);
+    Dialog_FreeContext(ctx);
+}
+
 DialogContext* Dialog_GetContext(HWND hwndDlg) {
     return (DialogContext*)GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
 }
@@ -69,19 +77,12 @@ DialogContext* Dialog_GetContext(HWND hwndDlg) {
  * ============================================================================ */
 
 LRESULT APIENTRY Dialog_EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static BOOL firstKeyProcessed = FALSE;
-
     switch (msg) {
         case WM_SETFOCUS:
             PostMessage(hwnd, EM_SETSEL, 0, -1);
-            firstKeyProcessed = FALSE;
             break;
 
         case WM_KEYDOWN:
-            if (!firstKeyProcessed) {
-                firstKeyProcessed = TRUE;
-            }
-
             if (wParam == VK_RETURN) {
                 HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
                 SendMessage(GetParent(hwnd), WM_COMMAND, 
@@ -106,31 +107,58 @@ LRESULT APIENTRY Dialog_EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
             break;
     }
 
-    return CallWindowProc(g_wpOrigEditProc, hwnd, msg, wParam, lParam);
+    WNDPROC origProc = (WNDPROC)(LONG_PTR)GetPropW(hwnd, DIALOG_EDIT_ORIG_PROC_PROP);
+    if (!origProc) {
+        return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+    return CallWindowProc(origProc, hwnd, msg, wParam, lParam);
 }
 
 BOOL Dialog_SubclassEdit(HWND hwndEdit, DialogContext* ctx) {
     if (!hwndEdit || !ctx) return FALSE;
+
+    WNDPROC existingOrigProc = (WNDPROC)(LONG_PTR)GetPropW(hwndEdit, DIALOG_EDIT_ORIG_PROC_PROP);
+    if (existingOrigProc) {
+        ctx->wpOrigEditProc = existingOrigProc;
+        return TRUE;
+    }
     
-    WNDPROC origProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, 
-                                                  (LONG_PTR)Dialog_EditSubclassProc);
-    if (!origProc) return FALSE;
+    SetLastError(0);
+    LONG_PTR previousProc = SetWindowLongPtr(hwndEdit, GWLP_WNDPROC,
+                                             (LONG_PTR)Dialog_EditSubclassProc);
+    if (!previousProc && GetLastError() != 0) return FALSE;
+
+    WNDPROC origProc = (WNDPROC)previousProc;
+    if (!SetPropW(hwndEdit, DIALOG_EDIT_ORIG_PROC_PROP, (HANDLE)(LONG_PTR)origProc)) {
+        SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)origProc);
+        return FALSE;
+    }
     
     ctx->wpOrigEditProc = origProc;
-    
-    /* Set global for legacy compatibility */
-    if (!g_wpOrigEditProc) {
-        g_wpOrigEditProc = origProc;
-    }
     
     return TRUE;
 }
 
 void Dialog_UnsubclassEdit(HWND hwndEdit, DialogContext* ctx) {
-    if (!hwndEdit || !ctx || !ctx->wpOrigEditProc) return;
+    if (!hwndEdit || !ctx) return;
 
-    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)ctx->wpOrigEditProc);
-    ctx->wpOrigEditProc = NULL;
+    WNDPROC origProc = (WNDPROC)(LONG_PTR)GetPropW(hwndEdit, DIALOG_EDIT_ORIG_PROC_PROP);
+    if (!origProc) {
+        WNDPROC currentProc = (WNDPROC)(LONG_PTR)GetWindowLongPtr(hwndEdit, GWLP_WNDPROC);
+        if (currentProc != Dialog_EditSubclassProc) {
+            return;
+        }
+        origProc = ctx->wpOrigEditProc;
+    }
+    if (!origProc) return;
+
+    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)origProc);
+    RemovePropW(hwndEdit, DIALOG_EDIT_ORIG_PROC_PROP);
+
+    if (ctx->wpOrigEditProc == origProc) {
+        ctx->wpOrigEditProc = NULL;
+    }
 }
 
 /* ============================================================================
@@ -151,19 +179,12 @@ LRESULT Dialog_EditSubclassProc_Ex(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
         }
     }
 
-    static BOOL firstKeyProcessed = FALSE;
-
     switch (msg) {
         case WM_SETFOCUS:
             PostMessage(hwnd, EM_SETSEL, 0, -1);
-            firstKeyProcessed = FALSE;
             break;
 
         case WM_KEYDOWN:
-            if (!firstKeyProcessed) {
-                firstKeyProcessed = TRUE;
-            }
-
             if (wParam == VK_RETURN) {
                 HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
                 SendMessage(GetParent(hwnd), WM_COMMAND,
@@ -357,15 +378,25 @@ void Dialog_UnregisterInstance(DialogInstanceType type) {
     g_dialogInstances[type] = NULL;
 }
 
+void Dialog_UnregisterInstanceForWindow(DialogInstanceType type, HWND hwnd) {
+    if (type < 0 || type >= DIALOG_INSTANCE_COUNT) return;
+    if (g_dialogInstances[type] == hwnd) {
+        g_dialogInstances[type] = NULL;
+    }
+}
+
 HWND Dialog_GetInstance(DialogInstanceType type) {
     if (type < 0 || type >= DIALOG_INSTANCE_COUNT) return NULL;
-    return g_dialogInstances[type];
+    HWND hwnd = g_dialogInstances[type];
+    if (hwnd && !IsWindow(hwnd)) {
+        g_dialogInstances[type] = NULL;
+        return NULL;
+    }
+    return hwnd;
 }
 
 BOOL Dialog_IsOpen(DialogInstanceType type) {
-    if (type < 0 || type >= DIALOG_INSTANCE_COUNT) return FALSE;
-    HWND hwnd = g_dialogInstances[type];
-    return hwnd != NULL && IsWindow(hwnd);
+    return Dialog_GetInstance(type) != NULL;
 }
 
 /* ============================================================================

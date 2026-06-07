@@ -7,6 +7,9 @@
 #define DIALOG_NOTIFICATION_AUDIO_H
 
 #include <windows.h>
+#include <stddef.h>
+
+#define WM_NOTIFICATION_SOUND_PLAYBACK_COMPLETE (WM_APP + 100)
 
 /* ============================================================================
  * Audio File Management
@@ -18,10 +21,29 @@
  * @param currentFile Current selected file path (UTF-8, can be NULL or empty)
  * 
  * @details
- * Scans audio folder for .mp3/.wav/.flac files and populates combo box.
+ * Uses the cached audio folder scan for .mp3/.wav/.flac files and populates combo box.
  * First two items are always "None" and "System Beep".
  */
 void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile);
+
+/**
+ * @brief Request a background refresh of the notification sound cache
+ */
+void NotificationSoundCache_RequestScanAsync(void);
+
+/**
+ * @brief Stop background notification sound scanning and clear cached state
+ */
+void NotificationSoundCache_Shutdown(void);
+
+/**
+ * @brief Resolve the selected combo item to a notification sound value
+ * @param hwndCombo Sound combo box handle
+ * @param outSoundFile Output buffer receiving "", "SYSTEM_BEEP", or UTF-8 file path
+ * @param outSize Output buffer size in bytes
+ * @return TRUE if resolved, FALSE if conversion/path construction failed
+ */
+BOOL GetSelectedNotificationSoundFile(HWND hwndCombo, char* outSoundFile, size_t outSize);
 
 /**
  * @brief Handle sound test button click

@@ -11,6 +11,10 @@
 
 #include <windows.h>
 
+#define TRAY_ANIMATION_DEFAULT_INTERVAL_MS 150u
+#define TRAY_ANIMATION_MIN_INTERVAL_MS 20u
+#define TRAY_ANIMATION_MAX_INTERVAL_MS 60000u
+
 /**
  * @brief Start animation system
  * @param hwnd Window handle for message posting
@@ -26,6 +30,12 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs);
  * @param hwnd Window handle (for timer cleanup)
  */
 void StopTrayAnimation(HWND hwnd);
+
+/**
+ * @brief Check whether the tray animation runtime is accepting updates
+ * @return TRUE if StartTrayAnimation has successfully started the runtime
+ */
+BOOL TrayAnimation_IsRunning(void);
 
 /**
  * @brief Get current animation name
@@ -96,7 +106,7 @@ void TrayAnimation_SetBaseIntervalMs(UINT ms);
 void TrayAnimation_SetMinIntervalMs(UINT ms);
 
 /**
- * @brief Recompute timer delay (no-op, kept for compatibility)
+ * @brief Invalidate cached animation timer delay scaling
  */
 void TrayAnimation_RecomputeTimerDelay(void);
 
@@ -115,15 +125,29 @@ void TrayAnimation_ClearCurrentName(void);
 void TrayAnimation_UpdatePercentIconIfNeeded(void);
 
 /**
+ * @brief Update percent icon using already sampled CPU/memory values
+ *
+ * @details
+ * Called from tray tooltip update timer to avoid taking the same cached
+ * system-monitor lock twice in one tick.
+ */
+void TrayAnimation_UpdatePercentIconWithMetrics(float cpuPercent, float memPercent);
+
+/**
  * @brief Handle WM_TRAY_UPDATE_ICON message (must run in main thread)
  * @return TRUE if handled
  */
-BOOL TrayAnimation_HandleUpdateMessage(void);
+BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd);
 
 /**
- * @brief Preview animation from file path without persistence
+ * @brief Refresh tray icon immediately from the current animation state
  */
-void PreviewAnimationFromFile(HWND hwnd, const char* filePath);
+void TrayAnimation_RefreshCurrentIcon(void);
+
+/**
+ * @brief Queue animation preview from file path without persistence
+ */
+BOOL PreviewAnimationFromFile(HWND hwnd, const char* filePath);
 
 /**
  * @brief Check if animation preview is currently active

@@ -5,6 +5,7 @@
 
 #include "color/gradient.h"
 #include <string.h>
+#include <stdlib.h>
 #ifdef _MSC_VER
 #define strcasecmp _stricmp
 #else
@@ -84,39 +85,135 @@ static GradientInfo g_CustomGradient = {
 static COLORREF g_CustomPalette[MAX_CUSTOM_GRADIENT_COLORS];
 static char g_CustomNameBuffer[COLOR_HEX_BUFFER];
 static uint32_t g_CustomVersion = 0;
+static SRWLOCK g_CustomGradientLock = SRWLOCK_INIT;
 
-static COLORREF ParseHexColor(const char* hex) {
-    unsigned int r, g, b;
-    const char* start = (hex[0] == '#') ? hex + 1 : hex;
-    if (sscanf(start, "%02x%02x%02x", &r, &g, &b) == 3) {
-        return RGB(r, g, b);
-    }
-    return RGB(0, 0, 0);
+static int HexDigitValue(char ch) {
+    if (ch >= '0' && ch <= '9') return ch - '0';
+    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+    return -1;
 }
 
-static void ParseCustomGradient(const char* name) {
-    if (!name) return;
+static BOOL ParseHexColor(const char* hex, COLORREF* out) {
+    if (!hex || !out) return FALSE;
 
-    /* Check if already current to avoid unnecessary re-parsing */
-    if (strcmp(name, g_CustomNameBuffer) == 0) return;
+    const char* start = (hex[0] == '#') ? hex + 1 : hex;
+    if (strlen(start) != 6) return FALSE;
 
-    /* Update name buffer */
-    strncpy(g_CustomNameBuffer, name, sizeof(g_CustomNameBuffer) - 1);
-    g_CustomNameBuffer[sizeof(g_CustomNameBuffer) - 1] = '\0';
+    int channels[3] = {0, 0, 0};
+    for (int i = 0; i < 3; i++) {
+        int hi = HexDigitValue(start[i * 2]);
+        int lo = HexDigitValue(start[i * 2 + 1]);
+        if (hi < 0 || lo < 0) return FALSE;
+        channels[i] = hi * 16 + lo;
+    }
 
-    /* Parse colors */
-    char tempName[COLOR_HEX_BUFFER];
+    *out = RGB(channels[0], channels[1], channels[2]);
+    return TRUE;
+}
+
+static const GradientInfo* FindGradientInfoByType(GradientType type) {
+    if (type <= GRADIENT_NONE || type >= GRADIENT_COUNT) return NULL;
+
+    for (size_t i = 0; i < REGISTRY_COUNT; i++) {
+        if (GRADIENT_REGISTRY[i].type == type) {
+            return &GRADIENT_REGISTRY[i];
+        }
+    }
+    return NULL;
+}
+
+static const GradientInfo* FindGradientInfoByName(const char* name) {
+    if (!name) return NULL;
+
+    for (size_t i = 0; i < REGISTRY_COUNT; i++) {
+        if (strcasecmp(name, GRADIENT_REGISTRY[i].name) == 0) {
+            return &GRADIENT_REGISTRY[i];
+        }
+    }
+    return NULL;
+}
+
+static void CopyGradientInfoToSnapshot(const GradientInfo* info, GradientInfoSnapshot* out) {
+    if (!info || !out) return;
+
+    ZeroMemory(out, sizeof(*out));
+    out->info = *info;
+    if (info->name) {
+        strncpy(out->name, info->name, sizeof(out->name) - 1);
+        out->name[sizeof(out->name) - 1] = '\0';
+        out->info.name = out->name;
+    }
+    if (info->palette && info->paletteCount > 0) {
+        int count = info->paletteCount;
+        if (count > MAX_CUSTOM_GRADIENT_COLORS) count = MAX_CUSTOM_GRADIENT_COLORS;
+        memcpy(out->palette, info->palette, (size_t)count * sizeof(out->palette[0]));
+        out->info.palette = out->palette;
+        out->info.paletteCount = count;
+    }
+}
+
+static BOOL BuildCustomGradientSnapshot(const char* name, GradientInfoSnapshot* out) {
+    if (!name || !out || !strchr(name, '_')) return FALSE;
+    if (strlen(name) >= sizeof(out->name)) return FALSE;
+
+    ZeroMemory(out, sizeof(*out));
+    out->info.type = GRADIENT_CUSTOM;
+    out->info.name = out->name;
+    out->info.displayName = L"Custom Gradient";
+
+    strncpy(out->name, name, sizeof(out->name) - 1);
+    out->name[sizeof(out->name) - 1] = '\0';
+
+    char tempName[GRADIENT_NAME_BUFFER];
     strncpy(tempName, name, sizeof(tempName) - 1);
     tempName[sizeof(tempName) - 1] = '\0';
 
     int count = 0;
     char* ctx = NULL;
     const char* token = strtok_s(tempName, "_", &ctx);
-    
+
     while (token && count < MAX_CUSTOM_GRADIENT_COLORS) {
-        g_CustomPalette[count++] = ParseHexColor(token);
+        COLORREF parsedColor;
+        if (!ParseHexColor(token, &parsedColor)) {
+            return FALSE;
+        }
+        out->palette[count++] = parsedColor;
         token = strtok_s(NULL, "_", &ctx);
     }
+
+    out->info.palette = out->palette;
+    out->info.paletteCount = count;
+
+    if (count >= 1) {
+        out->info.startColor = out->palette[0];
+        out->info.endColor = (count > 1) ? out->palette[count - 1] : out->palette[0];
+    }
+    out->info.isAnimated = (count > 2);
+
+    return count >= 2;
+}
+
+static void ParseCustomGradient(const char* name) {
+    if (!name) return;
+
+    GradientInfoSnapshot snapshot;
+    if (!BuildCustomGradientSnapshot(name, &snapshot)) return;
+
+    AcquireSRWLockExclusive(&g_CustomGradientLock);
+
+    /* Check if already current to avoid unnecessary re-parsing */
+    if (strcmp(name, g_CustomNameBuffer) == 0) {
+        ReleaseSRWLockExclusive(&g_CustomGradientLock);
+        return;
+    }
+
+    /* Update name buffer */
+    strncpy(g_CustomNameBuffer, snapshot.name, sizeof(g_CustomNameBuffer) - 1);
+    g_CustomNameBuffer[sizeof(g_CustomNameBuffer) - 1] = '\0';
+
+    int count = snapshot.info.paletteCount;
+    memcpy(g_CustomPalette, snapshot.palette, (size_t)count * sizeof(g_CustomPalette[0]));
 
     /* Update global struct */
     g_CustomGradient.name = g_CustomNameBuffer;
@@ -133,11 +230,60 @@ static void ParseCustomGradient(const char* name) {
 
     /* Increment version to trigger cache invalidation */
     g_CustomVersion++;
+    ReleaseSRWLockExclusive(&g_CustomGradientLock);
 }
 
 uint32_t GetCustomGradientVersion(void) {
-    return g_CustomVersion;
+    AcquireSRWLockShared(&g_CustomGradientLock);
+    uint32_t version = g_CustomVersion;
+    ReleaseSRWLockShared(&g_CustomGradientLock);
+    return version;
 }
+
+static DWORD ColorRefToDibRgb(COLORREF color) {
+    return ((DWORD)GetBValue(color)) |
+           ((DWORD)GetGValue(color) << 8) |
+           ((DWORD)GetRValue(color) << 16);
+}
+
+static COLORREF InterpolateGradientColor(const GradientInfo* info, float t) {
+    if (!info) return RGB(0, 0, 0);
+
+    if (info->palette && info->paletteCount > 1) {
+        int colorCount = info->paletteCount;
+        float scaledT = t * (float)(colorCount - 1);
+        int idx = (int)scaledT;
+        int nextIdx = idx + 1;
+
+        if (idx < 0) idx = 0;
+        if (idx >= colorCount) idx = colorCount - 1;
+        if (nextIdx >= colorCount) nextIdx = colorCount - 1;
+
+        float frac = scaledT - (float)idx;
+        COLORREF c1 = info->palette[idx];
+        COLORREF c2 = info->palette[nextIdx];
+
+        int r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * frac);
+        int g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * frac);
+        int b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * frac);
+        return RGB(r, g, b);
+    }
+
+    int r1 = GetRValue(info->startColor);
+    int g1 = GetGValue(info->startColor);
+    int b1 = GetBValue(info->startColor);
+
+    int r2 = GetRValue(info->endColor);
+    int g2 = GetGValue(info->endColor);
+    int b2 = GetBValue(info->endColor);
+
+    int r = (int)(r1 + (r2 - r1) * t);
+    int g = (int)(g1 + (g2 - g1) * t);
+    int b = (int)(b1 + (b2 - b1) * t);
+    return RGB(r, g, b);
+}
+
+#define GRADIENT_STACK_PIXELS 256
 
 /* ============================================================================
  * Public API
@@ -145,28 +291,56 @@ uint32_t GetCustomGradientVersion(void) {
 
 const GradientInfo* GetGradientInfo(GradientType type) {
     if (type == GRADIENT_CUSTOM) return &g_CustomGradient;
-    if (type <= GRADIENT_NONE || type >= GRADIENT_COUNT) return NULL;
-    
-    for (size_t i = 0; i < REGISTRY_COUNT; i++) {
-        if (GRADIENT_REGISTRY[i].type == type) {
-            return &GRADIENT_REGISTRY[i];
-        }
+    return FindGradientInfoByType(type);
+}
+
+BOOL GetGradientInfoSnapshot(GradientType type, GradientInfoSnapshot* out) {
+    if (!out) return FALSE;
+
+    if (type == GRADIENT_CUSTOM) {
+        AcquireSRWLockShared(&g_CustomGradientLock);
+        CopyGradientInfoToSnapshot(&g_CustomGradient, out);
+        ReleaseSRWLockShared(&g_CustomGradientLock);
+        return out->info.paletteCount > 0 || out->info.startColor != 0 || out->info.endColor != 0;
     }
-    return NULL;
+
+    const GradientInfo* info = FindGradientInfoByType(type);
+    if (!info) return FALSE;
+    CopyGradientInfoToSnapshot(info, out);
+    return TRUE;
+}
+
+GradientType GetGradientInfoSnapshotByName(const char* name, GradientInfoSnapshot* out) {
+    if (!name || !out) return GRADIENT_NONE;
+
+    const GradientInfo* info = FindGradientInfoByName(name);
+    if (info) {
+        CopyGradientInfoToSnapshot(info, out);
+        return info->type;
+    }
+
+    if (BuildCustomGradientSnapshot(name, out)) {
+        return GRADIENT_CUSTOM;
+    }
+
+    return GRADIENT_NONE;
 }
 
 GradientType GetGradientTypeByName(const char* name) {
     if (!name) return GRADIENT_NONE;
-    
+
     /* 1. Check registry first */
-    for (size_t i = 0; i < REGISTRY_COUNT; i++) {
-        if (strcasecmp(name, GRADIENT_REGISTRY[i].name) == 0) {
-            return GRADIENT_REGISTRY[i].type;
-        }
+    const GradientInfo* info = FindGradientInfoByName(name);
+    if (info) {
+        return info->type;
     }
     
     /* 2. Check for custom gradient format (contains '_') */
     if (strchr(name, '_')) {
+        GradientInfoSnapshot snapshot;
+        if (!BuildCustomGradientSnapshot(name, &snapshot)) {
+            return GRADIENT_NONE;
+        }
         ParseCustomGradient(name);
         return GRADIENT_CUSTOM;
     }
@@ -184,72 +358,50 @@ const GradientInfo* GetGradientInfoByIndex(int index) {
 }
 
 BOOL IsGradientAnimated(GradientType type) {
-    const GradientInfo* info = GetGradientInfo(type);
-    return info ? info->isAnimated : FALSE;
+    GradientInfoSnapshot snapshot;
+    return GetGradientInfoSnapshot(type, &snapshot) ? snapshot.info.isAnimated : FALSE;
+}
+
+BOOL IsGradientNameAnimated(const char* name) {
+    GradientInfoSnapshot snapshot;
+    return GetGradientInfoSnapshotByName(name, &snapshot) != GRADIENT_NONE
+        ? snapshot.info.isAnimated
+        : FALSE;
 }
 
 void DrawGradientRect(HDC hdc, const RECT* rect, const GradientInfo* info) {
     if (!hdc || !rect || !info) return;
-    
-    int width = rect->right - rect->left;
-    
-    /* Multi-stop gradient logic (e.g. Streamer) */
-    if (info->palette && info->paletteCount > 1) {
-        const int colorCount = info->paletteCount;
-        const COLORREF* colors = info->palette;
 
-        for (int x = 0; x < width; x++) {
-            float t = (width > 1) ? (float)x / (float)(width - 1) : 0.0f;
-            
-            // Map t to color array index
-            float scaledT = t * (colorCount - 1);
-            int idx = (int)scaledT;
-            int nextIdx = idx + 1;
-            if (nextIdx >= colorCount) nextIdx = colorCount - 1;
-            
-            float frac = scaledT - idx;
-            
-            COLORREF c1 = colors[idx];
-            COLORREF c2 = colors[nextIdx];
-            
-            int r = (int)(GetRValue(c1) + (GetRValue(c2) - GetRValue(c1)) * frac);
-            int g = (int)(GetGValue(c1) + (GetGValue(c2) - GetGValue(c1)) * frac);
-            int b = (int)(GetBValue(c1) + (GetBValue(c2) - GetBValue(c1)) * frac);
-            
-            HPEN hPen = CreatePen(PS_SOLID, 1, RGB(r, g, b));
-            HPEN oldPen = SelectObject(hdc, hPen);
-            
-            MoveToEx(hdc, rect->left + x, rect->top, NULL);
-            LineTo(hdc, rect->left + x, rect->bottom);
-            
-            SelectObject(hdc, oldPen);
-            DeleteObject(hPen);
-        }
-        return;
-    }
-    
-    /* Standard 2-color gradient */
-    int r1 = GetRValue(info->startColor);
-    int g1 = GetGValue(info->startColor);
-    int b1 = GetBValue(info->startColor);
-    
-    int r2 = GetRValue(info->endColor);
-    int g2 = GetGValue(info->endColor);
-    int b2 = GetBValue(info->endColor);
-    
+    int width = rect->right - rect->left;
+    int height = rect->bottom - rect->top;
+    if (width <= 0 || height <= 0) return;
+
+    DWORD stackPixels[GRADIENT_STACK_PIXELS];
+    DWORD* pixels = (width <= GRADIENT_STACK_PIXELS)
+        ? stackPixels
+        : (DWORD*)malloc((size_t)width * sizeof(DWORD));
+    if (!pixels) return;
+
     for (int x = 0; x < width; x++) {
         float t = (width > 1) ? (float)x / (float)(width - 1) : 0.0f;
-        int r = (int)(r1 + (r2 - r1) * t);
-        int g = (int)(g1 + (g2 - g1) * t);
-        int b = (int)(b1 + (b2 - b1) * t);
-        
-        HPEN hPen = CreatePen(PS_SOLID, 1, RGB(r, g, b));
-        HPEN oldPen = SelectObject(hdc, hPen);
-        
-        MoveToEx(hdc, rect->left + x, rect->top, NULL);
-        LineTo(hdc, rect->left + x, rect->bottom);
-        
-        SelectObject(hdc, oldPen);
-        DeleteObject(hPen);
+        pixels[x] = ColorRefToDibRgb(InterpolateGradientColor(info, t));
+    }
+
+    BITMAPINFO bi;
+    ZeroMemory(&bi, sizeof(bi));
+    bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bi.bmiHeader.biWidth = width;
+    bi.bmiHeader.biHeight = 1;
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = 32;
+    bi.bmiHeader.biCompression = BI_RGB;
+
+    StretchDIBits(hdc,
+                  rect->left, rect->top, width, height,
+                  0, 0, width, 1,
+                  pixels, &bi, DIB_RGB_COLORS, SRCCOPY);
+
+    if (pixels != stackPixels) {
+        free(pixels);
     }
 }

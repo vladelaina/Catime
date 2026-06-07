@@ -5,9 +5,9 @@
 
 #include "markdown/markdown_parser.h"
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "log.h"
 
 #define BULLET_POINT L"• "
 
@@ -31,6 +31,16 @@ static const AlertTypeInfo g_alertTypes[] = {
 };
 static const int g_alertTypeCount = sizeof(g_alertTypes) / sizeof(g_alertTypes[0]);
 
+static BOOL StartsWithLiteralW(const wchar_t* text, const wchar_t* literal) {
+    if (!text || !literal) return FALSE;
+    while (*literal) {
+        if (*text++ != *literal++) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 /* ============================================================================
  * Block Element Parsers
  * ============================================================================ */
@@ -45,7 +55,7 @@ BOOL ParseCodeBlock(const wchar_t** src, ParseState* state, wchar_t** dest, BOOL
     while (*p == L' ') p++;
     
     // Check for ```
-    if (*p != L'`' || *(p + 1) != L'`' || *(p + 2) != L'`') {
+    if (!StartsWithLiteralW(p, L"```")) {
         return FALSE;
     }
     
@@ -141,7 +151,7 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
     }
     
     // Check for unordered list: -, +, or * followed by space
-    BOOL isUnorderedList = (*p == L'-' || *p == L'+' || (*p == L'*' && *(p + 1) == L' '));
+    BOOL isUnorderedList = (*p == L'-' || *p == L'+' || *p == L'*') && *(p + 1) == L' ';
     
     if (!isOrderedList && !isUnorderedList) return FALSE;
     
@@ -180,11 +190,11 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
         p += 2;  // Skip ". "
         advanceSrc = (int)(p - *src);
         _snwprintf_s(replacement, 16, _TRUNCATE, L"%d. ", num);
-    } else if (*p == L'-' && p[1] == L' ' && p[2] == L'[' && p[3] == L' ' && p[4] == L']' && p[5] == L' ') {
+    } else if (StartsWithLiteralW(p, L"- [ ] ")) {
         // Unchecked task: "- [ ] "
         wcscpy_s(replacement, 16, L"\x25A1 ");
         advanceSrc = 6;
-    } else if (*p == L'-' && p[1] == L' ' && p[2] == L'[' && (p[3] == L'x' || p[3] == L'X') && p[4] == L']' && p[5] == L' ') {
+    } else if (StartsWithLiteralW(p, L"- [x] ") || StartsWithLiteralW(p, L"- [X] ")) {
         // Checked task: "- [x] "
         wcscpy_s(replacement, 16, L"\x25A0 ");
         advanceSrc = 6;
@@ -234,8 +244,6 @@ BOOL ParseHeading(const wchar_t** src, ParseState* state, wchar_t** dest,
     *inHeading = TRUE;
     *currentHeadingIndex = state->headingCount;
     state->headingCount++;
-    
-    LOG_INFO("MD: Found Heading Level %d at pos %d", level, heading->startPos);
     
     return TRUE;
 }

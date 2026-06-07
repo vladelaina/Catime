@@ -14,6 +14,10 @@
 #include <strsafe.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
+
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define FONT_LICENSE_PARENT_PROP L"Catime.FontLicense.Parent"
 
 /* ============================================================================
  * Constants
@@ -44,6 +48,21 @@ static AboutLinkInfo g_aboutLinkInfos[] = {
     {IDC_COPYRIGHT_LINK, NULL, L"Copyright Notice", L"https://github.com/vladelaina/Catime#️copyright-notice"},
     {IDC_SUPPORT, NULL, L"Discord", L"https://discord.com/invite/W3tW2gtp6g"}
 };
+
+static BOOL ConvertWideUrlToUtf8(const wchar_t* source, char* dest, size_t destSize) {
+    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
+        return FALSE;
+    }
+
+    dest[0] = '\0';
+    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
+    if (required <= 0 || (size_t)required > destSize) {
+        return FALSE;
+    }
+
+    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
+                               (int)destSize, NULL, NULL) > 0;
+}
 
 static const size_t g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
 
@@ -117,13 +136,11 @@ void ShowAboutDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HICON hLargeIcon = NULL;
-
     switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_ABOUT, hwndDlg);
 
-            hLargeIcon = (HICON)LoadImage(GetModuleHandle(NULL),
+            HICON hLargeIcon = (HICON)LoadImage(GetModuleHandle(NULL),
                 MAKEINTRESOURCE(IDI_CATIME),
                 IMAGE_ICON,
                 ABOUT_ICON_SIZE,
@@ -131,7 +148,12 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 LR_DEFAULTCOLOR);
 
             if (hLargeIcon) {
-                SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON, STM_SETICON, (WPARAM)hLargeIcon, 0);
+                HICON hOldIcon = (HICON)SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON,
+                                                           STM_SETICON,
+                                                           (WPARAM)hLargeIcon, 0);
+                if (hOldIcon && hOldIcon != hLargeIcon) {
+                    DestroyIcon(hOldIcon);
+                }
             }
 
             ApplyDialogLanguage(hwndDlg, IDD_ABOUT_DIALOG);
@@ -199,13 +221,15 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             return TRUE;
         }
 
-        case WM_DESTROY:
+        case WM_DESTROY: {
+            HICON hLargeIcon = (HICON)SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON,
+                                                         STM_SETICON, 0, 0);
             if (hLargeIcon) {
                 DestroyIcon(hLargeIcon);
-                hLargeIcon = NULL;
             }
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_ABOUT);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_ABOUT, hwndDlg);
             break;
+        }
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
@@ -238,15 +262,23 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     if (!hFont) {
                         hFont = GetStockObject(DEFAULT_GUI_FONT);
                     }
-                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                    HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
 
                     /* Orange color for links */
-                    SetTextColor(hdc, 0x00D26919);
-                    SetBkMode(hdc, TRANSPARENT);
+                    COLORREF oldTextColor = SetTextColor(hdc, 0x00D26919);
+                    int oldBkMode = SetBkMode(hdc, TRANSPARENT);
 
                     DrawTextW(hdc, text, -1, &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
-                    SelectObject(hdc, hOldFont);
+                    if (hOldFont) {
+                        SelectObject(hdc, hOldFont);
+                    }
+                    if (oldTextColor != CLR_INVALID) {
+                        SetTextColor(hdc, oldTextColor);
+                    }
+                    if (oldBkMode != 0) {
+                        SetBkMode(hdc, oldBkMode);
+                    }
                     return TRUE;
                 }
             }
@@ -307,8 +339,10 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             Dialog_SubclassEdit(hwndEdit, ctx);
             if (strlen(CLOCK_TIMEOUT_WEBSITE_URL) > 0) {
                 wchar_t wUrl[MAX_PATH];
-                MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1, wUrl, MAX_PATH);
-                SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wUrl);
+                if (MultiByteToWideChar(CP_UTF8, 0, CLOCK_TIMEOUT_WEBSITE_URL, -1,
+                                        wUrl, MAX_PATH) > 0) {
+                    SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wUrl);
+                }
             }
 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_WEBSITE_DIALOG);
@@ -345,13 +379,19 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 /* Auto-prepend https:// if no protocol */
                 if (wcsncmp(url, L"http://", 7) != 0 && wcsncmp(url, L"https://", 8) != 0) {
                     wchar_t tempUrl[MAX_PATH] = L"https://";
-                    StringCbCatW(tempUrl, sizeof(tempUrl), url);
-                    StringCbCopyW(url, sizeof(url), tempUrl);
+                    if (FAILED(StringCbCatW(tempUrl, sizeof(tempUrl), url)) ||
+                        FAILED(StringCbCopyW(url, sizeof(url), tempUrl))) {
+                        Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                        return TRUE;
+                    }
                 }
 
                 extern void WriteConfigTimeoutWebsite(const char* url);
-                char urlUtf8[MAX_PATH * 3];
-                WideCharToMultiByte(CP_UTF8, 0, url, -1, urlUtf8, sizeof(urlUtf8), NULL, NULL);
+                char urlUtf8[MAX_PATH * 3] = {0};
+                if (!ConvertWideUrlToUtf8(url, urlUtf8, sizeof(urlUtf8))) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
+                }
                 WriteConfigTimeoutWebsite(urlUtf8);
                 DestroyWindow(hwndDlg);
                 return TRUE;
@@ -374,9 +414,9 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                 if (hwndEdit) {
                     Dialog_UnsubclassEdit(hwndEdit, ctx);
                 }
-                Dialog_FreeContext(ctx);
+                Dialog_DestroyContext(hwndDlg);
             }
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_WEBSITE);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_WEBSITE, hwndDlg);
             break;
 
         case WM_CLOSE:
@@ -407,9 +447,6 @@ static int g_colorTagCount = 0;
 static MarkdownFontTag* g_fontTags = NULL;
 static int g_fontTagCount = 0;
 
-/* Parent window handle for posting results */
-static HWND g_fontLicenseParent = NULL;
-
 static void CleanupFontLicenseResources(void) {
     FreeMarkdownLinks(g_links, g_linkCount);
     g_links = NULL;
@@ -429,10 +466,47 @@ static void CleanupFontLicenseResources(void) {
     if (g_displayText) { free(g_displayText); g_displayText = NULL; }
 }
 
+static BOOL IsValidFontLicenseParentWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static HWND GetFontLicenseParent(HWND hwndDlg) {
+    HWND hwndParent = (HWND)GetPropW(hwndDlg, FONT_LICENSE_PARENT_PROP);
+    return IsValidFontLicenseParentWindow(hwndParent) ? hwndParent : NULL;
+}
+
+static BOOL PostFontLicenseResult(HWND hwndDlg, WPARAM result) {
+    HWND hwndParent = GetFontLicenseParent(hwndDlg);
+    if (!hwndParent) {
+        return FALSE;
+    }
+
+    return PostMessage(hwndParent, WM_DIALOG_FONT_LICENSE, result, 0) != 0;
+}
+
 INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
+            HWND hwndParent = (HWND)lParam;
+            if (IsValidFontLicenseParentWindow(hwndParent)) {
+                SetPropW(hwndDlg, FONT_LICENSE_PARENT_PROP, (HANDLE)hwndParent);
+            }
             
             const wchar_t* title = GetLocalizedString(
                 NULL,
@@ -486,17 +560,13 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
             switch (LOWORD(wParam)) {
                 case IDC_FONT_LICENSE_AGREE_BTN:
                     CleanupFontLicenseResources();
-                    if (g_fontLicenseParent) {
-                        PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDOK, 0);
-                    }
+                    PostFontLicenseResult(hwndDlg, IDOK);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 case IDC_FONT_LICENSE_CANCEL_BTN:
                 case IDCANCEL:
                     CleanupFontLicenseResources();
-                    if (g_fontLicenseParent) {
-                        PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDCANCEL, 0);
-                    }
+                    PostFontLicenseResult(hwndDlg, IDCANCEL);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 case IDC_FONT_LICENSE_TEXT:
@@ -516,9 +586,7 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
                 CleanupFontLicenseResources();
-                if (g_fontLicenseParent) {
-                    PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDCANCEL, 0);
-                }
+                PostFontLicenseResult(hwndDlg, IDCANCEL);
                 DestroyWindow(hwndDlg);
                 return TRUE;
             }
@@ -530,18 +598,19 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
                 HDC hdc = lpDrawItem->hDC;
                 RECT rect = lpDrawItem->rcItem;
 
-                HBRUSH hBrush = CreateSolidBrush(GetSysColor(COLOR_BTNFACE));
-                FillRect(hdc, &rect, hBrush);
-                DeleteObject(hBrush);
+                HBRUSH hBrush = GetSysColorBrush(COLOR_BTNFACE);
+                if (hBrush) {
+                    FillRect(hdc, &rect, hBrush);
+                }
 
                 if (g_displayText) {
-                    SetBkMode(hdc, TRANSPARENT);
+                    int oldBkMode = SetBkMode(hdc, TRANSPARENT);
 
                     HFONT hFont = (HFONT)SendMessage(lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
                     if (!hFont) {
                         hFont = GetStockObject(DEFAULT_GUI_FONT);
                     }
-                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                    HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
 
                     RECT drawRect = rect;
                     drawRect.left += 5;
@@ -554,7 +623,12 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
                                        g_blockquotes, g_blockquoteCount,
                                        drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
 
-                    SelectObject(hdc, hOldFont);
+                    if (hOldFont) {
+                        SelectObject(hdc, hOldFont);
+                    }
+                    if (oldBkMode != 0) {
+                        SetBkMode(hdc, oldBkMode);
+                    }
                 }
 
                 return TRUE;
@@ -564,14 +638,13 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
 
         case WM_DESTROY:
             CleanupFontLicenseResources();
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_FONT_LICENSE);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
+            RemovePropW(hwndDlg, FONT_LICENSE_PARENT_PROP);
             break;
 
         case WM_CLOSE:
             CleanupFontLicenseResources();
-            if (g_fontLicenseParent) {
-                PostMessage(g_fontLicenseParent, WM_DIALOG_FONT_LICENSE, IDCANCEL, 0);
-            }
+            PostFontLicenseResult(hwndDlg, IDCANCEL);
             DestroyWindow(hwndDlg);
             return TRUE;
     }
@@ -585,13 +658,16 @@ void ShowFontLicenseDialog(HWND hwndParent) {
         return;
     }
 
-    g_fontLicenseParent = hwndParent;
+    if (!IsValidFontLicenseParentWindow(hwndParent)) {
+        return;
+    }
 
-    HWND hwndDlg = CreateDialogW(
+    HWND hwndDlg = CreateDialogParamW(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(IDD_FONT_LICENSE_DIALOG),
         hwndParent,
-        FontLicenseDlgProc
+        FontLicenseDlgProc,
+        (LPARAM)hwndParent
     );
 
     if (hwndDlg) {

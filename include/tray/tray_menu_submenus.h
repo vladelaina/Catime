@@ -51,4 +51,9 @@ void BuildPluginsSubmenu(HMENU hMenu);
  */
 void BuildHelpSubmenu(HMENU hMenu);
 
+/**
+ * @brief Release cached bitmap resources used by tray submenus
+ */
+void CleanupTraySubmenuResources(void);
+
 #endif // TRAY_MENU_SUBMENUS_H

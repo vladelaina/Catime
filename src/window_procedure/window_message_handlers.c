@@ -12,6 +12,7 @@
 #include "timer/main_timer.h"
 #include "tray/tray_events.h"
 #include "tray/tray_animation_core.h"
+#include "tray/tray_menu_font.h"
 #include "config/config_watcher.h"
 #include "update/update_internal.h"
 #include "dialog/dialog_plugin_security.h"
@@ -41,15 +42,47 @@
 
 /* 50ms menu debounce prevents accidental double-clicks during menu interaction */
 #define MENU_DEBOUNCE_DELAY_MS 50
+#define ANIMATION_PREVIEW_DELAY_MS 30
 #define BUFFER_SIZE_CLI_INPUT 256
 #define BUFFER_SIZE_MENU_ITEM 100
 
 UINT GetPendingAnimationPreviewItem(void);
+static void ClearPendingMenuPreview(HWND hwnd);
+static void DispatchPendingMenuPreview(HWND hwnd);
+static void ResetMenuPreviewTracking(HWND hwnd);
+static void StartMenuDebounceTimer(HWND hwnd);
+static void StartAnimationPreviewDelayTimer(HWND hwnd);
 
 extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;
 extern size_t COLOR_OPTIONS_COUNT;
 extern PredefinedColor* COLOR_OPTIONS;
+
+static int HexDigitValue(char ch) {
+    if (ch >= '0' && ch <= '9') return ch - '0';
+    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+    return -1;
+}
+
+static BOOL TryParseHexColorRef(const char* color, COLORREF* out) {
+    if (!color || !out || color[0] != '#' || strlen(color) != 7) {
+        return FALSE;
+    }
+
+    int channels[3] = {0, 0, 0};
+    for (int i = 0; i < 3; i++) {
+        int hi = HexDigitValue(color[1 + i * 2]);
+        int lo = HexDigitValue(color[2 + i * 2]);
+        if (hi < 0 || lo < 0) {
+            return FALSE;
+        }
+        channels[i] = hi * 16 + lo;
+    }
+
+    *out = RGB(channels[0], channels[1], channels[2]);
+    return TRUE;
+}
 
 /* ============================================================================
  * Message Handler Implementations
@@ -67,7 +100,7 @@ LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
 
     /* In non-edit mode, show hand cursor for clickable regions */
-    if (!CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT) {
+    if (!CLOCK_EDIT_MODE && LOWORD(lp) == HTCLIENT && HasClickableRegions()) {
         POINT pt;
         GetCursorPos(&pt);
 
@@ -75,8 +108,7 @@ LRESULT HandleSetCursor(HWND hwnd, WPARAM wp, LPARAM lp) {
         GetWindowRect(hwnd, &rcWindow);
         UpdateRegionPositions(rcWindow.left, rcWindow.top);
 
-        const ClickableRegion* region = GetClickableRegionAt(pt);
-        if (region) {
+        if (IsClickableRegionAt(pt)) {
             SetCursor(LoadCursorW(NULL, IDC_HAND));
             return TRUE;
         }
@@ -97,7 +129,7 @@ LRESULT HandleLButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
 
     /* In non-edit mode, check for clickable region clicks */
-    if (!CLOCK_EDIT_MODE) {
+    if (!CLOCK_EDIT_MODE && HasClickableRegions()) {
         POINT pt;
         GetCursorPos(&pt);
 
@@ -106,9 +138,7 @@ LRESULT HandleLButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
         GetWindowRect(hwnd, &rcWindow);
         UpdateRegionPositions(rcWindow.left, rcWindow.top);
 
-        const ClickableRegion* region = GetClickableRegionAt(pt);
-        if (region) {
-            HandleRegionClick(region, hwnd);
+        if (HandleRegionClickAt(pt, hwnd)) {
             return 0;
         }
     }
@@ -145,18 +175,15 @@ LRESULT HandlePaint(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-#define TIMER_ID_TRANSITION_END 100
-extern BOOL g_IsTransitioning;
+LRESULT HandleEraseBkgnd(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)hwnd;
+    (void)wp;
+    (void)lp;
+    return 1;
+}
 
 LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
-    if (wp == TIMER_ID_TRANSITION_END) {
-        KillTimer(hwnd, TIMER_ID_TRANSITION_END);
-        g_IsTransitioning = FALSE;
-        // Force full update now that transition is done
-        InvalidateRect(hwnd, NULL, TRUE);
-        return 0;
-    }
     if (wp == TIMER_ID_DISPLAY_RESTORE) {
         KillTimer(hwnd, TIMER_ID_DISPLAY_RESTORE);
         RestoreWindowPositionAfterSystemChange(hwnd);
@@ -169,11 +196,7 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
         return 0;
     }
     if (wp == IDT_ANIMATION_PREVIEW_DELAY) {
-        KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
-        UINT menuItem = GetPendingAnimationPreviewItem();
-        if (menuItem != 0) {
-            DispatchMenuPreview(hwnd, menuItem);
-        }
+        DispatchPendingMenuPreview(hwnd);
         return 0;
     }
     /* Handle click-through timer for dynamic WS_EX_TRANSPARENT switching */
@@ -190,11 +213,14 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
  * Called from worker thread via PostMessage for smooth milliseconds display
  */
 LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    /* Delegate to main timer event handler */
-    HandleTimerEvent(hwnd, TIMER_ID_MAIN);
+    (void)lp;
+    LONG generation = (LONG)wp;
+    if (MainTimer_ShouldHandleTick(generation)) {
+        /* Delegate to main timer event handler */
+        HandleTimerEvent(hwnd, TIMER_ID_MAIN);
+    }
     /* Release coalescing gate for the next high-precision tick message. */
-    MainTimer_NotifyTickHandled();
+    MainTimer_NotifyTickHandled(generation);
     return 0;
 }
 
@@ -236,14 +262,16 @@ LRESULT HandleShowWindow(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    BeginSystemPositionChangeGuard(hwnd);
+    if (!BeginSystemPositionChangeGuard(hwnd)) {
+        RestoreWindowPositionAfterSystemChange(hwnd);
+    }
     InvalidateRect(hwnd, NULL, FALSE);
     return 0;
 }
 
 LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
-    BeginSystemPositionChangeGuard(hwnd);
+    BOOL restoreScheduled = BeginSystemPositionChangeGuard(hwnd);
 
     RECT* suggested = (RECT*)lp;
     if (suggested) {
@@ -255,6 +283,9 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
                      SWP_NOZORDER | SWP_NOACTIVATE);
     }
 
+    if (!restoreScheduled) {
+        RestoreWindowPositionAfterSystemChange(hwnd);
+    }
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
 }
@@ -279,8 +310,8 @@ LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    KillTimer(hwnd, IDT_MENU_DEBOUNCE);
-    SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
+    ResetMenuPreviewTracking(hwnd);
+    StartMenuDebounceTimer(hwnd);
     return 0;
 }
 
@@ -409,7 +440,7 @@ LRESULT HandleShowCliHelp(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleTrayUpdateIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp; (void)lp;
-    if (TrayAnimation_HandleUpdateMessage()) return 0;
+    if (TrayAnimation_HandleUpdateMessage(hwnd)) return 0;
     return DefWindowProc(hwnd, WM_USER + 100, wp, lp);
 }
 
@@ -422,7 +453,7 @@ LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp; (void)lp;
     /* Update tray icon after preview animation is loaded */
-    TrayAnimation_HandleUpdateMessage();
+    TrayAnimation_HandleUpdateMessage(hwnd);
     return 0;
 }
 
@@ -446,33 +477,35 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (colorIndex < 0 || colorIndex >= (int)COLOR_OPTIONS_COUNT) return FALSE;
 
     const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
-    GradientType gradientType = GetGradientTypeByName(hexColor);
+    GradientInfoSnapshot gradientSnapshot;
+    GradientType gradientType = GetGradientInfoSnapshotByName(hexColor, &gradientSnapshot);
 
     /* Draw color/gradient with space for sequence number */
     RECT colorRect = lpdis->rcItem;
     colorRect.left += 28;  /* Leave space for number */
 
     if (gradientType != GRADIENT_NONE) {
-        const GradientInfo* info = GetGradientInfo(gradientType);
-        if (!info) return FALSE;
-        DrawGradientRect(lpdis->hDC, &colorRect, info);
+        DrawGradientRect(lpdis->hDC, &colorRect, &gradientSnapshot.info);
     } else {
-        unsigned int r = 0, g = 0, b = 0;
-        sscanf(hexColor + 1, "%02x%02x%02x", &r, &g, &b);
+        COLORREF color = RGB(255, 255, 255);
+        TryParseHexColorRef(hexColor, &color);
 
-        HBRUSH hBrush = CreateSolidBrush(RGB((int)r, (int)g, (int)b));
-        HPEN hPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
+        HGDIOBJ hBrush = GetStockObject(DC_BRUSH);
+        HGDIOBJ hPen = GetStockObject(DC_PEN);
+        if (!hBrush || !hPen) return FALSE;
 
-        HGDIOBJ oldBrush = hBrush ? SelectObject(lpdis->hDC, hBrush) : NULL;
-        HGDIOBJ oldPen = hPen ? SelectObject(lpdis->hDC, hPen) : NULL;
+        COLORREF oldBrushColor = SetDCBrushColor(lpdis->hDC, color);
+        COLORREF oldPenColor = SetDCPenColor(lpdis->hDC, RGB(200, 200, 200));
+        HGDIOBJ oldBrush = SelectObject(lpdis->hDC, hBrush);
+        HGDIOBJ oldPen = SelectObject(lpdis->hDC, hPen);
 
         Rectangle(lpdis->hDC, colorRect.left, colorRect.top,
                  colorRect.right, colorRect.bottom);
 
         if (oldPen) SelectObject(lpdis->hDC, oldPen);
         if (oldBrush) SelectObject(lpdis->hDC, oldBrush);
-        if (hPen) DeleteObject(hPen);
-        if (hBrush) DeleteObject(hBrush);
+        if (oldPenColor != CLR_INVALID) SetDCPenColor(lpdis->hDC, oldPenColor);
+        if (oldBrushColor != CLR_INVALID) SetDCBrushColor(lpdis->hDC, oldBrushColor);
     }
 
     /* Draw sequence number on left side */
@@ -480,21 +513,121 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     _snwprintf_s(numStr, 8, _TRUNCATE, L"%d", colorIndex + 1);
     RECT numRect = lpdis->rcItem;
     numRect.right = numRect.left + 26;
-    SetBkMode(lpdis->hDC, TRANSPARENT);
-    SetTextColor(lpdis->hDC, GetSysColor(COLOR_MENUTEXT));
+    int oldBkMode = SetBkMode(lpdis->hDC, TRANSPARENT);
+    COLORREF oldTextColor = SetTextColor(lpdis->hDC, GetSysColor(COLOR_MENUTEXT));
     DrawTextW(lpdis->hDC, numStr, -1, &numRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     if (lpdis->itemState & ODS_SELECTED) {
         DrawFocusRect(lpdis->hDC, &lpdis->rcItem);
     }
 
+    if (oldTextColor != CLR_INVALID) {
+        SetTextColor(lpdis->hDC, oldTextColor);
+    }
+    if (oldBkMode != 0) {
+        SetBkMode(lpdis->hDC, oldBkMode);
+    }
+
     return TRUE;
 }
 
 static UINT g_pendingAnimationPreviewItem = 0;
+static UINT g_lastPreviewMenuItem = 0;
+static BOOL g_lastWasColorOrFontPreview = FALSE;
+static BOOL g_lastWasAnimationPreview = FALSE;
 
 UINT GetPendingAnimationPreviewItem(void) {
     return g_pendingAnimationPreviewItem;
+}
+
+static void ClearPendingMenuPreview(HWND hwnd) {
+    KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
+    g_pendingAnimationPreviewItem = 0;
+}
+
+static void DispatchPendingMenuPreview(HWND hwnd) {
+    UINT menuItem = GetPendingAnimationPreviewItem();
+    ClearPendingMenuPreview(hwnd);
+    if (menuItem != 0) {
+        DispatchMenuPreview(hwnd, menuItem);
+    }
+}
+
+static void ResetMenuPreviewTracking(HWND hwnd) {
+    ClearPendingMenuPreview(hwnd);
+    g_lastPreviewMenuItem = 0;
+    g_lastWasColorOrFontPreview = FALSE;
+    g_lastWasAnimationPreview = FALSE;
+}
+
+void StopMenuPreviewTrackingForCommand(HWND hwnd) {
+    ResetMenuPreviewTracking(hwnd);
+    KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+}
+
+static void StartMenuDebounceTimer(HWND hwnd) {
+    KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+    if (!SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL)) {
+        LOG_WARNING("MenuPreview: Failed to start debounce timer (error=%lu)",
+                    GetLastError());
+        CancelPreview(hwnd);
+        RestoreWindowVisibility(hwnd);
+    }
+}
+
+static void StartAnimationPreviewDelayTimer(HWND hwnd) {
+    if (!SetTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY,
+                  ANIMATION_PREVIEW_DELAY_MS, NULL)) {
+        LOG_WARNING("MenuPreview: Failed to start preview delay timer (error=%lu)",
+                    GetLastError());
+        DispatchPendingMenuPreview(hwnd);
+    }
+}
+
+static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
+                              BOOL* isAnimationPreview) {
+    BOOL colorOrFont = FALSE;
+    BOOL animation = FALSE;
+
+    int colorIndex = (int)menuItem - CMD_COLOR_OPTIONS_BASE;
+    if (colorIndex >= 0 && colorIndex < (int)COLOR_OPTIONS_COUNT) {
+        colorOrFont = TRUE;
+    }
+
+    if (menuItem >= CMD_FONT_SELECTION_BASE &&
+        menuItem < CMD_FONT_SELECTION_BASE + FONT_MENU_MAX_ENTRIES) {
+        colorOrFont = TRUE;
+    }
+
+    if (menuItem == CLOCK_IDM_TIME_FORMAT_DEFAULT ||
+        menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
+        menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
+        menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS ||
+        menuItem == CLOCK_IDM_GLOW_EFFECT ||
+        menuItem == CLOCK_IDM_GLASS_EFFECT ||
+        menuItem == CLOCK_IDM_NEON_EFFECT ||
+        menuItem == CLOCK_IDM_HOLOGRAPHIC_EFFECT ||
+        menuItem == CLOCK_IDM_LIQUID_EFFECT) {
+        colorOrFont = TRUE;
+    }
+
+    if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
+        menuItem == CLOCK_IDM_ANIMATIONS_USE_CPU ||
+        menuItem == CLOCK_IDM_ANIMATIONS_USE_MEM ||
+        menuItem == CLOCK_IDM_ANIMATIONS_USE_BATTERY ||
+        menuItem == CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK ||
+        menuItem == CLOCK_IDM_ANIMATIONS_USE_NONE ||
+        (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_END)) {
+        animation = TRUE;
+    }
+
+    if (isColorOrFontPreview) {
+        *isColorOrFontPreview = colorOrFont;
+    }
+    if (isAnimationPreview) {
+        *isAnimationPreview = animation;
+    }
+    return colorOrFont || animation;
 }
 
 /* ============================================================================
@@ -566,8 +699,6 @@ LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (wp == 1) {
         if (lp == 0) {
             ShowStoredUpdateDialog(hwnd);
-        } else {
-            LOG_INFO("Silent update check found new version - notification deferred to menu");
         }
     } else {
         ShowStoredNoUpdateDialog(hwnd);
@@ -647,17 +778,16 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
         /* Failed to start after security check - show specific error */
         const wchar_t* errorMsg = PluginProcess_GetLastError();
         if (errorMsg && errorMsg[0] != L'\0') {
-            PluginData_SetText(errorMsg);
+            PluginData_SetStatusText(errorMsg);
         } else {
-            PluginData_SetText(L"FAIL");
+            PluginData_SetStatusText(L"FAIL");
         }
-        PluginData_SetActive(TRUE);
     }
 
     /* Check if animated gradient needs timer for smooth animation */
     char activeColor[COLOR_HEX_BUFFER];
     GetActiveColor(activeColor, sizeof(activeColor));
-    if (IsGradientAnimated(GetGradientTypeByName(activeColor))) {
+    if (IsGradientNameAnimated(activeColor)) {
         MainTimer_Start(hwnd, 66);  /* 15 FPS for smooth animation */
     }
 
@@ -672,17 +802,14 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 /**
  * @brief Handle plugin hot-reload request from background thread
- * @param wp Plugin index to restart
+ * @param wp Hot-reload request generation
  * @param lp Reserved
  */
 LRESULT HandlePluginHotReload(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd;
     (void)lp;
 
-    int pluginIndex = (int)wp;
-    LOG_INFO("[HotReload] Restarting plugin %d from main thread", pluginIndex);
-
-    PluginManager_RestartPlugin(pluginIndex);
+    PluginManager_RestartPendingHotReload((LONG)(LONG_PTR)wp);
 
     return 0;
 }
@@ -692,17 +819,10 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     UINT flags = HIWORD(wp);
     HMENU hMenu = (HMENU)lp;
 
-    static UINT lastMenuItem = 0;
-    static BOOL lastWasColorOrFont = FALSE;
-    static BOOL lastWasAnimationPreview = FALSE;
-
     /* Mouse moved outside any menu item - set debounce timer to cancel preview */
     if (menuItem == 0xFFFF) {
-        KillTimer(hwnd, IDT_MENU_DEBOUNCE);
-        SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL);
-        lastMenuItem = 0;
-        lastWasColorOrFont = FALSE;
-        lastWasAnimationPreview = FALSE;
+        ResetMenuPreviewTracking(hwnd);
+        StartMenuDebounceTimer(hwnd);
         return 0;
     } else {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
@@ -713,50 +833,17 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (!(flags & MF_POPUP)) {
         BOOL isColorOrFontPreview = FALSE;
         BOOL isAnimationPreview = FALSE;
+        BOOL isPreviewItem = IsPreviewMenuItem(menuItem, &isColorOrFontPreview,
+                                               &isAnimationPreview);
 
-        int colorIndex = menuItem - CMD_COLOR_OPTIONS_BASE;
-        if (colorIndex >= 0 && colorIndex < (int)COLOR_OPTIONS_COUNT) {
-            isColorOrFontPreview = TRUE;
-        }
-
-
-        if (menuItem >= CMD_FONT_SELECTION_BASE && menuItem < CMD_FONT_SELECTION_END) {
-            /* Exclude all animation menu items (2200-2220) from font preview */
-            if (menuItem < CLOCK_IDM_ANIMATIONS_MENU || menuItem > CLOCK_IDM_ANIM_SPEED_TIMER) {
-                isColorOrFontPreview = TRUE;
-            }
-        }
-
-        if (menuItem == CLOCK_IDM_TIME_FORMAT_DEFAULT ||
-            menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
-            menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
-            menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS ||
-            menuItem == CLOCK_IDM_GLOW_EFFECT ||
-            menuItem == CLOCK_IDM_GLASS_EFFECT ||
-            menuItem == CLOCK_IDM_NEON_EFFECT ||
-            menuItem == CLOCK_IDM_HOLOGRAPHIC_EFFECT ||
-            menuItem == CLOCK_IDM_LIQUID_EFFECT) {
-            isColorOrFontPreview = TRUE;
-        }
-
-        if (menuItem == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
-            menuItem == CLOCK_IDM_ANIMATIONS_USE_CPU ||
-            menuItem == CLOCK_IDM_ANIMATIONS_USE_MEM ||
-            menuItem == CLOCK_IDM_ANIMATIONS_USE_BATTERY ||
-            menuItem == CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK ||
-            menuItem == CLOCK_IDM_ANIMATIONS_USE_NONE ||
-            (menuItem >= CLOCK_IDM_ANIMATIONS_BASE && menuItem < CLOCK_IDM_ANIMATIONS_END)) {
-            isAnimationPreview = TRUE;
-        }
-
-        if (isAnimationPreview != lastWasAnimationPreview) {
-            if (lastWasAnimationPreview && !isAnimationPreview) {
+        if (isAnimationPreview != g_lastWasAnimationPreview) {
+            if (g_lastWasAnimationPreview && !isAnimationPreview) {
                 CancelPreview(hwnd);
             }
         }
 
-        if (isColorOrFontPreview != lastWasColorOrFont) {
-            if (lastWasColorOrFont && !isColorOrFontPreview) {
+        if (isColorOrFontPreview != g_lastWasColorOrFontPreview) {
+            if (g_lastWasColorOrFontPreview && !isColorOrFontPreview) {
                 CancelPreview(hwnd);
                 RestoreWindowVisibility(hwnd);
             }
@@ -766,29 +853,31 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
             ShowWindowForPreview(hwnd);
         }
 
-        lastWasColorOrFont = isColorOrFontPreview;
-        lastWasAnimationPreview = isAnimationPreview;
+        g_lastWasColorOrFontPreview = isColorOrFontPreview;
+        g_lastWasAnimationPreview = isAnimationPreview;
 
-        if (menuItem != lastMenuItem) {
-            lastMenuItem = menuItem;
+        if (isPreviewItem && menuItem != g_lastPreviewMenuItem) {
+            g_lastPreviewMenuItem = menuItem;
 
-            KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
+            ClearPendingMenuPreview(hwnd);
             g_pendingAnimationPreviewItem = menuItem;
-            SetTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY, 30, NULL);
+            StartAnimationPreviewDelayTimer(hwnd);
+        } else if (!isPreviewItem) {
+            ClearPendingMenuPreview(hwnd);
+            g_lastPreviewMenuItem = menuItem;
         }
     } else {
-        KillTimer(hwnd, IDT_ANIMATION_PREVIEW_DELAY);
-        g_pendingAnimationPreviewItem = 0;
-        if (lastWasColorOrFont) {
+        ClearPendingMenuPreview(hwnd);
+        if (g_lastWasColorOrFontPreview) {
             CancelPreview(hwnd);
             RestoreWindowVisibility(hwnd);
-            lastWasColorOrFont = FALSE;
+            g_lastWasColorOrFontPreview = FALSE;
         }
-        if (lastWasAnimationPreview) {
+        if (g_lastWasAnimationPreview) {
             CancelPreview(hwnd);
-            lastWasAnimationPreview = FALSE;
+            g_lastWasAnimationPreview = FALSE;
         }
-        lastMenuItem = 0;
+        g_lastPreviewMenuItem = 0;
     }
 
     return 0;

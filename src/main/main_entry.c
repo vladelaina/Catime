@@ -8,6 +8,7 @@
 #include "main/main_initialization.h"
 #include "main/main_single_instance.h"
 #include "window.h"
+#include "window/window_visual_effects.h"
 #include "log.h"
 #include "config.h"
 
@@ -34,9 +35,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    if (!InitializeApplicationSubsystem(hInstance)) {
+    HANDLE hMutex = NULL;
+    if (!HandleSingleInstance(GetCommandLineW(), &hMutex)) {
+        ShutdownWindowVisualEffects();
         CoUninitialize();
         CleanupLogSystem();
+        return 0;
+    }
+
+    if (!InitializeApplicationSubsystem(hInstance)) {
+        CleanupResources(hMutex);
         return 1;
     }
 
@@ -44,13 +52,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SetupDesktopShortcut();
     }
     InitializeDialogLanguages();
-
-    HANDLE hMutex = NULL;
-    if (!HandleSingleInstance(GetCommandLineW(), &hMutex)) {
-        CoUninitialize();
-        CleanupLogSystem();
-        return 0;
-    }
 
     LOG_INFO("Starting main window creation...");
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
@@ -62,6 +63,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
 
     if (!SetupMainWindow(hInstance, hwnd, nCmdShow)) {
+        DestroyWindow(hwnd);
         CleanupResources(hMutex);
         return 0;
     }
@@ -72,4 +74,3 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     return exitCode;
 }
-

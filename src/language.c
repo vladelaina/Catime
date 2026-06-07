@@ -6,6 +6,8 @@
 #include <windows.h>
 #include <wchar.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "language.h"
 #include "../resource/resource.h"
 
@@ -13,9 +15,15 @@
 #define MAX_STRING_LENGTH 1536
 
 typedef struct {
-    wchar_t english[MAX_STRING_LENGTH];
-    wchar_t translation[MAX_STRING_LENGTH];
+    wchar_t* english;
+    wchar_t* translation;
 } LocalizedString;
+
+typedef struct {
+    LocalizedString entries[MAX_TRANSLATIONS];
+    int count;
+    BOOL loaded;
+} TranslationTable;
 
 typedef struct {
     AppLanguage language;
@@ -30,9 +38,11 @@ typedef struct {
 
 AppLanguage CURRENT_LANGUAGE = APP_LANG_ENGLISH;
 
-static LocalizedString g_translations[MAX_TRANSLATIONS];
-static int g_translation_count = 0;
+static TranslationTable g_translationTables[APP_LANG_COUNT] = {0};
+static AppLanguage g_activeTranslationLanguage = APP_LANG_ENGLISH;
 static BOOL g_initialized = FALSE;
+static INIT_ONCE g_languageLockOnce = INIT_ONCE_STATIC_INIT;
+static CRITICAL_SECTION g_languageCS;
 
 /** Adding a new language = one entry here (Auto-generated via X-Macro) */
 static const LanguageMetadata g_languageMetadata[APP_LANG_COUNT] = {
@@ -43,8 +53,58 @@ static const LanguageMetadata g_languageMetadata[APP_LANG_COUNT] = {
 #undef X
 };
 
+static BOOL CALLBACK InitLanguageLock(PINIT_ONCE initOnce,
+                                      PVOID parameter,
+                                      PVOID* context) {
+    (void)initOnce;
+    (void)parameter;
+    (void)context;
+    InitializeCriticalSection(&g_languageCS);
+    return TRUE;
+}
+
+static BOOL BeginLanguageStateUse(void) {
+    if (!InitOnceExecuteOnce(&g_languageLockOnce, InitLanguageLock, NULL, NULL)) {
+        return FALSE;
+    }
+    EnterCriticalSection(&g_languageCS);
+    return TRUE;
+}
+
+static void EndLanguageStateUse(void) {
+    LeaveCriticalSection(&g_languageCS);
+}
+
+static void ClearTranslationTable(TranslationTable* table) {
+    if (!table) return;
+
+    for (int i = 0; i < table->count; i++) {
+        free(table->entries[i].english);
+        free(table->entries[i].translation);
+    }
+    ZeroMemory(table, sizeof(*table));
+}
+
+static wchar_t* DuplicateWideSpan(const wchar_t* start, size_t length) {
+    if (!start || length >= (size_t)-1 / sizeof(wchar_t)) {
+        return NULL;
+    }
+
+    wchar_t* copy = (wchar_t*)malloc((length + 1) * sizeof(wchar_t));
+    if (!copy) {
+        return NULL;
+    }
+
+    memcpy(copy, start, length * sizeof(wchar_t));
+    copy[length] = L'\0';
+    return copy;
+}
+
 /** @return Position after closing quote, or NULL */
-static const wchar_t* ExtractQuotedString(const wchar_t* start, wchar_t* output, size_t maxLength) {
+static const wchar_t* ExtractQuotedString(const wchar_t* start, wchar_t** output) {
+    if (!output) return NULL;
+    *output = NULL;
+
     const wchar_t* quote_start = wcschr(start, L'"');
     if (!quote_start) return NULL;
     quote_start++;
@@ -53,10 +113,10 @@ static const wchar_t* ExtractQuotedString(const wchar_t* start, wchar_t* output,
     if (!quote_end) return NULL;
     
     size_t length = quote_end - quote_start;
-    if (length >= maxLength) length = maxLength - 1;
-    
-    wcsncpy(output, quote_start, length);
-    output[length] = L'\0';
+    if (length >= MAX_STRING_LENGTH) length = MAX_STRING_LENGTH - 1;
+
+    *output = DuplicateWideSpan(quote_start, length);
+    if (!*output) return NULL;
     
     return quote_end + 1;
 }
@@ -97,36 +157,59 @@ static BOOL ShouldSkipLine(const wchar_t* line) {
 }
 
 /** Parse line format: "English Key" = "Translated Value" */
-static BOOL ParseIniLine(const wchar_t* line) {
+static BOOL ParseIniLine(TranslationTable* table, const wchar_t* line) {
+    if (!table) {
+        return FALSE;
+    }
     if (ShouldSkipLine(line)) {
         return FALSE;
     }
     
-    if (g_translation_count >= MAX_TRANSLATIONS) {
+    if (table->count >= MAX_TRANSLATIONS) {
         return FALSE;
     }
-    
-    const wchar_t* pos = ExtractQuotedString(line, 
-                                            g_translations[g_translation_count].english,
-                                            MAX_STRING_LENGTH);
+
+    wchar_t* english = NULL;
+    wchar_t* translation = NULL;
+
+    const wchar_t* pos = ExtractQuotedString(line, &english);
     if (!pos) return FALSE;
     
     pos = wcschr(pos, L'=');
-    if (!pos) return FALSE;
-    
-    pos = ExtractQuotedString(pos, 
-                             g_translations[g_translation_count].translation,
-                             MAX_STRING_LENGTH);
-    if (!pos) return FALSE;
-    
-    ProcessEscapeSequences(g_translations[g_translation_count].translation);
-    
-    g_translation_count++;
+    if (!pos) {
+        free(english);
+        return FALSE;
+    }
+
+    pos = ExtractQuotedString(pos, &translation);
+    if (!pos) {
+        free(english);
+        return FALSE;
+    }
+
+    ProcessEscapeSequences(translation);
+
+    table->entries[table->count].english = english;
+    table->entries[table->count].translation = translation;
+    table->count++;
     return TRUE;
 }
 
 static int UTF8ToWideChar(const char* utf8, wchar_t* wstr, int wstr_size) {
-    return MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wstr, wstr_size) - 1;
+    if (!wstr || wstr_size <= 0) {
+        return -1;
+    }
+    wstr[0] = L'\0';
+    if (!utf8) {
+        return -1;
+    }
+
+    int converted = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wstr, wstr_size);
+    if (converted <= 0) {
+        wstr[0] = L'\0';
+        return -1;
+    }
+    return converted - 1;
 }
 
 static const char* SkipUTF8BOM(const char* str) {
@@ -166,12 +249,14 @@ static BOOL LoadResourceToBuffer(UINT resourceId, char** outBuffer) {
     return TRUE;
 }
 
-static void ParseLanguageBuffer(char* buffer) {
+static void ParseLanguageBuffer(TranslationTable* table, char* buffer) {
+    if (!table) return;
+
     wchar_t wide_buffer[MAX_STRING_LENGTH];
     
     const char* line = strtok(buffer, "\r\n");
     
-    while (line && g_translation_count < MAX_TRANSLATIONS) {
+    while (line && table->count < MAX_TRANSLATIONS) {
         if (line[0] == '\0') {
             line = strtok(NULL, "\r\n");
             continue;
@@ -180,7 +265,7 @@ static void ParseLanguageBuffer(char* buffer) {
         line = SkipUTF8BOM(line);
         
         if (UTF8ToWideChar(line, wide_buffer, MAX_STRING_LENGTH) > 0) {
-            ParseIniLine(wide_buffer);
+            ParseIniLine(table, wide_buffer);
         }
         
         line = strtok(NULL, "\r\n");
@@ -192,8 +277,12 @@ static BOOL LoadLanguageResource(AppLanguage language) {
     if (language < 0 || language >= APP_LANG_COUNT) {
         return FALSE;
     }
-    
-    g_translation_count = 0;
+
+    TranslationTable* table = &g_translationTables[language];
+    if (table->loaded) {
+        g_activeTranslationLanguage = language;
+        return TRUE;
+    }
     
     const LanguageMetadata* metadata = &g_languageMetadata[language];
     char* buffer = NULL;
@@ -204,8 +293,10 @@ static BOOL LoadLanguageResource(AppLanguage language) {
         }
         return FALSE;
     }
-    
-    ParseLanguageBuffer(buffer);
+
+    ParseLanguageBuffer(table, buffer);
+    table->loaded = TRUE;
+    g_activeTranslationLanguage = language;
     
     free(buffer);
     return TRUE;
@@ -213,9 +304,18 @@ static BOOL LoadLanguageResource(AppLanguage language) {
 
 /** Linear search (faster than hash table for ~200 entries) */
 static const wchar_t* FindTranslation(const wchar_t* english) {
-    for (int i = 0; i < g_translation_count; i++) {
-        if (wcscmp(english, g_translations[i].english) == 0) {
-            return g_translations[i].translation;
+    if (!english ||
+        g_activeTranslationLanguage < 0 ||
+        g_activeTranslationLanguage >= APP_LANG_COUNT) {
+        return NULL;
+    }
+
+    const TranslationTable* table =
+        &g_translationTables[g_activeTranslationLanguage];
+    for (int i = 0; i < table->count; i++) {
+        if (table->entries[i].english &&
+            wcscmp(english, table->entries[i].english) == 0) {
+            return table->entries[i].translation;
         }
     }
     return NULL;
@@ -249,9 +349,14 @@ static void DetectSystemLanguage(void) {
  */
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
     if (!g_initialized) {
-        DetectSystemLanguage();
-        LoadLanguageResource(CURRENT_LANGUAGE);
-        g_initialized = TRUE;
+        if (BeginLanguageStateUse()) {
+            if (!g_initialized) {
+                DetectSystemLanguage();
+                LoadLanguageResource(CURRENT_LANGUAGE);
+                g_initialized = TRUE;
+            }
+            EndLanguageStateUse();
+        }
     }
     
     if (chinese && g_languageMetadata[CURRENT_LANGUAGE].useDirectChinese) {
@@ -263,19 +368,38 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
         return translation;
     }
     
-    return english;
+    return english ? english : L"";
 }
 
 BOOL SetLanguage(AppLanguage language) {
     if (language < 0 || language >= APP_LANG_COUNT) {
         return FALSE;
     }
-    
+
+    if (!BeginLanguageStateUse()) {
+        return FALSE;
+    }
+
     CURRENT_LANGUAGE = language;
-    g_translation_count = 0;
     g_initialized = TRUE;
-    
-    return LoadLanguageResource(language);
+
+    BOOL loaded = LoadLanguageResource(language);
+    EndLanguageStateUse();
+    return loaded;
+}
+
+void CleanupLanguage(void) {
+    if (!BeginLanguageStateUse()) {
+        return;
+    }
+
+    for (int i = 0; i < APP_LANG_COUNT; i++) {
+        ClearTranslationTable(&g_translationTables[i]);
+    }
+    g_activeTranslationLanguage = APP_LANG_ENGLISH;
+    g_initialized = FALSE;
+
+    EndLanguageStateUse();
 }
 
 AppLanguage GetCurrentLanguage(void) {

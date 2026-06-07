@@ -15,6 +15,8 @@
 #include "utils/string_convert.h"
 #include "../resource/resource.h"
 
+#define CLI_FORWARD_TIMEOUT_MS 1500
+
 typedef struct {
     const wchar_t* command;
     UINT message;
@@ -40,6 +42,14 @@ static const CliCommandMapping QUICK_COUNTDOWN_COMMANDS[] = {
     {L"q3", WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0},
 };
 
+static BOOL SendCliMessageToExisting(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    DWORD_PTR ignored = 0;
+    return SendMessageTimeoutW(hwnd, message, wParam, lParam,
+                               SMTO_ABORTIFHUNG | SMTO_BLOCK | SMTO_ERRORONEXIT,
+                               CLI_FORWARD_TIMEOUT_MS,
+                               &ignored) != 0;
+}
+
 /** @return Pointer to trimmed string (within original buffer) */
 static wchar_t* NormalizeWhitespace(wchar_t* str) {
     if (!str) return NULL;
@@ -59,11 +69,9 @@ static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
     
     for (size_t i = 0; i < sizeof(SINGLE_CHAR_COMMANDS) / sizeof(SINGLE_CHAR_COMMANDS[0]); i++) {
         if (wcscmp(cmdStr, SINGLE_CHAR_COMMANDS[i].command) == 0) {
-            /* All commands use SendMessage for consistent behavior */
-            SendMessage(hwnd, SINGLE_CHAR_COMMANDS[i].message, 
-                       SINGLE_CHAR_COMMANDS[i].wParam, 
-                       SINGLE_CHAR_COMMANDS[i].lParam);
-            return TRUE;
+            return SendCliMessageToExisting(hwnd, SINGLE_CHAR_COMMANDS[i].message,
+                                            SINGLE_CHAR_COMMANDS[i].wParam,
+                                            SINGLE_CHAR_COMMANDS[i].lParam);
         }
     }
     
@@ -72,16 +80,14 @@ static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
 
 static BOOL RouteTwoCharCommand(HWND hwnd, const wchar_t* cmdStr) {
     if (towlower(cmdStr[0]) == L'p' && towlower(cmdStr[1]) == L'r') {
-        SendMessage(hwnd, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
-        return TRUE;
+        return SendCliMessageToExisting(hwnd, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
     }
     
     for (size_t i = 0; i < sizeof(QUICK_COUNTDOWN_COMMANDS) / sizeof(QUICK_COUNTDOWN_COMMANDS[0]); i++) {
         if (_wcsicmp(cmdStr, QUICK_COUNTDOWN_COMMANDS[i].command) == 0) {
-            SendMessage(hwnd, QUICK_COUNTDOWN_COMMANDS[i].message,
-                       QUICK_COUNTDOWN_COMMANDS[i].wParam,
-                       QUICK_COUNTDOWN_COMMANDS[i].lParam);
-            return TRUE;
+            return SendCliMessageToExisting(hwnd, QUICK_COUNTDOWN_COMMANDS[i].message,
+                                            QUICK_COUNTDOWN_COMMANDS[i].wParam,
+                                            QUICK_COUNTDOWN_COMMANDS[i].lParam);
         }
     }
     
@@ -97,12 +103,10 @@ static BOOL RoutePomodoroCommand(HWND hwnd, const wchar_t* cmdStr) {
     long idx = wcstol(cmdStr + 1, &endp, 10);
     
     if (idx > 0 && (endp == NULL || *endp == L'\0')) {
-        SendMessage(hwnd, WM_APP_QUICK_COUNTDOWN_INDEX, 0, (LPARAM)idx);
+        return SendCliMessageToExisting(hwnd, WM_APP_QUICK_COUNTDOWN_INDEX, 0, (LPARAM)idx);
     } else {
-        SendMessage(hwnd, WM_HOTKEY, HOTKEY_ID_COUNTDOWN, 0);
+        return SendCliMessageToExisting(hwnd, WM_HOTKEY, HOTKEY_ID_COUNTDOWN, 0);
     }
-    
-    return TRUE;
 }
 
 static BOOL ForwardTimerInput(HWND hwnd, const wchar_t* cmdStr) {
@@ -114,10 +118,10 @@ static BOOL ForwardTimerInput(HWND hwnd, const wchar_t* cmdStr) {
     cds.cbData = (DWORD)(strlen(utf8Str) + 1);
     cds.lpData = utf8Str;
     
-    SendMessage(hwnd, WM_COPYDATA, 0, (LPARAM)&cds);
+    BOOL sent = SendCliMessageToExisting(hwnd, WM_COPYDATA, 0, (LPARAM)&cds);
     free(utf8Str);
-    
-    return TRUE;
+
+    return sent;
 }
 
 BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) {

@@ -11,6 +11,7 @@
 #include "font.h"
 #include "color/color.h"
 #include "color/color_parser.h"
+#include "drawing/drawing_effect.h"
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
 #include "window/window_core.h"
@@ -32,10 +33,10 @@ extern char PREVIEW_FONT_NAME[MAX_PATH];
 extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 
 extern void ResetTimerWithInterval(HWND hwnd);
-extern void WriteConfigColor(const char* color);
+extern BOOL WriteConfigColor(const char* color);
 extern void WriteConfigFont(const char* fontName, BOOL isCustom);
-extern void WriteConfigTimeFormat(TimeFormatType format);
-extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
+extern BOOL WriteConfigTimeFormat(TimeFormatType format);
+extern BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
 extern void WriteConfigEffect(EffectType effect); /* To be implemented if needed, or use existing logic */
 
 /* ============================================================================
@@ -62,6 +63,14 @@ typedef struct {
     BOOL wasWindowVisible;
     BOOL didShowForPreview;
     BOOL createdPreviewTimer;
+    BOOL savedTimerState;
+    BOOL previousShowCurrentTime;
+    BOOL previousCountUp;
+    BOOL previousIsPaused;
+    int32_t previousTotalTime;
+    int32_t previousCountdownElapsed;
+    int64_t previousTargetEndTime;
+    int64_t previousPauseStartTime;
 } PreviewState;
 
 static PreviewState g_previewState = {PREVIEW_TYPE_NONE};
@@ -78,7 +87,60 @@ PreviewType GetActivePreviewType(void) {
     return g_previewState.type;
 }
 
+static BOOL IsConfiguredTextEffectActive(void) {
+    return CLOCK_TEXT_EFFECT != TEXT_EFFECT_NONE;
+}
+
+static BOOL LoadPreviewFontName(const char* fontName, char* internalName, size_t internalNameSize) {
+    if (!fontName || !fontName[0] || !internalName || internalNameSize == 0) {
+        return FALSE;
+    }
+
+    HINSTANCE hInstance = GetModuleHandle(NULL);
+    if (!LoadFontByNameAndGetRealName(hInstance, fontName, internalName, internalNameSize)) {
+        LOG_WARNING("Preview: failed to load font preview: %s", fontName);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 void StartPreview(PreviewType type, const void* data, HWND hwnd) {
+    if (type == PREVIEW_TYPE_EFFECT && g_previewState.type == PREVIEW_TYPE_EFFECT) {
+        if (!data) {
+            return;
+        }
+
+        EffectType effect = *(const EffectType*)data;
+        if (g_previewState.data.effect == effect) {
+            return;
+        }
+
+        g_previewState.data.effect = effect;
+        if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
+        return;
+    }
+
+    if (type == PREVIEW_TYPE_FONT && g_previewState.type == PREVIEW_TYPE_FONT) {
+        const char* fontName = (const char*)data;
+        if (!fontName || !fontName[0]) {
+            return;
+        }
+        if (_stricmp(g_previewState.data.font.fontName, fontName) == 0) {
+            return;
+        }
+
+        char internalName[MAX_PATH] = {0};
+        if (!LoadPreviewFontName(fontName, internalName, sizeof(internalName))) {
+            return;
+        }
+
+        strncpy_s(g_previewState.data.font.fontName, MAX_PATH, fontName, _TRUNCATE);
+        strncpy_s(g_previewState.data.font.internalName, MAX_PATH, internalName, _TRUNCATE);
+        if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
+        return;
+    }
+
     if (IsPreviewActive()) CancelPreview(hwnd);
     
     g_previewState.type = type;
@@ -95,12 +157,14 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
         
         case PREVIEW_TYPE_FONT: {
             const char* fontName = (const char*)data;
+            char internalName[MAX_PATH] = {0};
+            if (!LoadPreviewFontName(fontName, internalName, sizeof(internalName))) {
+                g_previewState.type = PREVIEW_TYPE_NONE;
+                return;
+            }
+
             strncpy_s(g_previewState.data.font.fontName, MAX_PATH, fontName, _TRUNCATE);
-            
-            HINSTANCE hInstance = GetModuleHandle(NULL);
-            LoadFontByNameAndGetRealName(hInstance, fontName, 
-                                        g_previewState.data.font.internalName,
-                                        sizeof(g_previewState.data.font.internalName));
+            strncpy_s(g_previewState.data.font.internalName, MAX_PATH, internalName, _TRUNCATE);
             break;
         }
         
@@ -136,8 +200,9 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
 }
 
 void CancelPreview(HWND hwnd) {
-    /* Always cancel animation preview if active */
-    if (g_isPreviewActive) {
+    /* Cancel active or queued animation previews; queued loads may not have
+       flipped g_isPreviewActive yet. */
+    if (g_isPreviewActive || g_previewState.type == PREVIEW_TYPE_ANIMATION) {
         CancelAnimationPreview();
     }
 
@@ -148,6 +213,8 @@ void CancelPreview(HWND hwnd) {
     BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS || 
                             g_previewState.type == PREVIEW_TYPE_COLOR);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
+    BOOL needsEffectCleanup = (g_previewState.type == PREVIEW_TYPE_EFFECT &&
+                               !IsConfiguredTextEffectActive());
 
     if (needsFontReload) {
         HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -160,6 +227,10 @@ void CancelPreview(HWND hwnd) {
     /* Reset preview state */
     g_previewState.type = PREVIEW_TYPE_NONE;
 
+    if (needsEffectCleanup) {
+        CleanupDrawingEffects();
+    }
+
     if (needsTimerReset && hwnd) ResetTimerWithInterval(hwnd);
     if (needsRedraw && hwnd) InvalidateRect(hwnd, NULL, TRUE);
 }
@@ -171,9 +242,9 @@ BOOL ApplyPreview(HWND hwnd) {
     
     switch (appliedType) {
         case PREVIEW_TYPE_COLOR:
-            WriteConfigColor(g_previewState.data.colorHex);
-            strncpy_s(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR),
-                     g_previewState.data.colorHex, _TRUNCATE);
+            if (!WriteConfigColor(g_previewState.data.colorHex)) {
+                return FALSE;
+            }
             if (hwnd) ResetTimerWithInterval(hwnd);
             break;
             
@@ -186,11 +257,15 @@ BOOL ApplyPreview(HWND hwnd) {
             break;
             
         case PREVIEW_TYPE_TIME_FORMAT:
-            WriteConfigTimeFormat(g_previewState.data.timeFormat);
+            if (!WriteConfigTimeFormat(g_previewState.data.timeFormat)) {
+                return FALSE;
+            }
             break;
             
         case PREVIEW_TYPE_MILLISECONDS:
-            WriteConfigShowMilliseconds(g_previewState.data.showMilliseconds);
+            if (!WriteConfigShowMilliseconds(g_previewState.data.showMilliseconds)) {
+                return FALSE;
+            }
             break;
             
         case PREVIEW_TYPE_ANIMATION:
@@ -283,12 +358,12 @@ void ShowWindowForPreview(HWND hwnd) {
     BOOL hasActiveContent = CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP ||
                            (CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME);
 
-    WriteLog(LOG_LEVEL_INFO, "ShowWindowForPreview: visible=%d, showTime=%d, countUp=%d, total=%d, elapsed=%d, hasContent=%d, didShow=%d",
+    LOG_DEBUG("ShowWindowForPreview: visible=%d, showTime=%d, countUp=%d, total=%d, elapsed=%d, hasContent=%d, didShow=%d",
              isVisible, CLOCK_SHOW_CURRENT_TIME, CLOCK_COUNT_UP, CLOCK_TOTAL_TIME, countdown_elapsed_time, hasActiveContent,
              g_previewState.didShowForPreview);
 
     if (g_previewState.didShowForPreview) {
-        WriteLog(LOG_LEVEL_INFO, "Already in preview mode, refreshing display");
+        LOG_DEBUG("Already in preview mode, refreshing display");
         InvalidateRect(hwnd, NULL, TRUE);
         return;
     }
@@ -300,9 +375,17 @@ void ShowWindowForPreview(HWND hwnd) {
         if (!hasActiveContent) {
             /* Use 25 minutes (1500 seconds) as preview time for better visual */
             int previewTime = 1500;
-            WriteLog(LOG_LEVEL_INFO, "No active content, creating preview timer: %d", previewTime);
+            LOG_DEBUG("No active content, creating preview timer: %d", previewTime);
 
             g_previewState.createdPreviewTimer = TRUE;
+            g_previewState.savedTimerState = TRUE;
+            g_previewState.previousShowCurrentTime = CLOCK_SHOW_CURRENT_TIME;
+            g_previewState.previousCountUp = CLOCK_COUNT_UP;
+            g_previewState.previousIsPaused = CLOCK_IS_PAUSED;
+            g_previewState.previousTotalTime = CLOCK_TOTAL_TIME;
+            g_previewState.previousCountdownElapsed = countdown_elapsed_time;
+            g_previewState.previousTargetEndTime = g_target_end_time;
+            g_previewState.previousPauseStartTime = g_pause_start_time;
 
             CLOCK_SHOW_CURRENT_TIME = false;
             CLOCK_COUNT_UP = false;
@@ -316,8 +399,9 @@ void ShowWindowForPreview(HWND hwnd) {
             g_pause_start_time = now;
             g_target_end_time = now + ((int64_t)previewTime * 1000);
         } else {
-            WriteLog(LOG_LEVEL_INFO, "Window hidden but has active timer, just showing it");
+            LOG_DEBUG("Window hidden but has active timer, just showing it");
             g_previewState.createdPreviewTimer = FALSE;
+            g_previewState.savedTimerState = FALSE;
         }
 
         if (!isVisible) {
@@ -328,26 +412,38 @@ void ShowWindowForPreview(HWND hwnd) {
         g_previewState.wasWindowVisible = TRUE;
         g_previewState.didShowForPreview = FALSE;
         g_previewState.createdPreviewTimer = FALSE;
+        g_previewState.savedTimerState = FALSE;
     }
 }
 
 void RestoreWindowVisibility(HWND hwnd) {
     if (!hwnd || !g_previewState.didShowForPreview) return;
 
-    WriteLog(LOG_LEVEL_INFO, "RestoreWindowVisibility: was visible=%d, created preview timer=%d",
+    LOG_DEBUG("RestoreWindowVisibility: was visible=%d, created preview timer=%d",
              g_previewState.wasWindowVisible, g_previewState.createdPreviewTimer);
 
     if (g_previewState.createdPreviewTimer) {
-        WriteLog(LOG_LEVEL_INFO, "Clearing preview timer that we created");
-        CLOCK_TOTAL_TIME = 0;
-        countdown_elapsed_time = 0;
-        CLOCK_SHOW_CURRENT_TIME = false;
-        CLOCK_COUNT_UP = false;
-        
-        /* Also clear g_target_end_time to avoid stale values */
-        g_target_end_time = 0;
+        LOG_DEBUG("Clearing preview timer that we created");
+        if (g_previewState.savedTimerState) {
+            CLOCK_SHOW_CURRENT_TIME = g_previewState.previousShowCurrentTime;
+            CLOCK_COUNT_UP = g_previewState.previousCountUp;
+            CLOCK_IS_PAUSED = g_previewState.previousIsPaused;
+            CLOCK_TOTAL_TIME = g_previewState.previousTotalTime;
+            countdown_elapsed_time = g_previewState.previousCountdownElapsed;
+            g_target_end_time = g_previewState.previousTargetEndTime;
+            g_pause_start_time = g_previewState.previousPauseStartTime;
+        } else {
+            CLOCK_TOTAL_TIME = 0;
+            countdown_elapsed_time = 0;
+            CLOCK_SHOW_CURRENT_TIME = false;
+            CLOCK_COUNT_UP = false;
+            CLOCK_IS_PAUSED = false;
+            g_target_end_time = 0;
+            g_pause_start_time = 0;
+        }
+        ResetTimerWithInterval(hwnd);
     } else {
-        WriteLog(LOG_LEVEL_INFO, "Not clearing timer - was showing existing active timer");
+        LOG_DEBUG("Not clearing timer - was showing existing active timer");
     }
 
     if (!g_previewState.wasWindowVisible) {
@@ -358,6 +454,7 @@ void RestoreWindowVisibility(HWND hwnd) {
 
     g_previewState.didShowForPreview = FALSE;
     g_previewState.createdPreviewTimer = FALSE;
+    g_previewState.savedTimerState = FALSE;
 }
 
 /* ============================================================================

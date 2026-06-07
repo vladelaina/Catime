@@ -98,11 +98,8 @@ void ReadConfig() {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     
-    LOG_INFO("Loading configuration from: %s", config_path);
-
     /* Create default config if missing */
     if (!FileExists(config_path)) {
-        LOG_INFO("Configuration file not found, creating default configuration");
         CreateDefaultConfig(config_path);
     }
 
@@ -111,28 +108,15 @@ void ReadConfig() {
     /* Version check - migrate if version mismatch */
     char version[32] = {0};
     
-    LOG_DEBUG("DEBUG_TRACE: Attempting to read CONFIG_VERSION from file: %s", config_path);
     ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "",
                  version, sizeof(version), config_path);
 
-    LOG_INFO("DEBUG_TRACE: Version Check Start --------------------------------");
-    LOG_INFO("DEBUG_TRACE: Config Path: '%s'", config_path);
-    LOG_INFO("DEBUG_TRACE: Config Version in File: '%s'", version[0] ? version : "<empty/missing>");
-    LOG_INFO("DEBUG_TRACE: App Current Version:    '%s'", CATIME_VERSION);
-    
     int versionMatch = strcmp(version, CATIME_VERSION);
-    LOG_INFO("DEBUG_TRACE: strcmp result: %d (0 means match)", versionMatch);
 
     if (versionMatch != 0) {
-        LOG_INFO("DEBUG_TRACE: >> Version MISMATCH detected. Entering logic block.");
-        
-        LOG_INFO("DEBUG_TRACE: Checking FORCE_CONFIG_RESET_ON_UPDATE macro value...");
-        LOG_INFO("DEBUG_TRACE: FORCE_CONFIG_RESET_ON_UPDATE evaluates to: %d", FORCE_CONFIG_RESET_ON_UPDATE);
-
 #if FORCE_CONFIG_RESET_ON_UPDATE
         {
             LOG_WARNING("DEBUG_TRACE: >> DECISION: FORCE RESET (Switch is ON)");
-            LOG_INFO("DEBUG_TRACE: Preparing to delete old configuration file...");
             
             /* Delete the old configuration file */
             wchar_t wConfigPath[MAX_PATH] = {0};
@@ -140,32 +124,17 @@ void ReadConfig() {
             
             if (conversionResult == 0) {
                  LOG_ERROR("DEBUG_TRACE: Failed to convert config path to WideChar. Win32 Error: %lu", GetLastError());
-            }
-
-            // Check if file exists before deleting
-            DWORD fileAttr = GetFileAttributesW(wConfigPath);
-            if (fileAttr == INVALID_FILE_ATTRIBUTES) {
-                 LOG_INFO("DEBUG_TRACE: GetFileAttributesW says file does not exist or cannot be accessed before deletion.");
             } else {
-                 LOG_INFO("DEBUG_TRACE: File exists. Proceeding to DeleteFileW...");
-            }
-
-            if (DeleteFileW(wConfigPath)) {
-                LOG_INFO("DEBUG_TRACE: SUCCESS: Old configuration file deleted.");
-            } else {
-                DWORD err = GetLastError();
-                if (err == ERROR_FILE_NOT_FOUND) {
-                    LOG_INFO("DEBUG_TRACE: DeleteFileW result: File not found (already gone).");
-                } else {
-                    LOG_ERROR("DEBUG_TRACE: ERROR: Failed to delete file. Win32 Error Code: %lu", err);
+                if (!DeleteFileW(wConfigPath)) {
+                    DWORD err = GetLastError();
+                    if (err != ERROR_FILE_NOT_FOUND) {
+                        LOG_ERROR("DEBUG_TRACE: ERROR: Failed to delete file. Win32 Error Code: %lu", err);
+                    }
                 }
             }
 
             /* Create a fresh default configuration */
-            LOG_INFO("DEBUG_TRACE: Calling CreateDefaultConfig to generate a fresh INI...");
             CreateDefaultConfig(config_path);
-            
-            LOG_INFO("DEBUG_TRACE: >> RESET PHASE 1 COMPLETE. Scheduling UI reset.");
             
             /* Mark for full factory reset after window creation */
             g_PerformFactoryReset = TRUE;
@@ -201,26 +170,17 @@ void ReadConfig() {
                 snapshot.language[sizeof(snapshot.language) - 1] = '\0';
             }
             
-            LOG_INFO("DEBUG_TRACE: Applying pure default snapshot directly to memory...");
             ApplyConfigSnapshot(&snapshot);
             
-            LOG_INFO("DEBUG_TRACE: Configuration reset and applied successfully.");
             return; /* EXIT FUNCTION HERE - Do not proceed to LoadConfigFromFile */
         }
 #else
         {
-            LOG_INFO("DEBUG_TRACE: >> DECISION: STANDARD MIGRATION (Switch is OFF)");
-            LOG_INFO("DEBUG_TRACE: Calling MigrateConfig...");
             MigrateConfig(config_path);
             needsWriteBack = TRUE;
-            LOG_INFO("DEBUG_TRACE: >> MIGRATION COMPLETE. needsWriteBack set to TRUE.");
         }
 #endif
-    } else {
-        LOG_INFO("DEBUG_TRACE: >> Version MATCH detected. Skipping all migration/reset logic.");
-        LOG_INFO("DEBUG_TRACE: Logic skipped because config version matches app version.");
     }
-    LOG_INFO("DEBUG_TRACE: Version Check End ----------------------------------");
 
     /* Load configuration into snapshot */
     /* NOTE: If we performed a FORCE RESET, we have already returned from the function above. */
@@ -233,7 +193,6 @@ void ReadConfig() {
 
     /* Validate and sanitize - returns TRUE if any values were modified */
     if (ValidateConfigSnapshot(&snapshot)) {
-        LOG_INFO("Configuration validation found issues and auto-corrected them");
         needsWriteBack = TRUE;
     }
 
@@ -242,11 +201,8 @@ void ReadConfig() {
 
     /* Write back if migration occurred or validation modified values */
     if (needsWriteBack) {
-        LOG_INFO("Writing corrected configuration back to file");
         WriteConfig(config_path);
     }
-    
-    LOG_INFO("Configuration loading completed successfully");
 }
 
 /* ============================================================================
@@ -259,23 +215,119 @@ void ReadConfig() {
  * @note One-time actions (SHUTDOWN/RESTART/SLEEP) are not persisted to config.
  * They only affect the current session and will reset on next launch.
  */
-void WriteConfigTimeoutAction(const char* action) {
-    const char* actual_action = action;
-    
-    if (strcmp(action, "RESTART") == 0 || 
-        strcmp(action, "SHUTDOWN") == 0 || 
-        strcmp(action, "SLEEP") == 0) {
+static BOOL IsOneTimeTimeoutAction(TimeoutActionType action) {
+    return action == TIMEOUT_ACTION_SHUTDOWN ||
+           action == TIMEOUT_ACTION_RESTART ||
+           action == TIMEOUT_ACTION_SLEEP;
+}
+
+static BOOL TimerConfigValueEqualsInFile(const char* configPath,
+                                         const char* key,
+                                         const char* expectedValue,
+                                         const char* defaultValue) {
+    char currentValue[MAX_PATH];
+
+    ReadIniString(INI_SECTION_TIMER, key, defaultValue ? defaultValue : "",
+                  currentValue, sizeof(currentValue), configPath);
+
+    return strcmp(currentValue, expectedValue ? expectedValue : "") == 0;
+}
+
+static void CopyTimeoutString(char* dest, size_t destSize, const char* value) {
+    if (!dest || destSize == 0) {
         return;
     }
-    
-    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", actual_action);
+
+    if (!value) {
+        value = "";
+    }
+
+    strncpy(dest, value, destSize - 1);
+    dest[destSize - 1] = '\0';
+}
+
+void WriteConfigTimeoutAction(const char* action) {
+    TimeoutActionType newAction = TimeoutActionType_FromStr(action ? action : "MESSAGE");
+    const char* configAction = TimeoutActionType_ToStr(newAction);
+
+    if (IsOneTimeTimeoutAction(newAction)) {
+        CLOCK_TIMEOUT_ACTION = newAction;
+        return;
+    }
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    BOOL runtimeMatches = CLOCK_TIMEOUT_ACTION == newAction;
+    BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
+                                                      "CLOCK_TIMEOUT_ACTION",
+                                                      configAction,
+                                                      "MESSAGE");
+
+    if (runtimeMatches && configMatches) {
+        return;
+    }
+
+    if (!configMatches &&
+        !UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", configAction)) {
+        return;
+    }
+
+    CLOCK_TIMEOUT_ACTION = newAction;
 }
 
 /**
  * @brief Write time options configuration
  */
-void WriteConfigTimeOptions(const char* options) {
-    UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", options);
+BOOL WriteConfigTimeOptions(const char* options) {
+    if (!options) {
+        return FALSE;
+    }
+
+    return UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", options);
+}
+
+BOOL WriteConfigDefaultCountdownStartup(int seconds) {
+    if (seconds <= 0) {
+        return FALSE;
+    }
+
+    char secondsStr[32];
+    if (snprintf(secondsStr, sizeof(secondsStr), "%d", seconds) < 0) {
+        return FALSE;
+    }
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    char currentSeconds[32] = {0};
+    char currentMode[sizeof(CLOCK_STARTUP_MODE)] = {0};
+    ReadIniString(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "",
+                  currentSeconds, sizeof(currentSeconds), config_path);
+    ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "SHOW_TIME",
+                  currentMode, sizeof(currentMode), config_path);
+
+    BOOL runtimeMatches = g_AppConfig.timer.default_start_time == seconds &&
+                          strcmp(CLOCK_STARTUP_MODE, "DEFAULT") == 0;
+    BOOL configMatches = strcmp(currentSeconds, secondsStr) == 0 &&
+                         strcmp(currentMode, "DEFAULT") == 0;
+    if (runtimeMatches && configMatches) {
+        return TRUE;
+    }
+
+    const IniKeyValue updates[] = {
+        {INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", secondsStr},
+        {INI_SECTION_TIMER, "STARTUP_MODE", "DEFAULT"},
+    };
+    if (!configMatches &&
+        !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
+        return FALSE;
+    }
+
+    g_AppConfig.timer.default_start_time = seconds;
+    strncpy(CLOCK_STARTUP_MODE, "DEFAULT", sizeof(CLOCK_STARTUP_MODE) - 1);
+    CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
+    return TRUE;
 }
 
 /**
@@ -292,22 +344,76 @@ BOOL WriteConfigTopmost(const char* topmost) {
  * @brief Configure timeout action to open file
  */
 void WriteConfigTimeoutFile(const char* filePath) {
-    if (!filePath) filePath = "";
+    char normalizedPath[MAX_PATH];
+    CopyTimeoutString(normalizedPath, sizeof(normalizedPath), filePath);
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    BOOL runtimeMatches = CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE &&
+                          strcmp(CLOCK_TIMEOUT_FILE_PATH, normalizedPath) == 0;
+    BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
+                                                      "CLOCK_TIMEOUT_ACTION",
+                                                      "OPEN_FILE",
+                                                      "MESSAGE") &&
+                         TimerConfigValueEqualsInFile(config_path,
+                                                      "CLOCK_TIMEOUT_FILE",
+                                                      normalizedPath,
+                                                      "");
+
+    if (runtimeMatches && configMatches) {
+        return;
+    }
+
+    const IniKeyValue updates[] = {
+        {INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "OPEN_FILE"},
+        {INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", normalizedPath}
+    };
+
+    if (!configMatches &&
+        !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
+        return;
+    }
+
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
-    strncpy(CLOCK_TIMEOUT_FILE_PATH, filePath, MAX_PATH - 1);
-    CLOCK_TIMEOUT_FILE_PATH[MAX_PATH - 1] = '\0';
-    WriteConfigKeyValue("CLOCK_TIMEOUT_ACTION", "OPEN_FILE");
-    WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", filePath);
+    CopyTimeoutString(CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, normalizedPath);
 }
 
 /**
  * @brief Configure timeout action to open website
  */
 void WriteConfigTimeoutWebsite(const char* url) {
-    if (!url) url = "";
+    char normalizedUrl[MAX_PATH];
+    CopyTimeoutString(normalizedUrl, sizeof(normalizedUrl), url);
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    BOOL runtimeMatches = CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE &&
+                          strcmp(CLOCK_TIMEOUT_WEBSITE_URL, normalizedUrl) == 0;
+    BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
+                                                      "CLOCK_TIMEOUT_ACTION",
+                                                      "OPEN_WEBSITE",
+                                                      "MESSAGE") &&
+                         TimerConfigValueEqualsInFile(config_path,
+                                                      "CLOCK_TIMEOUT_WEBSITE",
+                                                      normalizedUrl,
+                                                      "");
+
+    if (runtimeMatches && configMatches) {
+        return;
+    }
+
+    const IniKeyValue updates[] = {
+        {INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "OPEN_WEBSITE"},
+        {INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", normalizedUrl}
+    };
+
+    if (!configMatches &&
+        !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
+        return;
+    }
+
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
-    strncpy(CLOCK_TIMEOUT_WEBSITE_URL, url, MAX_PATH - 1);
-    CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH - 1] = '\0';
-    WriteConfigKeyValue("CLOCK_TIMEOUT_ACTION", "OPEN_WEBSITE");
-    WriteConfigKeyValue("CLOCK_TIMEOUT_WEBSITE", url);
+    CopyTimeoutString(CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, normalizedUrl);
 }

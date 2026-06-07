@@ -122,14 +122,17 @@ static BOOL FindTTFTable(HANDLE hFile, WORD numTables, DWORD targetTag, DWORD fi
  * @param outName Output buffer
  * @param outNameSize Buffer size
  */
-static void ParseFontName(const char* stringData, size_t dataLength, BOOL isUnicode,
+static BOOL ParseFontName(const char* stringData, size_t dataLength, BOOL isUnicode,
                           char* outName, size_t outNameSize) {
-    if (!stringData || !outName || outNameSize == 0) return;
+    if (!outName || outNameSize == 0) return FALSE;
+    outName[0] = '\0';
+    if (!stringData || dataLength == 0) return FALSE;
     
     if (isUnicode) {
         /* UTF-16 Big-Endian → UTF-16 Little-Endian → UTF-8 */
         WCHAR* unicodeStr = (WCHAR*)stringData;
         int numChars = (int)(dataLength / 2);
+        if (numChars <= 0) return FALSE;
         
         /* Swap byte order */
         for (int i = 0; i < numChars; i++) {
@@ -138,12 +141,14 @@ static void ParseFontName(const char* stringData, size_t dataLength, BOOL isUnic
         unicodeStr[numChars] = 0;
         
         /* Convert to UTF-8 */
-        WideToUtf8(unicodeStr, outName, outNameSize);
+        return WideToUtf8(unicodeStr, outName, outNameSize) && outName[0] != '\0';
     } else {
         /* ASCII → UTF-8 (direct copy) */
         size_t copyLen = (dataLength < outNameSize - 1) ? dataLength : outNameSize - 1;
+        if (copyLen == 0) return FALSE;
         memcpy(outName, stringData, copyLen);
         outName[copyLen] = '\0';
+        return outName[0] != '\0';
     }
 }
 
@@ -183,9 +188,6 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
 
     fontHeader.numTables = SwapWORD(fontHeader.numTables);
 
-    if ((DWORD)fontHeader.numTables > (MAXDWORD - sizeof(FontDirectoryHeader)) / sizeof(TableRecord)) {
-        return FALSE;
-    }
     DWORD tableDirectorySize = sizeof(FontDirectoryHeader) +
                                (DWORD)fontHeader.numTables * sizeof(TableRecord);
     if (!RangeInFile(0, tableDirectorySize, fileSize)) {
@@ -218,9 +220,6 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
     nameHeader.count = SwapWORD(nameHeader.count);
     nameHeader.stringOffset = SwapWORD(nameHeader.stringOffset);
 
-    if ((DWORD)nameHeader.count > (MAXDWORD - sizeof(NameTableHeader)) / sizeof(NameRecord)) {
-        return FALSE;
-    }
     DWORD recordsSize = (DWORD)nameHeader.count * sizeof(NameRecord);
     if (!RangeInTable(sizeof(NameTableHeader), recordsSize, nameTableLength) ||
         nameHeader.stringOffset < sizeof(NameTableHeader) + recordsSize ||
@@ -297,8 +296,7 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
     BOOL success = FALSE;
     if (ReadFile(hFile, stringBuffer, nameLength, &bytesRead, NULL) && 
         bytesRead == nameLength) {
-        ParseFontName(stringBuffer, nameLength, isUnicode, fontName, fontNameSize);
-        success = TRUE;
+        success = ParseFontName(stringBuffer, nameLength, isUnicode, fontName, fontNameSize);
     }
     
     free(stringBuffer);
@@ -311,6 +309,7 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
 
 BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize) {
     if (!fontFilePath || !fontName || fontNameSize == 0) return FALSE;
+    fontName[0] = '\0';
     
     /* Convert path to wide */
     wchar_t wFontPath[MAX_PATH];

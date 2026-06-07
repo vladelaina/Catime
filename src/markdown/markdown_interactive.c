@@ -8,7 +8,7 @@
 #include "utils/url_safety.h"
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+#include <wchar.h>
 #include <shellapi.h>
 
 /*
@@ -20,6 +20,10 @@
  */
 /* Plugin output file path */
 #define PLUGIN_OUTPUT_FILENAME "output.txt"
+#define PLUGIN_OUTPUT_FILENAME_W L"output.txt"
+#define CHECKBOX_OUTPUT_MAX_BYTES (1024ll * 1024ll)
+#define CHECKBOX_OUTPUT_FILE_SHARE (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 /* ============================================================================
  * Global State
@@ -27,42 +31,103 @@
 
 static ClickableRegion g_regions[MAX_CLICKABLE_REGIONS];
 static int g_regionCount = 0;
+static volatile LONG g_regionCountVisible = 0;
 static int g_windowOffsetX = 0;
 static int g_windowOffsetY = 0;
 static CRITICAL_SECTION g_interactiveCS;
 static volatile LONG g_initialized = 0;
+static SRWLOCK g_interactiveLifecycleLock = SRWLOCK_INIT;
 
 #define INTERACTIVE_CS_UNINITIALIZED 0
 #define INTERACTIVE_CS_INITIALIZING 1
 #define INTERACTIVE_CS_INITIALIZED 2
+
+static BOOL HandleRegionClick(const ClickableRegion* region, HWND hwnd);
+
+static BOOL IsValidMarkdownInteractiveWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static BOOL IsInteractiveInitialized(void) {
+    return InterlockedCompareExchange(&g_initialized, 0, 0) == INTERACTIVE_CS_INITIALIZED;
+}
+
+static BOOL BeginInteractiveUse(void) {
+    AcquireSRWLockShared(&g_interactiveLifecycleLock);
+    if (!IsInteractiveInitialized()) {
+        ReleaseSRWLockShared(&g_interactiveLifecycleLock);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void EndInteractiveUse(void) {
+    ReleaseSRWLockShared(&g_interactiveLifecycleLock);
+}
+
+static void ClearClickableRegionsLocked(void) {
+    for (int i = 0; i < g_regionCount && i < MAX_CLICKABLE_REGIONS; ++i) {
+        free(g_regions[i].url);
+        g_regions[i].url = NULL;
+    }
+    ZeroMemory(g_regions, sizeof(g_regions));
+    g_regionCount = 0;
+    InterlockedExchange(&g_regionCountVisible, 0);
+}
 
 /* ============================================================================
  * Initialization
  * ============================================================================ */
 
 void InitMarkdownInteractive(void) {
+    AcquireSRWLockExclusive(&g_interactiveLifecycleLock);
+    if (IsInteractiveInitialized()) {
+        ReleaseSRWLockExclusive(&g_interactiveLifecycleLock);
+        return;
+    }
+
     if (InterlockedCompareExchange(&g_initialized,
                                    INTERACTIVE_CS_INITIALIZING,
                                    INTERACTIVE_CS_UNINITIALIZED) == INTERACTIVE_CS_UNINITIALIZED) {
         InitializeCriticalSection(&g_interactiveCS);
         g_regionCount = 0;
+        g_windowOffsetX = 0;
+        g_windowOffsetY = 0;
+        InterlockedExchange(&g_regionCountVisible, 0);
         InterlockedExchange(&g_initialized, INTERACTIVE_CS_INITIALIZED);
-        return;
     }
-
-    while (InterlockedCompareExchange(&g_initialized, 0, 0) == INTERACTIVE_CS_INITIALIZING) {
-        Sleep(0);
-    }
+    ReleaseSRWLockExclusive(&g_interactiveLifecycleLock);
 }
 
 void CleanupMarkdownInteractive(void) {
-    while (InterlockedCompareExchange(&g_initialized, 0, 0) == INTERACTIVE_CS_INITIALIZING) {
-        Sleep(0);
+    AcquireSRWLockExclusive(&g_interactiveLifecycleLock);
+    if (!IsInteractiveInitialized()) {
+        ReleaseSRWLockExclusive(&g_interactiveLifecycleLock);
+        return;
     }
-    if (InterlockedCompareExchange(&g_initialized, 0, 0) != INTERACTIVE_CS_INITIALIZED) return;
-    ClearClickableRegions();
+
+    EnterCriticalSection(&g_interactiveCS);
+    ClearClickableRegionsLocked();
+    LeaveCriticalSection(&g_interactiveCS);
+
     DeleteCriticalSection(&g_interactiveCS);
     InterlockedExchange(&g_initialized, INTERACTIVE_CS_UNINITIALIZED);
+    ReleaseSRWLockExclusive(&g_interactiveLifecycleLock);
 }
 
 /* ============================================================================
@@ -70,42 +135,45 @@ void CleanupMarkdownInteractive(void) {
  * ============================================================================ */
 
 void ClearClickableRegions(void) {
-    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return;
+    if (!BeginInteractiveUse()) return;
     EnterCriticalSection(&g_interactiveCS);
-    
-    for (int i = 0; i < g_regionCount; i++) {
-        if (g_regions[i].url) {
-            free(g_regions[i].url);
-            g_regions[i].url = NULL;
-        }
-    }
-    g_regionCount = 0;
-    
+
+    ClearClickableRegionsLocked();
+
     LeaveCriticalSection(&g_interactiveCS);
+    EndInteractiveUse();
 }
 
 void AddLinkRegion(const RECT* rect, const wchar_t* url) {
-    if (g_initialized != INTERACTIVE_CS_INITIALIZED || !rect || !url) return;
-    EnterCriticalSection(&g_interactiveCS);
-    
-    if (g_regionCount < MAX_CLICKABLE_REGIONS) {
-        wchar_t* urlCopy = _wcsdup(url);
-        if (urlCopy) {
-            ClickableRegion* r = &g_regions[g_regionCount];
-            r->type = CLICK_TYPE_LINK;
-            r->rect = *rect;
-            r->url = urlCopy;
-            r->checkboxIndex = -1;
-            r->isChecked = FALSE;
-            g_regionCount++;
-        }
+    if (!rect || !url) return;
+    wchar_t* urlCopy = _wcsdup(url);
+    if (!urlCopy) return;
+    if (!BeginInteractiveUse()) {
+        free(urlCopy);
+        return;
     }
-    
+    EnterCriticalSection(&g_interactiveCS);
+
+    if (g_regionCount < MAX_CLICKABLE_REGIONS) {
+        ClickableRegion* r = &g_regions[g_regionCount];
+        r->type = CLICK_TYPE_LINK;
+        r->rect = *rect;
+        r->url = urlCopy;
+        urlCopy = NULL;
+        r->checkboxIndex = -1;
+        r->isChecked = FALSE;
+        g_regionCount++;
+        InterlockedExchange(&g_regionCountVisible, g_regionCount);
+    }
+
     LeaveCriticalSection(&g_interactiveCS);
+    EndInteractiveUse();
+    free(urlCopy);
 }
 
 void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
-    if (g_initialized != INTERACTIVE_CS_INITIALIZED || !rect) return;
+    if (!rect) return;
+    if (!BeginInteractiveUse()) return;
     EnterCriticalSection(&g_interactiveCS);
     
     if (g_regionCount < MAX_CLICKABLE_REGIONS) {
@@ -121,70 +189,150 @@ void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
         r->checkboxIndex = index;
         r->isChecked = isChecked;
         g_regionCount++;
+        InterlockedExchange(&g_regionCountVisible, g_regionCount);
     }
-    
+
     LeaveCriticalSection(&g_interactiveCS);
+    EndInteractiveUse();
 }
 
 void UpdateRegionPositions(int windowX, int windowY) {
-    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return;
-    if (g_windowOffsetX == windowX && g_windowOffsetY == windowY) return;
+    if (!BeginInteractiveUse()) return;
 
     EnterCriticalSection(&g_interactiveCS);
-    
+    if (g_windowOffsetX == windowX && g_windowOffsetY == windowY) {
+        LeaveCriticalSection(&g_interactiveCS);
+        EndInteractiveUse();
+        return;
+    }
+
     /* Just store window position - regions are in window coords */
     g_windowOffsetX = windowX;
     g_windowOffsetY = windowY;
-    
+
     LeaveCriticalSection(&g_interactiveCS);
+    EndInteractiveUse();
 }
 
-const ClickableRegion* GetClickableRegionAt(POINT pt) {
-    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return NULL;
-    if (g_regionCount <= 0) return NULL;
+static BOOL CopyClickableRegionAtLocked(POINT localPt, ClickableRegion* outRegion) {
+    if (!outRegion) return FALSE;
 
-    const ClickableRegion* result = NULL;
-    EnterCriticalSection(&g_interactiveCS);
-    
-    /* Convert screen point to window-relative coords */
-    POINT localPt = { pt.x - g_windowOffsetX, pt.y - g_windowOffsetY };
-    
     for (int i = 0; i < g_regionCount; i++) {
         if (PtInRect(&g_regions[i].rect, localPt)) {
-            result = &g_regions[i];
+            *outRegion = g_regions[i];
+            if (g_regions[i].url) {
+                outRegion->url = _wcsdup(g_regions[i].url);
+                if (!outRegion->url) {
+                    return FALSE;
+                }
+            }
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+BOOL IsClickableRegionAt(POINT pt) {
+    if (!BeginInteractiveUse()) return FALSE;
+    if (InterlockedCompareExchange(&g_regionCountVisible, 0, 0) <= 0) {
+        EndInteractiveUse();
+        return FALSE;
+    }
+
+    BOOL result = FALSE;
+    EnterCriticalSection(&g_interactiveCS);
+
+    POINT localPt = { pt.x - g_windowOffsetX, pt.y - g_windowOffsetY };
+    for (int i = 0; i < g_regionCount; i++) {
+        if (PtInRect(&g_regions[i].rect, localPt)) {
+            result = TRUE;
             break;
         }
     }
-    
+
     LeaveCriticalSection(&g_interactiveCS);
+    EndInteractiveUse();
     return result;
+}
+
+BOOL HandleRegionClickAt(POINT pt, HWND hwnd) {
+    if (!BeginInteractiveUse()) return FALSE;
+    if (InterlockedCompareExchange(&g_regionCountVisible, 0, 0) <= 0) {
+        EndInteractiveUse();
+        return FALSE;
+    }
+
+    ClickableRegion region = {0};
+    BOOL found = FALSE;
+
+    EnterCriticalSection(&g_interactiveCS);
+    POINT localPt = { pt.x - g_windowOffsetX, pt.y - g_windowOffsetY };
+    found = CopyClickableRegionAtLocked(localPt, &region);
+    LeaveCriticalSection(&g_interactiveCS);
+    EndInteractiveUse();
+
+    if (!found) {
+        return FALSE;
+    }
+
+    BOOL handled = HandleRegionClick(&region, hwnd);
+    if (region.url) {
+        free(region.url);
+    }
+    return handled;
 }
 
 BOOL HasClickableRegions(void) {
-    if (g_initialized != INTERACTIVE_CS_INITIALIZED) return FALSE;
-    BOOL result;
-    EnterCriticalSection(&g_interactiveCS);
-    result = (g_regionCount > 0);
-    LeaveCriticalSection(&g_interactiveCS);
-    return result;
+    if (!BeginInteractiveUse()) return FALSE;
+    BOOL hasRegions = InterlockedCompareExchange(&g_regionCountVisible, 0, 0) > 0;
+    EndInteractiveUse();
+    return hasRegions;
 }
 
 void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
-    if (g_initialized != INTERACTIVE_CS_INITIALIZED || !pixels) return;
+    if (!pixels) return;
+    if (!BeginInteractiveUse()) return;
+    if (InterlockedCompareExchange(&g_regionCountVisible, 0, 0) <= 0) {
+        EndInteractiveUse();
+        return;
+    }
     if (width <= 0 || height <= 0 ||
-        (size_t)width > ((size_t)-1) / (size_t)height / sizeof(DWORD)) return;
+        (size_t)width > ((size_t)-1) / (size_t)height / sizeof(DWORD)) {
+        EndInteractiveUse();
+        return;
+    }
+
+    RECT regions[MAX_CLICKABLE_REGIONS];
+    int regionCount = 0;
+
     EnterCriticalSection(&g_interactiveCS);
-    
+
+    regionCount = g_regionCount;
+    if (regionCount > MAX_CLICKABLE_REGIONS) {
+        regionCount = MAX_CLICKABLE_REGIONS;
+    }
+    for (int i = 0; i < regionCount; i++) {
+        regions[i] = g_regions[i].rect;
+    }
+
+    LeaveCriticalSection(&g_interactiveCS);
+    EndInteractiveUse();
+
     /* Fill each clickable region with minimal alpha so Windows sends mouse messages */
-    for (int i = 0; i < g_regionCount; i++) {
-        RECT* r = &g_regions[i].rect;
-        
+    for (int i = 0; i < regionCount; i++) {
+        RECT* r = &regions[i];
+
         /* Clamp to buffer bounds */
         int left = r->left < 0 ? 0 : r->left;
         int top = r->top < 0 ? 0 : r->top;
         int right = r->right > width ? width : r->right;
         int bottom = r->bottom > height ? height : r->bottom;
-        
+
+        if (left >= right || top >= bottom) {
+            continue;
+        }
+
         /* Fill region pixels with minimal alpha if they're transparent */
         for (int y = top; y < bottom; y++) {
             for (int x = left; x < right; x++) {
@@ -196,59 +344,113 @@ void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
             }
         }
     }
-    
-    LeaveCriticalSection(&g_interactiveCS);
 }
 
 /* ============================================================================
  * Click Handling
  * ============================================================================ */
 
-static BOOL GetPluginOutputPath(char* buffer, size_t bufferSize) {
-    DWORD result = ExpandEnvironmentStringsA(
-        "%LOCALAPPDATA%\\Catime\\resources\\plugins\\" PLUGIN_OUTPUT_FILENAME,
-        buffer, (DWORD)bufferSize);
-    return (result > 0 && result < bufferSize);
+static BOOL GetPluginOutputPathW(wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0 || bufferSize > (size_t)MAXDWORD) {
+        return FALSE;
+    }
+    buffer[0] = L'\0';
+
+    DWORD result = ExpandEnvironmentStringsW(
+        L"%LOCALAPPDATA%\\Catime\\resources\\plugins\\" PLUGIN_OUTPUT_FILENAME_W,
+        buffer,
+        (DWORD)bufferSize);
+    if (result == 0 || result >= bufferSize) {
+        buffer[0] = L'\0';
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL WritePluginOutputContentAtomicW(const wchar_t* filePath,
+                                            const char* content,
+                                            DWORD contentSize) {
+    if (!filePath || !content) return FALSE;
+
+    wchar_t tempPath[MAX_PATH];
+    int written = _snwprintf_s(tempPath, _countof(tempPath), _TRUNCATE,
+                               L"%ls.tmp", filePath);
+    if (written < 0) {
+        return FALSE;
+    }
+
+    HANDLE hFile = CreateFileW(tempPath, GENERIC_WRITE, CHECKBOX_OUTPUT_FILE_SHARE,
+                               NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    DWORD bytesWritten = 0;
+    BOOL writeOk = WriteFile(hFile, content, contentSize, &bytesWritten, NULL) &&
+                   bytesWritten == contentSize &&
+                   FlushFileBuffers(hFile);
+    CloseHandle(hFile);
+
+    if (!writeOk) {
+        DeleteFileW(tempPath);
+        return FALSE;
+    }
+
+    if (!MoveFileExW(tempPath, filePath,
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        DeleteFileW(tempPath);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
-    char filePath[MAX_PATH];
-    if (!GetPluginOutputPath(filePath, sizeof(filePath))) {
+    wchar_t filePath[MAX_PATH];
+    if (!GetPluginOutputPathW(filePath, MAX_PATH)) {
         return FALSE;
     }
-    
+
     /* Read file content */
-    FILE* f = fopen(filePath, "rb");
-    if (!f) return FALSE;
-    
-    fseek(f, 0, SEEK_END);
-    long fileSize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    
-    if (fileSize <= 0 || fileSize > 1024 * 1024) {
-        fclose(f);
+    HANDLE hFile = CreateFileW(filePath, GENERIC_READ, CHECKBOX_OUTPUT_FILE_SHARE,
+                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return FALSE;
+
+    LARGE_INTEGER fileSizeValue;
+    if (!GetFileSizeEx(hFile, &fileSizeValue) ||
+        fileSizeValue.QuadPart <= 0 ||
+        fileSizeValue.QuadPart > CHECKBOX_OUTPUT_MAX_BYTES) {
+        CloseHandle(hFile);
         return FALSE;
     }
-    
-    char* content = (char*)malloc(fileSize + 1);
+
+    DWORD contentSize = (DWORD)fileSizeValue.QuadPart;
+    char* content = (char*)malloc(contentSize + 1);
     if (!content) {
-        fclose(f);
+        CloseHandle(hFile);
         return FALSE;
     }
-    
-    size_t bytesRead = fread(content, 1, fileSize, f);
-    fclose(f);
+
+    DWORD bytesRead = 0;
+    BOOL readOk = ReadFile(hFile, content, contentSize, &bytesRead, NULL) &&
+                  bytesRead == contentSize;
+    CloseHandle(hFile);
+    if (!readOk) {
+        free(content);
+        return FALSE;
+    }
     content[bytesRead] = '\0';
     
     /* Find and toggle the checkbox at given index */
     int currentIndex = 0;
     char* p = content;
+    char* end = content + bytesRead;
     BOOL modified = FALSE;
-    
-    while (*p) {
+
+    while (end - p >= 6) {
         /* Look for checkbox pattern: "- [ ] " or "- [x] " or "- [X] " */
-        if (p[0] == '-' && p[1] == ' ' && p[2] == '[' && 
-            (p[3] == ' ' || p[3] == 'x' || p[3] == 'X') && 
+        if (p[0] == '-' && p[1] == ' ' && p[2] == '[' &&
+            (p[3] == ' ' || p[3] == 'x' || p[3] == 'X') &&
             p[4] == ']' && p[5] == ' ') {
             
             if (currentIndex == index) {
@@ -265,17 +467,13 @@ BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
         }
         p++;
     }
-    
+
     if (modified) {
-        /* Write back to file */
-        f = fopen(filePath, "wb");
-        if (f) {
-            fwrite(content, 1, bytesRead, f);
-            fclose(f);
+        if (WritePluginOutputContentAtomicW(filePath, content, bytesRead)) {
             LOG_INFO("Toggled checkbox %d in output file", index);
-            
+
             /* Force redraw */
-            if (hwnd) {
+            if (IsValidMarkdownInteractiveWindow(hwnd)) {
                 InvalidateRect(hwnd, NULL, TRUE);
             }
         } else {
@@ -287,7 +485,7 @@ BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
     return modified;
 }
 
-BOOL HandleRegionClick(const ClickableRegion* region, HWND hwnd) {
+static BOOL HandleRegionClick(const ClickableRegion* region, HWND hwnd) {
     if (!region) return FALSE;
     
     switch (region->type) {

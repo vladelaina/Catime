@@ -7,16 +7,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
 #include <wchar.h>
+
+#define MARKDOWN_LINK_TEXT_MAX_CHARS 2048
+#define MARKDOWN_LINK_URL_MAX_CHARS 2048
 
 /* ============================================================================
  * Helper Functions
  * ============================================================================ */
 
+static void IncrementCountSaturated(int* count) {
+    if (count && *count < INT_MAX) {
+        (*count)++;
+    }
+}
+
 BOOL ExtractWideString(const wchar_t* start, const wchar_t* end, wchar_t** output) {
     if (!start || !end || start >= end || !output) return FALSE;
 
     size_t length = end - start;
+    if (length > (SIZE_MAX / sizeof(wchar_t)) - 1) return FALSE;
     *output = (wchar_t*)malloc((length + 1) * sizeof(wchar_t));
     if (!*output) return FALSE;
 
@@ -38,8 +49,21 @@ int CountMarkdownLinks(const wchar_t* input) {
     while (*p) {
         if (*p == L'[') {
             const wchar_t* textEnd = wcschr(p + 1, L']');
-            if (textEnd && textEnd[1] == L'(' && wcschr(textEnd + 2, L')')) {
-                count++;
+            if (!textEnd) {
+                break;
+            }
+            if (textEnd[1] != L'(') {
+                p = textEnd + 1;
+                continue;
+            }
+            const wchar_t* parenEnd = wcschr(textEnd + 2, L')');
+            if (!parenEnd) {
+                break;
+            }
+            if (parenEnd) {
+                IncrementCountSaturated(&count);
+                p = parenEnd + 1;
+                continue;
             }
         }
         p++;
@@ -62,7 +86,7 @@ int CountMarkdownHeadings(const wchar_t* input) {
                 hashEnd++;
             }
             if (*hashEnd == L' ' && (hashEnd - p) >= 1 && (hashEnd - p) <= 6) {
-                count++;
+                IncrementCountSaturated(&count);
             }
         }
         atLineStart = (*p == L'\n' || *p == L'\r');
@@ -83,7 +107,7 @@ int CountMarkdownStyles(const wchar_t* input) {
             const wchar_t* end = p + 1;
             while (*end && *end != L'`') end++;
             if (*end == L'`' && end > p + 1) {
-                count++;
+                IncrementCountSaturated(&count);
                 p = end;
             }
         } else if (*p == L'*' || *p == L'_') {
@@ -106,7 +130,7 @@ int CountMarkdownStyles(const wchar_t* input) {
                                 endCheck++;
                             }
                             if (endCount == i && end > searchStart) {
-                                count++;
+                                IncrementCountSaturated(&count);
                                 p = endCheck - 1;
                                 break;
                             }
@@ -136,14 +160,14 @@ int CountMarkdownListItems(const wchar_t* input) {
             while (*p == L' ') p++;
             // Unordered: -, *, +
             if ((*p == L'-' || *p == L'*' || *p == L'+') && *(p + 1) == L' ') {
-                count++;
+                IncrementCountSaturated(&count);
             }
             // Ordered: digit(s) + '.' + ' '
             else {
                 const wchar_t* numCheck = p;
                 while (*numCheck >= L'0' && *numCheck <= L'9') numCheck++;
                 if (numCheck > p && *numCheck == L'.' && *(numCheck + 1) == L' ') {
-                    count++;
+                    IncrementCountSaturated(&count);
                 }
             }
         }
@@ -163,7 +187,7 @@ int CountMarkdownBlockquotes(const wchar_t* input) {
 
     while (*p) {
         if (atLineStart && *p == L'>') {
-            count++;
+            IncrementCountSaturated(&count);
         }
         atLineStart = (*p == L'\n' || *p == L'\r');
         p++;
@@ -181,11 +205,12 @@ int CountMarkdownColorTags(const wchar_t* input) {
     while (*p) {
         if (wcsncmp(p, L"<color:", 7) == 0) {
             const wchar_t* end = wcsstr(p, L"</color>");
-            if (end) {
-                count++;
-                p = end + 8;
-                continue;
+            if (!end) {
+                break;
             }
+            IncrementCountSaturated(&count);
+            p = end + 8;
+            continue;
         }
         p++;
     }
@@ -202,11 +227,12 @@ int CountMarkdownFontTags(const wchar_t* input) {
     while (*p) {
         if (wcsncmp(p, L"<font:", 6) == 0) {
             const wchar_t* end = wcsstr(p, L"</font>");
-            if (end) {
-                count++;
-                p = end + 7;
-                continue;
+            if (!end) {
+                break;
             }
+            IncrementCountSaturated(&count);
+            p = end + 7;
+            continue;
         }
         p++;
     }
@@ -339,27 +365,62 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
     int urlLen = (int)(actualUrlEnd - urlStart);
 
     /* Strip style markers from link text and record styles */
-    wchar_t cleanText[512];
-    int cleanLen = StripStyleMarkersWithStyles(linkTextStart, rawTextLen, cleanText, 512,
-                                               state, state->currentPos);
+    if (rawTextLen < 0 || urlLen < 0) return FALSE;
+    if (rawTextLen > MARKDOWN_LINK_TEXT_MAX_CHARS ||
+        urlLen > MARKDOWN_LINK_URL_MAX_CHARS) {
+        return FALSE;
+    }
+
+    wchar_t stackCleanText[512];
+    wchar_t* heapCleanText = NULL;
+    wchar_t* cleanText = stackCleanText;
+    int cleanTextCapacity = (int)_countof(stackCleanText);
+    if (rawTextLen >= cleanTextCapacity) {
+        if ((size_t)rawTextLen > ((size_t)-1 / sizeof(wchar_t)) - 1) {
+            return FALSE;
+        }
+        heapCleanText = (wchar_t*)malloc(((size_t)rawTextLen + 1) * sizeof(wchar_t));
+        if (!heapCleanText) {
+            return FALSE;
+        }
+        cleanText = heapCleanText;
+        cleanTextCapacity = rawTextLen + 1;
+    }
+
+    int originalStyleCount = state->styleCount;
+    int cleanLen = StripStyleMarkersWithStyles(linkTextStart, rawTextLen, cleanText,
+                                               cleanTextCapacity, state, state->currentPos);
 
     if (urlLen == 0) {
+        state->styleCount = originalStyleCount;
         wcsncpy(state->displayText + state->currentPos, cleanText, cleanLen);
         state->currentPos += cleanLen;
         *src = urlEnd + 1;
+        free(heapCleanText);
         return TRUE;
     }
 
-    if (!EnsureLinkCapacity(state)) return FALSE;
+    if (!EnsureLinkCapacity(state)) {
+        state->styleCount = originalStyleCount;
+        free(heapCleanText);
+        return FALSE;
+    }
 
     MarkdownLink* link = &state->links[state->linkCount];
 
     /* Store clean text (without markers) */
     link->linkText = _wcsdup(cleanText);
-    if (!link->linkText) return FALSE;
+    if (!link->linkText) {
+        state->styleCount = originalStyleCount;
+        free(heapCleanText);
+        return FALSE;
+    }
 
     if (!ExtractWideString(urlStart, actualUrlEnd, &link->linkUrl)) {
         free(link->linkText);
+        link->linkText = NULL;
+        state->styleCount = originalStyleCount;
+        free(heapCleanText);
         return FALSE;
     }
 
@@ -372,6 +433,7 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
     state->linkCount++;
 
     *src = urlEnd + 1;
+    free(heapCleanText);
     return TRUE;
 }
 
@@ -549,27 +611,34 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
     wcsncpy(colorSpec, colorStart, colorSpecLen);
     colorSpec[colorSpecLen] = L'\0';
     
-    if (!EnsureColorTagCapacity(state)) return FALSE;
-    
-    MarkdownColorTag* tag = &state->colorTags[state->colorTagCount];
-    tag->startPos = state->currentPos;
-    tag->colorCount = 0;
+    COLORREF colors[MAX_COLOR_TAG_COLORS];
+    int colorCount = 0;
     
     /* Parse colors (single or gradient separated by _) */
     wchar_t* ctx = NULL;
     wchar_t* token = wcstok_s(colorSpec, L"_", &ctx);
     
-    while (token && tag->colorCount < MAX_COLOR_TAG_COLORS) {
+    while (token && colorCount < MAX_COLOR_TAG_COLORS) {
         /* Skip leading whitespace */
         while (*token == L' ') token++;
         
         if (*token == L'#') {
-            tag->colors[tag->colorCount++] = ParseWideHexColor(token);
+            colors[colorCount++] = ParseWideHexColor(token);
         }
         token = wcstok_s(NULL, L"_", &ctx);
     }
     
-    if (tag->colorCount == 0) return FALSE;
+    if (colorCount == 0) return FALSE;
+    if (!EnsureColorTagCapacity(state)) return FALSE;
+
+    int colorTagIndex = state->colorTagCount++;
+    MarkdownColorTag* tag = &state->colorTags[colorTagIndex];
+    tag->startPos = state->currentPos;
+    tag->endPos = state->currentPos;
+    tag->colorCount = colorCount;
+    for (int i = 0; i < colorCount; i++) {
+        tag->colors[i] = colors[i];
+    }
     
     /* Parse content (between > and </color>) - supports nested tags and styles */
     const wchar_t* contentSrc = tagEnd + 1;
@@ -609,8 +678,7 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
         state->currentPos++;
     }
     
-    tag->endPos = state->currentPos;
-    state->colorTagCount++;
+    state->colorTags[colorTagIndex].endPos = state->currentPos;
     
     *src = closeTag + 8;  /* Skip </color> */
     return TRUE;
@@ -636,25 +704,28 @@ BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
     int fontNameLen = (int)(tagEnd - fontStart);
     if (fontNameLen <= 0 || fontNameLen >= MAX_FONT_NAME_LENGTH) return FALSE;
     
-    if (!EnsureFontTagCapacity(state)) return FALSE;
-    
-    MarkdownFontTag* tag = &state->fontTags[state->fontTagCount];
-    tag->startPos = state->currentPos;
-    
-    /* Copy font name */
-    wcsncpy(tag->fontName, fontStart, fontNameLen);
-    tag->fontName[fontNameLen] = L'\0';
+    wchar_t fontName[MAX_FONT_NAME_LENGTH];
+    wcsncpy(fontName, fontStart, fontNameLen);
+    fontName[fontNameLen] = L'\0';
     
     /* Trim whitespace from font name */
-    wchar_t* p = tag->fontName;
+    wchar_t* p = fontName;
     while (*p == L' ') p++;
-    if (p != tag->fontName) {
-        memmove(tag->fontName, p, (wcslen(p) + 1) * sizeof(wchar_t));
+    if (p != fontName) {
+        memmove(fontName, p, (wcslen(p) + 1) * sizeof(wchar_t));
     }
-    int len = (int)wcslen(tag->fontName);
-    while (len > 0 && tag->fontName[len - 1] == L' ') {
-        tag->fontName[--len] = L'\0';
+    int len = (int)wcslen(fontName);
+    while (len > 0 && fontName[len - 1] == L' ') {
+        fontName[--len] = L'\0';
     }
+    if (len == 0) return FALSE;
+    if (!EnsureFontTagCapacity(state)) return FALSE;
+
+    int fontTagIndex = state->fontTagCount++;
+    MarkdownFontTag* tag = &state->fontTags[fontTagIndex];
+    tag->startPos = state->currentPos;
+    tag->endPos = state->currentPos;
+    wcscpy_s(tag->fontName, MAX_FONT_NAME_LENGTH, fontName);
     
     /* Parse content (between > and </font>) - supports nested tags and styles */
     const wchar_t* contentSrc = tagEnd + 1;
@@ -694,8 +765,7 @@ BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
         state->currentPos++;
     }
     
-    tag->endPos = state->currentPos;
-    state->fontTagCount++;
+    state->fontTags[fontTagIndex].endPos = state->currentPos;
     
     *src = closeTag + 7;  /* Skip </font> */
     return TRUE;

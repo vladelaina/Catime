@@ -18,6 +18,7 @@
 #define PROGMAN_CLASS L"Progman"
 #define WORKERW_CLASS L"WorkerW"
 #define SHELLDLL_CLASS L"SHELLDLL_DefView"
+#define TASKBAR_CLASS L"Shell_TrayWnd"
 #define TOPMOST_APPLY_RETRY_INTERVAL_MS 500
 #define TOPMOST_APPLY_MAX_RETRIES 5
 #define TOPMOST_APPLY_RETRY_COOLDOWN_MS 30000
@@ -37,6 +38,7 @@ static int s_topmostApplyRetriesRemaining = 0;
 static BOOL s_topmostApplyRetryActive = FALSE;
 static BOOL s_topmostApplyRetryTarget = TRUE;
 static DWORD s_topmostApplyRetryCooldownUntil = 0;
+static BOOL s_topmostVisibilityRestoreActive = FALSE;
 static BOOL s_windowIntentionallyHidden = FALSE;
 
 static BOOL IsTopmostRetryCoolingDown(BOOL targetTopmost) {
@@ -58,7 +60,6 @@ static HWND FindDesktopWorkerWindow(void) {
     while (hWorkerW) {
         HWND hView = FindWindowExW(hWorkerW, NULL, SHELLDLL_CLASS, NULL);
         if (hView) {
-            LOG_INFO("Found desktop WorkerW window");
             return hWorkerW;
         }
         hWorkerW = FindWindowExW(NULL, hWorkerW, WORKERW_CLASS, NULL);
@@ -74,6 +75,19 @@ static BOOL IsValidWindowHandle(HWND hwnd, const char* caller) {
         return FALSE;
     }
     return TRUE;
+}
+
+static BOOL IsWindowOfClass(HWND hwnd, const wchar_t* className) {
+    if (!hwnd || !IsWindow(hwnd) || !className) {
+        return FALSE;
+    }
+
+    wchar_t actualClass[64] = {0};
+    if (GetClassNameW(hwnd, actualClass, _countof(actualClass)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(actualClass, className) == 0;
 }
 
 static void ShowWindowNoActivateIfNeeded(HWND hwnd) {
@@ -137,19 +151,19 @@ static void LogTopmostDiagnostics(HWND hwnd, const char* phase, BOOL requestedTo
     BOOL actualTopmost = FALSE;
     BOOL hasActual = GetWindowTopmostState(hwnd, &actualTopmost);
 
-    LOG_INFO("Topmost diagnostics [%s]: requested=%d preference=%d runtimeTarget=%d actualKnown=%d actual=%d exStyle=0x%08lX exErr=%lu owner=0x%p editMode=%d visible=%d iconic=%d",
-             phase ? phase : "unknown",
-             requestedTopmost,
-             CLOCK_WINDOW_TOPMOST,
-             CLOCK_WINDOW_EFFECTIVE_TOPMOST,
-             hasActual,
-             actualTopmost,
-             (unsigned long)exStyle,
-             exStyleErr,
-             owner,
-             CLOCK_EDIT_MODE,
-             IsWindowVisible(hwnd),
-             IsIconic(hwnd));
+    LOG_WARNING("Topmost diagnostics [%s]: requested=%d preference=%d runtimeTarget=%d actualKnown=%d actual=%d exStyle=0x%08lX exErr=%lu owner=0x%p editMode=%d visible=%d iconic=%d",
+                phase ? phase : "unknown",
+                requestedTopmost,
+                CLOCK_WINDOW_TOPMOST,
+                CLOCK_WINDOW_EFFECTIVE_TOPMOST,
+                hasActual,
+                actualTopmost,
+                (unsigned long)exStyle,
+                exStyleErr,
+                owner,
+                CLOCK_EDIT_MODE,
+                IsWindowVisible(hwnd),
+                IsIconic(hwnd));
 }
 
 static BOOL ScheduleTopmostApplyRetry(HWND hwnd, BOOL targetTopmost) {
@@ -164,15 +178,24 @@ static BOOL ScheduleTopmostApplyRetry(HWND hwnd, BOOL targetTopmost) {
     if (!s_topmostApplyRetryActive || s_topmostApplyRetryTarget != targetTopmost) {
         s_topmostApplyRetriesRemaining = TOPMOST_APPLY_MAX_RETRIES;
         s_topmostApplyRetryTarget = targetTopmost;
-        s_topmostApplyRetryActive = TRUE;
         s_topmostApplyRetryCooldownUntil = 0;
     }
 
     if (!SetTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY, TOPMOST_APPLY_RETRY_INTERVAL_MS, NULL)) {
         LOG_WARNING("Failed to schedule topmost apply retry (err=%lu)", GetLastError());
+        s_topmostApplyRetriesRemaining = 0;
+        s_topmostApplyRetryActive = FALSE;
         return FALSE;
     }
+    s_topmostApplyRetryActive = TRUE;
     return TRUE;
+}
+
+static void CancelTopmostVisibilityRestore(HWND hwnd) {
+    if (s_topmostVisibilityRestoreActive && hwnd && IsWindow(hwnd)) {
+        KillTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE);
+    }
+    s_topmostVisibilityRestoreActive = FALSE;
 }
 
 static BOOL WindowShouldBeVisibleForCurrentMode(void) {
@@ -196,12 +219,18 @@ static BOOL ScheduleTopmostVisibilityRestore(HWND hwnd, const char* reason) {
         return FALSE;
     }
 
+    if (s_topmostVisibilityRestoreActive) {
+        return TRUE;
+    }
+
     LOG_WARNING("Topmost window visibility changed externally; scheduling restore (%s)",
                 reason ? reason : "unknown");
     if (!SetTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE, 100, NULL)) {
         LOG_WARNING("Failed to schedule topmost visibility restore (err=%lu)", GetLastError());
+        s_topmostVisibilityRestoreActive = FALSE;
         return FALSE;
     }
+    s_topmostVisibilityRestoreActive = TRUE;
     return TRUE;
 }
 
@@ -212,7 +241,6 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
     DWORD zOrderError = ERROR_SUCCESS;
     BOOL actualTopmost = FALSE;
     BOOL hasActualTopmost = FALSE;
-    BOOL persisted = TRUE;
     BOOL suppressFailureDiagnostics = !updatePreference && !persistConfig && !updateRuntimeTarget &&
                                       IsTopmostRetryCoolingDown(topmost);
 
@@ -227,13 +255,11 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
         CLOCK_WINDOW_EFFECTIVE_TOPMOST = topmost;
     }
     if (persistConfig) {
-        persisted = WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
+        BOOL persisted = WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
         if (!persisted) {
             LOG_WARNING("Topmost preference updated in memory but failed to persist config");
         }
     }
-
-    LogTopmostDiagnostics(hwnd, "before-apply", topmost);
 
     if (topmost) {
         ownerApplied = TrySetWindowOwner(hwnd, NULL);
@@ -246,7 +272,6 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
         HWND hDesktop = FindDesktopWorkerWindow();
         if (hDesktop) {
             ownerApplied = TrySetWindowOwner(hwnd, hDesktop);
-            LOG_INFO("Window parented to desktop anchor for Win+D protection");
         } else {
             LOG_WARNING("Desktop anchor not found, clearing parent");
             ownerApplied = TrySetWindowOwner(hwnd, NULL);
@@ -283,9 +308,6 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
         s_topmostApplyRetryActive = FALSE;
         s_topmostApplyRetryCooldownUntil = 0;
         KillTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY);
-        LOG_INFO("Window topmost state applied%s",
-                 persistConfig ? (persisted ? " and saved" : " but config save failed") : "");
-        LogTopmostDiagnostics(hwnd, "after-apply-success", topmost);
     } else {
         LOG_WARNING("Topmost apply incomplete: requested=%d zOrder=%d owner=%d style=%d actualKnown=%d actual=%d (zErr=%lu)",
                     topmost, zOrderApplied, ownerApplied, styleApplied,
@@ -310,23 +332,17 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
 BOOL SetWindowTopmost(HWND hwnd, BOOL topmost) {
     if (!IsValidWindowHandle(hwnd, "SetWindowTopmost")) return FALSE;
 
-    LOG_INFO("Setting window topmost: %s", topmost ? "true" : "false");
-
     return ApplyWindowTopmostStateInternal(hwnd, topmost, TRUE, TRUE, TRUE, TRUE);
 }
 
 BOOL SetWindowTopmostFromConfig(HWND hwnd, BOOL topmost) {
     if (!IsValidWindowHandle(hwnd, "SetWindowTopmostFromConfig")) return FALSE;
 
-    LOG_INFO("Applying configured window topmost: %s", topmost ? "true" : "false");
-
     return ApplyWindowTopmostStateInternal(hwnd, topmost, FALSE, TRUE, TRUE, TRUE);
 }
 
 BOOL SetWindowTopmostTransient(HWND hwnd, BOOL topmost) {
     if (!IsValidWindowHandle(hwnd, "SetWindowTopmostTransient")) return FALSE;
-
-    LOG_INFO("Applying transient window topmost: %s", topmost ? "true" : "false");
 
     return ApplyWindowTopmostStateInternal(hwnd, topmost, FALSE, FALSE, TRUE, TRUE);
 }
@@ -340,6 +356,7 @@ void EnsureWindowVisibleWithTopmostState(HWND hwnd) {
     if (!IsValidWindowHandle(hwnd, "EnsureWindowVisibleWithTopmostState")) return;
 
     s_windowIntentionallyHidden = FALSE;
+    CancelTopmostVisibilityRestore(hwnd);
     ShowWindowNoActivateIfNeeded(hwnd);
 
     RefreshWindowTopmostState(hwnd);
@@ -354,14 +371,20 @@ void HideWindowIntentionally(HWND hwnd) {
     if (!IsValidWindowHandle(hwnd, "HideWindowIntentionally")) return;
 
     s_windowIntentionallyHidden = TRUE;
+    CancelTopmostVisibilityRestore(hwnd);
     ShowWindow(hwnd, SW_HIDE);
 }
 
 BOOL HandleTopmostVisibilityChange(HWND hwnd, const WINDOWPOS* pwp) {
     if (!IsValidWindowHandle(hwnd, "HandleTopmostVisibilityChange")) return FALSE;
 
+    if (!pwp) {
+        s_topmostVisibilityRestoreActive = FALSE;
+    }
+
     if (pwp && (pwp->flags & SWP_SHOWWINDOW)) {
         s_windowIntentionallyHidden = FALSE;
+        CancelTopmostVisibilityRestore(hwnd);
         return FALSE;
     }
 
@@ -384,7 +407,6 @@ BOOL HandleTopmostVisibilityChange(HWND hwnd, const WINDOWPOS* pwp) {
         return ScheduleTopmostVisibilityRestore(hwnd, "window-pos-hide");
     }
 
-    LOG_INFO("Restoring topmost window visibility after external hide");
     EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     return TRUE;
@@ -398,6 +420,7 @@ BOOL HandleTopmostHiddenEvent(HWND hwnd) {
 void HandleTopmostShownEvent(HWND hwnd) {
     if (!IsValidWindowHandle(hwnd, "HandleTopmostShownEvent")) return;
     s_windowIntentionallyHidden = FALSE;
+    CancelTopmostVisibilityRestore(hwnd);
 }
 
 BOOL HandleTopmostMinimizeCommand(HWND hwnd, UINT sysCommand) {
@@ -408,7 +431,6 @@ BOOL HandleTopmostMinimizeCommand(HWND hwnd, UINT sysCommand) {
         return FALSE;
     }
 
-    LOG_INFO("Blocking minimize request while topmost mode is enabled");
     EnsureWindowVisibleWithTopmostState(hwnd);
     return TRUE;
 }
@@ -421,7 +443,6 @@ BOOL HandleTopmostSizeEvent(HWND hwnd, WPARAM sizeType) {
     if (s_restoringTopmostMinimize) return TRUE;
 
     s_restoringTopmostMinimize = TRUE;
-    LOG_INFO("Topmost window was minimized, restoring visibility");
     EnsureWindowVisibleWithTopmostState(hwnd);
     s_restoringTopmostMinimize = FALSE;
     return TRUE;
@@ -430,13 +451,10 @@ BOOL HandleTopmostSizeEvent(HWND hwnd, WPARAM sizeType) {
 void ReattachToDesktop(HWND hwnd) {
     if (!IsValidWindowHandle(hwnd, "ReattachToDesktop")) return;
 
-    LOG_INFO("Reattaching window to desktop level");
-    
     HWND hDesktop = FindDesktopWorkerWindow();
     
     if (hDesktop) {
         TrySetWindowOwner(hwnd, hDesktop);
-        LOG_INFO("Window owner set to desktop anchor");
     } else {
         TrySetWindowOwner(hwnd, NULL);
         LOG_WARNING("Desktop worker not found, owner cleared");
@@ -464,8 +482,8 @@ BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
     if (!GetWindowRect(hwnd, &rcWindow)) return FALSE;
     
     /* Get taskbar position */
-    if (!s_taskbarHwnd || !IsWindow(s_taskbarHwnd)) {
-        s_taskbarHwnd = FindWindowW(L"Shell_TrayWnd", NULL);
+    if (!IsWindowOfClass(s_taskbarHwnd, TASKBAR_CLASS)) {
+        s_taskbarHwnd = FindWindowW(TASKBAR_CLASS, NULL);
     }
     if (!s_taskbarHwnd) return FALSE;
     
@@ -517,13 +535,10 @@ BOOL HandleTopmostApplyRetry(HWND hwnd) {
         return TRUE;
     }
 
-    LOG_INFO("Retrying topmost apply: runtimeTarget=%d attemptsRemaining=%d",
-             CLOCK_WINDOW_EFFECTIVE_TOPMOST, s_topmostApplyRetriesRemaining);
     s_topmostApplyRetriesRemaining--;
 
     if (ApplyWindowTopmostStateInternal(hwnd, CLOCK_WINDOW_EFFECTIVE_TOPMOST,
                                         FALSE, FALSE, FALSE, FALSE)) {
-        LOG_INFO("Topmost apply retry succeeded");
         s_topmostApplyRetriesRemaining = 0;
         s_topmostApplyRetryActive = FALSE;
         s_topmostApplyRetryCooldownUntil = 0;
@@ -537,6 +552,7 @@ BOOL HandleTopmostApplyRetry(HWND hwnd) {
     } else {
         if (!SetTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY, TOPMOST_APPLY_RETRY_INTERVAL_MS, NULL)) {
             LOG_WARNING("Failed to continue topmost apply retry timer (err=%lu)", GetLastError());
+            s_topmostApplyRetriesRemaining = 0;
             s_topmostApplyRetryActive = FALSE;
         }
     }
@@ -544,3 +560,14 @@ BOOL HandleTopmostApplyRetry(HWND hwnd) {
     return TRUE;
 }
 
+void CleanupWindowDesktopIntegrationState(HWND hwnd) {
+    if (hwnd && IsWindow(hwnd)) {
+        KillTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY);
+        KillTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE);
+    }
+
+    s_topmostApplyRetriesRemaining = 0;
+    s_topmostApplyRetryActive = FALSE;
+    s_topmostApplyRetryCooldownUntil = 0;
+    s_topmostVisibilityRestoreActive = FALSE;
+}

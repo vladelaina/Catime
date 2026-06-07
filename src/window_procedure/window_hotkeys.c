@@ -24,9 +24,13 @@
 #define HOTKEYF_ALT     0x04
 #endif
 
+#ifndef VK_IME_SHIFT
+#define VK_IME_SHIFT 0xE5
+#endif
+
 extern wchar_t inputText[256];
 extern HWND g_hwndInputDialog;
-extern void WriteConfigShowMilliseconds(BOOL showMilliseconds);
+extern BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
 
 /* ============================================================================
  * Hotkey Actions
@@ -148,6 +152,86 @@ static HotkeyConfig g_hotkeyConfigs[] = {
     #undef X
 };
 
+static HWND g_registeredHotkeyHwnd = NULL;
+
+static void LoadHotkeyConfigValues(const char* configPath, WORD* values, size_t count) {
+    if (!configPath || !values) return;
+
+    for (size_t i = 0; i < count && i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
+        char hotkeyStr[64];
+        ReadIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey,
+                      "None", hotkeyStr, sizeof(hotkeyStr), configPath);
+        values[i] = StringToHotkey(hotkeyStr);
+    }
+}
+
+static BOOL HotkeyConfigValuesMatch(const WORD* values, size_t count) {
+    if (!values || count != ARRAY_SIZE(g_hotkeyConfigs)) return FALSE;
+
+    for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
+        if (g_hotkeyConfigs[i].value != values[i]) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+static BOOL HasAnyHotkeyValue(const WORD* values, size_t count) {
+    if (!values) return FALSE;
+
+    for (size_t i = 0; i < count; i++) {
+        if (values[i] != 0) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+static BOOL IsInvalidIMEHotkeyValue(WORD hotkey) {
+    return (LOBYTE(hotkey) == VK_IME_SHIFT && HIBYTE(hotkey) == HOTKEYF_SHIFT);
+}
+
+static BOOL IsRestrictedSingleHotkeyValue(WORD hotkey) {
+    if (hotkey == 0) return FALSE;
+
+    BYTE vk = LOBYTE(hotkey);
+    BYTE modifiers = HIBYTE(hotkey);
+    if (modifiers != 0) return FALSE;
+
+    if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9') ||
+        (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9)) {
+        return TRUE;
+    }
+
+    switch (vk) {
+        case VK_OEM_1: case VK_OEM_PLUS: case VK_OEM_COMMA:
+        case VK_OEM_MINUS: case VK_OEM_PERIOD: case VK_OEM_2:
+        case VK_OEM_3: case VK_OEM_4: case VK_OEM_5:
+        case VK_OEM_6: case VK_OEM_7: case VK_SPACE:
+        case VK_RETURN: case VK_ESCAPE: case VK_TAB:
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+static BOOL SanitizeLoadedHotkeyValues(WORD* values, size_t count) {
+    if (!values) return FALSE;
+
+    BOOL changed = FALSE;
+    for (size_t i = 0; i < count; i++) {
+        if (IsInvalidIMEHotkeyValue(values[i]) ||
+            IsRestrictedSingleHotkeyValue(values[i])) {
+            values[i] = 0;
+            changed = TRUE;
+        }
+    }
+
+    return changed;
+}
+
 static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
     if (config->value == 0) return FALSE;
 
@@ -174,21 +258,31 @@ static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
 BOOL RegisterGlobalHotkeys(HWND hwnd) {
     extern void HotkeyToString(WORD hotkey, char* out, size_t size);
 
-    LOG_INFO("Registering global hotkeys...");
-    UnregisterGlobalHotkeys(hwnd);
-
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
+    WORD desiredValues[ARRAY_SIZE(g_hotkeyConfigs)] = {0};
+    LoadHotkeyConfigValues(config_path, desiredValues, ARRAY_SIZE(desiredValues));
+    BOOL configChanged = SanitizeLoadedHotkeyValues(desiredValues, ARRAY_SIZE(desiredValues));
+
+    if (!configChanged &&
+        g_registeredHotkeyHwnd == hwnd &&
+        HotkeyConfigValuesMatch(desiredValues, ARRAY_SIZE(desiredValues))) {
+        return HasAnyHotkeyValue(desiredValues, ARRAY_SIZE(desiredValues));
+    }
+
+    LOG_INFO("Registering global hotkeys...");
+    if (g_registeredHotkeyHwnd) {
+        UnregisterGlobalHotkeys(g_registeredHotkeyHwnd);
+    } else {
+        UnregisterGlobalHotkeys(hwnd);
+    }
+
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
-        char hotkeyStr[64];
-        ReadIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey,
-                     "None", hotkeyStr, sizeof(hotkeyStr), config_path);
-        g_hotkeyConfigs[i].value = StringToHotkey(hotkeyStr);
+        g_hotkeyConfigs[i].value = desiredValues[i];
     }
 
     BOOL anyRegistered = FALSE;
-    BOOL configChanged = FALSE;
     int successCount = 0;
     int failCount = 0;
 
@@ -209,13 +303,20 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
 
     if (configChanged) {
         LOG_INFO("Updating configuration to clear failed hotkeys");
+        char hotkeyStrings[ARRAY_SIZE(g_hotkeyConfigs)][64];
+        IniKeyValue updates[ARRAY_SIZE(g_hotkeyConfigs)];
+
         for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
-            char hotkeyStr[64];
-            HotkeyToString(g_hotkeyConfigs[i].value, hotkeyStr, sizeof(hotkeyStr));
-            WriteIniString(INI_SECTION_HOTKEYS, g_hotkeyConfigs[i].configKey,
-                          hotkeyStr, config_path);
+            HotkeyToString(g_hotkeyConfigs[i].value, hotkeyStrings[i],
+                           sizeof(hotkeyStrings[i]));
+            updates[i].section = INI_SECTION_HOTKEYS;
+            updates[i].key = g_hotkeyConfigs[i].configKey;
+            updates[i].value = hotkeyStrings[i];
         }
+        WriteIniMultipleAtomic(config_path, updates, ARRAY_SIZE(g_hotkeyConfigs));
     }
+
+    g_registeredHotkeyHwnd = hwnd;
 
     LOG_INFO("Hotkey registration completed: %d successful, %d failed\n", successCount, failCount);
     return anyRegistered;
@@ -224,5 +325,8 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
 void UnregisterGlobalHotkeys(HWND hwnd) {
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); i++) {
         UnregisterHotKey(hwnd, g_hotkeyConfigs[i].id);
+    }
+    if (!hwnd || g_registeredHotkeyHwnd == hwnd) {
+        g_registeredHotkeyHwnd = NULL;
     }
 }

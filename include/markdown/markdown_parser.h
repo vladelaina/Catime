@@ -102,7 +102,7 @@ typedef struct {
 /**
  * @brief Maximum font name length
  */
-#define MAX_FONT_NAME_LENGTH 64
+#define MAX_FONT_NAME_LENGTH MAX_PATH
 
 /**
  * @brief Parsed font tag <font:FontName>text</font>
@@ -368,6 +368,7 @@ BOOL EnsureBlockquoteCapacity(ParseState* state);
 BOOL EnsureColorTagCapacity(ParseState* state);
 BOOL EnsureFontTagCapacity(ParseState* state);
 void CleanupParseState(ParseState* state);
+void DetachParseState(ParseState* state);
 int GetInitialLinkCapacity(int estimatedCount);
 int GetInitialHeadingCapacity(int estimatedCount);
 int GetInitialStyleCapacity(int estimatedCount);

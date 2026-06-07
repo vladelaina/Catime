@@ -5,6 +5,7 @@
 
 #include "utils/string_convert.h"
 #include <stdlib.h>
+#include <limits.h>
 
 /* ============================================================================
  * Size calculation helpers
@@ -27,17 +28,31 @@ size_t WideToUtf8Size(const wchar_t* wide) {
  * ============================================================================ */
 
 BOOL Utf8ToWide(const char* utf8, wchar_t* wide, size_t wideSize) {
-    if (!utf8 || !wide || wideSize == 0) return FALSE;
+    if (!wide || wideSize == 0) return FALSE;
+    wide[0] = L'\0';
+    if (!utf8) return FALSE;
+    if (wideSize > (size_t)INT_MAX) return FALSE;
     
     int result = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, (int)wideSize);
-    return result > 0;
+    if (result <= 0) {
+        wide[0] = L'\0';
+        return FALSE;
+    }
+    return TRUE;
 }
 
 BOOL WideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Size) {
-    if (!wide || !utf8 || utf8Size == 0) return FALSE;
+    if (!utf8 || utf8Size == 0) return FALSE;
+    utf8[0] = '\0';
+    if (!wide) return FALSE;
+    if (utf8Size > (size_t)INT_MAX) return FALSE;
     
     int result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, (int)utf8Size, NULL, NULL);
-    return result > 0;
+    if (result <= 0) {
+        utf8[0] = '\0';
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /* ============================================================================
@@ -49,6 +64,7 @@ wchar_t* Utf8ToWideAlloc(const char* utf8) {
     
     size_t size = Utf8ToWideSize(utf8);
     if (size == 0) return NULL;
+    if (size > (size_t)-1 / sizeof(wchar_t)) return NULL;
     
     wchar_t* wide = (wchar_t*)malloc(size * sizeof(wchar_t));
     if (!wide) return NULL;

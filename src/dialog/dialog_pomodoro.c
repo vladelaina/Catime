@@ -9,18 +9,143 @@
 #include "dialog/dialog_input.h"
 #include "language.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "dialog/dialog_language.h"
 #include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <strsafe.h>
 #include <string.h>
 #include <stdio.h>
+#include <wctype.h>
+
+#define POMODORO_OPTIONS_MAX_INPUT_CHARS 512
+#define POMODORO_OPTIONS_MAX_INPUT_BYTES ((POMODORO_OPTIONS_MAX_INPUT_CHARS * 4) + 1)
+#define POMODORO_OPTIONS_TOKEN_DELIMITERS " \t\r\n"
 
 /* ============================================================================
  * Global State (defined in timer.c)
  * ============================================================================ */
 
 /* Pomodoro configuration is now in g_AppConfig */
+
+static BOOL ConvertPomodoroInputToUtf8(const wchar_t* source, char* dest, size_t destSize) {
+    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
+        return FALSE;
+    }
+
+    dest[0] = '\0';
+    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
+    if (required <= 0 || (size_t)required > destSize) {
+        return FALSE;
+    }
+
+    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
+                               (int)destSize, NULL, NULL) > 0;
+}
+
+static BOOL ParsePomodoroLoopCount(const wchar_t* input, int* loopCount) {
+    if (!input || !loopCount) return FALSE;
+
+    int value = 0;
+    BOOL hasDigit = FALSE;
+
+    for (int i = 0; input[i]; i++) {
+        if (iswspace(input[i])) {
+            continue;
+        }
+
+        if (!iswdigit(input[i])) {
+            return FALSE;
+        }
+
+        hasDigit = TRUE;
+        value = value * 10 + (int)(input[i] - L'0');
+        if (value > 100) {
+            return FALSE;
+        }
+    }
+
+    if (!hasDigit || value < 1) {
+        return FALSE;
+    }
+
+    *loopCount = value;
+    return TRUE;
+}
+
+static BOOL AppendTextW(wchar_t* dest, size_t destBytes, const wchar_t* text) {
+    if (!dest || destBytes == 0 || !text) {
+        return FALSE;
+    }
+
+    return SUCCEEDED(StringCbCatW(dest, destBytes, text));
+}
+
+static BOOL BuildPomodoroOptionsDisplay(wchar_t* dest, size_t destBytes) {
+    if (!dest || destBytes == 0) {
+        return FALSE;
+    }
+
+    dest[0] = L'\0';
+    int timesCount = g_AppConfig.pomodoro.times_count;
+    if (timesCount <= 0 ||
+        timesCount > MAX_POMODORO_TIMES ||
+        timesCount > (int)_countof(g_AppConfig.pomodoro.times)) {
+        return FALSE;
+    }
+
+    for (int i = 0; i < timesCount; i++) {
+        if (g_AppConfig.pomodoro.times[i] <= 0 ||
+            g_AppConfig.pomodoro.times[i] > MAX_POMODORO_OPTION_SECONDS) {
+            return FALSE;
+        }
+
+        char timeStrA[32] = {0};
+        wchar_t timeStr[32] = {0};
+        Dialog_FormatSecondsToString(g_AppConfig.pomodoro.times[i],
+                                     timeStrA, sizeof(timeStrA));
+        if (MultiByteToWideChar(CP_UTF8, 0, timeStrA, -1,
+                                timeStr, _countof(timeStr)) <= 0) {
+            return FALSE;
+        }
+
+        if (i > 0 && !AppendTextW(dest, destBytes, L" ")) {
+            return FALSE;
+        }
+        if (!AppendTextW(dest, destBytes, timeStr)) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+static BOOL BuildPomodoroOptionsFromInput(char* inputUtf8, int* times,
+                                          int* count) {
+    if (!inputUtf8 || !times || !count) {
+        return FALSE;
+    }
+
+    *count = 0;
+    char* token = strtok(inputUtf8, POMODORO_OPTIONS_TOKEN_DELIMITERS);
+    while (token) {
+        if (*count >= MAX_POMODORO_TIMES) {
+            return FALSE;
+        }
+
+        int seconds = 0;
+        if (!TimeParser_ParseBasic(token, &seconds) ||
+            seconds <= 0 || seconds > MAX_POMODORO_OPTION_SECONDS) {
+            return FALSE;
+        }
+
+        times[*count] = seconds;
+        (*count)++;
+        token = strtok(NULL, POMODORO_OPTIONS_TOKEN_DELIMITERS);
+    }
+
+    return *count > 0;
+}
 
 /* ============================================================================
  * Pomodoro Loop Dialog Implementation
@@ -102,24 +227,14 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
                     return TRUE;
                 }
 
-                if (!Dialog_IsValidNumberInput(input_str)) {
-                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
-                    return TRUE;
-                }
-
-                wchar_t cleanStr[16] = {0};
-                int cleanIndex = 0;
-                for (int i = 0; input_str[i]; i++) {
-                    if (iswdigit(input_str[i])) {
-                        cleanStr[cleanIndex++] = input_str[i];
-                    }
-                }
-
                 /* Range: 1-100 */
-                int new_loop_count = _wtoi(cleanStr);
-                if (new_loop_count >= 1 && new_loop_count <= 100) {
-                    extern void WriteConfigPomodoroLoopCount(int loop_count);
-                    WriteConfigPomodoroLoopCount(new_loop_count);
+                int new_loop_count = 0;
+                if (ParsePomodoroLoopCount(input_str, &new_loop_count)) {
+                    extern BOOL WriteConfigPomodoroLoopCount(int loop_count);
+                    if (!WriteConfigPomodoroLoopCount(new_loop_count)) {
+                        Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                        return TRUE;
+                    }
                     DestroyWindow(hwndDlg);
                 } else {
                     Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
@@ -144,9 +259,9 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
                 if (hwndEdit) {
                     Dialog_UnsubclassEdit(hwndEdit, ctx);
                 }
-                Dialog_FreeContext(ctx);
+                Dialog_DestroyContext(hwndDlg);
             }
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_POMODORO_LOOP);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_POMODORO_LOOP, hwndDlg);
             break;
 
         case WM_CLOSE:
@@ -193,22 +308,15 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             Dialog_SubclassEdit(hwndEdit, ctx);
-
-            wchar_t currentOptions[256] = {0};
-            for (int i = 0; i < g_AppConfig.pomodoro.times_count; i++) {
-                char timeStrA[32];
-                wchar_t timeStr[32];
-                Dialog_FormatSecondsToString(g_AppConfig.pomodoro.times[i], timeStrA, sizeof(timeStrA));
-                MultiByteToWideChar(CP_UTF8, 0, timeStrA, -1, timeStr, 32);
-                StringCbCatW(currentOptions, sizeof(currentOptions), timeStr);
-                StringCbCatW(currentOptions, sizeof(currentOptions), L" ");
+            if (hwndEdit) {
+                SendMessageW(hwndEdit, EM_SETLIMITTEXT,
+                             POMODORO_OPTIONS_MAX_INPUT_CHARS, 0);
             }
 
-            if (wcslen(currentOptions) > 0 && currentOptions[wcslen(currentOptions) - 1] == L' ') {
-                currentOptions[wcslen(currentOptions) - 1] = L'\0';
+            wchar_t currentOptions[POMODORO_OPTIONS_MAX_INPUT_CHARS + 1] = {0};
+            if (BuildPomodoroOptionsDisplay(currentOptions, sizeof(currentOptions))) {
+                SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
             }
-
-            SetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, currentOptions);
 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
 
@@ -233,52 +341,38 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK || LOWORD(wParam) == IDOK) {
-                char input[256] = {0};
+                char input[POMODORO_OPTIONS_MAX_INPUT_BYTES] = {0};
 
-                wchar_t winput[256];
-                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, winput, sizeof(winput)/sizeof(wchar_t));
-                WideCharToMultiByte(CP_UTF8, 0, winput, -1, input, sizeof(input), NULL, NULL);
+                wchar_t winput[POMODORO_OPTIONS_MAX_INPUT_CHARS + 1] = {0};
+                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, winput, _countof(winput));
+                if (!ConvertPomodoroInputToUtf8(winput, input, sizeof(input))) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
+                }
 
                 if (Dialog_IsEmptyOrWhitespaceA(input)) {
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
-                const char* token;
-                char input_copy[256];
-                StringCbCopyA(input_copy, sizeof(input_copy), input);
-
-                int times[MAX_POMODORO_TIMES] = {0};
-                int times_count = 0;
-                BOOL hasInvalidInput = FALSE;
-
-                token = strtok(input_copy, " ");
-                while (token && times_count < MAX_POMODORO_TIMES) {
-                    int seconds = 0;
-                    if (TimeParser_ParseBasic(token, &seconds)) {
-                        times[times_count++] = seconds;
-                    } else {
-                        hasInvalidInput = TRUE;
-                        break;
-                    }
-                    token = strtok(NULL, " ");
-                }
-
-                if (hasInvalidInput || times_count == 0) {
+                char input_copy[POMODORO_OPTIONS_MAX_INPUT_BYTES] = {0};
+                if (FAILED(StringCbCopyA(input_copy, sizeof(input_copy), input))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                     return TRUE;
                 }
 
-                g_AppConfig.pomodoro.times_count = times_count;
-                for (int i = 0; i < times_count; i++) {
-                    g_AppConfig.pomodoro.times[i] = times[i];
+                int times[MAX_POMODORO_TIMES] = {0};
+                int times_count = 0;
+
+                if (!BuildPomodoroOptionsFromInput(input_copy, times, &times_count)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
                 }
 
-                if (times_count > 0) g_AppConfig.pomodoro.work_time = times[0];
-                if (times_count > 1) g_AppConfig.pomodoro.short_break = times[1];
-                if (times_count > 2) g_AppConfig.pomodoro.long_break = times[2];
-
-                WriteConfigPomodoroTimeOptions(times, times_count);
+                if (!WriteConfigPomodoroTimeOptions(times, times_count)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
+                }
 
                 DestroyWindow(hwndDlg);
                 return TRUE;
@@ -305,9 +399,9 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
                 if (hwndEdit) {
                     Dialog_UnsubclassEdit(hwndEdit, ctx);
                 }
-                Dialog_FreeContext(ctx);
+                Dialog_DestroyContext(hwndDlg);
             }
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_POMODORO_COMBO);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_POMODORO_COMBO, hwndDlg);
             break;
     }
 

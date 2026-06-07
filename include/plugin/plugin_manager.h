@@ -36,7 +36,7 @@ void PluginManager_Shutdown(void);
 
 /**
  * @brief Scan plugin directory and load plugin list
- * @return Number of plugins found
+ * @return Number of plugins found, or a negative value on scan failure/cancel
  */
 int PluginManager_ScanPlugins(void);
 
@@ -51,13 +51,6 @@ void PluginManager_RequestScanAsync(void);
  * @return Number of plugins
  */
 int PluginManager_GetPluginCount(void);
-
-/**
- * @brief Get plugin info by index
- * @param index Plugin index (0-based)
- * @return Pointer to plugin info, or NULL if invalid index
- */
-const PluginInfo* PluginManager_GetPlugin(int index);
 
 /**
  * @brief Copy plugin info by index
@@ -152,10 +145,16 @@ void PluginManager_SetNotifyWindow(HWND hwnd);
 BOOL PluginManager_RestartPlugin(int index);
 
 /**
+ * @brief Restart a plugin from a queued hot-reload snapshot
+ * @param requestGeneration Generation posted by the hot-reload worker
+ * @return TRUE if restart initiated successfully
+ */
+BOOL PluginManager_RestartPendingHotReload(LONG requestGeneration);
+
+/**
  * @brief Mark a plugin process as exited from the process monitor thread
  * @param processId Process ID that exited
- * @param displayName Display name for logging
  */
-void PluginManager_HandleProcessExit(DWORD processId, const wchar_t* displayName);
+void PluginManager_HandleProcessExit(DWORD processId);
 
 #endif /* PLUGIN_MANAGER_H */

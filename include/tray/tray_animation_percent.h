@@ -39,6 +39,21 @@ COLORREF GetPercentIconTextColor(void);
 COLORREF GetPercentIconBgColor(void);
 
 /**
+ * @brief Get colors that would be used for rendering an icon now
+ * @param textColor Receives resolved text color, including theme-aware auto text
+ * @param bgColor Receives configured background color or TRANSPARENT_BG_AUTO
+ * @return TRUE on success
+ */
+BOOL GetPercentIconColorSnapshot(COLORREF* textColor, COLORREF* bgColor);
+
+/**
+ * @brief Get normalized generated tray icon size
+ * @param outCx Receives icon width in pixels
+ * @param outCy Receives icon height in pixels
+ */
+void GetGeneratedTrayIconSizeSnapshot(int* outCx, int* outCy);
+
+/**
  * @brief Create 16x16 percent icon with rendered text
  * @param percent Value (0-999, clamped)
  * @return HICON or NULL on failure

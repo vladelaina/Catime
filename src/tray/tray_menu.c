@@ -46,6 +46,7 @@ void ShowColorMenu(HWND hwnd) {
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
+    if (!hMenu) return;
     
     /* Edit mode toggle */
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
@@ -104,8 +105,13 @@ void ShowContextMenu(HWND hwnd) {
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
+    if (!hMenu) return;
     
     HMENU hTimerManageMenu = CreatePopupMenu();
+    if (!hTimerManageMenu) {
+        DestroyMenu(hMenu);
+        return;
+    }
     
     BOOL timerRunning = (!CLOCK_SHOW_CURRENT_TIME && 
                          (CLOCK_COUNT_UP || 
@@ -130,27 +136,33 @@ void ShowContextMenu(HWND hwnd) {
     
     AppendMenuW(hTimerManageMenu, MF_STRING, CLOCK_IDC_TOGGLE_VISIBILITY, visibilityText);
     
-    AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManageMenu,
-               GetLocalizedString(NULL, L"Timer Control"));
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimerManageMenu,
+                     GetLocalizedString(NULL, L"Timer Control"))) {
+        DestroyMenu(hTimerManageMenu);
+    }
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
     
     HMENU hTimeMenu = CreatePopupMenu();
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_SHOW_CURRENT_TIME,
-               GetLocalizedString(NULL, L"Show Current Time"));
-    
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_24HOUR_FORMAT,
-               GetLocalizedString(NULL, L"24-Hour Format"));
-    
-    AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDM_SHOW_SECONDS,
-               GetLocalizedString(NULL, L"Show Seconds"));
-    
-    AppendMenuW(hMenu, MF_POPUP,
-               (UINT_PTR)hTimeMenu,
-               GetLocalizedString(NULL, L"Time Display"));
+    if (hTimeMenu) {
+        AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),
+                   CLOCK_IDM_SHOW_CURRENT_TIME,
+                   GetLocalizedString(NULL, L"Show Current Time"));
+        
+        AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_USE_24HOUR ? MF_CHECKED : MF_UNCHECKED),
+                   CLOCK_IDM_24HOUR_FORMAT,
+                   GetLocalizedString(NULL, L"24-Hour Format"));
+        
+        AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
+                   CLOCK_IDM_SHOW_SECONDS,
+                   GetLocalizedString(NULL, L"Show Seconds"));
+        
+        if (!AppendMenuW(hMenu, MF_POPUP,
+                         (UINT_PTR)hTimeMenu,
+                         GetLocalizedString(NULL, L"Time Display"))) {
+            DestroyMenu(hTimeMenu);
+        }
+    }
 
     /* Build Pomodoro submenu using dedicated module */
     BuildPomodoroMenu(hMenu);
@@ -165,7 +177,11 @@ void ShowContextMenu(HWND hwnd) {
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
-    for (int i = 0; i < time_options_count; i++) {
+    int timeOptionsCount = time_options_count;
+    if (timeOptionsCount < 0) timeOptionsCount = 0;
+    if (timeOptionsCount > MAX_TIME_OPTIONS) timeOptionsCount = MAX_TIME_OPTIONS;
+    for (int i = 0; i < timeOptionsCount; i++) {
+        if (time_options[i] <= 0) continue;
         wchar_t menu_item[20];
         FormatPomodoroTime(time_options[i], menu_item, sizeof(menu_item)/sizeof(wchar_t));
         AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_QUICK_TIME_BASE + i, menu_item);

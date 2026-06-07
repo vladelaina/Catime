@@ -14,9 +14,11 @@
 #include "config/config_defaults.h"
 #include "config/config_loader.h"
 #include "language.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #ifdef _MSC_VER
 #include <string.h>
 #define strcasecmp _stricmp
@@ -71,7 +73,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_TIMER, "CLOCK_SHOW_SECONDS", "FALSE", CONFIG_TYPE_BOOL, CFG_OFFSET(showSeconds), CFG_NO_SIZE, "Show seconds in clock mode"},
     {INI_SECTION_TIMER, "CLOCK_TIME_FORMAT", "DEFAULT", CONFIG_TYPE_ENUM, CFG_OFFSET(timeFormat), CFG_NO_SIZE, "Time format style"},
     {INI_SECTION_TIMER, "CLOCK_SHOW_MILLISECONDS", "FALSE", CONFIG_TYPE_BOOL, CFG_OFFSET(showMilliseconds), CFG_NO_SIZE, "Show centiseconds"},
-    {INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", "1500,600,300", CONFIG_TYPE_CUSTOM, CFG_NO_OFFSET, CFG_NO_SIZE, "Quick countdown presets"},
+    {INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", DEFAULT_TIME_OPTIONS_INI, CONFIG_TYPE_CUSTOM, CFG_NO_OFFSET, CFG_NO_SIZE, "Quick countdown presets"},
     {INI_SECTION_TIMER, "CLOCK_TIMEOUT_TEXT", "0", CONFIG_TYPE_STRING, CFG_OFFSET(timeoutText), CFG_SIZE(timeoutText), "Timeout text"},
     {INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE", CONFIG_TYPE_ENUM, CFG_OFFSET(timeoutAction), CFG_NO_SIZE, "Timeout action type"},
     {INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", CONFIG_TYPE_STRING, CFG_OFFSET(timeoutFilePath), CFG_SIZE(timeoutFilePath), "File to open on timeout"},
@@ -79,7 +81,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_TIMER, "STARTUP_MODE", "SHOW_TIME", CONFIG_TYPE_STRING, CFG_OFFSET(startupMode), CFG_SIZE(startupMode), "Startup mode"},
     
     /* Pomodoro settings */
-    {INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "1500,300,1500,600", CONFIG_TYPE_CUSTOM, CFG_NO_OFFSET, CFG_NO_SIZE, "Pomodoro time intervals"},
+    {INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", DEFAULT_POMODORO_OPTIONS_INI, CONFIG_TYPE_CUSTOM, CFG_NO_OFFSET, CFG_NO_SIZE, "Pomodoro time intervals"},
     {INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", "1", CONFIG_TYPE_INT, CFG_OFFSET(pomodoroLoopCount), CFG_NO_SIZE, "Cycles before long break"},
     
     /* Notification settings */
@@ -171,7 +173,10 @@ void WriteDefaultsToConfig(const char* config_path) {
 
     /* Convert path to wide char for _wfopen */
     wchar_t wconfig_path[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH) == 0) {
+        LOG_ERROR("Failed to convert default config path: %s", config_path);
+        return;
+    }
 
     /* Open file for writing in UTF-8 mode (no BOM needed) */
     FILE* f = _wfopen(wconfig_path, L"wb");
@@ -336,7 +341,16 @@ void WriteDefaultsToConfig(const char* config_path) {
         fprintf(f, "CLOCK_RECENT_FILE_%d=\n", i);
     }
 
-    fclose(f);
+    BOOL writeOk = !ferror(f);
+    if (fclose(f) != 0) {
+        writeOk = FALSE;
+    }
+    if (!writeOk) {
+        LOG_ERROR("Failed to write default config: %s", config_path);
+        return;
+    }
+
+    InvalidateIniCache();
 }
 
 void CreateDefaultConfig(const char* config_path) {
@@ -377,6 +391,9 @@ typedef struct ConfigEntry {
     char value[2048];  /* Large enough for COLOR_OPTIONS */
     struct ConfigEntry* next;
 } ConfigEntry;
+
+#define CONFIG_MIGRATION_MAX_PARSE_LINES   8192
+#define CONFIG_MIGRATION_MAX_PARSE_ENTRIES 2048
 
 static void FreeConfigEntryList(ConfigEntry* head) {
     while (head) {
@@ -421,10 +438,19 @@ static BOOL IsUtf8String(const char* str) {
     return TRUE;
 }
 
+static void DiscardRestOfMigrationLine(FILE* f) {
+    int ch;
+    while ((ch = fgetc(f)) != EOF && ch != '\n') {
+        /* Skip the remainder of an overlong physical line. */
+    }
+}
+
 static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
     /* Open file for reading (UTF-8) */
     wchar_t wConfigPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) == 0) {
+        return NULL;
+    }
 
     FILE* f = _wfopen(wConfigPath, L"rb");
     if (!f) return NULL;
@@ -433,6 +459,8 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
     ConfigEntry* tail = NULL;
     char currentSection[64] = "";
     char line[4096];
+    int parsedLines = 0;
+    int parsedEntries = 0;
 
     /* Skip UTF-8 BOM if present */
     int c1 = fgetc(f);
@@ -446,6 +474,19 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
     }
 
     while (fgets(line, sizeof(line), f)) {
+        if (++parsedLines > CONFIG_MIGRATION_MAX_PARSE_LINES) {
+            LOG_WARNING("Config migration parse line limit reached (%d)",
+                        CONFIG_MIGRATION_MAX_PARSE_LINES);
+            break;
+        }
+
+        size_t rawLen = strlen(line);
+        if (rawLen > 0 && line[rawLen - 1] != '\n' && !feof(f)) {
+            DiscardRestOfMigrationLine(f);
+            LOG_WARNING("Config migration skipped overlong line %d", parsedLines);
+            continue;
+        }
+
         /* Detect encoding: if not UTF-8, assume ANSI and convert */
         /* This handles migration from old ANSI config files to new UTF-8 ones */
         if (!IsUtf8String(line)) {
@@ -493,6 +534,12 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
         /* Key=Value */
         char* eq = strchr(trimmed, '=');
         if (eq && currentSection[0]) {
+            if (parsedEntries >= CONFIG_MIGRATION_MAX_PARSE_ENTRIES) {
+                LOG_WARNING("Config migration parse entry limit reached (%d)",
+                            CONFIG_MIGRATION_MAX_PARSE_ENTRIES);
+                break;
+            }
+
             *eq = '\0';
 
             /* Create new entry */
@@ -527,6 +574,7 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
                 tail->next = entry;
                 tail = entry;
             }
+            parsedEntries++;
         }
     }
 
@@ -541,6 +589,7 @@ void MigrateConfig(const char* config_path) {
     ConfigEntry* oldConfig = ReadAllConfigEntries(config_path);
     if (!oldConfig) {
         /* If reading fails, just create default config */
+        InvalidateIniCache();
         CreateDefaultConfig(config_path);
         return;
     }
@@ -584,27 +633,56 @@ void MigrateConfig(const char* config_path) {
 
     /* Step 3: Delete old config file to remove deprecated items */
     wchar_t wConfigPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
-    DeleteFileW(wConfigPath);
+    if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) != 0) {
+        DeleteFileW(wConfigPath);
+    } else {
+        LOG_WARNING("Failed to convert config path for migration delete: %s", config_path);
+    }
+    InvalidateIniCache();
 
     /* Step 4: Create fresh default config */
     CreateDefaultConfig(config_path);
 
     /* Step 5: Restore user values that exist in CONFIG_METADATA */
+    int restoreCount = 0;
     current = oldConfig;
     while (current) {
-        /* Skip CONFIG_VERSION - must be updated to current version */
-        if (strcmp(current->key, "CONFIG_VERSION") == 0) {
-            current = current->next;
-            continue;
+        if (strcmp(current->key, "CONFIG_VERSION") != 0 &&
+            IsConfigItemInMetadata(current->section, current->key)) {
+            restoreCount++;
         }
-
-        /* Only restore if config item exists in current metadata (filters deprecated items) */
-        if (IsConfigItemInMetadata(current->section, current->key)) {
-            WriteIniString(current->section, current->key, current->value, config_path);
-        }
-
         current = current->next;
+    }
+
+    if (restoreCount > 0) {
+        IniKeyValue* updates = (IniKeyValue*)calloc((size_t)restoreCount, sizeof(IniKeyValue));
+        if (updates) {
+            size_t updateCount = 0;
+            current = oldConfig;
+            while (current) {
+                /* Skip CONFIG_VERSION - must be updated to current version */
+                if (strcmp(current->key, "CONFIG_VERSION") != 0 &&
+                    IsConfigItemInMetadata(current->section, current->key)) {
+                    updates[updateCount].section = current->section;
+                    updates[updateCount].key = current->key;
+                    updates[updateCount].value = current->value;
+                    updateCount++;
+                }
+                current = current->next;
+            }
+
+            WriteIniMultipleAtomic(config_path, updates, updateCount);
+            free(updates);
+        } else {
+            current = oldConfig;
+            while (current) {
+                if (strcmp(current->key, "CONFIG_VERSION") != 0 &&
+                    IsConfigItemInMetadata(current->section, current->key)) {
+                    WriteIniString(current->section, current->key, current->value, config_path);
+                }
+                current = current->next;
+            }
+        }
     }
 
     /* Clean up */

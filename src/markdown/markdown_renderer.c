@@ -4,12 +4,14 @@
  */
 
 #include "markdown/markdown_parser.h"
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define TEXT_WRAP_MARGIN 10
 #define LIST_ITEM_INDENT 20
 #define BLOCKQUOTE_INDENT 20
+#define MARKDOWN_FONT_CACHE_CAPACITY 64
 
 /** Unified position tracking eliminates duplicate calculations */
 typedef struct {
@@ -18,6 +20,66 @@ typedef struct {
     int lineHeight;
     RECT bounds;
 } TextLayoutContext;
+
+typedef struct {
+    int height;
+    int weight;
+    BYTE italic;
+    BOOL monospace;
+    HFONT font;
+} MarkdownFontCacheEntry;
+
+typedef struct {
+    MarkdownFontCacheEntry entries[MARKDOWN_FONT_CACHE_CAPACITY];
+    int count;
+} MarkdownFontCache;
+
+typedef struct {
+    int linkIndex;
+    int headingIndex;
+    int styleIndex;
+    int listItemIndex;
+    int blockquoteIndex;
+} MarkdownRangeCursors;
+
+#define DEFINE_MARKDOWN_CURSOR_LOOKUP(name, type) \
+    static BOOL name(const type* ranges, int count, int position, int* cursor, int* outIndex) { \
+        if (outIndex) *outIndex = -1; \
+        if (!ranges || count <= 0 || !cursor) return FALSE; \
+        while (*cursor < count && position >= ranges[*cursor].endPos) { \
+            (*cursor)++; \
+        } \
+        if (*cursor < count && \
+            position >= ranges[*cursor].startPos && \
+            position < ranges[*cursor].endPos) { \
+            if (outIndex) *outIndex = *cursor; \
+            return TRUE; \
+        } \
+        return FALSE; \
+    }
+
+DEFINE_MARKDOWN_CURSOR_LOOKUP(FindLinkAtCursor, MarkdownLink)
+DEFINE_MARKDOWN_CURSOR_LOOKUP(FindHeadingAtCursor, MarkdownHeading)
+DEFINE_MARKDOWN_CURSOR_LOOKUP(FindStyleAtCursor, MarkdownStyle)
+DEFINE_MARKDOWN_CURSOR_LOOKUP(FindListItemAtCursor, MarkdownListItem)
+DEFINE_MARKDOWN_CURSOR_LOOKUP(FindBlockquoteAtCursor, MarkdownBlockquote)
+
+static int GetMarkdownRenderTextLength(const wchar_t* text) {
+    if (!text) return 0;
+
+    size_t len = wcslen(text);
+    return (len > (size_t)INT_MAX) ? INT_MAX : (int)len;
+}
+
+static BOOL IsHorizontalRuleMarker(const wchar_t* text, int position, int textLen) {
+    if (!text || position < 0 || textLen < 3 || position > textLen - 3) {
+        return FALSE;
+    }
+
+    return text[position] == L'\x2500' &&
+           text[position + 1] == L'\x2500' &&
+           text[position + 2] == L'\x2500';
+}
 
 static void InitTextLayout(TextLayoutContext* ctx, HDC hdc, RECT drawRect) {
     if (!ctx) return;
@@ -28,11 +90,121 @@ static void InitTextLayout(TextLayoutContext* ctx, HDC hdc, RECT drawRect) {
 
     if (hdc) {
         TEXTMETRIC tm;
-        GetTextMetrics(hdc, &tm);
-        ctx->lineHeight = tm.tmHeight;
+        if (GetTextMetrics(hdc, &tm)) {
+            ctx->lineHeight = tm.tmHeight;
+        } else {
+            ctx->lineHeight = 0;
+        }
     } else {
         ctx->lineHeight = 0;
     }
+}
+
+static void UpdateLineHeightFromCurrentFont(HDC hdc, TextLayoutContext* ctx) {
+    if (!hdc || !ctx) return;
+
+    TEXTMETRIC tm;
+    if (GetTextMetrics(hdc, &tm)) {
+        ctx->lineHeight = tm.tmHeight;
+    }
+}
+
+static void InitBaseFontState(HDC hdc, HFONT* hOriginalFont, LOGFONT* baseLf, int* baseFontHeight) {
+    if (hOriginalFont) {
+        *hOriginalFont = NULL;
+    }
+    if (baseLf) {
+        memset(baseLf, 0, sizeof(*baseLf));
+    }
+    if (baseFontHeight) {
+        *baseFontHeight = 16;
+    }
+    if (!hdc || !baseLf || !baseFontHeight) return;
+
+    TEXTMETRIC tm;
+    if (GetTextMetrics(hdc, &tm) && tm.tmHeight > 0) {
+        *baseFontHeight = tm.tmHeight;
+    }
+
+    HFONT hCurrentFont = (HFONT)GetCurrentObject(hdc, OBJ_FONT);
+    if (hOriginalFont) {
+        *hOriginalFont = hCurrentFont;
+    }
+
+    if (hCurrentFont && GetObject(hCurrentFont, sizeof(*baseLf), baseLf) == sizeof(*baseLf)) {
+        if (baseLf->lfHeight != 0) {
+            *baseFontHeight = baseLf->lfHeight;
+        }
+        return;
+    }
+
+    HFONT hDefaultFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+    if (hDefaultFont && GetObject(hDefaultFont, sizeof(*baseLf), baseLf) == sizeof(*baseLf)) {
+        if (baseLf->lfHeight != 0) {
+            *baseFontHeight = baseLf->lfHeight;
+        }
+        return;
+    }
+
+    baseLf->lfHeight = *baseFontHeight;
+    baseLf->lfWeight = FW_NORMAL;
+    wcscpy_s(baseLf->lfFaceName, LF_FACESIZE, L"Segoe UI");
+}
+
+static HFONT GetCachedMarkdownFont(MarkdownFontCache* cache, const LOGFONT* baseLf,
+                                   int height, int weight, BOOL italic, BOOL monospace) {
+    if (!cache || !baseLf) return NULL;
+
+    BYTE italicByte = (BYTE)(italic ? 1 : 0);
+
+    for (int i = 0; i < cache->count; i++) {
+        MarkdownFontCacheEntry* entry = &cache->entries[i];
+        if (entry->height == height &&
+            entry->weight == weight &&
+            entry->italic == italicByte &&
+            entry->monospace == monospace) {
+            return entry->font;
+        }
+    }
+
+    if (cache->count >= MARKDOWN_FONT_CACHE_CAPACITY) {
+        return NULL;
+    }
+
+    LOGFONT lf;
+    memcpy(&lf, baseLf, sizeof(LOGFONT));
+    lf.lfHeight = height;
+    lf.lfWeight = weight;
+    lf.lfItalic = italicByte;
+
+    if (monospace) {
+        wcscpy_s(lf.lfFaceName, LF_FACESIZE, L"Consolas");
+    }
+
+    HFONT font = CreateFontIndirect(&lf);
+    if (!font) {
+        return NULL;
+    }
+
+    MarkdownFontCacheEntry* entry = &cache->entries[cache->count++];
+    entry->height = height;
+    entry->weight = weight;
+    entry->italic = italicByte;
+    entry->monospace = monospace;
+    entry->font = font;
+    return font;
+}
+
+static void ReleaseMarkdownFontCache(MarkdownFontCache* cache) {
+    if (!cache) return;
+
+    for (int i = 0; i < cache->count; i++) {
+        if (cache->entries[i].font) {
+            DeleteObject(cache->entries[i].font);
+            cache->entries[i].font = NULL;
+        }
+    }
+    cache->count = 0;
 }
 
 static void AdvanceNewline(TextLayoutContext* ctx) {
@@ -70,12 +242,16 @@ static void ProcessMarkdownCharacter(
     int listItemCount,
     const MarkdownBlockquote* blockquotes,
     int blockquoteCount,
+    MarkdownRangeCursors* cursors,
     HFONT hOriginalFont,
     const LOGFONT* baseLf,
     int baseFontHeight,
+    MarkdownFontCache* fontCache,
     HFONT* hCurrentFont,
     int* lastHeadingLevel,
     int* lastStyleType,
+    BOOL* lastBlockquoteFont,
+    COLORREF* lastTextColor,
     int* lastListItemIndex,
     int* lastBlockquoteIndex,
     COLORREF linkColor,
@@ -84,12 +260,15 @@ static void ProcessMarkdownCharacter(
 ) {
     if (ch == L'\n') {
         if (*hCurrentFont) {
-            SelectObject(hdc, hOriginalFont);
-            DeleteObject(*hCurrentFont);
+            if (hOriginalFont) {
+                SelectObject(hdc, hOriginalFont);
+            }
             *hCurrentFont = NULL;
+            UpdateLineHeightFromCurrentFont(hdc, ctx);
         }
         *lastHeadingLevel = 0;
         *lastStyleType = STYLE_NONE;
+        *lastBlockquoteFont = FALSE;
         *lastListItemIndex = -1;
         *lastBlockquoteIndex = -1;
         AdvanceNewline(ctx);
@@ -97,19 +276,24 @@ static void ProcessMarkdownCharacter(
     }
 
     int linkIndex = -1;
-    BOOL isLink = IsCharacterInLink(links, linkCount, position, &linkIndex);
+    BOOL isLink = FindLinkAtCursor(links, linkCount, position,
+                                   &cursors->linkIndex, &linkIndex);
 
     int headingIndex = -1;
-    BOOL isHeading = IsCharacterInHeading(headings, headingCount, position, &headingIndex);
+    BOOL isHeading = FindHeadingAtCursor(headings, headingCount, position,
+                                         &cursors->headingIndex, &headingIndex);
 
     int styleIndex = -1;
-    BOOL isStyled = IsCharacterInStyle(styles, styleCount, position, &styleIndex);
+    BOOL isStyled = FindStyleAtCursor(styles, styleCount, position,
+                                      &cursors->styleIndex, &styleIndex);
 
     int listItemIndex = -1;
-    BOOL isListItem = IsCharacterInListItem(listItems, listItemCount, position, &listItemIndex);
+    BOOL isListItem = FindListItemAtCursor(listItems, listItemCount, position,
+                                           &cursors->listItemIndex, &listItemIndex);
 
     int blockquoteIndex = -1;
-    BOOL isBlockquote = IsCharacterInBlockquote(blockquotes, blockquoteCount, position, &blockquoteIndex);
+    BOOL isBlockquote = FindBlockquoteAtCursor(blockquotes, blockquoteCount, position,
+                                               &cursors->blockquoteIndex, &blockquoteIndex);
 
     if (isListItem && listItemIndex != *lastListItemIndex) {
         if (position == listItems[listItemIndex].startPos) {
@@ -166,44 +350,44 @@ static void ProcessMarkdownCharacter(
             case STYLE_CODE:
                 currentMonospace = TRUE;
                 break;
+            default:
+                break;
         }
     }
 
-    if (*lastHeadingLevel != (isHeading ? headings[headingIndex].level : 0) ||
-        *lastStyleType != currentStyleType) {
+    int currentHeadingLevel = isHeading ? headings[headingIndex].level : 0;
+    BOOL currentBlockquoteFont = isBlockquote ? TRUE : FALSE;
 
-        if (*hCurrentFont) {
-            SelectObject(hdc, hOriginalFont);
-            DeleteObject(*hCurrentFont);
-            *hCurrentFont = NULL;
-        }
+    if (*lastHeadingLevel != currentHeadingLevel ||
+        *lastStyleType != currentStyleType ||
+        *lastBlockquoteFont != currentBlockquoteFont) {
 
-        if (isHeading || isStyled) {
-            LOGFONT lf;
-            memcpy(&lf, baseLf, sizeof(LOGFONT));
-            lf.lfHeight = currentFontHeight;
-            lf.lfWeight = currentFontWeight;
-            lf.lfItalic = (BYTE)(currentItalic ? 1 : 0);
-
-            if (currentMonospace) {
-                wcscpy_s(lf.lfFaceName, LF_FACESIZE, L"Consolas");
+        if (hOriginalFont && (isHeading || isStyled || isBlockquote)) {
+            HFONT hNewFont = GetCachedMarkdownFont(fontCache, baseLf, currentFontHeight,
+                                                   currentFontWeight, currentItalic,
+                                                   currentMonospace);
+            if (hNewFont) {
+                if (SelectObject(hdc, hNewFont)) {
+                    *hCurrentFont = hNewFont;
+                } else {
+                    SelectObject(hdc, hOriginalFont);
+                    *hCurrentFont = NULL;
+                }
+            } else {
+                SelectObject(hdc, hOriginalFont);
+                *hCurrentFont = NULL;
             }
-
-            *hCurrentFont = CreateFontIndirect(&lf);
-            SelectObject(hdc, *hCurrentFont);
-
-            TEXTMETRIC tm;
-            GetTextMetrics(hdc, &tm);
-            ctx->lineHeight = tm.tmHeight;
+            UpdateLineHeightFromCurrentFont(hdc, ctx);
         } else {
-            SelectObject(hdc, hOriginalFont);
-            TEXTMETRIC tm;
-            GetTextMetrics(hdc, &tm);
-            ctx->lineHeight = tm.tmHeight;
+            if (hOriginalFont) {
+                SelectObject(hdc, hOriginalFont);
+            }
+            UpdateLineHeightFromCurrentFont(hdc, ctx);
         }
 
-        *lastHeadingLevel = isHeading ? headings[headingIndex].level : 0;
+        *lastHeadingLevel = currentHeadingLevel;
         *lastStyleType = currentStyleType;
+        *lastBlockquoteFont = currentBlockquoteFont;
     }
 
     if (renderMode) {
@@ -234,11 +418,22 @@ static void ProcessMarkdownCharacter(
                     break;
             }
         }
-        SetTextColor(hdc, textColor);
+        if (!lastTextColor || *lastTextColor != textColor) {
+            SetTextColor(hdc, textColor);
+            if (lastTextColor) {
+                *lastTextColor = textColor;
+            }
+        }
     }
 
-    SIZE charSize;
-    GetTextExtentPoint32W(hdc, &ch, 1, &charSize);
+    SIZE charSize = {0};
+    if (!GetTextExtentPoint32W(hdc, &ch, 1, &charSize)) {
+        TEXTMETRIC tm;
+        if (GetTextMetrics(hdc, &tm)) {
+            charSize.cx = tm.tmAveCharWidth;
+            charSize.cy = tm.tmHeight;
+        }
+    }
 
     if (renderMode && isLink) {
         MarkdownLink* link = &links[linkIndex];
@@ -272,33 +467,44 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
                         RECT drawRect, COLORREF linkColor, COLORREF normalColor) {
     if (!hdc || !displayText) return;
 
+    COLORREF originalTextColor = GetTextColor(hdc);
     TextLayoutContext ctx;
     InitTextLayout(&ctx, hdc, drawRect);
 
-    HFONT hOriginalFont = (HFONT)GetCurrentObject(hdc, OBJ_FONT);
+    HFONT hOriginalFont = NULL;
     LOGFONT baseLf;
-    GetObject(hOriginalFont, sizeof(LOGFONT), &baseLf);
-    int baseFontHeight = baseLf.lfHeight;
+    int baseFontHeight = 0;
+    InitBaseFontState(hdc, &hOriginalFont, &baseLf, &baseFontHeight);
 
-    int textLen = wcslen(displayText);
+    int textLen = GetMarkdownRenderTextLength(displayText);
+    MarkdownRangeCursors cursors = {0};
+    MarkdownFontCache fontCache = {0};
     HFONT hCurrentFont = NULL;
     int lastHeadingLevel = 0;
     int lastStyleType = STYLE_NONE;
+    BOOL lastBlockquoteFont = FALSE;
+    COLORREF lastTextColor = CLR_INVALID;
     int lastListItemIndex = -1;
     int lastBlockquoteIndex = -1;
 
     for (int i = 0; i < textLen; i++) {
         /* Check for horizontal rule marker (─── = \x2500\x2500\x2500) */
-        if (displayText[i] == L'\x2500' && i + 2 < textLen &&
-            displayText[i + 1] == L'\x2500' && displayText[i + 2] == L'\x2500') {
+        if (IsHorizontalRuleMarker(displayText, i, textLen)) {
             /* Draw horizontal line across full width */
             int lineY = ctx.y + ctx.lineHeight / 2;
-            HPEN hPen = CreatePen(PS_SOLID, 1, normalColor);
-            HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
-            MoveToEx(hdc, drawRect.left, lineY, NULL);
-            LineTo(hdc, drawRect.right, lineY);
-            SelectObject(hdc, hOldPen);
-            DeleteObject(hPen);
+            HGDIOBJ hPen = GetStockObject(DC_PEN);
+            if (hPen) {
+                COLORREF oldPenColor = SetDCPenColor(hdc, normalColor);
+                HGDIOBJ hOldPen = SelectObject(hdc, hPen);
+                MoveToEx(hdc, drawRect.left, lineY, NULL);
+                LineTo(hdc, drawRect.right, lineY);
+                if (hOldPen) {
+                    SelectObject(hdc, hOldPen);
+                }
+                if (oldPenColor != CLR_INVALID) {
+                    SetDCPenColor(hdc, oldPenColor);
+                }
+            }
             
             /* Move to next line */
             ctx.y += ctx.lineHeight;
@@ -314,17 +520,24 @@ void RenderMarkdownText(HDC hdc, const wchar_t* displayText,
             styles, styleCount,
             listItems, listItemCount,
             blockquotes, blockquoteCount,
+            &cursors,
             hOriginalFont, &baseLf, baseFontHeight,
-            &hCurrentFont, &lastHeadingLevel, &lastStyleType,
+            &fontCache, &hCurrentFont, &lastHeadingLevel, &lastStyleType,
+            &lastBlockquoteFont, &lastTextColor,
             &lastListItemIndex, &lastBlockquoteIndex,
             linkColor, normalColor, TRUE
         );
     }
 
     if (hCurrentFont) {
-        SelectObject(hdc, hOriginalFont);
-        DeleteObject(hCurrentFont);
+        if (hOriginalFont) {
+            SelectObject(hdc, hOriginalFont);
+        }
     }
+    if (originalTextColor != CLR_INVALID) {
+        SetTextColor(hdc, originalTextColor);
+    }
+    ReleaseMarkdownFontCache(&fontCache);
 }
 
 int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
@@ -338,22 +551,25 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
     TextLayoutContext ctx;
     InitTextLayout(&ctx, hdc, drawRect);
 
-    HFONT hOriginalFont = (HFONT)GetCurrentObject(hdc, OBJ_FONT);
+    HFONT hOriginalFont = NULL;
     LOGFONT baseLf;
-    GetObject(hOriginalFont, sizeof(LOGFONT), &baseLf);
-    int baseFontHeight = baseLf.lfHeight;
+    int baseFontHeight = 0;
+    InitBaseFontState(hdc, &hOriginalFont, &baseLf, &baseFontHeight);
 
-    int textLen = wcslen(displayText);
+    int textLen = GetMarkdownRenderTextLength(displayText);
+    MarkdownRangeCursors cursors = {0};
+    MarkdownFontCache fontCache = {0};
     HFONT hCurrentFont = NULL;
     int lastHeadingLevel = 0;
     int lastStyleType = STYLE_NONE;
+    BOOL lastBlockquoteFont = FALSE;
+    COLORREF lastTextColor = CLR_INVALID;
     int lastListItemIndex = -1;
     int lastBlockquoteIndex = -1;
 
     for (int i = 0; i < textLen; i++) {
         /* Check for horizontal rule marker */
-        if (displayText[i] == L'\x2500' && i + 2 < textLen &&
-            displayText[i + 1] == L'\x2500' && displayText[i + 2] == L'\x2500') {
+        if (IsHorizontalRuleMarker(displayText, i, textLen)) {
             ctx.y += ctx.lineHeight;
             ctx.x = ctx.bounds.left;
             i += 2;
@@ -367,17 +583,21 @@ int CalculateMarkdownTextHeight(HDC hdc, const wchar_t* displayText,
             styles, styleCount,
             listItems, listItemCount,
             blockquotes, blockquoteCount,
+            &cursors,
             hOriginalFont, &baseLf, baseFontHeight,
-            &hCurrentFont, &lastHeadingLevel, &lastStyleType,
+            &fontCache, &hCurrentFont, &lastHeadingLevel, &lastStyleType,
+            &lastBlockquoteFont, &lastTextColor,
             &lastListItemIndex, &lastBlockquoteIndex,
             0, 0, FALSE
         );
     }
 
     if (hCurrentFont) {
-        SelectObject(hdc, hOriginalFont);
-        DeleteObject(hCurrentFont);
+        if (hOriginalFont) {
+            SelectObject(hdc, hOriginalFont);
+        }
     }
+    ReleaseMarkdownFontCache(&fontCache);
 
     return ctx.y + ctx.lineHeight - drawRect.top;
 }

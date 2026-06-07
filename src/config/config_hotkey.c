@@ -9,16 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <windows.h>
-
-#define UTF8_TO_WIDE(utf8, wide) \
-    wchar_t wide[MAX_PATH] = {0}; \
-    MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, MAX_PATH)
-
-#define FOPEN_UTF8(utf8Path, mode, filePtr) \
-    wchar_t _w##filePtr[MAX_PATH] = {0}; \
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, _w##filePtr, MAX_PATH); \
-    FILE* filePtr = _wfopen(_w##filePtr, mode)
 
 /**
  * @brief Virtual Key Code to String mapping table
@@ -155,6 +148,40 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     }
 }
 
+static BOOL ParseFunctionKeyToken(const char* token, BYTE* vk) {
+    if (!token || !vk || token[0] != 'F' || !isdigit((unsigned char)token[1])) {
+        return FALSE;
+    }
+
+    errno = 0;
+    char* end = NULL;
+    long fNum = strtol(token + 1, &end, 10);
+    if (end == token + 1 || *end != '\0' || errno == ERANGE ||
+        fNum < 1 || fNum > 24) {
+        return FALSE;
+    }
+
+    *vk = (BYTE)(VK_F1 + fNum - 1);
+    return TRUE;
+}
+
+static BOOL ParseHexVirtualKeyToken(const char* token, BYTE* vk) {
+    if (!token || !vk || strncmp(token, "0x", 2) != 0 || token[2] == '\0') {
+        return FALSE;
+    }
+
+    errno = 0;
+    char* end = NULL;
+    long parsed = strtol(token + 2, &end, 16);
+    if (end == token + 2 || *end != '\0' || errno == ERANGE ||
+        parsed <= 0 || parsed > UCHAR_MAX) {
+        return FALSE;
+    }
+
+    *vk = (BYTE)parsed;
+    return TRUE;
+}
+
 
 /**
  * @brief Parse human-readable hotkey string to Windows hotkey code
@@ -199,15 +226,12 @@ WORD StringToHotkey(const char* str) {
             }
         } 
         /** Handle function keys (F1-F24) */
-        else if (lastToken[0] == 'F' && isdigit(lastToken[1])) {
-            int fNum = atoi(lastToken + 1);
-            if (fNum >= 1 && fNum <= 24) {
-                vk = (BYTE)(VK_F1 + fNum - 1);
-            }
+        else if (ParseFunctionKeyToken(lastToken, &vk)) {
+            /** Parsed above */
         }
         /** Handle hex format (0xNN) */
-        else if (strncmp(lastToken, "0x", 2) == 0) {
-            vk = (BYTE)strtol(lastToken, NULL, 16);
+        else if (ParseHexVirtualKeyToken(lastToken, &vk)) {
+            /** Parsed above */
         }
         /** Look up in mapping table */
         else {
@@ -279,6 +303,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 
 
 void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
+                        WORD customCountdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
                         WORD pauseResumeHotkey, WORD restartTimerHotkey, WORD toggleMillisecondsHotkey,
@@ -291,6 +316,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         {"HOTKEY_SHOW_TIME",           showTimeHotkey},
         {"HOTKEY_COUNT_UP",            countUpHotkey},
         {"HOTKEY_COUNTDOWN",           countdownHotkey},
+        {"HOTKEY_CUSTOM_COUNTDOWN",    customCountdownHotkey},
         {"HOTKEY_QUICK_COUNTDOWN1",    quickCountdown1Hotkey},
         {"HOTKEY_QUICK_COUNTDOWN2",    quickCountdown2Hotkey},
         {"HOTKEY_QUICK_COUNTDOWN3",    quickCountdown3Hotkey},
@@ -305,48 +331,31 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
     
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
+
+    enum { HOTKEY_WRITE_COUNT = sizeof(entries) / sizeof(entries[0]) };
+    char hotkeyStrings[HOTKEY_WRITE_COUNT][64];
+    IniKeyValue updates[HOTKEY_WRITE_COUNT];
+
     /** Write all hotkeys using data-driven approach */
     for (size_t i = 0; i < sizeof(entries) / sizeof(entries[0]); ++i) {
-        char hotkeyStr[64];
-        HotkeyToString(entries[i].value, hotkeyStr, sizeof(hotkeyStr));
-        WriteIniString(INI_SECTION_HOTKEYS, entries[i].key, hotkeyStr, config_path);
+        HotkeyToString(entries[i].value, hotkeyStrings[i], sizeof(hotkeyStrings[i]));
+        updates[i].section = INI_SECTION_HOTKEYS;
+        updates[i].key = entries[i].key;
+        updates[i].value = hotkeyStrings[i];
     }
-    
-    /** Write HOTKEY_CUSTOM_COUNTDOWN */
-    WORD customCountdownHotkey = 0;
-    ReadCustomCountdownHotkey(&customCountdownHotkey);
-    char customCountdownStr[64];
-    HotkeyToString(customCountdownHotkey, customCountdownStr, sizeof(customCountdownStr));
-    WriteIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr, config_path);
+
+    WriteIniMultipleAtomic(config_path, updates, HOTKEY_WRITE_COUNT);
 }
 
 
 void ReadCustomCountdownHotkey(WORD* hotkey) {
     if (!hotkey) return;
-    
-    *hotkey = 0;
-    
+
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-    /** Open config file with UTF-8 path support */
-    FOPEN_UTF8(config_path, L"r", file);
-    if (!file) return;
-    
-    char line[256];
-    while (fgets(line, sizeof(line), file)) {
-        if (strncmp(line, "HOTKEY_CUSTOM_COUNTDOWN=", 24) == 0) {
-            const char* value = line + 24;
 
-            char* newline = strchr(value, '\n');
-            if (newline) *newline = '\0';
-            
-
-            *hotkey = StringToHotkey(value);
-            break;
-        }
-    }
-    
-    fclose(file);
+    char hotkeyStr[64];
+    ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None",
+                  hotkeyStr, sizeof(hotkeyStr), config_path);
+    *hotkey = StringToHotkey(hotkeyStr);
 }

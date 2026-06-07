@@ -8,6 +8,7 @@
 #include <strsafe.h>
 #include <windowsx.h>
 #include <wchar.h>
+#include <stdlib.h>
 
 /** Enable visual styles */
 #ifdef _MSC_VER
@@ -38,6 +39,7 @@
 #endif
 
 #define VK_IME_SHIFT 0xE5
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 typedef struct {
     int editCtrlId;
@@ -46,11 +48,17 @@ typedef struct {
     const wchar_t* labelEN;
 } HotkeyMetadata;
 
+typedef struct {
+    HWND hwndParent;
+    HBRUSH hBackgroundBrush;
+    HBRUSH hButtonBrush;
+    WNDPROC origDlgProc;
+    BOOL hotkeysSuspended;
+    BOOL reregisterPosted;
+} HotkeyDialogState;
+
 /** Dialog-local hotkey storage (avoids 12 global variables) */
 static WORD g_dialogHotkeys[HOTKEY_COUNT] = {0};
-
-static WNDPROC g_OldHotkeyDlgProc = NULL;
-static HWND g_hwndParent = NULL;
 
 static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
     {IDC_HOTKEY_EDIT1,  IDC_HOTKEY_LABEL1,  NULL, L"Show Current Time:"},
@@ -76,6 +84,95 @@ static inline BOOL IsHotkeyEditControl(DWORD ctrlId) {
         }
     }
     return FALSE;
+}
+
+static BOOL IsValidHotkeyParentWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static HWND GetHotkeyDialogParent(HWND hwndDlg) {
+    HWND hwndParent = hwndDlg ? GetParent(hwndDlg) : NULL;
+    return IsValidHotkeyParentWindow(hwndParent) ? hwndParent : NULL;
+}
+
+static HotkeyDialogState* GetHotkeyDialogState(HWND hwndDlg) {
+    return (HotkeyDialogState*)GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
+}
+
+static void SetHotkeyDialogState(HWND hwndDlg, HotkeyDialogState* state) {
+    SetWindowLongPtr(hwndDlg, GWLP_USERDATA, (LONG_PTR)state);
+}
+
+static HotkeyDialogState* CreateHotkeyDialogState(HWND hwndParent) {
+    HotkeyDialogState* state = (HotkeyDialogState*)calloc(1, sizeof(*state));
+    if (!state) {
+        return NULL;
+    }
+
+    state->hwndParent = hwndParent;
+    state->hBackgroundBrush = CreateSolidBrush(DIALOG_BG_COLOR);
+    state->hButtonBrush = CreateSolidBrush(BUTTON_BG_COLOR);
+    return state;
+}
+
+static void DestroyHotkeyDialogState(HWND hwndDlg, HotkeyDialogState* state) {
+    if (!state) {
+        return;
+    }
+
+    if (state->hBackgroundBrush) {
+        DeleteObject(state->hBackgroundBrush);
+        state->hBackgroundBrush = NULL;
+    }
+    if (state->hButtonBrush) {
+        DeleteObject(state->hButtonBrush);
+        state->hButtonBrush = NULL;
+    }
+
+    SetHotkeyDialogState(hwndDlg, NULL);
+    free(state);
+}
+
+static BOOL EnsureHotkeyBrush(HBRUSH* brush, COLORREF color) {
+    if (!brush) {
+        return FALSE;
+    }
+    if (!*brush) {
+        *brush = CreateSolidBrush(color);
+    }
+    return *brush != NULL;
+}
+
+static void PostHotkeyReregister(HWND hwndDlg) {
+    HotkeyDialogState* state = GetHotkeyDialogState(hwndDlg);
+    if (!state || !state->hotkeysSuspended || state->reregisterPosted) {
+        return;
+    }
+
+    if (!IsValidHotkeyParentWindow(state->hwndParent)) {
+        return;
+    }
+
+    if (PostMessage(state->hwndParent, WM_APP + 1, 0, 0)) {
+        state->reregisterPosted = TRUE;
+    } else {
+        LOG_WARNING("Failed to post hotkey re-register message: %lu", GetLastError());
+    }
 }
 
 static inline BOOL IsModifierKey(BYTE vk) {
@@ -173,14 +270,11 @@ static void ValidateAllHotkeys(void) {
 
 static void SaveHotkeyConfiguration(void) {
     WriteConfigHotkeys(g_dialogHotkeys[0], g_dialogHotkeys[1], g_dialogHotkeys[3],
+                      g_dialogHotkeys[2],
                       g_dialogHotkeys[4], g_dialogHotkeys[5], g_dialogHotkeys[6],
                       g_dialogHotkeys[7], g_dialogHotkeys[8], g_dialogHotkeys[9],
                       g_dialogHotkeys[10], g_dialogHotkeys[11], g_dialogHotkeys[12],
                       g_dialogHotkeys[13]);
-
-    char customCountdownStr[64] = {0};
-    HotkeyToString(g_dialogHotkeys[2], customCountdownStr, sizeof(customCountdownStr));
-    WriteConfigKeyValue("HOTKEY_CUSTOM_COUNTDOWN", customCountdownStr);
 }
 
 static void SetupHotkeyControlSubclassing(HWND hwndDlg) {
@@ -299,7 +393,12 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
             break;
     }
 
-    return CallWindowProc(g_OldHotkeyDlgProc, hwnd, msg, wParam, lParam);
+    HotkeyDialogState* state = GetHotkeyDialogState(hwnd);
+    if (!state || !state->origDlgProc) {
+        return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+    return CallWindowProc(state->origDlgProc, hwnd, msg, wParam, lParam);
 }
 
 void ShowHotkeySettingsDialog(HWND hwndParent) {
@@ -309,7 +408,9 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
         return;
     }
 
-    g_hwndParent = hwndParent;
+    if (!IsValidHotkeyParentWindow(hwndParent)) {
+        return;
+    }
 
     HWND hwndDlg = CreateDialogW(
         GetModuleHandle(NULL),
@@ -327,31 +428,42 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
 }
 
 INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    static HBRUSH hBackgroundBrush = NULL;
-    static HBRUSH hButtonBrush = NULL;
+    HotkeyDialogState* state = GetHotkeyDialogState(hwndDlg);
 
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_HOTKEY, hwndDlg);
+            HWND hwndParent = GetHotkeyDialogParent(hwndDlg);
+            state = CreateHotkeyDialogState(hwndParent);
+            if (!state) {
+                LOG_ERROR("Failed to allocate hotkey dialog state");
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            SetHotkeyDialogState(hwndDlg, state);
 
+            Dialog_RegisterInstance(DIALOG_INSTANCE_HOTKEY, hwndDlg);
             MoveDialogToPrimaryScreen(hwndDlg);
 
             InitializeDialogLabels(hwndDlg);
-
-            hBackgroundBrush = CreateSolidBrush(DIALOG_BG_COLOR);
-            hButtonBrush = CreateSolidBrush(BUTTON_BG_COLOR);
 
             LoadHotkeyConfiguration();
             SetHotkeyControlValues(hwndDlg);
 
             /* Unregister hotkeys while dialog is open */
-            if (g_hwndParent) {
-                UnregisterGlobalHotkeys(g_hwndParent);
+            if (hwndParent) {
+                UnregisterGlobalHotkeys(hwndParent);
+                state->hotkeysSuspended = TRUE;
             }
             SetupHotkeyControlSubclassing(hwndDlg);
 
-            g_OldHotkeyDlgProc = (WNDPROC)SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, 
-                                                           (LONG_PTR)HotkeyDialogSubclassProc);
+            SetLastError(0);
+            WNDPROC origDlgProc = (WNDPROC)SetWindowLongPtr(hwndDlg, GWLP_WNDPROC,
+                                                            (LONG_PTR)HotkeyDialogSubclassProc);
+            if (origDlgProc) {
+                state->origDlgProc = origDlgProc;
+            } else if (GetLastError() != 0) {
+                LOG_WARNING("Failed to subclass hotkey dialog: %lu", GetLastError());
+            }
 
             SetFocus(GetDlgItem(hwndDlg, IDCANCEL));
             return FALSE;
@@ -361,19 +473,19 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         case WM_CTLCOLORSTATIC: {
             HDC hdcStatic = (HDC)wParam;
             SetBkColor(hdcStatic, DIALOG_BG_COLOR);
-            if (!hBackgroundBrush) {
-                hBackgroundBrush = CreateSolidBrush(DIALOG_BG_COLOR);
+            if (state && EnsureHotkeyBrush(&state->hBackgroundBrush, DIALOG_BG_COLOR)) {
+                return (INT_PTR)state->hBackgroundBrush;
             }
-            return (INT_PTR)hBackgroundBrush;
+            break;
         }
         
         case WM_CTLCOLORBTN: {
             HDC hdcBtn = (HDC)wParam;
             SetBkColor(hdcBtn, BUTTON_BG_COLOR);
-            if (!hButtonBrush) {
-                hButtonBrush = CreateSolidBrush(BUTTON_BG_COLOR);
+            if (state && EnsureHotkeyBrush(&state->hButtonBrush, BUTTON_BG_COLOR)) {
+                return (INT_PTR)state->hButtonBrush;
             }
-            return (INT_PTR)hButtonBrush;
+            break;
         }
         
         case WM_LBUTTONDOWN: {
@@ -415,59 +527,45 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     SaveHotkeyConfiguration();
 
                     /* Re-register hotkeys */
-                    if (g_hwndParent) {
-                        PostMessage(g_hwndParent, WM_APP+1, 0, 0);
-                    }
+                    PostHotkeyReregister(hwndDlg);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
-                case IDCANCEL:
+                case IDCANCEL: {
                     /* Re-register hotkeys */
-                    if (g_hwndParent) {
-                        PostMessage(g_hwndParent, WM_APP+1, 0, 0);
-                    }
+                    PostHotkeyReregister(hwndDlg);
                     DestroyWindow(hwndDlg);
                     return TRUE;
+                }
             }
             break;
         }
 
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
-                if (g_hwndParent) {
-                    PostMessage(g_hwndParent, WM_APP+1, 0, 0);
-                }
+                PostHotkeyReregister(hwndDlg);
                 DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
 
         case WM_CLOSE:
-            if (g_hwndParent) {
-                PostMessage(g_hwndParent, WM_APP+1, 0, 0);
-            }
+            PostHotkeyReregister(hwndDlg);
             DestroyWindow(hwndDlg);
             return TRUE;
         
         case WM_DESTROY:
-            if (hBackgroundBrush) {
-                DeleteObject(hBackgroundBrush);
-                hBackgroundBrush = NULL;
-            }
-            if (hButtonBrush) {
-                DeleteObject(hButtonBrush);
-                hButtonBrush = NULL;
-            }
+            PostHotkeyReregister(hwndDlg);
 
-            if (g_OldHotkeyDlgProc) {
-                SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, (LONG_PTR)g_OldHotkeyDlgProc);
-                g_OldHotkeyDlgProc = NULL;
+            if (state && state->origDlgProc) {
+                SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, (LONG_PTR)state->origDlgProc);
+                state->origDlgProc = NULL;
             }
 
             RemoveHotkeyControlSubclassing(hwndDlg);
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_HOTKEY);
-            g_hwndParent = NULL;
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_HOTKEY, hwndDlg);
+            DestroyHotkeyDialogState(hwndDlg, state);
             break;
     }
 

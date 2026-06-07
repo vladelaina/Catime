@@ -57,6 +57,12 @@ void Dialog_FreeContext(DialogContext* ctx);
 void Dialog_SetContext(HWND hwndDlg, DialogContext* ctx);
 
 /**
+ * @brief Detach and free the dialog context stored on a dialog window
+ * @param hwndDlg Dialog handle
+ */
+void Dialog_DestroyContext(HWND hwndDlg);
+
+/**
  * @brief Retrieve dialog context
  * @param hwndDlg Dialog handle
  * @return Context or NULL if not set
@@ -257,7 +263,7 @@ BOOL Dialog_IsValidNumberInput(const wchar_t* str);
  */
 typedef enum {
     DIALOG_INSTANCE_ERROR,
-    DIALOG_INSTANCE_INPUT,
+    DIALOG_INSTANCE_INPUT,            /**< Custom countdown input */
     DIALOG_INSTANCE_ABOUT,
     DIALOG_INSTANCE_POMODORO_LOOP,
     DIALOG_INSTANCE_POMODORO_COMBO,
@@ -267,7 +273,9 @@ typedef enum {
     DIALOG_INSTANCE_NOTIFICATION_FULL,
     /* New modeless dialog types */
     DIALOG_INSTANCE_SHORTCUT,        /**< Quick countdown time settings */
+    DIALOG_INSTANCE_STARTUP,         /**< Startup default time settings */
     DIALOG_INSTANCE_POMODORO_TIME,   /**< Pomodoro time edit */
+    DIALOG_INSTANCE_INPUT_BOX,       /**< Generic modal input box */
     DIALOG_INSTANCE_COLOR,           /**< Color picker */
     DIALOG_INSTANCE_HOTKEY,          /**< Hotkey settings */
     DIALOG_INSTANCE_UPDATE,          /**< Update available dialog */
@@ -292,12 +300,22 @@ typedef enum {
 void Dialog_RegisterInstance(DialogInstanceType type, HWND hwnd);
 
 /**
- * @brief Unregister dialog instance
+ * @brief Unregister dialog instance unconditionally
  * @param type Dialog type
  * 
- * @details Call in WM_DESTROY
+ * @details Prefer Dialog_UnregisterInstanceForWindow() in WM_DESTROY paths.
  */
 void Dialog_UnregisterInstance(DialogInstanceType type);
+
+/**
+ * @brief Unregister dialog instance only if it still belongs to hwnd
+ * @param type Dialog type
+ * @param hwnd Dialog handle being destroyed
+ *
+ * @details Call in WM_DESTROY so a stale window cannot clear a newer
+ * instance of the same type.
+ */
+void Dialog_UnregisterInstanceForWindow(DialogInstanceType type, HWND hwnd);
 
 /**
  * @brief Get active dialog instance

@@ -10,6 +10,7 @@
 #include <netioapi.h>
 #include <iphlpapi.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "system_monitor.h"
@@ -20,6 +21,8 @@
 #define COUNTER_MAX_32BIT 0x100000000ULL
 #define MAX_REASONABLE_RATE_BPS 100000000000.0 /* 100 GB/s guardrail for reset/wrap anomalies */
 #define MAX_TRACKED_INTERFACES 256
+#define MAX_NETWORK_IF_TABLE_BYTES (1024u * 1024u)
+#define NETWORK_REFRESH_START_FAILURE_COOLDOWN_MS 2000
 
 typedef struct {
     FILETIME lastIdle;
@@ -35,6 +38,11 @@ typedef struct {
 } NetInterfaceCounter;
 
 typedef struct {
+    HANDLE refreshEvent;
+    LONG generation;
+} NetworkRefreshWorkerContext;
+
+typedef struct {
     BOOL hasBaseline;
     ULONGLONG lastTick;
     ULONGLONG lastPollAttemptTick;
@@ -43,6 +51,7 @@ typedef struct {
     float cachedUpBps;
     float cachedDownBps;
     BOOL sampleAvailable;
+    BOOL refreshInProgress;
 } NetworkState;
 
 /** Consolidates 13 globals into 1 structure */
@@ -50,18 +59,31 @@ typedef struct {
     struct {
         CpuTimesState timesState;
         float cachedPercent;
+        ULONGLONG lastUpdateTick;
     } cpu;
     struct {
         float cachedPercent;
+        ULONGLONG lastUpdateTick;
     } memory;
     NetworkState network;
     DWORD updateIntervalMs;
-    ULONGLONG lastUpdateTick;
 } SystemMonitorState;
 
 static volatile LONG g_initialized = 0;
 static SystemMonitorState g_state = {0};
+static SRWLOCK g_monitorLifecycleLock = SRWLOCK_INIT;
 static SRWLOCK g_stateLock = SRWLOCK_INIT;
+static SRWLOCK g_networkApiLock = SRWLOCK_INIT;
+static HANDLE g_networkRefreshThread = NULL;
+static HANDLE g_networkRefreshEvent = NULL;
+static HANDLE g_retiredNetworkRefreshThread = NULL;
+static HANDLE g_retiredNetworkRefreshEvent = NULL;
+static volatile LONG g_networkRefreshGeneration = 0;
+static DWORD g_networkRefreshLastStartFailureTick = 0;
+
+#define NETWORK_REFRESH_SHUTDOWN_WAIT_MS 2000
+
+static inline LONG IsMonitorInitialized(void);
 
 typedef enum {
     CPU_SAMPLE_ERROR = 0,
@@ -97,10 +119,9 @@ static inline ULONGLONG GetMonotonicTickMs(void) {
     return GetTickCount64();
 }
 
-static inline BOOL ShouldRefresh(void) {
-    ULONGLONG now = GetMonotonicTickMs();
-    return (g_state.lastUpdateTick == 0) || 
-           ((now - g_state.lastUpdateTick) >= g_state.updateIntervalMs);
+static inline BOOL ShouldRefreshTick(ULONGLONG now, ULONGLONG lastUpdateTick) {
+    return (lastUpdateTick == 0) ||
+           ((now - lastUpdateTick) >= g_state.updateIntervalMs);
 }
 
 /** First call establishes baseline, second+ return deltas */
@@ -208,57 +229,105 @@ static BOOL ResolveNetworkApi64(void) {
     return g_getIfTable2 && g_freeMibTable;
 }
 
+static void ReleaseNetworkApiResources(void) {
+    AcquireSRWLockExclusive(&g_networkApiLock);
+    g_getIfTable2 = NULL;
+    g_freeMibTable = NULL;
+    g_netioApiResolved = FALSE;
+    if (g_iphlpapiLoadedByUs && g_iphlpapiModule) {
+        FreeLibrary(g_iphlpapiModule);
+    }
+    g_iphlpapiModule = NULL;
+    g_iphlpapiLoadedByUs = FALSE;
+    ReleaseSRWLockExclusive(&g_networkApiLock);
+}
+
 static BOOL CollectNetworkCounters64(NetInterfaceCounter* outCounters, DWORD* outCount) {
     if (!outCounters || !outCount) return FALSE;
     *outCount = 0;
-    if (!ResolveNetworkApi64()) return FALSE;
 
-    PMIB_IF_TABLE2 table = NULL;
-    if (g_getIfTable2(&table) != NO_ERROR || !table) {
-        return FALSE;
-    }
-
-    DWORD count = 0;
-    for (ULONG i = 0; i < table->NumEntries; ++i) {
-        const MIB_IF_ROW2* row = &table->Table[i];
-        if (row->Type == IF_TYPE_SOFTWARE_LOOPBACK) continue;
-        if (row->OperStatus != IfOperStatusUp) continue;
-
-        if (count < MAX_TRACKED_INTERFACES) {
-            outCounters[count].index = row->InterfaceIndex;
-            outCounters[count].inOctets = row->InOctets;
-            outCounters[count].outOctets = row->OutOctets;
-            ++count;
+    BOOL success = FALSE;
+    AcquireSRWLockExclusive(&g_networkApiLock);
+    do {
+        if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) {
+            break;
         }
-    }
+        if (!ResolveNetworkApi64()) {
+            break;
+        }
 
-    g_freeMibTable(table);
-    *outCount = count;
-    return TRUE;
+        PMIB_IF_TABLE2 table = NULL;
+        if (g_getIfTable2(&table) != NO_ERROR || !table) {
+            break;
+        }
+
+        DWORD count = 0;
+        for (ULONG i = 0; i < table->NumEntries; ++i) {
+            if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) {
+                break;
+            }
+            const MIB_IF_ROW2* row = &table->Table[i];
+            if (row->Type == IF_TYPE_SOFTWARE_LOOPBACK) continue;
+            if (row->OperStatus != IfOperStatusUp) continue;
+
+            if (count < MAX_TRACKED_INTERFACES) {
+                outCounters[count].index = row->InterfaceIndex;
+                outCounters[count].inOctets = row->InOctets;
+                outCounters[count].outOctets = row->OutOctets;
+                ++count;
+            }
+        }
+
+        g_freeMibTable(table);
+        *outCount = count;
+        success = TRUE;
+    } while (0);
+    ReleaseSRWLockExclusive(&g_networkApiLock);
+
+    return success;
 }
 
 /** Collect active non-loopback interface counters (32-bit fallback). */
 static BOOL CollectNetworkCounters32(NetInterfaceCounter* outCounters, DWORD* outCount) {
     if (!outCounters || !outCount) return FALSE;
     *outCount = 0;
+    if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) return FALSE;
 
     DWORD size = 0;
     DWORD ret = GetIfTable(NULL, &size, TRUE);
     if (ret != ERROR_INSUFFICIENT_BUFFER) {
         return FALSE;
     }
+    if (size == 0 || size > MAX_NETWORK_IF_TABLE_BYTES) {
+        return FALSE;
+    }
 
     MIB_IFTABLE* pTable = (MIB_IFTABLE*)malloc(size);
     if (!pTable) return FALSE;
+
+    if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) {
+        free(pTable);
+        return FALSE;
+    }
 
     ret = GetIfTable(pTable, &size, TRUE);
     if (ret != NO_ERROR) {
         free(pTable);
         return FALSE;
     }
+    if (size > MAX_NETWORK_IF_TABLE_BYTES || size < FIELD_OFFSET(MIB_IFTABLE, table)) {
+        free(pTable);
+        return FALSE;
+    }
 
     DWORD count = 0;
-    for (DWORD i = 0; i < pTable->dwNumEntries; ++i) {
+    DWORD maxRowsInBuffer = (size - FIELD_OFFSET(MIB_IFTABLE, table)) / sizeof(MIB_IFROW);
+    DWORD rowsToScan = (pTable->dwNumEntries < maxRowsInBuffer) ? pTable->dwNumEntries : maxRowsInBuffer;
+    for (DWORD i = 0; i < rowsToScan; ++i) {
+        if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) {
+            free(pTable);
+            return FALSE;
+        }
         const MIB_IFROW* row = &pTable->table[i];
         if (row->dwType == IF_TYPE_SOFTWARE_LOOPBACK) continue;
 #ifdef IF_OPER_STATUS_OPERATIONAL
@@ -280,22 +349,44 @@ static BOOL CollectNetworkCounters32(NetInterfaceCounter* outCounters, DWORD* ou
 
 static BOOL CollectNetworkCounters(NetInterfaceCounter* outCounters, DWORD* outCount, BOOL* outIs64Bit) {
     if (!outCounters || !outCount || !outIs64Bit) return FALSE;
+    if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) return FALSE;
 
     if (CollectNetworkCounters64(outCounters, outCount)) {
         *outIs64Bit = TRUE;
         return TRUE;
     }
 
+    if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) return FALSE;
+
     *outIs64Bit = FALSE;
     return CollectNetworkCounters32(outCounters, outCount);
 }
 
+static int CompareNetInterfaceCounterByIndex(const void* lhs, const void* rhs) {
+    const NetInterfaceCounter* a = (const NetInterfaceCounter*)lhs;
+    const NetInterfaceCounter* b = (const NetInterfaceCounter*)rhs;
+    if (a->index < b->index) return -1;
+    if (a->index > b->index) return 1;
+    return 0;
+}
+
 static const NetInterfaceCounter* FindCounterByIndex(const NetInterfaceCounter* counters, DWORD count, DWORD index) {
-    for (DWORD i = 0; i < count; ++i) {
-        if (counters[i].index == index) {
-            return &counters[i];
+    DWORD low = 0;
+    DWORD high = count;
+
+    while (low < high) {
+        DWORD mid = low + ((high - low) / 2);
+        DWORD midIndex = counters[mid].index;
+        if (midIndex == index) {
+            return &counters[mid];
+        }
+        if (midIndex < index) {
+            low = mid + 1;
+        } else {
+            high = mid;
         }
     }
+
     return NULL;
 }
 
@@ -304,26 +395,24 @@ static void SetNetworkBaseline(const NetInterfaceCounter* counters, DWORD count,
     g_state.network.lastCounterCount = clipped;
     if (clipped > 0) {
         memcpy(g_state.network.lastCounters, counters, sizeof(NetInterfaceCounter) * clipped);
+        qsort(g_state.network.lastCounters, clipped, sizeof(NetInterfaceCounter), CompareNetInterfaceCounterByIndex);
     }
     g_state.network.lastTick = now;
     g_state.network.hasBaseline = TRUE;
     g_state.network.sampleAvailable = TRUE;
 }
 
-/** Aggregates active interfaces and computes B/s from per-interface deltas */
-static void SampleNetworkSpeed(void) {
-    NetInterfaceCounter currentCounters[MAX_TRACKED_INTERFACES];
-    DWORD currentCount = 0;
-    BOOL countersAre64Bit = FALSE;
-    if (!CollectNetworkCounters(currentCounters, &currentCount, &countersAre64Bit)) {
-        g_state.network.sampleAvailable = FALSE;
-        g_state.network.cachedDownBps = 0.0f;
-        g_state.network.cachedUpBps = 0.0f;
-        return;
-    }
+static void MarkNetworkSampleUnavailable(void) {
+    g_state.network.sampleAvailable = FALSE;
+    g_state.network.cachedDownBps = 0.0f;
+    g_state.network.cachedUpBps = 0.0f;
+}
 
-    ULONGLONG now = GetMonotonicTickMs();
-
+/** Aggregates active interfaces and computes B/s from per-interface deltas. */
+static void ApplyNetworkSample(const NetInterfaceCounter* currentCounters,
+                               DWORD currentCount,
+                               BOOL countersAre64Bit,
+                               ULONGLONG now) {
     if (!g_state.network.hasBaseline) {
         SetNetworkBaseline(currentCounters, currentCount, now);
         g_state.network.cachedDownBps = 0.0f;
@@ -377,9 +466,104 @@ static void SampleNetworkSpeed(void) {
     SetNetworkBaseline(currentCounters, currentCount, now);
 }
 
-/** Refresh CPU/memory cache only. Network is sampled lazily by its own getter. */
-static void RefreshBasicCacheIfNeeded(void) {
-    if (!ShouldRefresh()) {
+static DWORD WINAPI NetworkRefreshThreadProc(LPVOID param) {
+    NetworkRefreshWorkerContext* context = (NetworkRefreshWorkerContext*)param;
+    HANDLE refreshEvent = NULL;
+    LONG workerGeneration = 0;
+
+    if (!context) {
+        return 1;
+    }
+
+    refreshEvent = context->refreshEvent;
+    workerGeneration = context->generation;
+    free(context);
+
+    if (!refreshEvent) {
+        return 1;
+    }
+
+    for (;;) {
+        DWORD waitResult = WaitForSingleObject(refreshEvent, INFINITE);
+        if (waitResult != WAIT_OBJECT_0 ||
+            IsMonitorInitialized() == 0 ||
+            InterlockedCompareExchange(&g_networkRefreshGeneration, 0, 0) != workerGeneration) {
+            break;
+        }
+
+        NetInterfaceCounter currentCounters[MAX_TRACKED_INTERFACES];
+        DWORD currentCount = 0;
+        BOOL countersAre64Bit = FALSE;
+        BOOL sampleOk = CollectNetworkCounters(currentCounters, &currentCount, &countersAre64Bit);
+        ULONGLONG sampleTick = GetMonotonicTickMs();
+
+        AcquireSRWLockExclusive(&g_stateLock);
+        if (IsMonitorInitialized() != 0 &&
+            InterlockedCompareExchange(&g_networkRefreshGeneration, 0, 0) == workerGeneration) {
+            if (sampleOk) {
+                ApplyNetworkSample(currentCounters, currentCount, countersAre64Bit, sampleTick);
+            } else {
+                MarkNetworkSampleUnavailable();
+            }
+            g_state.network.refreshInProgress = FALSE;
+            ReleaseSRWLockExclusive(&g_stateLock);
+        } else {
+            ReleaseSRWLockExclusive(&g_stateLock);
+            break;
+        }
+    }
+
+    return 0;
+}
+
+static void CleanupCompletedNetworkRefreshWorkerLocked(void) {
+    if (!g_networkRefreshThread) {
+        return;
+    }
+
+    if (WaitForSingleObject(g_networkRefreshThread, 0) != WAIT_OBJECT_0) {
+        return;
+    }
+
+    CloseHandle(g_networkRefreshThread);
+    g_networkRefreshThread = NULL;
+
+    if (g_networkRefreshEvent) {
+        CloseHandle(g_networkRefreshEvent);
+        g_networkRefreshEvent = NULL;
+    }
+    g_state.network.refreshInProgress = FALSE;
+}
+
+static BOOL CleanupRetiredNetworkRefreshWorkerLocked(DWORD waitMs) {
+    if (!g_retiredNetworkRefreshThread) {
+        if (g_retiredNetworkRefreshEvent) {
+            CloseHandle(g_retiredNetworkRefreshEvent);
+            g_retiredNetworkRefreshEvent = NULL;
+        }
+        return TRUE;
+    }
+
+    DWORD waitResult = WaitForSingleObject(g_retiredNetworkRefreshThread, waitMs);
+    if (waitResult != WAIT_OBJECT_0) {
+        return FALSE;
+    }
+
+    CloseHandle(g_retiredNetworkRefreshThread);
+    g_retiredNetworkRefreshThread = NULL;
+
+    if (g_retiredNetworkRefreshEvent) {
+        CloseHandle(g_retiredNetworkRefreshEvent);
+        g_retiredNetworkRefreshEvent = NULL;
+    }
+    if (!g_networkRefreshThread) {
+        ReleaseNetworkApiResources();
+    }
+    return TRUE;
+}
+
+static void RefreshCpuCacheIfNeeded(ULONGLONG now) {
+    if (!ShouldRefreshTick(now, g_state.cpu.lastUpdateTick)) {
         return;
     }
 
@@ -389,42 +573,161 @@ static void RefreshBasicCacheIfNeeded(void) {
         g_state.cpu.cachedPercent = cpuTmp;
     }
 
+    /* Baseline creation requires an immediate follow-up sample to avoid startup 0%. */
+    if (cpuStatus == CPU_SAMPLE_BASELINE_ONLY) {
+        g_state.cpu.lastUpdateTick = 0;
+    } else {
+        g_state.cpu.lastUpdateTick = GetMonotonicTickMs();
+    }
+}
+
+static void RefreshMemoryCacheIfNeeded(ULONGLONG now) {
+    if (!ShouldRefreshTick(now, g_state.memory.lastUpdateTick)) {
+        return;
+    }
+
     float memTmp = 0.0f;
     if (SampleMemoryUsage(&memTmp)) {
         g_state.memory.cachedPercent = memTmp;
     }
-
-    /* Baseline creation requires an immediate follow-up sample to avoid startup 0%. */
-    if (cpuStatus == CPU_SAMPLE_BASELINE_ONLY) {
-        g_state.lastUpdateTick = 0;
-    } else {
-        g_state.lastUpdateTick = GetMonotonicTickMs();
-    }
+    g_state.memory.lastUpdateTick = GetMonotonicTickMs();
 }
 
-static void RefreshNetworkCacheIfNeeded(void) {
+/** Refresh CPU/memory cache only. Network is sampled by a background worker. */
+static void RefreshBasicCacheIfNeeded(void) {
     ULONGLONG now = GetMonotonicTickMs();
+    RefreshCpuCacheIfNeeded(now);
+    RefreshMemoryCacheIfNeeded(now);
+}
+
+static BOOL BeginNetworkRefreshIfNeeded(void) {
+    ULONGLONG now = GetMonotonicTickMs();
+    if (!g_networkRefreshThread || !g_networkRefreshEvent) {
+        return FALSE;
+    }
+    if (g_state.network.refreshInProgress) {
+        return FALSE;
+    }
     if (g_state.network.lastPollAttemptTick != 0 &&
         (now - g_state.network.lastPollAttemptTick) < g_state.updateIntervalMs) {
-        return;
+        return FALSE;
     }
 
     g_state.network.lastPollAttemptTick = now;
-    SampleNetworkSpeed();
+    g_state.network.refreshInProgress = TRUE;
+    return TRUE;
+}
+
+static BOOL IsNetworkRefreshStartFailureCoolingDown(ULONGLONG now) {
+    return g_networkRefreshLastStartFailureTick != 0 &&
+           (DWORD)(now - g_networkRefreshLastStartFailureTick) <
+               NETWORK_REFRESH_START_FAILURE_COOLDOWN_MS;
+}
+
+static void MarkNetworkRefreshStartFailure(ULONGLONG now) {
+    g_networkRefreshLastStartFailureTick = (DWORD)(now ? now : 1);
+}
+
+static void StartNetworkRefreshIfNeeded(void) {
+    if (!BeginNetworkRefreshIfNeeded()) {
+        return;
+    }
+
+    if (!g_networkRefreshEvent || !SetEvent(g_networkRefreshEvent)) {
+        g_state.network.refreshInProgress = FALSE;
+    }
+}
+
+static BOOL EnsureNetworkRefreshWorkerStarted(void) {
+    CleanupCompletedNetworkRefreshWorkerLocked();
+    if (!CleanupRetiredNetworkRefreshWorkerLocked(0)) {
+        return FALSE;
+    }
+
+    if (g_networkRefreshThread && g_networkRefreshEvent) {
+        return TRUE;
+    }
+
+    ULONGLONG now = GetMonotonicTickMs();
+    if (IsNetworkRefreshStartFailureCoolingDown(now)) {
+        return FALSE;
+    }
+
+    if (g_networkRefreshEvent && !g_networkRefreshThread) {
+        CloseHandle(g_networkRefreshEvent);
+        g_networkRefreshEvent = NULL;
+    }
+
+    g_networkRefreshEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
+    if (!g_networkRefreshEvent) {
+        MarkNetworkRefreshStartFailure(now);
+        return FALSE;
+    }
+
+    LONG workerGeneration = InterlockedCompareExchange(&g_networkRefreshGeneration, 0, 0);
+    NetworkRefreshWorkerContext* context =
+        (NetworkRefreshWorkerContext*)calloc(1, sizeof(NetworkRefreshWorkerContext));
+    if (!context) {
+        CloseHandle(g_networkRefreshEvent);
+        g_networkRefreshEvent = NULL;
+        MarkNetworkRefreshStartFailure(now);
+        return FALSE;
+    }
+    context->refreshEvent = g_networkRefreshEvent;
+    context->generation = workerGeneration;
+
+    g_networkRefreshThread = CreateThread(NULL, 0, NetworkRefreshThreadProc,
+                                          context, 0, NULL);
+    if (!g_networkRefreshThread) {
+        free(context);
+        CloseHandle(g_networkRefreshEvent);
+        g_networkRefreshEvent = NULL;
+        MarkNetworkRefreshStartFailure(now);
+        return FALSE;
+    }
+
+    g_networkRefreshLastStartFailureTick = 0;
+    return TRUE;
 }
 
 static inline LONG IsMonitorInitialized(void) {
     return InterlockedCompareExchange(&g_initialized, 0, 0);
 }
 
+static BOOL BeginMonitorUse(void) {
+    for (int attempt = 0; attempt < 2; ++attempt) {
+        if (IsMonitorInitialized() == 0) {
+            SystemMonitor_Init();
+        }
+
+        AcquireSRWLockShared(&g_monitorLifecycleLock);
+        if (IsMonitorInitialized() != 0) {
+            return TRUE;
+        }
+        ReleaseSRWLockShared(&g_monitorLifecycleLock);
+    }
+
+    return FALSE;
+}
+
+static void EndMonitorUse(void) {
+    ReleaseSRWLockShared(&g_monitorLifecycleLock);
+}
+
 void SystemMonitor_Init(void) {
+    AcquireSRWLockExclusive(&g_monitorLifecycleLock);
+    CleanupRetiredNetworkRefreshWorkerLocked(0);
+
     if (InterlockedCompareExchange(&g_initialized, 1, 0) != 0) {
+        ReleaseSRWLockExclusive(&g_monitorLifecycleLock);
         return;
     }
 
+    InterlockedIncrement(&g_networkRefreshGeneration);
     AcquireSRWLockExclusive(&g_stateLock);
     ZeroMemory(&g_state, sizeof(g_state));
     g_state.updateIntervalMs = DEFAULT_UPDATE_INTERVAL_MS;
+    g_networkRefreshLastStartFailureTick = 0;
     /*
      * Prime CPU baseline during init so the next caller can obtain a
      * delta sample instead of always seeing startup 0%.
@@ -439,81 +742,119 @@ void SystemMonitor_Init(void) {
         }
     }
     ReleaseSRWLockExclusive(&g_stateLock);
+    ReleaseSRWLockExclusive(&g_monitorLifecycleLock);
 }
 
 void SystemMonitor_Shutdown(void) {
+    HANDLE hRefreshThread = NULL;
+    HANDLE hRefreshEvent = NULL;
+    BOOL refreshThreadExited = TRUE;
+
+    AcquireSRWLockExclusive(&g_monitorLifecycleLock);
+    CleanupRetiredNetworkRefreshWorkerLocked(0);
+
     AcquireSRWLockExclusive(&g_stateLock);
     InterlockedExchange(&g_initialized, 0);
+    InterlockedIncrement(&g_networkRefreshGeneration);
+    hRefreshThread = g_networkRefreshThread;
+    hRefreshEvent = g_networkRefreshEvent;
+    g_networkRefreshThread = NULL;
+    g_networkRefreshEvent = NULL;
     ZeroMemory(&g_state, sizeof(g_state));
-    g_getIfTable2 = NULL;
-    g_freeMibTable = NULL;
-    g_netioApiResolved = FALSE;
-    if (g_iphlpapiLoadedByUs && g_iphlpapiModule) {
-        FreeLibrary(g_iphlpapiModule);
-    }
-    g_iphlpapiModule = NULL;
-    g_iphlpapiLoadedByUs = FALSE;
     ReleaseSRWLockExclusive(&g_stateLock);
+
+    if (hRefreshEvent) {
+        SetEvent(hRefreshEvent);
+    }
+    if (hRefreshThread) {
+        DWORD waitResult = WaitForSingleObject(hRefreshThread, NETWORK_REFRESH_SHUTDOWN_WAIT_MS);
+        refreshThreadExited = (waitResult == WAIT_OBJECT_0);
+        if (!refreshThreadExited) {
+            if (waitResult == WAIT_TIMEOUT) {
+                OutputDebugStringW(L"SystemMonitor: network refresh worker did not exit before shutdown timeout\n");
+            }
+            g_retiredNetworkRefreshThread = hRefreshThread;
+            g_retiredNetworkRefreshEvent = hRefreshEvent;
+            hRefreshThread = NULL;
+            hRefreshEvent = NULL;
+        }
+    }
+    if (hRefreshThread) {
+        CloseHandle(hRefreshThread);
+    }
+    if (hRefreshEvent) {
+        CloseHandle(hRefreshEvent);
+    }
+
+    if (refreshThreadExited && !g_retiredNetworkRefreshThread) {
+        ReleaseNetworkApiResources();
+    }
+    ReleaseSRWLockExclusive(&g_monitorLifecycleLock);
 }
 
 void SystemMonitor_SetUpdateIntervalMs(DWORD intervalMs) {
-    if (IsMonitorInitialized() == 0) {
-        SystemMonitor_Init();
-    }
+    if (!BeginMonitorUse()) return;
     AcquireSRWLockExclusive(&g_stateLock);
     if (IsMonitorInitialized() == 0) {
         ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
         return;
     }
     g_state.updateIntervalMs = (intervalMs == 0) ? DEFAULT_UPDATE_INTERVAL_MS : intervalMs;
     ReleaseSRWLockExclusive(&g_stateLock);
+    EndMonitorUse();
 }
 
 void SystemMonitor_ForceRefresh(void) {
-    if (IsMonitorInitialized() == 0) {
-        SystemMonitor_Init();
-    }
+    if (!BeginMonitorUse()) return;
     AcquireSRWLockExclusive(&g_stateLock);
     if (IsMonitorInitialized() == 0) {
         ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
         return;
     }
-    g_state.lastUpdateTick = 0;
+    g_state.cpu.lastUpdateTick = 0;
+    g_state.memory.lastUpdateTick = 0;
     RefreshBasicCacheIfNeeded();
+    if (EnsureNetworkRefreshWorkerStarted()) {
+        g_state.network.lastPollAttemptTick = 0;
+        StartNetworkRefreshIfNeeded();
+    }
     ReleaseSRWLockExclusive(&g_stateLock);
+    EndMonitorUse();
 }
 
 BOOL SystemMonitor_GetCpuUsage(float* outPercent) {
     if (!outPercent) return FALSE;
     *outPercent = 0.0f;
-    if (IsMonitorInitialized() == 0) {
-        SystemMonitor_Init();
-    }
+    if (!BeginMonitorUse()) return FALSE;
     AcquireSRWLockExclusive(&g_stateLock);
     if (IsMonitorInitialized() == 0) {
         ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
         return FALSE;
     }
-    RefreshBasicCacheIfNeeded();
+    RefreshCpuCacheIfNeeded(GetMonotonicTickMs());
     *outPercent = g_state.cpu.cachedPercent;
     ReleaseSRWLockExclusive(&g_stateLock);
+    EndMonitorUse();
     return TRUE;
 }
 
 BOOL SystemMonitor_GetMemoryUsage(float* outPercent) {
     if (!outPercent) return FALSE;
     *outPercent = 0.0f;
-    if (IsMonitorInitialized() == 0) {
-        SystemMonitor_Init();
-    }
+    if (!BeginMonitorUse()) return FALSE;
     AcquireSRWLockExclusive(&g_stateLock);
     if (IsMonitorInitialized() == 0) {
         ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
         return FALSE;
     }
-    RefreshBasicCacheIfNeeded();
+    RefreshMemoryCacheIfNeeded(GetMonotonicTickMs());
     *outPercent = g_state.memory.cachedPercent;
     ReleaseSRWLockExclusive(&g_stateLock);
+    EndMonitorUse();
     return TRUE;
 }
 
@@ -522,12 +863,11 @@ BOOL SystemMonitor_GetUsage(float* outCpuPercent, float* outMemPercent) {
     if (!outCpuPercent) return FALSE;
     *outCpuPercent = 0.0f;
     *outMemPercent = 0.0f;
-    if (IsMonitorInitialized() == 0) {
-        SystemMonitor_Init();
-    }
+    if (!BeginMonitorUse()) return FALSE;
     AcquireSRWLockExclusive(&g_stateLock);
     if (IsMonitorInitialized() == 0) {
         ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
         return FALSE;
     }
     RefreshBasicCacheIfNeeded();
@@ -535,6 +875,7 @@ BOOL SystemMonitor_GetUsage(float* outCpuPercent, float* outMemPercent) {
     *outCpuPercent = g_state.cpu.cachedPercent;
     *outMemPercent = g_state.memory.cachedPercent;
     ReleaseSRWLockExclusive(&g_stateLock);
+    EndMonitorUse();
     return TRUE;
 }
 
@@ -543,23 +884,32 @@ BOOL SystemMonitor_GetNetSpeed(float* outUpBytesPerSec, float* outDownBytesPerSe
     if (!outUpBytesPerSec) return FALSE;
     *outUpBytesPerSec = 0.0f;
     *outDownBytesPerSec = 0.0f;
-    if (IsMonitorInitialized() == 0) {
-        SystemMonitor_Init();
-    }
+    if (!BeginMonitorUse()) return FALSE;
+
     AcquireSRWLockExclusive(&g_stateLock);
     if (IsMonitorInitialized() == 0) {
         ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
         return FALSE;
     }
-    RefreshNetworkCacheIfNeeded();
-    
+
+    if (!EnsureNetworkRefreshWorkerStarted()) {
+        ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
+        return FALSE;
+    }
+
+    StartNetworkRefreshIfNeeded();
+
     if (!g_state.network.sampleAvailable) {
         ReleaseSRWLockExclusive(&g_stateLock);
+        EndMonitorUse();
         return FALSE;
     }
     *outUpBytesPerSec = g_state.network.cachedUpBps;
     *outDownBytesPerSec = g_state.network.cachedDownBps;
     ReleaseSRWLockExclusive(&g_stateLock);
+    EndMonitorUse();
     return TRUE;
 }
 

@@ -112,4 +112,10 @@ BOOL HandleScaleWindow(HWND hwnd, int delta);
  */
 void ScheduleConfigSave(HWND hwnd);
 
+/**
+ * @brief Cancel any pending debounced config save
+ * @param hwnd Window handle used as fallback for timer cancellation
+ */
+void CancelScheduledConfigSave(HWND hwnd);
+
 #endif

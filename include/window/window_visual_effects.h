@@ -47,6 +47,21 @@ UINT GetClickThroughTimerId(void);
 void UpdateClickThroughState(HWND hwnd);
 
 /**
+ * @brief Start or stop click-through polling based on current clickable regions
+ */
+void RefreshClickThroughState(HWND hwnd);
+
+/**
+ * @brief Clear per-window visual-effect state and timers during teardown
+ */
+void CleanupWindowVisualEffects(HWND hwnd);
+
+/**
+ * @brief Release process-wide visual-effect resources
+ */
+void ShutdownWindowVisualEffects(void);
+
+/**
  * @brief Initialize DWM functions for blur effects
  * @return TRUE if loaded successfully
  * 

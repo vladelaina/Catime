@@ -12,26 +12,39 @@
 #include "main/main_single_instance.h"
 #include "log.h"
 #include "config.h"
+#include "config/config_watcher.h"
+#include "language.h"
 #include "config/config_plugin_security.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
 #include "window.h"
 #include "window/window_initialization.h"
+#include "window/window_desktop_integration.h"
+#include "window/window_visual_effects.h"
 #include "cli.h"
 #include "async_update_checker.h"
+#include "update_checker.h"
+#include "audio_player.h"
 #include "dialog/dialog_language.h"
+#include "dialog/dialog_font_picker.h"
+#include "dialog/dialog_notification_audio.h"
 #include "shortcut_checker.h"
 #include "utils/string_convert.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
+#include "tray/tray_animation_menu.h"
+#include "tray/tray_menu_font.h"
 #include "drawing/drawing_image.h"
 #include "drawing/drawing_render.h"
 #include "drawing/drawing_timer_precision.h"
 #include "markdown/markdown_image.h"
 #include "markdown/markdown_interactive.h"
+#include "notification.h"
 #include "../resource/resource.h"
 #include <tlhelp32.h>
+
+#define STARTUP_WINDOW_RECOVERY_DELAY_MS 2000
 
 static BOOL ContainsFlag(const wchar_t* cmdLine, const wchar_t* flag) {
     const wchar_t* pos;
@@ -80,12 +93,32 @@ UINT GetCiExitTimeoutMs(void) {
 }
 
 static VOID CALLBACK CiSmokeExitTimerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
-    (void)uMsg;
     (void)dwTime;
+
+    if (uMsg != WM_TIMER || idEvent != TIMER_ID_CI_EXIT) {
+        return;
+    }
 
     KillTimer(hwnd, idEvent);
     LOG_INFO("CI smoke timeout reached, closing application");
     PostMessage(hwnd, WM_CLOSE, 0, 0);
+}
+
+static void ScheduleCiSmokeExit(HWND hwnd, UINT exitDelayMs) {
+    if (!SetTimer(hwnd, TIMER_ID_CI_EXIT, exitDelayMs, CiSmokeExitTimerProc)) {
+        LOG_WARNING("CI smoke exit timer creation failed (error: %lu); closing immediately",
+                    GetLastError());
+        PostMessage(hwnd, WM_CLOSE, 0, 0);
+    }
+}
+
+static void ScheduleStartupWindowRecovery(HWND hwnd, BOOL topmost) {
+    UINT timerId = topmost ? TIMER_ID_TOPMOST_RETRY : TIMER_ID_VISIBILITY_RETRY;
+    if (!SetTimer(hwnd, timerId, STARTUP_WINDOW_RECOVERY_DELAY_MS, NULL)) {
+        LOG_WARNING("Startup window recovery timer %u creation failed (error: %lu)",
+                    timerId, GetLastError());
+        EnsureWindowVisibleWithTopmostState(hwnd);
+    }
 }
 
 /* Helper to check if process is elevated */
@@ -139,9 +172,6 @@ static BOOL RelaunchAsStandardUser(void) {
         CloseHandle(hShellProcess);
         return FALSE;
     }
-
-    wchar_t szPath[MAX_PATH];
-    GetModuleFileNameW(NULL, szPath, MAX_PATH);
 
     /* Reconstruct command line safely - CreateProcess might modify the buffer */
     const wchar_t* pszOriginalCmdLine = GetCommandLineW();
@@ -442,13 +472,11 @@ BOOL InitializeSubsystems(void) {
     HRESULT hr = CoInitialize(NULL);
     if (FAILED(hr)) {
         LOG_ERROR("COM initialization failed, error code: 0x%08X. Application cannot continue.", hr);
+        ShutdownWindowVisualEffects();
+        CleanupLogSystem();
         return FALSE;
     }
     LOG_INFO("COM initialization successful");
-
-    // Initialize plugin manager
-    PluginManager_Init();
-    LOG_INFO("Plugin manager initialized");
 
     return TRUE;
 }
@@ -458,7 +486,11 @@ BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     
     /* Initialize markdown interactive system */
     InitMarkdownInteractive();
-    
+
+    // Initialize plugin manager after single-instance ownership is confirmed.
+    PluginManager_Init();
+    LOG_INFO("Plugin manager initialized");
+
     if (!InitializeApplication(hInstance)) {
         LOG_ERROR("Application initialization failed. Check log file for details.");
         return FALSE;
@@ -505,6 +537,10 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     // Initialize Plugin Data subsystem early - needed by CLI handlers and startup mode
     PluginData_Init(hwnd);
     PluginManager_SetNotifyWindow(hwnd);
+    PluginManager_RequestScanAsync();
+    AnimationMenu_RequestScanAsync();
+    FontMenu_RequestScanAsync();
+    NotificationSoundCache_RequestScanAsync();
     
     LPWSTR lpCmdLineW = GetCommandLineW();
     if (!lpCmdLineW) {
@@ -565,7 +601,7 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     if (ciSmokeMode) {
         const UINT exitDelayMs = GetCiExitTimeoutMs();
         LOG_INFO("CI smoke mode enabled, skipping startup-only side effects and auto-exiting in %u ms", exitDelayMs);
-        SetTimer(hwnd, TIMER_ID_CI_EXIT, exitDelayMs, CiSmokeExitTimerProc);
+        ScheduleCiSmokeExit(hwnd, exitDelayMs);
     } else {
         LOG_INFO("Starting automatic update check at startup...");
         CheckForUpdateAsync(hwnd, TRUE);
@@ -575,11 +611,7 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     }
 
     if (launchedFromStartup) {
-        if (CLOCK_WINDOW_TOPMOST) {
-            SetTimer(hwnd, TIMER_ID_TOPMOST_RETRY, 2000, NULL);
-        } else {
-            SetTimer(hwnd, TIMER_ID_VISIBILITY_RETRY, 2000, NULL);
-        }
+        ScheduleStartupWindowRecovery(hwnd, CLOCK_WINDOW_TOPMOST);
     }
 
     /* Check if a factory reset was requested during config loading */
@@ -625,8 +657,29 @@ void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Shutting down markdown image subsystem");
     ShutdownMarkdownImage();
 
+    LOG_INFO("Stopping notification audio playback");
+    StopNotificationSound();
+
+    LOG_INFO("Cleaning up notification drawing resources");
+    CleanupNotificationResources();
+
     LOG_INFO("Preparing to clean up update check thread resources");
-    CleanupUpdateThread();
+    CleanupUpdateThreadBlocking();
+
+    LOG_INFO("Releasing update checker network resources");
+    CleanupUpdateCheckResources();
+
+    LOG_INFO("Shutting down animation menu cache");
+    AnimationMenu_Shutdown();
+
+    LOG_INFO("Shutting down font menu cache");
+    FontMenu_Shutdown();
+
+    LOG_INFO("Cleaning up system font picker resources");
+    CleanupSystemFontDialogResources();
+
+    LOG_INFO("Shutting down notification sound cache");
+    NotificationSoundCache_Shutdown();
 
     LOG_INFO("Shutting down plugin manager");
     PluginManager_Shutdown();
@@ -640,8 +693,17 @@ void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Shutting down GDI+");
     ShutdownDrawingImage();
 
+    LOG_INFO("Shutting down window visual effects");
+    ShutdownWindowVisualEffects();
+
+    LOG_INFO("Stopping config watcher");
+    ConfigWatcher_Shutdown();
+
     LOG_INFO("Shutting down INI cache");
     ShutdownIniCache();
+
+    LOG_INFO("Cleaning up language resources");
+    CleanupLanguage();
 
     if (hMutex) {
         LOG_INFO("Releasing mutex before exit");

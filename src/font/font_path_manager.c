@@ -17,12 +17,38 @@
 extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
 
+static SRWLOCK g_fontsFolderCacheLock = SRWLOCK_INIT;
+static wchar_t g_cachedFontsFolderW[MAX_PATH] = {0};
+static BOOL g_cachedFontsFolderValid = FALSE;
+static BOOL g_fontsFolderCreateAttempted = FALSE;
+
+#define FONT_SEARCH_ENTRY_BUDGET 4096u
+#define FONT_SEARCH_DEPTH_LIMIT 16u
+
+typedef struct {
+    DWORD scannedEntries;
+    BOOL truncated;
+} FontSearchState;
+
+static BOOL CopyStringExactA(const char* src, char* out, size_t outSize) {
+    if (!out || outSize == 0) return FALSE;
+    out[0] = '\0';
+    if (!src) return FALSE;
+
+    size_t len = strlen(src);
+    if (len >= outSize) return FALSE;
+
+    memcpy(out, src, len + 1);
+    return TRUE;
+}
+
 /* ============================================================================
  * Fonts Folder Resolution
  * ============================================================================ */
 
-BOOL GetFontsFolderW(wchar_t* outW, size_t size, BOOL ensureCreate) {
+static BOOL BuildFontsFolderPathW(wchar_t* outW, size_t size) {
     if (!outW || size == 0) return FALSE;
+    outW[0] = L'\0';
     
     /* Get config path */
     char configPathUtf8[MAX_PATH] = {0};
@@ -44,12 +70,43 @@ BOOL GetFontsFolderW(wchar_t* outW, size_t size, BOOL ensureCreate) {
     /* Append fonts subfolder path */
     if (wcslen(outW) + 1 + wcslen(L"resources\\fonts") + 1 >= size) return FALSE;
     wcscat_s(outW, size, L"\\resources\\fonts");
-    
-    /* Create directory if requested */
-    if (ensureCreate) {
-        SHCreateDirectoryExW(NULL, outW, NULL);
+    return TRUE;
+}
+
+BOOL GetFontsFolderW(wchar_t* outW, size_t size, BOOL ensureCreate) {
+    if (!outW || size == 0) return FALSE;
+    outW[0] = L'\0';
+
+    AcquireSRWLockExclusive(&g_fontsFolderCacheLock);
+
+    if (!g_cachedFontsFolderValid) {
+        if (!BuildFontsFolderPathW(g_cachedFontsFolderW, MAX_PATH)) {
+            ReleaseSRWLockExclusive(&g_fontsFolderCacheLock);
+            return FALSE;
+        }
+        g_cachedFontsFolderValid = TRUE;
+        g_fontsFolderCreateAttempted = FALSE;
     }
-    
+
+    if (wcslen(g_cachedFontsFolderW) + 1 > size) {
+        ReleaseSRWLockExclusive(&g_fontsFolderCacheLock);
+        return FALSE;
+    }
+
+    wcscpy_s(outW, size, g_cachedFontsFolderW);
+
+    if (ensureCreate && !g_fontsFolderCreateAttempted) {
+        int createResult = SHCreateDirectoryExW(NULL, g_cachedFontsFolderW, NULL);
+        if (createResult != ERROR_SUCCESS && createResult != ERROR_ALREADY_EXISTS) {
+            LOG_WARNING("Failed to create fonts folder: %ls (error=%d)",
+                        g_cachedFontsFolderW, createResult);
+            ReleaseSRWLockExclusive(&g_fontsFolderCacheLock);
+            return FALSE;
+        }
+        g_fontsFolderCreateAttempted = TRUE;
+    }
+
+    ReleaseSRWLockExclusive(&g_fontsFolderCacheLock);
     return TRUE;
 }
 
@@ -57,23 +114,69 @@ BOOL GetFontsFolderW(wchar_t* outW, size_t size, BOOL ensureCreate) {
  * Path Building
  * ============================================================================ */
 
+static BOOL IsSafeRelativeFontPathUtf8(const char* path);
+
 BOOL BuildFontConfigPath(const char* relativePath, char* outBuffer, size_t bufferSize) {
     if (!relativePath || !outBuffer || bufferSize == 0) return FALSE;
+    outBuffer[0] = '\0';
+    if (!IsSafeRelativeFontPathUtf8(relativePath)) return FALSE;
     
     int result = snprintf(outBuffer, bufferSize, "%s%s", FONT_FOLDER_PREFIX, relativePath);
-    return result > 0 && result < (int)bufferSize;
+    if (result <= 0 || result >= (int)bufferSize) {
+        outBuffer[0] = '\0';
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL IsAbsoluteFontPathUtf8(const char* path) {
+    if (!path || !*path) return FALSE;
+
+    if (((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) &&
+        path[1] == ':') {
+        return TRUE;
+    }
+
+    return path[0] == '\\' && path[1] == '\\';
+}
+
+static BOOL IsSafeRelativeFontPathUtf8(const char* path) {
+    if (!path || !*path) return FALSE;
+    if (path[0] == '\\' || path[0] == '/') return FALSE;
+
+    const char* segment = path;
+    while (*segment) {
+        const char* end = segment;
+        while (*end && *end != '\\' && *end != '/') {
+            end++;
+        }
+
+        size_t len = (size_t)(end - segment);
+        if (len == 0 ||
+            (len == 1 && segment[0] == '.') ||
+            (len == 2 && segment[0] == '.' && segment[1] == '.')) {
+            return FALSE;
+        }
+
+        segment = *end ? end + 1 : end;
+    }
+
+    return TRUE;
 }
 
 BOOL BuildFullFontPath(const char* relativePath, char* outAbsolutePath, size_t bufferSize) {
     if (!relativePath || !outAbsolutePath || bufferSize == 0) return FALSE;
+    outAbsolutePath[0] = '\0';
 
     /* Check if path is already absolute (contains drive letter or starts with UNC) */
-    if (strchr(relativePath, ':') || (strlen(relativePath) > 2 && relativePath[0] == '\\' && relativePath[1] == '\\')) {
+    if (IsAbsoluteFontPathUtf8(relativePath)) {
         if (strlen(relativePath) >= bufferSize) return FALSE;
         strncpy(outAbsolutePath, relativePath, bufferSize - 1);
         outAbsolutePath[bufferSize - 1] = '\0';
         return TRUE;
     }
+
+    if (!IsSafeRelativeFontPathUtf8(relativePath)) return FALSE;
 
     wchar_t fontsFolderW[MAX_PATH] = {0};
     if (!GetFontsFolderW(fontsFolderW, MAX_PATH, TRUE)) return FALSE;
@@ -90,6 +193,7 @@ BOOL BuildFullFontPath(const char* relativePath, char* outAbsolutePath, size_t b
 
 BOOL CalculateRelativePath(const char* absolutePath, char* outRelativePath, size_t bufferSize) {
     if (!absolutePath || !outRelativePath || bufferSize == 0) return FALSE;
+    outRelativePath[0] = '\0';
     
     /* Get fonts folder */
     wchar_t fontsFolderW[MAX_PATH] = {0};
@@ -115,8 +219,14 @@ BOOL CalculateRelativePath(const char* absolutePath, char* outRelativePath, size
     
     /* Extract relative portion */
     const char* relativePart = absolutePath + prefixLen;
-    strncpy(outRelativePath, relativePart, bufferSize - 1);
-    outRelativePath[bufferSize - 1] = '\0';
+    if (!CopyStringExactA(relativePart, outRelativePath, bufferSize)) {
+        LOG_WARNING("Font relative path too long: %s", relativePart);
+        return FALSE;
+    }
+    if (!IsSafeRelativeFontPathUtf8(outRelativePath)) {
+        outRelativePath[0] = '\0';
+        return FALSE;
+    }
     
     return TRUE;
 }
@@ -148,8 +258,13 @@ const char* ExtractRelativePath(const char* fullConfigPath) {
  * @return TRUE on first match
  */
 static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targetFileW,
-                                 wchar_t* resultPathW, size_t resultCapacity) {
-    if (!folderPathW || !targetFileW || !resultPathW) return FALSE;
+                                 wchar_t* resultPathW, size_t resultCapacity,
+                                 FontSearchState* state, unsigned depth) {
+    if (!folderPathW || !targetFileW || !resultPathW || !state || state->truncated) return FALSE;
+    if (depth >= FONT_SEARCH_DEPTH_LIMIT) {
+        state->truncated = TRUE;
+        return FALSE;
+    }
 
     wchar_t searchPathW[MAX_PATH] = {0};
     int searchWritten = _snwprintf_s(searchPathW, MAX_PATH, _TRUNCATE, L"%s\\*", folderPathW);
@@ -168,6 +283,12 @@ static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targ
             continue;
         }
 
+        if (state->scannedEntries >= FONT_SEARCH_ENTRY_BUDGET) {
+            state->truncated = TRUE;
+            break;
+        }
+        state->scannedEntries++;
+
         wchar_t fullItemPathW[MAX_PATH] = {0};
         int itemWritten = _snwprintf_s(fullItemPathW, MAX_PATH, _TRUNCATE, L"%s\\%s",
                                        folderPathW, findDataW.cFileName);
@@ -181,14 +302,15 @@ static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targ
                 found = TRUE;
                 break;
             }
-        } else {
+        } else if (!(findDataW.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
             /* Directory: recurse */
-            if (SearchFontRecursiveW(fullItemPathW, targetFileW, resultPathW, resultCapacity)) {
+            if (SearchFontRecursiveW(fullItemPathW, targetFileW, resultPathW,
+                                     resultCapacity, state, depth + 1)) {
                 found = TRUE;
                 break;
             }
         }
-    } while (FindNextFileW(hFind, &findDataW));
+    } while (!state->truncated && FindNextFileW(hFind, &findDataW));
     
     FindClose(hFind);
     return found;
@@ -196,6 +318,7 @@ static BOOL SearchFontRecursiveW(const wchar_t* folderPathW, const wchar_t* targ
 
 BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t foundPathSize) {
     if (!fontFileName || !foundPath || foundPathSize == 0) return FALSE;
+    foundPath[0] = '\0';
     
     /* Get fonts folder */
     wchar_t fontsFolderW[MAX_PATH] = {0};
@@ -207,7 +330,9 @@ BOOL FindFontInFontsFolder(const char* fontFileName, char* foundPath, size_t fou
     
     /* Search recursively */
     wchar_t resultPathW[MAX_PATH] = {0};
-    if (!SearchFontRecursiveW(fontsFolderW, targetFileW, resultPathW, MAX_PATH)) {
+    FontSearchState searchState = {0};
+    if (!SearchFontRecursiveW(fontsFolderW, targetFileW, resultPathW, MAX_PATH,
+                              &searchState, 0)) {
         return FALSE;
     }
     
@@ -226,7 +351,11 @@ BOOL AutoFixFontPath(const char* fontFileName, FontPathInfo* pathInfo) {
     memset(pathInfo, 0, sizeof(FontPathInfo));
     
     /* Extract filename only (strip any directory prefix) */
-    strncpy(pathInfo->fileName, GetFileNameU8(fontFileName), sizeof(pathInfo->fileName) - 1);
+    if (!CopyStringExactA(GetFileNameU8(fontFileName), pathInfo->fileName,
+                          sizeof(pathInfo->fileName))) {
+        LOG_WARNING("Font file name too long for auto-fix: %s", fontFileName);
+        return FALSE;
+    }
     
     /* Search for font in fonts folder */
     if (!FindFontInFontsFolder(pathInfo->fileName, pathInfo->absolutePath, 

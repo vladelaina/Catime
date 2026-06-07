@@ -78,6 +78,40 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message);
 void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview);
 
 /**
+ * @brief Show a persistent toast preview with explicit opacity
+ * @param hwnd Parent handle
+ * @param message Message text
+ * @param opacityPercent Initial opacity percentage (1-100)
+ *
+ * @details
+ * Used by settings UI to preview appearance without temporarily mutating
+ * global notification config.
+ */
+void ShowToastNotificationPreview(HWND hwnd, const wchar_t* message, int opacityPercent);
+
+/**
+ * @brief Update a toast window opacity and its internal animation target
+ * @param hwnd Toast window handle
+ * @param opacityPercent Opacity percentage (1-100)
+ */
+void SetToastNotificationOpacity(HWND hwnd, int opacityPercent);
+
+/**
+ * @brief Update a toast window message text
+ * @param hwnd Toast window handle
+ * @param message Replacement message text
+ * @return TRUE if the message was updated, FALSE if the window/data was invalid or allocation failed
+ */
+BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message);
+
+/**
+ * @brief Check whether a toast window is an interactive preview window
+ * @param hwnd Toast window handle
+ * @return TRUE only for current Catime preview toasts
+ */
+BOOL IsToastNotificationPreviewWindow(HWND hwnd);
+
+/**
  * @brief Show modal in background thread (non-blocking)
  * @param hwnd Parent handle
  * @param message Message text
@@ -98,5 +132,10 @@ void ShowModalNotification(HWND hwnd, const wchar_t* message);
  * @note Only affects toasts (not modal/tray). Already fading ignored.
  */
 void CloseAllNotifications(void);
+
+/**
+ * @brief Release cached notification drawing resources.
+ */
+void CleanupNotificationResources(void);
 
 #endif /* NOTIFICATION_H */

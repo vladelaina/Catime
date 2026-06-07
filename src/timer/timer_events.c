@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "timer/timer_events.h"
 #include "timer/timer.h"
@@ -15,8 +16,11 @@
 #include "notification.h"
 #include "pomodoro.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "window.h"
 #include "drawing.h"
+#include "color/gradient.h"
+#include "menu_preview.h"
 #include "audio_player.h"
 #include "drag_scale.h"
 #include "tray/tray_animation_core.h"
@@ -44,9 +48,14 @@ static int pomodoro_initial_loop_count = 0;
 static int pomodoro_initial_times[MAX_POMODORO_TIMES] = {0};
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
+static wchar_t g_visibleTimerCurrentText[TIME_TEXT_MAX_LEN] = {0};
 
 static inline void ForceWindowRedraw(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
+}
+
+static inline void RequestWindowRepaint(HWND hwnd) {
+    InvalidateRect(hwnd, NULL, FALSE);
 }
 
 static wchar_t* SafeUtf8ToWide(const char* utf8String, wchar_t* buffer, size_t bufferSize) {
@@ -158,7 +167,12 @@ static BOOL HandleRetryTimer(HWND hwnd, UINT timerId, int* retryCount, RetrySetu
     
     (*retryCount)--;
     if (*retryCount > 0) {
-        SetTimer(hwnd, timerId, RETRY_INTERVAL_MS, NULL);
+        if (!SetTimer(hwnd, timerId, RETRY_INTERVAL_MS, NULL)) {
+            LOG_WARNING("Retry timer %u failed to reschedule (error: %lu)",
+                        timerId, GetLastError());
+            *retryCount = 0;
+            KillTimer(hwnd, timerId);
+        }
     } else {
         KillTimer(hwnd, timerId);
     }
@@ -233,7 +247,10 @@ static BOOL HandleFontValidation(HWND hwnd) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
     
-    SetTimer(hwnd, TIMER_ID_FONT_VALIDATION, FONT_CHECK_INTERVAL_MS, NULL);
+    if (!SetTimer(hwnd, TIMER_ID_FONT_VALIDATION, FONT_CHECK_INTERVAL_MS, NULL)) {
+        LOG_WARNING("Font validation timer failed to reschedule (error: %lu)",
+                    GetLastError());
+    }
     return TRUE;
 }
 
@@ -341,6 +358,76 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     }
 }
 
+static BOOL IsRenderAnimationActive(void) {
+    /* Holographic does not consume timeOffset, so it should not force
+     * high-frequency redraws by itself.
+     */
+    if (CLOCK_LIQUID_EFFECT) {
+        return TRUE;
+    }
+
+    char activeColor[COLOR_HEX_BUFFER];
+    GetActiveColor(activeColor, sizeof(activeColor));
+
+    static char s_lastActiveColor[COLOR_HEX_BUFFER] = {0};
+    static BOOL s_lastActiveColorAnimated = FALSE;
+
+    if (strcmp(activeColor, s_lastActiveColor) == 0) {
+        return s_lastActiveColorAnimated;
+    }
+
+    strncpy_s(s_lastActiveColor, sizeof(s_lastActiveColor), activeColor, _TRUNCATE);
+    s_lastActiveColorAnimated = IsGradientNameAnimated(activeColor);
+    return s_lastActiveColorAnimated;
+}
+
+static BOOL HasVisibleTimerTextChanged(wchar_t* lastText, size_t lastTextSize, BOOL* hasLastText) {
+    if (!lastText || lastTextSize == 0 || !hasLastText) return TRUE;
+
+    wchar_t* currentText = g_visibleTimerCurrentText;
+    currentText[0] = L'\0';
+    GetTimeText(currentText, TIME_TEXT_MAX_LEN);
+
+    if (*hasLastText && wcscmp(lastText, currentText) == 0) {
+        return FALSE;
+    }
+
+    wcsncpy(lastText, currentText, lastTextSize - 1);
+    lastText[lastTextSize - 1] = L'\0';
+    *hasLastText = TRUE;
+    return TRUE;
+}
+
+static BOOL ShouldRenderMainTimer(wchar_t* lastText, size_t lastTextSize, BOOL* hasLastText) {
+    if (!g_AppConfig.display.time_format.show_milliseconds &&
+        !IsRenderAnimationActive()) {
+        return HasVisibleTimerTextChanged(lastText, lastTextSize, hasLastText);
+    }
+
+    if (hasLastText) *hasLastText = FALSE;
+    return TRUE;
+}
+
+static BOOL ShouldCheckActiveTimerRender(int currentElapsedSecond,
+                                         int* lastCheckedSecond,
+                                         BOOL* hasLastCheckedSecond) {
+    if (!lastCheckedSecond || !hasLastCheckedSecond) return TRUE;
+
+    if (g_AppConfig.display.time_format.show_milliseconds ||
+        IsRenderAnimationActive()) {
+        *hasLastCheckedSecond = FALSE;
+        return TRUE;
+    }
+
+    if (*hasLastCheckedSecond && *lastCheckedSecond == currentElapsedSecond) {
+        return FALSE;
+    }
+
+    *lastCheckedSecond = currentElapsedSecond;
+    *hasLastCheckedSecond = TRUE;
+    return TRUE;
+}
+
 static BOOL HandlePomodoroCompletion(HWND hwnd) {
     wchar_t completionMsg[256];
     wchar_t timeStr[32];
@@ -441,16 +528,6 @@ static BOOL HandlePomodoroCompletion(HWND hwnd) {
 }
 
 static void HandleCountdownCompletion(HWND hwnd) {
-    LOG_INFO("========== Countdown timer timeout triggered ==========");
-    
-    const char* actionNames[] = {
-        "MESSAGE", "LOCK", "SHUTDOWN", "RESTART", "SLEEP",
-        "SHOW_TIME", "COUNT_UP", "OPEN_FILE", "OPEN_WEBSITE"
-    };
-    const char* actionName = (CLOCK_TIMEOUT_ACTION >= 0 && CLOCK_TIMEOUT_ACTION < 9) 
-        ? actionNames[CLOCK_TIMEOUT_ACTION] : "UNKNOWN";
-    LOG_INFO("Timeout action configured: %s", actionName);
-    
     BOOL shouldNotify = (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&
@@ -461,7 +538,6 @@ static void HandleCountdownCompletion(HWND hwnd) {
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_WEBSITE);
     
     if (shouldNotify) {
-        LOG_INFO("Displaying timeout notification and playing sound");
         ShowTimeoutNotification(hwnd, g_AppConfig.notification.messages.timeout_message, TRUE);
     }
     
@@ -469,10 +545,7 @@ static void HandleCountdownCompletion(HWND hwnd) {
         ResetPomodoroState();
     }
     
-    if (ExecuteSystemAction(hwnd, CLOCK_TIMEOUT_ACTION)) {
-        LOG_INFO("System action executed successfully");
-        return;
-    }
+    if (ExecuteSystemAction(hwnd, CLOCK_TIMEOUT_ACTION)) return;
     
     HandleTimeoutActions(hwnd);
     
@@ -481,16 +554,16 @@ static void HandleCountdownCompletion(HWND hwnd) {
         ResetTimerState(0);
         ResetMillisecondAccumulator();
     }
-    
-    LOG_INFO("========== Countdown timeout handling completed ==========\n");
 }
 
 static BOOL HandleMainTimer(HWND hwnd) {
-    static DWORD s_lastRenderTime = 0;
     static DWORD s_lastTopmostCheck = 0;
     static UINT s_lastDesiredInterval = 0;
+    static wchar_t s_lastRenderedText[TIME_TEXT_MAX_LEN] = {0};
+    static BOOL s_hasLastRenderedText = FALSE;
+    static int s_lastActiveRenderCheckSecond = 0;
+    static BOOL s_hasLastActiveRenderCheckSecond = FALSE;
     DWORD now_tick = GetTickCount();
-    BOOL shouldRender = TRUE;
     UINT desiredInterval = GetTimerInterval();
 
     if (s_lastDesiredInterval != desiredInterval) {
@@ -504,31 +577,24 @@ static BOOL HandleMainTimer(HWND hwnd) {
         s_lastTopmostCheck = now_tick;
     }
     
-    if (CLOCK_HOLOGRAPHIC_EFFECT) {
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-        int pixels = rect.right * rect.bottom;
-        DWORD minInterval = (pixels < 30000) ? 0 : (pixels < 100000) ? 50 : (pixels < 300000) ? 100 : 150;
-        if (minInterval > 0 && (now_tick - s_lastRenderTime) < minInterval) shouldRender = FALSE;
-    } else if (!g_AppConfig.display.time_format.show_milliseconds && !CLOCK_SHOW_CURRENT_TIME) {
-        if (s_lastRenderTime != 0 && (now_tick - s_lastRenderTime) < 250) shouldRender = FALSE;
-    }
-
     if (CLOCK_SHOW_CURRENT_TIME) {
         last_displayed_second = -1;
-        if (shouldRender) {
-            s_lastRenderTime = now_tick;
-            InvalidateRect(hwnd, NULL, TRUE);
+        s_hasLastActiveRenderCheckSecond = FALSE;
+        if (ShouldRenderMainTimer(s_lastRenderedText,
+                                  sizeof(s_lastRenderedText) / sizeof(s_lastRenderedText[0]),
+                                  &s_hasLastRenderedText)) {
+            RequestWindowRepaint(hwnd);
         }
         return TRUE;
     }
-    
-    if (shouldRender) {
-        s_lastRenderTime = now_tick;
-        InvalidateRect(hwnd, NULL, TRUE);
-    }
-    
+
     if (CLOCK_IS_PAUSED) {
+        s_hasLastActiveRenderCheckSecond = FALSE;
+        if (ShouldRenderMainTimer(s_lastRenderedText,
+                                  sizeof(s_lastRenderedText) / sizeof(s_lastRenderedText[0]),
+                                  &s_hasLastRenderedText)) {
+            RequestWindowRepaint(hwnd);
+        }
         return TRUE;
     }
     
@@ -574,6 +640,16 @@ static BOOL HandleMainTimer(HWND hwnd) {
         }
         countdown_elapsed_time = CLOCK_TOTAL_TIME;
     }
+
+    if (ShouldCheckActiveTimerRender(current_elapsed_sec,
+                                     &s_lastActiveRenderCheckSecond,
+                                     &s_hasLastActiveRenderCheckSecond)) {
+        if (ShouldRenderMainTimer(s_lastRenderedText,
+                                  sizeof(s_lastRenderedText) / sizeof(s_lastRenderedText[0]),
+                                  &s_hasLastRenderedText)) {
+            RequestWindowRepaint(hwnd);
+        }
+    }
     
     return TRUE;
 }
@@ -590,14 +666,23 @@ void InitializePomodoro(void) {
     complete_pomodoro_cycles = 0;
     
     pomodoro_initial_times_count = g_AppConfig.pomodoro.times_count;
-    pomodoro_initial_loop_count = (g_AppConfig.pomodoro.loop_count > 0) 
-        ? g_AppConfig.pomodoro.loop_count : 1;
+    if (pomodoro_initial_times_count < 0) {
+        pomodoro_initial_times_count = 0;
+    }
+    if (pomodoro_initial_times_count > MAX_POMODORO_TIMES) {
+        pomodoro_initial_times_count = MAX_POMODORO_TIMES;
+    }
+    pomodoro_initial_loop_count = g_AppConfig.pomodoro.loop_count;
+    if (pomodoro_initial_loop_count < MIN_POMODORO_LOOP_COUNT) {
+        pomodoro_initial_loop_count = MIN_POMODORO_LOOP_COUNT;
+    }
+    if (pomodoro_initial_loop_count > MAX_POMODORO_LOOP_COUNT) {
+        pomodoro_initial_loop_count = MAX_POMODORO_LOOP_COUNT;
+    }
     
     // Copy the entire times array to protect against config changes during run
     memset(pomodoro_initial_times, 0, sizeof(pomodoro_initial_times));
-    int copy_count = (pomodoro_initial_times_count < MAX_POMODORO_TIMES) 
-        ? pomodoro_initial_times_count : MAX_POMODORO_TIMES;
-    for (int i = 0; i < copy_count; i++) {
+    for (int i = 0; i < pomodoro_initial_times_count; i++) {
         pomodoro_initial_times[i] = g_AppConfig.pomodoro.times[i];
     }
     
@@ -641,11 +726,14 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
             return HandleFontValidation(hwnd);
 
         case TIMER_ID_MAIN:
+            if (!MainTimer_IsRunning()) {
+                return TRUE;
+            }
             return HandleMainTimer(hwnd);
 
         case TIMER_ID_RENDER_ANIMATION:
             /* Pure render tick - decouples visual flow from logic update */
-            InvalidateRect(hwnd, NULL, TRUE);
+            RequestWindowRepaint(hwnd);
             return TRUE;
 
         default:

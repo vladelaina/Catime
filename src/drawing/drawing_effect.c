@@ -5,22 +5,50 @@
 #include <windows.h>
 #include "drawing/drawing_effect.h"
 
+#define EFFECT_BUFFER_SHRINK_RATIO 4
+#define EFFECT_BUFFER_SHRINK_DELAY_MS 5000ULL
+#define EFFECT_BUFFER_SHRINK_MIN_SIZE (256 * 1024)
+#define EFFECT_BUFFER_MAX_PIXELS (4096 * 4096)
+
 /* Static buffers for effect processing to avoid repeated mallocs */
 static unsigned char* g_effectBuffer1 = NULL;
 static unsigned char* g_effectBuffer2 = NULL;
 static unsigned char* g_effectBuffer3 = NULL;
 static int g_effectBufferSize = 0;
+static ULONGLONG g_effectShrinkCandidateTick = 0;
+static INIT_ONCE g_effectBufferLockOnce = INIT_ONCE_STATIC_INIT;
+static CRITICAL_SECTION g_effectBufferCS;
 
-static BOOL CalculateEffectBufferSize(int w, int h, int padding, int multiplier,
+static BOOL CALLBACK InitEffectBufferLock(PINIT_ONCE initOnce, PVOID parameter, PVOID* context) {
+    (void)initOnce;
+    (void)parameter;
+    (void)context;
+    InitializeCriticalSection(&g_effectBufferCS);
+    return TRUE;
+}
+
+static BOOL BeginEffectBufferUse(void) {
+    if (!InitOnceExecuteOnce(&g_effectBufferLockOnce, InitEffectBufferLock, NULL, NULL)) {
+        return FALSE;
+    }
+    EnterCriticalSection(&g_effectBufferCS);
+    return TRUE;
+}
+
+static void EndEffectBufferUse(void) {
+    LeaveCriticalSection(&g_effectBufferCS);
+}
+
+static BOOL CalculateEffectBufferSize(int w, int h, int padding,
                                       int* outGw, int* outGh,
-                                      int* outNeededSize, int* outAllocSize) {
+                                      int* outNeededSize) {
     int padTotal;
     int gw;
     int gh;
     int neededSize;
 
-    if (!outGw || !outGh || !outNeededSize || !outAllocSize) return FALSE;
-    if (w <= 0 || h <= 0 || padding < 0 || multiplier <= 0) return FALSE;
+    if (!outGw || !outGh || !outNeededSize) return FALSE;
+    if (w <= 0 || h <= 0 || padding < 0) return FALSE;
     if (padding > INT_MAX / 2) return FALSE;
 
     padTotal = padding * 2;
@@ -29,14 +57,77 @@ static BOOL CalculateEffectBufferSize(int w, int h, int padding, int multiplier,
     gw = w + padTotal;
     gh = h + padTotal;
     if (gw <= 0 || gh <= 0 || gw > INT_MAX / gh) return FALSE;
+    if (gw > EFFECT_BUFFER_MAX_PIXELS / gh) return FALSE;
 
     neededSize = gw * gh;
-    if (neededSize > INT_MAX / multiplier) return FALSE;
 
     *outGw = gw;
     *outGh = gh;
     *outNeededSize = neededSize;
-    *outAllocSize = neededSize * multiplier;
+    return TRUE;
+}
+
+static void FreeEffectBuffers(void) {
+    if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
+    if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
+    if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
+    g_effectBufferSize = 0;
+    g_effectShrinkCandidateTick = 0;
+}
+
+static void ResetEffectBufferShrinkCandidate(void) {
+    g_effectShrinkCandidateTick = 0;
+}
+
+static void MaybeShrinkOversizedEffectBuffers(int neededSize) {
+    if (g_effectBufferSize < EFFECT_BUFFER_SHRINK_MIN_SIZE ||
+        neededSize > g_effectBufferSize / EFFECT_BUFFER_SHRINK_RATIO ||
+        !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
+        ResetEffectBufferShrinkCandidate();
+        return;
+    }
+
+    ULONGLONG now = GetTickCount64();
+    if (g_effectShrinkCandidateTick == 0) {
+        g_effectShrinkCandidateTick = now;
+        return;
+    }
+
+    if (now - g_effectShrinkCandidateTick >= EFFECT_BUFFER_SHRINK_DELAY_MS) {
+        FreeEffectBuffers();
+    }
+}
+
+static BOOL EnsureEffectBuffers(int neededSize) {
+    if (neededSize <= 0) return FALSE;
+    if (neededSize <= g_effectBufferSize &&
+        g_effectBuffer1 && g_effectBuffer2 && g_effectBuffer3) {
+        MaybeShrinkOversizedEffectBuffers(neededSize);
+        if (neededSize <= g_effectBufferSize &&
+            g_effectBuffer1 && g_effectBuffer2 && g_effectBuffer3) {
+            return TRUE;
+        }
+    } else {
+        ResetEffectBufferShrinkCandidate();
+    }
+
+    FreeEffectBuffers();
+
+    unsigned char* newBuffer1 = (unsigned char*)malloc((size_t)neededSize);
+    unsigned char* newBuffer2 = (unsigned char*)malloc((size_t)neededSize);
+    unsigned char* newBuffer3 = (unsigned char*)malloc((size_t)neededSize);
+
+    if (!newBuffer1 || !newBuffer2 || !newBuffer3) {
+        free(newBuffer1);
+        free(newBuffer2);
+        free(newBuffer3);
+        return FALSE;
+    }
+
+    g_effectBuffer1 = newBuffer1;
+    g_effectBuffer2 = newBuffer2;
+    g_effectBuffer3 = newBuffer3;
+    g_effectBufferSize = neededSize;
     return TRUE;
 }
 
@@ -51,6 +142,28 @@ static BOOL CalculateBlurPixelCount(int w, int h, size_t* outPixelCount) {
     return TRUE;
 }
 
+static BOOL CalculateVisibleSpan(long long start, int length, int limit,
+                                 int* outFirst, int* outLast) {
+    if (!outFirst || !outLast || length <= 0 || limit <= 0) return FALSE;
+
+    long long spanStart = start;
+    long long spanEnd = spanStart + (long long)length;
+    if (spanEnd <= 0 || spanStart >= (long long)limit) return FALSE;
+
+    long long first = (spanStart < 0) ? -spanStart : 0;
+    long long last = (spanEnd > (long long)limit)
+        ? ((long long)limit - spanStart)
+        : (long long)length;
+
+    if (first < 0 || last < first || first > (long long)INT_MAX || last > (long long)INT_MAX) {
+        return FALSE;
+    }
+
+    *outFirst = (int)first;
+    *outLast = (int)last;
+    return first < last;
+}
+
 /**
  * @brief Apply Optimized Box Blur (Sliding Window)
  * O(1) per pixel regardless of radius
@@ -63,6 +176,9 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
         memcpy(dest, src, pixelCount);
         return;
     }
+
+    int div = radius * 2 + 1;
+    int reciprocal = (1 << 20) / div;
 
     /* Horizontal Pass: src -> tempBuffer */
     /* Using sliding window sum */
@@ -80,9 +196,6 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
             if (idx >= w) idx = w - 1;
             sum += rowSrc[idx];
         }
-        
-        int div = radius * 2 + 1;
-        int reciprocal = (1 << 20) / div;
         
         for (int x = 0; x < w; x++) {
             rowDest[x] = (unsigned char)((sum * reciprocal) >> 20);
@@ -111,8 +224,6 @@ void ApplyGaussianBlur(unsigned char* src, unsigned char* dest, unsigned char* t
     /* We can transpose or just do it. Sliding window still helps. */
     for (int x = 0; x < w; x++) {
         int sum = 0;
-        int div = radius * 2 + 1;
-        int reciprocal = (1 << 20) / div;
         
         /* Initialize window for y=0 */
         for (int k = -radius; k <= radius; k++) {
@@ -152,35 +263,33 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
                       const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
+    if (!pixels || !bitmap || destWidth <= 0 || destHeight <= 0) return;
+
     /* 1. Dynamic Buffer Allocation */
     int padding = 12;
     int gw = 0;
     int gh = 0;
     int neededSize = 0;
-    int newSize = 0;
 
-    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+    if (!CalculateEffectBufferSize(w, h, padding, &gw, &gh, &neededSize)) {
         return;
     }
 
-    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        if (g_effectBuffer1) free(g_effectBuffer1);
-        if (g_effectBuffer2) free(g_effectBuffer2);
-        if (g_effectBuffer3) free(g_effectBuffer3);
+    long long startX = (long long)x_pos - (long long)padding;
+    long long startY = (long long)y_pos - (long long)padding;
+    int firstI = 0;
+    int lastI = 0;
+    int firstJ = 0;
+    int lastJ = 0;
+    if (!CalculateVisibleSpan(startX, gw, destWidth, &firstI, &lastI) ||
+        !CalculateVisibleSpan(startY, gh, destHeight, &firstJ, &lastJ)) {
+        return;
+    }
 
-        g_effectBuffer1 = (unsigned char*)malloc(newSize);
-        g_effectBuffer2 = (unsigned char*)malloc(newSize);
-        g_effectBuffer3 = (unsigned char*)malloc(newSize);
-        
-        if (!g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-            /* Cleanup and fail gracefully */
-            if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
-            if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
-            if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
-            g_effectBufferSize = 0;
-            return;
-        }
-        g_effectBufferSize = newSize;
+    if (!BeginEffectBufferUse()) return;
+    if (!EnsureEffectBuffers(neededSize)) {
+        EndEffectBufferUse();
+        return;
     }
 
     unsigned char* alphaMap = g_effectBuffer1;
@@ -197,19 +306,14 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
     ApplyGaussianBlur(alphaMap, glowMap, tempBuffer, gw, gh, 4);
 
     /* 4. Render to Destination */
-    int startX = x_pos - padding;
-    int startY = y_pos - padding;
+    for (int j = firstJ; j < lastJ; j++) {
+        int screenY = (int)(startY + (long long)j);
 
-    for (int j = 0; j < gh; j++) {
-        int screenY = startY + j;
-        if (screenY < 0 || screenY >= destHeight) continue;
-
-        DWORD* pDestRow = pixels + screenY * destWidth;
+        DWORD* pDestRow = pixels + (size_t)screenY * (size_t)destWidth;
         const unsigned char* pGlowRow = glowMap + j * gw;
 
-        for (int i = 0; i < gw; i++) {
-            int screenX = startX + i;
-            if (screenX < 0 || screenX >= destWidth) continue;
+        for (int i = firstI; i < lastI; i++) {
+            int screenX = (int)(startX + (long long)i);
 
             int alpha = pGlowRow[i];
             if (alpha == 0) continue;
@@ -246,6 +350,7 @@ void RenderGlowEffect(DWORD* pixels, int destWidth, int destHeight,
             *pPixel = (outA << 24) | (outR << 16) | (outG << 8) | outB;
         }
     }
+    EndEffectBufferUse();
 }
 
 /**
@@ -261,34 +366,33 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
                       const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
+    if (!pixels || !bitmap || destWidth <= 0 || destHeight <= 0) return;
+
     /* Dynamic Buffer Allocation */
     int padding = 4; /* Small padding for bevel */
     int gw = 0;
     int gh = 0;
     int neededSize = 0;
-    int newSize = 0;
 
-    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+    if (!CalculateEffectBufferSize(w, h, padding, &gw, &gh, &neededSize)) {
         return;
     }
 
-    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        if (g_effectBuffer1) free(g_effectBuffer1);
-        if (g_effectBuffer2) free(g_effectBuffer2);
-        if (g_effectBuffer3) free(g_effectBuffer3);
-        
-        g_effectBuffer1 = (unsigned char*)malloc(newSize);
-        g_effectBuffer2 = (unsigned char*)malloc(newSize);
-        g_effectBuffer3 = (unsigned char*)malloc(newSize);
-        
-        if (!g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-            if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
-            if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
-            if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
-            g_effectBufferSize = 0;
-            return;
-        }
-        g_effectBufferSize = newSize;
+    long long startX = (long long)x_pos - (long long)padding;
+    long long startY = (long long)y_pos - (long long)padding;
+    int firstI = 0;
+    int lastI = 0;
+    int firstJ = 0;
+    int lastJ = 0;
+    if (!CalculateVisibleSpan(startX, gw, destWidth, &firstI, &lastI) ||
+        !CalculateVisibleSpan(startY, gh, destHeight, &firstJ, &lastJ)) {
+        return;
+    }
+
+    if (!BeginEffectBufferUse()) return;
+    if (!EnsureEffectBuffers(neededSize)) {
+        EndEffectBufferUse();
+        return;
     }
 
     unsigned char* alphaMap = g_effectBuffer1;
@@ -305,15 +409,12 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
     int shadowBlur = 4;
     ApplyGaussianBlur(alphaMap, shadowMap, tempBuffer, gw, gh, shadowBlur);
 
-    int startX = x_pos - padding;
-    int startY = y_pos - padding;
     int shadowOffset = 3; 
 
-    for (int j = 0; j < gh; j++) {
-        int screenY = startY + j;
-        if (screenY < 0 || screenY >= destHeight) continue;
+    for (int j = firstJ; j < lastJ; j++) {
+        int screenY = (int)(startY + (long long)j);
 
-        DWORD* pDestRow = pixels + screenY * destWidth;
+        DWORD* pDestRow = pixels + (size_t)screenY * (size_t)destWidth;
         const unsigned char* pAlphaRow = alphaMap + j * gw;
         
         const unsigned char* pShadowRow = NULL;
@@ -334,9 +435,8 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
             sheen = (255 - (localY * 255) / h) >> 3;
         }
 
-        for (int i = 0; i < gw; i++) {
-            int screenX = startX + i;
-            if (screenX < 0 || screenX >= destWidth) continue;
+        for (int i = firstI; i < lastI; i++) {
+            int screenX = (int)(startX + (long long)i);
 
             unsigned char srcAlpha = pAlphaRow[i];
             
@@ -427,6 +527,7 @@ void RenderGlassEffect(DWORD* pixels, int destWidth, int destHeight,
             *pPixel = (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
         }
     }
+    EndEffectBufferUse();
 }
 
 /**
@@ -438,35 +539,33 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
                       const unsigned char* bitmap, int w, int h,
                       int r, int g, int b,
                       GlowColorCallback colorCb, void* userData) {
+    if (!pixels || !bitmap || destWidth <= 0 || destHeight <= 0) return;
+
     /* 1. Dynamic Buffer Allocation */
     int padding = 20; /* Sufficient padding for wide glow */
     int gw = 0;
     int gh = 0;
     int neededSize = 0;
-    int newSize = 0;
 
-    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+    if (!CalculateEffectBufferSize(w, h, padding, &gw, &gh, &neededSize)) {
         return;
     }
 
-    /* Ensure buffers are large enough */
-    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        if (g_effectBuffer1) free(g_effectBuffer1);
-        if (g_effectBuffer2) free(g_effectBuffer2);
-        if (g_effectBuffer3) free(g_effectBuffer3);
+    long long startX = (long long)x_pos - (long long)padding;
+    long long startY = (long long)y_pos - (long long)padding;
+    int firstI = 0;
+    int lastI = 0;
+    int firstJ = 0;
+    int lastJ = 0;
+    if (!CalculateVisibleSpan(startX, gw, destWidth, &firstI, &lastI) ||
+        !CalculateVisibleSpan(startY, gh, destHeight, &firstJ, &lastJ)) {
+        return;
+    }
 
-        g_effectBuffer1 = (unsigned char*)malloc(newSize);
-        g_effectBuffer2 = (unsigned char*)malloc(newSize);
-        g_effectBuffer3 = (unsigned char*)malloc(newSize);
-
-        if (!g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-            if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
-            if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
-            if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
-            g_effectBufferSize = 0;
-            return;
-        }
-        g_effectBufferSize = newSize;
+    if (!BeginEffectBufferUse()) return;
+    if (!EnsureEffectBuffers(neededSize)) {
+        EndEffectBufferUse();
+        return;
     }
 
     /* 
@@ -554,21 +653,16 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
        Buf2 = Soft Tube Body
     */
 
-    int startX = x_pos - padding;
-    int startY = y_pos - padding;
-
     /* Step 6: Compositing */
-    for (int j = 0; j < gh; j++) {
-        int screenY = startY + j;
-        if (screenY < 0 || screenY >= destHeight) continue;
+    for (int j = firstJ; j < lastJ; j++) {
+        int screenY = (int)(startY + (long long)j);
 
-        DWORD* pDestRow = pixels + screenY * destWidth;
+        DWORD* pDestRow = pixels + (size_t)screenY * (size_t)destWidth;
         const unsigned char* pGlowRow = buf1 + j * gw;
         const unsigned char* pTubeRow = buf2 + j * gw;
 
-        for (int i = 0; i < gw; i++) {
-            int screenX = startX + i;
-            if (screenX < 0 || screenX >= destWidth) continue;
+        for (int i = firstI; i < lastI; i++) {
+            int screenX = (int)(startX + (long long)i);
 
             int glowAlpha = pGlowRow[i];
             int tubeAlpha = pTubeRow[i];
@@ -641,6 +735,7 @@ void RenderNeonEffect(DWORD* pixels, int destWidth, int destHeight,
             *pPixel = (outA << 24) | (outR << 16) | (outG << 8) | outB;
         }
     }
+    EndEffectBufferUse();
 }
 
 /**
@@ -658,6 +753,8 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
                             int r, int g, int b,
                             GlowColorCallback colorCb, void* userData,
                             int timeOffset) {
+    if (!pixels || !bitmap || destWidth <= 0 || destHeight <= 0) return;
+
     (void)timeOffset;
     
     /* 1. Dynamic Buffer Allocation */
@@ -665,29 +762,33 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
     int gw = 0;
     int gh = 0;
     int neededSize = 0;
-    int newSize = 0;
 
-    if (!CalculateEffectBufferSize(w, h, padding, 2, &gw, &gh, &neededSize, &newSize)) {
+    if (!CalculateEffectBufferSize(w, h, padding, &gw, &gh, &neededSize)) {
         return;
     }
 
-    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        if (g_effectBuffer1) free(g_effectBuffer1);
-        if (g_effectBuffer2) free(g_effectBuffer2);
-        if (g_effectBuffer3) free(g_effectBuffer3);
-        
-        g_effectBuffer1 = (unsigned char*)malloc(newSize);
-        g_effectBuffer2 = (unsigned char*)malloc(newSize);
-        g_effectBuffer3 = (unsigned char*)malloc(newSize);
-        
-        if (!g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-            if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
-            if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
-            if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
-            g_effectBufferSize = 0;
-            return;
-        }
-        g_effectBufferSize = newSize;
+    long long startX = (long long)x_pos - (long long)padding;
+    long long startY = (long long)y_pos - (long long)padding;
+    int firstI = 0;
+    int lastI = 0;
+    int firstJ = 0;
+    int lastJ = 0;
+    if (!CalculateVisibleSpan(startX, gw, destWidth, &firstI, &lastI) ||
+        !CalculateVisibleSpan(startY, gh, destHeight, &firstJ, &lastJ)) {
+        return;
+    }
+    if (firstI < 1) firstI = 1;
+    if (lastI > gw - 1) lastI = gw - 1;
+    if (firstJ < 1) firstJ = 1;
+    if (lastJ > gh - 1) lastJ = gh - 1;
+    if (firstI >= lastI || firstJ >= lastJ) {
+        return;
+    }
+
+    if (!BeginEffectBufferUse()) return;
+    if (!EnsureEffectBuffers(neededSize)) {
+        EndEffectBufferUse();
+        return;
     }
 
     unsigned char* alphaMap = g_effectBuffer1;
@@ -705,34 +806,17 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
     ApplyGaussianBlur(alphaMap, glowMap, tempMap, gw, gh, 10);
     ApplyGaussianBlur(glowMap, glowMap, tempMap, gw, gh, 10);
 
-    int startX = x_pos - padding;
-    int startY = y_pos - padding;
+    for (int j = firstJ; j < lastJ; j++) {
+        int screenY = (int)(startY + (long long)j);
 
-    for (int j = 1; j < gh - 1; j++) {
-        int screenY = startY + j;
-        if (screenY < 0 || screenY >= destHeight) continue;
-
-        DWORD* pDestRow = pixels + screenY * destWidth;
+        DWORD* pDestRow = pixels + (size_t)screenY * (size_t)destWidth;
         unsigned char* pAlphaRow = alphaMap + j * gw;
         const unsigned char* pGlowRow = glowMap + j * gw;
         const unsigned char* pRowPrev = alphaMap + (j - 1) * gw;
         const unsigned char* pRowNext = alphaMap + (j + 1) * gw;
 
-        /* Calculate Loop Bounds to remove per-pixel boundary checks */
-        /* Range of i is [1, gw - 1) normally */
-        int minI = 1;
-        int maxI = gw - 1;
-        
-        /* screenX = startX + i */
-        /* Constraint 1: screenX >= 0  =>  startX + i >= 0  =>  i >= -startX */
-        if (minI < -startX) minI = -startX;
-        
-        /* Constraint 2: screenX < destWidth  =>  startX + i < destWidth  =>  i < destWidth - startX */
-        if (maxI > destWidth - startX) maxI = destWidth - startX;
-
-        for (int i = minI; i < maxI; i++) {
-            int screenX = startX + i;
-            /* Removed per-pixel boundary check: if (screenX < 0 || screenX >= destWidth) continue; */
+        for (int i = firstI; i < lastI; i++) {
+            int screenX = (int)(startX + (long long)i);
 
             /* Early exit: skip completely empty regions */
             int alphaG = pAlphaRow[i];
@@ -843,6 +927,7 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
             *pPixel = (finalA << 24) | (outR << 16) | (outG << 8) | outB;
         }
     }
+    EndEffectBufferUse();
 }
 
 
@@ -850,10 +935,9 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
  * @brief Free static resources used by drawing effects
  */
 void CleanupDrawingEffects(void) {
-    if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
-    if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
-    if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
-    g_effectBufferSize = 0;
+    if (!BeginEffectBufferUse()) return;
+    FreeEffectBuffers();
+    EndEffectBufferUse();
 }
 
 /* --- OPTIMIZATION HELPERS --- */
@@ -939,45 +1023,42 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
                        int r, int g, int b,
                        GlowColorCallback colorCb, void* userData,
                        int timeOffset) {
-    
-    if (!g_lutInitialized) InitSpecularLUT();
-    if (!g_slopeLUTInit) InitSlopeLUT();
+    if (!pixels || !bitmap || destWidth <= 0 || destHeight <= 0) return;
 
     /* 1. Dynamic Buffer Allocation (Extreme Memory Optimization) */
     int padding = 12;
     int gw = 0;
     int gh = 0;
     int neededSize = 0;
-    int newSize = 0;
 
-    if (!CalculateEffectBufferSize(w, h, padding, 1, &gw, &gh, &neededSize, &newSize)) {
+    if (!CalculateEffectBufferSize(w, h, padding, &gw, &gh, &neededSize)) {
         return;
     }
 
-    /* Check if resize needed */
-    if (neededSize > g_effectBufferSize || !g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-        /* Revert to standard 3-buffer allocation to maintain compatibility with other effects */
-        /* Other effects assume if g_effectBufferSize is sufficient, ALL 3 buffers exist */
-        
-        /* Free old buffers first, then allocate new ones to avoid realloc complexity */
-        if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
-        if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
-        if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
-        
-        g_effectBuffer1 = (unsigned char*)malloc(newSize);
-        g_effectBuffer2 = (unsigned char*)malloc(newSize);
-        g_effectBuffer3 = (unsigned char*)malloc(newSize);
-        
-        if (!g_effectBuffer1 || !g_effectBuffer2 || !g_effectBuffer3) {
-            /* Allocation failed - cleanup */
-            if (g_effectBuffer1) { free(g_effectBuffer1); g_effectBuffer1 = NULL; }
-            if (g_effectBuffer2) { free(g_effectBuffer2); g_effectBuffer2 = NULL; }
-            if (g_effectBuffer3) { free(g_effectBuffer3); g_effectBuffer3 = NULL; }
-            g_effectBufferSize = 0;
-            return;
-        }
-        
-        g_effectBufferSize = newSize;
+    long long startX = (long long)x_pos - (long long)padding;
+    long long startY = (long long)y_pos - (long long)padding;
+    int firstI = 0;
+    int lastI = 0;
+    int firstJ = 0;
+    int lastJ = 0;
+    if (!CalculateVisibleSpan(startX, gw, destWidth, &firstI, &lastI) ||
+        !CalculateVisibleSpan(startY, gh, destHeight, &firstJ, &lastJ)) {
+        return;
+    }
+    if (firstI < 2) firstI = 2;
+    if (lastI > gw - 2) lastI = gw - 2;
+    if (firstJ < 2) firstJ = 2;
+    if (lastJ > gh - 2) lastJ = gh - 2;
+    if (firstI >= lastI || firstJ >= lastJ) {
+        return;
+    }
+
+    if (!BeginEffectBufferUse()) return;
+    if (!g_lutInitialized) InitSpecularLUT();
+    if (!g_slopeLUTInit) InitSlopeLUT();
+    if (!EnsureEffectBuffers(neededSize)) {
+        EndEffectBufferUse();
+        return;
     }
 
     /* 
@@ -1037,9 +1118,6 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
     */
     int t_idx = (int)((double)timeOffset * 0.815) & FLOW_LUT_MASK;
 
-    int startX = x_pos - padding;
-    int startY = y_pos - padding;
-    
     /* Precalc 60 degree vector constants (sin(60) ~= 0.866 ~= 222/256) */
     /* t1, t2, t3 offsets */
     int t1 = t_idx;
@@ -1047,11 +1125,10 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
     int t3 = (t_idx + 1365) & FLOW_LUT_MASK; /* +2/3 cycle */
 
     /* 5. Main Optical Loop (INT OPTIMIZED) */
-    for (int j = 2; j < gh - 2; j++) {
-        int screenY = startY + j;
-        if (screenY < 0 || screenY >= destHeight) continue;
+    for (int j = firstJ; j < lastJ; j++) {
+        int screenY = (int)(startY + (long long)j);
 
-        DWORD* pDestRow = pixels + screenY * destWidth;
+        DWORD* pDestRow = pixels + (size_t)screenY * (size_t)destWidth;
         
         /* 
          * Integer Tri-Planar Setup 
@@ -1059,9 +1136,8 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
          */
         int yComp = (screenY * 222) >> 8; 
 
-        for (int i = 2; i < gw - 2; i++) {
-            int screenX = startX + i;
-            if (screenX < 0 || screenX >= destWidth) continue;
+        for (int i = firstI; i < lastI; i++) {
+            int screenX = (int)(startX + (long long)i);
 
             /* --- FAST TRI-PLANAR INTERFERENCE --- */
             /* Wave 1: X (0 deg) */
@@ -1157,8 +1233,8 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
             int curR = r, curG = g, curB = b;
             
             if (colorCb) {
-                int sampleX = x_pos - padding + srcX;
-                int sampleY = y_pos - padding + srcY;
+                int sampleX = (int)(startX + (long long)srcX);
+                int sampleY = (int)(startY + (long long)srcY);
                 colorCb(sampleX, sampleY, &curR, &curG, &curB, userData);
             }
 
@@ -1211,5 +1287,6 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
             *pPixel = (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
         }
     }
+    EndEffectBufferUse();
 }
 

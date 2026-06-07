@@ -39,6 +39,12 @@ void PluginData_Clear(void);
 void PluginData_SetText(const wchar_t* text);
 
 /**
+ * @brief Set status text without starting the output-file watcher
+ * @param text Text to display
+ */
+void PluginData_SetStatusText(const wchar_t* text);
+
+/**
  * @brief Set plugin mode active state
  * @param active TRUE to enable plugin data display, FALSE to disable
  * 

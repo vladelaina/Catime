@@ -63,6 +63,14 @@ const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english
 BOOL SetLanguage(AppLanguage language);
 
 /**
+ * @brief Release cached translation resources.
+ *
+ * Must be called during shutdown after UI code has stopped requesting localized
+ * strings.
+ */
+void CleanupLanguage(void);
+
+/**
  * @brief Get current active language
  * @return Current language enumeration value
  */

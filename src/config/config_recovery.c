@@ -12,6 +12,28 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include <math.h>
+
+static void SetDefaultQuickCountdownOptionsForRecovery(ConfigSnapshot* snapshot) {
+    if (!snapshot) return;
+
+    memset(snapshot->timeOptions, 0, sizeof(snapshot->timeOptions));
+    snapshot->timeOptionsCount = DEFAULT_QUICK_COUNTDOWN_COUNT;
+    snapshot->timeOptions[0] = DEFAULT_QUICK_COUNTDOWN_1;
+    snapshot->timeOptions[1] = DEFAULT_QUICK_COUNTDOWN_2;
+    snapshot->timeOptions[2] = DEFAULT_QUICK_COUNTDOWN_3;
+}
+
+static void SetDefaultPomodoroOptionsForRecovery(ConfigSnapshot* snapshot) {
+    if (!snapshot) return;
+
+    memset(snapshot->pomodoroTimes, 0, sizeof(snapshot->pomodoroTimes));
+    snapshot->pomodoroTimesCount = DEFAULT_POMODORO_TIMES_COUNT;
+    snapshot->pomodoroTimes[0] = DEFAULT_POMODORO_WORK;
+    snapshot->pomodoroTimes[1] = DEFAULT_POMODORO_SHORT_BREAK;
+    snapshot->pomodoroTimes[2] = DEFAULT_POMODORO_WORK;
+    snapshot->pomodoroTimes[3] = DEFAULT_POMODORO_LONG_BREAK;
+}
 
 BOOL ValidateFontConfig(ConfigSnapshot* snapshot) {
     if (!snapshot) return FALSE;
@@ -56,8 +78,8 @@ BOOL ValidateColorConfig(ConfigSnapshot* snapshot) {
     BOOL modified = FALSE;
     
     /* Check if it's a valid gradient name or custom gradient format */
-    GradientType gradType = GetGradientTypeByName(snapshot->textColor);
-    if (gradType != GRADIENT_NONE) {
+    GradientInfoSnapshot gradientSnapshot;
+    if (GetGradientInfoSnapshotByName(snapshot->textColor, &gradientSnapshot) != GRADIENT_NONE) {
         return modified; /* Valid gradient name or custom gradient, no modification needed */
     }
 
@@ -115,14 +137,22 @@ BOOL ValidateTimerConfig(ConfigSnapshot* snapshot) {
     }
     
     /* Validate time options */
-    if (snapshot->timeOptionsCount < 0 || snapshot->timeOptionsCount > MAX_TIME_OPTIONS) {
+    if (snapshot->timeOptionsCount <= 0 || snapshot->timeOptionsCount > MAX_TIME_OPTIONS) {
         LOG_WARNING("Invalid time options count %d, resetting to defaults",
                    snapshot->timeOptionsCount);
-        snapshot->timeOptionsCount = DEFAULT_QUICK_COUNTDOWN_COUNT;
-        snapshot->timeOptions[0] = DEFAULT_QUICK_COUNTDOWN_1;
-        snapshot->timeOptions[1] = DEFAULT_QUICK_COUNTDOWN_2;
-        snapshot->timeOptions[2] = DEFAULT_QUICK_COUNTDOWN_3;
+        SetDefaultQuickCountdownOptionsForRecovery(snapshot);
         modified = TRUE;
+    } else {
+        for (int i = 0; i < snapshot->timeOptionsCount; i++) {
+            if (snapshot->timeOptions[i] <= 0 ||
+                snapshot->timeOptions[i] > MAX_TIME_OPTION_SECONDS) {
+                LOG_WARNING("Invalid time option %d, resetting to defaults",
+                            snapshot->timeOptions[i]);
+                SetDefaultQuickCountdownOptionsForRecovery(snapshot);
+                modified = TRUE;
+                break;
+            }
+        }
     }
     
     /* Validate startup mode */
@@ -150,21 +180,36 @@ BOOL ValidatePomodoroConfig(ConfigSnapshot* snapshot) {
     
     BOOL modified = FALSE;
     
-    if (snapshot->pomodoroTimesCount < 0 || snapshot->pomodoroTimesCount > 10) {
+    if (snapshot->pomodoroTimesCount <= 0 ||
+        snapshot->pomodoroTimesCount > MAX_POMODORO_TIMES) {
         LOG_WARNING("Invalid Pomodoro times count %d, resetting to defaults",
                    snapshot->pomodoroTimesCount);
-        snapshot->pomodoroTimesCount = DEFAULT_POMODORO_TIMES_COUNT;
-        snapshot->pomodoroTimes[0] = DEFAULT_POMODORO_WORK;
-        snapshot->pomodoroTimes[1] = DEFAULT_POMODORO_SHORT_BREAK;
-        snapshot->pomodoroTimes[2] = DEFAULT_POMODORO_WORK;
-        snapshot->pomodoroTimes[3] = DEFAULT_POMODORO_LONG_BREAK;
+        SetDefaultPomodoroOptionsForRecovery(snapshot);
         modified = TRUE;
+    } else {
+        for (int i = 0; i < snapshot->pomodoroTimesCount; i++) {
+            if (snapshot->pomodoroTimes[i] <= 0 ||
+                snapshot->pomodoroTimes[i] > MAX_POMODORO_OPTION_SECONDS) {
+                LOG_WARNING("Invalid Pomodoro interval %d, resetting to defaults",
+                            snapshot->pomodoroTimes[i]);
+                SetDefaultPomodoroOptionsForRecovery(snapshot);
+                modified = TRUE;
+                break;
+            }
+        }
     }
     
-    if (snapshot->pomodoroLoopCount < 1) {
+    if (snapshot->pomodoroLoopCount < MIN_POMODORO_LOOP_COUNT) {
         LOG_WARNING("Invalid Pomodoro loop count %d, resetting to %d",
-                   snapshot->pomodoroLoopCount, DEFAULT_POMODORO_LOOP_COUNT);
-        snapshot->pomodoroLoopCount = DEFAULT_POMODORO_LOOP_COUNT;
+                   snapshot->pomodoroLoopCount, MIN_POMODORO_LOOP_COUNT);
+        snapshot->pomodoroLoopCount = MIN_POMODORO_LOOP_COUNT;
+        modified = TRUE;
+    }
+
+    if (snapshot->pomodoroLoopCount > MAX_POMODORO_LOOP_COUNT) {
+        LOG_WARNING("Invalid Pomodoro loop count %d, capping to %d",
+                   snapshot->pomodoroLoopCount, MAX_POMODORO_LOOP_COUNT);
+        snapshot->pomodoroLoopCount = MAX_POMODORO_LOOP_COUNT;
         modified = TRUE;
     }
     
@@ -214,6 +259,11 @@ BOOL ValidateWindowConfig(ConfigSnapshot* snapshot) {
     BOOL modified = FALSE;
     
     /* Validate window scale */
+    if (!isfinite(snapshot->windowScale)) {
+        LOG_WARNING("Window scale is not finite, setting to %.2f", MIN_SCALE_FACTOR);
+        snapshot->windowScale = MIN_SCALE_FACTOR;
+        modified = TRUE;
+    }
     if (snapshot->windowScale < MIN_SCALE_FACTOR) {
         LOG_WARNING("Window scale too small (%.2f), setting to %.2f",
                    snapshot->windowScale, MIN_SCALE_FACTOR);
@@ -228,6 +278,11 @@ BOOL ValidateWindowConfig(ConfigSnapshot* snapshot) {
     }
     
     /* Validate plugin scale */
+    if (!isfinite(snapshot->pluginScale)) {
+        LOG_WARNING("Plugin scale is not finite, setting to %.2f", MIN_SCALE_FACTOR);
+        snapshot->pluginScale = MIN_SCALE_FACTOR;
+        modified = TRUE;
+    }
     if (snapshot->pluginScale < MIN_SCALE_FACTOR) {
         LOG_WARNING("Plugin scale too small (%.2f), setting to %.2f",
                    snapshot->pluginScale, MIN_SCALE_FACTOR);
@@ -284,6 +339,24 @@ BOOL ValidateWindowConfig(ConfigSnapshot* snapshot) {
         snapshot->opacityStepFast = MAX_OPACITY;
         modified = TRUE;
     }
+
+    if (snapshot->scaleStepNormal < MIN_OPACITY) {
+        snapshot->scaleStepNormal = MIN_OPACITY;
+        modified = TRUE;
+    }
+    if (snapshot->scaleStepNormal > MAX_OPACITY) {
+        snapshot->scaleStepNormal = MAX_OPACITY;
+        modified = TRUE;
+    }
+
+    if (snapshot->scaleStepFast < MIN_OPACITY) {
+        snapshot->scaleStepFast = MIN_OPACITY;
+        modified = TRUE;
+    }
+    if (snapshot->scaleStepFast > MAX_OPACITY) {
+        snapshot->scaleStepFast = MAX_OPACITY;
+        modified = TRUE;
+    }
     
     return modified;
 }
@@ -292,7 +365,9 @@ static inline BOOL FileExistsUtf8(const char* utf8Path) {
     if (!utf8Path || !*utf8Path) return FALSE;
     
     wchar_t wPath[MAX_PATH] = {0};
-    MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH);
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH) == 0) {
+        return FALSE;
+    }
     return GetFileAttributesW(wPath) != INVALID_FILE_ATTRIBUTES;
 }
 
@@ -336,8 +411,6 @@ BOOL ValidateAndRecoverConfig(ConfigSnapshot* snapshot) {
 
     BOOL modified = FALSE;
     
-    LOG_INFO("Starting configuration validation and recovery");
-
     /* Validate each category - order matters for dependencies */
     if (ValidateFontConfig(snapshot)) modified = TRUE;
     if (ValidateColorConfig(snapshot)) modified = TRUE;
@@ -346,12 +419,6 @@ BOOL ValidateAndRecoverConfig(ConfigSnapshot* snapshot) {
     if (ValidateNotificationConfig(snapshot)) modified = TRUE;
     if (ValidateWindowConfig(snapshot)) modified = TRUE;
     if (ValidateTimeoutAction(snapshot)) modified = TRUE;
-
-    if (modified) {
-        LOG_INFO("Configuration validation completed with auto-corrections applied");
-    } else {
-        LOG_INFO("Configuration validation completed - all values valid");
-    }
 
     return modified;
 }

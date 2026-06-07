@@ -7,6 +7,7 @@
 #include "window_procedure/window_utils.h"
 #include "window_procedure/window_helpers.h"
 #include "window_procedure/window_hotkeys.h"
+#include "window_procedure/window_message_handlers.h"
 #include "timer/timer_events.h"
 #include "timer/main_timer.h"
 #include "tray/tray_events.h"
@@ -21,9 +22,12 @@
 #include "startup.h"
 #include "notification.h"
 #include "font.h"
+#include "font/font_path_manager.h"
 #include "color/color.h"
 #include "pomodoro.h"
 #include "tray/tray.h"
+#include "drawing/drawing_effect.h"
+#include "drawing/drawing_render.h"
 
 extern void HandleStartupMode(HWND hwnd);
 #include "dialog/dialog_procedure.h"
@@ -76,47 +80,6 @@ static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/* Adaptive frame interval based on window size to prevent mouse lag */
-static UINT GetAdaptiveAnimationInterval(HWND hwnd) {
-    RECT rect;
-    GetClientRect(hwnd, &rect);
-    int pixels = rect.right * rect.bottom;
-    
-    /* 
-     * Larger windows need longer intervals to avoid blocking DWM.
-     * UpdateLayeredWindow is synchronous and blocks until DWM composites.
-     * 
-     * Holographic effect is significantly heavier (double Gaussian blur + 
-     * per-pixel HSV conversion) and needs more aggressive throttling.
-     */
-    if (CLOCK_HOLOGRAPHIC_EFFECT) {
-        if (pixels < 30000) return 50;
-        if (pixels < 100000) return 80;
-        if (pixels < 300000) return 120;
-        return 200;
-    }
-    
-    /* Standard thresholds for other effects */
-    if (pixels < 50000) return 33;
-    if (pixels < 200000) return 50;
-    if (pixels < 500000) return 80;
-    return 120;
-}
-
-static void UpdateAnimationTimer(HWND hwnd) {
-    /*
-     * Temporal Decoupling: Animated effects use a dedicated timer
-     * to drive visual flow independently of the 1FPS logic clock.
-     * Interval is adaptive to window size to prevent mouse lag.
-     */
-    if (CLOCK_TEXT_EFFECT != TEXT_EFFECT_NONE) {
-        UINT interval = GetAdaptiveAnimationInterval(hwnd);
-        SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL);
-    } else {
-        KillTimer(hwnd, TIMER_ID_RENDER_ANIMATION);
-    }
-}
-
 /* Convert TextEffectType to config string */
 static const char* TextEffectToString(TextEffectType effect) {
     switch (effect) {
@@ -131,18 +94,25 @@ static const char* TextEffectToString(TextEffectType effect) {
 
 /* Toggle effect: if already active, turn off; otherwise switch to it */
 static void ToggleTextEffect(HWND hwnd, TextEffectType effect) {
-    if (CLOCK_TEXT_EFFECT == effect) {
-        CLOCK_TEXT_EFFECT = TEXT_EFFECT_NONE;
-    } else {
-        CLOCK_TEXT_EFFECT = effect;
-    }
+    TextEffectType previousEffect = CLOCK_TEXT_EFFECT;
+    TextEffectType newEffect = (previousEffect == effect) ? TEXT_EFFECT_NONE : effect;
+    const char* effectConfigValue = TextEffectToString(newEffect);
 
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    WriteIniString(INI_SECTION_DISPLAY, "TEXT_EFFECT",
-                   TextEffectToString(CLOCK_TEXT_EFFECT), config_path);
+    if (!WriteIniString(INI_SECTION_DISPLAY, "TEXT_EFFECT",
+                        effectConfigValue, config_path)) {
+        return;
+    }
 
-    UpdateAnimationTimer(hwnd);
+    CLOCK_TEXT_EFFECT = newEffect;
+    g_AppConfig.display.text_effect = newEffect;
+
+    if (previousEffect != TEXT_EFFECT_NONE && newEffect == TEXT_EFFECT_NONE) {
+        CleanupDrawingEffects();
+    }
+
+    UpdateDrawingRenderAnimationTimer(hwnd, FALSE);
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
@@ -190,13 +160,7 @@ static LRESULT CmdToggleVisibility(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdCustomizeColor(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    COLORREF color = ShowColorDialog(hwnd);
-    if (color != (COLORREF)-1) {
-        char hex_color[10];
-        snprintf(hex_color, sizeof(hex_color), "#%02X%02X%02X", 
-                GetRValue(color), GetGValue(color), GetBValue(color));
-        WriteConfigColor(hex_color);
-    }
+    ShowColorDialog(hwnd);
     return 0;
 }
 
@@ -211,18 +175,8 @@ static LRESULT CmdFontLicense(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdFontAdvanced(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    char configPathUtf8[MAX_PATH];
-    GetConfigPath(configPathUtf8, MAX_PATH);
-    
-    WideString wsConfig = ToWide(configPathUtf8);
-    if (!wsConfig.valid) return 0;
-    
-    wchar_t* lastSep = wcsrchr(wsConfig.buf, L'\\');
-    if (lastSep) {
-        *lastSep = L'\0';
-        wchar_t wFontsFolderPath[MAX_PATH];
-        _snwprintf_s(wFontsFolderPath, MAX_PATH, _TRUNCATE, L"%s\\resources\\fonts", wsConfig.buf);
-        SHCreateDirectoryExW(NULL, wFontsFolderPath, NULL);
+    wchar_t wFontsFolderPath[MAX_PATH];
+    if (GetFontsFolderW(wFontsFolderPath, MAX_PATH, TRUE)) {
         ShellExecuteW(hwnd, L"open", wFontsFolderPath, NULL, NULL, SW_SHOWNORMAL);
     }
     return 0;
@@ -261,8 +215,12 @@ static LRESULT CmdColorPanel(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 static LRESULT CmdAnimationSpeed(HWND hwnd, AnimationSpeedMetric metric) {
-    WriteConfigAnimationSpeedMetric(metric);
-    InvalidateRect(hwnd, NULL, TRUE);
+    AnimationSpeedMetric previousMetric = GetAnimationSpeedMetric();
+    if (WriteConfigAnimationSpeedMetric(metric) &&
+        previousMetric != GetAnimationSpeedMetric()) {
+        TrayAnimation_RecomputeTimerDelay();
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
     return 0;
 }
 
@@ -342,10 +300,18 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
     snprintf(posXStr, sizeof(posXStr), "%d", DEFAULT_WINDOW_POS_X);
     snprintf(posYStr, sizeof(posYStr), "%d", DEFAULT_WINDOW_POS_Y);
     
-    WriteConfigKeyValue("CLOCK_WINDOW_POS_X", posXStr);
-    WriteConfigKeyValue("CLOCK_WINDOW_POS_Y", posYStr);
-    WriteConfigKeyValue("WINDOW_SCALE", DEFAULT_WINDOW_SCALE);
-    WriteConfigKeyValue("PLUGIN_SCALE", DEFAULT_PLUGIN_SCALE);
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    const IniKeyValue updates[] = {
+        {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posXStr},
+        {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posYStr},
+        {INI_SECTION_DISPLAY, "WINDOW_SCALE", DEFAULT_WINDOW_SCALE},
+        {INI_SECTION_DISPLAY, "PLUGIN_SCALE", DEFAULT_PLUGIN_SCALE},
+    };
+    if (!WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
+        LOG_WARNING("Failed to reset window position configuration");
+        return 0;
+    }
     
     /* Directly apply position (don't rely on hot-reload for special values) */
     RECT windowRect;
@@ -513,28 +479,31 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
 static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
     if (index >= 0 && index < (int)COLOR_OPTIONS_COUNT) {
-        strncpy_s(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR), 
-                 COLOR_OPTIONS[index].hexColor, _TRUNCATE);
-        char config_path[MAX_PATH];
-        GetConfigPath(config_path, MAX_PATH);
-        WriteConfig(config_path);
-        InvalidateRect(hwnd, NULL, TRUE);
+        if (WriteConfigColor(COLOR_OPTIONS[index].hexColor)) {
+            InvalidateRect(hwnd, NULL, TRUE);
+        } else {
+            CancelPreview(hwnd);
+        }
     }
     return TRUE;
 }
 
 static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
-    if (index >= g_AppConfig.recent_files.count) return TRUE;
-    
+    int recentFilesCount = g_AppConfig.recent_files.count;
+    if (recentFilesCount < 0) recentFilesCount = 0;
+    if (recentFilesCount > MAX_RECENT_FILES) recentFilesCount = MAX_RECENT_FILES;
+    if (index < 0 || index >= recentFilesCount) return TRUE;
+
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
         CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-        WriteConfigKeyValue("CLOCK_TIMEOUT_FILE", "");
-        WriteConfigTimeoutAction("MESSAGE");
-        for (int i = index; i < g_AppConfig.recent_files.count - 1; i++) {
+        CLOCK_TIMEOUT_FILE_PATH[0] = '\0';
+        for (int i = index; i < recentFilesCount - 1; i++) {
             g_AppConfig.recent_files.files[i] = g_AppConfig.recent_files.files[i + 1];
         }
-        g_AppConfig.recent_files.count--;
+        ZeroMemory(&g_AppConfig.recent_files.files[recentFilesCount - 1],
+                   sizeof(g_AppConfig.recent_files.files[recentFilesCount - 1]));
+        g_AppConfig.recent_files.count = recentFilesCount - 1;
         char config_path[MAX_PATH];
         GetConfigPath(config_path, MAX_PATH);
         WriteConfig(config_path);
@@ -612,7 +581,7 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
         {CMD_COLOR_OPTIONS_BASE, CMD_COLOR_OPTIONS_BASE + COLOR_OPTIONS_COUNT - 1, HandleColorSelection},
         {CLOCK_IDM_RECENT_FILE_1, CLOCK_IDM_RECENT_FILE_5, HandleRecentFile},
         {CMD_POMODORO_TIME_BASE, CMD_POMODORO_TIME_END, HandlePomodoroTime},
-        {CMD_FONT_SELECTION_BASE, CMD_FONT_SELECTION_END - 1, HandleFontSelection},
+        {CMD_FONT_SELECTION_BASE, CMD_FONT_SELECTION_BASE + FONT_MENU_MAX_ENTRIES - 1, HandleFontSelection},
         {0, 0, NULL}
     };
 
@@ -644,7 +613,6 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
 LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
     WORD cmd = LOWORD(wp);
 
-    #define IDT_MENU_DEBOUNCE 500
     BOOL isAnimationSelectionCommand =
         (cmd >= CLOCK_IDM_ANIMATIONS_BASE && cmd < CLOCK_IDM_ANIMATIONS_END) ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
@@ -654,10 +622,11 @@ LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
         cmd == CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK ||
         cmd == CLOCK_IDM_ANIMATIONS_USE_NONE;
 
-    if (isAnimationSelectionCommand) {
-        KillTimer(hwnd, IDT_MENU_DEBOUNCE);
-    } else {
-        CancelAnimationPreview();
+    StopMenuPreviewTrackingForCommand(hwnd);
+
+    if (!isAnimationSelectionCommand) {
+        CancelPreview(hwnd);
+        RestoreWindowVisibility(hwnd);
     }
 
     if (DispatchRangeCommand(hwnd, cmd, wp, lp)) return 0;

@@ -19,6 +19,7 @@ LRESULT HandleLButtonUp(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleMouseWheel(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleMouseMove(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandlePaint(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleEraseBkgnd(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp);
@@ -42,6 +43,7 @@ LRESULT HandleShowCliHelp(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleTrayUpdateIcon(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp);
+void StopMenuPreviewTrackingForCommand(HWND hwnd);
 
 // Owner-drawn menu handlers
 LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp);

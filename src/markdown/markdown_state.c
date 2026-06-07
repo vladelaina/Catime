@@ -16,14 +16,16 @@
 #define INITIAL_BLOCKQUOTE_CAPACITY 5
 #define INITIAL_COLOR_TAG_CAPACITY 10
 #define INITIAL_FONT_TAG_CAPACITY 10
+#define MARKDOWN_RANGE_CAPACITY_LIMIT 4096
 
 /** Unified capacity management macro to eliminate code duplication */
-#define ENSURE_CAPACITY(state, type, field, count_field, capacity_field) \
+#define ENSURE_CAPACITY(state, type, field, count_field, capacity_field, initial_capacity) \
     do { \
         if (!state) return FALSE; \
         if ((state)->count_field < (state)->capacity_field) return TRUE; \
-        if ((state)->capacity_field <= 0 || (state)->capacity_field > INT_MAX / 2) return FALSE; \
-        int newCapacity = (state)->capacity_field * 2; \
+        if ((state)->capacity_field >= MARKDOWN_RANGE_CAPACITY_LIMIT) return FALSE; \
+        int newCapacity = ((state)->capacity_field > 0) ? ((state)->capacity_field * 2) : (initial_capacity); \
+        if (newCapacity > MARKDOWN_RANGE_CAPACITY_LIMIT) newCapacity = MARKDOWN_RANGE_CAPACITY_LIMIT; \
         if ((size_t)newCapacity > ((size_t)-1) / sizeof(type)) return FALSE; \
         type* newArray = (type*)realloc((state)->field, (size_t)newCapacity * sizeof(type)); \
         if (!newArray) return FALSE; \
@@ -33,31 +35,36 @@
     } while(0)
 
 BOOL EnsureLinkCapacity(ParseState* state) {
-    ENSURE_CAPACITY(state, MarkdownLink, links, linkCount, linkCapacity);
+    ENSURE_CAPACITY(state, MarkdownLink, links, linkCount, linkCapacity, INITIAL_LINK_CAPACITY);
 }
 
 BOOL EnsureHeadingCapacity(ParseState* state) {
-    ENSURE_CAPACITY(state, MarkdownHeading, headings, headingCount, headingCapacity);
+    ENSURE_CAPACITY(state, MarkdownHeading, headings, headingCount, headingCapacity, INITIAL_HEADING_CAPACITY);
 }
 
 BOOL EnsureStyleCapacity(ParseState* state) {
-    ENSURE_CAPACITY(state, MarkdownStyle, styles, styleCount, styleCapacity);
+    ENSURE_CAPACITY(state, MarkdownStyle, styles, styleCount, styleCapacity, INITIAL_STYLE_CAPACITY);
 }
 
 BOOL EnsureListItemCapacity(ParseState* state) {
-    ENSURE_CAPACITY(state, MarkdownListItem, listItems, listItemCount, listItemCapacity);
+    ENSURE_CAPACITY(state, MarkdownListItem, listItems, listItemCount, listItemCapacity, INITIAL_LIST_ITEM_CAPACITY);
 }
 
 BOOL EnsureBlockquoteCapacity(ParseState* state) {
-    ENSURE_CAPACITY(state, MarkdownBlockquote, blockquotes, blockquoteCount, blockquoteCapacity);
+    ENSURE_CAPACITY(state, MarkdownBlockquote, blockquotes, blockquoteCount, blockquoteCapacity, INITIAL_BLOCKQUOTE_CAPACITY);
 }
 
 BOOL EnsureColorTagCapacity(ParseState* state) {
-    ENSURE_CAPACITY(state, MarkdownColorTag, colorTags, colorTagCount, colorTagCapacity);
+    ENSURE_CAPACITY(state, MarkdownColorTag, colorTags, colorTagCount, colorTagCapacity, INITIAL_COLOR_TAG_CAPACITY);
 }
 
 BOOL EnsureFontTagCapacity(ParseState* state) {
-    ENSURE_CAPACITY(state, MarkdownFontTag, fontTags, fontTagCount, fontTagCapacity);
+    ENSURE_CAPACITY(state, MarkdownFontTag, fontTags, fontTagCount, fontTagCapacity, INITIAL_FONT_TAG_CAPACITY);
+}
+
+void DetachParseState(ParseState* state) {
+    if (!state) return;
+    memset(state, 0, sizeof(*state));
 }
 
 void CleanupParseState(ParseState* state) {
@@ -230,30 +237,36 @@ BOOL HandleMarkdownClick(MarkdownLink* links, int linkCount, POINT clickPoint) {
     return FALSE;
 }
 
+static int GetInitialCapacity(int estimatedCount, int fallbackCapacity) {
+    if (estimatedCount <= 0) return fallbackCapacity;
+    if (estimatedCount >= MARKDOWN_RANGE_CAPACITY_LIMIT - 2) return MARKDOWN_RANGE_CAPACITY_LIMIT;
+    return estimatedCount + 2;
+}
+
 int GetInitialLinkCapacity(int estimatedCount) {
-    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_LINK_CAPACITY;
+    return GetInitialCapacity(estimatedCount, INITIAL_LINK_CAPACITY);
 }
 
 int GetInitialHeadingCapacity(int estimatedCount) {
-    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_HEADING_CAPACITY;
+    return GetInitialCapacity(estimatedCount, INITIAL_HEADING_CAPACITY);
 }
 
 int GetInitialStyleCapacity(int estimatedCount) {
-    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_STYLE_CAPACITY;
+    return GetInitialCapacity(estimatedCount, INITIAL_STYLE_CAPACITY);
 }
 
 int GetInitialListItemCapacity(int estimatedCount) {
-    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_LIST_ITEM_CAPACITY;
+    return GetInitialCapacity(estimatedCount, INITIAL_LIST_ITEM_CAPACITY);
 }
 
 int GetInitialBlockquoteCapacity(int estimatedCount) {
-    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_BLOCKQUOTE_CAPACITY;
+    return GetInitialCapacity(estimatedCount, INITIAL_BLOCKQUOTE_CAPACITY);
 }
 
 int GetInitialColorTagCapacity(int estimatedCount) {
-    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_COLOR_TAG_CAPACITY;
+    return GetInitialCapacity(estimatedCount, INITIAL_COLOR_TAG_CAPACITY);
 }
 
 int GetInitialFontTagCapacity(int estimatedCount) {
-    return estimatedCount > 0 ? estimatedCount + 2 : INITIAL_FONT_TAG_CAPACITY;
+    return GetInitialCapacity(estimatedCount, INITIAL_FONT_TAG_CAPACITY);
 }

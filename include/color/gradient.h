@@ -11,6 +11,7 @@
 
 #define MAX_GRADIENT_STOPS 5  /* Legacy preset limit */
 #define MAX_CUSTOM_GRADIENT_COLORS 20  /* Custom gradient limit */
+#define GRADIENT_NAME_BUFFER 256
 
 typedef enum {
     GRADIENT_NONE = 0,
@@ -35,10 +36,29 @@ typedef struct {
     int paletteCount;           // Count of colors in palette
 } GradientInfo;
 
+typedef struct {
+    GradientInfo info;
+    char name[GRADIENT_NAME_BUFFER];
+    COLORREF palette[MAX_CUSTOM_GRADIENT_COLORS];
+} GradientInfoSnapshot;
+
 /**
  * @brief Get gradient info by type
  */
 const GradientInfo* GetGradientInfo(GradientType type);
+
+/**
+ * @brief Copy gradient info into caller-owned storage.
+ * @details Required for GRADIENT_CUSTOM because its legacy global pointer can be
+ *          republished when another color string is parsed.
+ */
+BOOL GetGradientInfoSnapshot(GradientType type, GradientInfoSnapshot* out);
+
+/**
+ * @brief Resolve a gradient name and copy a stable snapshot into caller storage.
+ * @return GRADIENT_NONE if not a known preset or custom gradient string.
+ */
+GradientType GetGradientInfoSnapshotByName(const char* name, GradientInfoSnapshot* out);
 
 /**
  * @brief Get gradient type from internal name string (case-insensitive)
@@ -67,6 +87,9 @@ void DrawGradientRect(HDC hdc, const RECT* rect, const GradientInfo* info);
 
 /* Helper to check if a gradient needs animation timer */
 BOOL IsGradientAnimated(GradientType type);
+
+/* Helper to check a specific gradient name without publishing custom state */
+BOOL IsGradientNameAnimated(const char* name);
 
 /* Custom gradient support */
 uint32_t GetCustomGradientVersion(void);

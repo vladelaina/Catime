@@ -38,6 +38,11 @@ float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 static DWORD g_systemPositionGuardUntil = 0;
+static BOOL g_hasLastSavedWindowSettings = FALSE;
+static int g_lastSavedWindowPosX = 0;
+static int g_lastSavedWindowPosY = 0;
+static char g_lastSavedWindowScale[16] = {0};
+static char g_lastSavedPluginScale[16] = {0};
 
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
@@ -65,6 +70,11 @@ TextEffectType CLOCK_TEXT_EFFECT = TEXT_EFFECT_NONE;
  */
 static void InitializeTrayAndAnimation(HWND hwnd, HINSTANCE hInstance) {
     InitTrayIcon(hwnd, hInstance);
+    if (!IsTrayIconActive(hwnd)) {
+        LOG_WARNING("Tray icon initialization failed; skipping tray animation startup");
+        return;
+    }
+
     StartTrayAnimation(hwnd, DEFAULT_TRAY_ANIMATION_SPEED_MS);
     LOG_INFO("Tray icon and animation initialized");
 }
@@ -81,6 +91,13 @@ static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
     RefreshWindowTopmostState(hwnd);
+}
+
+static BOOL IsCurrentProcessWindow(HWND hwnd) {
+    DWORD processId = 0;
+    if (!hwnd) return FALSE;
+    GetWindowThreadProcessId(hwnd, &processId);
+    return processId == GetCurrentProcessId();
 }
 
 static BOOL IsSpecialWindowPositionX(int posX) {
@@ -181,11 +198,22 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     return hwnd;
 }
 
+HWND FindCurrentProcessMainWindow(void) {
+    HWND hwnd = NULL;
+
+    while ((hwnd = FindWindowExW(NULL, hwnd, WINDOW_CLASS_NAME, WINDOW_TITLE)) != NULL) {
+        if (IsCurrentProcessWindow(hwnd)) {
+            return hwnd;
+        }
+    }
+
+    return NULL;
+}
+
 void SaveWindowSettings(HWND hwnd) {
     if (!hwnd) return;
 
     if (IsSystemPositionChangeGuardActive() && !CLOCK_EDIT_MODE) {
-        LOG_INFO("Skipping window settings save during system position guard");
         return;
     }
 
@@ -206,6 +234,14 @@ void SaveWindowSettings(HWND hwnd) {
     snprintf(posYStr, sizeof(posYStr), "%d", CLOCK_WINDOW_POS_Y);
     snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
     snprintf(pluginScaleStr, sizeof(pluginScaleStr), "%.2f", PLUGIN_FONT_SCALE_FACTOR);
+
+    if (g_hasLastSavedWindowSettings &&
+        CLOCK_WINDOW_POS_X == g_lastSavedWindowPosX &&
+        CLOCK_WINDOW_POS_Y == g_lastSavedWindowPosY &&
+        strcmp(scaleStr, g_lastSavedWindowScale) == 0 &&
+        strcmp(pluginScaleStr, g_lastSavedPluginScale) == 0) {
+        return;
+    }
     
     IniKeyValue updates[] = {
         {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posXStr},
@@ -215,8 +251,11 @@ void SaveWindowSettings(HWND hwnd) {
     };
     
     if (WriteIniMultipleAtomic(config_path, updates, 4)) {
-        LOG_INFO("Window settings saved (batch): pos(%d, %d), scale(%.2f), plugin_scale(%.2f)", 
-                 CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y, CLOCK_WINDOW_SCALE, PLUGIN_FONT_SCALE_FACTOR);
+        g_hasLastSavedWindowSettings = TRUE;
+        g_lastSavedWindowPosX = CLOCK_WINDOW_POS_X;
+        g_lastSavedWindowPosY = CLOCK_WINDOW_POS_Y;
+        strcpy_s(g_lastSavedWindowScale, sizeof(g_lastSavedWindowScale), scaleStr);
+        strcpy_s(g_lastSavedPluginScale, sizeof(g_lastSavedPluginScale), pluginScaleStr);
     } else {
         LOG_WARNING("Failed to save window settings");
     }
@@ -264,12 +303,19 @@ void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY
     *outY = posY;
 }
 
-void BeginSystemPositionChangeGuard(HWND hwnd) {
+BOOL BeginSystemPositionChangeGuard(HWND hwnd) {
     g_systemPositionGuardUntil = GetTickCount() + SYSTEM_POSITION_GUARD_MS;
-    if (hwnd && IsWindow(hwnd)) {
-        KillTimer(hwnd, TIMER_ID_DISPLAY_RESTORE);
-        SetTimer(hwnd, TIMER_ID_DISPLAY_RESTORE, 750, NULL);
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
     }
+
+    KillTimer(hwnd, TIMER_ID_DISPLAY_RESTORE);
+    if (!SetTimer(hwnd, TIMER_ID_DISPLAY_RESTORE, 750, NULL)) {
+        LOG_WARNING("Failed to schedule display restore timer (error=%lu)",
+                    GetLastError());
+        return FALSE;
+    }
+    return TRUE;
 }
 
 BOOL IsSystemPositionChangeGuardActive(void) {

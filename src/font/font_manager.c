@@ -28,6 +28,30 @@ BOOL IS_PREVIEWING = FALSE;
 static wchar_t CURRENT_LOADED_FONT_PATH[MAX_PATH] = {0};
 static BOOL FONT_RESOURCE_LOADED = FALSE;
 
+static BOOL CopyStringExactA(const char* src, char* out, size_t outSize) {
+    if (!out || outSize == 0) return FALSE;
+    out[0] = '\0';
+    if (!src) return FALSE;
+
+    size_t len = strlen(src);
+    if (len >= outSize) return FALSE;
+
+    memcpy(out, src, len + 1);
+    return TRUE;
+}
+
+static BOOL ShouldAttemptFontAutoFix(const char* fontFileName) {
+    if (!fontFileName || fontFileName[0] == '\0') return FALSE;
+    if (IsFontsFolderPath(fontFileName)) return TRUE;
+    if (strchr(fontFileName, ':') != NULL ||
+        fontFileName[0] == '\\' ||
+        fontFileName[0] == '/' ||
+        fontFileName[0] == '%') {
+        return FALSE;
+    }
+    return TRUE;
+}
+
 /* ============================================================================
  * Embedded Font Resources
  * ============================================================================ */
@@ -58,11 +82,17 @@ BOOL UnloadCurrentFontResource(void) {
     if (!FONT_RESOURCE_LOADED || CURRENT_LOADED_FONT_PATH[0] == 0) {
         return TRUE;
     }
-    
+
     BOOL result = RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
+    if (!result) {
+        LOG_WARNING("Failed to unload current font resource: %S (error=%lu)",
+                    CURRENT_LOADED_FONT_PATH, GetLastError());
+        return FALSE;
+    }
+
     CURRENT_LOADED_FONT_PATH[0] = 0;
     FONT_RESOURCE_LOADED = FALSE;
-    return result;
+    return TRUE;
 }
 
 BOOL LoadFontFromFile(const char* fontFilePath) {
@@ -81,19 +111,36 @@ BOOL LoadFontFromFile(const char* fontFilePath) {
     if (FONT_RESOURCE_LOADED && wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) == 0) {
         return TRUE;
     }
-    
+
+    wchar_t previousFontPath[MAX_PATH] = {0};
+    BOOL hadPreviousFont = FONT_RESOURCE_LOADED && CURRENT_LOADED_FONT_PATH[0] != 0;
+    if (hadPreviousFont) {
+        wcscpy_s(previousFontPath, MAX_PATH, CURRENT_LOADED_FONT_PATH);
+        if (!UnloadCurrentFontResource()) {
+            return FALSE;
+        }
+    }
+
     /* Load new font */
     int addResult = AddFontResourceExW(wFontPath, FR_PRIVATE, NULL);
     if (addResult <= 0) {
+        LOG_WARNING("Failed to load font resource: %S (error=%lu)",
+                    wFontPath, GetLastError());
+        if (hadPreviousFont) {
+            int restoreResult = AddFontResourceExW(previousFontPath, FR_PRIVATE, NULL);
+            if (restoreResult > 0) {
+                wcscpy_s(CURRENT_LOADED_FONT_PATH, MAX_PATH, previousFontPath);
+                FONT_RESOURCE_LOADED = TRUE;
+            } else {
+                LOG_WARNING("Failed to restore previous font resource: %S (error=%lu)",
+                            previousFontPath, GetLastError());
+                CURRENT_LOADED_FONT_PATH[0] = 0;
+                FONT_RESOURCE_LOADED = FALSE;
+            }
+        }
         return FALSE;
     }
-    
-    /* Unload previous font if different */
-    if (FONT_RESOURCE_LOADED && CURRENT_LOADED_FONT_PATH[0] != 0 && 
-        wcscmp(CURRENT_LOADED_FONT_PATH, wFontPath) != 0) {
-        RemoveFontResourceExW(CURRENT_LOADED_FONT_PATH, FR_PRIVATE, NULL);
-    }
-    
+
     /* Save current loaded font */
     wcscpy_s(CURRENT_LOADED_FONT_PATH, MAX_PATH, wFontPath);
     FONT_RESOURCE_LOADED = TRUE;
@@ -120,7 +167,11 @@ static BOOL LoadFontInternal(const char* fontFileName, BOOL shouldUpdateConfig) 
     if (LoadFontFromFile(fontPath)) {
         return TRUE;
     }
-    
+
+    if (!ShouldAttemptFontAutoFix(fontFileName)) {
+        return FALSE;
+    }
+
     /* Direct load failed: try auto-fix */
     FontPathInfo pathInfo;
     if (!AutoFixFontPath(fontFileName, &pathInfo)) {
@@ -168,6 +219,10 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
     
     /* If not exists, try auto-fix */
     if (!fontExists) {
+        if (!ShouldAttemptFontAutoFix(fontFileName)) {
+            return FALSE;
+        }
+
         FontPathInfo pathInfo;
         if (AutoFixFontPath(fontFileName, &pathInfo)) {
             strncpy(fontPath, pathInfo.absolutePath, MAX_PATH - 1);
@@ -207,17 +262,31 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
 
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
-    
-    /* Update active font filename */
-    strncpy(FONT_FILE_NAME, fontName, sizeof(FONT_FILE_NAME) - 1);
-    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-    
-    /* Load and extract internal name */
-    if (!LoadFontByNameAndGetRealName(hInstance, fontName, FONT_INTERNAL_NAME, 
-                                      sizeof(FONT_INTERNAL_NAME))) {
+
+    char previousFontName[MAX_PATH] = {0};
+    char previousInternalName[MAX_PATH] = {0};
+    char pendingFontName[MAX_PATH] = {0};
+    char loadedInternalName[MAX_PATH] = {0};
+
+    if (!CopyStringExactA(fontName, pendingFontName, sizeof(pendingFontName))) {
+        LOG_WARNING("Font name too long, ignoring switch: %s", fontName);
         return FALSE;
     }
-    
+
+    CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+    CopyStringExactA(FONT_INTERNAL_NAME, previousInternalName, sizeof(previousInternalName));
+
+    /* Load and extract internal name */
+    if (!LoadFontByNameAndGetRealName(hInstance, pendingFontName,
+                                      loadedInternalName, sizeof(loadedInternalName))) {
+        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        return FALSE;
+    }
+
+    CopyStringExactA(pendingFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+    CopyStringExactA(loadedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+
     /* Write to config (without reload) */
     WriteConfigFont(FONT_FILE_NAME, FALSE);
     
@@ -228,19 +297,43 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
  * Preview System
  * ============================================================================ */
 
+static void ClearFontPreviewState(void) {
+    IS_PREVIEWING = FALSE;
+    PREVIEW_FONT_NAME[0] = '\0';
+    PREVIEW_INTERNAL_NAME[0] = '\0';
+}
+
 BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
-    
-    /* Save preview font name */
-    strncpy(PREVIEW_FONT_NAME, fontName, sizeof(PREVIEW_FONT_NAME) - 1);
-    PREVIEW_FONT_NAME[sizeof(PREVIEW_FONT_NAME) - 1] = '\0';
-    
-    /* Load and extract internal name */
-    if (!LoadFontByNameAndGetRealName(hInstance, fontName, PREVIEW_INTERNAL_NAME, 
-                                      sizeof(PREVIEW_INTERNAL_NAME))) {
+
+    BOOL hadPreview = IS_PREVIEWING;
+    char pendingFontName[MAX_PATH] = {0};
+    char loadedInternalName[MAX_PATH] = {0};
+
+    if (!CopyStringExactA(fontName, pendingFontName, sizeof(pendingFontName))) {
+        LOG_WARNING("Font preview name too long, ignoring preview: %s", fontName);
+        if (hadPreview) {
+            CancelFontPreview();
+        } else {
+            ClearFontPreviewState();
+        }
         return FALSE;
     }
-    
+
+    /* Load and extract internal name */
+    if (!LoadFontByNameAndGetRealName(hInstance, pendingFontName, loadedInternalName,
+                                      sizeof(loadedInternalName))) {
+        if (hadPreview) {
+            CancelFontPreview();
+        } else {
+            ClearFontPreviewState();
+        }
+        return FALSE;
+    }
+
+    CopyStringExactA(pendingFontName, PREVIEW_FONT_NAME, sizeof(PREVIEW_FONT_NAME));
+    CopyStringExactA(loadedInternalName, PREVIEW_INTERNAL_NAME, sizeof(PREVIEW_INTERNAL_NAME));
+
     /* Set preview mode */
     IS_PREVIEWING = TRUE;
     return TRUE;
@@ -248,9 +341,7 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
 
 void CancelFontPreview(void) {
     /* Clear preview mode */
-    IS_PREVIEWING = FALSE;
-    PREVIEW_FONT_NAME[0] = '\0';
-    PREVIEW_INTERNAL_NAME[0] = '\0';
+    ClearFontPreviewState();
     
     /* Reload original font */
     HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -269,19 +360,24 @@ void CancelFontPreview(void) {
 
 void ApplyFontPreview(void) {
     if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
-    
+
+    char committedFontName[MAX_PATH] = {0};
+    char committedInternalName[MAX_PATH] = {0};
+    if (!CopyStringExactA(PREVIEW_FONT_NAME, committedFontName, sizeof(committedFontName)) ||
+        !CopyStringExactA(PREVIEW_INTERNAL_NAME, committedInternalName, sizeof(committedInternalName))) {
+        CancelFontPreview();
+        return;
+    }
+
     /* Commit preview to active font */
-    strncpy(FONT_FILE_NAME, PREVIEW_FONT_NAME, sizeof(FONT_FILE_NAME) - 1);
-    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-    
-    strncpy(FONT_INTERNAL_NAME, PREVIEW_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME) - 1);
-    FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
-    
+    CopyStringExactA(committedFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+    CopyStringExactA(committedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+
     /* Write to config */
     WriteConfigFont(FONT_FILE_NAME, FALSE);
-    
-    /* Clear preview state */
-    CancelFontPreview();
+
+    /* Preview font is already loaded; keep it active and only clear preview state. */
+    ClearFontPreviewState();
 }
 
 /* ============================================================================
@@ -317,10 +413,16 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
     if (hFile == INVALID_HANDLE_VALUE) return FALSE;
     
     DWORD bytesWritten;
-    BOOL result = WriteFile(hFile, fontData, fontLength, &bytesWritten, NULL);
-    CloseHandle(hFile);
-    
-    return (result && bytesWritten == fontLength);
+    BOOL result = WriteFile(hFile, fontData, fontLength, &bytesWritten, NULL) &&
+                  bytesWritten == fontLength;
+    if (result && !FlushFileBuffers(hFile)) {
+        result = FALSE;
+    }
+    if (!CloseHandle(hFile)) {
+        result = FALSE;
+    }
+
+    return result;
 }
 
 BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
@@ -360,11 +462,12 @@ void ListAvailableFonts(void) {
                               lf.lfCharSet, OUT_DEFAULT_PRECIS,
                               CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
                               DEFAULT_PITCH | FF_DONTCARE, NULL);
-    SelectObject(hdc, hFont);
-    
+    HFONT oldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
+
     EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamExProc, 0, 0);
-    
-    DeleteObject(hFont);
+
+    if (oldFont) SelectObject(hdc, oldFont);
+    if (hFont) DeleteObject(hFont);
     ReleaseDC(NULL, hdc);
 }
 

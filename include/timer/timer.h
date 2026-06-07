@@ -20,6 +20,8 @@
  * ============================================================================ */
 
 #define MAX_TIME_OPTIONS 50
+#define MAX_TIME_OPTION_SECONDS 86400
+#define TIME_OPTIONS_CONFIG_BUFFER_SIZE 1024
 
 /* ============================================================================
  * Types
@@ -130,7 +132,7 @@ int ParseInput(const char* input, int* total_seconds);
  * @brief Write default start time to config
  * @param seconds Duration (>0)
  */
-void WriteConfigDefaultStartTime(int seconds);
+BOOL WriteConfigDefaultStartTime(int seconds);
 
 /**
  * @brief Reset timer to initial state

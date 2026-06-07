@@ -11,6 +11,11 @@
 #include <time.h>
 #include <limits.h>
 
+#define TIME_PARSER_INPUT_BUFFER_SIZE 256
+#define TIME_PARSER_MAX_COMPONENTS 10
+#define TIME_PARSER_ADVANCED_MAX_PARTS 3
+#define TIME_PARSER_TOKEN_DELIMITERS " \t"
+
 /* ============================================================================
  * Internal Helper Functions
  * ============================================================================ */
@@ -44,17 +49,36 @@ static int ParseNumber(const char** pos) {
     return (int)value;
 }
 
+static BOOL GetInputLengthWithinLimit(const char* input, size_t* length) {
+    if (!input) {
+        return FALSE;
+    }
+
+    for (size_t i = 0; i < TIME_PARSER_INPUT_BUFFER_SIZE; i++) {
+        if (input[i] == '\0') {
+            if (length) {
+                *length = i;
+            }
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 /* ============================================================================
  * Validation Functions
  * ============================================================================ */
 
 BOOL TimeParser_Validate(const char* input) {
-    if (!input || !*input) return FALSE;
+    size_t len = 0;
+    if (!GetInputLengthWithinLimit(input, &len) || len == 0) {
+        return FALSE;
+    }
 
-    int len = strlen(input);
     int digit_count = 0;
 
-    for (int i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         int c = tolower((unsigned char)input[i]);
         if (isdigit(input[i])) {
             digit_count++;
@@ -75,7 +99,8 @@ BOOL TimeParser_Validate(const char* input) {
 BOOL TimeParser_HasUnits(const char* input) {
     if (!input) return FALSE;
 
-    for (const char* p = input; *p; p++) {
+    for (size_t i = 0; i < TIME_PARSER_INPUT_BUFFER_SIZE && input[i]; i++) {
+        const char* p = input + i;
         int c = tolower((unsigned char)*p);
         if (c == 'h' || c == 'm' || c == 's') {
             return TRUE;
@@ -181,18 +206,22 @@ BOOL TimeParser_ParseBasic(const char* input, int* seconds) {
 
     *seconds = 0;
 
-    char buffer[256];
+    char buffer[TIME_PARSER_INPUT_BUFFER_SIZE];
     strncpy(buffer, input, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
 
     /* First pass: extract all components */
-    TimeComponent components[10];
+    TimeComponent components[TIME_PARSER_MAX_COMPONENTS];
     int comp_count = 0;
     const char* pos = buffer;
 
-    while (*pos && comp_count < 10) {
+    while (*pos) {
         pos = SkipWhitespace(pos);
         if (*pos == '\0') break;
+
+        if (comp_count >= TIME_PARSER_MAX_COMPONENTS) {
+            return FALSE;
+        }
 
         if (!isdigit((unsigned char)*pos)) {
             return FALSE;
@@ -215,6 +244,11 @@ BOOL TimeParser_ParseBasic(const char* input, int* seconds) {
         components[comp_count].value = value;
         components[comp_count].unit = unit;
         comp_count++;
+    }
+
+    pos = SkipWhitespace(pos);
+    if (*pos != '\0') {
+        return FALSE;
     }
 
     if (comp_count == 0) {
@@ -256,7 +290,7 @@ BOOL TimeParser_ParseAdvanced(const char* input, int* seconds) {
     }
 
     /* Make a mutable copy */
-    char input_copy[256];
+    char input_copy[TIME_PARSER_INPUT_BUFFER_SIZE];
     strncpy(input_copy, input, sizeof(input_copy) - 1);
     input_copy[sizeof(input_copy) - 1] = '\0';
 
@@ -276,13 +310,13 @@ BOOL TimeParser_ParseAdvanced(const char* input, int* seconds) {
     }
 
     /* Parse numeric shorthand: "25" (minutes), "130 20" (130m 20s), "1 30 15" (1h 30m 15s) */
-    char* parts[3];
+    char* parts[TIME_PARSER_ADVANCED_MAX_PARTS];
     int part_count = 0;
 
-    char* token = strtok(input_copy, " ");
-    while (token && part_count < 3) {
+    char* token = strtok(input_copy, TIME_PARSER_TOKEN_DELIMITERS);
+    while (token && part_count < TIME_PARSER_ADVANCED_MAX_PARTS) {
         parts[part_count++] = token;
-        token = strtok(NULL, " ");
+        token = strtok(NULL, TIME_PARSER_TOKEN_DELIMITERS);
     }
 
     /* Check for extra tokens */

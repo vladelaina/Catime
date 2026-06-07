@@ -12,6 +12,10 @@
 static COLORREF g_percentTextColor = RGB(0, 0, 0);
 static COLORREF g_percentBgColor = TRANSPARENT_BG_AUTO;
 
+#define ICON_MASK_STACK_BYTES 2048u
+#define GENERATED_TRAY_ICON_FALLBACK_SIZE 16
+#define GENERATED_TRAY_ICON_MAX_SIZE 256
+
 typedef struct {
     HICON icon;
     COLORREF textColor;
@@ -35,6 +39,28 @@ static PercentIconCacheEntry g_percentIconCache[1000];
 static CapsIconCacheEntry g_capsIconCache[2];
 static COLORREF g_cachedThemeTextColor = CLR_INVALID;
 static DWORD g_lastThemeCheckTick = 0;
+static INIT_ONCE g_percentIconCacheLockOnce = INIT_ONCE_STATIC_INIT;
+static CRITICAL_SECTION g_percentIconCacheCS;
+
+static BOOL CALLBACK InitPercentIconCacheLock(PINIT_ONCE initOnce, PVOID parameter, PVOID* context) {
+    (void)initOnce;
+    (void)parameter;
+    (void)context;
+    InitializeCriticalSection(&g_percentIconCacheCS);
+    return TRUE;
+}
+
+static BOOL BeginPercentIconCacheAccess(void) {
+    if (!InitOnceExecuteOnce(&g_percentIconCacheLockOnce, InitPercentIconCacheLock, NULL, NULL)) {
+        return FALSE;
+    }
+    EnterCriticalSection(&g_percentIconCacheCS);
+    return TRUE;
+}
+
+static void EndPercentIconCacheAccess(void) {
+    LeaveCriticalSection(&g_percentIconCacheCS);
+}
 
 static DWORD ColorRefToDibRgb(COLORREF color) {
     return ((DWORD)GetBValue(color)) |
@@ -42,10 +68,33 @@ static DWORD ColorRefToDibRgb(COLORREF color) {
            ((DWORD)GetRValue(color) << 16);
 }
 
+static void GetGeneratedTrayIconSize(int* outCx, int* outCy) {
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    if (cx <= 0) cx = GENERATED_TRAY_ICON_FALLBACK_SIZE;
+    if (cy <= 0) cy = GENERATED_TRAY_ICON_FALLBACK_SIZE;
+    if (cx > GENERATED_TRAY_ICON_MAX_SIZE) cx = GENERATED_TRAY_ICON_MAX_SIZE;
+    if (cy > GENERATED_TRAY_ICON_MAX_SIZE) cy = GENERATED_TRAY_ICON_MAX_SIZE;
+    if (outCx) *outCx = cx;
+    if (outCy) *outCy = cy;
+}
+
+void GetGeneratedTrayIconSizeSnapshot(int* outCx, int* outCy) {
+    GetGeneratedTrayIconSize(outCx, outCy);
+}
+
 static void FillTransparentIconBackground(void* pvBits, int cx, int cy, DWORD marker) {
     DWORD* pixels = (DWORD*)pvBits;
     for (int i = 0; i < cx * cy; i++) {
         pixels[i] = marker;
+    }
+}
+
+static void FillSolidIconBackground(void* pvBits, int cx, int cy, COLORREF bgColor) {
+    DWORD* pixels = (DWORD*)pvBits;
+    DWORD dibColor = ColorRefToDibRgb(bgColor);
+    for (int i = 0; i < cx * cy; i++) {
+        pixels[i] = dibColor;
     }
 }
 
@@ -72,16 +121,19 @@ static HBITMAP CreateInitializedMaskBitmap(int cx, int cy, BYTE value) {
 
     SIZE_T stride = (SIZE_T)(((cx + 15) / 16) * 2);
     SIZE_T size = stride * (SIZE_T)cy;
-    BYTE* maskBits = (BYTE*)malloc(size);
+    BYTE stackMaskBits[ICON_MASK_STACK_BYTES];
+    BYTE* maskBits = size <= sizeof(stackMaskBits)
+        ? stackMaskBits
+        : (BYTE*)malloc(size);
     if (!maskBits) return NULL;
 
     memset(maskBits, value, size);
     HBITMAP hMask = CreateBitmap(cx, cy, 1, 1, maskBits);
-    free(maskBits);
+    if (maskBits != stackMaskBits) free(maskBits);
     return hMask;
 }
 
-static void ClearGeneratedIconCache(void) {
+static void ClearGeneratedIconCacheLocked(void) {
     for (int i = 0; i < (int)_countof(g_percentIconCache); ++i) {
         if (g_percentIconCache[i].icon) {
             DestroyIcon(g_percentIconCache[i].icon);
@@ -98,9 +150,11 @@ static void ClearGeneratedIconCache(void) {
 }
 
 void CleanupPercentIconCache(void) {
-    ClearGeneratedIconCache();
+    if (!BeginPercentIconCacheAccess()) return;
+    ClearGeneratedIconCacheLocked();
     g_cachedThemeTextColor = CLR_INVALID;
     g_lastThemeCheckTick = 0;
+    EndPercentIconCacheAccess();
 }
 
 /**
@@ -128,68 +182,122 @@ static BOOL IsSystemDarkTheme(void) {
     return FALSE;
 }
 
-/**
- * @brief Get text color based on theme
- * @return Text color (white for dark theme, black for light theme)
- */
-static COLORREF GetThemeTextColor(void) {
-    DWORD now = GetTickCount();
-    if (g_cachedThemeTextColor != CLR_INVALID && (now - g_lastThemeCheckTick) < 5000) {
-        return g_cachedThemeTextColor;
-    }
-
-    g_cachedThemeTextColor = IsSystemDarkTheme()
+static COLORREF QueryThemeTextColor(void) {
+    return IsSystemDarkTheme()
         ? RGB(255, 255, 255)
         : RGB(0, 0, 0);
-    g_lastThemeCheckTick = now;
-    return g_cachedThemeTextColor;
+}
+
+static BOOL TryGetCachedThemeTextColorLocked(COLORREF* textColor) {
+    if (!textColor) return FALSE;
+    DWORD now = GetTickCount();
+    if (g_cachedThemeTextColor != CLR_INVALID && (now - g_lastThemeCheckTick) < 5000) {
+        *textColor = g_cachedThemeTextColor;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static void StoreThemeTextColorLocked(COLORREF textColor, DWORD tick) {
+    g_cachedThemeTextColor = textColor;
+    g_lastThemeCheckTick = tick;
+}
+
+static BOOL SnapshotIconColorsLocked(COLORREF* textColor, COLORREF* bgColor) {
+    if (!textColor || !bgColor) return FALSE;
+
+    *bgColor = g_percentBgColor;
+    if (*bgColor == TRANSPARENT_BG_AUTO) {
+        return TryGetCachedThemeTextColorLocked(textColor);
+    }
+
+    *textColor = g_percentTextColor;
+    return TRUE;
+}
+
+static BOOL GetIconColorSnapshot(COLORREF* textColor, COLORREF* bgColor) {
+    if (!textColor || !bgColor) return FALSE;
+
+    if (!BeginPercentIconCacheAccess()) return FALSE;
+    if (SnapshotIconColorsLocked(textColor, bgColor)) {
+        EndPercentIconCacheAccess();
+        return TRUE;
+    }
+    EndPercentIconCacheAccess();
+
+    COLORREF themeTextColor = QueryThemeTextColor();
+    DWORD themeTick = GetTickCount();
+
+    if (!BeginPercentIconCacheAccess()) return FALSE;
+    if (g_percentBgColor == TRANSPARENT_BG_AUTO) {
+        StoreThemeTextColorLocked(themeTextColor, themeTick);
+        *textColor = themeTextColor;
+        *bgColor = TRANSPARENT_BG_AUTO;
+    } else {
+        *textColor = g_percentTextColor;
+        *bgColor = g_percentBgColor;
+    }
+    EndPercentIconCacheAccess();
+    return TRUE;
+}
+
+BOOL GetPercentIconColorSnapshot(COLORREF* textColor, COLORREF* bgColor) {
+    return GetIconColorSnapshot(textColor, bgColor);
 }
 
 /**
  * @brief Set percent icon colors
  */
 void SetPercentIconColors(COLORREF textColor, COLORREF bgColor) {
+    if (!BeginPercentIconCacheAccess()) return;
+
     if (g_percentTextColor == textColor && g_percentBgColor == bgColor) {
+        EndPercentIconCacheAccess();
         return;
     }
 
-    ClearGeneratedIconCache();
+    ClearGeneratedIconCacheLocked();
     g_percentTextColor = textColor;
     g_percentBgColor = bgColor;
+    EndPercentIconCacheAccess();
 }
 
 /**
  * @brief Get text color
  */
 COLORREF GetPercentIconTextColor(void) {
-    return g_percentTextColor;
+    COLORREF textColor;
+    if (!BeginPercentIconCacheAccess()) return RGB(0, 0, 0);
+    textColor = g_percentTextColor;
+    EndPercentIconCacheAccess();
+    return textColor;
 }
 
 /**
  * @brief Get background color
  */
 COLORREF GetPercentIconBgColor(void) {
-    return g_percentBgColor;
+    COLORREF bgColor;
+    if (!BeginPercentIconCacheAccess()) return TRANSPARENT_BG_AUTO;
+    bgColor = g_percentBgColor;
+    EndPercentIconCacheAccess();
+    return bgColor;
 }
 
 /**
  * @brief Create percent icon with text rendering
  */
-static HICON CreatePercentIcon16Uncached(int percent) {
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-    if (cx <= 0) cx = 16;
-    if (cy <= 0) cy = 16;
-
+static HICON CreatePercentIcon16Uncached(int percent,
+                                         int cx,
+                                         int cy,
+                                         COLORREF textColor,
+                                         COLORREF bgColor) {
     /* Clamp percent */
     if (percent > 999) percent = 999;
     if (percent < 0) percent = 0;
 
-    /* Determine colors: use theme-based or user-configured */
-    BOOL useTransparentBg = (g_percentBgColor == TRANSPARENT_BG_AUTO);
-    COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
-    COLORREF bgColor = g_percentBgColor;
-
+    BOOL useTransparentBg = (bgColor == TRANSPARENT_BG_AUTO);
     DWORD transparentMarker = ColorRefToDibRgb(textColor) ^ 0x00010101u;
 
     /* Create DIB section for color bitmap */
@@ -232,13 +340,7 @@ static HICON CreatePercentIcon16Uncached(int percent) {
     if (useTransparentBg) {
         FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
     } else {
-        /* Solid background: use configured color */
-        RECT rc = {0, 0, cx, cy};
-        HBRUSH bk = CreateSolidBrush(bgColor);
-        if (bk) {
-            FillRect(mem, &rc, bk);
-            DeleteObject(bk);
-        }
+        FillSolidIconBackground(pvBits, cx, cy, bgColor);
     }
 
     /* Setup text rendering */
@@ -274,15 +376,14 @@ static HICON CreatePercentIcon16Uncached(int percent) {
         MakeIconFullyOpaque(pvBits, cx, cy);
     }
 
-    /* Cleanup font */
     if (oldf) SelectObject(mem, oldf);
-    if (hFont) DeleteObject(hFont);
 
     SelectObject(mem, old);
 
     /* Create mask bitmap based on text rendering */
     HBITMAP hbmMask = CreateInitializedMaskBitmap(cx, cy, useTransparentBg ? 0xFF : 0x00);
     if (!hbmMask) {
+        if (hFont) DeleteObject(hFont);
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);
         DeleteObject(hbmColor);
@@ -291,6 +392,7 @@ static HICON CreatePercentIcon16Uncached(int percent) {
 
     HDC memMask = CreateCompatibleDC(hdc);
     if (!memMask) {
+        if (hFont) DeleteObject(hFont);
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);
         DeleteObject(hbmMask);
@@ -299,6 +401,7 @@ static HICON CreatePercentIcon16Uncached(int percent) {
     }
     HGDIOBJ oldMask = SelectObject(memMask, hbmMask);
     if (!oldMask) {
+        if (hFont) DeleteObject(hFont);
         DeleteDC(memMask);
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);
@@ -308,39 +411,19 @@ static HICON CreatePercentIcon16Uncached(int percent) {
     }
 
     if (useTransparentBg) {
-        /* For transparent background: mask = white (1) for background, black (0) for text */
-        /* First fill entire mask with white (transparent) */
-        RECT rc = {0, 0, cx, cy};
-        HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
-        if (whiteBrush) {
-            FillRect(memMask, &rc, whiteBrush);
-            DeleteObject(whiteBrush);
-        }
-
         /* Draw text in black on mask to mark opaque text pixels */
         SetBkMode(memMask, TRANSPARENT);
         SetTextColor(memMask, RGB(0, 0, 0));
 
-        HFONT hMaskFont = CreateFontW(fontSize, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-                                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                      ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
-        HFONT oldMaskFont = hMaskFont ? (HFONT)SelectObject(memMask, hMaskFont) : NULL;
+        HFONT oldMaskFont = hFont ? (HFONT)SelectObject(memMask, hFont) : NULL;
 
         TextOutW(memMask, x, y, txt, txtLen);
 
         if (oldMaskFont) SelectObject(memMask, oldMaskFont);
-        if (hMaskFont) DeleteObject(hMaskFont);
-    } else {
-        /* For solid background: entire icon is opaque (mask all black) */
-        RECT rc = {0, 0, cx, cy};
-        HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
-        if (blackBrush) {
-            FillRect(memMask, &rc, blackBrush);
-            DeleteObject(blackBrush);
-        }
     }
 
     SelectObject(memMask, oldMask);
+    if (hFont) DeleteObject(hFont);
     DeleteDC(memMask);
     ReleaseDC(NULL, hdc);
     DeleteDC(mem);
@@ -361,39 +444,58 @@ static HICON CreatePercentIcon16Uncached(int percent) {
 }
 
 HICON CreatePercentIcon16(int percent) {
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-    if (cx <= 0) cx = 16;
-    if (cy <= 0) cy = 16;
+    int cx = GENERATED_TRAY_ICON_FALLBACK_SIZE;
+    int cy = GENERATED_TRAY_ICON_FALLBACK_SIZE;
+    GetGeneratedTrayIconSize(&cx, &cy);
 
     if (percent > 999) percent = 999;
     if (percent < 0) percent = 0;
 
-    BOOL useTransparentBg = (g_percentBgColor == TRANSPARENT_BG_AUTO);
-    COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
-    COLORREF bgColor = g_percentBgColor;
-    PercentIconCacheEntry* entry = &g_percentIconCache[percent];
+    COLORREF textColor;
+    COLORREF bgColor;
+    if (!GetIconColorSnapshot(&textColor, &bgColor)) return NULL;
 
+    if (!BeginPercentIconCacheAccess()) return NULL;
+
+    PercentIconCacheEntry* entry = &g_percentIconCache[percent];
     if (entry->valid && entry->icon &&
         entry->textColor == textColor && entry->bgColor == bgColor &&
         entry->cx == cx && entry->cy == cy) {
-        return CopyIcon(entry->icon);
+        HICON result = CopyIcon(entry->icon);
+        EndPercentIconCacheAccess();
+        return result;
+    }
+    EndPercentIconCacheAccess();
+
+    HICON generated = CreatePercentIcon16Uncached(percent, cx, cy, textColor, bgColor);
+    if (!generated) {
+        return NULL;
     }
 
-    HICON generated = CreatePercentIcon16Uncached(percent);
-    if (!generated) return NULL;
-
-    if (entry->icon) {
-        DestroyIcon(entry->icon);
+    HICON result = generated;
+    if (BeginPercentIconCacheAccess()) {
+        COLORREF currentTextColor;
+        COLORREF currentBgColor;
+        if (SnapshotIconColorsLocked(&currentTextColor, &currentBgColor) &&
+            currentTextColor == textColor && currentBgColor == bgColor) {
+            HICON cachedIcon = CopyIcon(generated);
+            entry = &g_percentIconCache[percent];
+            if (cachedIcon) {
+                if (entry->icon) {
+                    DestroyIcon(entry->icon);
+                }
+                entry->icon = cachedIcon;
+                entry->textColor = textColor;
+                entry->bgColor = bgColor;
+                entry->cx = cx;
+                entry->cy = cy;
+                entry->valid = TRUE;
+            }
+        }
+        EndPercentIconCacheAccess();
     }
-    entry->icon = generated;
-    entry->textColor = textColor;
-    entry->bgColor = bgColor;
-    entry->cx = cx;
-    entry->cy = cy;
-    entry->valid = TRUE;
 
-    return CopyIcon(entry->icon);
+    return result;
 }
 
 /**
@@ -406,16 +508,12 @@ BOOL IsCapsLockOn(void) {
 /**
  * @brief Create Caps Lock indicator icon
  */
-static HICON CreateCapsLockIconUncached(BOOL capsOn) {
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-    if (cx <= 0) cx = 16;
-    if (cy <= 0) cy = 16;
-
-    /* Determine colors: use theme-based or user-configured */
-    BOOL useTransparentBg = (g_percentBgColor == TRANSPARENT_BG_AUTO);
-    COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
-    COLORREF bgColor = g_percentBgColor;
+static HICON CreateCapsLockIconUncached(BOOL capsOn,
+                                        int cx,
+                                        int cy,
+                                        COLORREF textColor,
+                                        COLORREF bgColor) {
+    BOOL useTransparentBg = (bgColor == TRANSPARENT_BG_AUTO);
     DWORD transparentMarker = ColorRefToDibRgb(textColor) ^ 0x00010101u;
 
     /* Create DIB section for color bitmap */
@@ -458,13 +556,7 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
     if (useTransparentBg) {
         FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
     } else {
-        /* Solid background: use configured color */
-        RECT rc = {0, 0, cx, cy};
-        HBRUSH bk = CreateSolidBrush(bgColor);
-        if (bk) {
-            FillRect(mem, &rc, bk);
-            DeleteObject(bk);
-        }
+        FillSolidIconBackground(pvBits, cx, cy, bgColor);
     }
 
     /* Setup text rendering */
@@ -497,15 +589,14 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
         MakeIconFullyOpaque(pvBits, cx, cy);
     }
 
-    /* Cleanup font */
     if (oldf) SelectObject(mem, oldf);
-    if (hFont) DeleteObject(hFont);
 
     SelectObject(mem, old);
 
     /* Create mask bitmap */
     HBITMAP hbmMask = CreateInitializedMaskBitmap(cx, cy, useTransparentBg ? 0xFF : 0x00);
     if (!hbmMask) {
+        if (hFont) DeleteObject(hFont);
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);
         DeleteObject(hbmColor);
@@ -514,6 +605,7 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
 
     HDC memMask = CreateCompatibleDC(hdc);
     if (!memMask) {
+        if (hFont) DeleteObject(hFont);
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);
         DeleteObject(hbmMask);
@@ -522,6 +614,7 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
     }
     HGDIOBJ oldMask = SelectObject(memMask, hbmMask);
     if (!oldMask) {
+        if (hFont) DeleteObject(hFont);
         DeleteDC(memMask);
         ReleaseDC(NULL, hdc);
         DeleteDC(mem);
@@ -531,38 +624,19 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
     }
 
     if (useTransparentBg) {
-        /* For transparent background: mask = white for bg, black for text */
-        RECT rc = {0, 0, cx, cy};
-        HBRUSH whiteBrush = CreateSolidBrush(RGB(255, 255, 255));
-        if (whiteBrush) {
-            FillRect(memMask, &rc, whiteBrush);
-            DeleteObject(whiteBrush);
-        }
-
         /* Draw text in black on mask */
         SetBkMode(memMask, TRANSPARENT);
         SetTextColor(memMask, RGB(0, 0, 0));
 
-        HFONT hMaskFont = CreateFontW(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                                      ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
-        HFONT oldMaskFont = hMaskFont ? (HFONT)SelectObject(memMask, hMaskFont) : NULL;
+        HFONT oldMaskFont = hFont ? (HFONT)SelectObject(memMask, hFont) : NULL;
 
         TextOutW(memMask, x, y, txt, 1);
 
         if (oldMaskFont) SelectObject(memMask, oldMaskFont);
-        if (hMaskFont) DeleteObject(hMaskFont);
-    } else {
-        /* For solid background: entire icon is opaque */
-        RECT rc = {0, 0, cx, cy};
-        HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
-        if (blackBrush) {
-            FillRect(memMask, &rc, blackBrush);
-            DeleteObject(blackBrush);
-        }
     }
 
     SelectObject(memMask, oldMask);
+    if (hFont) DeleteObject(hFont);
     DeleteDC(memMask);
     ReleaseDC(NULL, hdc);
     DeleteDC(mem);
@@ -583,36 +657,55 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn) {
 }
 
 HICON CreateCapsLockIcon(BOOL capsOn) {
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-    if (cx <= 0) cx = 16;
-    if (cy <= 0) cy = 16;
+    int cx = GENERATED_TRAY_ICON_FALLBACK_SIZE;
+    int cy = GENERATED_TRAY_ICON_FALLBACK_SIZE;
+    GetGeneratedTrayIconSize(&cx, &cy);
 
-    BOOL useTransparentBg = (g_percentBgColor == TRANSPARENT_BG_AUTO);
-    COLORREF textColor = useTransparentBg ? GetThemeTextColor() : g_percentTextColor;
-    COLORREF bgColor = g_percentBgColor;
+    COLORREF textColor;
+    COLORREF bgColor;
+    if (!GetIconColorSnapshot(&textColor, &bgColor)) return NULL;
+
+    if (!BeginPercentIconCacheAccess()) return NULL;
+
     CapsIconCacheEntry* entry = &g_capsIconCache[capsOn ? 1 : 0];
-
     if (entry->valid && entry->icon &&
         entry->textColor == textColor && entry->bgColor == bgColor &&
         entry->cx == cx && entry->cy == cy && entry->capsOn == capsOn) {
-        return CopyIcon(entry->icon);
+        HICON result = CopyIcon(entry->icon);
+        EndPercentIconCacheAccess();
+        return result;
+    }
+    EndPercentIconCacheAccess();
+
+    HICON generated = CreateCapsLockIconUncached(capsOn, cx, cy, textColor, bgColor);
+    if (!generated) {
+        return NULL;
     }
 
-    HICON generated = CreateCapsLockIconUncached(capsOn);
-    if (!generated) return NULL;
-
-    if (entry->icon) {
-        DestroyIcon(entry->icon);
+    HICON result = generated;
+    if (BeginPercentIconCacheAccess()) {
+        COLORREF currentTextColor;
+        COLORREF currentBgColor;
+        if (SnapshotIconColorsLocked(&currentTextColor, &currentBgColor) &&
+            currentTextColor == textColor && currentBgColor == bgColor) {
+            HICON cachedIcon = CopyIcon(generated);
+            entry = &g_capsIconCache[capsOn ? 1 : 0];
+            if (cachedIcon) {
+                if (entry->icon) {
+                    DestroyIcon(entry->icon);
+                }
+                entry->icon = cachedIcon;
+                entry->textColor = textColor;
+                entry->bgColor = bgColor;
+                entry->cx = cx;
+                entry->cy = cy;
+                entry->capsOn = capsOn;
+                entry->valid = TRUE;
+            }
+        }
+        EndPercentIconCacheAccess();
     }
-    entry->icon = generated;
-    entry->textColor = textColor;
-    entry->bgColor = bgColor;
-    entry->cx = cx;
-    entry->cy = cy;
-    entry->capsOn = capsOn;
-    entry->valid = TRUE;
 
-    return CopyIcon(entry->icon);
+    return result;
 }
 

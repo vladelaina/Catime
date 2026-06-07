@@ -59,6 +59,21 @@ static bool ContainsBoth(const char* str, const char* sub1, const char* sub2) {
     return Contains(str, sub1) && Contains(str, sub2);
 }
 
+static bool CopyStringExact(const char* src, char* output, size_t output_size) {
+    if (!src || !output || output_size == 0) {
+        return false;
+    }
+
+    output[0] = '\0';
+    size_t len = strlen(src);
+    if (len >= output_size) {
+        return false;
+    }
+
+    memcpy(output, src, len + 1);
+    return true;
+}
+
 /* Thin wrappers for utils/string_convert.h (bool return type for this file's convention) */
 static inline bool LocalWideToUtf8(const wchar_t* wide_str, char* output, size_t output_size) {
     return WideToUtf8(wide_str, output, output_size) ? true : false;
@@ -139,18 +154,37 @@ static bool GetDesktopPath(int desktop_type, char* output, size_t output_size) {
     return LocalWideToUtf8(path_w, output, output_size);
 }
 
-static void BuildShortcutPath(const char* desktop_path, char* output, size_t output_size) {
-    snprintf(output, output_size, "%s\\%s", desktop_path, SHORTCUT_FILENAME);
+static bool BuildShortcutPath(const char* desktop_path, char* output, size_t output_size) {
+    if (!desktop_path || !output || output_size == 0) {
+        return false;
+    }
+
+    output[0] = '\0';
+    int written = snprintf(output, output_size, "%s\\%s", desktop_path, SHORTCUT_FILENAME);
+    if (written < 0 || (size_t)written >= output_size) {
+        output[0] = '\0';
+        return false;
+    }
+    return true;
 }
 
-static void ExtractDirectory(const char* file_path, char* output, size_t output_size) {
-    strncpy(output, file_path, output_size);
-    output[output_size - 1] = '\0';
+static bool ExtractDirectory(const char* file_path, char* output, size_t output_size) {
+    if (!file_path || !output || output_size == 0) {
+        return false;
+    }
+
+    output[0] = '\0';
+    if (!CopyStringExact(file_path, output, output_size)) {
+        return false;
+    }
     
     char* last_slash = strrchr(output, '\\');
-    if (last_slash) {
-        *last_slash = '\0';
+    if (!last_slash || last_slash == output) {
+        output[0] = '\0';
+        return false;
     }
+    *last_slash = '\0';
+    return true;
 }
 
 /** Extensible pattern matching avoids hardcoding install paths */
@@ -216,24 +250,25 @@ cleanup:
 
 /** User desktop has priority over public desktop */
 static bool FindExistingShortcut(char* shortcut_path_output, size_t path_size) {
+    if (!shortcut_path_output || path_size == 0) {
+        return false;
+    }
+    shortcut_path_output[0] = '\0';
+
     char desktop_path[MAX_PATH];
     char shortcut_path[MAX_PATH];
     
     if (GetDesktopPath(CSIDL_DESKTOP, desktop_path, MAX_PATH)) {
-        BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
-        if (ShortcutFileExists(shortcut_path)) {
-            strncpy(shortcut_path_output, shortcut_path, path_size);
-            shortcut_path_output[path_size - 1] = '\0';
-            return true;
+        if (BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH) &&
+            ShortcutFileExists(shortcut_path)) {
+            return CopyStringExact(shortcut_path, shortcut_path_output, path_size);
         }
     }
     
     if (GetDesktopPath(CSIDL_COMMON_DESKTOPDIRECTORY, desktop_path, MAX_PATH)) {
-        BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
-        if (ShortcutFileExists(shortcut_path)) {
-            strncpy(shortcut_path_output, shortcut_path, path_size);
-            shortcut_path_output[path_size - 1] = '\0';
-            return true;
+        if (BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH) &&
+            ShortcutFileExists(shortcut_path)) {
+            return CopyStringExact(shortcut_path, shortcut_path_output, path_size);
         }
     }
     
@@ -251,8 +286,9 @@ static ShortcutStatus CheckShortcutStatus(const char* exe_path,
     }
     
     if (shortcut_path_output && shortcut_path_size > 0) {
-        strncpy(shortcut_path_output, shortcut_path, shortcut_path_size);
-        shortcut_path_output[shortcut_path_size - 1] = '\0';
+        if (!CopyStringExact(shortcut_path, shortcut_path_output, shortcut_path_size)) {
+            return SHORTCUT_NOT_FOUND;
+        }
     }
     
     if (!ReadShortcutTarget(shortcut_path, target_path, MAX_PATH)) {
@@ -260,8 +296,9 @@ static ShortcutStatus CheckShortcutStatus(const char* exe_path,
     }
     
     if (target_path_output && target_path_size > 0) {
-        strncpy(target_path_output, target_path, target_path_size);
-        target_path_output[target_path_size - 1] = '\0';
+        if (!CopyStringExact(target_path, target_path_output, target_path_size)) {
+            return SHORTCUT_NOT_FOUND;
+        }
     }
     
     if (_stricmp(target_path, exe_path) == 0) {
@@ -284,8 +321,8 @@ static bool ConfigureShellLink(ComShellLink* link, const char* exe_path) {
     hr = link->shellLink->lpVtbl->SetPath(link->shellLink, exe_path_w);
     CHECK_HR_RETURN(hr, "Failed to set shortcut target path", false);
     
-    ExtractDirectory(exe_path, work_dir, MAX_PATH);
-    if (Utf8ToWide(work_dir, work_dir_w, MAX_PATH)) {
+    if (ExtractDirectory(exe_path, work_dir, MAX_PATH) &&
+        Utf8ToWide(work_dir, work_dir_w, MAX_PATH)) {
         hr = link->shellLink->lpVtbl->SetWorkingDirectory(link->shellLink, work_dir_w);
         CHECK_HR_WARN(hr, "Failed to set working directory");
     }
@@ -310,8 +347,12 @@ static bool CreateOrUpdateShortcut(const char* exe_path, const char* existing_sh
     
     if (existing_shortcut_path && *existing_shortcut_path) {
         LOG_INFO("Updating desktop shortcut: %s -> %s", existing_shortcut_path, exe_path);
-        strncpy(shortcut_path, existing_shortcut_path, MAX_PATH);
-        shortcut_path[MAX_PATH - 1] = '\0';
+        size_t shortcut_path_len = strlen(existing_shortcut_path);
+        if (shortcut_path_len >= MAX_PATH) {
+            LOG_ERROR("Existing shortcut path is too long");
+            return false;
+        }
+        memcpy(shortcut_path, existing_shortcut_path, shortcut_path_len + 1);
     } else {
         LOG_INFO("Creating desktop shortcut for: %s", exe_path);
         
@@ -321,7 +362,10 @@ static bool CreateOrUpdateShortcut(const char* exe_path, const char* existing_sh
             return false;
         }
         
-        BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH);
+        if (!BuildShortcutPath(desktop_path, shortcut_path, MAX_PATH)) {
+            LOG_ERROR("Failed to build desktop shortcut path");
+            return false;
+        }
     }
     
     if (!InitComShellLink(&link)) {
@@ -366,7 +410,9 @@ int CheckAndCreateShortcut(void) {
     hr = CoInitialize(NULL);
     CHECK_HR_RETURN(hr, "COM library initialization failed", 1);
     
-    if (GetModuleFileNameW(NULL, exe_path_w, MAX_PATH) == 0) {
+    DWORD exe_path_len = GetModuleFileNameW(NULL, exe_path_w, MAX_PATH);
+    if (exe_path_len == 0 || exe_path_len >= MAX_PATH) {
+        exe_path_w[0] = L'\0';
         LOG_ERROR("Failed to get program path");
         CoUninitialize();
         return 1;

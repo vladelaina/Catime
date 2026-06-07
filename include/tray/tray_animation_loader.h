@@ -110,6 +110,14 @@ BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
                          MemoryPool* pool, int iconWidth, int iconHeight);
 
 /**
+ * @brief Load animation frames by name with cooperative cancellation
+ * @param cancelEvent Optional event; signaled event aborts animated image decoding
+ */
+BOOL LoadAnimationByNameWithCancel(const char* name, LoadedAnimation* anim,
+                                   MemoryPool* pool, int iconWidth, int iconHeight,
+                                   HANDLE cancelEvent);
+
+/**
  * @brief Load animation frames from an absolute file or folder path
  * @param path Absolute path to a file/folder or builtin animation name
  * @param anim Output structure
@@ -122,6 +130,14 @@ BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
                            MemoryPool* pool, int iconWidth, int iconHeight);
 
 /**
+ * @brief Load animation frames from path with cooperative cancellation
+ * @param cancelEvent Optional event; signaled event aborts animated image decoding
+ */
+BOOL LoadAnimationFromPathWithCancel(const char* path, LoadedAnimation* anim,
+                                     MemoryPool* pool, int iconWidth, int iconHeight,
+                                     HANDLE cancelEvent);
+
+/**
  * @brief Load icons from folder (naturally sorted)
  * @param utf8FolderPath Full path to folder
  * @param anim Output animation structure
@@ -130,11 +146,25 @@ BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
 BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim);
 
 /**
+ * @brief Load icons from folder with cooperative cancellation
+ * @param cancelEvent Optional event; signaled event aborts folder frame loading
+ */
+BOOL LoadIconsFromFolderWithCancel(const char* utf8FolderPath, LoadedAnimation* anim,
+                                   HANDLE cancelEvent);
+
+/**
  * @brief Check if file/folder exists and is valid animation source
  * @param name Animation name
  * @return TRUE if valid and exists
  */
 BOOL IsValidAnimationSource(const char* name);
+
+/**
+ * @brief Check if a custom animation path stays relative to the animations folder
+ * @param path UTF-8 relative file/folder path
+ * @return TRUE if path has no absolute/rooted or parent-directory segments
+ */
+BOOL IsSafeAnimationRelativePath(const char* path);
 
 /**
  * @brief Check if name is a builtin animation (not custom file/folder)

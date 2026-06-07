@@ -90,16 +90,39 @@ void ShowError(HWND hwnd, ErrorCode errorCode) {
  * Configuration Access Implementation
  * ============================================================================ */
 
+#define CONFIG_PATH_CACHE_UNINITIALIZED 0
+#define CONFIG_PATH_CACHE_INITIALIZING  1
+#define CONFIG_PATH_CACHE_READY         2
+#define CONFIG_PATH_CACHE_WAIT_SPIN_LIMIT 64
+
 static char g_configPathCache[MAX_PATH] = {0};
-static volatile LONG g_configPathCached = 0;
+static volatile LONG g_configPathCacheState = CONFIG_PATH_CACHE_UNINITIALIZED;
+
+static void WaitWhileConfigPathCacheInitializing(void) {
+    DWORD spins = 0;
+    while (InterlockedCompareExchange(&g_configPathCacheState, 0, 0) ==
+           CONFIG_PATH_CACHE_INITIALIZING) {
+        Sleep(spins++ < CONFIG_PATH_CACHE_WAIT_SPIN_LIMIT ? 0 : 1);
+    }
+}
 
 const char* GetCachedConfigPath(void) {
-    if (InterlockedCompareExchange(&g_configPathCached, 0, 0) == 0) {
+    LONG state = InterlockedCompareExchange(&g_configPathCacheState, 0, 0);
+    if (state == CONFIG_PATH_CACHE_READY) {
+        return g_configPathCache;
+    }
+
+    if (InterlockedCompareExchange(&g_configPathCacheState,
+                                   CONFIG_PATH_CACHE_INITIALIZING,
+                                   CONFIG_PATH_CACHE_UNINITIALIZED) == CONFIG_PATH_CACHE_UNINITIALIZED) {
         char tempPath[MAX_PATH] = {0};
         GetConfigPath(tempPath, MAX_PATH);
         memcpy(g_configPathCache, tempPath, MAX_PATH);
-        InterlockedExchange(&g_configPathCached, 1);
+        InterlockedExchange(&g_configPathCacheState, CONFIG_PATH_CACHE_READY);
+    } else {
+        WaitWhileConfigPathCacheInitializing();
     }
+
     return g_configPathCache;
 }
 
@@ -133,22 +156,28 @@ void ClearInputBuffer(wchar_t* buffer, size_t size) {
 }
 
 void UpdateConfigWithRefresh(HWND hwnd, const char* key, const char* value) {
-    WriteConfigKeyValue(key, value);
-    if (hwnd) {
+    if (WriteConfigKeyValue(key, value) && hwnd) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
 }
 
 void ToggleConfigBool(HWND hwnd, const char* key, bool* currentValue, bool needsRedraw) {
-    *currentValue = !(*currentValue);
-    WriteConfigKeyValue(key, *currentValue ? "TRUE" : "FALSE");
+    if (!key || !currentValue) {
+        return;
+    }
+
+    bool newValue = !(*currentValue);
+    if (!WriteConfigKeyValue(key, newValue ? "TRUE" : "FALSE")) {
+        return;
+    }
+
+    *currentValue = newValue;
     if (needsRedraw && hwnd) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
 }
 
 void WriteConfigAndRedraw(HWND hwnd, const char* key, const char* value) {
-    WriteConfigKeyValue(key, value);
-    if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
+    if (WriteConfigKeyValue(key, value) && hwnd) InvalidateRect(hwnd, NULL, TRUE);
 }
 

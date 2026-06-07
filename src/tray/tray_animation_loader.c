@@ -15,12 +15,45 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define MAX_FOLDER_ANIMATION_FRAMES 512
+#define MAX_FOLDER_ANIMATION_SCAN_ENTRIES 4096
+#define MAX_ANIMATION_FILE_BYTES (128ull * 1024ull * 1024ull)
+#define TRAY_ANIMATION_ICON_FALLBACK_SIZE 16
+#define TRAY_ANIMATION_ICON_MAX_SIZE 256
+
+static int ClampTrayAnimationIconDimension(int value) {
+    if (value <= 0) return TRAY_ANIMATION_ICON_FALLBACK_SIZE;
+    if (value > TRAY_ANIMATION_ICON_MAX_SIZE) return TRAY_ANIMATION_ICON_MAX_SIZE;
+    return value;
+}
+
+static void NormalizeTrayAnimationIconSize(int* iconWidth, int* iconHeight) {
+    if (iconWidth) {
+        *iconWidth = ClampTrayAnimationIconDimension(*iconWidth);
+    }
+    if (iconHeight) {
+        *iconHeight = ClampTrayAnimationIconDimension(*iconHeight);
+    }
+}
+
+static void GetTrayAnimationSystemIconSize(int* iconWidth, int* iconHeight) {
+    int cx = GetSystemMetrics(SM_CXSMICON);
+    int cy = GetSystemMetrics(SM_CYSMICON);
+    NormalizeTrayAnimationIconSize(&cx, &cy);
+    if (iconWidth) *iconWidth = cx;
+    if (iconHeight) *iconHeight = cy;
+}
+
+static BOOL IsAnimationLoadCancelRequested(HANDLE cancelEvent) {
+    return cancelEvent && WaitForSingleObject(cancelEvent, 0) == WAIT_OBJECT_0;
+}
+
 /**
  * @brief Get CPU usage for builtin animation
  */
 static int GetCpuValue(void) {
-    float cpu = 0.0f, mem = 0.0f;
-    if (SystemMonitor_GetUsage(&cpu, &mem)) {
+    float cpu = 0.0f;
+    if (SystemMonitor_GetCpuUsage(&cpu)) {
         return (int)(cpu + 0.5f);
     }
     return 0;
@@ -30,8 +63,8 @@ static int GetCpuValue(void) {
  * @brief Get Memory usage for builtin animation
  */
 static int GetMemValue(void) {
-    float cpu = 0.0f, mem = 0.0f;
-    if (SystemMonitor_GetUsage(&cpu, &mem)) {
+    float mem = 0.0f;
+    if (SystemMonitor_GetMemoryUsage(&mem)) {
         return (int)(mem + 0.5f);
     }
     return 0;
@@ -62,6 +95,42 @@ static const BuiltinAnimDef g_builtinAnims[] = {
 };
 
 static const int g_builtinAnimCount = sizeof(g_builtinAnims) / sizeof(g_builtinAnims[0]);
+
+static BOOL IsAnimationFileSizeAllowed(const char* utf8Path) {
+    if (!utf8Path || !*utf8Path) return FALSE;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    if (MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1, wPath, MAX_PATH) <= 0) {
+        return FALSE;
+    }
+
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (!GetFileAttributesExW(wPath, GetFileExInfoStandard, &data)) {
+        WriteLog(LOG_LEVEL_WARNING, "Failed to query animation file size: %s (error=%lu)",
+                 utf8Path, GetLastError());
+        return FALSE;
+    }
+
+    if (data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        return TRUE;
+    }
+
+    ULONGLONG fileSize = ((ULONGLONG)data.nFileSizeHigh << 32) | data.nFileSizeLow;
+    if (fileSize > MAX_ANIMATION_FILE_BYTES) {
+        WriteLog(LOG_LEVEL_WARNING, "Animation file too large: %s (%llu bytes, limit %llu bytes)",
+                 utf8Path, fileSize, (ULONGLONG)MAX_ANIMATION_FILE_BYTES);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL IsFindDataFileSizeAllowed(const WIN32_FIND_DATAW* data) {
+    if (!data || (data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) return FALSE;
+
+    ULONGLONG fileSize = ((ULONGLONG)data->nFileSizeHigh << 32) | data->nFileSizeLow;
+    return fileSize <= MAX_ANIMATION_FILE_BYTES;
+}
 
 /**
  * @brief Initialize loaded animation
@@ -136,6 +205,13 @@ void LoadedAnimation_Free(LoadedAnimation* anim) {
     anim->capacity = 0;
     anim->isAnimated = FALSE;
     anim->sourceType = ANIM_SOURCE_UNKNOWN;
+}
+
+static void MoveLoadedAnimationToOutput(LoadedAnimation* dst, LoadedAnimation* src) {
+    if (!dst || !src || dst == src) return;
+    LoadedAnimation_Free(dst);
+    *dst = *src;
+    LoadedAnimation_Init(src);
 }
 
 /**
@@ -227,9 +303,14 @@ AnimationSourceType DetectAnimationSourceType(const char* name) {
  */
 static BOOL BuildAnimationPath(const char* name, char* path, size_t size) {
     if (!name || !path || size == 0) return FALSE;
+    if (!IsSafeAnimationRelativePath(name)) return FALSE;
 
     char base[MAX_PATH] = {0};
     GetAnimationsFolderPath(base, sizeof(base));
+    if (base[0] == '\0') {
+        path[0] = '\0';
+        return FALSE;
+    }
     
     size_t len = strlen(base);
     int pathLen = 0;
@@ -242,6 +323,30 @@ static BOOL BuildAnimationPath(const char* name, char* path, size_t size) {
     if (pathLen < 0 || (size_t)pathLen >= size) {
         path[0] = '\0';
         return FALSE;
+    }
+
+    return TRUE;
+}
+
+BOOL IsSafeAnimationRelativePath(const char* path) {
+    if (!path || !*path) return FALSE;
+    if (path[0] == '\\' || path[0] == '/') return FALSE;
+
+    const char* segment = path;
+    while (*segment) {
+        const char* end = segment;
+        while (*end && *end != '\\' && *end != '/') {
+            end++;
+        }
+
+        size_t len = (size_t)(end - segment);
+        if (len == 0 ||
+            (len == 1 && segment[0] == '.') ||
+            (len == 2 && segment[0] == '.' && segment[1] == '.')) {
+            return FALSE;
+        }
+
+        segment = *end ? end + 1 : end;
     }
 
     return TRUE;
@@ -270,85 +375,148 @@ static int CompareAnimFile(const void* a, const void* b) {
     return NaturalCompareW(fa->name, fb->name);
 }
 
+static BOOL IsSupportedAnimationExtensionW(const wchar_t* ext) {
+    if (!ext) return FALSE;
+
+    static const wchar_t* supportedExtensions[] = {
+        L".ico", L".png", L".bmp", L".jpg", L".jpeg",
+        L".gif", L".webp", L".tif", L".tiff"
+    };
+
+    for (size_t i = 0; i < sizeof(supportedExtensions) / sizeof(supportedExtensions[0]); ++i) {
+        if (_wcsicmp(ext, supportedExtensions[i]) == 0) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 /**
  * @brief Load icons from folder with natural sorting
  */
-BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim) {
+BOOL LoadIconsFromFolderWithCancel(const char* utf8FolderPath, LoadedAnimation* anim,
+                                   HANDLE cancelEvent) {
     if (!utf8FolderPath || !anim) return FALSE;
+    if (IsAnimationLoadCancelRequested(cancelEvent)) return FALSE;
 
-    anim->count = 0;
-    
     wchar_t wFolder[MAX_PATH] = {0};
     if (MultiByteToWideChar(CP_UTF8, 0, utf8FolderPath, -1, wFolder, MAX_PATH) <= 0) {
         return FALSE;
     }
+    if (IsAnimationLoadCancelRequested(cancelEvent)) return FALSE;
     
     int fileCapacity = 64;
     AnimFile* files = (AnimFile*)malloc(sizeof(AnimFile) * (size_t)fileCapacity);
     if (!files) return FALSE;
 
     int fileCount = 0;
-    
-    /* Scan for all supported image formats */
-    const wchar_t* patterns[] = {
-        L"\\*.ico", L"\\*.png", L"\\*.bmp", L"\\*.jpg",
-        L"\\*.jpeg", L"\\*.gif", L"\\*.webp", L"\\*.tif", L"\\*.tiff"
-    };
-    
-    for (size_t p = 0; p < sizeof(patterns) / sizeof(patterns[0]); ++p) {
-        wchar_t wSearch[MAX_PATH] = {0};
-        int searchWritten = _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s%s", wFolder, patterns[p]);
-        if (searchWritten < 0) continue;
-        
-        WIN32_FIND_DATAW ffd;
-        HANDLE hFind = FindFirstFileW(wSearch, &ffd);
-        if (hFind != INVALID_HANDLE_VALUE) {
-            do {
-                if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-                if (fileCount >= fileCapacity) {
-                    int newCapacity = fileCapacity * 2;
-                    AnimFile* newFiles = (AnimFile*)realloc(files, sizeof(AnimFile) * (size_t)newCapacity);
-                    if (!newFiles) break;
-                    files = newFiles;
-                    fileCapacity = newCapacity;
+
+    wchar_t wSearch[MAX_PATH] = {0};
+    int searchWritten = _snwprintf_s(wSearch, MAX_PATH, _TRUNCATE, L"%s\\*", wFolder);
+    if (searchWritten < 0) {
+        free(files);
+        return FALSE;
+    }
+
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(wSearch, &ffd);
+    if (hFind != INVALID_HANDLE_VALUE) {
+        BOOL allocationFailed = FALSE;
+        BOOL reachedFrameLimit = FALSE;
+        BOOL reachedScanLimit = FALSE;
+        int scannedEntries = 0;
+        BOOL canceled = FALSE;
+        do {
+            if (IsAnimationLoadCancelRequested(cancelEvent)) {
+                canceled = TRUE;
+                break;
+            }
+
+            if (++scannedEntries > MAX_FOLDER_ANIMATION_SCAN_ENTRIES) {
+                reachedScanLimit = TRUE;
+                break;
+            }
+
+            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+
+            const wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
+            if (!IsSupportedAnimationExtensionW(dot)) continue;
+            if (!IsFindDataFileSizeAllowed(&ffd)) {
+                WriteLog(LOG_LEVEL_WARNING, "Skipping oversized folder animation frame: %ls (%llu bytes)",
+                         ffd.cFileName,
+                         ((ULONGLONG)ffd.nFileSizeHigh << 32) | ffd.nFileSizeLow);
+                continue;
+            }
+
+            size_t nameLen = (size_t)(dot - ffd.cFileName);
+            if (nameLen == 0 || nameLen >= MAX_PATH) continue;
+
+            if (fileCount >= fileCapacity) {
+                if (fileCapacity >= MAX_FOLDER_ANIMATION_FRAMES) {
+                    reachedFrameLimit = TRUE;
+                    break;
                 }
-                
-                const wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
-                if (!dot) continue;
-                
-                size_t nameLen = (size_t)(dot - ffd.cFileName);
-                if (nameLen == 0 || nameLen >= MAX_PATH) continue;
-                
-                /* Extract numeric component for sorting */
-                int hasNum = 0, numVal = 0;
-                for (size_t i = 0; i < nameLen; ++i) {
-                    if (iswdigit(ffd.cFileName[i])) {
-                        hasNum = 1;
-                        numVal = 0;
-                        while (i < nameLen && iswdigit(ffd.cFileName[i])) {
-                            int digit = (int)(ffd.cFileName[i] - L'0');
-                            if (numVal <= (INT_MAX - digit) / 10) {
-                                numVal = numVal * 10 + digit;
-                            } else {
-                                numVal = INT_MAX;
-                            }
-                            i++;
+                int newCapacity = fileCapacity * 2;
+                if (newCapacity > MAX_FOLDER_ANIMATION_FRAMES) {
+                    newCapacity = MAX_FOLDER_ANIMATION_FRAMES;
+                }
+                AnimFile* newFiles = (AnimFile*)realloc(files, sizeof(AnimFile) * (size_t)newCapacity);
+                if (!newFiles) {
+                    allocationFailed = TRUE;
+                    break;
+                }
+                files = newFiles;
+                fileCapacity = newCapacity;
+            }
+
+            /* Extract numeric component for sorting */
+            int hasNum = 0, numVal = 0;
+            for (size_t i = 0; i < nameLen; ++i) {
+                if (iswdigit(ffd.cFileName[i])) {
+                    hasNum = 1;
+                    numVal = 0;
+                    while (i < nameLen && iswdigit(ffd.cFileName[i])) {
+                        int digit = (int)(ffd.cFileName[i] - L'0');
+                        if (numVal <= (INT_MAX - digit) / 10) {
+                            numVal = numVal * 10 + digit;
+                        } else {
+                            numVal = INT_MAX;
                         }
-                        break;
+                        i++;
                     }
+                    break;
                 }
-                
-                files[fileCount].hasNum = hasNum;
-                files[fileCount].num = numVal;
-                wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
-                files[fileCount].name[nameLen] = L'\0';
-                int pathWritten = _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE,
-                                               L"%s\\%s", wFolder, ffd.cFileName);
-                if (pathWritten < 0) continue;
-                fileCount++;
-                
-            } while (FindNextFileW(hFind, &ffd));
-            FindClose(hFind);
+            }
+
+            files[fileCount].hasNum = hasNum;
+            files[fileCount].num = numVal;
+            wcsncpy(files[fileCount].name, ffd.cFileName, nameLen);
+            files[fileCount].name[nameLen] = L'\0';
+            int pathWritten = _snwprintf_s(files[fileCount].path, MAX_PATH, _TRUNCATE,
+                                           L"%s\\%s", wFolder, ffd.cFileName);
+            if (pathWritten < 0) continue;
+            fileCount++;
+        } while (FindNextFileW(hFind, &ffd));
+        FindClose(hFind);
+
+        if (canceled) {
+            free(files);
+            return FALSE;
+        }
+
+        if (reachedFrameLimit) {
+            WriteLog(LOG_LEVEL_WARNING, "Folder animation frame limit reached (%d), ignoring remaining files",
+                     MAX_FOLDER_ANIMATION_FRAMES);
+        }
+        if (reachedScanLimit) {
+            WriteLog(LOG_LEVEL_WARNING, "Folder animation scan limit reached (%d), ignoring remaining files",
+                     MAX_FOLDER_ANIMATION_SCAN_ENTRIES);
+        }
+
+        if (allocationFailed) {
+            free(files);
+            return FALSE;
         }
     }
     
@@ -356,8 +524,16 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim) {
         free(files);
         return FALSE;
     }
+    if (IsAnimationLoadCancelRequested(cancelEvent)) {
+        free(files);
+        return FALSE;
+    }
 
-    if (!LoadedAnimation_Reserve(anim, fileCount)) {
+    LoadedAnimation loaded;
+    LoadedAnimation_Init(&loaded);
+    loaded.sourceType = ANIM_SOURCE_FOLDER;
+
+    if (!LoadedAnimation_Reserve(&loaded, fileCount)) {
         free(files);
         return FALSE;
     }
@@ -366,32 +542,71 @@ BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim) {
     qsort(files, (size_t)fileCount, sizeof(AnimFile), CompareAnimFile);
     
     /* Load icons */
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
+    int cx = 0;
+    int cy = 0;
+    GetTrayAnimationSystemIconSize(&cx, &cy);
+    HRESULT wicInitResult = E_FAIL;
+    IWICImagingFactory* staticImageFactory = NULL;
+    BOOL attemptedStaticImageFactory = FALSE;
+    BOOL canceled = FALSE;
     
     for (int i = 0; i < fileCount; ++i) {
+        if (IsAnimationLoadCancelRequested(cancelEvent)) {
+            canceled = TRUE;
+            break;
+        }
+
         HICON hIcon = NULL;
         const wchar_t* ext = wcsrchr(files[i].path, L'.');
         
         if (ext && _wcsicmp(ext, L".ico") == 0) {
             hIcon = (HICON)LoadImageW(NULL, files[i].path, IMAGE_ICON, cx, cy, LR_LOADFROMFILE);
         } else {
-            /* Use decoder for other formats */
-            char utf8Path[MAX_PATH] = {0};
-            if (WideCharToMultiByte(CP_UTF8, 0, files[i].path, -1, utf8Path, MAX_PATH, NULL, NULL) <= 0) {
-                continue;
+            if (!staticImageFactory && !attemptedStaticImageFactory) {
+                attemptedStaticImageFactory = TRUE;
+                wicInitResult = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+                if (FAILED(CoCreateInstance(&CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
+                                            &IID_IWICImagingFactory, (void**)&staticImageFactory))) {
+                    staticImageFactory = NULL;
+                }
             }
-            hIcon = DecodeStaticImage(utf8Path, cx, cy);
+            hIcon = DecodeStaticImageWithFactory(staticImageFactory, files[i].path, cx, cy);
         }
-        
+
+        if (IsAnimationLoadCancelRequested(cancelEvent)) {
+            if (hIcon) {
+                DestroyIcon(hIcon);
+            }
+            canceled = TRUE;
+            break;
+        }
+
         if (hIcon) {
-            anim->icons[anim->count++] = hIcon;
-            anim->ownsIcons[anim->count - 1] = TRUE;
+            loaded.icons[loaded.count++] = hIcon;
+            loaded.ownsIcons[loaded.count - 1] = TRUE;
         }
+    }
+
+    if (staticImageFactory) {
+        staticImageFactory->lpVtbl->Release(staticImageFactory);
+    }
+    if (SUCCEEDED(wicInitResult)) {
+        CoUninitialize();
     }
     
     free(files);
-    return (anim->count > 0);
+    if (canceled || loaded.count == 0) {
+        LoadedAnimation_Free(&loaded);
+        return FALSE;
+    }
+
+    loaded.isAnimated = (loaded.count > 1);
+    MoveLoadedAnimationToOutput(anim, &loaded);
+    return TRUE;
+}
+
+BOOL LoadIconsFromFolder(const char* utf8FolderPath, LoadedAnimation* anim) {
+    return LoadIconsFromFolderWithCancel(utf8FolderPath, anim, NULL);
 }
 
 /**
@@ -438,15 +653,19 @@ BOOL IsValidAnimationSource(const char* name) {
         if (hFind == INVALID_HANDLE_VALUE) return FALSE;
         
         BOOL hasImages = FALSE;
+        int scannedEntries = 0;
         do {
+            if (++scannedEntries > MAX_FOLDER_ANIMATION_SCAN_ENTRIES) {
+                WriteLog(LOG_LEVEL_WARNING, "Animation validation scan limit reached (%d): %ls",
+                         MAX_FOLDER_ANIMATION_SCAN_ENTRIES, wPath);
+                break;
+            }
+
             if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
             
             const wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-            if (ext && (_wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
-                       _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".jpg") == 0 ||
-                       _wcsicmp(ext, L".jpeg") == 0 || _wcsicmp(ext, L".gif") == 0 ||
-                       _wcsicmp(ext, L".webp") == 0 || _wcsicmp(ext, L".tif") == 0 ||
-                       _wcsicmp(ext, L".tiff") == 0)) {
+            if (IsSupportedAnimationExtensionW(ext) &&
+                IsFindDataFileSizeAllowed(&ffd)) {
                 hasImages = TRUE;
                 break;
             }
@@ -456,149 +675,245 @@ BOOL IsValidAnimationSource(const char* name) {
         return hasImages;
     }
     
-    /* File exists */
-    return TRUE;
+    const wchar_t* ext = wcsrchr(wPath, L'.');
+    if (!IsSupportedAnimationExtensionW(ext)) {
+        return FALSE;
+    }
+
+    return IsAnimationFileSizeAllowed(fullPath);
 }
 
-/**
- * @brief Load animation by name
- */
 BOOL LoadAnimationByName(const char* name, LoadedAnimation* anim,
                          MemoryPool* pool, int iconWidth, int iconHeight) {
+    return LoadAnimationByNameWithCancel(name, anim, pool, iconWidth, iconHeight, NULL);
+}
+
+BOOL LoadAnimationByNameWithCancel(const char* name, LoadedAnimation* anim,
+                                   MemoryPool* pool, int iconWidth, int iconHeight,
+                                   HANDLE cancelEvent) {
     if (!name || !anim) return FALSE;
-    
-    LoadedAnimation_Init(anim);
+    if (IsAnimationLoadCancelRequested(cancelEvent)) return FALSE;
+
+    NormalizeTrayAnimationIconSize(&iconWidth, &iconHeight);
+
+    LoadedAnimation loaded;
+    LoadedAnimation_Init(&loaded);
     
     AnimationSourceType type = DetectAnimationSourceType(name);
-    anim->sourceType = type;
+    loaded.sourceType = type;
     
     if (type == ANIM_SOURCE_LOGO) {
         HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
-        if (LoadedAnimation_SetSingleIcon(anim, hIcon, FALSE)) {
+        if (LoadedAnimation_SetSingleIcon(&loaded, hIcon, FALSE)) {
+            MoveLoadedAnimationToOutput(anim, &loaded);
             return TRUE;
         }
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_PERCENT) {
         /* Percent icons are generated dynamically, not pre-loaded */
-        anim->count = 0;
-        anim->isAnimated = FALSE;
+        loaded.count = 0;
+        loaded.isAnimated = FALSE;
+        MoveLoadedAnimationToOutput(anim, &loaded);
         return TRUE;
     }
     
     if (type == ANIM_SOURCE_CAPSLOCK) {
         /* Caps Lock icons are generated dynamically, not pre-loaded */
-        anim->count = 0;
-        anim->isAnimated = FALSE;
+        loaded.count = 0;
+        loaded.isAnimated = FALSE;
+        MoveLoadedAnimationToOutput(anim, &loaded);
         return TRUE;
     }
     
     /* Handle __none__ (transparent icon) - no frames needed */
     if (_stricmp(name, "__none__") == 0) {
-        anim->count = 0;
-        anim->isAnimated = FALSE;
+        loaded.count = 0;
+        loaded.isAnimated = FALSE;
+        MoveLoadedAnimationToOutput(anim, &loaded);
         return TRUE;
     }
     
     char fullPath[MAX_PATH] = {0};
-    if (!BuildAnimationPath(name, fullPath, sizeof(fullPath))) return FALSE;
+    if (!BuildAnimationPath(name, fullPath, sizeof(fullPath))) {
+        LoadedAnimation_Free(&loaded);
+        return FALSE;
+    }
+    if (IsAnimationLoadCancelRequested(cancelEvent)) {
+        LoadedAnimation_Free(&loaded);
+        return FALSE;
+    }
     
     if (type == ANIM_SOURCE_GIF || type == ANIM_SOURCE_WEBP) {
+        if (!IsAnimationFileSizeAllowed(fullPath)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+
         DecodedAnimation decoded;
         DecodedAnimation_Init(&decoded);
         
-        if (DecodeAnimatedImage(fullPath, &decoded, pool, iconWidth, iconHeight)) {
-            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, anim);
+        if (DecodeAnimatedImageWithCancel(fullPath, &decoded, pool,
+                                          iconWidth, iconHeight, cancelEvent)) {
+            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, &loaded);
             DecodedAnimation_Free(&decoded);
-            return moved;
+            if (moved) {
+                MoveLoadedAnimationToOutput(anim, &loaded);
+                return TRUE;
+            }
         }
         
         DecodedAnimation_Free(&decoded);
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_STATIC) {
+        if (!IsAnimationFileSizeAllowed(fullPath)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+        if (IsAnimationLoadCancelRequested(cancelEvent)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+
         HICON hIcon = DecodeStaticImage(fullPath, iconWidth, iconHeight);
-        if (LoadedAnimation_SetSingleIcon(anim, hIcon, TRUE)) {
+        if (IsAnimationLoadCancelRequested(cancelEvent)) {
+            if (hIcon) {
+                DestroyIcon(hIcon);
+            }
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+        if (LoadedAnimation_SetSingleIcon(&loaded, hIcon, TRUE)) {
+            MoveLoadedAnimationToOutput(anim, &loaded);
             return TRUE;
         }
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_FOLDER) {
-        if (LoadIconsFromFolder(fullPath, anim)) {
-            anim->isAnimated = (anim->count > 1);
+        if (LoadIconsFromFolderWithCancel(fullPath, &loaded, cancelEvent)) {
+            loaded.isAnimated = (loaded.count > 1);
+            MoveLoadedAnimationToOutput(anim, &loaded);
             return TRUE;
         }
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
+    LoadedAnimation_Free(&loaded);
     return FALSE;
 }
 
-/**
- * @brief Load animation from absolute path
- */
 BOOL LoadAnimationFromPath(const char* path, LoadedAnimation* anim,
                           MemoryPool* pool, int iconWidth, int iconHeight) {
+    return LoadAnimationFromPathWithCancel(path, anim, pool, iconWidth, iconHeight, NULL);
+}
+
+BOOL LoadAnimationFromPathWithCancel(const char* path, LoadedAnimation* anim,
+                                     MemoryPool* pool, int iconWidth, int iconHeight,
+                                     HANDLE cancelEvent) {
     if (!path || !anim) return FALSE;
-    
-    LoadedAnimation_Init(anim);
+    if (IsAnimationLoadCancelRequested(cancelEvent)) return FALSE;
+
+    NormalizeTrayAnimationIconSize(&iconWidth, &iconHeight);
+
+    LoadedAnimation loaded;
+    LoadedAnimation_Init(&loaded);
     
     AnimationSourceType type = DetectAnimationSourceType(path);
-    anim->sourceType = type;
+    loaded.sourceType = type;
     
     /* Handle special types if path happens to be one of them (unlikely but safe) */
     if (type == ANIM_SOURCE_LOGO) {
         HICON hIcon = LoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCEW(IDI_CATIME));
-        if (LoadedAnimation_SetSingleIcon(anim, hIcon, FALSE)) {
+        if (LoadedAnimation_SetSingleIcon(&loaded, hIcon, FALSE)) {
+            MoveLoadedAnimationToOutput(anim, &loaded);
             return TRUE;
         }
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_PERCENT) {
-        anim->count = 0;
-        anim->isAnimated = FALSE;
+        loaded.count = 0;
+        loaded.isAnimated = FALSE;
+        MoveLoadedAnimationToOutput(anim, &loaded);
         return TRUE;
     }
 
     if (type == ANIM_SOURCE_CAPSLOCK) {
-        anim->count = 0;
-        anim->isAnimated = FALSE;
+        loaded.count = 0;
+        loaded.isAnimated = FALSE;
+        MoveLoadedAnimationToOutput(anim, &loaded);
         return TRUE;
     }
     
     if (type == ANIM_SOURCE_GIF || type == ANIM_SOURCE_WEBP) {
+        if (!IsAnimationFileSizeAllowed(path)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+
         DecodedAnimation decoded;
         DecodedAnimation_Init(&decoded);
         
-        if (DecodeAnimatedImage(path, &decoded, pool, iconWidth, iconHeight)) {
-            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, anim);
+        if (DecodeAnimatedImageWithCancel(path, &decoded, pool,
+                                          iconWidth, iconHeight, cancelEvent)) {
+            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, &loaded);
             DecodedAnimation_Free(&decoded);
-            return moved;
+            if (moved) {
+                MoveLoadedAnimationToOutput(anim, &loaded);
+                return TRUE;
+            }
         }
         
         DecodedAnimation_Free(&decoded);
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_STATIC) {
+        if (!IsAnimationFileSizeAllowed(path)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+        if (IsAnimationLoadCancelRequested(cancelEvent)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+
         HICON hIcon = DecodeStaticImage(path, iconWidth, iconHeight);
-        if (LoadedAnimation_SetSingleIcon(anim, hIcon, TRUE)) {
+        if (IsAnimationLoadCancelRequested(cancelEvent)) {
+            if (hIcon) {
+                DestroyIcon(hIcon);
+            }
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+        if (LoadedAnimation_SetSingleIcon(&loaded, hIcon, TRUE)) {
+            MoveLoadedAnimationToOutput(anim, &loaded);
             return TRUE;
         }
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
     if (type == ANIM_SOURCE_FOLDER) {
-        if (LoadIconsFromFolder(path, anim)) {
-            anim->isAnimated = (anim->count > 1);
+        if (LoadIconsFromFolderWithCancel(path, &loaded, cancelEvent)) {
+            loaded.isAnimated = (loaded.count > 1);
+            MoveLoadedAnimationToOutput(anim, &loaded);
             return TRUE;
         }
+        LoadedAnimation_Free(&loaded);
         return FALSE;
     }
     
+    LoadedAnimation_Free(&loaded);
     return FALSE;
 }

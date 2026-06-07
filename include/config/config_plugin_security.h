@@ -23,6 +23,14 @@ BOOL IsPluginTrusted(const char* pluginPath);
 BOOL TrustPlugin(const char* pluginPath);
 
 /**
+ * @brief Add plugin to trust list using a SHA256 hash already verified by caller
+ * @param pluginPath Path to plugin file
+ * @param verifiedHash SHA256 hash string (64 hex chars) verified against pluginPath
+ * @return TRUE if successful
+ */
+BOOL TrustPluginWithVerifiedHash(const char* pluginPath, const char* verifiedHash);
+
+/**
  * @brief Remove plugin from trust list
  * @param pluginPath Path to plugin file
  * @return TRUE if successful

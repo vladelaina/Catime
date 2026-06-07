@@ -40,11 +40,11 @@ const wchar_t* PluginProcess_GetLastError(void);
 void PluginProcess_SetLastError(const wchar_t* errorMsg);
 
 /**
- * @brief Terminate a running plugin
- * @param plugin Plugin info to terminate
+ * @brief Terminate a detached plugin snapshot without sweeping the whole job
+ * @param plugin Plugin info snapshot to terminate
  * @return TRUE if terminated successfully
  */
-BOOL PluginProcess_Terminate(PluginInfo* plugin);
+BOOL PluginProcess_TerminateDetached(PluginInfo* plugin);
 
 /**
  * @brief Terminate all orphaned processes in Job Object

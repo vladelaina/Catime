@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <limits.h>
+#include <wchar.h>
 #include <windows.h>
 #include "color/color_input_dialog.h"
 #include "color/color_parser.h"
@@ -14,12 +16,89 @@
 #include "language.h"
 #include "../resource/resource.h"
 
-/* ============================================================================
- * Static Variables
- * ============================================================================ */
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define COLOR_EDIT_ORIG_PROC_PROP L"Catime.ColorInput.OrigEditProc"
 
-static WNDPROC g_OldEditProc = NULL;
-static HWND g_hwndParent = NULL;
+static BOOL IsValidColorInputParentWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static HWND GetColorInputParent(HWND hwndDlg) {
+    HWND hwndMain = hwndDlg ? GetParent(hwndDlg) : NULL;
+    return IsValidColorInputParentWindow(hwndMain) ? hwndMain : NULL;
+}
+
+static BOOL ConvertColorInputToUtf8(const wchar_t* source, char* dest, size_t destSize) {
+    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
+        return FALSE;
+    }
+
+    dest[0] = '\0';
+    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
+    if (required <= 0 || (size_t)required > destSize) {
+        return FALSE;
+    }
+
+    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
+                               (int)destSize, NULL, NULL) > 0;
+}
+
+static WNDPROC GetColorEditOrigProc(HWND hwndEdit) {
+    return (WNDPROC)(LONG_PTR)GetPropW(hwndEdit, COLOR_EDIT_ORIG_PROC_PROP);
+}
+
+static BOOL SubclassColorEdit(HWND hwndEdit) {
+    if (!hwndEdit) {
+        return FALSE;
+    }
+
+    if (GetColorEditOrigProc(hwndEdit)) {
+        return TRUE;
+    }
+
+    SetLastError(0);
+    WNDPROC origProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC,
+                                                 (LONG_PTR)ColorEditSubclassProc);
+    if (!origProc && GetLastError() != 0) {
+        return FALSE;
+    }
+
+    if (!SetPropW(hwndEdit, COLOR_EDIT_ORIG_PROC_PROP, (HANDLE)(LONG_PTR)origProc)) {
+        SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)origProc);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void UnsubclassColorEdit(HWND hwndEdit) {
+    if (!hwndEdit) {
+        return;
+    }
+
+    WNDPROC origProc = GetColorEditOrigProc(hwndEdit);
+    if (!origProc) {
+        return;
+    }
+
+    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)origProc);
+    RemovePropW(hwndEdit, COLOR_EDIT_ORIG_PROC_PROP);
+}
 
 /* ============================================================================
  * Helper Functions
@@ -33,34 +112,27 @@ static HWND g_hwndParent = NULL;
  * Supports both single colors and gradient colors
  */
 static void UpdateColorPreviewFromEdit(HWND hwndEdit) {
-    char color[COLOR_BUFFER_SIZE];
+    char color[COLOR_BUFFER_SIZE] = {0};
     wchar_t wcolor[COLOR_BUFFER_SIZE];
     GetWindowTextW(hwndEdit, wcolor, sizeof(wcolor) / sizeof(wchar_t));
-    WideCharToMultiByte(CP_UTF8, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
 
-    HWND hwndMain = g_hwndParent ? g_hwndParent : GetParent(GetParent(hwndEdit));
-
-    /* Check if it's a gradient (contains underscore) */
-    if (strchr(color, '_') != NULL) {
-        /* Gradient color: validate and preview directly */
-        if (isValidColorOrGradient(color)) {
-            StartPreview(PREVIEW_TYPE_COLOR, color, hwndMain);
-        } else {
-            CancelPreview(hwndMain);
-        }
-    } else {
-        /* Single color: normalize first */
-        char normalized[COLOR_BUFFER_SIZE];
-        normalizeColor(color, normalized, sizeof(normalized));
-
-        if (normalized[0] == '#') {
-            char finalColor[COLOR_HEX_BUFFER];
-            ReplaceBlackColor(normalized, finalColor, sizeof(finalColor));
-            StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndMain);
-        } else {
-            CancelPreview(hwndMain);
-        }
+    HWND hwndDlg = GetParent(hwndEdit);
+    HWND hwndMain = GetColorInputParent(hwndDlg);
+    if (!hwndMain) {
+        return;
     }
+    if (!ConvertColorInputToUtf8(wcolor, color, sizeof(color))) {
+        CancelPreview(hwndMain);
+        return;
+    }
+
+    char finalColor[COLOR_HEX_BUFFER];
+    if (NormalizeColorConfigValue(color, finalColor, sizeof(finalColor))) {
+        StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndMain);
+        return;
+    }
+
+    CancelPreview(hwndMain);
 }
 
 /* ============================================================================
@@ -96,8 +168,13 @@ static LRESULT ColorEditCustomCallback(HWND hwnd, UINT msg, WPARAM wParam, LPARA
  * @brief Subclass procedure for color edit control
  */
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    WNDPROC origProc = GetColorEditOrigProc(hwnd);
+    if (!origProc) {
+        return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
     return Dialog_EditSubclassProc_Ex(hwnd, msg, wParam, lParam,
-                                      ColorEditCustomCallback, g_OldEditProc);
+                                      ColorEditCustomCallback, origProc);
 }
 
 /* ============================================================================
@@ -115,7 +192,9 @@ void ShowColorInputDialog(HWND hwndParent) {
         return;
     }
 
-    g_hwndParent = hwndParent;
+    if (!IsValidColorInputParentWindow(hwndParent)) {
+        return;
+    }
 
     HWND hwndDlg = CreateDialogW(
         GetModuleHandle(NULL),
@@ -150,14 +229,16 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {
-                g_OldEditProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC,
-                                                         (LONG_PTR)ColorEditSubclassProc);
+                SubclassColorEdit(hwndEdit);
 
                 if (CLOCK_TEXT_COLOR[0] != '\0') {
-                    wchar_t wcolor[COLOR_BUFFER_SIZE];
-                    MultiByteToWideChar(CP_UTF8, 0, CLOCK_TEXT_COLOR, -1,
-                                      wcolor, sizeof(wcolor) / sizeof(wchar_t));
-                    Dialog_InitEditWithValue(hwndEdit, wcolor);
+                    wchar_t wcolor[COLOR_BUFFER_SIZE] = {0};
+                    if (MultiByteToWideChar(CP_UTF8, 0, CLOCK_TEXT_COLOR, -1,
+                                            wcolor, sizeof(wcolor) / sizeof(wchar_t)) > 0) {
+                        Dialog_InitEditWithValue(hwndEdit, wcolor);
+                    } else {
+                        Dialog_SelectAllText(hwndEdit);
+                    }
                 } else {
                     Dialog_SelectAllText(hwndEdit);
                 }
@@ -169,28 +250,41 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
-                char color[COLOR_BUFFER_SIZE];
+                char color[COLOR_BUFFER_SIZE] = {0};
                 wchar_t wcolor[COLOR_BUFFER_SIZE];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcolor,
                               sizeof(wcolor) / sizeof(wchar_t));
-                WideCharToMultiByte(CP_UTF8, 0, wcolor, -1, color, sizeof(color), NULL, NULL);
+                if (!ConvertColorInputToUtf8(wcolor, color, sizeof(color))) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
+                }
 
                 if (Dialog_IsEmptyOrWhitespaceA(color)) {
-                    HWND hwndMain = g_hwndParent ? g_hwndParent : GetParent(hwndDlg);
+                    HWND hwndMain = GetColorInputParent(hwndDlg);
                     CancelPreview(hwndMain);
-                    if (g_hwndParent) {
-                        PostMessage(g_hwndParent, WM_DIALOG_COLOR, 0, 0);
+                    if (hwndMain) {
+                        PostMessage(hwndMain, WM_DIALOG_COLOR, 0, 0);
                     }
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
-                /* Support both single colors and gradients */
-                if (isValidColorOrGradient(color)) {
-                    HWND hwndMain = g_hwndParent ? g_hwndParent : GetParent(hwndDlg);
-                    ApplyPreview(hwndMain);
-                    if (g_hwndParent) {
-                        PostMessage(g_hwndParent, WM_DIALOG_COLOR, 1, 0);
+                char finalColor[COLOR_HEX_BUFFER];
+                if (NormalizeColorConfigValue(color, finalColor, sizeof(finalColor))) {
+                    HWND hwndMain = GetColorInputParent(hwndDlg);
+                    if (!hwndMain) {
+                        Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                        return TRUE;
+                    }
+
+                    StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndMain);
+                    if (!ApplyPreview(hwndMain)) {
+                        Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                        return TRUE;
+                    }
+
+                    if (hwndMain) {
+                        PostMessage(hwndMain, WM_DIALOG_COLOR, 1, 0);
                     }
                     DestroyWindow(hwndDlg);
                     return TRUE;
@@ -199,10 +293,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 }
             } else if (LOWORD(wParam) == IDCANCEL) {
-                HWND hwndMain = g_hwndParent ? g_hwndParent : GetParent(hwndDlg);
+                HWND hwndMain = GetColorInputParent(hwndDlg);
                 CancelPreview(hwndMain);
-                if (g_hwndParent) {
-                    PostMessage(g_hwndParent, WM_DIALOG_COLOR, 0, 0);
+                if (hwndMain) {
+                    PostMessage(hwndMain, WM_DIALOG_COLOR, 0, 0);
                 }
                 DestroyWindow(hwndDlg);
                 return TRUE;
@@ -211,10 +305,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
-                HWND hwndMain = g_hwndParent ? g_hwndParent : GetParent(hwndDlg);
+                HWND hwndMain = GetColorInputParent(hwndDlg);
                 CancelPreview(hwndMain);
-                if (g_hwndParent) {
-                    PostMessage(g_hwndParent, WM_DIALOG_COLOR, 0, 0);
+                if (hwndMain) {
+                    PostMessage(hwndMain, WM_DIALOG_COLOR, 0, 0);
                 }
                 DestroyWindow(hwndDlg);
                 return TRUE;
@@ -223,10 +317,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_CLOSE:
             {
-                HWND hwndMain = g_hwndParent ? g_hwndParent : GetParent(hwndDlg);
+                HWND hwndMain = GetColorInputParent(hwndDlg);
                 CancelPreview(hwndMain);
-                if (g_hwndParent) {
-                    PostMessage(g_hwndParent, WM_DIALOG_COLOR, 0, 0);
+                if (hwndMain) {
+                    PostMessage(hwndMain, WM_DIALOG_COLOR, 0, 0);
                 }
                 DestroyWindow(hwndDlg);
             }
@@ -234,15 +328,8 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_DESTROY:
             /* Restore original edit control procedure */
-            if (g_OldEditProc) {
-                HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                if (hwndEdit) {
-                    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)g_OldEditProc);
-                }
-                g_OldEditProc = NULL;
-            }
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_COLOR);
-            g_hwndParent = NULL;
+            UnsubclassColorEdit(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_COLOR, hwndDlg);
             break;
     }
     return FALSE;

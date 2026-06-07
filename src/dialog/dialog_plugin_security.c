@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "../../resource/resource.h"
 #include "dialog/dialog_info.h"
 #include "dialog/dialog_common.h"
@@ -13,6 +14,10 @@
 #include "markdown/markdown_parser.h"
 #include "language.h"
 #include "log.h"
+
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define PLUGIN_SECURITY_PARENT_PROP L"Catime.PluginSecurity.Parent"
+#define PLUGIN_SECURITY_MESSAGE_BUFFER_CHARS 4096
 
 /* Dialog state */
 static wchar_t* g_displayText = NULL;
@@ -36,9 +41,6 @@ static char g_pluginPath[MAX_PATH] = {0};
 static char g_pluginName[128] = {0};
 static int g_pluginIndex = -1;
 static char g_pluginHash[65] = {0};  /* SHA256 hash at dialog show time */
-
-/* Parent window handle for posting results */
-static HWND g_pluginSecurityParent = NULL;
 
 /**
  * @brief Set plugin info for dialog
@@ -107,6 +109,10 @@ const char* GetPendingPluginHash(void) {
     return g_pluginHash;
 }
 
+BOOL IsPluginSecurityDialogOpen(void) {
+    return Dialog_IsOpen(DIALOG_INSTANCE_PLUGIN_SECURITY);
+}
+
 /**
  * @brief Cleanup markdown rendering resources
  */
@@ -136,16 +142,57 @@ static void CleanupMarkdownResources(void) {
     if (g_displayText) { free(g_displayText); g_displayText = NULL; }
 }
 
+static BOOL IsValidPluginSecurityParentWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    if (processId != GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    wchar_t className[64] = {0};
+    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static HWND GetPluginSecurityParent(HWND hwndDlg) {
+    HWND hwndParent = (HWND)GetPropW(hwndDlg, PLUGIN_SECURITY_PARENT_PROP);
+    return IsValidPluginSecurityParentWindow(hwndParent) ? hwndParent : NULL;
+}
+
+static BOOL PostPluginSecurityResult(HWND hwndDlg, WPARAM result) {
+    HWND hwndParent = GetPluginSecurityParent(hwndDlg);
+    if (!hwndParent) {
+        ClearPendingPluginInfo();
+        return FALSE;
+    }
+
+    if (!PostMessage(hwndParent, WM_DIALOG_PLUGIN_SECURITY, result, 0)) {
+        ClearPendingPluginInfo();
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 /**
  * @brief Plugin security dialog procedure
  */
 static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    (void)lParam;
-    
     switch (uMsg) {
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_PLUGIN_SECURITY, hwndDlg);
-            
+            HWND hwndParent = (HWND)lParam;
+            if (IsValidPluginSecurityParentWindow(hwndParent)) {
+                SetPropW(hwndDlg, PLUGIN_SECURITY_PARENT_PROP, (HANDLE)hwndParent);
+            }
+
             /* Set dialog title and button texts */
             SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"PluginSecDialogTitle"));
             SetDlgItemTextW(hwndDlg, IDC_PLUGIN_SECURITY_CANCEL_BTN, GetLocalizedString(NULL, L"PluginSecBtnCancel"));
@@ -156,7 +203,10 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             HDC hdc = GetDC(hwndDlg);
             if (!hdc) return TRUE;
             HFONT hFont = (HFONT)SendMessage(hwndDlg, WM_GETFONT, 0, 0);
-            HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+            if (!hFont) {
+                hFont = GetStockObject(DEFAULT_GUI_FONT);
+            }
+            HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
             
             /* Get actual dialog client rect size */
             RECT dialogRect;
@@ -177,7 +227,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             GetDlgItemTextW(hwndDlg, IDC_PLUGIN_SECURITY_RUN_ONCE_BTN, runOnceText, 128);
             GetDlgItemTextW(hwndDlg, IDC_PLUGIN_SECURITY_TRUST_BTN, trustText, 128);
             
-            SIZE cancelSize, runOnceSize, trustSize;
+            SIZE cancelSize = {0}, runOnceSize = {0}, trustSize = {0};
             GetTextExtentPoint32W(hdc, cancelText, (int)wcslen(cancelText), &cancelSize);
             GetTextExtentPoint32W(hdc, runOnceText, (int)wcslen(runOnceText), &runOnceSize);
             GetTextExtentPoint32W(hdc, trustText, (int)wcslen(trustText), &trustSize);
@@ -190,7 +240,9 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             if (runOnceWidth < 60) runOnceWidth = 60;
             if (trustWidth < 60) trustWidth = 60;
             
-            SelectObject(hdc, hOldFont);
+            if (hOldFont) {
+                SelectObject(hdc, hOldFont);
+            }
             ReleaseDC(hwndDlg, hdc);
             
             /* Calculate positions from right to left */
@@ -207,8 +259,14 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                        trustX, btnY, trustWidth, btnHeight, SWP_NOZORDER);
             
             /* Build security message with localized strings */
-            wchar_t messageWide[4096];
-            int written = _snwprintf_s(messageWide, 4096, _TRUNCATE,
+            wchar_t* messageWide = (wchar_t*)malloc(PLUGIN_SECURITY_MESSAGE_BUFFER_CHARS * sizeof(wchar_t));
+            if (!messageWide) {
+                LOG_ERROR("Failed to allocate plugin security message buffer");
+                Dialog_CenterOnPrimaryScreen(hwndDlg);
+                return TRUE;
+            }
+
+            int written = _snwprintf_s(messageWide, PLUGIN_SECURITY_MESSAGE_BUFFER_CHARS, _TRUNCATE,
                 L"<md>\n"
                 L"%s\n\n"
                 L"%s\n"
@@ -239,11 +297,11 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 GetLocalizedString(NULL, L"PluginSecTip3"),
                 GetLocalizedString(NULL, L"PluginSecTip4")
             );
-            
-            if (written < 0 || written >= 4096) {
+
+            if (written < 0 || written >= PLUGIN_SECURITY_MESSAGE_BUFFER_CHARS) {
                 LOG_WARNING("Plugin security message truncated (length: %d)", written);
             }
-            
+
             /* Parse markdown */
             ParseMarkdownLinks(messageWide, &g_displayText, &g_links, &g_linkCount,
                              &g_headings, &g_headingCount,
@@ -252,7 +310,8 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                              &g_blockquotes, &g_blockquoteCount,
                              &g_colorTags, &g_colorTagCount,
                              &g_fontTags, &g_fontTagCount);
-            
+            free(messageWide);
+
             /* Center dialog */
             Dialog_CenterOnPrimaryScreen(hwndDlg);
             
@@ -263,28 +322,22 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             switch (LOWORD(wParam)) {
                 case IDC_PLUGIN_SECURITY_TRUST_BTN: {
                     CleanupMarkdownResources();
-                    if (g_pluginSecurityParent) {
-                        PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDYES, 0);
-                    }
+                    PostPluginSecurityResult(hwndDlg, IDYES);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 }
-                
+
                 case IDC_PLUGIN_SECURITY_RUN_ONCE_BTN: {
                     CleanupMarkdownResources();
-                    if (g_pluginSecurityParent) {
-                        PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDOK, 0);
-                    }
+                    PostPluginSecurityResult(hwndDlg, IDOK);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 }
-                
+
                 case IDC_PLUGIN_SECURITY_CANCEL_BTN:
                 case IDCANCEL: {
                     CleanupMarkdownResources();
-                    if (g_pluginSecurityParent) {
-                        PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDCANCEL, 0);
-                    }
+                    PostPluginSecurityResult(hwndDlg, IDCANCEL);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 }
@@ -306,9 +359,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
                 CleanupMarkdownResources();
-                if (g_pluginSecurityParent) {
-                    PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDCANCEL, 0);
-                }
+                PostPluginSecurityResult(hwndDlg, IDCANCEL);
                 DestroyWindow(hwndDlg);
                 return TRUE;
             }
@@ -321,16 +372,18 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 RECT rect = lpDrawItem->rcItem;
                 
                 HBRUSH hBrush = GetSysColorBrush(COLOR_BTNFACE);
-                FillRect(hdc, &rect, hBrush);
+                if (hBrush) {
+                    FillRect(hdc, &rect, hBrush);
+                }
                 
                 if (g_displayText) {
-                    SetBkMode(hdc, TRANSPARENT);
+                    int oldBkMode = SetBkMode(hdc, TRANSPARENT);
                     
                     HFONT hFont = (HFONT)SendMessage(lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
                     if (!hFont) {
                         hFont = GetStockObject(DEFAULT_GUI_FONT);
                     }
-                    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+                    HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
                     
                     RECT drawRect = rect;
                     drawRect.left += 10;
@@ -345,7 +398,12 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                                      g_blockquotes, g_blockquoteCount,
                                      drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
                     
-                    SelectObject(hdc, hOldFont);
+                    if (hOldFont) {
+                        SelectObject(hdc, hOldFont);
+                    }
+                    if (oldBkMode != 0) {
+                        SetBkMode(hdc, oldBkMode);
+                    }
                 }
                 
                 return TRUE;
@@ -355,14 +413,13 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
         
         case WM_DESTROY:
             CleanupMarkdownResources();
-            Dialog_UnregisterInstance(DIALOG_INSTANCE_PLUGIN_SECURITY);
+            Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_PLUGIN_SECURITY, hwndDlg);
+            RemovePropW(hwndDlg, PLUGIN_SECURITY_PARENT_PROP);
             break;
-        
+
         case WM_CLOSE:
             CleanupMarkdownResources();
-            if (g_pluginSecurityParent) {
-                PostMessage(g_pluginSecurityParent, WM_DIALOG_PLUGIN_SECURITY, IDCANCEL, 0);
-            }
+            PostPluginSecurityResult(hwndDlg, IDCANCEL);
             DestroyWindow(hwndDlg);
             return TRUE;
     }
@@ -376,29 +433,39 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
  * @param pluginPath Full path to plugin file
  * @param pluginName Display name of plugin
  * @param pluginIndex Index of plugin in plugin list
- * 
+ * @param pluginHash SHA256 hash captured before showing the dialog
+ *
  * Results are sent via WM_DIALOG_PLUGIN_SECURITY message:
  * - wParam = IDYES (trust and remember)
  * - wParam = IDOK (run once)
  * - wParam = IDCANCEL (cancelled)
  */
-void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const char* pluginName, int pluginIndex) {
+void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath,
+                              const char* pluginName, int pluginIndex,
+                              const char* pluginHash) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_PLUGIN_SECURITY)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_PLUGIN_SECURITY);
         SetForegroundWindow(existing);
         return;
     }
-    
-    g_pluginSecurityParent = hwndParent;
+
+    if (!IsValidPluginSecurityParentWindow(hwndParent)) {
+        LOG_WARNING("ShowPluginSecurityDialog: invalid parent window");
+        ClearPendingPluginInfo();
+        return;
+    }
+
     SetPluginSecurityDialogInfo(pluginPath, pluginName, pluginIndex);
-    
-    HWND hwndDlg = CreateDialogW(
+    SetPendingPluginHash(pluginHash);
+
+    HWND hwndDlg = CreateDialogParamW(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(IDD_PLUGIN_SECURITY_DIALOG),
         hwndParent,
-        PluginSecurityDlgProc
+        PluginSecurityDlgProc,
+        (LPARAM)hwndParent
     );
-    
+
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
     } else {

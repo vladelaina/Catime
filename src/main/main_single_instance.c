@@ -32,10 +32,14 @@ static BOOL IsTrustedExistingInstanceWindow(HWND hwnd) {
 
     wchar_t currentPath[MAX_PATH] = {0};
     wchar_t targetPath[MAX_PATH] = {0};
+    DWORD currentPathLen = GetModuleFileNameW(NULL, currentPath, MAX_PATH);
     DWORD targetPathSize = MAX_PATH;
-    GetModuleFileNameW(NULL, currentPath, MAX_PATH);
 
-    BOOL trusted = QueryFullProcessImageNameW(hProcess, 0, targetPath, &targetPathSize) &&
+    BOOL trusted = currentPathLen > 0 &&
+                   currentPathLen < MAX_PATH &&
+                   QueryFullProcessImageNameW(hProcess, 0, targetPath, &targetPathSize) &&
+                   targetPathSize > 0 &&
+                   targetPathSize < MAX_PATH &&
                    _wcsicmp(currentPath, targetPath) == 0;
     CloseHandle(hProcess);
     return trusted;
