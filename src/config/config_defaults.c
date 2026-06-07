@@ -555,7 +555,7 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
 
             /* Trim key */
             const char* key = trimmed;
-            char* keyEnd = eq - 1;
+            const char* keyEnd = eq - 1;
             while (keyEnd > key && isspace((unsigned char)*keyEnd)) keyEnd--;
             size_t keyLen = keyEnd - key + 1;
             if (keyLen >= sizeof(entry->key)) keyLen = sizeof(entry->key) - 1;
@@ -563,7 +563,7 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
             entry->key[keyLen] = '\0';
 
             /* Trim value */
-            char* value = eq + 1;
+            const char* value = eq + 1;
             while (*value && isspace((unsigned char)*value)) value++;
             strncpy(entry->value, value, sizeof(entry->value) - 1);
 
@@ -610,7 +610,6 @@ void MigrateConfig(const char* config_path) {
     }
 
     /* Convert old hardcoded defaults to new "auto"/"transparent" keywords */
-    BOOL isOldHardcodedDefault = FALSE;
     if (textColorEntry && bgColorEntry) {
         /* Old buggy default: white text (#FFFFFF), black bg (#000000) */
         BOOL isOldBuggyDefault =
@@ -622,10 +621,8 @@ void MigrateConfig(const char* config_path) {
             (strcasecmp(textColorEntry->value, "#000000") == 0 || strcasecmp(textColorEntry->value, "#000") == 0) &&
             (strcasecmp(bgColorEntry->value, "#FFFFFF") == 0 || strcasecmp(bgColorEntry->value, "#ffffff") == 0);
 
-        isOldHardcodedDefault = isOldBuggyDefault || isOldFixedDefault;
-
         /* Convert to new defaults */
-        if (isOldHardcodedDefault) {
+        if (isOldBuggyDefault || isOldFixedDefault) {
             strncpy(textColorEntry->value, "auto", sizeof(textColorEntry->value) - 1);
             strncpy(bgColorEntry->value, "transparent", sizeof(bgColorEntry->value) - 1);
         }

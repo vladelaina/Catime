@@ -315,13 +315,15 @@ static BOOL CollectNetworkCounters32(NetInterfaceCounter* outCounters, DWORD* ou
         free(pTable);
         return FALSE;
     }
-    if (size > MAX_NETWORK_IF_TABLE_BYTES || size < FIELD_OFFSET(MIB_IFTABLE, table)) {
+    if (size > MAX_NETWORK_IF_TABLE_BYTES ||
+        size < (DWORD)FIELD_OFFSET(MIB_IFTABLE, table)) {
         free(pTable);
         return FALSE;
     }
 
     DWORD count = 0;
-    DWORD maxRowsInBuffer = (size - FIELD_OFFSET(MIB_IFTABLE, table)) / sizeof(MIB_IFROW);
+    DWORD maxRowsInBuffer =
+        (size - (DWORD)FIELD_OFFSET(MIB_IFTABLE, table)) / sizeof(MIB_IFROW);
     DWORD rowsToScan = (pTable->dwNumEntries < maxRowsInBuffer) ? pTable->dwNumEntries : maxRowsInBuffer;
     for (DWORD i = 0; i < rowsToScan; ++i) {
         if (InterlockedCompareExchange(&g_initialized, 0, 0) == 0) {
@@ -676,10 +678,12 @@ static BOOL EnsureNetworkRefreshWorkerStarted(void) {
     context->refreshEvent = g_networkRefreshEvent;
     context->generation = workerGeneration;
 
+    NetworkRefreshWorkerContext* threadContext = context;
+    context = NULL;
     g_networkRefreshThread = CreateThread(NULL, 0, NetworkRefreshThreadProc,
-                                          context, 0, NULL);
+                                          threadContext, 0, NULL);
     if (!g_networkRefreshThread) {
-        free(context);
+        free(threadContext);
         CloseHandle(g_networkRefreshEvent);
         g_networkRefreshEvent = NULL;
         MarkNetworkRefreshStartFailure(now);

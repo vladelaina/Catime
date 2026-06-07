@@ -1243,8 +1243,19 @@ BOOL SetCurrentAnimationName(const char* name) {
         goto done;
     }
 
+    BOOL sameAnimationNoPreview = FALSE;
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        sameAnimationNoPreview = !g_isPreviewActive &&
+                                 _stricmp(g_animationName, requestedName) == 0;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        sameAnimationNoPreview = !g_isPreviewActive &&
+                                 _stricmp(g_animationName, requestedName) == 0;
+    }
+
     /* Prevent redundant reloads if name is same and no preview is active */
-    if (!g_isPreviewActive && _stricmp(g_animationName, requestedName) == 0) {
+    if (sameAnimationNoPreview) {
         result = TRUE;
         goto done;
     }
@@ -1255,53 +1266,65 @@ BOOL SetCurrentAnimationName(const char* name) {
     }
     
     /* Seamless preview promotion */
-    if (g_isPreviewActive && !g_previewAnimationFromPath &&
-        g_previewAnimationName[0] != '\0' &&
-        _stricmp(g_previewAnimationName, requestedName) == 0 &&
-        (g_previewAnimation.count > 0 || g_previewAnimation.sourceType == ANIM_SOURCE_PERCENT ||
-         g_previewAnimation.sourceType == ANIM_SOURCE_CAPSLOCK)) {
+    {
         LoadedAnimation oldMain;
         LoadedAnimation_Init(&oldMain);
+        BOOL promotedPreview = FALSE;
 
         AcquireSRWLockExclusive(&g_previewWorkerLock);
         if (IsAnimCriticalSectionReady()) {
             EnterCriticalSection(&g_animCriticalSection);
         }
 
-        SwapLoadedAnimation(&oldMain, &g_mainAnimation);
-        SwapLoadedAnimation(&g_mainAnimation, &g_previewAnimation);
-        LoadedAnimation_Init(&g_previewAnimation);
-        g_mainIndex = g_previewIndex;
-        
-        /* Clear preview */
-        g_previewIndex = 0;
-        g_isPreviewActive = FALSE;
-        g_previewAnimationFromPath = FALSE;
-        g_previewAnimationName[0] = '\0';
-        g_pendingPreviewFromPath = FALSE;
-        g_pendingPreviewName[0] = '\0';
-        InterlockedIncrement(&g_previewRequestSerial);
-        CopyStringExactA(requestedName, g_animationName, sizeof(g_animationName));
+        BOOL canPromotePreview =
+            g_isPreviewActive &&
+            !g_previewAnimationFromPath &&
+            g_previewAnimationName[0] != '\0' &&
+            _stricmp(g_previewAnimationName, requestedName) == 0 &&
+            (g_previewAnimation.count > 0 ||
+             g_previewAnimation.sourceType == ANIM_SOURCE_PERCENT ||
+             g_previewAnimation.sourceType == ANIM_SOURCE_CAPSLOCK);
 
-        SignalPreviewDecodeCancelLocked();
-        WakePreviewWorkerLocked();
+        if (canPromotePreview) {
+            SwapLoadedAnimation(&oldMain, &g_mainAnimation);
+            SwapLoadedAnimation(&g_mainAnimation, &g_previewAnimation);
+            LoadedAnimation_Init(&g_previewAnimation);
+            g_mainIndex = g_previewIndex;
+
+            /* Clear preview */
+            g_previewIndex = 0;
+            g_isPreviewActive = FALSE;
+            g_previewAnimationFromPath = FALSE;
+            g_previewAnimationName[0] = '\0';
+            g_pendingPreviewFromPath = FALSE;
+            g_pendingPreviewName[0] = '\0';
+            InterlockedIncrement(&g_previewRequestSerial);
+            CopyStringExactA(requestedName, g_animationName, sizeof(g_animationName));
+            promotedPreview = TRUE;
+        }
         
         if (IsAnimCriticalSectionReady()) {
             LeaveCriticalSection(&g_animCriticalSection);
         }
+        if (promotedPreview) {
+            SignalPreviewDecodeCancelLocked();
+            WakePreviewWorkerLocked();
+        }
         ReleaseSRWLockExclusive(&g_previewWorkerLock);
 
-        LoadedAnimation_Free(&oldMain);
-        
-        /* Persist to config */
-        WriteAnimationNameToConfigIfChanged(requestedName);
+        if (promotedPreview) {
+            LoadedAnimation_Free(&oldMain);
 
-        ResetBuiltinIconUpdateCache();
-        EnsureTrayAnimationTimerState();
-        UpdateTrayIconToCurrentFrame();
+            /* Persist to config */
+            WriteAnimationNameToConfigIfChanged(requestedName);
 
-        result = TRUE;
-        goto done;
+            ResetBuiltinIconUpdateCache();
+            EnsureTrayAnimationTimerState();
+            UpdateTrayIconToCurrentFrame();
+
+            result = TRUE;
+            goto done;
+        }
     }
 
     LoadedAnimation newMain;
@@ -1606,14 +1629,21 @@ void CancelAnimationPreview(void) {
 
     if (!BeginTrayAnimationRuntimeUse()) return;
 
-    if (!g_isPreviewActive && g_pendingPreviewName[0] == '\0') goto done;
-
     AcquireSRWLockExclusive(&g_previewWorkerLock);
 
     InterlockedIncrement(&g_previewRequestSerial);
 
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
+    }
+
+    BOOL hasPreviewState = g_isPreviewActive || g_pendingPreviewName[0] != '\0';
+    if (!hasPreviewState) {
+        if (IsAnimCriticalSectionReady()) {
+            LeaveCriticalSection(&g_animCriticalSection);
+        }
+        ReleaseSRWLockExclusive(&g_previewWorkerLock);
+        goto done;
     }
 
     g_isPreviewActive = FALSE;
@@ -1863,10 +1893,23 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) goto done;
     if (IsTrayInteractionSuspended()) goto done;
-    if (!g_animationName[0]) goto done;
-    if (g_isPreviewActive) goto done;
+
+    char animationName[MAX_PATH] = {0};
+    BOOL previewActive = FALSE;
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        CopyStringExactA(g_animationName, animationName, sizeof(animationName));
+        previewActive = g_isPreviewActive;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        CopyStringExactA(g_animationName, animationName, sizeof(animationName));
+        previewActive = g_isPreviewActive;
+    }
+
+    if (!animationName[0]) goto done;
+    if (previewActive) goto done;
     
-    const BuiltinAnimDef* def = GetBuiltinAnimDef(g_animationName);
+    const BuiltinAnimDef* def = GetBuiltinAnimDef(animationName);
     if (!def) goto done;
     
     HICON hIcon = NULL;
@@ -1881,9 +1924,9 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
     /* Handle percent type (CPU, Memory, Battery) */
     if (def->type == ANIM_SOURCE_PERCENT) {
         int p = 0;
-        if (hasMetricsSnapshot && _stricmp(g_animationName, "__cpu__") == 0) {
+        if (hasMetricsSnapshot && _stricmp(animationName, "__cpu__") == 0) {
             p = (int)(cpuPercent + 0.5f);
-        } else if (hasMetricsSnapshot && _stricmp(g_animationName, "__mem__") == 0) {
+        } else if (hasMetricsSnapshot && _stricmp(animationName, "__mem__") == 0) {
             p = (int)(memPercent + 0.5f);
         } else if (def->getValue) {
             p = def->getValue();
@@ -1891,7 +1934,7 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
         if (p < 0) p = 0;
         if (p > 100) p = 100;
         value = p;
-        if (IsBuiltinIconUpdateCacheCurrent(g_animationName, value,
+        if (IsBuiltinIconUpdateCacheCurrent(animationName, value,
                                             textColor, bgColor,
                                             iconCx, iconCy)) {
             goto done;
@@ -1901,7 +1944,7 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
     /* Handle Caps Lock indicator */
     else if (def->type == ANIM_SOURCE_CAPSLOCK) {
         value = IsCapsLockOn() ? 1 : 0;
-        if (IsBuiltinIconUpdateCacheCurrent(g_animationName, value,
+        if (IsBuiltinIconUpdateCacheCurrent(animationName, value,
                                             textColor, bgColor,
                                             iconCx, iconCy)) {
             goto done;
@@ -1921,7 +1964,7 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
     nid.uFlags = NIF_ICON;
     nid.hIcon = hIcon;
     if (Shell_NotifyIconW(NIM_MODIFY, &nid)) {
-        RecordBuiltinIconUpdateCache(g_animationName, value,
+        RecordBuiltinIconUpdateCache(animationName, value,
                                      textColor, bgColor,
                                      iconCx, iconCy);
     }

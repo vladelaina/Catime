@@ -569,12 +569,12 @@ void PluginManager_Shutdown(void) {
     StopHotReloadThread(TRUE);
 
     PluginInfo* detachedPlugins = AllocatePluginSnapshotArray();
-    int detachedCount = 0;
 
     if (detachedPlugins) {
         EnterCriticalSection(&g_pluginCS);
 
-        detachedCount = DetachAllRunningPluginProcessesLocked(detachedPlugins, MAX_PLUGINS);
+        int detachedCount =
+            DetachAllRunningPluginProcessesLocked(detachedPlugins, MAX_PLUGINS);
         g_activePluginIndex = -1;
         g_lastRunningPluginIndex = -1;
         g_pluginCount = 0;
@@ -954,7 +954,7 @@ static DWORD WINAPI AsyncScanThread(LPVOID lpParam) {
     LONG generation = 0;
 
     if (lpParam) {
-        AsyncScanThreadParams* params = (AsyncScanThreadParams*)lpParam;
+        const AsyncScanThreadParams* params = (const AsyncScanThreadParams*)lpParam;
         requestedSnapshot = params->snapshot;
         hasRequestedSnapshot = params->hasSnapshot;
         generation = params->generation;
@@ -1277,7 +1277,7 @@ static BOOL PreparePluginLaunchLocked(int index, const wchar_t* expectedPath,
         return FALSE;
     }
 
-    PluginInfo* plugin = &g_plugins[index];
+    const PluginInfo* plugin = &g_plugins[index];
     if (expectedPath && wcscmp(plugin->path, expectedPath) != 0) {
         LOG_WARNING("Plugin changed before launch; launch cancelled");
         PluginProcess_SetLastError(L"File changed");
@@ -1877,7 +1877,7 @@ BOOL PluginManager_RestartPendingHotReload(LONG requestGeneration) {
         return FALSE;
     }
 
-    PluginHotReloadRequest request;
+    PluginHotReloadRequest request = {0};
     BOOL hasRequest = FALSE;
 
     EnterCriticalSection(&g_pluginCS);

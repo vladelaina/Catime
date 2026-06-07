@@ -6,6 +6,7 @@
 #include "utils/string_format.h"
 #include <string.h>
 #include <stdio.h>
+#include <wchar.h>
 
 /**
  * @brief Truncate long filenames for menu display
@@ -15,45 +16,31 @@
  * @note Uses middle truncation ("start...end.ext") for very long names
  */
 void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
-    if (!fileName || !truncated || maxLen <= 7) return;
-    
+    if (!truncated || maxLen == 0) return;
+    truncated[0] = L'\0';
+    if (!fileName) return;
+
     size_t nameLen = wcslen(fileName);
+    if (maxLen <= 7) {
+        size_t copyLen = nameLen < maxLen ? nameLen : maxLen;
+        wmemcpy(truncated, fileName, copyLen);
+        truncated[copyLen] = L'\0';
+        return;
+    }
+
     if (nameLen <= maxLen) {
         wcscpy_s(truncated, maxLen + 1, fileName);
         return;
     }
-    
-    const wchar_t* lastDot = wcsrchr(fileName, L'.');
-    const wchar_t* ext = L"";
-    size_t nameNoExtLen = nameLen;
-    size_t extLen = 0;
-    
-    if (lastDot && lastDot != fileName) {
-        ext = lastDot;
-        extLen = wcslen(ext);
-        nameNoExtLen = lastDot - fileName;
-    }
-    
-    if (nameNoExtLen <= 27) {
-        wcsncpy(truncated, fileName, maxLen - extLen - 3);
-        truncated[maxLen - extLen - 3] = L'\0';
-        wcscat_s(truncated, maxLen + 1, L"...");
-        wcscat_s(truncated, maxLen + 1, ext);
-        return;
-    }
-    
-    wchar_t buffer[MAX_PATH];
-    
-    wcsncpy(buffer, fileName, 12);
-    buffer[12] = L'\0';
-    
-    wcscat_s(buffer, MAX_PATH, L"...");
-    
-    wcsncat(buffer, fileName + nameNoExtLen - 12, 12);
-    
-    wcscat_s(buffer, MAX_PATH, ext);
-    
-    wcscpy_s(truncated, maxLen + 1, buffer);
+
+    size_t available = maxLen - 3;
+    size_t prefixLen = (available + 1) / 2;
+    size_t suffixLen = available - prefixLen;
+
+    wmemcpy(truncated, fileName, prefixLen);
+    wmemcpy(truncated + prefixLen, L"...", 3);
+    wmemcpy(truncated + prefixLen + 3, fileName + nameLen - suffixLen, suffixLen);
+    truncated[maxLen] = L'\0';
 }
 
 /**

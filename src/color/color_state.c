@@ -103,7 +103,7 @@ static BOOL AppendColorOptionTo(PredefinedColor** options, size_t* count,
     GradientType gradType = GetGradientInfoSnapshotByName(color, &gradientSnapshot);
     if (gradType != GRADIENT_NONE) {
         const GradientInfo* info = &gradientSnapshot.info;
-        if (!info || !info->name) return TRUE;
+        if (!info->name) return TRUE;
         if (PaletteContainsColor(*options, *count, info->name)) return TRUE;
         return AppendColorOptionCopyTo(options, count, info->name);
     }

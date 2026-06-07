@@ -164,7 +164,7 @@ static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity) {
     return fileCount;
 }
 
-static BOOL StoreNotificationSoundCache(wchar_t files[][MAX_PATH], int fileCount) {
+static BOOL StoreNotificationSoundCache(const wchar_t (*files)[MAX_PATH], int fileCount) {
     if (IsSoundScanShuttingDown()) {
         return FALSE;
     }

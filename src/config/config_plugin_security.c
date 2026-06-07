@@ -489,7 +489,6 @@ BOOL UntrustPlugin(const char* pluginPath) {
 
     PluginTrustState updatedTrust = g_AppConfig.plugin_trust;
     int trustCount = ClampPluginTrustCount(updatedTrust.count);
-    updatedTrust.count = trustCount;
 
     /* Find and remove entry (use case-insensitive comparison for Windows paths) */
     for (int i = 0; i < trustCount; i++) {

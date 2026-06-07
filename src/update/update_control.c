@@ -145,8 +145,8 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 
             if (links && linkCount > 0) {
                 POINT pt;
-                pt.x = GET_X_LPARAM(lParam) + 5;
-                pt.y = GET_Y_LPARAM(lParam) + scrollPos + 5;
+                pt.x = GET_X_LPARAM(lParam);
+                pt.y = GET_Y_LPARAM(lParam) + scrollPos;
 
                 if (HandleMarkdownClick(links, linkCount, pt)) {
                     return 0;
@@ -270,8 +270,7 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                 POINT pt;
                 GetCursorPos(&pt);
                 ScreenToClient(hwnd, &pt);
-                pt.x += 5;
-                pt.y += scrollPos + 5;
+                pt.y += scrollPos;
 
                 const wchar_t* url = GetClickedLinkUrl(links, linkCount, pt);
                 if (url) {

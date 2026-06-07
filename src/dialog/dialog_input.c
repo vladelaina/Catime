@@ -183,7 +183,7 @@ static BOOL BuildQuickTimeOptionsConfig(char* inputUtf8, char* options,
     options[0] = '\0';
     *parsedCount = 0;
 
-    char* token = strtok(inputUtf8, QUICK_TIME_OPTIONS_TOKEN_DELIMITERS);
+    const char* token = strtok(inputUtf8, QUICK_TIME_OPTIONS_TOKEN_DELIMITERS);
     while (token) {
         if (*parsedCount >= MAX_TIME_OPTIONS) {
             return FALSE;
@@ -529,7 +529,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
         case WM_COMMAND:
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
-                InputDialogState* state = GetInputDialogState(ctx);
+                const InputDialogState* state = GetInputDialogState(ctx);
                 if (!state) {
                     return TRUE;
                 }

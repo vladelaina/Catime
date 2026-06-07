@@ -37,7 +37,7 @@ typedef struct {
 static BOOL GrowProcessTreeSnapshot(ProcessTreeEntry** entries,
                                     DWORD* capacity,
                                     DWORD count,
-                                    ProcessTreeEntry* stackEntries) {
+                                    const ProcessTreeEntry* stackEntries) {
     if (*capacity == 0 || *capacity > ((DWORD)~(DWORD)0) / 2) {
         return FALSE;
     }
@@ -124,6 +124,7 @@ typedef struct {
     BOOL success;
     wchar_t errorMsg[128];  /* Error message for display */
     volatile LONG readyState;
+    volatile LONG refCount;
     PluginInfo pluginSnapshot;
 } PluginLauncherArgs;
 
@@ -151,6 +152,7 @@ static BOOL SignalPluginLaunchReady(PluginLauncherArgs* args) {
                         GetLastError());
         }
         CloseHandle(signalEvent);
+        args->hReadySignalEvent = NULL;
     }
     return TRUE;
 }
@@ -177,6 +179,10 @@ static BOOL IsValidPluginNotifyWindow(HWND hwnd) {
 static void ReleaseAbandonedPluginLaunchArgs(PluginLauncherArgs* args) {
     if (!args) return;
 
+    if (InterlockedDecrement(&args->refCount) != 0) {
+        return;
+    }
+
     ClosePluginLaunchJobHandle(args);
     if (args->hReadySignalEvent) {
         CloseHandle(args->hReadySignalEvent);
@@ -187,9 +193,8 @@ static void ReleaseAbandonedPluginLaunchArgs(PluginLauncherArgs* args) {
 
 static DWORD FinishPluginLaunchFailure(PluginLauncherArgs* args) {
     ClosePluginLaunchJobHandle(args);
-    if (!SignalPluginLaunchReady(args)) {
-        ReleaseAbandonedPluginLaunchArgs(args);
-    }
+    SignalPluginLaunchReady(args);
+    ReleaseAbandonedPluginLaunchArgs(args);
     return 0;
 }
 
@@ -420,6 +425,7 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         ReleaseAbandonedPluginLaunchArgs(args);
         return 0;
     }
+    ReleaseAbandonedPluginLaunchArgs(args);
 
     /* If we have a process handle, wait for it to exit */
     if (hMonitorProcess) {
@@ -433,9 +439,6 @@ static DWORD WINAPI PluginLauncherThread(LPVOID lpParam) {
         /* This handles cases like: cmd.exe exits but PowerShell child is still running */
         if (dwProcessId != 0) {
             TerminateProcessTree(dwProcessId, 0);
-        }
-
-        if (dwProcessId != 0) {
             PluginManager_HandleProcessExit(dwProcessId);
         }
         CloseHandle(hMonitorProcess);
@@ -532,6 +535,7 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     args->success = FALSE;
     args->errorMsg[0] = L'\0';
     args->readyState = PLUGIN_LAUNCH_READY_PENDING;
+    args->refCount = 1;
 
     HANDLE hReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (!hReadyEvent) {
@@ -567,13 +571,16 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     }
 
     /* Create launcher thread */
+    InterlockedIncrement(&args->refCount);
     HANDLE hThread = CreateThread(NULL, 0, PluginLauncherThread, args, 0, NULL);
     if (!hThread) {
         LOG_ERROR("[Process] Failed to create launcher thread");
         ClosePluginLaunchJobHandle(args);
         CloseHandle(hReadyEvent);
         CloseHandle(args->hReadySignalEvent);
-        free(args);
+        args->hReadySignalEvent = NULL;
+        ReleaseAbandonedPluginLaunchArgs(args);
+        ReleaseAbandonedPluginLaunchArgs(args);
         MarkPluginLaunchStartFailure(now);
         wcscpy_s(g_lastLaunchError, 128, L"Internal error");
         return FALSE;
@@ -600,12 +607,14 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
                 wcscpy_s(g_lastLaunchError, 128, L"Launch failed");
             }
             CloseHandle(hThread);
+            ReleaseAbandonedPluginLaunchArgs(args);
             return FALSE;
         }
         if (previous != PLUGIN_LAUNCH_READY_SIGNALED) {
             LOG_ERROR("[Process] Unexpected plugin launch state after wait failure: %ld",
                       previous);
             CloseHandle(hThread);
+            ReleaseAbandonedPluginLaunchArgs(args);
             return FALSE;
         }
     }
@@ -625,7 +634,7 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
     }
 
     BOOL success = args->success;
-    free(args);
+    ReleaseAbandonedPluginLaunchArgs(args);
     return success;
 }
 

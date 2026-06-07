@@ -999,14 +999,14 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
             }
         } else {
             EnterCriticalSection(&g_dataCS);
-            BOOL displayChanged = ClearPluginDisplayDataLocked();
+            BOOL clearedDisplayChanged = ClearPluginDisplayDataLocked();
             ClearLastContentCacheLocked();
             UpdateLastOutputFileStateLocked(&currentWriteTime, fileSize);
             LeaveCriticalSection(&g_dataCS);
             *lastWriteTime = currentWriteTime;
             *lastFileSize = fileSize;
 
-            if (displayChanged && g_hNotifyWnd) {
+            if (clearedDisplayChanged && g_hNotifyWnd) {
                 RequestPluginDataRedraw(g_hNotifyWnd);
             }
         }

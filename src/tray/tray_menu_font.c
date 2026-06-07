@@ -503,10 +503,14 @@ void FontMenu_Shutdown(void) {
 /**
  * @brief Comparator for font entries (by relative path)
  */
+typedef struct {
+    const FontEntry* entry;
+} FontEntrySortItem;
+
 static int CompareFontEntries(const void* a, const void* b) {
-    const FontEntry* const* ea = (const FontEntry* const*)a;
-    const FontEntry* const* eb = (const FontEntry* const*)b;
-    return NaturalPathCompareW((*ea)->relativePath, (*eb)->relativePath);
+    const FontEntrySortItem* ea = a;
+    const FontEntrySortItem* eb = b;
+    return NaturalPathCompareW(ea->entry->relativePath, eb->entry->relativePath);
 }
 
 static BOOL IsFontEntryCurrent(const FontEntry* entry, const wchar_t* currentFontRelPath) {
@@ -560,13 +564,13 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, const FontEntry* entries, 
     if (!entries || count <= 0 || count > MAX_FONT_ENTRIES) return;
 
     /* Sort entries for consistent display */
-    const FontEntry* sortedEntries[MAX_FONT_ENTRIES];
+    FontEntrySortItem sortedEntries[MAX_FONT_ENTRIES];
 
     for (int i = 0; i < count; i++) {
-        sortedEntries[i] = &entries[i];
+        sortedEntries[i].entry = &entries[i];
     }
 
-    qsort(sortedEntries, count, sizeof(FontEntry*), CompareFontEntries);
+    qsort(sortedEntries, count, sizeof(sortedEntries[0]), CompareFontEntries);
 
     /* Collect parent directories of selected fonts */
     enum { MAX_PARENT_DIRS = 100 };
@@ -574,7 +578,7 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, const FontEntry* entries, 
     int parentDirCount = 0;
 
     for (int i = 0; i < count; i++) {
-        if (IsFontEntryCurrent(sortedEntries[i], currentFontRelPath)) {
+        if (IsFontEntryCurrent(sortedEntries[i].entry, currentFontRelPath)) {
             if (!parentDirs) {
                 parentDirs = (wchar_t (*)[MAX_PATH])calloc(MAX_PARENT_DIRS,
                                                            sizeof(*parentDirs));
@@ -585,7 +589,7 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, const FontEntry* entries, 
             }
 
             wchar_t pathCopy[MAX_PATH];
-            wcsncpy(pathCopy, sortedEntries[i]->relativePath, MAX_PATH - 1);
+            wcsncpy(pathCopy, sortedEntries[i].entry->relativePath, MAX_PATH - 1);
             pathCopy[MAX_PATH - 1] = L'\0';
 
             wchar_t currentPath[MAX_PATH] = L"";
@@ -623,7 +627,7 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, const FontEntry* entries, 
 
     /* Build menu tree */
     for (int i = 0; i < count; i++) {
-        const FontEntry* entry = sortedEntries[i];
+        const FontEntry* entry = sortedEntries[i].entry;
         BOOL isCurrentFont = IsFontEntryCurrent(entry, currentFontRelPath);
 
         wchar_t pathCopy[MAX_PATH];

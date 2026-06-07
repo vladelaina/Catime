@@ -283,9 +283,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                         return TRUE;
                     }
 
-                    if (hwndMain) {
-                        PostMessage(hwndMain, WM_DIALOG_COLOR, 1, 0);
-                    }
+                    PostMessage(hwndMain, WM_DIALOG_COLOR, 1, 0);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 } else {

@@ -152,7 +152,7 @@ static void UpdatePomodoroTimesState(const int* times, int count) {
         g_AppConfig.pomodoro.times[i] = times[i];
     }
 
-    if (count > 0) g_AppConfig.pomodoro.work_time = times[0];
+    g_AppConfig.pomodoro.work_time = times[0];
     if (count > 1) g_AppConfig.pomodoro.short_break = times[1];
     if (count > 2) g_AppConfig.pomodoro.long_break = times[2];
 }

@@ -273,11 +273,9 @@ void ApplyPomodoroSettings(const ConfigSnapshot* snapshot) {
         g_AppConfig.pomodoro.times[i] = snapshot->pomodoroTimes[i];
     }
     
-    if (timesCount > 0) {
-        g_AppConfig.pomodoro.work_time = g_AppConfig.pomodoro.times[0];
-        if (timesCount > 1) g_AppConfig.pomodoro.short_break = g_AppConfig.pomodoro.times[1];
-        if (timesCount > 2) g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
-    }
+    g_AppConfig.pomodoro.work_time = g_AppConfig.pomodoro.times[0];
+    if (timesCount > 1) g_AppConfig.pomodoro.short_break = g_AppConfig.pomodoro.times[1];
+    if (timesCount > 2) g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
     
     g_AppConfig.pomodoro.loop_count = loopCount;
 }

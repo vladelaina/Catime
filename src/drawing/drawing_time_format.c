@@ -16,6 +16,26 @@
 extern int GetElapsedCentiseconds(void);
 extern int GetSystemCentiseconds(void);
 
+#define DRAWING_MS_PER_SECOND 1000LL
+
+static int ClampMillisecondsToSecondsFloor(int64_t milliseconds) {
+    int64_t seconds;
+    if (milliseconds <= 0) return 0;
+
+    seconds = milliseconds / DRAWING_MS_PER_SECOND;
+    if (seconds > INT_MAX) return INT_MAX;
+    return (int)seconds;
+}
+
+static int ClampMillisecondsToSecondsCeil(int64_t milliseconds) {
+    if (milliseconds <= 0) return 0;
+    if (milliseconds > (int64_t)INT_MAX * DRAWING_MS_PER_SECOND) {
+        return INT_MAX;
+    }
+
+    return (int)((milliseconds + DRAWING_MS_PER_SECOND - 1) / DRAWING_MS_PER_SECOND);
+}
+
 TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
     SYSTEMTIME st;
     GetLocalTime(&st);
@@ -55,7 +75,7 @@ TimeComponents GetCountUpComponents(void) {
     int64_t elapsed_ms = now - g_start_time;
     if (elapsed_ms < 0) elapsed_ms = 0;
     
-    int total_seconds = (int)(elapsed_ms / 1000);
+    int total_seconds = ClampMillisecondsToSecondsFloor(elapsed_ms);
     
     /* Use real centiseconds sampled from elapsed milliseconds */
     int centis = GetSmoothedCentiseconds(elapsed_ms, FALSE);
@@ -79,9 +99,9 @@ TimeComponents GetCountDownComponents(void) {
      * Without centiseconds, keep round-up behavior for UX (e.g. 10:00 not 9:59). */
     int total_seconds;
     if (g_AppConfig.display.time_format.show_milliseconds) {
-        total_seconds = (int)(remaining_ms / 1000);
+        total_seconds = ClampMillisecondsToSecondsFloor(remaining_ms);
     } else {
-        total_seconds = (int)((remaining_ms + 999) / 1000);
+        total_seconds = ClampMillisecondsToSecondsCeil(remaining_ms);
     }
     
     /* Use real centiseconds sampled from remaining milliseconds */

@@ -399,9 +399,9 @@ static BOOL ConvertPathForMiniaudio(const wchar_t* wFilePath, char* outPath, siz
         /* Try to convert temp path (should always succeed since we use ASCII filename) */
         DWORD tempShortLen = GetShortPathNameW(tempPath, shortPath, MAX_PATH);
         if (tempShortLen > 0 && tempShortLen < MAX_PATH) {
-            BOOL usedDefaultChar = FALSE;
-            int result = WideCharToMultiByte(CP_ACP, 0, shortPath, -1, outPath, (int)outPathSize, NULL, &usedDefaultChar);
-            if (result > 0 && !usedDefaultChar) {
+            BOOL shortPathUsedDefaultChar = FALSE;
+            int result = WideCharToMultiByte(CP_ACP, 0, shortPath, -1, outPath, (int)outPathSize, NULL, &shortPathUsedDefaultChar);
+            if (result > 0 && !shortPathUsedDefaultChar) {
                 return TRUE;
             }
         }

@@ -1039,6 +1039,7 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                                                     hdlg, hwndList);
                         } else {
                             wchar_t fontName[LF_FACESIZE];
+                            ZeroMemory(fontName, sizeof(fontName));
                             if (SendMessageW(hwndList, LB_GETTEXT, (WPARAM)sel,
                                              (LPARAM)fontName) != LB_ERR) {
                                 PreviewFontInMainWindow(fontName, NULL, hdlg, hwndList);

@@ -493,10 +493,14 @@ void AnimationMenu_Shutdown(void) {
 /**
  * @brief Comparator for animation entries (by relative path)
  */
+typedef struct {
+    const AnimEntry* entry;
+} AnimEntrySortItem;
+
 static int CompareAnimEntries(const void* a, const void* b) {
-    const AnimEntry* const* ea = (const AnimEntry* const*)a;
-    const AnimEntry* const* eb = (const AnimEntry* const*)b;
-    return NaturalPathCompareA((*ea)->relativePath, (*eb)->relativePath);
+    const AnimEntrySortItem* ea = a;
+    const AnimEntrySortItem* eb = b;
+    return NaturalPathCompareA(ea->entry->relativePath, eb->entry->relativePath);
 }
 
 /**
@@ -539,16 +543,16 @@ static void BuildAnimationMenuFromEntries(HMENU hRootMenu, const AnimEntry* entr
     if (!entries || count <= 0 || count > MAX_ANIM_ENTRIES) return;
 
     /* Sort entries for consistent display */
-    const AnimEntry* sortedEntries[MAX_ANIM_ENTRIES];
+    AnimEntrySortItem sortedEntries[MAX_ANIM_ENTRIES];
 
     for (int i = 0; i < count; i++) {
-        sortedEntries[i] = &entries[i];
+        sortedEntries[i].entry = &entries[i];
     }
 
-    qsort(sortedEntries, count, sizeof(AnimEntry*), CompareAnimEntries);
+    qsort(sortedEntries, count, sizeof(sortedEntries[0]), CompareAnimEntries);
 
     for (int i = 0; i < count; i++) {
-        const AnimEntry* entry = sortedEntries[i];
+        const AnimEntry* entry = sortedEntries[i].entry;
 
         if (entry->isSpecial) continue;
 

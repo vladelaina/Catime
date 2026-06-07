@@ -63,7 +63,7 @@ void ReplaceBlackColor(const char* color, char* output, size_t output_size) {
         return;
     }
 
-    if (color && strcasecmp(color, "#000000") == 0) {
+    if (strcasecmp(color, "#000000") == 0) {
         strncpy(output, NEAR_BLACK_COLOR, output_size);
     } else {
         strncpy(output, color, output_size);
