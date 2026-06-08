@@ -15,6 +15,7 @@
  * @brief Truncate long filenames for menu display
  * @param fileName Original filename
  * @param truncated Output buffer
+ * @param truncatedSize Output buffer size in wchar_t units
  * @param maxLen Maximum display length
  * 
  * @details
@@ -23,7 +24,8 @@
  * 
  * @note maxLen should be at least 8 characters for meaningful truncation
  */
-void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen);
+void TruncateFileName(const wchar_t* fileName, wchar_t* truncated,
+                      size_t truncatedSize, size_t maxLen);
 
 /**
  * @brief Format time duration for Pomodoro menu display

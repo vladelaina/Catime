@@ -720,7 +720,9 @@ static void EndMonitorUse(void) {
 
 void SystemMonitor_Init(void) {
     AcquireSRWLockExclusive(&g_monitorLifecycleLock);
-    CleanupRetiredNetworkRefreshWorkerLocked(0);
+    if (!CleanupRetiredNetworkRefreshWorkerLocked(NETWORK_REFRESH_SHUTDOWN_WAIT_MS)) {
+        OutputDebugStringW(L"SystemMonitor: previous network refresh worker is still retiring\n");
+    }
 
     if (InterlockedCompareExchange(&g_initialized, 1, 0) != 0) {
         ReleaseSRWLockExclusive(&g_monitorLifecycleLock);

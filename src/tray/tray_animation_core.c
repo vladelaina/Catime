@@ -398,7 +398,12 @@ static void EnsureTrayAnimationTimerState(void) {
     if (shouldRun) {
         if (!IsAnimationTimerActive()) {
             FrameRateController_Init(&g_frameRateCtrl, TRAY_UPDATE_INTERVAL_MS);
-            InitializeAnimationTimer(trayHwnd, INTERNAL_TICK_INTERVAL_MS, TrayAnimationTimerCallback, NULL);
+            if (!InitializeAnimationTimer(trayHwnd, INTERNAL_TICK_INTERVAL_MS,
+                                          TrayAnimationTimerCallback, NULL)) {
+                LOG_WARNING("Failed to start tray animation timer (interval=%u)",
+                            (unsigned)INTERNAL_TICK_INTERVAL_MS);
+                ClearPendingTrayUpdate();
+            }
         }
     } else if (IsAnimationTimerActive()) {
         CleanupAnimationTimer();

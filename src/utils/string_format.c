@@ -15,32 +15,39 @@
  * @param maxLen Maximum display length
  * @note Uses middle truncation ("start...end.ext") for very long names
  */
-void TruncateFileName(const wchar_t* fileName, wchar_t* truncated, size_t maxLen) {
-    if (!truncated || maxLen == 0) return;
+void TruncateFileName(const wchar_t* fileName, wchar_t* truncated,
+                      size_t truncatedSize, size_t maxLen) {
+    if (!truncated || truncatedSize == 0) return;
     truncated[0] = L'\0';
-    if (!fileName) return;
+    if (!fileName || maxLen == 0) return;
+
+    size_t outputLen = maxLen;
+    if (outputLen >= truncatedSize) {
+        outputLen = truncatedSize - 1;
+    }
+    if (outputLen == 0) return;
 
     size_t nameLen = wcslen(fileName);
-    if (maxLen <= 7) {
-        size_t copyLen = nameLen < maxLen ? nameLen : maxLen;
+    if (outputLen <= 7) {
+        size_t copyLen = nameLen < outputLen ? nameLen : outputLen;
         wmemcpy(truncated, fileName, copyLen);
         truncated[copyLen] = L'\0';
         return;
     }
 
-    if (nameLen <= maxLen) {
-        wcscpy_s(truncated, maxLen + 1, fileName);
+    if (nameLen <= outputLen) {
+        wcscpy_s(truncated, truncatedSize, fileName);
         return;
     }
 
-    size_t available = maxLen - 3;
+    size_t available = outputLen - 3;
     size_t prefixLen = (available + 1) / 2;
     size_t suffixLen = available - prefixLen;
 
     wmemcpy(truncated, fileName, prefixLen);
     wmemcpy(truncated + prefixLen, L"...", 3);
     wmemcpy(truncated + prefixLen + 3, fileName + nameLen - suffixLen, suffixLen);
-    truncated[maxLen] = L'\0';
+    truncated[outputLen] = L'\0';
 }
 
 /**

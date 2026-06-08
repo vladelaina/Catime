@@ -158,7 +158,7 @@ void BuildTimeoutActionSubmenu(HMENU hMenu) {
             Utf8ToWide(g_AppConfig.recent_files.files[i].name, wFileName, MAX_PATH);
 
             wchar_t truncatedName[MAX_PATH];
-            TruncateFileName(wFileName, truncatedName, 25);
+            TruncateFileName(wFileName, truncatedName, _countof(truncatedName), 25);
 
             BOOL isCurrentFile = (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE &&
                                  strlen(CLOCK_TIMEOUT_FILE_PATH) > 0 &&
