@@ -70,6 +70,8 @@ jobs:
             --max-configs=12 \
             --std=c11 \
             --library=windows \
+            --suppress=missingIncludeSystem \
+            --suppress=unmatchedSuppression \
             -i libs \
             -i src/audio_player.c \
             --xml \

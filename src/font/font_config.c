@@ -52,11 +52,9 @@ BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
     BOOL runtimeMatches = (strcmp(FONT_FILE_NAME, configFontName) == 0);
     BOOL configMatches = (strcmp(currentConfigValue, configFontName) == 0);
 
-    BOOL writeSucceeded = TRUE;
     if (!configMatches) {
-        writeSucceeded = WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME",
-                                        configFontName, config_path);
-        if (!writeSucceeded) {
+        if (!WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME",
+                            configFontName, config_path)) {
             LOG_WARNING("Failed to write font config: %s", configFontName);
             return FALSE;
         }

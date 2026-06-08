@@ -492,6 +492,49 @@ static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
     return TRUE;
 }
 
+static BOOL RemoveRecentFileAtIndex(int index) {
+    int recentFilesCount = g_AppConfig.recent_files.count;
+    if (recentFilesCount < 0) recentFilesCount = 0;
+    if (recentFilesCount > MAX_RECENT_FILES) recentFilesCount = MAX_RECENT_FILES;
+    if (index < 0 || index >= recentFilesCount) return FALSE;
+
+    RecentFile newRecentFiles[MAX_RECENT_FILES];
+    ZeroMemory(newRecentFiles, sizeof(newRecentFiles));
+
+    int newCount = 0;
+    for (int i = 0; i < recentFilesCount; i++) {
+        if (i == index) {
+            continue;
+        }
+        if (newCount < MAX_RECENT_FILES) {
+            newRecentFiles[newCount++] = g_AppConfig.recent_files.files[i];
+        }
+    }
+
+    char keys[MAX_RECENT_FILES][32];
+    IniKeyValue updates[MAX_RECENT_FILES];
+    for (int i = 0; i < MAX_RECENT_FILES; i++) {
+        snprintf(keys[i], sizeof(keys[i]), "CLOCK_RECENT_FILE_%d", i + 1);
+        updates[i].section = INI_SECTION_RECENTFILES;
+        updates[i].key = keys[i];
+        updates[i].value = (i < newCount) ? newRecentFiles[i].path : "";
+    }
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+    if (!WriteIniMultipleAtomic(config_path, updates, MAX_RECENT_FILES)) {
+        LOG_WARNING("Failed to persist removal of missing recent file at index %d", index);
+        return FALSE;
+    }
+
+    ZeroMemory(g_AppConfig.recent_files.files, sizeof(g_AppConfig.recent_files.files));
+    for (int i = 0; i < newCount; i++) {
+        g_AppConfig.recent_files.files[i] = newRecentFiles[i];
+    }
+    g_AppConfig.recent_files.count = newCount;
+    return TRUE;
+}
+
 static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
     int recentFilesCount = g_AppConfig.recent_files.count;
@@ -500,17 +543,10 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     if (index < 0 || index >= recentFilesCount) return TRUE;
 
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
-        CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-        CLOCK_TIMEOUT_FILE_PATH[0] = '\0';
-        for (int i = index; i < recentFilesCount - 1; i++) {
-            g_AppConfig.recent_files.files[i] = g_AppConfig.recent_files.files[i + 1];
+        if (RemoveRecentFileAtIndex(index)) {
+            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+            CLOCK_TIMEOUT_FILE_PATH[0] = '\0';
         }
-        ZeroMemory(&g_AppConfig.recent_files.files[recentFilesCount - 1],
-                   sizeof(g_AppConfig.recent_files.files[recentFilesCount - 1]));
-        g_AppConfig.recent_files.count = recentFilesCount - 1;
-        char config_path[MAX_PATH];
-        GetConfigPath(config_path, MAX_PATH);
-        WriteConfig(config_path);
     }
     return TRUE;
 }
