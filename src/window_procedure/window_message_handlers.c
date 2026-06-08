@@ -13,6 +13,7 @@
 #include "tray/tray_events.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_menu_font.h"
+#include "tray/tray_menu_submenus.h"
 #include "config/config_watcher.h"
 #include "update/update_internal.h"
 #include "dialog/dialog_plugin_security.h"
@@ -55,8 +56,6 @@ static void StartAnimationPreviewDelayTimer(HWND hwnd);
 
 extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;
-extern size_t COLOR_OPTIONS_COUNT;
-extern PredefinedColor* COLOR_OPTIONS;
 
 static int HexDigitValue(char ch) {
     if (ch >= '0' && ch <= '9') return ch - '0';
@@ -473,10 +472,11 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     LPDRAWITEMSTRUCT lpdis = (LPDRAWITEMSTRUCT)lp;
     if (lpdis->CtlType != ODT_MENU) return FALSE;
 
-    int colorIndex = lpdis->itemID - CMD_COLOR_OPTIONS_BASE;
-    if (colorIndex < 0 || colorIndex >= (int)COLOR_OPTIONS_COUNT) return FALSE;
+    char hexColor[COLOR_HEX_BUFFER];
+    if (!GetColorMenuColorFromId(lpdis->itemID, hexColor, sizeof(hexColor))) {
+        return FALSE;
+    }
 
-    const char* hexColor = COLOR_OPTIONS[colorIndex].hexColor;
     GradientInfoSnapshot gradientSnapshot;
     GradientType gradientType = GetGradientInfoSnapshotByName(hexColor, &gradientSnapshot);
 
@@ -510,7 +510,8 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     /* Draw sequence number on left side */
     wchar_t numStr[8];
-    _snwprintf_s(numStr, 8, _TRUNCATE, L"%d", colorIndex + 1);
+    _snwprintf_s(numStr, 8, _TRUNCATE, L"%u",
+                 (unsigned int)(lpdis->itemID - CMD_COLOR_OPTIONS_BASE + 1));
     RECT numRect = lpdis->rcItem;
     numRect.right = numRect.left + 26;
     int oldBkMode = SetBkMode(lpdis->hDC, TRANSPARENT);
@@ -589,8 +590,7 @@ static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
     BOOL colorOrFont = FALSE;
     BOOL animation = FALSE;
 
-    int colorIndex = (int)menuItem - CMD_COLOR_OPTIONS_BASE;
-    if (colorIndex >= 0 && colorIndex < (int)COLOR_OPTIONS_COUNT) {
+    if (GetColorMenuColorFromId(menuItem, NULL, 0)) {
         colorOrFont = TRUE;
     }
 

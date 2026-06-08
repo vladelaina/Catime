@@ -101,6 +101,12 @@ void CancelPreview(HWND hwnd);
 BOOL ApplyPreview(HWND hwnd);
 
 /**
+ * @brief Clear menu preview bookkeeping after an animation preview was applied
+ * @param hwnd Window handle for optional UI refresh
+ */
+void MarkAnimationPreviewApplied(HWND hwnd);
+
+/**
  * @brief Check if any preview is currently active
  * @return TRUE if preview active, FALSE otherwise
  */

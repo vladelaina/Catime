@@ -39,6 +39,7 @@ extern void HandleStartupMode(HWND hwnd);
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_menu_font.h"
+#include "tray/tray_menu_submenus.h"
 #include "menu_preview.h"
 #include "dialog/dialog_font_picker.h"
 #include "../resource/resource.h"
@@ -51,8 +52,6 @@ extern void HandleStartupMode(HWND hwnd);
 extern TextEffectType CLOCK_TEXT_EFFECT;
 
 extern wchar_t inputText[256];
-extern size_t COLOR_OPTIONS_COUNT;
-extern PredefinedColor* COLOR_OPTIONS;
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 
 /* ============================================================================
@@ -112,7 +111,7 @@ static void ToggleTextEffect(HWND hwnd, TextEffectType effect) {
         CleanupDrawingEffects();
     }
 
-    UpdateDrawingRenderAnimationTimer(hwnd, FALSE);
+    UpdateDrawingRenderAnimationTimer(hwnd, FALSE, FALSE);
     InvalidateRect(hwnd, NULL, TRUE);
 }
 
@@ -477,13 +476,18 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
  * ============================================================================ */
 
 static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
-    (void)cmd;
-    if (index >= 0 && index < (int)COLOR_OPTIONS_COUNT) {
-        if (WriteConfigColor(COLOR_OPTIONS[index].hexColor)) {
-            InvalidateRect(hwnd, NULL, TRUE);
-        } else {
-            CancelPreview(hwnd);
-        }
+    (void)index;
+
+    char color[COLOR_HEX_BUFFER];
+    if (!GetColorMenuColorFromId(cmd, color, sizeof(color))) {
+        CancelPreview(hwnd);
+        return TRUE;
+    }
+
+    if (WriteConfigColor(color)) {
+        InvalidateRect(hwnd, NULL, TRUE);
+    } else {
+        CancelPreview(hwnd);
     }
     return TRUE;
 }
@@ -578,7 +582,7 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     RangeCommandDescriptor rangeTable[] = {
         {CMD_QUICK_COUNTDOWN_BASE, CMD_QUICK_COUNTDOWN_END, HandleQuickCountdown},
         {CLOCK_IDM_QUICK_TIME_BASE, CLOCK_IDM_QUICK_TIME_BASE + MAX_TIME_OPTIONS - 1, HandleQuickCountdown},
-        {CMD_COLOR_OPTIONS_BASE, CMD_COLOR_OPTIONS_BASE + COLOR_OPTIONS_COUNT - 1, HandleColorSelection},
+        {CMD_COLOR_OPTIONS_BASE, CMD_COLOR_OPTIONS_BASE + MAX_COLOR_OPTIONS - 1, HandleColorSelection},
         {CLOCK_IDM_RECENT_FILE_1, CLOCK_IDM_RECENT_FILE_5, HandleRecentFile},
         {CMD_POMODORO_TIME_BASE, CMD_POMODORO_TIME_END, HandlePomodoroTime},
         {CMD_FONT_SELECTION_BASE, CMD_FONT_SELECTION_BASE + FONT_MENU_MAX_ENTRIES - 1, HandleFontSelection},
@@ -629,7 +633,16 @@ LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
         RestoreWindowVisibility(hwnd);
     }
 
-    if (DispatchRangeCommand(hwnd, cmd, wp, lp)) return 0;
+    if (DispatchRangeCommand(hwnd, cmd, wp, lp)) {
+        if (isAnimationSelectionCommand) {
+            MarkAnimationPreviewApplied(hwnd);
+        }
+        return 0;
+    }
+
+    if (isAnimationSelectionCommand) {
+        CancelPreview(hwnd);
+    }
 
     for (const CommandDispatchEntry* entry = COMMAND_DISPATCH_TABLE; entry->handler; entry++) {
         if (entry->cmdId == cmd) return entry->handler(hwnd, wp, lp);

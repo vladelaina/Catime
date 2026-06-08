@@ -38,6 +38,7 @@ static HANDLE g_hFontMapping = NULL;
 /* Fallback memory mapping handles */
 static HANDLE g_hFallbackFontFile = INVALID_HANDLE_VALUE;
 static HANDLE g_hFallbackFontMapping = NULL;
+static volatile LONG g_fontStateGeneration = 1;
 
 /* Font cache for <font:> tags */
 static CachedFont g_fontCache[MAX_CACHED_FONTS] = {0};
@@ -88,6 +89,13 @@ static CRITICAL_SECTION g_fontStateCS;
 /* Forward declarations for cleanup paths that already hold g_fontStateCS */
 static void ClearFontCacheSTBLocked(void);
 static void CleanupFontSTBLocked(void);
+
+static void AdvanceFontStateGeneration(void) {
+    LONG generation = InterlockedIncrement(&g_fontStateGeneration);
+    if (generation == 0) {
+        InterlockedIncrement(&g_fontStateGeneration);
+    }
+}
 
 static BOOL CALLBACK InitFontStateLock(PINIT_ONCE initOnce, PVOID parameter, PVOID* context) {
     (void)initOnce;
@@ -174,6 +182,10 @@ BOOL BeginFontUseSTB(void) {
 
 void EndFontUseSTB(void) {
     LeaveCriticalSection(&g_fontStateCS);
+}
+
+DWORD GetFontStateGenerationSTB(void) {
+    return (DWORD)InterlockedCompareExchange(&g_fontStateGeneration, 0, 0);
 }
 
 static void ReleaseMappedFont(unsigned char* buffer, HANDLE hFile, HANDLE hMapping) {
@@ -506,6 +518,9 @@ void CleanupFontSTB(void) {
 }
 
 static void CleanupFontSTBLocked(void) {
+    BOOL hadMainFontState = g_fontLoaded || g_fallbackFontLoaded ||
+                            g_fontBuffer || g_fallbackFontBuffer;
+
     /* Cleanup main font */
     ReleaseMappedFont(g_fontBuffer, g_hFontFile, g_hFontMapping);
     g_fontBuffer = NULL;
@@ -532,6 +547,10 @@ static void CleanupFontSTBLocked(void) {
     
     /* Also cleanup effect buffers */
     CleanupDrawingEffects();
+
+    if (hadMainFontState) {
+        AdvanceFontStateGeneration();
+    }
 }
 
 BOOL InitFontSTB(const char* fontFilePath) {
@@ -583,6 +602,7 @@ BOOL InitFontSTB(const char* fontFilePath) {
     g_currentFontLastValidateTick = GetTickCount();
     g_currentFontFileInfoValid = TRUE;
     g_fontLoaded = TRUE;
+    AdvanceFontStateGeneration();
     
     LOG_INFO("STB Font loaded successfully: %s", fontFilePath);
 
@@ -1504,6 +1524,7 @@ static void ReleaseCachedFontSlotLocked(int slot) {
         ReleaseMappedFont(g_fontCache[slot].fontBuffer,
                           g_fontCache[slot].hFile,
                           g_fontCache[slot].hMapping);
+        AdvanceFontStateGeneration();
     }
     ZeroMemory(&g_fontCache[slot], sizeof(CachedFont));
     g_fontCacheLRU[slot] = 0;
@@ -1742,6 +1763,7 @@ stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath) {
     g_fontCache[targetSlot].fileInfoValid = TRUE;
     g_fontCache[targetSlot].isLoaded = TRUE;
     TouchFontCacheSlotLocked(targetSlot);
+    AdvanceFontStateGeneration();
 
     LOG_INFO("Cached font loaded: %ls -> %ls", fontPath, resolvedPath);
 

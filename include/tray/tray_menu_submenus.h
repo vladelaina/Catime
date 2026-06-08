@@ -2,6 +2,7 @@
 #define TRAY_MENU_SUBMENUS_H
 
 #include <windows.h>
+#include <stddef.h>
 
 /**
  * @brief Build timeout action submenu
@@ -26,6 +27,15 @@ void BuildFormatSubmenu(HMENU hMenu);
  * @param hMenu Parent menu handle
  */
 void BuildColorSubmenu(HMENU hMenu);
+
+/**
+ * @brief Resolve the color captured when the current color submenu was built
+ * @param id Menu command identifier
+ * @param outColor Optional output buffer for the color string
+ * @param outSize Output buffer size
+ * @return TRUE when id maps to a color in the current/last built color submenu
+ */
+BOOL GetColorMenuColorFromId(UINT id, char* outColor, size_t outSize);
 
 /**
  * @brief Build style/appearance submenu

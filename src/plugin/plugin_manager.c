@@ -600,8 +600,10 @@ void PluginManager_Shutdown(void) {
 
     PluginData_Clear();
 
-    /* Shutdown process management */
-    if (asyncScanStopped && g_pluginProcessInitialized) {
+    /* Shutdown process management once plugin state has been detached.  The
+     * async scanner may still be retiring, but it no longer needs the job.
+     */
+    if (g_pluginProcessInitialized) {
         PluginProcess_Shutdown();
         g_pluginProcessInitialized = FALSE;
     }

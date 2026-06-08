@@ -42,7 +42,7 @@ BOOL HandleWindowCreate(HWND hwnd) {
     /* Enable OLE drag and drop for resource import with preview */
     InitializeOleDropTarget(hwnd);
 
-    UpdateDrawingRenderAnimationTimer(hwnd, FALSE);
+    UpdateDrawingRenderAnimationTimer(hwnd, FALSE, FALSE);
 
     /* Initialize high-precision multimedia timer for smooth milliseconds display */
     if (!MainTimer_Init(hwnd, GetTimerInterval())) {

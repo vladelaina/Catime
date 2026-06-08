@@ -262,6 +262,7 @@ typedef struct {
     int fontSize;
     DWORD headingSignature;
     DWORD fontTagSignature;
+    DWORD fontStateGeneration;
     char fontPath[MAX_PATH];
     wchar_t text[TIME_TEXT_MAX_LEN];
     size_t textLen;
@@ -379,6 +380,62 @@ static BOOL CachedWideTextEquals(const wchar_t* cached, size_t cachedCount,
 
     return wcsncmp(cached, text, textLen) == 0 &&
            cached[textLen] == L'\0';
+}
+
+static BOOL CanUseMeasureCacheForFontTags(const MarkdownFontTag* fontTags, int fontTagCount) {
+    if (!fontTags || fontTagCount <= 0) {
+        return TRUE;
+    }
+
+    int uniqueCount = 0;
+    for (int i = 0; i < fontTagCount; i++) {
+        BOOL seen = FALSE;
+        for (int j = 0; j < i; j++) {
+            if (wcscmp(fontTags[i].fontName, fontTags[j].fontName) == 0) {
+                seen = TRUE;
+                break;
+            }
+        }
+        if (seen) {
+            continue;
+        }
+
+        if (++uniqueCount > MAX_CACHED_FONTS) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+static BOOL RefreshMeasureCacheFontTags(const MarkdownFontTag* fontTags, int fontTagCount) {
+    if (!fontTags || fontTagCount <= 0) {
+        return TRUE;
+    }
+
+    if (!CanUseMeasureCacheForFontTags(fontTags, fontTagCount)) {
+        return FALSE;
+    }
+
+    if (!BeginFontUseSTB()) {
+        return FALSE;
+    }
+
+    for (int i = 0; i < fontTagCount; i++) {
+        BOOL seen = FALSE;
+        for (int j = 0; j < i; j++) {
+            if (wcscmp(fontTags[i].fontName, fontTags[j].fontName) == 0) {
+                seen = TRUE;
+                break;
+            }
+        }
+        if (!seen) {
+            (void)GetCachedFontSTB(fontTags[i].fontName);
+        }
+    }
+
+    EndFontUseSTB();
+    return TRUE;
 }
 
 static void EnsureMarkdownRenderCache(const wchar_t* text) {
@@ -574,11 +631,21 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
         DWORD headingSignature = ComputeHeadingSignature(headings, headingCount);
         DWORD fontTagSignature = ComputeFontTagSignature(fontTags, fontTagCount);
 
-        if (g_textMeasureCache.valid &&
+        if (!InitFontSTB(ctx->absoluteFontPath)) {
+            return FALSE;
+        }
+
+        BOOL canUseMeasureCache = RefreshMeasureCacheFontTags(fontTags, fontTagCount);
+
+        DWORD fontStateGeneration = GetFontStateGenerationSTB();
+
+        if (canUseMeasureCache &&
+            g_textMeasureCache.valid &&
             g_textMeasureCache.isMarkdown == isMarkdown &&
             g_textMeasureCache.fontSize == fontSize &&
             g_textMeasureCache.headingSignature == headingSignature &&
             g_textMeasureCache.fontTagSignature == fontTagSignature &&
+            g_textMeasureCache.fontStateGeneration == fontStateGeneration &&
             strcmp(g_textMeasureCache.fontPath, ctx->absoluteFontPath) == 0 &&
             CachedWideTextEquals(g_textMeasureCache.text,
                                  _countof(g_textMeasureCache.text),
@@ -588,26 +655,25 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
             return TRUE;
         }
 
-        if (InitFontSTB(ctx->absoluteFontPath)) {
-            int w, h;
-            if (MeasureMarkdownSTB(text, headings, headingCount, fontTags, fontTagCount,
-                                  fontSize, &w, &h)) {
-                outSize->cx = w;
-                outSize->cy = h;
-                g_textMeasureCache.valid = TRUE;
-                g_textMeasureCache.isMarkdown = isMarkdown;
-                g_textMeasureCache.fontSize = fontSize;
-                g_textMeasureCache.headingSignature = headingSignature;
-                g_textMeasureCache.fontTagSignature = fontTagSignature;
-                strcpy_s(g_textMeasureCache.fontPath, sizeof(g_textMeasureCache.fontPath),
-                         ctx->absoluteFontPath);
-                CopyCachedWideText(g_textMeasureCache.text,
-                                   _countof(g_textMeasureCache.text),
-                                   &g_textMeasureCache.textLen,
-                                   text);
-                g_textMeasureCache.size = *outSize;
-                return TRUE;
-            }
+        int w, h;
+        if (MeasureMarkdownSTB(text, headings, headingCount, fontTags, fontTagCount,
+                              fontSize, &w, &h)) {
+            outSize->cx = w;
+            outSize->cy = h;
+            g_textMeasureCache.valid = TRUE;
+            g_textMeasureCache.isMarkdown = isMarkdown;
+            g_textMeasureCache.fontSize = fontSize;
+            g_textMeasureCache.headingSignature = headingSignature;
+            g_textMeasureCache.fontTagSignature = fontTagSignature;
+            g_textMeasureCache.fontStateGeneration = GetFontStateGenerationSTB();
+            strcpy_s(g_textMeasureCache.fontPath, sizeof(g_textMeasureCache.fontPath),
+                     ctx->absoluteFontPath);
+            CopyCachedWideText(g_textMeasureCache.text,
+                               _countof(g_textMeasureCache.text),
+                               &g_textMeasureCache.textLen,
+                               text);
+            g_textMeasureCache.size = *outSize;
+            return TRUE;
         }
     }
 
@@ -750,22 +816,30 @@ static BOOL IsActiveTextColorAnimated(void) {
     return s_lastActiveColorAnimated;
 }
 
-static BOOL ShouldRunRenderAnimationTimer(BOOL hasColorTagGradient) {
+static BOOL ShouldRunRenderAnimationTimer(BOOL hasRenderableContent,
+                                          BOOL hasColorTagGradient) {
     /* Holographic is a static prism/glow pass; only liquid and animated
      * gradients need a render-only timer.
      */
-    return CLOCK_LIQUID_EFFECT ||
+    if (!hasRenderableContent) {
+        return FALSE;
+    }
+
+    return GetActiveEffect() == EFFECT_TYPE_LIQUID ||
            hasColorTagGradient ||
            IsActiveTextColorAnimated();
 }
 
-BOOL UpdateDrawingRenderAnimationTimer(HWND hwnd, BOOL hasColorTagGradient) {
+BOOL UpdateDrawingRenderAnimationTimer(HWND hwnd,
+                                       BOOL hasRenderableContent,
+                                       BOOL hasColorTagGradient) {
     if (!IsValidRenderAnimationWindow(hwnd)) {
         StopDrawingRenderAnimationTimer(NULL);
         return FALSE;
     }
 
-    if (!ShouldRunRenderAnimationTimer(hasColorTagGradient)) {
+    if (!IsWindowVisible(hwnd) ||
+        !ShouldRunRenderAnimationTimer(hasRenderableContent, hasColorTagGradient)) {
         StopDrawingRenderAnimationTimer(hwnd);
         return FALSE;
     }
@@ -951,7 +1025,7 @@ static void PreparePaintMarkdownImagesForFrame(MarkdownImage* images, int imageC
 static BOOL EnsurePaintMarkdownImageCapacity(MarkdownImage** images,
                                              int* imageCapacity,
                                              BOOL* heapAllocated,
-                                             const MarkdownImage* stackImages) {
+                                             MarkdownImage* stackImages) {
     if (!images || !*images || !imageCapacity || !heapAllocated || !stackImages) {
         return FALSE;
     }
@@ -973,6 +1047,7 @@ static BOOL EnsurePaintMarkdownImageCapacity(MarkdownImage** images,
         newImages = (MarkdownImage*)calloc((size_t)newCapacity, sizeof(MarkdownImage));
         if (!newImages) return FALSE;
         memcpy(newImages, stackImages, (size_t)oldCapacity * sizeof(MarkdownImage));
+        ZeroMemory(stackImages, (size_t)oldCapacity * sizeof(MarkdownImage));
         *heapAllocated = TRUE;
     }
 
@@ -1608,6 +1683,6 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
 
     if (layeredUpdateSucceeded) {
         RefreshClickThroughState(hwnd);
-        UpdateDrawingRenderAnimationTimer(hwnd, hasColorTagGradient);
+        UpdateDrawingRenderAnimationTimer(hwnd, hasContent, hasColorTagGradient);
     }
 }

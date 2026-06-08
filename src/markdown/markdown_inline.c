@@ -437,8 +437,18 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
     return TRUE;
 }
 
-BOOL ExtractMarkdownStyle(const wchar_t** src, ParseState* state) {
+static BOOL IsBeforeInlineLimit(const wchar_t* p, const wchar_t* limit) {
+    return !limit || p < limit;
+}
+
+static BOOL IsAtInlineLimitOrEnd(const wchar_t* p, const wchar_t* limit) {
+    return limit ? p >= limit : *p == L'\0';
+}
+
+static BOOL ExtractMarkdownStyleBounded(const wchar_t** src, ParseState* state,
+                                        const wchar_t* limit) {
     if (!src || !*src || !state) return FALSE;
+    if (!IsBeforeInlineLimit(*src, limit)) return FALSE;
 
     wchar_t marker = **src;
     if (marker != L'*' && marker != L'_') return FALSE;
@@ -446,12 +456,12 @@ BOOL ExtractMarkdownStyle(const wchar_t** src, ParseState* state) {
     const wchar_t* start = *src;
     int markerCount = 0;
 
-    while (**src == marker && markerCount < 3) {
+    while (IsBeforeInlineLimit(*src, limit) && **src == marker && markerCount < 3) {
         markerCount++;
         (*src)++;
     }
 
-    if (markerCount == 0 || **src == L' ' || **src == L'\0') {
+    if (markerCount == 0 || IsAtInlineLimitOrEnd(*src, limit) || **src == L' ') {
         *src = start;
         return FALSE;
     }
@@ -459,11 +469,13 @@ BOOL ExtractMarkdownStyle(const wchar_t** src, ParseState* state) {
     const wchar_t* textStart = *src;
     const wchar_t* end = textStart;
 
-    while (*end) {
+    while (IsBeforeInlineLimit(end, limit) && *end) {
         if (*end == marker) {
             int endCount = 0;
             const wchar_t* endCheck = end;
-            while (*endCheck == marker && endCount < markerCount) {
+            while (IsBeforeInlineLimit(endCheck, limit) &&
+                   *endCheck == marker &&
+                   endCount < markerCount) {
                 endCount++;
                 endCheck++;
             }
@@ -496,6 +508,10 @@ BOOL ExtractMarkdownStyle(const wchar_t** src, ParseState* state) {
 
     *src = start;
     return FALSE;
+}
+
+BOOL ExtractMarkdownStyle(const wchar_t** src, ParseState* state) {
+    return ExtractMarkdownStyleBounded(src, state, NULL);
 }
 
 BOOL ExtractMarkdownCode(const wchar_t** src, ParseState* state) {
@@ -536,17 +552,23 @@ BOOL ExtractMarkdownCode(const wchar_t** src, ParseState* state) {
     return TRUE;
 }
 
-BOOL ExtractMarkdownStrikethrough(const wchar_t** src, ParseState* state) {
+static BOOL ExtractMarkdownStrikethroughBounded(const wchar_t** src, ParseState* state,
+                                                const wchar_t* limit) {
     if (!src || !*src || !state) return FALSE;
+    if (!IsBeforeInlineLimit(*src, limit)) return FALSE;
 
-    if (**src != L'~' || *(*src + 1) != L'~') return FALSE;
+    if (**src != L'~' ||
+        !IsBeforeInlineLimit(*src + 1, limit) ||
+        *(*src + 1) != L'~') return FALSE;
 
     const wchar_t* start = *src;
     const wchar_t* textStart = *src + 2;
     const wchar_t* end = textStart;
 
-    while (*end) {
-        if (*end == L'~' && *(end + 1) == L'~') {
+    while (IsBeforeInlineLimit(end, limit) && *end) {
+        if (*end == L'~' &&
+            IsBeforeInlineLimit(end + 1, limit) &&
+            *(end + 1) == L'~') {
             if (end > textStart) {
                 if (!EnsureStyleCapacity(state)) {
                     *src = start;
@@ -574,6 +596,10 @@ BOOL ExtractMarkdownStrikethrough(const wchar_t** src, ParseState* state) {
 
     *src = start;
     return FALSE;
+}
+
+BOOL ExtractMarkdownStrikethrough(const wchar_t** src, ParseState* state) {
+    return ExtractMarkdownStrikethroughBounded(src, state, NULL);
 }
 
 /* Parse hex color from wide string: #RRGGBB -> COLORREF */
@@ -659,7 +685,7 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
         
         /* Try Markdown styles (bold, italic, strikethrough) */
         if ((*contentSrc == L'*' || *contentSrc == L'_') && contentSrc + 1 < closeTag) {
-            if (ExtractMarkdownStyle(&contentSrc, state)) {
+            if (ExtractMarkdownStyleBounded(&contentSrc, state, closeTag)) {
                 dest = state->displayText + state->currentPos;
                 continue;
             }
@@ -667,7 +693,7 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
         
         /* Try strikethrough ~~text~~ */
         if (*contentSrc == L'~' && contentSrc + 1 < closeTag && *(contentSrc + 1) == L'~') {
-            if (ExtractMarkdownStrikethrough(&contentSrc, state)) {
+            if (ExtractMarkdownStrikethroughBounded(&contentSrc, state, closeTag)) {
                 dest = state->displayText + state->currentPos;
                 continue;
             }
@@ -746,7 +772,7 @@ BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
         
         /* Try Markdown styles (bold, italic, strikethrough) */
         if ((*contentSrc == L'*' || *contentSrc == L'_') && contentSrc + 1 < closeTag) {
-            if (ExtractMarkdownStyle(&contentSrc, state)) {
+            if (ExtractMarkdownStyleBounded(&contentSrc, state, closeTag)) {
                 dest = state->displayText + state->currentPos;
                 continue;
             }
@@ -754,7 +780,7 @@ BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
         
         /* Try strikethrough ~~text~~ */
         if (*contentSrc == L'~' && contentSrc + 1 < closeTag && *(contentSrc + 1) == L'~') {
-            if (ExtractMarkdownStrikethrough(&contentSrc, state)) {
+            if (ExtractMarkdownStrikethroughBounded(&contentSrc, state, closeTag)) {
                 dest = state->displayText + state->currentPos;
                 continue;
             }

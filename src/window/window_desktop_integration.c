@@ -8,6 +8,7 @@
 #include "config.h"
 #include "timer/timer.h"
 #include "plugin/plugin_data.h"
+#include "drawing/drawing_render.h"
 #include "log.h"
 #include "../../resource/resource.h"
 
@@ -372,6 +373,7 @@ void HideWindowIntentionally(HWND hwnd) {
 
     s_windowIntentionallyHidden = TRUE;
     CancelTopmostVisibilityRestore(hwnd);
+    StopDrawingRenderAnimationTimer(hwnd);
     ShowWindow(hwnd, SW_HIDE);
 }
 

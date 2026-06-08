@@ -651,7 +651,7 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         if (previousTextEffect != TEXT_EFFECT_NONE && newTextEffect == TEXT_EFFECT_NONE) {
             CleanupDrawingEffects();
         }
-        UpdateDrawingRenderAnimationTimer(hwnd, FALSE);
+        UpdateDrawingRenderAnimationTimer(hwnd, FALSE, FALSE);
         changed = TRUE;
     }
 

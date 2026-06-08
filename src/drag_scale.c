@@ -110,9 +110,14 @@ void CancelScheduledConfigSave(HWND hwnd) {
 
 void StartDragWindow(HWND hwnd) {
     if (!CLOCK_EDIT_MODE) return;
-    
-    CLOCK_IS_DRAGGING = TRUE;
+
     SetCapture(hwnd);
+    if (GetCapture() != hwnd) {
+        LOG_WARNING("Failed to capture mouse for edit-mode drag");
+        return;
+    }
+
+    CLOCK_IS_DRAGGING = TRUE;
     GetCursorPos(&CLOCK_LAST_MOUSE_POS);
 }
 
@@ -138,6 +143,13 @@ void StartEditMode(HWND hwnd) {
 
 void EndEditMode(HWND hwnd) {
     if (!CLOCK_EDIT_MODE) return;
+
+    if (CLOCK_IS_DRAGGING) {
+        CLOCK_IS_DRAGGING = FALSE;
+        if (GetCapture() == hwnd) {
+            ReleaseCapture();
+        }
+    }
 
     CLOCK_EDIT_MODE = FALSE;
 
@@ -171,18 +183,28 @@ void MarkEditModeTopmostOverride(void) {
 }
 
 void EndDragWindow(HWND hwnd) {
-    if (!CLOCK_EDIT_MODE || !CLOCK_IS_DRAGGING) return;
+    if (!CLOCK_IS_DRAGGING) return;
     
     CLOCK_IS_DRAGGING = FALSE;
-    ReleaseCapture();
+    if (GetCapture() == hwnd) {
+        ReleaseCapture();
+    }
     
     RefreshWindow(hwnd, TRUE);
-    ScheduleConfigSave(hwnd);
+    if (CLOCK_EDIT_MODE) {
+        ScheduleConfigSave(hwnd);
+    }
 }
 
 /* SWP_NOREDRAW + UpdateWindow maintains smooth dragging */
 BOOL HandleDragWindow(HWND hwnd) {
     if (!CLOCK_EDIT_MODE || !CLOCK_IS_DRAGGING) return FALSE;
+
+    if (GetCapture() != hwnd) {
+        CLOCK_IS_DRAGGING = FALSE;
+        ScheduleConfigSave(hwnd);
+        return FALSE;
+    }
     
     POINT currentPos;
     GetCursorPos(&currentPos);

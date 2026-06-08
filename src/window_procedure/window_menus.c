@@ -12,6 +12,7 @@
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_menu_font.h"
+#include "tray/tray_menu_submenus.h"
 #include "utils/natural_sort.h"
 #include "color/color_state.h"
 #include "config.h"
@@ -46,9 +47,9 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return FALSE;
     }
 
-    int colorIndex = menuId - CMD_COLOR_OPTIONS_BASE;
-    if (colorIndex >= 0 && colorIndex < (int)COLOR_OPTIONS_COUNT) {
-        StartPreview(PREVIEW_TYPE_COLOR, COLOR_OPTIONS[colorIndex].hexColor, hwnd);
+    char color[COLOR_HEX_BUFFER];
+    if (GetColorMenuColorFromId(menuId, color, sizeof(color))) {
+        StartPreview(PREVIEW_TYPE_COLOR, color, hwnd);
         return TRUE;
     }
 

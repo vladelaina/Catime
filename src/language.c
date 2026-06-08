@@ -13,6 +13,7 @@
 
 #define MAX_TRANSLATIONS 600
 #define MAX_STRING_LENGTH 1536
+#define LOCALIZED_RETURN_SLOT_COUNT 32
 
 typedef struct {
     wchar_t* english;
@@ -83,6 +84,27 @@ static void ClearTranslationTable(TranslationTable* table) {
         free(table->entries[i].translation);
     }
     ZeroMemory(table, sizeof(*table));
+}
+
+static const wchar_t* CopyLocalizedReturnValue(const wchar_t* value) {
+    if (!value) {
+        return L"";
+    }
+
+#if defined(_MSC_VER)
+    __declspec(thread) static wchar_t buffers[LOCALIZED_RETURN_SLOT_COUNT][MAX_STRING_LENGTH];
+    __declspec(thread) static unsigned int nextSlot = 0;
+#elif defined(__GNUC__)
+    static __thread wchar_t buffers[LOCALIZED_RETURN_SLOT_COUNT][MAX_STRING_LENGTH];
+    static __thread unsigned int nextSlot = 0;
+#else
+    static wchar_t buffers[LOCALIZED_RETURN_SLOT_COUNT][MAX_STRING_LENGTH];
+    static unsigned int nextSlot = 0;
+#endif
+
+    wchar_t* slot = buffers[nextSlot++ % LOCALIZED_RETURN_SLOT_COUNT];
+    wcsncpy_s(slot, MAX_STRING_LENGTH, value, _TRUNCATE);
+    return slot;
 }
 
 static wchar_t* DuplicateWideSpan(const wchar_t* start, size_t length) {
@@ -348,27 +370,37 @@ static void DetectSystemLanguage(void) {
  * @return Never NULL
  */
 const wchar_t* GetLocalizedString(const wchar_t* chinese, const wchar_t* english) {
+    const wchar_t* fallback = english ? english : L"";
+
+    if (!BeginLanguageStateUse()) {
+        return fallback;
+    }
+
     if (!g_initialized) {
-        if (BeginLanguageStateUse()) {
-            if (!g_initialized) {
-                DetectSystemLanguage();
-                LoadLanguageResource(CURRENT_LANGUAGE);
-                g_initialized = TRUE;
-            }
-            EndLanguageStateUse();
-        }
+        DetectSystemLanguage();
+        LoadLanguageResource(CURRENT_LANGUAGE);
+        g_initialized = TRUE;
+    }
+
+    AppLanguage language = CURRENT_LANGUAGE;
+    if (language < 0 || language >= APP_LANG_COUNT) {
+        language = APP_LANG_ENGLISH;
     }
     
-    if (chinese && g_languageMetadata[CURRENT_LANGUAGE].useDirectChinese) {
+    if (chinese && g_languageMetadata[language].useDirectChinese) {
+        EndLanguageStateUse();
         return chinese;
     }
     
     const wchar_t* translation = FindTranslation(english);
     if (translation) {
-        return translation;
+        const wchar_t* copy = CopyLocalizedReturnValue(translation);
+        EndLanguageStateUse();
+        return copy;
     }
-    
-    return english ? english : L"";
+
+    EndLanguageStateUse();
+    return fallback;
 }
 
 BOOL SetLanguage(AppLanguage language) {

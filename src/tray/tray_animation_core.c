@@ -691,6 +691,17 @@ static void RecordSuccessfulUpdate(void) {
     g_lastSuccessfulUpdateTime = GetTickCount();
 }
 
+static void RecordFrameRateLatency(void) {
+    BOOL locked = IsAnimCriticalSectionReady();
+    if (locked) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+    FrameRateController_RecordLatency(&g_frameRateCtrl, GetTickCount());
+    if (locked) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+}
+
 /**
  * @brief Record failed update
  * @return TRUE if should fallback
@@ -969,7 +980,7 @@ applyIcon:
                                          builtinIconCx, builtinIconCy);
         }
         if (sourceType != ANIM_SOURCE_PERCENT && sourceType != ANIM_SOURCE_CAPSLOCK) {
-            FrameRateController_RecordLatency(&g_frameRateCtrl, GetTickCount());
+            RecordFrameRateLatency();
         }
     } else {
         WriteLog(LOG_LEVEL_WARNING, "Shell_NotifyIconW failed");

@@ -105,6 +105,30 @@ static BOOL LoadPreviewFontName(const char* fontName, char* internalName, size_t
     return TRUE;
 }
 
+static BOOL RestoreConfiguredFontAfterPreview(void) {
+    if (FONT_FILE_NAME[0] == '\0') {
+        return FALSE;
+    }
+
+    const char* loadName = FONT_FILE_NAME;
+    if (IsFontsFolderPath(FONT_FILE_NAME)) {
+        const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+        if (!relativePath || relativePath[0] == '\0') {
+            return FALSE;
+        }
+        loadName = relativePath;
+    }
+
+    HINSTANCE hInstance = GetModuleHandle(NULL);
+    if (!LoadFontByNameAndGetRealName(hInstance, loadName,
+                                      FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
+        LOG_WARNING("Preview: failed to restore font after preview: %s", FONT_FILE_NAME);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 void StartPreview(PreviewType type, const void* data, HWND hwnd) {
     if (type == PREVIEW_TYPE_EFFECT && g_previewState.type == PREVIEW_TYPE_EFFECT) {
         if (!data) {
@@ -217,11 +241,7 @@ void CancelPreview(HWND hwnd) {
                                !IsConfiguredTextEffectActive());
 
     if (needsFontReload) {
-        HINSTANCE hInstance = GetModuleHandle(NULL);
-        if (FONT_FILE_NAME[0] != '\0') {
-            LoadFontByNameAndGetRealName(hInstance, FONT_FILE_NAME,
-                                        FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
-        }
+        RestoreConfiguredFontAfterPreview();
     }
 
     /* Reset preview state */
@@ -283,6 +303,18 @@ BOOL ApplyPreview(HWND hwnd) {
     g_previewState.type = PREVIEW_TYPE_NONE;
     if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
     return TRUE;
+}
+
+void MarkAnimationPreviewApplied(HWND hwnd) {
+    if (g_previewState.type != PREVIEW_TYPE_ANIMATION) {
+        return;
+    }
+
+    g_previewState.type = PREVIEW_TYPE_NONE;
+    g_previewState.data.animationPath[0] = '\0';
+    if (hwnd) {
+        InvalidateRect(hwnd, NULL, TRUE);
+    }
 }
 
 /* ============================================================================

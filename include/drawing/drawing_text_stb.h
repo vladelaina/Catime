@@ -35,6 +35,11 @@ BOOL BeginFontUseSTB(void);
  */
 void EndFontUseSTB(void);
 
+/**
+ * @brief Monotonic version for STB font mappings/cache state.
+ */
+DWORD GetFontStateGenerationSTB(void);
+
 /* ============================================================================
  * Font Cache for <font:> Tags (Max 4 cached fonts)
  * ============================================================================ */

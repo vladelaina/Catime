@@ -42,6 +42,55 @@ static HBITMAP s_hRedDot = NULL;
 static int s_redDotCx = 0;
 static int s_redDotCy = 0;
 
+typedef struct {
+    UINT id;
+    char color[COLOR_HEX_BUFFER];
+    BOOL valid;
+} ColorMenuIdMapEntry;
+
+static ColorMenuIdMapEntry s_colorMenuIdMap[MAX_COLOR_OPTIONS];
+
+static void ResetColorMenuIdMap(void) {
+    ZeroMemory(s_colorMenuIdMap, sizeof(s_colorMenuIdMap));
+}
+
+static BOOL RememberColorMenuId(UINT id, const char* color) {
+    if (!color || id < CMD_COLOR_OPTIONS_BASE) {
+        return FALSE;
+    }
+
+    UINT index = id - CMD_COLOR_OPTIONS_BASE;
+    if (index >= MAX_COLOR_OPTIONS) {
+        return FALSE;
+    }
+
+    s_colorMenuIdMap[index].id = id;
+    strncpy_s(s_colorMenuIdMap[index].color,
+              sizeof(s_colorMenuIdMap[index].color),
+              color,
+              _TRUNCATE);
+    s_colorMenuIdMap[index].valid = s_colorMenuIdMap[index].color[0] != '\0';
+    return s_colorMenuIdMap[index].valid;
+}
+
+BOOL GetColorMenuColorFromId(UINT id, char* outColor, size_t outSize) {
+    if (id < CMD_COLOR_OPTIONS_BASE) {
+        return FALSE;
+    }
+
+    UINT index = id - CMD_COLOR_OPTIONS_BASE;
+    if (index >= MAX_COLOR_OPTIONS ||
+        !s_colorMenuIdMap[index].valid ||
+        s_colorMenuIdMap[index].id != id) {
+        return FALSE;
+    }
+
+    if (outColor && outSize > 0) {
+        strncpy_s(outColor, outSize, s_colorMenuIdMap[index].color, _TRUNCATE);
+    }
+    return TRUE;
+}
+
 /* Function to read timeout action (extracted from tray_menu.c) */
 void ReadTimeoutActionFromConfig() {
     /* Preserve one-time actions: don't override them from config */
@@ -265,10 +314,17 @@ void BuildFormatSubmenu(HMENU hMenu) {
  * @param hMenu Parent menu handle
  */
 void BuildColorSubmenu(HMENU hMenu) {
+    ResetColorMenuIdMap();
+
     HMENU hColorSubMenu = CreatePopupMenu();
     if (!hColorSubMenu) return;
 
-    for (size_t i = 0; i < COLOR_OPTIONS_COUNT; i++) {
+    size_t colorCount = COLOR_OPTIONS_COUNT;
+    if (colorCount > MAX_COLOR_OPTIONS) {
+        colorCount = MAX_COLOR_OPTIONS;
+    }
+
+    for (size_t i = 0; i < colorCount; i++) {
         const char* hexColor = COLOR_OPTIONS[i].hexColor;
         
         /* Display as sequence number for easier selection */
@@ -282,8 +338,10 @@ void BuildColorSubmenu(HMENU hMenu) {
         mii.fState = strcmp(CLOCK_TEXT_COLOR, hexColor) == 0 ? MFS_CHECKED : MFS_UNCHECKED;
         mii.wID = CMD_COLOR_OPTIONS_BASE + (UINT)i;
         mii.dwTypeData = hexColorW;
-        
-        InsertMenuItem(hColorSubMenu, (UINT)i, TRUE, &mii);
+
+        if (InsertMenuItemW(hColorSubMenu, (UINT)i, TRUE, &mii)) {
+            RememberColorMenuId(mii.wID, hexColor);
+        }
     }
     AppendMenuW(hColorSubMenu, MF_SEPARATOR, 0, NULL);
 

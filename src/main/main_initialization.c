@@ -30,12 +30,14 @@
 #include "dialog/dialog_font_picker.h"
 #include "dialog/dialog_notification_audio.h"
 #include "shortcut_checker.h"
+#include "font.h"
 #include "utils/string_convert.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_menu_font.h"
 #include "drawing/drawing_image.h"
+#include "drawing/drawing_effect.h"
 #include "drawing/drawing_render.h"
 #include "drawing/drawing_timer_precision.h"
 #include "markdown/markdown_image.h"
@@ -654,6 +656,9 @@ void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Cleaning up cached markdown render state");
     CleanupDrawingRenderCache();
 
+    LOG_INFO("Cleaning up drawing effect buffers");
+    CleanupDrawingEffects();
+
     LOG_INFO("Shutting down markdown image subsystem");
     ShutdownMarkdownImage();
 
@@ -677,6 +682,11 @@ void CleanupResources(HANDLE hMutex) {
 
     LOG_INFO("Cleaning up system font picker resources");
     CleanupSystemFontDialogResources();
+
+    LOG_INFO("Unloading active font resource");
+    if (!UnloadCurrentFontResource()) {
+        LOG_WARNING("Failed to unload font resources during final cleanup");
+    }
 
     LOG_INFO("Shutting down notification sound cache");
     NotificationSoundCache_Shutdown();

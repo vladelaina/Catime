@@ -21,10 +21,13 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps);
  * Start, stop, or retune the render animation timer from the shared render state.
  *
  * @param hwnd Window handle that owns TIMER_ID_RENDER_ANIMATION
+ * @param hasRenderableContent TRUE when the current frame has visible text/images
  * @param hasColorTagGradient TRUE when the current markdown frame needs gradient animation
  * @return TRUE if the timer is active after the update
  */
-BOOL UpdateDrawingRenderAnimationTimer(HWND hwnd, BOOL hasColorTagGradient);
+BOOL UpdateDrawingRenderAnimationTimer(HWND hwnd,
+                                       BOOL hasRenderableContent,
+                                       BOOL hasColorTagGradient);
 
 /**
  * Stop the render animation timer and clear cached timer state.

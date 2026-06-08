@@ -201,7 +201,7 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
         RefreshWindowTopmostState(hwnd);
 
-        UpdateDrawingRenderAnimationTimer(hwnd, FALSE);
+        UpdateDrawingRenderAnimationTimer(hwnd, FALSE, FALSE);
 
         InvalidateRect(hwnd, NULL, TRUE);
     } else {
