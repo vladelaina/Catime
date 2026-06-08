@@ -72,7 +72,6 @@ jobs:
             --library=windows \
             -i libs \
             -i src/audio_player.c \
-            --suppress=missingIncludeSystem \
             --xml \
             --xml-version=2 \
             -I include \

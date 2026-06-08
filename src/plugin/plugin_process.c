@@ -18,6 +18,8 @@ static HWND g_hNotifyWnd = NULL;
 
 #define JOB_PROCESS_STACK_CAPACITY 16
 #define PROCESS_TREE_STACK_CAPACITY 256
+#define PROCESS_TREE_MAX_DEPTH 32
+#define PROCESS_TREE_VISITED_CAPACITY (PROCESS_TREE_MAX_DEPTH + 1)
 #define PLUGIN_LAUNCH_READY_TIMEOUT_MS 5000
 #define PLUGIN_LAUNCH_START_FAILURE_COOLDOWN_MS 2000
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
@@ -648,9 +650,29 @@ static void TerminateSingleProcess(DWORD pid) {
     }
 }
 
-static void TerminateProcessTreeSlow(DWORD pid, int depth) {
+static BOOL HasVisitedProcessId(const DWORD* visitedPids, DWORD visitedCount, DWORD pid) {
+    if (!visitedPids) return FALSE;
+    for (DWORD i = 0; i < visitedCount; i++) {
+        if (visitedPids[i] == pid) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void TerminateProcessTreeSlowVisited(DWORD pid,
+                                            int depth,
+                                            DWORD* visitedPids,
+                                            DWORD visitedCount) {
     /* Safety: prevent infinite recursion and skip invalid PIDs */
-    if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
+    if (pid == 0 || pid == GetCurrentProcessId() ||
+        depth > PROCESS_TREE_MAX_DEPTH ||
+        HasVisitedProcessId(visitedPids, visitedCount, pid)) {
+        return;
+    }
+    if (visitedCount < PROCESS_TREE_VISITED_CAPACITY) {
+        visitedPids[visitedCount++] = pid;
+    }
 
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot != INVALID_HANDLE_VALUE) {
@@ -661,7 +683,10 @@ static void TerminateProcessTreeSlow(DWORD pid, int depth) {
             do {
                 if (pe.th32ParentProcessID == pid && pe.th32ProcessID != pid) {
                     /* Found a child process - recurse first (depth-first termination) */
-                    TerminateProcessTreeSlow(pe.th32ProcessID, depth + 1);
+                    TerminateProcessTreeSlowVisited(pe.th32ProcessID,
+                                                    depth + 1,
+                                                    visitedPids,
+                                                    visitedCount);
                 }
             } while (Process32NextW(hSnapshot, &pe));
         }
@@ -671,19 +696,46 @@ static void TerminateProcessTreeSlow(DWORD pid, int depth) {
     TerminateSingleProcess(pid);
 }
 
-static void TerminateProcessTreeFromSnapshot(const ProcessTreeEntry* entries,
-                                             DWORD count,
-                                             DWORD pid,
-                                             int depth) {
-    if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
+static void TerminateProcessTreeSlow(DWORD pid, int depth) {
+    DWORD visitedPids[PROCESS_TREE_VISITED_CAPACITY] = {0};
+    TerminateProcessTreeSlowVisited(pid, depth, visitedPids, 0);
+}
+
+static void TerminateProcessTreeFromSnapshotVisited(const ProcessTreeEntry* entries,
+                                                    DWORD count,
+                                                    DWORD pid,
+                                                    int depth,
+                                                    DWORD* visitedPids,
+                                                    DWORD visitedCount) {
+    if (pid == 0 || pid == GetCurrentProcessId() ||
+        depth > PROCESS_TREE_MAX_DEPTH ||
+        HasVisitedProcessId(visitedPids, visitedCount, pid)) {
+        return;
+    }
+    if (visitedCount < PROCESS_TREE_VISITED_CAPACITY) {
+        visitedPids[visitedCount++] = pid;
+    }
 
     for (DWORD i = 0; i < count; i++) {
         if (entries[i].parentProcessId == pid && entries[i].processId != pid) {
-            TerminateProcessTreeFromSnapshot(entries, count, entries[i].processId, depth + 1);
+            TerminateProcessTreeFromSnapshotVisited(entries,
+                                                    count,
+                                                    entries[i].processId,
+                                                    depth + 1,
+                                                    visitedPids,
+                                                    visitedCount);
         }
     }
 
     TerminateSingleProcess(pid);
+}
+
+static void TerminateProcessTreeFromSnapshot(const ProcessTreeEntry* entries,
+                                             DWORD count,
+                                             DWORD pid,
+                                             int depth) {
+    DWORD visitedPids[PROCESS_TREE_VISITED_CAPACITY] = {0};
+    TerminateProcessTreeFromSnapshotVisited(entries, count, pid, depth, visitedPids, 0);
 }
 
 /**
@@ -692,7 +744,7 @@ static void TerminateProcessTreeFromSnapshot(const ProcessTreeEntry* entries,
  * @param depth Current recursion depth (for logging and safety)
  */
 static void TerminateProcessTree(DWORD pid, int depth) {
-    if (pid == 0 || pid == GetCurrentProcessId() || depth > 32) return;
+    if (pid == 0 || pid == GetCurrentProcessId() || depth > PROCESS_TREE_MAX_DEPTH) return;
 
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot == INVALID_HANDLE_VALUE) {

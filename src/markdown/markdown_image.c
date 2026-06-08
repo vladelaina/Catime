@@ -35,8 +35,10 @@
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 static BOOL IsDownloadShutdownRequested(void);
-static BOOL TrackDownloadHandle(HINTERNET handle);
-static void CloseTrackedDownloadHandle(HINTERNET* handlePtr);
+static BOOL IsDownloadCanceled(LONG generation);
+static LONG GetDownloadGeneration(void);
+static BOOL TrackDownloadHandle(HINTERNET handle, LONG generation);
+static void CloseTrackedDownloadHandle(HINTERNET* handlePtr, LONG generation);
 static void RequestMarkdownImageDownloadCancel(void);
 
 static BOOL IsValidMarkdownImageNotifyWindow(HWND hwnd) {
@@ -513,10 +515,11 @@ static void PruneImageCacheDirectory(const wchar_t* cacheDir, const wchar_t* kee
  * Network Image Download
  * ============================================================================ */
 
-BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
+static BOOL DownloadImageToCacheForGeneration(const wchar_t* url, wchar_t* localPath,
+                                              LONG generation) {
     if (!url || !localPath) return FALSE;
     localPath[0] = L'\0';
-    if (IsDownloadShutdownRequested()) return FALSE;
+    if (IsDownloadCanceled(generation)) return FALSE;
 
     /* Get cache directory */
     wchar_t cacheDir[MAX_PATH];
@@ -550,17 +553,17 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     HINTERNET hInternet = InternetOpenW(L"Catime/1.0", INTERNET_OPEN_TYPE_DIRECT,
                                          NULL, NULL, 0);
     if (!hInternet) {
-        if (!IsDownloadShutdownRequested()) {
+        if (!IsDownloadCanceled(generation)) {
             LOG_ERROR("Failed to open Internet session");
         }
         return FALSE;
     }
-    if (!TrackDownloadHandle(hInternet)) {
+    if (!TrackDownloadHandle(hInternet, generation)) {
         InternetCloseHandle(hInternet);
         return FALSE;
     }
-    if (IsDownloadShutdownRequested()) {
-        CloseTrackedDownloadHandle(&hInternet);
+    if (IsDownloadCanceled(generation)) {
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
 
@@ -573,15 +576,15 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     HINTERNET hUrl = InternetOpenUrlW(hInternet, url, NULL, 0,
                                        INTERNET_FLAG_RELOAD | INTERNET_FLAG_NO_CACHE_WRITE, 0);
     if (!hUrl) {
-        if (!IsDownloadShutdownRequested()) {
+        if (!IsDownloadCanceled(generation)) {
             LOG_ERROR("Failed to open URL: %ls", url);
         }
-        CloseTrackedDownloadHandle(&hInternet);
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
-    if (!TrackDownloadHandle(hUrl)) {
+    if (!TrackDownloadHandle(hUrl, generation)) {
         InternetCloseHandle(hUrl);
-        CloseTrackedDownloadHandle(&hInternet);
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
 
@@ -590,28 +593,28 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     if (!HttpQueryInfoW(hUrl, HTTP_QUERY_STATUS_CODE | HTTP_QUERY_FLAG_NUMBER,
                         &statusCode, &statusCodeSize, NULL) ||
         statusCode < 200 || statusCode >= 300) {
-        if (!IsDownloadShutdownRequested()) {
+        if (!IsDownloadCanceled(generation)) {
             LOG_WARNING("Image download returned HTTP status %lu: %ls",
                         statusCode, url);
         }
-        CloseTrackedDownloadHandle(&hUrl);
-        CloseTrackedDownloadHandle(&hInternet);
+        CloseTrackedDownloadHandle(&hUrl, generation);
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
 
-    if (IsDownloadShutdownRequested()) {
-        CloseTrackedDownloadHandle(&hUrl);
-        CloseTrackedDownloadHandle(&hInternet);
+    if (IsDownloadCanceled(generation)) {
+        CloseTrackedDownloadHandle(&hUrl, generation);
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
 
     wchar_t tempPath[MAX_PATH] = {0};
     if (GetTempFileNameW(cacheDir, L"cti", 0, tempPath) == 0) {
-        if (!IsDownloadShutdownRequested()) {
+        if (!IsDownloadCanceled(generation)) {
             LOG_ERROR("Failed to create temporary image cache file in: %ls", cacheDir);
         }
-        CloseTrackedDownloadHandle(&hUrl);
-        CloseTrackedDownloadHandle(&hInternet);
+        CloseTrackedDownloadHandle(&hUrl, generation);
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
 
@@ -619,12 +622,12 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
     HANDLE hFile = CreateFileW(tempPath, GENERIC_WRITE, 0, NULL,
                                CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
-        if (!IsDownloadShutdownRequested()) {
+        if (!IsDownloadCanceled(generation)) {
             LOG_ERROR("Failed to create temporary cache file: %ls", tempPath);
         }
         DeleteFileW(tempPath);
-        CloseTrackedDownloadHandle(&hUrl);
-        CloseTrackedDownloadHandle(&hInternet);
+        CloseTrackedDownloadHandle(&hUrl, generation);
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
 
@@ -634,18 +637,18 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
         LOG_ERROR("Failed to allocate image download buffer");
         CloseHandle(hFile);
         DeleteFileW(tempPath);
-        CloseTrackedDownloadHandle(&hUrl);
-        CloseTrackedDownloadHandle(&hInternet);
+        CloseTrackedDownloadHandle(&hUrl, generation);
+        CloseTrackedDownloadHandle(&hInternet, generation);
         return FALSE;
     }
     DWORD bytesRead, bytesWritten;
     DWORD totalBytes = 0;
     BOOL success = TRUE;
 
-    while (!IsDownloadShutdownRequested()) {
+    while (!IsDownloadCanceled(generation)) {
         bytesRead = 0;
         if (!InternetReadFile(hUrl, buffer, IMAGE_DOWNLOAD_READ_BUFFER_SIZE, &bytesRead)) {
-            if (!IsDownloadShutdownRequested()) {
+            if (!IsDownloadCanceled(generation)) {
                 LOG_ERROR("Failed while reading image URL: %ls", url);
             }
             success = FALSE;
@@ -668,7 +671,7 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
         }
         totalBytes += bytesRead;
     }
-    if (IsDownloadShutdownRequested()) {
+    if (IsDownloadCanceled(generation)) {
         success = FALSE;
     }
 
@@ -680,8 +683,8 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
         LOG_ERROR("Failed to close temporary image cache file: %ls", tempPath);
         success = FALSE;
     }
-    CloseTrackedDownloadHandle(&hUrl);
-    CloseTrackedDownloadHandle(&hInternet);
+    CloseTrackedDownloadHandle(&hUrl, generation);
+    CloseTrackedDownloadHandle(&hInternet, generation);
     free(buffer);
 
     if (success && totalBytes > 0 &&
@@ -694,6 +697,11 @@ BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
         localPath[0] = L'\0';
         return FALSE;
     }
+}
+
+BOOL DownloadImageToCache(const wchar_t* url, wchar_t* localPath) {
+    LONG generation = GetDownloadGeneration();
+    return DownloadImageToCacheForGeneration(url, localPath, generation);
 }
 
 /**
@@ -743,10 +751,24 @@ static volatile LONG g_downloadCSInit = 0;
 static HANDLE g_downloadIdleEvent = NULL;
 static volatile LONG g_activeDownloadCount = 0;
 static volatile LONG g_downloadShutdown = 0;
+static volatile LONG g_downloadGeneration = 0;
+static volatile LONG g_downloadRestartPending = 0;
 static volatile LONG g_downloadInitLastFailureTick = 0;
 
 static BOOL IsDownloadShutdownRequested(void) {
     return InterlockedCompareExchange(&g_downloadShutdown, 0, 0) != 0;
+}
+
+static LONG GetDownloadGeneration(void) {
+    return InterlockedCompareExchange(&g_downloadGeneration, 0, 0);
+}
+
+static BOOL IsDownloadGenerationCurrent(LONG generation) {
+    return GetDownloadGeneration() == generation;
+}
+
+static BOOL IsDownloadCanceled(LONG generation) {
+    return IsDownloadShutdownRequested() || !IsDownloadGenerationCurrent(generation);
 }
 
 static BOOL IsDownloadInitFailureCoolingDown(DWORD now) {
@@ -802,11 +824,15 @@ static BOOL EnsureDownloadCSInit(void) {
     return !IsDownloadShutdownRequested() && IsDownloadCSReady() && g_downloadIdleEvent != NULL;
 }
 
-static BOOL TrackDownloadHandle(HINTERNET handle) {
+static BOOL TrackDownloadHandle(HINTERNET handle, LONG generation) {
     if (!handle) return FALSE;
 
-    if (!EnsureDownloadCSInit()) return FALSE;
+    if (IsDownloadCanceled(generation) || !EnsureDownloadCSInit()) return FALSE;
     EnterCriticalSection(&g_downloadCS);
+    if (IsDownloadCanceled(generation)) {
+        LeaveCriticalSection(&g_downloadCS);
+        return FALSE;
+    }
     for (int i = 0; i < MAX_ACTIVE_DOWNLOAD_HANDLES; i++) {
         if (!g_activeDownloadHandles[i]) {
             g_activeDownloadHandles[i] = handle;
@@ -818,7 +844,7 @@ static BOOL TrackDownloadHandle(HINTERNET handle) {
     return FALSE;
 }
 
-static void CloseTrackedDownloadHandle(HINTERNET* handlePtr) {
+static void CloseTrackedDownloadHandle(HINTERNET* handlePtr, LONG generation) {
     if (!handlePtr || !*handlePtr) return;
 
     HINTERNET handle = *handlePtr;
@@ -836,7 +862,7 @@ static void CloseTrackedDownloadHandle(HINTERNET* handlePtr) {
         LeaveCriticalSection(&g_downloadCS);
     }
 
-    if (found || !IsDownloadShutdownRequested()) {
+    if (found || !IsDownloadCanceled(generation)) {
         InternetCloseHandle(handle);
     }
     *handlePtr = NULL;
@@ -1030,8 +1056,14 @@ static BOOL MarkDownloadStarted(void) {
 }
 
 static void MarkDownloadFinished(void) {
-    if (InterlockedDecrement(&g_activeDownloadCount) == 0 && g_downloadIdleEvent) {
-        SetEvent(g_downloadIdleEvent);
+    if (InterlockedDecrement(&g_activeDownloadCount) == 0) {
+        if (InterlockedExchange(&g_downloadRestartPending, 0) != 0) {
+            InterlockedIncrement(&g_downloadGeneration);
+            InterlockedExchange(&g_downloadShutdown, 0);
+        }
+        if (g_downloadIdleEvent) {
+            SetEvent(g_downloadIdleEvent);
+        }
     }
 }
 
@@ -1039,25 +1071,29 @@ typedef struct {
     wchar_t url[2048];
     wchar_t cachePath[MAX_PATH];
     HWND hwnd;
+    LONG generation;
 } AsyncDownloadParams;
 
 static DWORD WINAPI AsyncDownloadThread(LPVOID param) {
     AsyncDownloadParams* p = (AsyncDownloadParams*)param;
 
     /* Download synchronously in background */
-    BOOL downloaded = DownloadImageToCache(p->url, p->cachePath);
+    BOOL downloaded = DownloadImageToCacheForGeneration(p->url, p->cachePath,
+                                                       p->generation);
 
     /* Remove from downloading list */
     RemoveDownloadingUrl(p->url);
-    if (downloaded) {
-        ClearUrlDownloadFailure(p->url);
-    } else {
-        MarkUrlDownloadFailed(p->url);
-    }
+    if (IsDownloadGenerationCurrent(p->generation)) {
+        if (downloaded) {
+            ClearUrlDownloadFailure(p->url);
+        } else if (!IsDownloadShutdownRequested()) {
+            MarkUrlDownloadFailed(p->url);
+        }
 
-    /* Trigger window repaint */
-    if (IsValidMarkdownImageNotifyWindow(p->hwnd)) {
-        InvalidateRect(p->hwnd, NULL, FALSE);
+        /* Trigger window repaint */
+        if (IsValidMarkdownImageNotifyWindow(p->hwnd)) {
+            InvalidateRect(p->hwnd, NULL, FALSE);
+        }
     }
 
     free(p);
@@ -1141,6 +1177,7 @@ void StartAsyncImageDownload(MarkdownImage* image, HWND hwnd) {
     params->url[2047] = L'\0';
     params->cachePath[0] = L'\0';
     params->hwnd = IsValidMarkdownImageNotifyWindow(hwnd) ? hwnd : NULL;
+    params->generation = GetDownloadGeneration();
 
     /* Start background thread */
     if (!MarkDownloadStarted()) {
@@ -1535,8 +1572,18 @@ int RenderMarkdownImage(HDC hdc, MarkdownImage* image, int x, int y,
  * Cleanup
  * ============================================================================ */
 
+void InitializeMarkdownImage(void) {
+    if (InterlockedCompareExchange(&g_activeDownloadCount, 0, 0) == 0) {
+        InterlockedIncrement(&g_downloadGeneration);
+        InterlockedExchange(&g_downloadShutdown, 0);
+    } else {
+        InterlockedExchange(&g_downloadRestartPending, 1);
+    }
+}
+
 void ShutdownMarkdownImage(void) {
     AcquireSRWLockExclusive(&g_downloadLifecycleLock);
+    InterlockedIncrement(&g_downloadGeneration);
     RequestMarkdownImageDownloadCancel();
 
     if (g_downloadIdleEvent) {
@@ -1565,6 +1612,7 @@ void ShutdownMarkdownImage(void) {
     g_downloadingCount = 0;
     g_failedDownloadCount = 0;
     ClearDownloadInitFailure();
+    InterlockedExchange(&g_downloadRestartPending, 0);
     InterlockedExchange(&g_activeDownloadCount, 0);
     ReleaseSRWLockExclusive(&g_downloadLifecycleLock);
 }

@@ -4,6 +4,7 @@
  */
 
 #include "font/font_path_manager.h"
+#include "font/font_config.h"
 #include "font/font_ttf_parser.h"
 #include "utils/string_convert.h"
 #include "utils/path_utils.h"
@@ -49,7 +50,7 @@ static BOOL CopyStringExactA(const char* src, char* out, size_t outSize) {
 static BOOL BuildFontsFolderPathW(wchar_t* outW, size_t size) {
     if (!outW || size == 0) return FALSE;
     outW[0] = L'\0';
-    
+
     /* Get config path */
     char configPathUtf8[MAX_PATH] = {0};
     GetConfigPath(configPathUtf8, MAX_PATH);
@@ -120,7 +121,7 @@ BOOL BuildFontConfigPath(const char* relativePath, char* outBuffer, size_t buffe
     if (!relativePath || !outBuffer || bufferSize == 0) return FALSE;
     outBuffer[0] = '\0';
     if (!IsSafeRelativeFontPathUtf8(relativePath)) return FALSE;
-    
+
     int result = snprintf(outBuffer, bufferSize, "%s%s", FONT_FOLDER_PREFIX, relativePath);
     if (result <= 0 || result >= (int)bufferSize) {
         outBuffer[0] = '\0';
@@ -227,7 +228,7 @@ BOOL CalculateRelativePath(const char* absolutePath, char* outRelativePath, size
         outRelativePath[0] = '\0';
         return FALSE;
     }
-    
+
     return TRUE;
 }
 
@@ -349,7 +350,7 @@ BOOL AutoFixFontPath(const char* fontFileName, FontPathInfo* pathInfo) {
     
     /* Initialize output structure */
     memset(pathInfo, 0, sizeof(FontPathInfo));
-    
+
     /* Extract filename only (strip any directory prefix) */
     if (!CopyStringExactA(GetFileNameU8(fontFileName), pathInfo->fileName,
                           sizeof(pathInfo->fileName))) {
@@ -406,19 +407,31 @@ BOOL CheckAndFixFontPath(void) {
     if (!AutoFixFontPath(relativePath, &pathInfo)) {
         return FALSE;
     }
-    
+
+    char previousFontName[MAX_PATH] = {0};
+    char previousInternalName[MAX_PATH] = {0};
+    CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+    CopyStringExactA(FONT_INTERNAL_NAME, previousInternalName, sizeof(previousInternalName));
+
     /* Update global FONT_FILE_NAME */
     strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-    
+
     /* Update internal name from TTF */
-    GetFontNameFromFile(pathInfo.absolutePath, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
-    
+    if (!GetFontNameFromFile(pathInfo.absolutePath, FONT_INTERNAL_NAME,
+                             sizeof(FONT_INTERNAL_NAME))) {
+        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        return FALSE;
+    }
+
     /* Write to config */
-    char config_path[MAX_PATH];
-    GetConfigPath(config_path, MAX_PATH);
-    WriteIniString("Display", "FONT_FILE_NAME", pathInfo.configPath, config_path);
-    
+    if (!WriteConfigFont(pathInfo.configPath, FALSE)) {
+        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        return FALSE;
+    }
+
     return TRUE;
 }
 

@@ -26,6 +26,7 @@ typedef struct {
     BOOL isPreview;
     BOOL opacitySavePending;
     int pendingOpacity;
+    int opacitySaveRetryCount;
     HDC paintDC;
     HBITMAP paintBitmap;
     HBITMAP oldPaintBitmap;
@@ -67,6 +68,7 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
 
 #define NOTIFICATION_OPACITY_SAVE_TIMER_ID 1003
 #define NOTIFICATION_OPACITY_SAVE_DELAY_MS 300
+#define NOTIFICATION_OPACITY_SAVE_MAX_RETRIES 3
 #define NOTIFICATION_MAX_HEIGHT 600
 #define NOTIFICATION_MAX_PAINT_PIXELS (NOTIFICATION_MAX_WIDTH * NOTIFICATION_MAX_HEIGHT)
 #define NOTIFICATION_PAINT_SHRINK_THRESHOLD_MULTIPLIER 4u
@@ -375,13 +377,23 @@ static void FlushPendingNotificationOpacity(HWND hwnd, NotificationData* data, B
     KillTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID);
     if (WriteConfigNotificationOpacity(data->pendingOpacity)) {
         data->opacitySavePending = FALSE;
+        data->opacitySaveRetryCount = 0;
         return;
     }
 
-    if (allowRetry) {
-        SetTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID,
-                 NOTIFICATION_OPACITY_SAVE_DELAY_MS, NULL);
+    if (allowRetry &&
+        data->opacitySaveRetryCount < NOTIFICATION_OPACITY_SAVE_MAX_RETRIES) {
+        data->opacitySaveRetryCount++;
+        if (SetTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID,
+                     NOTIFICATION_OPACITY_SAVE_DELAY_MS, NULL) != 0) {
+            return;
+        }
     }
+
+    g_AppConfig.notification.display.max_opacity =
+        ClampOpacityPercent(data->pendingOpacity);
+    data->opacitySavePending = FALSE;
+    data->opacitySaveRetryCount = 0;
 }
 
 static void ReleaseNotificationPaintBuffer(NotificationData* data) {
@@ -703,6 +715,12 @@ void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) 
                                   TRUE, TRUE);
 }
 
+void ShowToastNotificationWithTimeout(HWND hwnd, const wchar_t* message, int timeoutMs) {
+    ShowToastNotificationInternal(hwnd, message, FALSE, timeoutMs,
+                                  g_AppConfig.notification.display.max_opacity,
+                                  TRUE, TRUE);
+}
+
 void ShowToastNotificationPreview(HWND hwnd, const wchar_t* message, int opacityPercent) {
     ShowToastNotificationInternal(hwnd, message, TRUE, 0, opacityPercent, FALSE, FALSE);
 }
@@ -750,7 +768,7 @@ BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message) {
 BOOL IsToastNotificationPreviewWindow(HWND hwnd) {
     if (!IsNotificationWindow(hwnd)) return FALSE;
 
-    NotificationData* data = GetNotificationData(hwnd);
+    const NotificationData* data = GetNotificationData(hwnd);
     return data && data->isPreview;
 }
 
@@ -1020,6 +1038,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
                 data->pendingOpacity = currentOpacity;
                 data->opacitySavePending = TRUE;
+                data->opacitySaveRetryCount = 0;
                 KillTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID);
                 if (SetTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID,
                              NOTIFICATION_OPACITY_SAVE_DELAY_MS, NULL) == 0) {

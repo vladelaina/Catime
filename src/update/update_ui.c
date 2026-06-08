@@ -251,6 +251,10 @@ static BOOL EnsureUpdateNotesPaintBuffer(HDC hdc, int width, int height, HDC* ou
 static void CleanupUpdateNotesState(HWND hwndDlg) {
     HWND hwndNotes = hwndDlg ? GetDlgItem(hwndDlg, IDC_UPDATE_NOTES) : NULL;
     if (hwndNotes) {
+        if (GetCapture() == hwndNotes) {
+            ReleaseCapture();
+        }
+        RemoveWindowSubclass(hwndNotes, NotesControlProc, 0);
         RemoveProp(hwndNotes, L"ScrollPos");
         RemoveProp(hwndNotes, L"ScrollMax");
         RemoveProp(hwndNotes, L"ScrollPage");

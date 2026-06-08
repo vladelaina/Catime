@@ -330,7 +330,11 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             Dialog_RegisterInstance(DIALOG_INSTANCE_WEBSITE, hwndDlg);
 
             ctx = Dialog_CreateContext();
-            if (!ctx) return FALSE;
+            if (!ctx) {
+                Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_WEBSITE, hwndDlg);
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
 
             ctx->userData = (void*)lParam;
             Dialog_SetContext(hwndDlg, ctx);

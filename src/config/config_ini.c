@@ -568,14 +568,14 @@ static IniFile* ParseIniFile(const char* filePath) {
 /**
  * @brief Write INI structure to file (UTF-8, no BOM)
  */
-static BOOL WriteIniToFile(IniFile* ini, const char* filePath) {
+static BOOL WriteIniToFile(const IniFile* ini, const char* filePath) {
     if (!ini || !filePath) return FALSE;
 
     FILE* f = OpenFileUtf8(filePath, L"wb");
     if (!f) return FALSE;
 
     BOOL success = TRUE;
-    for (IniSection* section = ini->sections; section; section = section->next) {
+    for (const IniSection* section = ini->sections; section; section = section->next) {
         /* Write section header */
         if (fprintf(f, "[%s]\n", section->name) < 0) {
             success = FALSE;
@@ -583,7 +583,7 @@ static BOOL WriteIniToFile(IniFile* ini, const char* filePath) {
         }
 
         /* Write entries */
-        for (IniEntry* entry = section->entries; entry; entry = entry->next) {
+        for (const IniEntry* entry = section->entries; entry; entry = entry->next) {
             if (fprintf(f, "%s=%s\n", entry->key, entry->value) < 0) {
                 success = FALSE;
                 break;

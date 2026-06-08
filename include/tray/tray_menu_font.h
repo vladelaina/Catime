@@ -12,6 +12,11 @@
 void BuildFontSubmenu(HMENU hMenu);
 
 /**
+ * @brief Reset shutdown state before using the font menu cache
+ */
+void FontMenu_Initialize(void);
+
+/**
  * @brief Request a background refresh of the font menu cache
  */
 void FontMenu_RequestScanAsync(void);

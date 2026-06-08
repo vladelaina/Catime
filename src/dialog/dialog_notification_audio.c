@@ -27,6 +27,7 @@ static SRWLOCK g_soundFileCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_soundScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hSoundScanThread = NULL;
 static volatile LONG g_soundScanShuttingDown = 0;
+static volatile LONG g_soundScanGeneration = 0;
 static volatile LONG g_soundFileLastScanTick = 0;
 
 /* ============================================================================
@@ -35,6 +36,11 @@ static volatile LONG g_soundFileLastScanTick = 0;
 
 static BOOL IsSoundScanShuttingDown(void) {
     return InterlockedCompareExchange(&g_soundScanShuttingDown, 0, 0) != 0;
+}
+
+static BOOL IsSoundScanCanceled(LONG generation) {
+    return IsSoundScanShuttingDown() ||
+           InterlockedCompareExchange(&g_soundScanGeneration, 0, 0) != generation;
 }
 
 static BOOL IsSoundFileCacheRecentlyScanned(DWORD now) {
@@ -85,7 +91,8 @@ static int CompareSoundFileRows(const void* a, const void* b) {
     return NaturalCompareW(fileA, fileB);
 }
 
-static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity) {
+static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity,
+                                      LONG generation) {
     if (!files || capacity <= 0) return NOTIFICATION_SOUND_SCAN_FAILED;
 
     char audio_path[MAX_PATH] = {0};
@@ -123,7 +130,7 @@ static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity) {
     BOOL scanCancelled = FALSE;
     BOOL stoppedEarly = FALSE;
     do {
-        if (IsSoundScanShuttingDown()) {
+        if (IsSoundScanCanceled(generation)) {
             scanCancelled = TRUE;
             stoppedEarly = TRUE;
             break;
@@ -150,7 +157,7 @@ static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity) {
     DWORD findError = stoppedEarly ? ERROR_SUCCESS : GetLastError();
     FindClose(hFind);
 
-    if (scanCancelled || IsSoundScanShuttingDown()) {
+    if (scanCancelled || IsSoundScanCanceled(generation)) {
         return NOTIFICATION_SOUND_SCAN_FAILED;
     }
     if (!stoppedEarly && findError != ERROR_NO_MORE_FILES) {
@@ -164,8 +171,9 @@ static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity) {
     return fileCount;
 }
 
-static BOOL StoreNotificationSoundCache(const wchar_t (*files)[MAX_PATH], int fileCount) {
-    if (IsSoundScanShuttingDown()) {
+static BOOL StoreNotificationSoundCache(wchar_t files[][MAX_PATH], int fileCount,
+                                        LONG generation) {
+    if (IsSoundScanCanceled(generation)) {
         return FALSE;
     }
 
@@ -177,7 +185,7 @@ static BOOL StoreNotificationSoundCache(const wchar_t (*files)[MAX_PATH], int fi
     }
 
     AcquireSRWLockExclusive(&g_soundFileCacheLock);
-    if (IsSoundScanShuttingDown()) {
+    if (IsSoundScanCanceled(generation)) {
         ReleaseSRWLockExclusive(&g_soundFileCacheLock);
         return FALSE;
     }
@@ -255,9 +263,10 @@ static BOOL RefreshNotificationSoundCacheNow(BOOL forceRefresh) {
     }
 
     ZeroMemory(files, (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*files));
-    int fileCount = ScanNotificationSoundFiles(files, NOTIFICATION_SOUND_ENTRY_LIMIT);
+    LONG generation = InterlockedCompareExchange(&g_soundScanGeneration, 0, 0);
+    int fileCount = ScanNotificationSoundFiles(files, NOTIFICATION_SOUND_ENTRY_LIMIT, generation);
     if (fileCount >= 0) {
-        refreshed = StoreNotificationSoundCache(files, fileCount);
+        refreshed = StoreNotificationSoundCache(files, fileCount, generation);
     } else {
         MarkNotificationSoundCacheScanFailed();
     }
@@ -268,21 +277,23 @@ static BOOL RefreshNotificationSoundCacheNow(BOOL forceRefresh) {
 }
 
 static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam) {
-    (void)lpParam;
+    LONG generation = (LONG)(INT_PTR)lpParam;
 
     wchar_t (*files)[MAX_PATH] = (wchar_t (*)[MAX_PATH])malloc(
         (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*files));
     if (!files) {
-        MarkNotificationSoundCacheScanFailed();
+        if (!IsSoundScanCanceled(generation)) {
+            MarkNotificationSoundCacheScanFailed();
+        }
         return 0;
     }
 
     ZeroMemory(files, (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*files));
-    int fileCount = ScanNotificationSoundFiles(files, NOTIFICATION_SOUND_ENTRY_LIMIT);
+    int fileCount = ScanNotificationSoundFiles(files, NOTIFICATION_SOUND_ENTRY_LIMIT, generation);
 
     if (fileCount >= 0) {
-        StoreNotificationSoundCache(files, fileCount);
-    } else {
+        StoreNotificationSoundCache(files, fileCount, generation);
+    } else if (!IsSoundScanCanceled(generation)) {
         MarkNotificationSoundCacheScanFailed();
     }
     free(files);
@@ -313,6 +324,11 @@ static int CopyNotificationSoundCache(wchar_t files[][MAX_PATH], int capacity, B
     return count;
 }
 
+void NotificationSoundCache_Initialize(void) {
+    InterlockedIncrement(&g_soundScanGeneration);
+    InterlockedExchange(&g_soundScanShuttingDown, 0);
+}
+
 void NotificationSoundCache_RequestScanAsync(void) {
     AcquireSRWLockExclusive(&g_soundScanThreadLock);
 
@@ -331,7 +347,9 @@ void NotificationSoundCache_RequestScanAsync(void) {
         return;
     }
 
-    HANDLE hThread = CreateThread(NULL, 0, NotificationSoundScanThread, NULL, 0, NULL);
+    LONG generation = InterlockedCompareExchange(&g_soundScanGeneration, 0, 0);
+    HANDLE hThread = CreateThread(NULL, 0, NotificationSoundScanThread,
+                                  (LPVOID)(INT_PTR)generation, 0, NULL);
     if (hThread) {
         g_hSoundScanThread = hThread;
     } else {
@@ -345,6 +363,7 @@ void NotificationSoundCache_Shutdown(void) {
     HANDLE hThread = NULL;
 
     InterlockedExchange(&g_soundScanShuttingDown, 1);
+    InterlockedIncrement(&g_soundScanGeneration);
 
     AcquireSRWLockExclusive(&g_soundScanThreadLock);
     if (g_hSoundScanThread) {

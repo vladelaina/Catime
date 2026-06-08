@@ -159,6 +159,24 @@ static BOOL StartClickThroughTimer(HWND hwnd) {
     return g_clickThroughTimerActive;
 }
 
+static void DisableSoftClickThroughFallback(HWND hwnd) {
+    StopClickThroughTimer(hwnd);
+    g_clickThroughEnabled = FALSE;
+    g_currentlyTransparent = FALSE;
+
+    if (!IsValidVisualEffectsWindow(hwnd)) {
+        return;
+    }
+
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    if (exStyle & WS_EX_TRANSPARENT) {
+        exStyle &= ~WS_EX_TRANSPARENT;
+        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+        SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    }
+}
+
 /* Update WS_EX_TRANSPARENT based on mouse position over clickable regions */
 void UpdateClickThroughState(HWND hwnd) {
     if (!g_clickThroughEnabled ||
@@ -247,12 +265,7 @@ void RefreshClickThroughState(HWND hwnd) {
     }
 
     if (!StartClickThroughTimer(hwnd)) {
-        LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-        if (exStyle & WS_EX_TRANSPARENT) {
-            exStyle &= ~WS_EX_TRANSPARENT;
-            SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-        }
-        g_currentlyTransparent = FALSE;
+        DisableSoftClickThroughFallback(hwnd);
         return;
     }
 
@@ -288,6 +301,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
         exStyle |= WS_EX_TRANSPARENT;
         g_currentlyTransparent = TRUE;
         if (hasClickableRegions && !StartClickThroughTimer(hwnd)) {
+            g_clickThroughEnabled = FALSE;
             exStyle &= ~WS_EX_TRANSPARENT;
             g_currentlyTransparent = FALSE;
         } else if (!hasClickableRegions) {

@@ -74,10 +74,16 @@ static SRWLOCK g_animMenuCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_animScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hAnimScanThread = NULL;
 static volatile LONG g_animScanShuttingDown = 0;
+static volatile LONG g_animScanGeneration = 0;
 static volatile LONG g_animMenuLastScanTick = 0;
 
 static BOOL IsAnimationMenuScanShuttingDown(void) {
     return InterlockedCompareExchange(&g_animScanShuttingDown, 0, 0) != 0;
+}
+
+static BOOL IsAnimationMenuScanCanceled(LONG generation) {
+    return IsAnimationMenuScanShuttingDown() ||
+           InterlockedCompareExchange(&g_animScanGeneration, 0, 0) != generation;
 }
 
 static BOOL IsAnimationMenuCacheRecentlyScanned(DWORD now) {
@@ -95,6 +101,9 @@ static BOOL IsAnimationMenuCacheRecentlyScanned(DWORD now) {
 
 static void MarkAnimationMenuScanStartFailure(DWORD now) {
     AcquireSRWLockExclusive(&g_animMenuCacheLock);
+    ZeroMemory(g_animMenuCache, sizeof(g_animMenuCache));
+    g_animMenuCacheCount = 0;
+    g_animMenuCacheReady = FALSE;
     g_animMenuCacheFailed = TRUE;
     InterlockedExchange(&g_animMenuLastScanTick, (LONG)now);
     ReleaseSRWLockExclusive(&g_animMenuCacheLock);
@@ -231,8 +240,9 @@ static BOOL AddAnimEntry(AnimScanContext* ctx, const char* fileName,
 static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
                                           const char* relativePathUtf8,
                                           AnimScanContext* ctx,
-                                          int depth) {
-    if (ctx->full || IsAnimationMenuScanShuttingDown()) return;
+                                          int depth,
+                                          LONG generation) {
+    if (ctx->full || IsAnimationMenuScanCanceled(generation)) return;
 
     if (depth >= MAX_RECURSION_DEPTH) {
         WriteLog(LOG_LEVEL_WARNING, "Max recursion depth reached at: %ls", folderPath);
@@ -264,7 +274,7 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
 
     BOOL stoppedEarly = FALSE;
     do {
-        if (ctx->full || IsAnimationMenuScanShuttingDown()) {
+        if (ctx->full || IsAnimationMenuScanCanceled(generation)) {
             stoppedEarly = TRUE;
             break;
         }
@@ -317,7 +327,7 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
             int len1 = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPath, findData.cFileName);
             if (len1 < 0 || len1 >= MAX_PATH) continue;
 
-            ScanAnimationFolderRecursive(fullPath, newRelativePath, ctx, depth + 1);
+            ScanAnimationFolderRecursive(fullPath, newRelativePath, ctx, depth + 1, generation);
             if (ctx->failed) {
                 stoppedEarly = TRUE;
                 break;
@@ -342,7 +352,7 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
 /**
  * @brief Scan animations folder and return entries
  */
-static int ScanAnimationsFolder(AnimEntry* entries, int capacity) {
+static int ScanAnimationsFolder(AnimEntry* entries, int capacity, LONG generation) {
     AnimScanContext ctx = {0};
     ctx.entries = entries;
     ctx.count = 0;
@@ -369,8 +379,8 @@ static int ScanAnimationsFolder(AnimEntry* entries, int capacity) {
         return ANIMATION_MENU_SCAN_FAILED;
     }
 
-    ScanAnimationFolderRecursive(animPath, "", &ctx, 0);
-    if (ctx.failed || IsAnimationMenuScanShuttingDown()) {
+    ScanAnimationFolderRecursive(animPath, "", &ctx, 0, generation);
+    if (ctx.failed || IsAnimationMenuScanCanceled(generation)) {
         return ANIMATION_MENU_SCAN_FAILED;
     }
 
@@ -380,21 +390,21 @@ static int ScanAnimationsFolder(AnimEntry* entries, int capacity) {
 }
 
 static DWORD WINAPI AnimationScanThread(LPVOID lpParam) {
-    (void)lpParam;
+    LONG generation = (LONG)(INT_PTR)lpParam;
 
     AnimEntry* entries = (AnimEntry*)malloc((size_t)MAX_ANIM_ENTRIES * sizeof(*entries));
     int count = ANIMATION_MENU_SCAN_FAILED;
     if (entries) {
         ZeroMemory(entries, (size_t)MAX_ANIM_ENTRIES * sizeof(*entries));
-        count = ScanAnimationsFolder(entries, MAX_ANIM_ENTRIES);
+        count = ScanAnimationsFolder(entries, MAX_ANIM_ENTRIES, generation);
     } else {
         LOG_WARNING("Failed to allocate animation menu scan buffer");
     }
     BOOL scanFailed = (count < 0);
 
-    if (!IsAnimationMenuScanShuttingDown()) {
+    if (!IsAnimationMenuScanCanceled(generation)) {
         AcquireSRWLockExclusive(&g_animMenuCacheLock);
-        if (!IsAnimationMenuScanShuttingDown()) {
+        if (!IsAnimationMenuScanCanceled(generation)) {
             if (!scanFailed && count > 0 && entries) {
                 memcpy(g_animMenuCache, entries, (size_t)count * sizeof(AnimEntry));
             }
@@ -442,7 +452,9 @@ void AnimationMenu_RequestScanAsync(void) {
         return;
     }
 
-    HANDLE hThread = CreateThread(NULL, 0, AnimationScanThread, NULL, 0, NULL);
+    LONG generation = InterlockedCompareExchange(&g_animScanGeneration, 0, 0);
+    HANDLE hThread = CreateThread(NULL, 0, AnimationScanThread,
+                                  (LPVOID)(INT_PTR)generation, 0, NULL);
     if (hThread) {
         g_hAnimScanThread = hThread;
     } else {
@@ -453,10 +465,16 @@ void AnimationMenu_RequestScanAsync(void) {
     ReleaseSRWLockExclusive(&g_animScanThreadLock);
 }
 
+void AnimationMenu_Initialize(void) {
+    InterlockedIncrement(&g_animScanGeneration);
+    InterlockedExchange(&g_animScanShuttingDown, 0);
+}
+
 void AnimationMenu_Shutdown(void) {
     HANDLE hThread = NULL;
 
     AcquireSRWLockExclusive(&g_animScanThreadLock);
+    InterlockedIncrement(&g_animScanGeneration);
     InterlockedExchange(&g_animScanShuttingDown, 1);
     if (g_hAnimScanThread) {
         hThread = g_hAnimScanThread;

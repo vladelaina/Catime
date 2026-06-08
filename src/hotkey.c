@@ -172,6 +172,8 @@ static void PostHotkeyReregister(HWND hwndDlg) {
         state->reregisterPosted = TRUE;
     } else {
         LOG_WARNING("Failed to post hotkey re-register message: %lu", GetLastError());
+        RegisterGlobalHotkeys(state->hwndParent);
+        state->reregisterPosted = TRUE;
     }
 }
 

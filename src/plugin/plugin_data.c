@@ -5,6 +5,7 @@
 
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_exit.h"
+#include "config.h"
 #include "notification.h"
 #include "../resource/resource.h"
 #include "log.h"
@@ -79,7 +80,27 @@ static DWORD g_lastPluginDataRedrawTick = 0;
 static DWORD g_watchLastStartFailureTick = 0;
 static volatile LONG g_pluginDataRedrawQueued = 0;
 static volatile LONG g_pluginDataRedrawTimerArmed = 0;
+static volatile LONG g_pluginDataTimerRecheckQueued = 0;
 static HWND g_pluginDataRedrawTimerHwnd = NULL;
+
+static BOOL PluginTextHasCatimeTagW(const wchar_t* text) {
+    if (!text) return FALSE;
+
+    const wchar_t* start = wcsstr(text, L"<catime>");
+    const wchar_t* end = wcsstr(text, L"</catime>");
+    return start && end && end > start;
+}
+
+static BOOL PluginDisplayHasCatimeTagLocked(void) {
+    return g_pluginModeActive &&
+           g_hasPluginData &&
+           g_pluginDisplayText &&
+           PluginTextHasCatimeTagW(g_pluginDisplayText);
+}
+
+static void QueuePluginDataTimerRecheck(void) {
+    InterlockedExchange(&g_pluginDataTimerRecheckQueued, 1);
+}
 
 static BOOL PluginData_BeginUse(void) {
     AcquireSRWLockShared(&g_pluginDataLifecycleLock);
@@ -113,6 +134,13 @@ static BOOL IsValidPluginDataNotifyWindow(HWND hwnd) {
     return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
 }
 
+static void RecheckPluginDataTimerIfQueued(HWND hwnd) {
+    if (InterlockedExchange(&g_pluginDataTimerRecheckQueued, 0) != 0 &&
+        IsValidPluginDataNotifyWindow(hwnd)) {
+        ResetTimerWithInterval(hwnd);
+    }
+}
+
 static void StopPluginDataRedrawTimer(HWND fallbackHwnd) {
     HWND timerHwnd = g_pluginDataRedrawTimerHwnd ? g_pluginDataRedrawTimerHwnd : fallbackHwnd;
     if (InterlockedCompareExchange(&g_pluginDataRedrawTimerArmed, 0, 0) != 0 &&
@@ -138,6 +166,7 @@ static void CALLBACK PluginDataRedrawTimerProc(HWND hwnd, UINT msg, UINT_PTR id,
     InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
     g_lastPluginDataRedrawTick = GetTickCount();
     InvalidateRect(hwnd, NULL, FALSE);
+    RecheckPluginDataTimerIfQueued(hwnd);
 }
 
 static void RequestPluginDataRedraw(HWND hwnd) {
@@ -161,14 +190,17 @@ static void RequestPluginDataRedraw(HWND hwnd) {
 void PluginData_HandleRedrawRequest(HWND hwnd) {
     if (!IsValidPluginDataNotifyWindow(hwnd)) {
         InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+        InterlockedExchange(&g_pluginDataTimerRecheckQueued, 0);
         return;
     }
     if (!PluginData_BeginUse()) {
         InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+        InterlockedExchange(&g_pluginDataTimerRecheckQueued, 0);
         return;
     }
 
     InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+    BOOL recheckTimer = InterlockedExchange(&g_pluginDataTimerRecheckQueued, 0) != 0;
 
     DWORD now = GetTickCount();
     DWORD elapsed = now - g_lastPluginDataRedrawTick;
@@ -177,6 +209,10 @@ void PluginData_HandleRedrawRequest(HWND hwnd) {
         g_lastPluginDataRedrawTick = now;
         InvalidateRect(hwnd, NULL, FALSE);
         PluginData_EndUse();
+        if (recheckTimer) {
+            QueuePluginDataTimerRecheck();
+            RecheckPluginDataTimerIfQueued(hwnd);
+        }
         return;
     }
 
@@ -192,6 +228,10 @@ void PluginData_HandleRedrawRequest(HWND hwnd) {
         InterlockedExchange(&g_pluginDataRedrawTimerArmed, 1);
     }
     PluginData_EndUse();
+    if (recheckTimer) {
+        QueuePluginDataTimerRecheck();
+        RecheckPluginDataTimerIfQueued(hwnd);
+    }
 }
 
 static BOOL ParseNonNegativeIntLimitedA(const char* start, const char* end, int* outValue) {
@@ -263,6 +303,12 @@ typedef struct {
 } PendingNotification;
 
 static PendingNotification g_pendingNotify = {0};
+
+typedef enum {
+    PLUGIN_PARSE_FAILED = 0,
+    PLUGIN_PARSE_OK,
+    PLUGIN_PARSE_TRANSIENT_FAILURE
+} PluginParseResult;
 
 static BOOL IsWatcherRunning(void) {
     return InterlockedCompareExchange(&g_isRunning, FALSE, FALSE) != FALSE;
@@ -521,8 +567,6 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
         DWORD now = GetTickCount();
         DWORD elapsed = now - g_lastNotifyTime;
         if (elapsed >= NOTIFY_MIN_INTERVAL_MS) {
-            g_lastNotifyTime = now;
-            
             /* Store pending notification for main thread to process
              * Note: This is called from ParseContent which already holds g_dataCS,
              * so we don't need to acquire the lock here. The main thread will
@@ -537,6 +581,8 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
             if (!IsValidPluginDataNotifyWindow(hwnd) ||
                 !PostMessage(hwnd, WM_PLUGIN_NOTIFY, 0, 0)) {
                 g_pendingNotify.pending = FALSE;
+            } else {
+                g_lastNotifyTime = now;
             }
         }
         
@@ -557,11 +603,16 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
  * - Multi-line text (real newlines, no \n escaping needed)
  * - Markdown formatting
  */
-static BOOL ParseContent(const char* content, size_t contentLen, BOOL* displayChangedOut) {
+static PluginParseResult ParseContent(const char* content, size_t contentLen,
+                                      BOOL* displayChangedOut,
+                                      BOOL* timerRecheckOut) {
     if (displayChangedOut) {
         *displayChangedOut = FALSE;
     }
-    if (!content || contentLen == 0) return FALSE;
+    if (timerRecheckOut) {
+        *timerRecheckOut = FALSE;
+    }
+    if (!content || contentLen == 0) return PLUGIN_PARSE_FAILED;
 
     DWORD parsedPollInterval = 0;
     BOOL hasFpsTag = TryParseFpsPollInterval(content, &parsedPollInterval, NULL);
@@ -570,15 +621,15 @@ static BOOL ParseContent(const char* content, size_t contentLen, BOOL* displayCh
     /* Convert outside g_dataCS so paint-time reads are not blocked by UTF-8 work. */
     int requiredLen = MultiByteToWideChar(CP_UTF8, 0, content, (int)displayInputLen, NULL, 0);
     if (requiredLen <= 0) {
-        return FALSE;
+        return PLUGIN_PARSE_FAILED;
     }
 
     if (requiredLen > INT_MAX - 1) {
-        return FALSE;
+        return PLUGIN_PARSE_FAILED;
     }
     size_t requiredSize = (size_t)(requiredLen + 1);
     if (requiredSize > SIZE_MAX / sizeof(wchar_t)) {
-        return FALSE;
+        return PLUGIN_PARSE_FAILED;
     }
 
     wchar_t stackText[PLUGIN_DISPLAY_STACK_WCHARS];
@@ -588,7 +639,7 @@ static BOOL ParseContent(const char* content, size_t contentLen, BOOL* displayCh
         heapText = (wchar_t*)malloc(requiredSize * sizeof(wchar_t));
         if (!heapText) {
             LOG_ERROR("PluginData: Failed to allocate %zu bytes", requiredSize * sizeof(wchar_t));
-            return FALSE;
+            return PLUGIN_PARSE_TRANSIENT_FAILURE;
         }
         displayText = heapText;
     }
@@ -597,7 +648,7 @@ static BOOL ParseContent(const char* content, size_t contentLen, BOOL* displayCh
                                   displayText, (int)requiredSize);
     if (len <= 0) {
         free(heapText);
-        return FALSE;
+        return PLUGIN_PARSE_FAILED;
     }
     displayText[len] = L'\0';
 
@@ -622,15 +673,17 @@ static BOOL ParseContent(const char* content, size_t contentLen, BOOL* displayCh
     if (!g_pluginModeActive) {
         LeaveCriticalSection(&g_dataCS);
         free(heapText);
-        return FALSE;
+        return PLUGIN_PARSE_FAILED;
     }
+
+    BOOL hadCatimeTag = PluginDisplayHasCatimeTagLocked();
 
     ApplyContentPollInterval(hasFpsTag, parsedPollInterval);
 
     if (PluginExit_IsInProgress()) {
         LeaveCriticalSection(&g_dataCS);
         free(heapText);
-        return TRUE;
+        return PLUGIN_PARSE_OK;
     }
 
     /* Process <notify> tags while holding g_dataCS for pending-notification state. */
@@ -649,13 +702,13 @@ static BOOL ParseContent(const char* content, size_t contentLen, BOOL* displayCh
         g_hasPluginData = TRUE;
         LeaveCriticalSection(&g_dataCS);
         free(heapText);
-        return TRUE;
+        return PLUGIN_PARSE_OK;
     }
 
     if (!EnsurePluginDisplayTextCapacityLocked(displaySize)) {
         LeaveCriticalSection(&g_dataCS);
         free(heapText);
-        return FALSE;
+        return PLUGIN_PARSE_TRANSIENT_FAILURE;
     }
 
     memcpy(g_pluginDisplayText, displayText, displaySize * sizeof(wchar_t));
@@ -663,22 +716,30 @@ static BOOL ParseContent(const char* content, size_t contentLen, BOOL* displayCh
     /* Process <exit> tag - if countdown starts, set data flag and return */
     if (PluginExit_ParseTag(g_pluginDisplayText, &len, g_pluginDisplayTextLen)) {
         g_hasPluginData = TRUE;
+        BOOL hasCatimeTag = PluginDisplayHasCatimeTagLocked();
         LeaveCriticalSection(&g_dataCS);
         free(heapText);
         if (displayChangedOut) {
             *displayChangedOut = TRUE;
         }
-        return TRUE;
+        if (timerRecheckOut && hadCatimeTag != hasCatimeTag) {
+            *timerRecheckOut = TRUE;
+        }
+        return PLUGIN_PARSE_OK;
     }
 
     g_hasPluginData = TRUE;
+    BOOL hasCatimeTag = PluginDisplayHasCatimeTagLocked();
     LeaveCriticalSection(&g_dataCS);
 
     free(heapText);
     if (displayChangedOut) {
         *displayChangedOut = displayChanged;
     }
-    return TRUE;
+    if (timerRecheckOut && hadCatimeTag != hasCatimeTag) {
+        *timerRecheckOut = TRUE;
+    }
+    return PLUGIN_PARSE_OK;
 }
 
 /*
@@ -886,11 +947,16 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
             }
 
             EnterCriticalSection(&g_dataCS);
+            BOOL hadCatimeTag = PluginDisplayHasCatimeTagLocked();
             BOOL displayChanged = ClearPluginDisplayDataLocked();
+            BOOL displayTimerRecheck = hadCatimeTag != PluginDisplayHasCatimeTagLocked();
             ClearLastContentCacheLocked();
             InvalidateLastOutputFileStateLocked();
             LeaveCriticalSection(&g_dataCS);
-            if (displayChanged && g_hNotifyWnd) {
+            if (displayTimerRecheck) {
+                QueuePluginDataTimerRecheck();
+            }
+            if ((displayChanged || displayTimerRecheck) && g_hNotifyWnd) {
                 RequestPluginDataRedraw(g_hNotifyWnd);
             }
             return displayChanged;
@@ -906,12 +972,17 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
         *lastWriteTime = currentWriteTime;
         *lastFileSize = 0;
         EnterCriticalSection(&g_dataCS);
+        BOOL hadCatimeTag = PluginDisplayHasCatimeTagLocked();
         BOOL displayChanged = ClearPluginDisplayDataLocked();
+        BOOL timerRecheck = hadCatimeTag != PluginDisplayHasCatimeTagLocked();
         ClearLastContentCacheLocked();
         UpdateLastOutputFileStateLocked(&currentWriteTime, 0);
         LeaveCriticalSection(&g_dataCS);
         CloseHandle(hFile);
-        if (displayChanged && g_hNotifyWnd) {
+        if (timerRecheck) {
+            QueuePluginDataTimerRecheck();
+        }
+        if ((displayChanged || timerRecheck) && g_hNotifyWnd) {
             RequestPluginDataRedraw(g_hNotifyWnd);
         }
         return displayChanged;
@@ -931,12 +1002,17 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
         *lastWriteTime = currentWriteTime;
         *lastFileSize = fileSize64;
         EnterCriticalSection(&g_dataCS);
+        BOOL hadCatimeTag = PluginDisplayHasCatimeTagLocked();
         BOOL displayChanged = ClearPluginDisplayDataLocked();
+        BOOL timerRecheck = hadCatimeTag != PluginDisplayHasCatimeTagLocked();
         ClearLastContentCacheLocked();
         UpdateLastOutputFileStateLocked(&currentWriteTime, *lastFileSize);
         LeaveCriticalSection(&g_dataCS);
         CloseHandle(hFile);
-        if (displayChanged && g_hNotifyWnd) {
+        if (timerRecheck) {
+            QueuePluginDataTimerRecheck();
+        }
+        if ((displayChanged || timerRecheck) && g_hNotifyWnd) {
             RequestPluginDataRedraw(g_hNotifyWnd);
         }
         return displayChanged;
@@ -986,7 +1062,10 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
         LeaveCriticalSection(&g_dataCS);
     } else {
         BOOL displayChanged = FALSE;
-        if (ParseContent(currentContent, bytesRead, &displayChanged)) {
+        BOOL timerRecheck = FALSE;
+        PluginParseResult parseResult =
+            ParseContent(currentContent, bytesRead, &displayChanged, &timerRecheck);
+        if (parseResult == PLUGIN_PARSE_OK) {
             *lastWriteTime = currentWriteTime;
             *lastFileSize = fileSize;
             EnterCriticalSection(&g_dataCS);
@@ -994,21 +1073,31 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
             UpdateLastOutputFileStateLocked(&currentWriteTime, fileSize);
             LeaveCriticalSection(&g_dataCS);
 
-            if (displayChanged && g_hNotifyWnd) {
+            if (timerRecheck) {
+                QueuePluginDataTimerRecheck();
+            }
+            if ((displayChanged || timerRecheck) && g_hNotifyWnd) {
                 RequestPluginDataRedraw(g_hNotifyWnd);
             }
-        } else {
+        } else if (parseResult == PLUGIN_PARSE_FAILED) {
             EnterCriticalSection(&g_dataCS);
+            BOOL hadCatimeTag = PluginDisplayHasCatimeTagLocked();
             BOOL clearedDisplayChanged = ClearPluginDisplayDataLocked();
+            BOOL displayTimerRecheck = hadCatimeTag != PluginDisplayHasCatimeTagLocked();
             ClearLastContentCacheLocked();
             UpdateLastOutputFileStateLocked(&currentWriteTime, fileSize);
             LeaveCriticalSection(&g_dataCS);
             *lastWriteTime = currentWriteTime;
             *lastFileSize = fileSize;
 
-            if (clearedDisplayChanged && g_hNotifyWnd) {
+            if (displayTimerRecheck) {
+                QueuePluginDataTimerRecheck();
+            }
+            if ((clearedDisplayChanged || displayTimerRecheck) && g_hNotifyWnd) {
                 RequestPluginDataRedraw(g_hNotifyWnd);
             }
+        } else {
+            contentChanged = FALSE;
         }
     }
 
@@ -1355,6 +1444,7 @@ void PluginData_Init(HWND hwnd) {
     g_lastPluginDataRedrawTick = 0;
     InterlockedExchange(&g_pluginDataRedrawQueued, 0);
     InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
+    InterlockedExchange(&g_pluginDataTimerRecheckQueued, 0);
     InterlockedExchange(&g_forceNextUpdate, FALSE);
     g_watchLastStartFailureTick = 0;
     SetPollIntervalMs(DEFAULT_POLL_INTERVAL_MS);
@@ -1377,7 +1467,7 @@ void PluginData_Init(HWND hwnd) {
 
 void PluginData_Shutdown(void) {
     AcquireSRWLockExclusive(&g_pluginDataLifecycleLock);
-    if (!g_pluginDataInitialized) {
+    if (!g_pluginDataInitialized && !g_pluginDataResourcesRetained) {
         ReleaseSRWLockExclusive(&g_pluginDataLifecycleLock);
         return;
     }
@@ -1388,6 +1478,7 @@ void PluginData_Shutdown(void) {
     StopPluginDataRedrawTimer(g_hNotifyWnd);
     g_hNotifyWnd = NULL;
     InterlockedExchange(&g_pluginDataRedrawQueued, 0);
+    InterlockedExchange(&g_pluginDataTimerRecheckQueued, 0);
     if (!watcherStopped) {
         g_pluginDataResourcesRetained = TRUE;
         LOG_WARNING("PluginData: Watcher resources retained because the watcher did not stop during shutdown");
@@ -1634,20 +1725,22 @@ void PluginData_ProcessPendingNotification(HWND hwnd) {
 
     int notifyType = localNotify.type;
     int customTimeout = localNotify.timeout;
-    
-    /* Save and restore timeout if custom timeout specified */
-    int savedTimeout = 0;
-    if (customTimeout > 0 && (notifyType == -1 || notifyType == NOTIFICATION_TYPE_CATIME)) {
-        savedTimeout = g_AppConfig.notification.display.timeout_ms;
-        g_AppConfig.notification.display.timeout_ms = customTimeout;
-    }
-    
+
     /* Show notification based on type */
     if (notifyType == -1) {
         /* Use default configured type */
-        ShowNotification(hwnd, localNotify.message);
+        if (customTimeout > 0 &&
+            g_AppConfig.notification.display.type == NOTIFICATION_TYPE_CATIME) {
+            ShowToastNotificationWithTimeout(hwnd, localNotify.message, customTimeout);
+        } else {
+            ShowNotification(hwnd, localNotify.message);
+        }
     } else if (notifyType == NOTIFICATION_TYPE_CATIME) {
-        ShowToastNotification(hwnd, localNotify.message);
+        if (customTimeout > 0) {
+            ShowToastNotificationWithTimeout(hwnd, localNotify.message, customTimeout);
+        } else {
+            ShowToastNotification(hwnd, localNotify.message);
+        }
     } else if (notifyType == NOTIFICATION_TYPE_SYSTEM_MODAL) {
         ShowModalNotification(hwnd, localNotify.message);
     } else if (notifyType == NOTIFICATION_TYPE_OS) {
@@ -1655,18 +1748,10 @@ void PluginData_ProcessPendingNotification(HWND hwnd) {
         char msgUtf8[2048] = {0};
         if (WideCharToMultiByte(CP_UTF8, 0, localNotify.message, -1, msgUtf8, sizeof(msgUtf8), NULL, NULL) <= 0) {
             LOG_WARNING("PluginData: Failed to convert OS notification message to UTF-8");
-            if (savedTimeout > 0) {
-                g_AppConfig.notification.display.timeout_ms = savedTimeout;
-            }
             return;
         }
         extern void ShowTrayNotification(HWND hwnd, const char* message);
         ShowTrayNotification(hwnd, msgUtf8);
-    }
-    
-    /* Restore timeout */
-    if (savedTimeout > 0) {
-        g_AppConfig.notification.display.timeout_ms = savedTimeout;
     }
 }
 

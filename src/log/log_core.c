@@ -168,22 +168,44 @@ static bool EnsureLogFileOpen(bool verifyPathExists) {
     return true;
 }
 
+static BOOL FormatLogRotationPath(wchar_t* buffer, size_t bufferCount, int index) {
+    if (!buffer || bufferCount == 0 || index <= 0) {
+        return FALSE;
+    }
+
+    int written = _snwprintf_s(buffer, bufferCount, _TRUNCATE,
+                               L"%s.%d", LOG_FILE_PATH, index);
+    if (written < 0 || (size_t)written >= bufferCount) {
+        buffer[0] = L'\0';
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 /** Rotation: .log → .log.1 → .log.2 → .log.3 (oldest deleted) */
-static void RotateLogFiles(void) {
+static BOOL RotateLogFiles(void) {
     wchar_t oldPath[MAX_PATH];
     wchar_t newPath[MAX_PATH];
-    
-    _snwprintf_s(oldPath, MAX_PATH, _TRUNCATE, L"%s.%d", LOG_FILE_PATH, LOG_ROTATION_COUNT);
+
+    if (!FormatLogRotationPath(oldPath, MAX_PATH, LOG_ROTATION_COUNT)) {
+        return FALSE;
+    }
     DeleteFileW(oldPath);
-    
+
     for (int i = LOG_ROTATION_COUNT - 1; i >= 1; i--) {
-        _snwprintf_s(oldPath, MAX_PATH, _TRUNCATE, L"%s.%d", LOG_FILE_PATH, i);
-        _snwprintf_s(newPath, MAX_PATH, _TRUNCATE, L"%s.%d", LOG_FILE_PATH, i + 1);
+        if (!FormatLogRotationPath(oldPath, MAX_PATH, i) ||
+            !FormatLogRotationPath(newPath, MAX_PATH, i + 1)) {
+            return FALSE;
+        }
         MoveFileExW(oldPath, newPath, MOVEFILE_REPLACE_EXISTING);
     }
-    
-    _snwprintf_s(newPath, MAX_PATH, _TRUNCATE, L"%s.1", LOG_FILE_PATH);
+
+    if (!FormatLogRotationPath(newPath, MAX_PATH, 1)) {
+        return FALSE;
+    }
     MoveFileExW(LOG_FILE_PATH, newPath, MOVEFILE_REPLACE_EXISTING);
+    return TRUE;
 }
 
 static void CheckAndRotateLog(void) {
@@ -198,12 +220,17 @@ static void CheckAndRotateLog(void) {
         hLogFile = INVALID_HANDLE_VALUE;
     }
 
-    RotateLogFiles();
+    BOOL rotated = RotateLogFiles();
 
     OpenLogFile();
     if (hLogFile != INVALID_HANDLE_VALUE) {
-        WriteLog(LOG_LEVEL_INFO, "Log file rotated (size exceeded %d MB)",
-                    LOG_MAX_FILE_SIZE / (1024 * 1024));
+        if (rotated) {
+            WriteLog(LOG_LEVEL_INFO, "Log file rotated (size exceeded %d MB)",
+                        LOG_MAX_FILE_SIZE / (1024 * 1024));
+        } else {
+            WriteLog(LOG_LEVEL_WARNING,
+                     "Log rotation path too long; started a fresh log file");
+        }
     }
 }
 

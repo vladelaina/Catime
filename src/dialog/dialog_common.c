@@ -170,10 +170,8 @@ LRESULT Dialog_EditSubclassProc_Ex(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
     if (!origProc) return 0;
 
     BOOL processed = FALSE;
-    LRESULT customResult = 0;
-
     if (callback) {
-        customResult = callback(hwnd, msg, wParam, lParam, &processed);
+        LRESULT customResult = callback(hwnd, msg, wParam, lParam, &processed);
         if (processed) {
             return customResult;
         }

@@ -288,6 +288,14 @@ static BOOL IsImageLoadFailureCached(const wchar_t* imagePath,
             return FALSE;
         }
 
+        if (!entry->hasWriteTime) {
+            ImageFileInfo currentInfo = {0};
+            if (GetImageFileInfo(cachePath, &currentInfo) && !currentInfo.isDirectory) {
+                ZeroMemory(entry, sizeof(*entry));
+                return FALSE;
+            }
+        }
+
         return FailedImageEntryMatches(entry, writeTime, hasWriteTime);
     }
 

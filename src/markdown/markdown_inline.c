@@ -60,11 +60,9 @@ int CountMarkdownLinks(const wchar_t* input) {
             if (!parenEnd) {
                 break;
             }
-            if (parenEnd) {
-                IncrementCountSaturated(&count);
-                p = parenEnd + 1;
-                continue;
-            }
+            IncrementCountSaturated(&count);
+            p = parenEnd + 1;
+            continue;
         }
         p++;
     }
@@ -528,7 +526,6 @@ BOOL ExtractMarkdownCode(const wchar_t** src, ParseState* state) {
     }
 
     if (*end != L'`' || end == textStart) {
-        *src = start;
         return FALSE;
     }
 
@@ -642,7 +639,7 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
     
     /* Parse colors (single or gradient separated by _) */
     wchar_t* ctx = NULL;
-    wchar_t* token = wcstok_s(colorSpec, L"_", &ctx);
+    const wchar_t* token = wcstok_s(colorSpec, L"_", &ctx);
     
     while (token && colorCount < MAX_COLOR_TAG_COLORS) {
         /* Skip leading whitespace */

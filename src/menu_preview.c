@@ -34,7 +34,6 @@ extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 
 extern void ResetTimerWithInterval(HWND hwnd);
 extern BOOL WriteConfigColor(const char* color);
-extern void WriteConfigFont(const char* fontName, BOOL isCustom);
 extern BOOL WriteConfigTimeFormat(TimeFormatType format);
 extern BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
 extern void WriteConfigEffect(EffectType effect); /* To be implemented if needed, or use existing logic */
@@ -269,11 +268,14 @@ BOOL ApplyPreview(HWND hwnd) {
             break;
             
         case PREVIEW_TYPE_FONT:
+            if (!WriteConfigFont(g_previewState.data.font.fontName, FALSE)) {
+                CancelPreview(hwnd);
+                return FALSE;
+            }
             strncpy_s(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), 
                      g_previewState.data.font.fontName, _TRUNCATE);
             strncpy_s(FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME),
                      g_previewState.data.font.internalName, _TRUNCATE);
-            WriteConfigFont(g_previewState.data.font.fontName, FALSE);
             break;
             
         case PREVIEW_TYPE_TIME_FORMAT:

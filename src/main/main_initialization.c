@@ -540,8 +540,11 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     PluginData_Init(hwnd);
     PluginManager_SetNotifyWindow(hwnd);
     PluginManager_RequestScanAsync();
+    AnimationMenu_Initialize();
     AnimationMenu_RequestScanAsync();
+    FontMenu_Initialize();
     FontMenu_RequestScanAsync();
+    NotificationSoundCache_Initialize();
     NotificationSoundCache_RequestScanAsync();
     
     LPWSTR lpCmdLineW = GetCommandLineW();

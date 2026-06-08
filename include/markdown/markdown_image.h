@@ -138,6 +138,11 @@ BOOL GetPluginsDirectory(wchar_t* buffer, size_t bufferSize);
 BOOL GetImageCacheDirectory(wchar_t* buffer, size_t bufferSize);
 
 /**
+ * @brief Reset shutdown state before using async markdown image downloads
+ */
+void InitializeMarkdownImage(void);
+
+/**
  * @brief Shutdown async download bookkeeping and release synchronization state
  */
 void ShutdownMarkdownImage(void);

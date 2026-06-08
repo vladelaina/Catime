@@ -65,6 +65,7 @@ static FontTagGlyphMetricsCacheEntry
 typedef struct {
     wchar_t fontName[MAX_PATH];
     DWORD lastFailureTick;
+    BOOL pathResolutionFailure;
 } FailedFontCacheEntry;
 
 static FailedFontCacheEntry g_failedFontCache[MAX_FAILED_FONT_CACHE] = {0};
@@ -715,17 +716,16 @@ void BlendCharBitmapSTBWithEffect(void* destBits, int destWidth, int destHeight,
                 continue;
             }
 
-            /* Calculate premultiplied color values for UpdateLayeredWindow */
-            DWORD finalR = (r * alpha) / 255;
-            DWORD finalG = (g * alpha) / 255;
-            DWORD finalB = (b * alpha) / 255;
-            DWORD finalA = (DWORD)alpha;
-
             DWORD currentPixel = *destRow;
             DWORD currentA = (currentPixel >> 24) & 0xFF;
 
             /* If new pixel is more opaque, overwrite */
             if (alpha > currentA) {
+                /* Calculate premultiplied color values for UpdateLayeredWindow */
+                DWORD finalR = (r * alpha) / 255;
+                DWORD finalG = (g * alpha) / 255;
+                DWORD finalB = (b * alpha) / 255;
+                DWORD finalA = (DWORD)alpha;
                 *destRow = (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
             }
             destRow++;
@@ -811,7 +811,7 @@ static void InitGlowGradientContext(GlowGradientContext* ctx,
  * @brief Callback to calculate gradient color for glow effect
  */
 static void GetGlowGradientColor(int x, int y, int* r, int* g, int* b, void* userData) {
-    GlowGradientContext* ctx = (GlowGradientContext*)userData;
+    const GlowGradientContext* ctx = (const GlowGradientContext*)userData;
     (void)y;
 
     if (!ctx || !ctx->info || !r || !g || !b) return;
@@ -1591,6 +1591,13 @@ static BOOL IsRecentFontFailureCached(const wchar_t* fontPath) {
         if (wcscmp(g_failedFontCache[i].fontName, cacheKey) != 0) continue;
 
         if (now - g_failedFontCache[i].lastFailureTick < FONT_FAILURE_RETRY_MS) {
+            if (g_failedFontCache[i].pathResolutionFailure) {
+                wchar_t resolvedPath[MAX_PATH];
+                if (ResolveFontTagPath(cacheKey, resolvedPath, _countof(resolvedPath))) {
+                    ZeroMemory(&g_failedFontCache[i], sizeof(g_failedFontCache[i]));
+                    return FALSE;
+                }
+            }
             return TRUE;
         }
 
@@ -1614,7 +1621,7 @@ static void RemoveFailedFontCacheEntry(const wchar_t* fontPath) {
     }
 }
 
-static void RecordFailedFontCacheEntry(const wchar_t* fontPath) {
+static void RecordFailedFontCacheEntry(const wchar_t* fontPath, BOOL pathResolutionFailure) {
     wchar_t cacheKey[MAX_PATH] = {0};
     if (!CopyFontCacheKeyW(fontPath, cacheKey)) return;
 
@@ -1649,6 +1656,7 @@ static void RecordFailedFontCacheEntry(const wchar_t* fontPath) {
 
     memcpy(g_failedFontCache[target].fontName, cacheKey, sizeof(cacheKey));
     g_failedFontCache[target].lastFailureTick = now;
+    g_failedFontCache[target].pathResolutionFailure = pathResolutionFailure;
 }
 
 /**
@@ -1694,7 +1702,7 @@ stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath) {
     /* Font not in cache, resolve path and load it */
     wchar_t resolvedPath[MAX_PATH];
     if (!ResolveFontTagPath(fontPath, resolvedPath, _countof(resolvedPath))) {
-        RecordFailedFontCacheEntry(cacheKey);
+        RecordFailedFontCacheEntry(cacheKey, TRUE);
         LOG_WARNING("Font path resolution failed: %ls", fontPath);
         return NULL;
     }
@@ -1722,7 +1730,7 @@ stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath) {
     unsigned char* buffer = LoadFontMappingW(resolvedPath, &hFile, &hMapping);
 
     if (!buffer) {
-        RecordFailedFontCacheEntry(cacheKey);
+        RecordFailedFontCacheEntry(cacheKey, FALSE);
         LOG_WARNING("Failed to load font file: %ls", resolvedPath);
         return NULL;
     }
@@ -1731,14 +1739,14 @@ stbtt_fontinfo* GetCachedFontSTB(const wchar_t* fontPath) {
     ULONGLONG fileSize = 0;
     if (!GetFontFileInfoFromHandle(hFile, &lastWriteTime, &fileSize)) {
         ReleaseMappedFont(buffer, hFile, hMapping);
-        RecordFailedFontCacheEntry(cacheKey);
+        RecordFailedFontCacheEntry(cacheKey, FALSE);
         return NULL;
     }
 
     stbtt_fontinfo newFontInfo;
     if (!InitFontInfoFromBufferW(&newFontInfo, buffer, resolvedPath)) {
         ReleaseMappedFont(buffer, hFile, hMapping);
-        RecordFailedFontCacheEntry(cacheKey);
+        RecordFailedFontCacheEntry(cacheKey, FALSE);
         return NULL;
     }
 

@@ -341,7 +341,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
     
     /* Parse countdown seconds (default 3) */
     int seconds = 3;
-    wchar_t* numStart = start + 6;
+    const wchar_t* numStart = start + 6;
     BOOL validNumber = TRUE;
     
     if (numStart < end) {
@@ -352,7 +352,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
         
         if (numStart < end) {
             /* Validate numeric content */
-            wchar_t* p = numStart;
+            const wchar_t* p = numStart;
             while (p < end && *p != L' ' && *p != L'\t') {
                 if (*p < L'0' || *p > L'9') {
                     validNumber = FALSE;
@@ -363,7 +363,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
 
             if (validNumber) {
                 int parsed = 0;
-                wchar_t* parsePtr = numStart;
+                const wchar_t* parsePtr = numStart;
                 while (parsePtr < end && *parsePtr >= L'0' && *parsePtr <= L'9') {
                     int digit = (int)(*parsePtr - L'0');
                     if (parsed > (INT_MAX - digit) / 10) {
@@ -408,6 +408,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
             g_exitPrefix[prefixLen] = L'\0';
         } else {
             LOG_WARNING("PluginExit: Failed to allocate prefix buffer (%zu bytes)", (prefixLen + 1) * sizeof(wchar_t));
+            goto fail_with_template_cleanup;
         }
     }
     
@@ -428,6 +429,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
             g_exitSuffix[suffixLen] = L'\0';
         } else {
             LOG_WARNING("PluginExit: Failed to allocate suffix buffer (%zu bytes)", (suffixLen + 1) * sizeof(wchar_t));
+            goto fail_with_template_cleanup;
         }
     }
     

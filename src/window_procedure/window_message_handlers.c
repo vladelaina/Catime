@@ -225,6 +225,8 @@ LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    StopMenuPreviewTrackingForCommand(hwnd);
+    CancelPreview(hwnd);
     UnregisterGlobalHotkeys(hwnd);
     HandleWindowDestroy(hwnd);
     ConfigWatcher_Stop();

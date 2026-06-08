@@ -12,6 +12,8 @@ def should_ignore(file_path: str, message: str) -> bool:
     normalized = file_path.replace("\\", "/")
     if message.startswith("Active checkers:"):
         return True
+    if message.startswith("Limiting analysis of branches."):
+        return True
     if normalized.startswith("libs/miniaudio/"):
         return True
     if normalized.startswith("libs/stb/"):
@@ -25,6 +27,8 @@ def should_ignore(file_path: str, message: str) -> bool:
     if (normalized == "src/notification.c" and "Memory leak: params" in message) or (normalized == "src/markdown/markdown_image.c" and "Memory leak: params" in message):
         return True
     if normalized == "src/window_procedure/ole_drop_target.c" and "Parameter 'this' can be declared as pointer to const" in message:
+        return True
+    if "is a callback function" in message and "can be declared as pointer to const" in message:
         return True
     return False
 

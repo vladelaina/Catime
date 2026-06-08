@@ -810,7 +810,7 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
         int screenY = (int)(startY + (long long)j);
 
         DWORD* pDestRow = pixels + (size_t)screenY * (size_t)destWidth;
-        unsigned char* pAlphaRow = alphaMap + j * gw;
+        const unsigned char* pAlphaRow = alphaMap + j * gw;
         const unsigned char* pGlowRow = glowMap + j * gw;
         const unsigned char* pRowPrev = alphaMap + (j - 1) * gw;
         const unsigned char* pRowNext = alphaMap + (j + 1) * gw;
@@ -864,10 +864,10 @@ void RenderHolographicEffect(DWORD* pixels, int destWidth, int destHeight,
             if (alphaG > 0 || alphaR > 0 || alphaB > 0) {
                 int dzdx = ((int)pAlphaRow[i+1] - (int)pAlphaRow[i-1]);
                 int dzdy = ((int)pRowNext[i] - (int)pRowPrev[i]);
-                int lighting = -(dzdx + dzdy);
                 int mag = abs(dzdx) + abs(dzdy);
-                
+
                 if (mag > 0) {
+                    int lighting = -(dzdx + dzdy);
                     rimA = (mag * 85) >> 8;
                     if (lighting > 0) {
                         rimA += lighting;

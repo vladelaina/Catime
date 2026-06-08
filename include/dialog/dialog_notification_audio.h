@@ -27,6 +27,11 @@
 void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile);
 
 /**
+ * @brief Reset shutdown state before using the notification sound cache
+ */
+void NotificationSoundCache_Initialize(void);
+
+/**
  * @brief Request a background refresh of the notification sound cache
  */
 void NotificationSoundCache_RequestScanAsync(void);

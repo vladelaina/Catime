@@ -337,6 +337,17 @@ BOOL WriteConfigTopmost(const char* topmost) {
     if (!topmost) {
         return FALSE;
     }
+
+    char config_path[MAX_PATH];
+    GetConfigPath(config_path, MAX_PATH);
+
+    char currentValue[16] = {0};
+    ReadIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "",
+                  currentValue, sizeof(currentValue), config_path);
+    if (strcmp(currentValue, topmost) == 0) {
+        return TRUE;
+    }
+
     return UpdateConfigKeyValueAtomic(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", topmost);
 }
 

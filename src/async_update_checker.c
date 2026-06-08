@@ -41,6 +41,13 @@ static void ResetThreadStateLocked(void) {
     }
 }
 
+static void ReleaseUpdateThreadHandleLocked(void) {
+    if (g_hUpdateThread) {
+        CloseHandle(g_hUpdateThread);
+        g_hUpdateThread = NULL;
+    }
+}
+
 static BOOL IsUpdateThreadStartFailureCoolingDown(DWORD now) {
     return g_updateLastStartFailureTick != 0 &&
            (DWORD)(now - g_updateLastStartFailureTick) <
@@ -156,7 +163,7 @@ void CleanupUpdateThreadBlocking(void) {
     DWORD waitResult = WaitForSingleObject(g_hUpdateThread, FINAL_THREAD_WAIT_TIMEOUT_MS);
     if (waitResult == WAIT_TIMEOUT) {
         LOG_WARNING("Final update thread cleanup timeout, abandoning worker during process teardown");
-        ResetThreadStateLocked();
+        ReleaseUpdateThreadHandleLocked();
         ReleaseSRWLockExclusive(&g_updateThreadLock);
         return;
     }

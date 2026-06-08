@@ -4,6 +4,7 @@
  */
 
 #include "markdown/markdown_interactive.h"
+#include "markdown/markdown_image.h"
 #include "log.h"
 #include "utils/url_safety.h"
 #include <stdlib.h>
@@ -101,6 +102,8 @@ void InitMarkdownInteractive(void) {
         return;
     }
 
+    InitializeMarkdownImage();
+
     if (InterlockedCompareExchange(&g_initialized,
                                    INTERACTIVE_CS_INITIALIZING,
                                    INTERACTIVE_CS_UNINITIALIZED) == INTERACTIVE_CS_UNINITIALIZED) {
@@ -146,20 +149,23 @@ void ClearClickableRegions(void) {
 
 void AddLinkRegion(const RECT* rect, const wchar_t* url) {
     if (!rect || !url) return;
-    wchar_t* urlCopy = _wcsdup(url);
-    if (!urlCopy) return;
     if (!BeginInteractiveUse()) {
-        free(urlCopy);
         return;
     }
     EnterCriticalSection(&g_interactiveCS);
 
     if (g_regionCount < MAX_CLICKABLE_REGIONS) {
+        wchar_t* urlCopy = _wcsdup(url);
+        if (!urlCopy) {
+            LeaveCriticalSection(&g_interactiveCS);
+            EndInteractiveUse();
+            return;
+        }
+
         ClickableRegion* r = &g_regions[g_regionCount];
         r->type = CLICK_TYPE_LINK;
         r->rect = *rect;
         r->url = urlCopy;
-        urlCopy = NULL;
         r->checkboxIndex = -1;
         r->isChecked = FALSE;
         g_regionCount++;
@@ -168,7 +174,6 @@ void AddLinkRegion(const RECT* rect, const wchar_t* url) {
 
     LeaveCriticalSection(&g_interactiveCS);
     EndInteractiveUse();
-    free(urlCopy);
 }
 
 void AddCheckboxRegion(const RECT* rect, int index, BOOL isChecked) {
@@ -444,7 +449,7 @@ BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
     /* Find and toggle the checkbox at given index */
     int currentIndex = 0;
     char* p = content;
-    char* end = content + bytesRead;
+    const char* end = content + bytesRead;
     BOOL modified = FALSE;
 
     while (end - p >= 6) {

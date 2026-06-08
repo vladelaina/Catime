@@ -412,7 +412,6 @@ int CheckAndCreateShortcut(void) {
     
     DWORD exe_path_len = GetModuleFileNameW(NULL, exe_path_w, MAX_PATH);
     if (exe_path_len == 0 || exe_path_len >= MAX_PATH) {
-        exe_path_w[0] = L'\0';
         LOG_ERROR("Failed to get program path");
         CoUninitialize();
         return 1;

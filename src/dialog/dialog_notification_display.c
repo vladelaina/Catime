@@ -110,7 +110,11 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             Dialog_RegisterInstance(DIALOG_INSTANCE_NOTIFICATION_DISP, hwndDlg);
 
             ctx = Dialog_CreateContext();
-            if (!ctx) return FALSE;
+            if (!ctx) {
+                Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_NOTIFICATION_DISP, hwndDlg);
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
             Dialog_SetContext(hwndDlg, ctx);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);

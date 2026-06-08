@@ -249,17 +249,18 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
         return FALSE;
     }
 
+    if (persistConfig) {
+        BOOL persisted = WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
+        if (!persisted) {
+            LOG_WARNING("Topmost preference change was not applied because config persistence failed");
+            return FALSE;
+        }
+    }
     if (updatePreference) {
         CLOCK_WINDOW_TOPMOST = topmost;
     }
     if (updateRuntimeTarget) {
         CLOCK_WINDOW_EFFECTIVE_TOPMOST = topmost;
-    }
-    if (persistConfig) {
-        BOOL persisted = WriteConfigTopmost(topmost ? "TRUE" : "FALSE");
-        if (!persisted) {
-            LOG_WARNING("Topmost preference updated in memory but failed to persist config");
-        }
     }
 
     if (topmost) {

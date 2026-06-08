@@ -149,10 +149,12 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
             snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
                     FONTS_PATH_PREFIX, defaultFont);
             
-            WriteConfigFont(FONT_FILE_NAME, FALSE);
-            FlushConfigToDisk();
-            
-            LOG_INFO("Font configuration auto-corrected to default font");
+            if (WriteConfigFont(FONT_FILE_NAME, FALSE)) {
+                FlushConfigToDisk();
+                LOG_INFO("Font configuration auto-corrected to default font");
+            } else {
+                LOG_WARNING("Loaded default font, but failed to persist font auto-correction");
+            }
             return TRUE;
         }
         
@@ -166,10 +168,12 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
                 snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
                         FONTS_PATH_PREFIX, defaultFont);
                 
-                WriteConfigFont(FONT_FILE_NAME, FALSE);
-                FlushConfigToDisk();
-                
-                LOG_INFO("Font configuration auto-corrected after re-extraction");
+                if (WriteConfigFont(FONT_FILE_NAME, FALSE)) {
+                    FlushConfigToDisk();
+                    LOG_INFO("Font configuration auto-corrected after re-extraction");
+                } else {
+                    LOG_WARNING("Loaded default font after extraction, but failed to persist font auto-correction");
+                }
                 return TRUE;
             }
         }
@@ -185,10 +189,13 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
                 snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
                         FONTS_PATH_PREFIX, fontResources[i].fontName);
                 
-                WriteConfigFont(FONT_FILE_NAME, FALSE);
-                FlushConfigToDisk();
-                
-                LOG_INFO("Font configuration auto-corrected to: %s", fontResources[i].fontName);
+                if (WriteConfigFont(FONT_FILE_NAME, FALSE)) {
+                    FlushConfigToDisk();
+                    LOG_INFO("Font configuration auto-corrected to: %s", fontResources[i].fontName);
+                } else {
+                    LOG_WARNING("Loaded fallback font, but failed to persist font auto-correction: %s",
+                                fontResources[i].fontName);
+                }
                 return TRUE;
             }
         }

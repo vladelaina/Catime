@@ -87,10 +87,16 @@ static SRWLOCK g_fontMenuCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_fontScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hFontScanThread = NULL;
 static volatile LONG g_fontScanShuttingDown = 0;
+static volatile LONG g_fontScanGeneration = 0;
 static volatile LONG g_fontMenuLastScanTick = 0;
 
 static BOOL IsFontMenuScanShuttingDown(void) {
     return InterlockedCompareExchange(&g_fontScanShuttingDown, 0, 0) != 0;
+}
+
+static BOOL IsFontMenuScanCanceled(LONG generation) {
+    return IsFontMenuScanShuttingDown() ||
+           InterlockedCompareExchange(&g_fontScanGeneration, 0, 0) != generation;
 }
 
 static BOOL IsFontMenuCacheRecentlyScanned(DWORD now) {
@@ -108,6 +114,9 @@ static BOOL IsFontMenuCacheRecentlyScanned(DWORD now) {
 
 static void MarkFontMenuScanStartFailure(DWORD now) {
     AcquireSRWLockExclusive(&g_fontMenuCacheLock);
+    ZeroMemory(g_fontMenuCache, sizeof(g_fontMenuCache));
+    g_fontMenuCacheCount = 0;
+    g_fontMenuCacheReady = FALSE;
     g_fontMenuCacheFailed = TRUE;
     InterlockedExchange(&g_fontMenuLastScanTick, (LONG)now);
     ReleaseSRWLockExclusive(&g_fontMenuCacheLock);
@@ -250,8 +259,9 @@ static BOOL AddFontEntry(FontScanContext* ctx, const wchar_t* fileName,
 static void ScanFontFolderRecursive(const wchar_t* folderPath,
                                     const wchar_t* relativePath,
                                     FontScanContext* ctx,
-                                    int depth) {
-    if (ctx->full || IsFontMenuScanShuttingDown()) return;
+                                    int depth,
+                                    LONG generation) {
+    if (ctx->full || IsFontMenuScanCanceled(generation)) return;
 
     if (depth >= MAX_RECURSION_DEPTH) {
         WriteLog(LOG_LEVEL_WARNING, "Max recursion depth reached at: %ls", folderPath);
@@ -283,7 +293,7 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
 
     BOOL stoppedEarly = FALSE;
     do {
-        if (ctx->full || IsFontMenuScanShuttingDown()) {
+        if (ctx->full || IsFontMenuScanCanceled(generation)) {
             stoppedEarly = TRUE;
             break;
         }
@@ -321,7 +331,7 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
         BOOL isDirectory = (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         if (isDirectory) {
             if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
-                ScanFontFolderRecursive(fullPath, newRelativePath, ctx, depth + 1);
+                ScanFontFolderRecursive(fullPath, newRelativePath, ctx, depth + 1, generation);
                 if (ctx->failed) {
                     stoppedEarly = TRUE;
                     break;
@@ -350,7 +360,9 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
 /**
  * @brief Scan fonts folder and return entries
  */
-static int ScanFontsFolder(FontEntry* entries, int capacity, const wchar_t* currentFontRelPath) {
+static int ScanFontsFolder(FontEntry* entries, int capacity,
+                           const wchar_t* currentFontRelPath,
+                           LONG generation) {
     FontScanContext ctx = {0};
     ctx.entries = entries;
     ctx.count = 0;
@@ -379,8 +391,8 @@ static int ScanFontsFolder(FontEntry* entries, int capacity, const wchar_t* curr
         return FONT_MENU_SCAN_FAILED;
     }
 
-    ScanFontFolderRecursive(fontsPath, L"", &ctx, 0);
-    if (ctx.failed || IsFontMenuScanShuttingDown()) {
+    ScanFontFolderRecursive(fontsPath, L"", &ctx, 0, generation);
+    if (ctx.failed || IsFontMenuScanCanceled(generation)) {
         return FONT_MENU_SCAN_FAILED;
     }
 
@@ -390,21 +402,21 @@ static int ScanFontsFolder(FontEntry* entries, int capacity, const wchar_t* curr
 }
 
 static DWORD WINAPI FontScanThread(LPVOID lpParam) {
-    (void)lpParam;
+    LONG generation = (LONG)(INT_PTR)lpParam;
 
     FontEntry* entries = (FontEntry*)malloc((size_t)MAX_FONT_ENTRIES * sizeof(*entries));
     int count = FONT_MENU_SCAN_FAILED;
     if (entries) {
         ZeroMemory(entries, (size_t)MAX_FONT_ENTRIES * sizeof(*entries));
-        count = ScanFontsFolder(entries, MAX_FONT_ENTRIES, L"");
+        count = ScanFontsFolder(entries, MAX_FONT_ENTRIES, L"", generation);
     } else {
         LOG_WARNING("Failed to allocate font menu scan buffer");
     }
     BOOL scanFailed = (count < 0);
 
-    if (!IsFontMenuScanShuttingDown()) {
+    if (!IsFontMenuScanCanceled(generation)) {
         AcquireSRWLockExclusive(&g_fontMenuCacheLock);
-        if (!IsFontMenuScanShuttingDown()) {
+        if (!IsFontMenuScanCanceled(generation)) {
             if (!scanFailed && count > 0 && entries) {
                 memcpy(g_fontMenuCache, entries, (size_t)count * sizeof(FontEntry));
             }
@@ -452,7 +464,9 @@ void FontMenu_RequestScanAsync(void) {
         return;
     }
 
-    HANDLE hThread = CreateThread(NULL, 0, FontScanThread, NULL, 0, NULL);
+    LONG generation = InterlockedCompareExchange(&g_fontScanGeneration, 0, 0);
+    HANDLE hThread = CreateThread(NULL, 0, FontScanThread,
+                                  (LPVOID)(INT_PTR)generation, 0, NULL);
     if (hThread) {
         g_hFontScanThread = hThread;
     } else {
@@ -463,10 +477,16 @@ void FontMenu_RequestScanAsync(void) {
     ReleaseSRWLockExclusive(&g_fontScanThreadLock);
 }
 
+void FontMenu_Initialize(void) {
+    InterlockedIncrement(&g_fontScanGeneration);
+    InterlockedExchange(&g_fontScanShuttingDown, 0);
+}
+
 void FontMenu_Shutdown(void) {
     HANDLE hThread = NULL;
 
     AcquireSRWLockExclusive(&g_fontScanThreadLock);
+    InterlockedIncrement(&g_fontScanGeneration);
     InterlockedExchange(&g_fontScanShuttingDown, 1);
     if (g_hFontScanThread) {
         hThread = g_hFontScanThread;

@@ -405,8 +405,11 @@ char* UTF8ToANSI(const char* utf8Str) {
  * @brief Set font license agreement acceptance status
  */
 void SetFontLicenseAccepted(BOOL accepted) {
+    accepted = accepted ? TRUE : FALSE;
+    if (!WriteConfigKeyValue("FONT_LICENSE_ACCEPTED", accepted ? "TRUE" : "FALSE")) {
+        return;
+    }
     g_AppConfig.font_license.accepted = accepted;
-    WriteConfigKeyValue("FONT_LICENSE_ACCEPTED", accepted ? "TRUE" : "FALSE");
 }
 
 /**
@@ -414,11 +417,13 @@ void SetFontLicenseAccepted(BOOL accepted) {
  */
 void SetFontLicenseVersionAccepted(const char* version) {
     if (!version) return;
-    
+
+    if (!WriteConfigKeyValue("FONT_LICENSE_VERSION_ACCEPTED", version)) {
+        return;
+    }
+
     strncpy(g_AppConfig.font_license.version_accepted, version, sizeof(g_AppConfig.font_license.version_accepted) - 1);
     g_AppConfig.font_license.version_accepted[sizeof(g_AppConfig.font_license.version_accepted) - 1] = '\0';
-    
-    WriteConfigKeyValue("FONT_LICENSE_VERSION_ACCEPTED", version);
 }
 
 /**

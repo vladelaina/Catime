@@ -21,6 +21,7 @@
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
+#include <wchar.h>
 #include <winnls.h>
 #include <commdlg.h>
 
@@ -284,7 +285,7 @@ void RecalculateWindowSize(HWND hwnd) {
     int fontNameLen = MultiByteToWideChar(CP_UTF8, 0, FONT_INTERNAL_NAME, -1,
                                           fontNameW, (int)(sizeof(fontNameW) / sizeof(fontNameW[0])));
     if (fontNameLen <= 0) {
-        lstrcpynW(fontNameW, L"Segoe UI", (int)(sizeof(fontNameW) / sizeof(fontNameW[0])));
+        wcscpy_s(fontNameW, _countof(fontNameW), L"Segoe UI");
     }
     
     HFONT hFont = CreateFontW(
@@ -302,12 +303,12 @@ void RecalculateWindowSize(HWND hwnd) {
     int timeTextLen = MultiByteToWideChar(CP_UTF8, 0, time_text, -1,
                                           time_textW, (int)(sizeof(time_textW) / sizeof(time_textW[0])));
     if (timeTextLen <= 0) {
-        lstrcpynW(time_textW, L"00:00", (int)(sizeof(time_textW) / sizeof(time_textW[0])));
-        timeTextLen = lstrlenW(time_textW) + 1;
+        wcscpy_s(time_textW, _countof(time_textW), L"00:00");
+        timeTextLen = (int)wcslen(time_textW) + 1;
     }
 
     SIZE textSize = { CLOCK_BASE_FONT_SIZE * 4, CLOCK_BASE_FONT_SIZE };
-    int visibleChars = timeTextLen > 0 ? timeTextLen - 1 : lstrlenW(time_textW);
+    int visibleChars = timeTextLen > 0 ? timeTextLen - 1 : (int)wcslen(time_textW);
     GetTextExtentPoint32W(hdc, time_textW, visibleChars, &textSize);
 
     if (hOldFont) SelectObject(hdc, hOldFont);

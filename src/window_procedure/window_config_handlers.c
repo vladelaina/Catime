@@ -312,7 +312,7 @@ static BOOL ResolveFontLoadNameForHotReload(const char* configFont,
 
     const char* relativePath = ExtractRelativePath(configFont);
     const char* source = relativePath ? relativePath : configFont;
-    if (!source || !*source) {
+    if (!*source) {
         return FALSE;
     }
 
@@ -329,7 +329,7 @@ static BOOL ApplyFontForHotReload(const char* configFont) {
     if (!ResolveFontLoadNameForHotReload(configFont, loadName, sizeof(loadName))) {
         WriteLog(LOG_LEVEL_WARNING,
                  "Ignoring invalid hot-reload font config value '%s'",
-                 configFont ? configFont : "");
+                 configFont);
         return FALSE;
     }
 

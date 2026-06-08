@@ -185,6 +185,7 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
 
     if (!hwnd) {
         LOG_WINDOWS_ERROR("Window creation failed");
+        UnregisterClassW(WINDOW_CLASS_NAME, hInstance);
         return NULL;
     }
 
@@ -276,9 +277,8 @@ void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY
 
     MONITORINFO mi = {0};
     GetPrimaryMonitorInfo(&mi);
-    int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
-
     if (IsSpecialWindowPositionX(configPosX)) {
+        int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
         if (configPosX == -1) {
             posX = mi.rcMonitor.left + (screenWidth - width) / 2;
         } else {

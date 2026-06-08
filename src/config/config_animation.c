@@ -203,13 +203,13 @@ static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8,
         if (eq) {
             *eq = L'\0';
             const wchar_t* key = p;
-            wchar_t* value = eq + 1;
 
             if (wcsncmp(key, prefix, prefixLen) == 0) {
                 const wchar_t* token = key + prefixLen;
                 const wchar_t* dash = wcschr(token, L'-');
                 if (!dash) {
                     /** New-style: ANIMATION_SPEED_MAP_PERCENT=VALUE */
+                    wchar_t* value = eq + 1;
                     double scale = 0.0;
                     int percent = 0;
                     if (!ParseAnimationPercentToken(token, &percent) ||

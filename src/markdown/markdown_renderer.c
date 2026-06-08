@@ -158,7 +158,7 @@ static HFONT GetCachedMarkdownFont(MarkdownFontCache* cache, const LOGFONT* base
     BYTE italicByte = (BYTE)(italic ? 1 : 0);
 
     for (int i = 0; i < cache->count; i++) {
-        MarkdownFontCacheEntry* entry = &cache->entries[i];
+        const MarkdownFontCacheEntry* entry = &cache->entries[i];
         if (entry->height == height &&
             entry->weight == weight &&
             entry->italic == italicByte &&

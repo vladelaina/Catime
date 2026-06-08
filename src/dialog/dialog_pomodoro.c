@@ -179,7 +179,11 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
             Dialog_RegisterInstance(DIALOG_INSTANCE_POMODORO_LOOP, hwndDlg);
 
             ctx = Dialog_CreateContext();
-            if (!ctx) return FALSE;
+            if (!ctx) {
+                Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_POMODORO_LOOP, hwndDlg);
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
             Dialog_SetContext(hwndDlg, ctx);
 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_LOOP_DIALOG);
@@ -303,7 +307,11 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             Dialog_RegisterInstance(DIALOG_INSTANCE_POMODORO_COMBO, hwndDlg);
 
             ctx = Dialog_CreateContext();
-            if (!ctx) return FALSE;
+            if (!ctx) {
+                Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_POMODORO_COMBO, hwndDlg);
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
             Dialog_SetContext(hwndDlg, ctx);
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);

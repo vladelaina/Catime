@@ -22,6 +22,7 @@
 #define ICON_RECT_CACHE_TIMEOUT_MS 250  /* Cache tray icon position to reduce Shell API calls */
 #define TRAY_OPACITY_SAVE_TIMER_ID 42423
 #define TRAY_OPACITY_SAVE_DELAY_MS 400
+#define TRAY_OPACITY_SAVE_MAX_RETRIES 3
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 /** @brief Global tray icon data for Shell_NotifyIcon */
@@ -44,6 +45,7 @@ static RECT g_cachedIconRect = {0};
 static DWORD g_lastRectUpdateTime = 0;
 static volatile LONG g_trayInteractionSuspended = FALSE;
 static int g_pendingOpacityToSave = -1;
+static int g_pendingOpacitySaveRetryCount = 0;
 static wchar_t g_lastTrayTooltip[256] = {0};
 
 extern void ReadPercentIconColorsConfig(void);
@@ -53,6 +55,7 @@ static void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
                                  BOOL startBackgroundWork,
                                  BOOL useAnimationInitialIcon);
 static void RemoveTrayIconInternal(BOOL finalCleanup);
+static void CALLBACK TrayOpacitySaveTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 
 static BOOL IsValidTrayMainWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
@@ -362,15 +365,45 @@ static void FlushPendingTrayOpacitySave(void) {
         GetConfigPath(configPath, sizeof(configPath));
         if (!WriteIniInt(INI_SECTION_DISPLAY, "WINDOW_OPACITY",
                          g_pendingOpacityToSave, configPath)) {
-            LOG_WARNING("Failed to save tray opacity: %d", g_pendingOpacityToSave);
+            g_pendingOpacitySaveRetryCount++;
+            if (g_pendingOpacitySaveRetryCount >= TRAY_OPACITY_SAVE_MAX_RETRIES) {
+                LOG_WARNING("Failed to save tray opacity after %d attempts; dropping pending value: %d",
+                            g_pendingOpacitySaveRetryCount, g_pendingOpacityToSave);
+                g_pendingOpacityToSave = -1;
+                g_pendingOpacitySaveRetryCount = 0;
+                return;
+            }
+            LOG_WARNING("Failed to save tray opacity: %d (attempt %d/%d)",
+                        g_pendingOpacityToSave,
+                        g_pendingOpacitySaveRetryCount,
+                        TRAY_OPACITY_SAVE_MAX_RETRIES);
             return;
         }
         g_pendingOpacityToSave = -1;
+        g_pendingOpacitySaveRetryCount = 0;
     }
 }
 
 static void DiscardPendingTrayOpacitySave(void) {
     g_pendingOpacityToSave = -1;
+    g_pendingOpacitySaveRetryCount = 0;
+}
+
+static void ReschedulePendingTrayOpacitySave(HWND hwnd) {
+    if (g_pendingOpacityToSave < 0) {
+        return;
+    }
+
+    if (!IsValidTrayMainWindow(hwnd)) {
+        return;
+    }
+
+    if (!SetTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID,
+                  TRAY_OPACITY_SAVE_DELAY_MS, TrayOpacitySaveTimerProc)) {
+        LOG_WARNING("Failed to reschedule pending tray opacity save (error=%lu)",
+                    GetLastError());
+        DiscardPendingTrayOpacitySave();
+    }
 }
 
 static void CompleteTrayOpacityFeedback(HWND hwnd, BOOL refreshTooltip) {
@@ -397,6 +430,7 @@ static void CALLBACK TrayOpacitySaveTimerProc(HWND hwnd, UINT msg, UINT_PTR id, 
                   TRAY_OPACITY_SAVE_DELAY_MS, TrayOpacitySaveTimerProc)) {
         LOG_WARNING("Failed to reschedule tray opacity save retry (error=%lu)",
                     GetLastError());
+        DiscardPendingTrayOpacitySave();
     }
 }
 
@@ -423,11 +457,16 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
     if (CLOCK_WINDOW_OPACITY != oldOpacity) {
         InvalidateRect(hwnd, NULL, FALSE);
         g_pendingOpacityToSave = CLOCK_WINDOW_OPACITY;
+        g_pendingOpacitySaveRetryCount = 0;
     }
 
     if (!SetTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID, TRAY_OPACITY_SAVE_DELAY_MS,
                   TrayOpacitySaveTimerProc)) {
         CompleteTrayOpacityFeedback(hwnd, TRUE);
+        if (g_pendingOpacityToSave >= 0) {
+            LOG_WARNING("Dropping pending tray opacity save after timer start failure");
+            DiscardPendingTrayOpacitySave();
+        }
     }
 }
 
@@ -607,7 +646,11 @@ static void RemoveTrayIconInternal(BOOL finalCleanup) {
         KillTimer(nid.hWnd, TRAY_TIP_TIMER_ID);
         KillTimer(nid.hWnd, TRAY_OPACITY_SAVE_TIMER_ID);
         CompleteTrayOpacityFeedback(nid.hWnd, FALSE);
-        DiscardPendingTrayOpacitySave();
+        if (finalCleanup) {
+            DiscardPendingTrayOpacitySave();
+        } else {
+            ReschedulePendingTrayOpacitySave(nid.hWnd);
+        }
     }
 
     /* Stop hover detection timer */
@@ -632,7 +675,9 @@ static void RemoveTrayIconInternal(BOOL finalCleanup) {
     g_lastTrayTooltip[0] = L'\0';
     SetRectEmpty(&g_cachedIconRect);
     g_lastRectUpdateTime = 0;
-    DiscardPendingTrayOpacitySave();
+    if (finalCleanup) {
+        DiscardPendingTrayOpacitySave();
+    }
 }
 
 /** @brief Remove tray icon and cleanup */
@@ -731,7 +776,7 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
         KillTimer(hwnd, TRAY_TIP_TIMER_ID);
         KillTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID);
         CompleteTrayOpacityFeedback(hwnd, FALSE);
-        DiscardPendingTrayOpacitySave();
+        ReschedulePendingTrayOpacitySave(hwnd);
         if (TrayAnimation_IsRunning()) {
             StopTrayAnimation(hwnd);
         }
@@ -796,6 +841,7 @@ void SetTrayInteractionSuspended(BOOL suspended) {
 
     HWND hwndMain = GetValidTrayMainWindow();
     if (hwndMain) {
+        TrayAnimation_RefreshCurrentIcon();
         TrayTipTimerProc(hwndMain, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
     }
 }

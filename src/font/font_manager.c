@@ -182,13 +182,19 @@ static BOOL LoadFontInternal(const char* fontFileName, BOOL shouldUpdateConfig) 
     if (shouldUpdateConfig && IsFontsFolderPath(FONT_FILE_NAME)) {
         const char* currentRelative = ExtractRelativePath(FONT_FILE_NAME);
         if (currentRelative && strcmp(currentRelative, fontFileName) == 0) {
+            char previousFontName[MAX_PATH] = {0};
+            CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+
             /* Update global FONT_FILE_NAME */
             strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
             FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-            
+
             /* Write to config */
-            WriteConfigFont(pathInfo.relativePath, FALSE);
-            FlushConfigToDisk();
+            if (WriteConfigFont(pathInfo.relativePath, FALSE)) {
+                FlushConfigToDisk();
+            } else {
+                CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+            }
         }
     }
     
@@ -232,11 +238,17 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
             if (IsFontsFolderPath(FONT_FILE_NAME)) {
                 const char* currentRelative = ExtractRelativePath(FONT_FILE_NAME);
                 if (currentRelative && strcmp(currentRelative, fontFileName) == 0) {
+                    char previousFontName[MAX_PATH] = {0};
+                    CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+
                     strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
                     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-                    
-                    WriteConfigFont(pathInfo.relativePath, FALSE);
-                    FlushConfigToDisk();
+
+                    if (WriteConfigFont(pathInfo.relativePath, FALSE)) {
+                        FlushConfigToDisk();
+                    } else {
+                        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+                    }
                 }
             }
         } else {
@@ -288,8 +300,24 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     CopyStringExactA(loadedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
 
     /* Write to config (without reload) */
-    WriteConfigFont(FONT_FILE_NAME, FALSE);
-    
+    if (!WriteConfigFont(FONT_FILE_NAME, FALSE)) {
+        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        if (previousFontName[0] != '\0') {
+            const char* reloadName = previousFontName;
+            if (IsFontsFolderPath(previousFontName)) {
+                const char* relativePath = ExtractRelativePath(previousFontName);
+                if (relativePath) {
+                    reloadName = relativePath;
+                }
+            }
+            LoadFontByNameAndGetRealName(hInstance, reloadName,
+                                         FONT_INTERNAL_NAME,
+                                         sizeof(FONT_INTERNAL_NAME));
+        }
+        return FALSE;
+    }
+
     return TRUE;
 }
 
@@ -374,7 +402,10 @@ void ApplyFontPreview(void) {
     CopyStringExactA(committedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
 
     /* Write to config */
-    WriteConfigFont(FONT_FILE_NAME, FALSE);
+    if (!WriteConfigFont(FONT_FILE_NAME, FALSE)) {
+        CancelFontPreview();
+        return;
+    }
 
     /* Preview font is already loaded; keep it active and only clear preview state. */
     ClearFontPreviewState();
@@ -434,17 +465,22 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
     if (!WideToUtf8(wFontsFolderPath, fontsFolderPath, MAX_PATH)) return FALSE;
     
     /* Extract each font */
+    BOOL allExtracted = TRUE;
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
         char outputPath[MAX_PATH];
         int outputPathLen = snprintf(outputPath, MAX_PATH, "%s\\%s", fontsFolderPath, fontResources[i].fontName);
         if (outputPathLen < 0 || outputPathLen >= MAX_PATH) {
             LOG_WARNING("Font output path too long: %s", fontResources[i].fontName);
+            allExtracted = FALSE;
             continue;
         }
-        ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath);
+        if (!ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath)) {
+            LOG_WARNING("Failed to extract embedded font: %s", fontResources[i].fontName);
+            allExtracted = FALSE;
+        }
     }
-    
-    return TRUE;
+
+    return allExtracted;
 }
 
 /* ============================================================================

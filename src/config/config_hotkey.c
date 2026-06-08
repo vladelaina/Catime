@@ -200,7 +200,7 @@ WORD StringToHotkey(const char* str) {
     buffer[sizeof(buffer) - 1] = '\0';
     
     /** Parse modifier and key components */
-    char* token = strtok(buffer, "+");
+    const char* token = strtok(buffer, "+");
     const char* lastToken = NULL;
     
     while (token) {

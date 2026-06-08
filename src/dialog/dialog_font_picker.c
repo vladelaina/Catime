@@ -22,6 +22,7 @@ extern char FONT_INTERNAL_NAME[MAX_PATH];
 typedef struct {
     char originalFontName[MAX_PATH];
     char originalFileName[MAX_PATH];
+    BOOL closeHandled;
 } FontDialogState;
 
 static FontDialogState g_fontState = {0};
@@ -41,14 +42,15 @@ static BOOL WideFontPathToUtf8(const wchar_t* fontPath, char* outPath, size_t ou
                                (int)outPathSize, NULL, NULL) > 0;
 }
 
-static BOOL ShouldStopFontEnumeration(void);
+static BOOL ShouldStopFontEnumeration(HANDLE stopEvent);
 
 static void SaveOriginalFont(void) {
     strncpy(g_fontState.originalFontName, FONT_INTERNAL_NAME, sizeof(g_fontState.originalFontName) - 1);
     g_fontState.originalFontName[sizeof(g_fontState.originalFontName) - 1] = '\0';
-    
+
     strncpy(g_fontState.originalFileName, FONT_FILE_NAME, sizeof(g_fontState.originalFileName) - 1);
     g_fontState.originalFileName[sizeof(g_fontState.originalFileName) - 1] = '\0';
+    g_fontState.closeHandled = FALSE;
 }
 
 static void RestoreOriginalFont(void) {
@@ -80,8 +82,9 @@ static void RestoreOriginalFont(void) {
     }
 }
 
-static BOOL GetSystemFontPath(const wchar_t* fontName, char* outPath, size_t outPathSize) {
-    if (ShouldStopFontEnumeration()) {
+static BOOL GetSystemFontPath(const wchar_t* fontName, char* outPath,
+                              size_t outPathSize, HANDLE stopEvent) {
+    if (ShouldStopFontEnumeration(stopEvent)) {
         return FALSE;
     }
 
@@ -102,7 +105,7 @@ static BOOL GetSystemFontPath(const wchar_t* fontName, char* outPath, size_t out
     const wchar_t* extensions[] = {L".ttf", L".otf", L".ttc"};
     
     for (int i = 0; i < 3; i++) {
-        if (ShouldStopFontEnumeration()) {
+        if (ShouldStopFontEnumeration(stopEvent)) {
             return FALSE;
         }
 
@@ -166,7 +169,7 @@ static BOOL PreviewFontInMainWindow(const wchar_t* fontName, const char* cachedF
     if (cachedFontPath && cachedFontPath[0]) {
         strncpy(fontPath, cachedFontPath, sizeof(fontPath) - 1);
         fontPath[sizeof(fontPath) - 1] = '\0';
-    } else if (!GetSystemFontPath(fontName, fontPath, sizeof(fontPath))) {
+    } else if (!GetSystemFontPath(fontName, fontPath, sizeof(fontPath), NULL)) {
         LOG_ERROR("FontApply: ✗ Failed to locate font file for: %S", fontName);
         return FALSE;
     }
@@ -214,7 +217,10 @@ static BOOL CommitCurrentFontSelection(void) {
         return TRUE;
     }
 
-    WriteConfigFont(FONT_FILE_NAME, FALSE);
+    if (!WriteConfigFont(FONT_FILE_NAME, FALSE)) {
+        LOG_WARNING("FontPicker: failed to persist selected font: %s", FONT_FILE_NAME);
+        return FALSE;
+    }
     FlushConfigToDisk();
     return TRUE;
 }
@@ -236,6 +242,7 @@ static int g_currentFontIndex = -1;
 
 typedef struct {
     HWND hdlg;
+    HANDLE stopEvent;
     LONG generation;
 } FontEnumerationThreadParams;
 
@@ -251,9 +258,9 @@ typedef struct {
 #define FONT_ENUM_DEFERRED_CLEANUP_INTERVAL_MS 1000
 #define FONT_ENUM_START_RETRY_INTERVAL_MS 1000
 
-static BOOL ShouldStopFontEnumeration(void) {
-    return g_fontEnumStopEvent &&
-           WaitForSingleObject(g_fontEnumStopEvent, 0) == WAIT_OBJECT_0;
+static BOOL ShouldStopFontEnumeration(HANDLE stopEvent) {
+    return stopEvent &&
+           WaitForSingleObject(stopEvent, 0) == WAIT_OBJECT_0;
 }
 
 static void ResetFontMap(void) {
@@ -404,8 +411,8 @@ void CleanupSystemFontDialogResources(void) {
     g_fontEnumRestartAfterCleanup = FALSE;
 }
 
-static BOOL CheckFontHasRequiredGlyphs(HDC hdc, const wchar_t* fontName) {
-    if (ShouldStopFontEnumeration()) {
+static BOOL CheckFontHasRequiredGlyphs(HDC hdc, const wchar_t* fontName, HANDLE stopEvent) {
+    if (ShouldStopFontEnumeration(stopEvent)) {
         return FALSE;
     }
 
@@ -434,7 +441,7 @@ static BOOL CheckFontHasRequiredGlyphs(HDC hdc, const wchar_t* fontName) {
         return FALSE;
     }
 
-    if (ShouldStopFontEnumeration()) {
+    if (ShouldStopFontEnumeration(stopEvent)) {
         DeleteObject(hFont);
         return FALSE;
     }
@@ -575,7 +582,7 @@ static int CALLBACK EnumFontFamiliesProc(const LOGFONTW* lpelf, const TEXTMETRIC
         
         /* Try to resolve font path */
         char fontPath[MAX_PATH];
-        if (GetSystemFontPath(faceName, fontPath, sizeof(fontPath))) {
+        if (GetSystemFontPath(faceName, fontPath, sizeof(fontPath), (HANDLE)lParam)) {
             if (!AddOrUpdateFontMap(faceName, fontPath)) {
                 return 0;
             }
@@ -700,7 +707,7 @@ static void PopulateFontList(HWND hdlg) {
 
 }
 
-static void BuildFontMap(void) {
+static void BuildFontMap(HANDLE stopEvent) {
     HDC hdc = GetDC(NULL);
     if (!hdc) {
         return;
@@ -708,21 +715,21 @@ static void BuildFontMap(void) {
 
     LOGFONTW lf = {0};
     lf.lfCharSet = DEFAULT_CHARSET;
-    EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamiliesProc, (LPARAM)g_fontEnumStopEvent, 0);
+    EnumFontFamiliesExW(hdc, &lf, (FONTENUMPROCW)EnumFontFamiliesProc, (LPARAM)stopEvent, 0);
 
-    if (ShouldStopFontEnumeration()) {
+    if (ShouldStopFontEnumeration(stopEvent)) {
         ReleaseDC(NULL, hdc);
         return;
     }
 
     int writeIndex = 0;
     for (int i = 0; i < g_fontMapCount; i++) {
-        if (ShouldStopFontEnumeration()) {
+        if (ShouldStopFontEnumeration(stopEvent)) {
             ReleaseDC(NULL, hdc);
             return;
         }
 
-        if (CheckFontHasRequiredGlyphs(hdc, g_fontMap[i].fontName)) {
+        if (CheckFontHasRequiredGlyphs(hdc, g_fontMap[i].fontName, stopEvent)) {
             if (writeIndex != i) {
                 g_fontMap[writeIndex] = g_fontMap[i];
             }
@@ -737,17 +744,22 @@ static void BuildFontMap(void) {
 static DWORD WINAPI FontEnumerationThread(LPVOID param) {
     FontEnumerationThreadParams* params = (FontEnumerationThreadParams*)param;
     HWND hdlg = params ? params->hdlg : NULL;
+    HANDLE stopEvent = params ? params->stopEvent : NULL;
     LONG generation = params ? params->generation : 0;
     free(params);
 
-    BuildFontMap();
+    BuildFontMap(stopEvent);
 
-    if (!ShouldStopFontEnumeration() &&
+    if (!ShouldStopFontEnumeration(stopEvent) &&
         InterlockedCompareExchange(&g_fontEnumGeneration, 0, 0) == generation &&
         hdlg &&
         IsWindow(hdlg) &&
         Dialog_GetInstance(DIALOG_INSTANCE_FONT_PICKER) == hdlg) {
         PostMessageW(hdlg, WM_APP_FONT_ENUM_COMPLETE, (WPARAM)generation, 0);
+    }
+
+    if (stopEvent) {
+        CloseHandle(stopEvent);
     }
 
     return 0;
@@ -761,10 +773,23 @@ static HANDLE StartFontEnumerationThread(HWND hdlg) {
     }
 
     params->hdlg = hdlg;
+    params->stopEvent = NULL;
     params->generation = InterlockedIncrement(&g_fontEnumGeneration);
+    if (g_fontEnumStopEvent &&
+        !DuplicateHandle(GetCurrentProcess(), g_fontEnumStopEvent,
+                         GetCurrentProcess(), &params->stopEvent,
+                         0, FALSE, DUPLICATE_SAME_ACCESS)) {
+        LOG_WARNING("FontPicker: Failed to duplicate enumeration stop event (error=%lu)",
+                    GetLastError());
+        free(params);
+        return NULL;
+    }
 
     HANDLE hThread = CreateThread(NULL, 0, FontEnumerationThread, params, 0, NULL);
     if (!hThread) {
+        if (params->stopEvent) {
+            CloseHandle(params->stopEvent);
+        }
         free(params);
     }
     return hThread;
@@ -1013,12 +1038,16 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
 
         case WM_COMMAND: {
             if (LOWORD(wp) == IDOK) {
-                CommitCurrentFontSelection();
+                if (!CommitCurrentFontSelection()) {
+                    return TRUE;
+                }
+                g_fontState.closeHandled = TRUE;
                 KillTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID);
                 DestroyWindow(hdlg);
                 return TRUE;
             } else if (LOWORD(wp) == IDCANCEL) {
                 RestoreOriginalFont();
+                g_fontState.closeHandled = TRUE;
                 KillTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID);
                 DestroyWindow(hdlg);
                 return TRUE;
@@ -1072,6 +1101,10 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
             return TRUE;
 
         case WM_DESTROY:
+            if (!g_fontState.closeHandled) {
+                RestoreOriginalFont();
+                g_fontState.closeHandled = TRUE;
+            }
             KillTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID);
             KillTimer(hdlg, FONT_ENUM_POLL_TIMER_ID);
             KillTimer(hdlg, FONT_ENUM_START_RETRY_TIMER_ID);
@@ -1086,6 +1119,7 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
             /* Clear checkmark index */
             g_currentFontIndex = -1;
             g_fontListReady = FALSE;
+            g_fontState.closeHandled = FALSE;
 
             if (enumStopped) {
                 ResetFontMap();

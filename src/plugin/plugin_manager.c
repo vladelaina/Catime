@@ -538,7 +538,7 @@ void PluginManager_Init(void) {
 }
 
 void PluginManager_Shutdown(void) {
-    if (!g_pluginManagerInitialized) return;
+    if (!g_pluginManagerInitialized && !g_pluginLocksInitialized) return;
 
     InterlockedIncrement(&g_asyncScanGeneration);
     BOOL asyncScanStopped = StopAsyncScanThread() &&
@@ -1190,6 +1190,7 @@ BOOL PluginManager_CopyPlugin(int index, PluginInfo* outPlugin) {
     }
 
     *outPlugin = g_plugins[index];
+    memset(&outPlugin->pi, 0, sizeof(outPlugin->pi));
     LeaveCriticalSection(&g_pluginCS);
     return TRUE;
 }

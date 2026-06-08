@@ -78,6 +78,18 @@ void ShowToastNotification(HWND hwnd, const wchar_t* message);
 void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview);
 
 /**
+ * @brief Show a toast notification with an explicit timeout
+ * @param hwnd Parent handle
+ * @param message Message text
+ * @param timeoutMs Auto-dismiss timeout in milliseconds
+ *
+ * @details
+ * Used for one-shot plugin notifications without temporarily mutating global
+ * notification config.
+ */
+void ShowToastNotificationWithTimeout(HWND hwnd, const wchar_t* message, int timeoutMs);
+
+/**
  * @brief Show a persistent toast preview with explicit opacity
  * @param hwnd Parent handle
  * @param message Message text

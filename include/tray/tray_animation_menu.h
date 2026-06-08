@@ -26,6 +26,11 @@
 void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName);
 
 /**
+ * @brief Reset shutdown state before using the animation menu cache
+ */
+void AnimationMenu_Initialize(void);
+
+/**
  * @brief Request a background refresh of the animation menu cache
  */
 void AnimationMenu_RequestScanAsync(void);

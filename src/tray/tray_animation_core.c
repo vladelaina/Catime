@@ -270,6 +270,7 @@ static DWORD g_lastSuccessfulUpdateTime = 0;
 
 static void TrayAnimationTimerCallback(void* userData);
 static void NormalizeAnimConfigValue(char* s);
+static BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig);
 
 static BOOL IsValidTrayAnimationWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
@@ -734,7 +735,7 @@ static void FallbackToLogoIcon(void) {
     WriteLog(LOG_LEVEL_INFO, "Falling back to logo icon due to errors");
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = GetTickCount();
-    SetCurrentAnimationName("__logo__");
+    SetCurrentAnimationNameInternal("__logo__", FALSE);
 }
 
 /**
@@ -948,7 +949,6 @@ applyIcon:
     if (!hIcon) {
         if (releaseLockAfterShell && locked) {
             LeaveCriticalSection(&g_animCriticalSection);
-            locked = FALSE;
         }
         if (!previewActive && RecordFailedUpdate()) {
             FallbackToLogoIcon();
@@ -966,7 +966,6 @@ applyIcon:
     BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
     if (releaseLockAfterShell && locked) {
         LeaveCriticalSection(&g_animCriticalSection);
-        locked = FALSE;
     }
     if (destroyIconAfterUse) {
         DestroyIcon(hIcon);
@@ -1240,10 +1239,7 @@ const char* GetCurrentAnimationName(void) {
     return g_animationName;
 }
 
-/**
- * @brief Set current animation
- */
-BOOL SetCurrentAnimationName(const char* name) {
+static BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig) {
     if (!name || !*name) return FALSE;
     if (!BeginTrayAnimationRuntimeUse()) return FALSE;
 
@@ -1267,7 +1263,7 @@ BOOL SetCurrentAnimationName(const char* name) {
 
     /* Prevent redundant reloads if name is same and no preview is active */
     if (sameAnimationNoPreview) {
-        result = TRUE;
+        result = persistConfig ? WriteAnimationNameToConfigIfChanged(requestedName) : TRUE;
         goto done;
     }
 
@@ -1281,6 +1277,9 @@ BOOL SetCurrentAnimationName(const char* name) {
         LoadedAnimation oldMain;
         LoadedAnimation_Init(&oldMain);
         BOOL promotedPreview = FALSE;
+        char oldAnimationName[MAX_PATH] = {0};
+        int oldMainIndex = 0;
+        int promotedPreviewIndex = 0;
 
         AcquireSRWLockExclusive(&g_previewWorkerLock);
         if (IsAnimCriticalSectionReady()) {
@@ -1297,10 +1296,13 @@ BOOL SetCurrentAnimationName(const char* name) {
              g_previewAnimation.sourceType == ANIM_SOURCE_CAPSLOCK);
 
         if (canPromotePreview) {
+            CopyStringExactA(g_animationName, oldAnimationName, sizeof(oldAnimationName));
+            oldMainIndex = g_mainIndex;
+            promotedPreviewIndex = g_previewIndex;
             SwapLoadedAnimation(&oldMain, &g_mainAnimation);
             SwapLoadedAnimation(&g_mainAnimation, &g_previewAnimation);
             LoadedAnimation_Init(&g_previewAnimation);
-            g_mainIndex = g_previewIndex;
+            g_mainIndex = promotedPreviewIndex;
 
             /* Clear preview */
             g_previewIndex = 0;
@@ -1324,15 +1326,45 @@ BOOL SetCurrentAnimationName(const char* name) {
         ReleaseSRWLockExclusive(&g_previewWorkerLock);
 
         if (promotedPreview) {
-            LoadedAnimation_Free(&oldMain);
+            if (persistConfig && !WriteAnimationNameToConfigIfChanged(requestedName)) {
+                LoadedAnimation restoredPreview;
+                LoadedAnimation_Init(&restoredPreview);
 
-            /* Persist to config */
-            WriteAnimationNameToConfigIfChanged(requestedName);
+                AcquireSRWLockExclusive(&g_previewWorkerLock);
+                if (IsAnimCriticalSectionReady()) {
+                    EnterCriticalSection(&g_animCriticalSection);
+                }
+
+                SwapLoadedAnimation(&restoredPreview, &g_previewAnimation);
+                SwapLoadedAnimation(&g_previewAnimation, &g_mainAnimation);
+                SwapLoadedAnimation(&g_mainAnimation, &oldMain);
+                CopyStringExactA(oldAnimationName, g_animationName,
+                                 sizeof(g_animationName));
+                g_mainIndex = oldMainIndex;
+                g_previewIndex = promotedPreviewIndex;
+                g_isPreviewActive = TRUE;
+                g_previewAnimationFromPath = FALSE;
+                CopyStringExactA(requestedName, g_previewAnimationName,
+                                 sizeof(g_previewAnimationName));
+
+                if (IsAnimCriticalSectionReady()) {
+                    LeaveCriticalSection(&g_animCriticalSection);
+                }
+                ReleaseSRWLockExclusive(&g_previewWorkerLock);
+
+                LoadedAnimation_Free(&restoredPreview);
+                ResetBuiltinIconUpdateCache();
+                EnsureTrayAnimationTimerState();
+                UpdateTrayIconToCurrentFrame();
+                result = FALSE;
+                goto done;
+            }
 
             ResetBuiltinIconUpdateCache();
             EnsureTrayAnimationTimerState();
             UpdateTrayIconToCurrentFrame();
 
+            LoadedAnimation_Free(&oldMain);
             result = TRUE;
             goto done;
         }
@@ -1348,6 +1380,11 @@ BOOL SetCurrentAnimationName(const char* name) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (!LoadAnimationByName(requestedName, &newMain, g_memoryPool, cx, cy)) {
+        LoadedAnimation_Free(&newMain);
+        goto done;
+    }
+
+    if (persistConfig && !WriteAnimationNameToConfigIfChanged(requestedName)) {
         LoadedAnimation_Free(&newMain);
         goto done;
     }
@@ -1390,9 +1427,6 @@ BOOL SetCurrentAnimationName(const char* name) {
     LoadedAnimation_Free(&oldMain);
     LoadedAnimation_Free(&oldPreview);
     
-    /* Persist to config */
-    WriteAnimationNameToConfigIfChanged(requestedName);
-
     ResetBuiltinIconUpdateCache();
     EnsureTrayAnimationTimerState();
     UpdateTrayIconToCurrentFrame();
@@ -1402,6 +1436,13 @@ BOOL SetCurrentAnimationName(const char* name) {
 done:
     EndTrayAnimationRuntimeUse();
     return result;
+}
+
+/**
+ * @brief Set current animation
+ */
+BOOL SetCurrentAnimationName(const char* name) {
+    return SetCurrentAnimationNameInternal(name, TRUE);
 }
 
 static BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath) {
@@ -2001,7 +2042,6 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
     if (!BeginTrayAnimationRuntimeUse()) return FALSE;
 
     BOOL hasPending = FALSE;
-    BOOL handled = FALSE;
 
     if (!IsValidTrayAnimationWindow(hwnd) || hwnd != g_trayHwnd) {
         goto done;
@@ -2019,12 +2059,11 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
     
     if (hasPending) {
         UpdateTrayIconToCurrentFrame();
-        handled = TRUE;
     }
 
 done:
     EndTrayAnimationRuntimeUse();
-    return handled;
+    return TRUE;
 }
 
 void TrayAnimation_RefreshCurrentIcon(void) {

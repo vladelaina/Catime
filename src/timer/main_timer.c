@@ -78,6 +78,12 @@ static void CALLBACK MainTimerCallback(UINT uTimerID, UINT uMsg,
 
     HWND hwnd = g_mainHwnd;
     LONG generation = (LONG)dwUser;
+    LONG currentGeneration = InterlockedCompareExchange(&g_timerGeneration, 0, 0);
+    if (generation != currentGeneration) {
+        InterlockedDecrement(&g_activeTimerCallbacks);
+        return;
+    }
+
     if (!IsValidMainTimerWindow(hwnd)) {
         InterlockedDecrement(&g_activeTimerCallbacks);
         return;

@@ -25,20 +25,20 @@ static BOOL IsRawFontConfigValue(const char* fontFileName) {
     return FALSE;
 }
 
-void WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
-    if (!fontFileName) return;
+BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
+    if (!fontFileName) return FALSE;
     
     char configFontName[MAX_PATH];
 
     if (IsRawFontConfigValue(fontFileName)) {
         if (strlen(fontFileName) >= sizeof(configFontName)) {
             LOG_WARNING("Font config path too long, skipping write");
-            return;
+            return FALSE;
         }
         strcpy_s(configFontName, sizeof(configFontName), fontFileName);
     } else if (!BuildFontConfigPath(fontFileName, configFontName, MAX_PATH)) {
         LOG_WARNING("Font config path too long, skipping write");
-        return;
+        return FALSE;
     }
     
     /* Write to config */
@@ -52,13 +52,21 @@ void WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
     BOOL runtimeMatches = (strcmp(FONT_FILE_NAME, configFontName) == 0);
     BOOL configMatches = (strcmp(currentConfigValue, configFontName) == 0);
 
+    BOOL writeSucceeded = TRUE;
     if (!configMatches) {
-        WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", configFontName, config_path);
+        writeSucceeded = WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME",
+                                        configFontName, config_path);
+        if (!writeSucceeded) {
+            LOG_WARNING("Failed to write font config: %s", configFontName);
+            return FALSE;
+        }
     }
     
     /* Reload if requested */
     if (shouldReload && (!runtimeMatches || !configMatches)) {
         ReadConfig();
     }
+
+    return TRUE;
 }
 
