@@ -251,6 +251,25 @@ static BOOL RestartTimerBackendLocked(void) {
     return StartConfiguredTimerLocked();
 }
 
+static BOOL RestartTimerBackendWithRollbackLocked(UINT oldInterval,
+                                                  BOOL restoreOldIntervalOnFailure) {
+    UINT requestedInterval = g_timerInterval;
+    BOOL result = RestartTimerBackendLocked();
+    if (result || !restoreOldIntervalOnFailure || oldInterval == requestedInterval) {
+        return result;
+    }
+
+    g_timerInterval = oldInterval;
+    if (RestartTimerBackendLocked()) {
+        LOG_WARNING("MainTimer: kept previous interval %u after restart to %u failed",
+                    oldInterval, requestedInterval);
+    } else {
+        LOG_WARNING("MainTimer: failed to restore previous interval %u after restart to %u failed",
+                    oldInterval, requestedInterval);
+    }
+    return FALSE;
+}
+
 static BOOL InitTimerLocked(HWND hwnd, UINT intervalMs) {
     StopTimerBackendLocked();
 
@@ -291,8 +310,10 @@ BOOL MainTimer_Start(HWND hwnd, UINT intervalMs) {
     } else if (normalized == g_timerInterval && IsConfiguredTimerRunningLocked()) {
         result = TRUE;
     } else {
+        UINT oldInterval = g_timerInterval;
+        BOOL wasRunning = IsConfiguredTimerRunningLocked();
         g_timerInterval = normalized;
-        result = RestartTimerBackendLocked();
+        result = RestartTimerBackendWithRollbackLocked(oldInterval, wasRunning);
     }
 
     ReleaseSRWLockExclusive(&g_mainTimerLock);
@@ -340,11 +361,13 @@ void MainTimer_SetInterval(UINT intervalMs) {
         return;
     }
 
+    UINT oldInterval = g_timerInterval;
+    BOOL wasRunning = IsConfiguredTimerRunningLocked();
     g_timerInterval = normalized;
     if (g_mainHwnd) {
-        if (!RestartTimerBackendLocked()) {
+        if (!RestartTimerBackendWithRollbackLocked(oldInterval, wasRunning)) {
             LOG_WARNING("MainTimer: failed to apply interval change (interval=%u)",
-                        g_timerInterval);
+                        normalized);
         }
     }
 

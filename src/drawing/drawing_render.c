@@ -777,12 +777,11 @@ static BOOL SetDrawingRenderAnimationTimer(HWND hwnd, UINT interval) {
     BOOL hadPreviousTimer = s_renderAnimationTimerActive;
 
     if (!SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL)) {
-        if (hadPreviousTimer && IsValidRenderAnimationWindow(previousHwnd)) {
-            KillTimer(previousHwnd, TIMER_ID_RENDER_ANIMATION);
+        if (!hadPreviousTimer || !IsValidRenderAnimationWindow(previousHwnd)) {
+            s_renderAnimationTimerActive = FALSE;
+            s_renderAnimationTimerInterval = 0;
+            s_renderAnimationTimerHwnd = NULL;
         }
-        s_renderAnimationTimerActive = FALSE;
-        s_renderAnimationTimerInterval = 0;
-        s_renderAnimationTimerHwnd = NULL;
         WriteLog(LOG_LEVEL_WARNING,
                  "Failed to set render animation timer (interval=%u, error=%lu)",
                  interval, GetLastError());

@@ -171,7 +171,7 @@ static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity,
     return fileCount;
 }
 
-static BOOL StoreNotificationSoundCache(const wchar_t files[][MAX_PATH], int fileCount,
+static BOOL StoreNotificationSoundCache(wchar_t files[][MAX_PATH], int fileCount,
                                         LONG generation) {
     if (IsSoundScanCanceled(generation)) {
         return FALSE;
@@ -366,18 +366,23 @@ void NotificationSoundCache_Shutdown(void) {
     InterlockedIncrement(&g_soundScanGeneration);
 
     AcquireSRWLockExclusive(&g_soundScanThreadLock);
-    if (g_hSoundScanThread) {
-        hThread = g_hSoundScanThread;
-        g_hSoundScanThread = NULL;
-    }
+    hThread = g_hSoundScanThread;
     ReleaseSRWLockExclusive(&g_soundScanThreadLock);
 
     if (hThread) {
         DWORD wait = WaitForSingleObject(hThread, NOTIFICATION_SOUND_SCAN_STOP_TIMEOUT_MS);
         if (wait != WAIT_OBJECT_0) {
             OutputDebugStringW(L"NotificationSoundCache: sound scan stop timed out\n");
+        } else {
+            AcquireSRWLockExclusive(&g_soundScanThreadLock);
+            if (g_hSoundScanThread == hThread) {
+                CloseHandle(g_hSoundScanThread);
+                g_hSoundScanThread = NULL;
+            } else {
+                CloseHandle(hThread);
+            }
+            ReleaseSRWLockExclusive(&g_soundScanThreadLock);
         }
-        CloseHandle(hThread);
     }
 
     AcquireSRWLockExclusive(&g_soundFileCacheLock);

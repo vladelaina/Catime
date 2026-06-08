@@ -488,10 +488,7 @@ void FontMenu_Shutdown(void) {
     AcquireSRWLockExclusive(&g_fontScanThreadLock);
     InterlockedIncrement(&g_fontScanGeneration);
     InterlockedExchange(&g_fontScanShuttingDown, 1);
-    if (g_hFontScanThread) {
-        hThread = g_hFontScanThread;
-        g_hFontScanThread = NULL;
-    }
+    hThread = g_hFontScanThread;
     ReleaseSRWLockExclusive(&g_fontScanThreadLock);
 
     if (hThread) {
@@ -501,8 +498,16 @@ void FontMenu_Shutdown(void) {
                         (DWORD)ASYNC_FONT_SCAN_STOP_TIMEOUT_MS,
                         wait,
                         GetLastError());
+        } else {
+            AcquireSRWLockExclusive(&g_fontScanThreadLock);
+            if (g_hFontScanThread == hThread) {
+                CloseHandle(g_hFontScanThread);
+                g_hFontScanThread = NULL;
+            } else {
+                CloseHandle(hThread);
+            }
+            ReleaseSRWLockExclusive(&g_fontScanThreadLock);
         }
-        CloseHandle(hThread);
     }
 
     AcquireSRWLockExclusive(&g_fontMenuCacheLock);

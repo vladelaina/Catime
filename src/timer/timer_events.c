@@ -58,6 +58,17 @@ static inline void RequestWindowRepaint(HWND hwnd) {
     InvalidateRect(hwnd, NULL, FALSE);
 }
 
+static BOOL StartMainTimerForTimeoutAction(HWND hwnd, const char* actionName) {
+    UINT interval = GetTimerInterval();
+    if (MainTimer_Start(hwnd, interval)) {
+        return TRUE;
+    }
+
+    LOG_WARNING("Failed to start main timer for timeout action %s (interval=%u)",
+                actionName ? actionName : "unknown", interval);
+    return FALSE;
+}
+
 static wchar_t* SafeUtf8ToWide(const char* utf8String, wchar_t* buffer, size_t bufferSize) {
     if (!utf8String || !buffer || utf8String[0] == '\0') {
         return NULL;
@@ -297,7 +308,7 @@ static void HandleTimeoutActions(HWND hwnd) {
             countdown_elapsed_time = 0;
             ResetMillisecondAccumulator();
             MainTimer_Stop();
-            MainTimer_Start(hwnd, GetTimerInterval());
+            StartMainTimerForTimeoutAction(hwnd, "show_time");
             InvalidateRect(hwnd, NULL, TRUE);
             break;
 
@@ -313,7 +324,9 @@ static void HandleTimeoutActions(HWND hwnd) {
             CLOCK_IS_PAUSED = false;
             ResetMillisecondAccumulator();
             MainTimer_Stop();
-            MainTimer_Start(hwnd, GetTimerInterval());
+            if (!StartMainTimerForTimeoutAction(hwnd, "count_up")) {
+                CLOCK_IS_PAUSED = true;
+            }
             InvalidateRect(hwnd, NULL, TRUE);
             break;
 

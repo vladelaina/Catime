@@ -476,10 +476,7 @@ void AnimationMenu_Shutdown(void) {
     AcquireSRWLockExclusive(&g_animScanThreadLock);
     InterlockedIncrement(&g_animScanGeneration);
     InterlockedExchange(&g_animScanShuttingDown, 1);
-    if (g_hAnimScanThread) {
-        hThread = g_hAnimScanThread;
-        g_hAnimScanThread = NULL;
-    }
+    hThread = g_hAnimScanThread;
     ReleaseSRWLockExclusive(&g_animScanThreadLock);
 
     if (hThread) {
@@ -489,8 +486,16 @@ void AnimationMenu_Shutdown(void) {
                         (DWORD)ASYNC_ANIM_SCAN_STOP_TIMEOUT_MS,
                         wait,
                         GetLastError());
+        } else {
+            AcquireSRWLockExclusive(&g_animScanThreadLock);
+            if (g_hAnimScanThread == hThread) {
+                CloseHandle(g_hAnimScanThread);
+                g_hAnimScanThread = NULL;
+            } else {
+                CloseHandle(hThread);
+            }
+            ReleaseSRWLockExclusive(&g_animScanThreadLock);
         }
-        CloseHandle(hThread);
     }
 
     AcquireSRWLockExclusive(&g_animMenuCacheLock);

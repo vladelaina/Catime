@@ -14,6 +14,7 @@
 #include "plugin/plugin_data.h"
 #include "timer/main_timer.h"
 #include "drawing/drawing_timer_precision.h"
+#include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -612,7 +613,13 @@ void ResetTimerWithInterval(HWND hwnd) {
 
     if (ShouldRunMainTimer(hwnd)) {
         /* Unified main timer start path keeps SetTimer/mmTimer behavior consistent */
-        MainTimer_Start(hwnd, interval);
+        if (!MainTimer_Start(hwnd, interval)) {
+            LOG_WARNING("Failed to reset main timer with interval %u; pausing active timer state",
+                        interval);
+            if (IsRunningCountUpTimer() || IsRunningCountdownTimer()) {
+                CLOCK_IS_PAUSED = true;
+            }
+        }
     } else {
         MainTimer_Stop();
     }

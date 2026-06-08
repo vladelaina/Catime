@@ -151,17 +151,18 @@ static inline void ForceWindowRedraw(HWND hwnd) {
  * @param timerId Timer identifier
  * @param interval Interval in milliseconds
  */
-static inline void RestartTimerWithInterval(HWND hwnd, UINT timerId, UINT interval) {
+static inline BOOL RestartTimerWithInterval(HWND hwnd, UINT timerId, UINT interval) {
     if (timerId == TIMER_ID_MAIN) {
-        MainTimer_Start(hwnd, interval);
-        return;
+        return MainTimer_Start(hwnd, interval);
     }
 
     KillTimer(hwnd, timerId);
     if (!SetTimer(hwnd, timerId, interval, NULL)) {
         LOG_WARNING("Failed to restart timer %u with interval %u ms (error=%lu)",
                     timerId, interval, GetLastError());
+        return FALSE;
     }
+    return TRUE;
 }
 
 /**
@@ -228,7 +229,12 @@ void TogglePauseResumeTimer(HWND hwnd) {
         MainTimer_Stop();
         PauseNotificationSound();
     } else {
-        RestartTimerWithInterval(hwnd, TIMER_ID_MAIN, GetTimerInterval());
+        if (!RestartTimerWithInterval(hwnd, TIMER_ID_MAIN, GetTimerInterval())) {
+            LOG_WARNING("Failed to resume timer; keeping timer paused");
+            TogglePauseTimer();
+            ForceWindowRedraw(hwnd);
+            return;
+        }
         ResumeNotificationSound();
     }
     
