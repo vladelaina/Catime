@@ -79,7 +79,10 @@ static void BuildNotificationSoundConfigValue(const char* sound_file,
 static BOOL NotificationIniValueMatches(const char* config_path, const char* key,
                                         const char* expected) {
     char current[2048] = {0};
-    ReadIniString(INI_SECTION_NOTIFICATION, key, "", current, sizeof(current), config_path);
+    if (!ReadIniStringExact(INI_SECTION_NOTIFICATION, key, "", current,
+                            sizeof(current), config_path)) {
+        return FALSE;
+    }
     return strcmp(current, expected ? expected : "") == 0;
 }
 

@@ -402,11 +402,13 @@ BOOL WriteConfigColor(const char* color_input) {
     GetConfigPath(config_path, MAX_PATH);
 
     char currentValue[COLOR_HEX_BUFFER];
-    ReadIniString(INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "",
-                  currentValue, sizeof(currentValue), config_path);
+    BOOL currentValueComplete = ReadIniStringExact(
+        INI_SECTION_DISPLAY, "CLOCK_TEXT_COLOR", "",
+        currentValue, sizeof(currentValue), config_path);
 
     BOOL runtimeMatches = strcmp(CLOCK_TEXT_COLOR, colorValue) == 0;
-    BOOL configMatches = strcmp(currentValue, colorValue) == 0;
+    BOOL configMatches = currentValueComplete &&
+                         strcmp(currentValue, colorValue) == 0;
     if (runtimeMatches && configMatches) {
         if (strchr(colorValue, '_') != NULL) {
             GetGradientTypeByName(colorValue);
@@ -450,10 +452,11 @@ BOOL WriteConfigColorOptions(const char* color_options) {
     GetConfigPath(config_path, MAX_PATH);
 
     char currentValue[2048];
-    ReadIniString(INI_SECTION_COLORS, "COLOR_OPTIONS", "",
-                  currentValue, sizeof(currentValue), config_path);
+    BOOL currentValueComplete = ReadIniStringExact(
+        INI_SECTION_COLORS, "COLOR_OPTIONS", "",
+        currentValue, sizeof(currentValue), config_path);
 
-    if (strcmp(currentValue, normalizedOptions) != 0 &&
+    if ((!currentValueComplete || strcmp(currentValue, normalizedOptions) != 0) &&
         !WriteIniString(INI_SECTION_COLORS, "COLOR_OPTIONS",
                         normalizedOptions, config_path)) {
         FreeColorOptionArray(newOptions, newCount);

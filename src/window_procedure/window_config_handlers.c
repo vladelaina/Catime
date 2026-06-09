@@ -65,15 +65,41 @@ static HotReloadRecentFilesConfig g_lastHotReloadRecentFilesConfig = {0};
  * Helper Functions
  * ============================================================================ */
 
+static BOOL ReadHotReloadStringExact(const char* section, const char* key,
+                                     const char* def, char* target,
+                                     DWORD targetSize);
+
 static BOOL LoadAndCompareString(const char* section, const char* key,
                                   char* target, size_t size, const char* def) {
-    char temp[512];
-    ReadConfigStr(section, key, def, temp, sizeof(temp));
+    if (!target || size == 0 || size > MAX_PATH) return FALSE;
+
+    char temp[MAX_PATH] = {0};
+    if (!ReadHotReloadStringExact(section, key, def, temp, (DWORD)size)) {
+        return FALSE;
+    }
+
     if (strcmp(temp, target) != 0) {
         strncpy_s(target, size, temp, _TRUNCATE);
         return TRUE;
     }
     return FALSE;
+}
+
+static BOOL ReadHotReloadStringExact(const char* section, const char* key,
+                                     const char* def, char* target,
+                                     DWORD targetSize) {
+    if (!target || targetSize == 0) return FALSE;
+
+    if (!ReadIniStringExact(section, key, def ? def : "", target, targetSize,
+                            GetCachedConfigPath())) {
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Hot reload ignored %s.%s because the config value is too long",
+                 section ? section : "(null)",
+                 key ? key : "(null)");
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 static BOOL LoadAndCompareBool(const char* section, const char* key, bool* target, bool def) {
@@ -143,8 +169,11 @@ static void ReadHotReloadRecentFilesConfig(HotReloadRecentFilesConfig* config) {
     for (int i = 0; i < MAX_RECENT_FILES; i++) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i + 1);
-        ReadConfigStr(INI_SECTION_RECENTFILES, key, "",
-                      config->recentFiles[i], sizeof(config->recentFiles[i]));
+        if (!ReadHotReloadStringExact(INI_SECTION_RECENTFILES, key, "",
+                                      config->recentFiles[i],
+                                      sizeof(config->recentFiles[i]))) {
+            config->recentFiles[i][0] = '\0';
+        }
     }
 
     config->timeoutAction = CLOCK_TIMEOUT_ACTION;
@@ -524,10 +553,10 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
     }
 
     char fontConfigValue[MAX_PATH] = {0};
-    ReadConfigStr(CFG_SECTION_DISPLAY, "FONT_FILE_NAME",
-                  FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
-                  fontConfigValue, sizeof(fontConfigValue));
-    if (ApplyFontForHotReload(fontConfigValue)) {
+    if (ReadHotReloadStringExact(CFG_SECTION_DISPLAY, "FONT_FILE_NAME",
+                                 FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
+                                 fontConfigValue, sizeof(fontConfigValue)) &&
+        ApplyFontForHotReload(fontConfigValue)) {
         changed = TRUE;
     }
 
@@ -833,14 +862,21 @@ LRESULT HandleAppNotificationChanged(HWND hwnd) {
     g_AppConfig.notification.display.window_height = ClampNotificationConfigHeight(
         ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_HEIGHT", 0));
 
-    ReadConfigStr(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", DEFAULT_TIMEOUT_MESSAGE,
-                  g_AppConfig.notification.messages.timeout_message,
-                  sizeof(g_AppConfig.notification.messages.timeout_message));
+    char timeoutMessage[sizeof(g_AppConfig.notification.messages.timeout_message)] = {0};
+    if (ReadHotReloadStringExact(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT",
+                                 DEFAULT_TIMEOUT_MESSAGE, timeoutMessage,
+                                 sizeof(timeoutMessage))) {
+        strncpy_s(g_AppConfig.notification.messages.timeout_message,
+                  sizeof(g_AppConfig.notification.messages.timeout_message),
+                  timeoutMessage, _TRUNCATE);
+    }
 
-    char soundBuf[MAX_PATH];
-    ReadConfigStr(INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", soundBuf, sizeof(soundBuf));
+    char soundBuf[MAX_PATH] = {0};
+    BOOL soundConfigComplete = ReadHotReloadStringExact(
+        INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE",
+        "", soundBuf, sizeof(soundBuf));
     /* Expand %LOCALAPPDATA% placeholder */
-    if (soundBuf[0] != '\0') {
+    if (soundConfigComplete && soundBuf[0] != '\0') {
         const char* varToken = "%LOCALAPPDATA%";
         size_t tokenLen = strlen(varToken);
         if (_strnicmp(soundBuf, varToken, tokenLen) == 0) {
@@ -860,7 +896,7 @@ LRESULT HandleAppNotificationChanged(HWND hwnd) {
             strncpy(g_AppConfig.notification.sound.sound_file, soundBuf, MAX_PATH - 1);
         }
         g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
-    } else {
+    } else if (soundConfigComplete) {
         g_AppConfig.notification.sound.sound_file[0] = '\0';
     }
 

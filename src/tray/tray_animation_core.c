@@ -344,9 +344,13 @@ static BOOL WriteAnimationConfigPathIfChanged(const char* configPath, const char
     if (!configPath || !animPath) return FALSE;
 
     char currentPath[MAX_PATH] = {0};
-    ReadIniString("Animation", "ANIMATION_PATH", "", currentPath, sizeof(currentPath), configPath);
-    if (strcmp(currentPath, animPath) == 0) {
+    BOOL hasCompleteCurrentPath = ReadIniStringExact(
+        "Animation", "ANIMATION_PATH", "", currentPath, sizeof(currentPath), configPath);
+    if (hasCompleteCurrentPath && strcmp(currentPath, animPath) == 0) {
         return TRUE;
+    }
+    if (!hasCompleteCurrentPath) {
+        LOG_WARNING("Replacing ANIMATION_PATH because the existing config value is too long");
     }
 
     return WriteIniString("Animation", "ANIMATION_PATH", animPath, configPath);

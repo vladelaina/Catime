@@ -599,9 +599,13 @@ void LoadPluginTrustFromConfig(void) {
         char key[32];
         snprintf(key, sizeof(key), "PLUGIN_%d", i);
         
-        char value[MAX_PATH + 65 + 2];
-        ReadIniString(INI_SECTION_PLUGIN_TRUST, key, "", value, sizeof(value), config_path);
-        
+        char value[PLUGIN_TRUST_VALUE_BUFFER_SIZE];
+        if (!ReadIniStringExact(INI_SECTION_PLUGIN_TRUST, key, "", value,
+                                sizeof(value), config_path)) {
+            LOG_WARNING("Ignoring plugin trust entry %d because the config value is too long", i);
+            continue;
+        }
+
         if (value[0] != '\0') {
             /* Parse "path|hash" format */
             char* separator = strchr(value, '|');

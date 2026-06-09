@@ -508,7 +508,11 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
         
         char filePath[MAX_PATH] = {0};
-        ReadIniString(INI_SECTION_RECENTFILES, key, "", filePath, MAX_PATH, config_path);
+        if (!ReadIniStringExact(INI_SECTION_RECENTFILES, key, "", filePath,
+                                MAX_PATH, config_path)) {
+            LOG_WARNING("Ignoring recent file snapshot entry %d because the config value is too long", i);
+            continue;
+        }
         
         if (strlen(filePath) > 0 && FileExistsUtf8(filePath)) {
             strncpy(snapshot->recentFiles[snapshot->recentFilesCount].path, 

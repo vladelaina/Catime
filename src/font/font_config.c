@@ -46,11 +46,16 @@ BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
     GetConfigPath(config_path, MAX_PATH);
 
     char currentConfigValue[MAX_PATH] = {0};
-    ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", "", currentConfigValue,
-                  sizeof(currentConfigValue), config_path);
+    BOOL currentConfigComplete = ReadIniStringExact(
+        INI_SECTION_DISPLAY, "FONT_FILE_NAME", "", currentConfigValue,
+        sizeof(currentConfigValue), config_path);
+    if (!currentConfigComplete) {
+        LOG_WARNING("Replacing FONT_FILE_NAME because the existing config value is too long");
+    }
 
     BOOL runtimeMatches = (strcmp(FONT_FILE_NAME, configFontName) == 0);
-    BOOL configMatches = (strcmp(currentConfigValue, configFontName) == 0);
+    BOOL configMatches = currentConfigComplete &&
+                         (strcmp(currentConfigValue, configFontName) == 0);
 
     if (!configMatches) {
         if (!WriteIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME",

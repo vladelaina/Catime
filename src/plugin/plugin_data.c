@@ -18,6 +18,7 @@
 #include <stdint.h>
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define PLUGIN_DISPLAY_RETAIN_WCHARS 4096
 
 /* ============================================================================
  * Shared State (exported for plugin_exit.c)
@@ -27,11 +28,37 @@ wchar_t* g_pluginDisplayText = NULL;
 size_t g_pluginDisplayTextLen = 0;
 BOOL g_hasPluginData = FALSE;
 
+static void ClearPluginDisplayTextLocked(void) {
+    if (!g_pluginDisplayText) return;
+
+    if (g_pluginDisplayTextLen > PLUGIN_DISPLAY_RETAIN_WCHARS) {
+        free(g_pluginDisplayText);
+        g_pluginDisplayText = NULL;
+        g_pluginDisplayTextLen = 0;
+        return;
+    }
+
+    g_pluginDisplayText[0] = L'\0';
+}
+
 static BOOL EnsurePluginDisplayTextCapacityLocked(size_t requiredChars) {
     if (requiredChars == 0) return FALSE;
     if (requiredChars > SIZE_MAX / sizeof(wchar_t)) {
         LOG_ERROR("PluginData: Display buffer size overflow (%zu chars)", requiredChars);
         return FALSE;
+    }
+
+    if (g_pluginDisplayText &&
+        g_pluginDisplayTextLen > PLUGIN_DISPLAY_RETAIN_WCHARS &&
+        requiredChars <= PLUGIN_DISPLAY_RETAIN_WCHARS) {
+        wchar_t* resized = (wchar_t*)realloc(
+            g_pluginDisplayText,
+            PLUGIN_DISPLAY_RETAIN_WCHARS * sizeof(wchar_t));
+        if (resized) {
+            g_pluginDisplayText = resized;
+            g_pluginDisplayTextLen = PLUGIN_DISPLAY_RETAIN_WCHARS;
+            g_pluginDisplayText[0] = L'\0';
+        }
     }
 
     if (g_pluginDisplayText && g_pluginDisplayTextLen >= requiredChars) {
@@ -867,9 +894,7 @@ static BOOL ClearPluginDisplayDataLocked(void) {
                           (g_pluginDisplayText && g_pluginDisplayText[0] != L'\0');
 
     g_hasPluginData = FALSE;
-    if (g_pluginDisplayText) {
-        g_pluginDisplayText[0] = L'\0';
-    }
+    ClearPluginDisplayTextLocked();
     SetPollIntervalMs(DEFAULT_POLL_INTERVAL_MS);
 
     return hadDisplayData;
@@ -1574,9 +1599,7 @@ void PluginData_Clear(void) {
     EnterCriticalSection(&g_dataCS);
     g_pluginModeActive = FALSE;  // Deactivate plugin mode
     g_hasPluginData = FALSE;
-    if (g_pluginDisplayText) {
-        g_pluginDisplayText[0] = L'\0';
-    }
+    ClearPluginDisplayTextLocked();
     ClearLastContentCacheLocked();
     InvalidateLastOutputFileStateLocked();
     /* Clear any pending notification to prevent stale notifications */
@@ -1686,9 +1709,7 @@ void PluginData_SetActive(BOOL active) {
     } else {
         // When deactivating, also clear any stale data
         g_hasPluginData = FALSE;
-        if (g_pluginDisplayText) {
-            g_pluginDisplayText[0] = L'\0';
-        }
+        ClearPluginDisplayTextLocked();
         // Clear any pending notification
         g_pendingNotify.pending = FALSE;
     }

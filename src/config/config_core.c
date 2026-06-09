@@ -229,8 +229,10 @@ static BOOL TimerConfigValueEqualsInFile(const char* configPath,
                                          const char* defaultValue) {
     char currentValue[MAX_PATH];
 
-    ReadIniString(INI_SECTION_TIMER, key, defaultValue ? defaultValue : "",
-                  currentValue, sizeof(currentValue), configPath);
+    if (!ReadIniStringExact(INI_SECTION_TIMER, key, defaultValue ? defaultValue : "",
+                            currentValue, sizeof(currentValue), configPath)) {
+        return FALSE;
+    }
 
     return strcmp(currentValue, expectedValue ? expectedValue : "") == 0;
 }

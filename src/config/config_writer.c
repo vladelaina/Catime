@@ -503,9 +503,14 @@ BOOL WriteConfig(const char* config_path) {
 
     /* Preserve existing animation config; only add current animation when the key is missing. */
     char existingAnimPath[MAX_PATH] = {0};
-    ReadIniString("Animation", "ANIMATION_PATH", "", existingAnimPath, sizeof(existingAnimPath), config_path);
+    BOOL existingAnimPathComplete = ReadIniStringExact(
+        "Animation", "ANIMATION_PATH", "", existingAnimPath, sizeof(existingAnimPath), config_path);
+    if (!existingAnimPathComplete) {
+        LOG_WARNING("Replacing ANIMATION_PATH during full config write because the existing value is too long");
+    }
 
-    if (existingAnimPath[0] == '\0' && count < CONFIG_WRITE_ITEM_CAPACITY) {
+    if ((!existingAnimPathComplete || existingAnimPath[0] == '\0') &&
+        count < CONFIG_WRITE_ITEM_CAPACITY) {
         const char* anim = GetCurrentAnimationName();
         if (anim && anim[0] != '\0') {
             char animPath[MAX_PATH];

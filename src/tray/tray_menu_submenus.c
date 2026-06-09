@@ -50,6 +50,21 @@ typedef struct {
 
 static ColorMenuIdMapEntry s_colorMenuIdMap[MAX_COLOR_OPTIONS];
 
+static BOOL ReadTimeoutStringExact(const char* configPath, const char* key,
+                                   char* target, DWORD targetSize) {
+    if (!configPath || !key || !target || targetSize == 0) return FALSE;
+
+    char value[MAX_PATH] = {0};
+    if (!ReadIniStringExact(INI_SECTION_TIMER, key, "", value,
+                            sizeof(value), configPath)) {
+        LOG_WARNING("Ignoring %s because the config value is too long", key);
+        return FALSE;
+    }
+
+    strncpy_s(target, targetSize, value, _TRUNCATE);
+    return TRUE;
+}
+
 static void ResetColorMenuIdMap(void) {
     ZeroMemory(s_colorMenuIdMap, sizeof(s_colorMenuIdMap));
 }
@@ -116,10 +131,10 @@ void ReadTimeoutActionFromConfig() {
     CLOCK_TIMEOUT_ACTION = parsedAction;
     
     /* Hot-reload file path and website URL */
-    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", "", 
-                  CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, configPath);
-    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "", 
-                  CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, configPath);
+    ReadTimeoutStringExact(configPath, "CLOCK_TIMEOUT_FILE", CLOCK_TIMEOUT_FILE_PATH,
+                           MAX_PATH);
+    ReadTimeoutStringExact(configPath, "CLOCK_TIMEOUT_WEBSITE", CLOCK_TIMEOUT_WEBSITE_URL,
+                           MAX_PATH);
 }
 
 /**

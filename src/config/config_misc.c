@@ -174,11 +174,12 @@ static BOOL WritePomodoroTimeOptionsStringIfChanged(const int* times, int count)
     GetConfigPath(config_path, MAX_PATH);
 
     char currentValue[POMODORO_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
-    ReadIniString(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "",
-                  currentValue, sizeof(currentValue), config_path);
+    BOOL currentValueComplete = ReadIniStringExact(
+        INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS", "",
+        currentValue, sizeof(currentValue), config_path);
 
     BOOL runtimeMatches = PomodoroTimesStateMatches(times, count);
-    BOOL configMatches = strcmp(currentValue, timesStr) == 0;
+    BOOL configMatches = currentValueComplete && strcmp(currentValue, timesStr) == 0;
     if (runtimeMatches && configMatches) {
         return TRUE;
     }
@@ -268,7 +269,11 @@ void LoadRecentFiles(void) {
         char key[32];
         char path[MAX_PATH] = {0};
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
-        ReadIniString(INI_SECTION_RECENTFILES, key, "", path, sizeof(path), config_path);
+        if (!ReadIniStringExact(INI_SECTION_RECENTFILES, key, "", path,
+                                sizeof(path), config_path)) {
+            LOG_WARNING("Ignoring recent file entry %d because the config value is too long", i);
+            continue;
+        }
 
         if (path[0] == '\0' || !FileExistsUtf8(path)) {
             continue;
@@ -309,8 +314,12 @@ BOOL SaveRecentFile(const char* filePath) {
     for (int i = 1; i <= kMax; ++i) {
         char key[32];
         snprintf(key, sizeof(key), "CLOCK_RECENT_FILE_%d", i);
-        ReadIniString(INI_SECTION_RECENTFILES, key, "", currentValues[i - 1],
-                      MAX_PATH, config_path);
+        if (!ReadIniStringExact(INI_SECTION_RECENTFILES, key, "",
+                                currentValues[i - 1], MAX_PATH, config_path)) {
+            LOG_WARNING("Dropping recent file entry %d because the config value is too long", i);
+            currentValues[i - 1][0] = '\0';
+            continue;
+        }
         if (currentValues[i - 1][0] != '\0') {
             strncpy(items[count], currentValues[i - 1], MAX_PATH - 1);
             items[count][MAX_PATH - 1] = '\0';
