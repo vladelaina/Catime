@@ -247,7 +247,10 @@ void TogglePauseResumeTimer(HWND hwnd) {
  * @param mode Startup mode ("DEFAULT", "COUNT_UP", "SHOW_TIME", "NO_DISPLAY")
  */
 void SetStartupMode(HWND hwnd, const char* mode) {
-    WriteConfigStartupMode(mode);
+    if (!WriteConfigStartupMode(mode)) {
+        LOG_WARNING("Failed to save startup mode: %s", mode ? mode : "(null)");
+        return;
+    }
     
     HMENU hMenu = GetMenu(hwnd);
     if (hMenu) {

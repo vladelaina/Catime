@@ -466,6 +466,16 @@ void AnimationMenu_RequestScanAsync(void) {
 }
 
 void AnimationMenu_Initialize(void) {
+    AcquireSRWLockExclusive(&g_animScanThreadLock);
+    if (g_hAnimScanThread) {
+        DWORD wait = WaitForSingleObject(g_hAnimScanThread, 0);
+        if (wait == WAIT_OBJECT_0) {
+            CloseHandle(g_hAnimScanThread);
+            g_hAnimScanThread = NULL;
+        }
+    }
+    ReleaseSRWLockExclusive(&g_animScanThreadLock);
+
     InterlockedIncrement(&g_animScanGeneration);
     InterlockedExchange(&g_animScanShuttingDown, 0);
 }
@@ -486,6 +496,14 @@ void AnimationMenu_Shutdown(void) {
                         (DWORD)ASYNC_ANIM_SCAN_STOP_TIMEOUT_MS,
                         wait,
                         GetLastError());
+            if (wait == WAIT_TIMEOUT) {
+                AcquireSRWLockExclusive(&g_animScanThreadLock);
+                if (g_hAnimScanThread == hThread) {
+                    CloseHandle(g_hAnimScanThread);
+                    g_hAnimScanThread = NULL;
+                }
+                ReleaseSRWLockExclusive(&g_animScanThreadLock);
+            }
         } else {
             AcquireSRWLockExclusive(&g_animScanThreadLock);
             if (g_hAnimScanThread == hThread) {
@@ -653,16 +671,32 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
 
     BOOL cacheReady = FALSE;
     int animCount = 0;
+    AnimEntry* animSnapshot =
+        (AnimEntry*)malloc((size_t)MAX_ANIM_ENTRIES * sizeof(*animSnapshot));
+    if (!animSnapshot) {
+        LOG_WARNING("Failed to allocate animation menu cache snapshot");
+    }
 
     AcquireSRWLockShared(&g_animMenuCacheLock);
     cacheReady = g_animMenuCacheReady || g_animMenuCacheFailed;
     animCount = g_animMenuCacheCount;
-    if (animCount > 0) {
-        UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
-        BuildAnimationMenuFromEntries(hMenu, g_animMenuCache, animCount,
-                                      currentAnimationName, &nextId);
+    if (animCount > MAX_ANIM_ENTRIES) {
+        animCount = MAX_ANIM_ENTRIES;
+    }
+    if (animCount > 0 && animSnapshot) {
+        memcpy(animSnapshot, g_animMenuCache, (size_t)animCount * sizeof(*animSnapshot));
+    } else if (animCount > 0) {
+        animCount = 0;
+        cacheReady = FALSE;
     }
     ReleaseSRWLockShared(&g_animMenuCacheLock);
+
+    if (animCount > 0) {
+        UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
+        BuildAnimationMenuFromEntries(hMenu, animSnapshot, animCount,
+                                      currentAnimationName, &nextId);
+    }
+    free(animSnapshot);
 
     if (animCount <= 0 && !cacheReady) {
         AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(NULL, L"Loading..."));

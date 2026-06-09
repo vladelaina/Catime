@@ -33,6 +33,7 @@
 #define INI_MAX_PARSE_LINES     8192
 #define INI_MAX_PARSE_ENTRIES   2048
 #define INI_CACHE_STAT_THROTTLE_MS 100
+#define INI_MAX_FILE_BYTES      (1024ull * 1024ull)
 
 /* ============================================================================
  * Internal data structures
@@ -221,6 +222,60 @@ static BOOL Utf8PathToWide(const char* utf8Path, wchar_t* wPath, size_t wPathSiz
     return TRUE;
 }
 
+static BOOL WidePathToUtf8(const wchar_t* wPath, char* utf8Path, size_t utf8PathSize) {
+    if (!utf8Path || utf8PathSize == 0) return FALSE;
+
+    utf8Path[0] = '\0';
+    if (!wPath || utf8PathSize > INT_MAX) return FALSE;
+
+    if (WideCharToMultiByte(CP_UTF8, 0, wPath, -1,
+                            utf8Path, (int)utf8PathSize, NULL, NULL) <= 0) {
+        utf8Path[0] = '\0';
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL CreateTempFilePathForTargetUtf8(const char* targetPath, char* tempPath, size_t tempPathSize) {
+    if (!targetPath || !tempPath || tempPathSize == 0) return FALSE;
+    tempPath[0] = '\0';
+
+    wchar_t wTarget[MAX_PATH] = {0};
+    if (!Utf8PathToWide(targetPath, wTarget, MAX_PATH)) {
+        return FALSE;
+    }
+
+    wchar_t wDir[MAX_PATH] = {0};
+    wcsncpy(wDir, wTarget, MAX_PATH - 1);
+    wDir[MAX_PATH - 1] = L'\0';
+
+    wchar_t* lastSlash = wcsrchr(wDir, L'\\');
+    wchar_t* lastForwardSlash = wcsrchr(wDir, L'/');
+    if (!lastSlash || (lastForwardSlash && lastForwardSlash > lastSlash)) {
+        lastSlash = lastForwardSlash;
+    }
+
+    if (lastSlash) {
+        *lastSlash = L'\0';
+    } else {
+        wcscpy_s(wDir, MAX_PATH, L".");
+    }
+
+    wchar_t wTemp[MAX_PATH] = {0};
+    if (GetTempFileNameW(wDir, L"cti", 0, wTemp) == 0) {
+        LOG_ERROR("Failed to create config temp file in directory for: %s (error=%lu)",
+                  targetPath, GetLastError());
+        return FALSE;
+    }
+
+    if (!WidePathToUtf8(wTemp, tempPath, tempPathSize)) {
+        DeleteFileW(wTemp);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 static FILE* OpenFileUtf8(const char* utf8Path, const wchar_t* mode) {
     if (!utf8Path || !mode) return NULL;
 
@@ -243,6 +298,27 @@ static BOOL GetFileTimeUtf8(const char* utf8Path, FILETIME* ft) {
     BOOL result = GetFileTime(hFile, NULL, NULL, ft);
     CloseHandle(hFile);
     return result;
+}
+
+static BOOL GetFileSizeUtf8(const char* utf8Path, ULONGLONG* outSize) {
+    if (!utf8Path || !outSize) return FALSE;
+    *outSize = 0;
+
+    wchar_t wPath[MAX_PATH] = {0};
+    if (!Utf8PathToWide(utf8Path, wPath, MAX_PATH)) return FALSE;
+
+    HANDLE hFile = CreateFileW(wPath, GENERIC_READ,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return FALSE;
+
+    LARGE_INTEGER size;
+    BOOL result = GetFileSizeEx(hFile, &size);
+    CloseHandle(hFile);
+    if (!result || size.QuadPart < 0) return FALSE;
+
+    *outSize = (ULONGLONG)size.QuadPart;
+    return TRUE;
 }
 
 static ULONGLONG GetIniCacheTickMs(void) {
@@ -470,6 +546,13 @@ static IniFile* ParseIniFile(const char* filePath) {
     strncpy(ini->filePath, filePath, MAX_PATH - 1);
     ini->lastStatCheckTick = GetIniCacheTickMs();
 
+    ULONGLONG fileSize = 0;
+    if (GetFileSizeUtf8(filePath, &fileSize) && fileSize > INI_MAX_FILE_BYTES) {
+        LOG_WARNING("INI file too large, ignoring %s (%llu bytes, limit %llu)",
+                    filePath, fileSize, (ULONGLONG)INI_MAX_FILE_BYTES);
+        return ini;
+    }
+
     FILE* f = OpenFileUtf8(filePath, L"rb");
     if (!f) {
         /* File doesn't exist - return empty INI */
@@ -622,9 +705,7 @@ static BOOL WriteIniAtomically(IniFile* ini) {
     if (!ini || !ini->filePath[0]) return FALSE;
 
     char tempPath[MAX_PATH];
-    int tempPathLen = snprintf(tempPath, sizeof(tempPath), "%s.tmp", ini->filePath);
-    if (tempPathLen < 0 || tempPathLen >= (int)sizeof(tempPath)) {
-        LOG_ERROR("Config temp path too long: %s", ini->filePath);
+    if (!CreateTempFilePathForTargetUtf8(ini->filePath, tempPath, sizeof(tempPath))) {
         return FALSE;
     }
 
@@ -1110,18 +1191,23 @@ BOOL WriteIniMultipleAtomic(const char* filePath, const IniKeyValue* updates, si
 /**
  * @brief Force flush any cached changes to disk
  */
-void FlushConfigToDisk(void) {
+BOOL FlushConfigToDisk(void) {
     if (!AcquireConfigWriteLock()) {
-        return;
+        return FALSE;
     }
     AcquireIniLock();
 
+    BOOL result = TRUE;
     if (g_ConfigIni && g_ConfigIni->dirty) {
-        WriteIniAtomically(g_ConfigIni);
+        result = WriteIniAtomically(g_ConfigIni);
+        if (!result) {
+            LOG_ERROR("Failed to flush config cache to disk: %s", g_ConfigIni->filePath);
+        }
     }
 
     ReleaseConfigWriteLock();
     ReleaseIniLock();
+    return result;
 }
 
 /**

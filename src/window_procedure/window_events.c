@@ -74,6 +74,7 @@ void HandleWindowDestroy(HWND hwnd) {
 
     /* Cleanup high-precision timer */
     MainTimer_Cleanup();
+    KillTimer(hwnd, TIMER_ID_FONT_VALIDATION);
     StopDrawingRenderAnimationTimer(hwnd);
     StopNotificationSound();
     

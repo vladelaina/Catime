@@ -769,11 +769,13 @@ BOOL DecodeAnimatedImageWithCancel(const char* utf8Path, DecodedAnimation* anim,
         canceled = TRUE;
     }
 
-    if (anim->count > 0) {
+    if (!canceled && anim->count > 0) {
         anim->isAnimated = TRUE;
+        return TRUE;
     }
 
-    return !canceled && anim->count > 0;
+    DecodedAnimation_Free(anim);
+    return FALSE;
 }
 
 /**

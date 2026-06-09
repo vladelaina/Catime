@@ -62,6 +62,32 @@ BOOL EnsureFontTagCapacity(ParseState* state) {
     ENSURE_CAPACITY(state, MarkdownFontTag, fontTags, fontTagCount, fontTagCapacity, INITIAL_FONT_TAG_CAPACITY);
 }
 
+BOOL AppendMarkdownOutputSpan(ParseState* state, const wchar_t* text, size_t textLen) {
+    if (!state || !state->displayText || !text) return FALSE;
+    if (textLen == 0) return TRUE;
+    if (state->currentPos < 0) return FALSE;
+
+    size_t currentPos = (size_t)state->currentPos;
+    if (currentPos >= state->displayCapacity ||
+        textLen >= state->displayCapacity - currentPos) {
+        return FALSE;
+    }
+
+    memcpy(state->displayText + currentPos, text, textLen * sizeof(wchar_t));
+    state->currentPos += (int)textLen;
+    state->displayText[state->currentPos] = L'\0';
+    return TRUE;
+}
+
+BOOL AppendMarkdownOutputChar(ParseState* state, wchar_t ch) {
+    return AppendMarkdownOutputSpan(state, &ch, 1);
+}
+
+void SyncMarkdownOutputPointer(ParseState* state, wchar_t** dest) {
+    if (!state || !dest || !state->displayText || state->currentPos < 0) return;
+    *dest = state->displayText + state->currentPos;
+}
+
 void DetachParseState(ParseState* state) {
     if (!state) return;
     memset(state, 0, sizeof(*state));

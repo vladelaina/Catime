@@ -45,6 +45,7 @@ static RECT g_cachedIconRect = {0};
 static DWORD g_lastRectUpdateTime = 0;
 static volatile LONG g_trayInteractionSuspended = FALSE;
 static int g_pendingOpacityToSave = -1;
+static int g_opacityRollbackValue = -1;
 static int g_pendingOpacitySaveRetryCount = 0;
 static wchar_t g_lastTrayTooltip[256] = {0};
 
@@ -359,7 +360,23 @@ void UpdateTrayTooltip(const wchar_t* tip) {
     }
 }
 
-static void FlushPendingTrayOpacitySave(void) {
+static void ClearPendingTrayOpacitySave(void) {
+    g_pendingOpacityToSave = -1;
+    g_opacityRollbackValue = -1;
+    g_pendingOpacitySaveRetryCount = 0;
+}
+
+static void RollBackPendingTrayOpacitySave(HWND hwnd) {
+    if (g_opacityRollbackValue >= 0) {
+        CLOCK_WINDOW_OPACITY = g_opacityRollbackValue;
+        if (IsValidTrayMainWindow(hwnd)) {
+            InvalidateRect(hwnd, NULL, FALSE);
+        }
+    }
+    ClearPendingTrayOpacitySave();
+}
+
+static void FlushPendingTrayOpacitySave(HWND hwnd) {
     if (g_pendingOpacityToSave >= 0) {
         char configPath[MAX_PATH];
         GetConfigPath(configPath, sizeof(configPath));
@@ -369,8 +386,7 @@ static void FlushPendingTrayOpacitySave(void) {
             if (g_pendingOpacitySaveRetryCount >= TRAY_OPACITY_SAVE_MAX_RETRIES) {
                 LOG_WARNING("Failed to save tray opacity after %d attempts; dropping pending value: %d",
                             g_pendingOpacitySaveRetryCount, g_pendingOpacityToSave);
-                g_pendingOpacityToSave = -1;
-                g_pendingOpacitySaveRetryCount = 0;
+                RollBackPendingTrayOpacitySave(hwnd);
                 return;
             }
             LOG_WARNING("Failed to save tray opacity: %d (attempt %d/%d)",
@@ -379,14 +395,12 @@ static void FlushPendingTrayOpacitySave(void) {
                         TRAY_OPACITY_SAVE_MAX_RETRIES);
             return;
         }
-        g_pendingOpacityToSave = -1;
-        g_pendingOpacitySaveRetryCount = 0;
+        ClearPendingTrayOpacitySave();
     }
 }
 
 static void DiscardPendingTrayOpacitySave(void) {
-    g_pendingOpacityToSave = -1;
-    g_pendingOpacitySaveRetryCount = 0;
+    ClearPendingTrayOpacitySave();
 }
 
 static void ReschedulePendingTrayOpacitySave(HWND hwnd) {
@@ -402,12 +416,12 @@ static void ReschedulePendingTrayOpacitySave(HWND hwnd) {
                   TRAY_OPACITY_SAVE_DELAY_MS, TrayOpacitySaveTimerProc)) {
         LOG_WARNING("Failed to reschedule pending tray opacity save (error=%lu)",
                     GetLastError());
-        DiscardPendingTrayOpacitySave();
+        RollBackPendingTrayOpacitySave(hwnd);
     }
 }
 
 static void CompleteTrayOpacityFeedback(HWND hwnd, BOOL refreshTooltip) {
-    FlushPendingTrayOpacitySave();
+    FlushPendingTrayOpacitySave(hwnd);
 
     if (g_showingOpacityTip) {
         g_showingOpacityTip = FALSE;
@@ -430,7 +444,7 @@ static void CALLBACK TrayOpacitySaveTimerProc(HWND hwnd, UINT msg, UINT_PTR id, 
                   TRAY_OPACITY_SAVE_DELAY_MS, TrayOpacitySaveTimerProc)) {
         LOG_WARNING("Failed to reschedule tray opacity save retry (error=%lu)",
                     GetLastError());
-        DiscardPendingTrayOpacitySave();
+        RollBackPendingTrayOpacitySave(hwnd);
     }
 }
 
@@ -456,6 +470,9 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
 
     if (CLOCK_WINDOW_OPACITY != oldOpacity) {
         InvalidateRect(hwnd, NULL, FALSE);
+        if (g_pendingOpacityToSave < 0) {
+            g_opacityRollbackValue = oldOpacity;
+        }
         g_pendingOpacityToSave = CLOCK_WINDOW_OPACITY;
         g_pendingOpacitySaveRetryCount = 0;
     }
@@ -465,7 +482,7 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
         CompleteTrayOpacityFeedback(hwnd, TRUE);
         if (g_pendingOpacityToSave >= 0) {
             LOG_WARNING("Dropping pending tray opacity save after timer start failure");
-            DiscardPendingTrayOpacitySave();
+            RollBackPendingTrayOpacitySave(hwnd);
         }
     }
 }

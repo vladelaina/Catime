@@ -46,7 +46,7 @@ static BOOL IsTopmostRetryCoolingDown(BOOL targetTopmost) {
     DWORD now = GetTickCount();
     return s_topmostApplyRetryCooldownUntil != 0 &&
            s_topmostApplyRetryTarget == targetTopmost &&
-           (LONG)(now - s_topmostApplyRetryCooldownUntil) < 0;
+           (LONG)(s_topmostApplyRetryCooldownUntil - now) > 0;
 }
 
 /**

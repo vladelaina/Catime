@@ -34,7 +34,7 @@ static HANDLE g_exitStopEvent = NULL;
 /* Template for countdown display */
 static wchar_t* g_exitPrefix = NULL;
 static wchar_t* g_exitSuffix = NULL;
-static DWORD g_exitLastStartFailureTick = 0;
+static DWORD g_exitStartFailureCooldownUntil = 0;
 
 /* Shared resources from plugin_data */
 static HWND g_notifyWnd = NULL;
@@ -62,13 +62,13 @@ static BOOL IsExitInProgress(void) {
 }
 
 static BOOL IsExitStartFailureCoolingDown(DWORD now) {
-    return g_exitLastStartFailureTick != 0 &&
-           (DWORD)(now - g_exitLastStartFailureTick) <
-               EXIT_COUNTDOWN_START_FAILURE_COOLDOWN_MS;
+    return g_exitStartFailureCooldownUntil != 0 &&
+           (LONG)(g_exitStartFailureCooldownUntil - now) > 0;
 }
 
 static void MarkExitStartFailure(DWORD now) {
-    g_exitLastStartFailureTick = now ? now : 1;
+    DWORD cooldownUntil = now + EXIT_COUNTDOWN_START_FAILURE_COOLDOWN_MS;
+    g_exitStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 static BOOL IsValidPluginNotifyWindow(HWND hwnd) {
@@ -267,7 +267,7 @@ BOOL PluginExit_Init(HWND hwnd, CRITICAL_SECTION* dataCS) {
     g_dataCS = dataCS;
     InterlockedExchange(&g_exitInProgress, FALSE);
     g_exitThreadStopInProgress = FALSE;
-    g_exitLastStartFailureTick = 0;
+    g_exitStartFailureCooldownUntil = 0;
     FreeExitTemplatesLocked();
     if (!EnsureExitStopEventLocked()) {
         MarkExitStartFailure(GetTickCount());
@@ -467,7 +467,7 @@ BOOL PluginExit_ParseTag(wchar_t* text, int* textLen, size_t maxLen) {
         MarkExitStartFailure(now);
         goto fail_with_template_cleanup;
     }
-    g_exitLastStartFailureTick = 0;
+    g_exitStartFailureCooldownUntil = 0;
     ReleaseSRWLockExclusive(&g_exitLock);
     return TRUE;
 

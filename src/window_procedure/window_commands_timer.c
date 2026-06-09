@@ -18,6 +18,7 @@
 #include "window.h"
 #include "pomodoro.h"
 #include "notification.h"
+#include "log.h"
 #include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <stdio.h>
@@ -158,7 +159,10 @@ LRESULT CmdSetTimeoutAction(HWND hwnd, TimeoutActionType action) {
     
     for (size_t i = 0; i < sizeof(TIMEOUT_ACTIONS)/sizeof(TIMEOUT_ACTIONS[0]); i++) {
         if (TIMEOUT_ACTIONS[i].action == action) {
-            WriteConfigTimeoutAction(TIMEOUT_ACTIONS[i].configStr);
+            if (!WriteConfigTimeoutAction(TIMEOUT_ACTIONS[i].configStr)) {
+                LOG_WARNING("Failed to save timeout action: %s",
+                            TIMEOUT_ACTIONS[i].configStr);
+            }
             break;
         }
     }

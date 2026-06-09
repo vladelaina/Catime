@@ -6,6 +6,7 @@
  */
 #include "config.h"
 #include "config/config_writer.h"
+#include "log.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_percent.h"
 #include <stdio.h>
@@ -188,6 +189,12 @@ static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8,
         if (!wbuf) return;
         bufChars = HEAP_BUF_CHARS;
         copied = GetPrivateProfileSectionW(wSection, wbuf, bufChars, wfilePath);
+    }
+    if (copied >= bufChars - 2) {
+        LOG_WARNING("Animation speed config section is too large; ignoring truncated speed map");
+        if (wbuf != stackBuf) free(wbuf);
+        *pointCount = 0;
+        return;
     }
     if (copied == 0) {
         if (wbuf != stackBuf) free(wbuf);
@@ -607,22 +614,26 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
 }
 
 /** Animation speed persistence (called from WriteConfig) */
-void WriteAnimationSpeedToConfig(const char* config_path) {
-    if (!config_path) return;
+BOOL WriteAnimationSpeedToConfig(const char* config_path) {
+    if (!config_path) return FALSE;
 
     const int itemCapacity = ANIM_SPEED_POINT_CAPACITY + 6;
     ConfigWriteItem* items = (ConfigWriteItem*)calloc((size_t)itemCapacity,
                                                       sizeof(ConfigWriteItem));
     if (!items) {
-        return;
+        return FALSE;
     }
 
     int count = 0;
     if (!CollectAnimationSpeedConfigItems(items, itemCapacity, &count)) {
         free(items);
-        return;
+        return FALSE;
     }
 
-    WriteConfigItems(config_path, items, count);
+    BOOL result = WriteConfigItems(config_path, items, count);
+    if (!result) {
+        LOG_ERROR("Failed to write animation speed config: %s", config_path);
+    }
     free(items);
+    return result;
 }

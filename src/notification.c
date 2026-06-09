@@ -10,6 +10,7 @@
 #include "notification.h"
 #include "config.h"
 #include "dialog/dialog_notification.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <windowsx.h>
 
@@ -86,7 +87,7 @@ static HBRUSH g_notificationBgBrush = NULL;
 static HPEN g_notificationBorderPen = NULL;
 static SRWLOCK g_notificationResourceLock = SRWLOCK_INIT;
 static volatile LONG g_modalNotificationActive = 0;
-static DWORD g_modalNotificationLastStartFailureTick = 0;
+static DWORD g_modalNotificationStartFailureCooldownUntil = 0;
 
 static int ClampOpacityPercent(int opacityPercent) {
     if (opacityPercent < 1) return 1;
@@ -118,13 +119,13 @@ static BOOL IsCurrentProcessWindow(HWND hwnd) {
 }
 
 static BOOL IsModalNotificationStartFailureCoolingDown(DWORD now) {
-    return g_modalNotificationLastStartFailureTick != 0 &&
-           (DWORD)(now - g_modalNotificationLastStartFailureTick) <
-               MODAL_NOTIFICATION_START_FAILURE_COOLDOWN_MS;
+    return g_modalNotificationStartFailureCooldownUntil != 0 &&
+           (LONG)(g_modalNotificationStartFailureCooldownUntil - now) > 0;
 }
 
 static void MarkModalNotificationStartFailure(DWORD now) {
-    g_modalNotificationLastStartFailureTick = now ? now : 1;
+    DWORD cooldownUntil = now + MODAL_NOTIFICATION_START_FAILURE_COOLDOWN_MS;
+    g_modalNotificationStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 static BOOL IsNotificationWindow(HWND hwnd) {
@@ -390,8 +391,6 @@ static void FlushPendingNotificationOpacity(HWND hwnd, NotificationData* data, B
         }
     }
 
-    g_AppConfig.notification.display.max_opacity =
-        ClampOpacityPercent(data->pendingOpacity);
     data->opacitySavePending = FALSE;
     data->opacitySaveRetryCount = 0;
 }
@@ -569,7 +568,7 @@ void ShowModalNotification(HWND hwnd, const wchar_t* message) {
         return;
     }
     
-    g_modalNotificationLastStartFailureTick = 0;
+    g_modalNotificationStartFailureCooldownUntil = 0;
     CloseHandle(hThread);
 }
 
@@ -997,9 +996,11 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             if (data && data->isPreview) {
                 RECT rect;
                 if (GetWindowRect(hwnd, &rect)) {
-                    WriteConfigNotificationWindow(rect.left, rect.top, 
-                                                 rect.right - rect.left, 
-                                                 rect.bottom - rect.top);
+                    if (!WriteConfigNotificationWindow(rect.left, rect.top,
+                                                       rect.right - rect.left,
+                                                       rect.bottom - rect.top)) {
+                        LOG_WARNING("Failed to save notification preview window placement");
+                    }
                 }
             }
             InvalidateRect(hwnd, NULL, FALSE);

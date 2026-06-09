@@ -221,7 +221,10 @@ static BOOL CommitCurrentFontSelection(void) {
         LOG_WARNING("FontPicker: failed to persist selected font: %s", FONT_FILE_NAME);
         return FALSE;
     }
-    FlushConfigToDisk();
+    if (!FlushConfigToDisk()) {
+        LOG_WARNING("FontPicker: failed to flush selected font to disk: %s", FONT_FILE_NAME);
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -1039,6 +1042,7 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
         case WM_COMMAND: {
             if (LOWORD(wp) == IDOK) {
                 if (!CommitCurrentFontSelection()) {
+                    RestoreOriginalFont();
                     return TRUE;
                 }
                 g_fontState.closeHandled = TRUE;

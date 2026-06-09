@@ -173,6 +173,37 @@ static BOOL ResolveConfigPathUtf8(char* outPathUtf8, size_t outSize) {
     return BuildConfigPathFromUserProfile(outPathUtf8, outSize);
 }
 
+static BOOL BuildConfigBaseDirFromPathUtf8(const char* configPathUtf8,
+                                           wchar_t* outDir,
+                                           size_t outDirSize) {
+    if (!configPathUtf8 || !*configPathUtf8 ||
+        !outDir || outDirSize == 0 || outDirSize > INT_MAX) {
+        return FALSE;
+    }
+    outDir[0] = L'\0';
+
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    if (MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1,
+                            wConfigPath, MAX_PATH) == 0) {
+        return FALSE;
+    }
+
+    wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
+    if (!lastSep) {
+        lastSep = wcsrchr(wConfigPath, L'/');
+    }
+    if (!lastSep) {
+        return FALSE;
+    }
+    *lastSep = L'\0';
+
+    if (wcslen(wConfigPath) >= outDirSize) {
+        return FALSE;
+    }
+    wcscpy_s(outDir, outDirSize, wConfigPath);
+    return TRUE;
+}
+
 static BOOL GetConfigBaseDirW(wchar_t* outDir, size_t outDirSize) {
     if (!outDir || outDirSize == 0 || outDirSize > INT_MAX) return FALSE;
     outDir[0] = L'\0';
@@ -191,27 +222,7 @@ static BOOL GetConfigBaseDirW(wchar_t* outDir, size_t outDirSize) {
         return TRUE;
     }
 
-    wchar_t wConfigPath[MAX_PATH] = {0};
-    if (MultiByteToWideChar(CP_UTF8, 0, configPathUtf8, -1,
-                            wConfigPath, MAX_PATH) == 0) {
-        return FALSE;
-    }
-
-    wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
-    if (!lastSep) {
-        lastSep = wcsrchr(wConfigPath, L'/');
-    }
-    if (!lastSep) {
-        return FALSE;
-    }
-    *lastSep = L'\0';
-
-    wcscpy_s(g_cachedConfigBaseDir, MAX_PATH, wConfigPath);
-    if (wcslen(g_cachedConfigBaseDir) >= outDirSize) {
-        return FALSE;
-    }
-    wcscpy_s(outDir, outDirSize, g_cachedConfigBaseDir);
-    return TRUE;
+    return BuildConfigBaseDirFromPathUtf8(configPathUtf8, outDir, outDirSize);
 }
 
 /**
@@ -240,8 +251,10 @@ void GetConfigPath(char* path, size_t size) {
         return;
     }
 
-    if (ResolveConfigPathUtf8(g_cachedConfigPath, sizeof(g_cachedConfigPath))) {
-        g_cachedConfigBaseDir[0] = '\0';
+    if (ResolveConfigPathUtf8(g_cachedConfigPath, sizeof(g_cachedConfigPath)) &&
+        BuildConfigBaseDirFromPathUtf8(g_cachedConfigPath,
+                                       g_cachedConfigBaseDir,
+                                       MAX_PATH)) {
         InterlockedExchange(&g_configPathInitState, CONFIG_PATH_INITIALIZED);
         CopyConfigPathOut(path, size, g_cachedConfigPath);
         return;
@@ -350,11 +363,11 @@ BOOL IsFirstRun(void) {
 /**
  * @brief Set first run flag to FALSE
  */
-void SetFirstRunCompleted(void) {
+BOOL SetFirstRunCompleted(void) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-    WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", "FALSE", config_path);
+
+    return WriteIniString(INI_SECTION_GENERAL, "FIRST_RUN", "FALSE", config_path);
 }
 
 
@@ -399,11 +412,12 @@ BOOL IsShortcutCheckDone(void) {
 /**
  * @brief Mark desktop shortcut verification as completed
  */
-void SetShortcutCheckDone(BOOL done) {
+BOOL SetShortcutCheckDone(BOOL done) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
+
     /** Write shortcut check status to general section */
-    WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE", done ? "TRUE" : "FALSE", config_path);
+    return WriteIniString(INI_SECTION_GENERAL, "SHORTCUT_CHECK_DONE",
+                          done ? "TRUE" : "FALSE", config_path);
 }
 

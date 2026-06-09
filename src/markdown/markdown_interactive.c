@@ -131,6 +131,8 @@ void CleanupMarkdownInteractive(void) {
     DeleteCriticalSection(&g_interactiveCS);
     InterlockedExchange(&g_initialized, INTERACTIVE_CS_UNINITIALIZED);
     ReleaseSRWLockExclusive(&g_interactiveLifecycleLock);
+
+    ShutdownMarkdownImage();
 }
 
 /* ============================================================================
@@ -377,16 +379,23 @@ static BOOL WritePluginOutputContentAtomicW(const wchar_t* filePath,
                                             DWORD contentSize) {
     if (!filePath || !content) return FALSE;
 
-    wchar_t tempPath[MAX_PATH];
-    int written = _snwprintf_s(tempPath, _countof(tempPath), _TRUNCATE,
-                               L"%ls.tmp", filePath);
-    if (written < 0) {
+    wchar_t tempDir[MAX_PATH] = {0};
+    wchar_t tempPath[MAX_PATH] = {0};
+    const wchar_t* lastSlash = wcsrchr(filePath, L'\\');
+    if (!lastSlash || lastSlash == filePath) {
         return FALSE;
     }
+    size_t dirLen = (size_t)(lastSlash - filePath + 1);
+    if (dirLen >= _countof(tempDir)) return FALSE;
+    wmemcpy(tempDir, filePath, dirLen);
+    tempDir[dirLen] = L'\0';
+
+    if (GetTempFileNameW(tempDir, L"cto", 0, tempPath) == 0) return FALSE;
 
     HANDLE hFile = CreateFileW(tempPath, GENERIC_WRITE, CHECKBOX_OUTPUT_FILE_SHARE,
                                NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
+        DeleteFileW(tempPath);
         return FALSE;
     }
 

@@ -30,6 +30,8 @@ static volatile LONG g_soundScanShuttingDown = 0;
 static volatile LONG g_soundScanGeneration = 0;
 static volatile LONG g_soundFileLastScanTick = 0;
 
+static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam);
+
 /* ============================================================================
  * Static Helper Functions
  * ============================================================================ */
@@ -234,46 +236,35 @@ static BOOL CloseCompletedSoundScanThreadLocked(DWORD waitMs) {
     return FALSE;
 }
 
-static BOOL RefreshNotificationSoundCacheNow(BOOL forceRefresh) {
-    BOOL refreshed = FALSE;
-    DWORD now = GetTickCount();
-
+static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh) {
     AcquireSRWLockExclusive(&g_soundScanThreadLock);
+
     if (IsSoundScanShuttingDown()) {
         ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-        return FALSE;
+        return;
     }
 
-    if (!CloseCompletedSoundScanThreadLocked(NOTIFICATION_SOUND_SCAN_FOREGROUND_WAIT_MS)) {
+    if (!CloseCompletedSoundScanThreadLocked(0)) {
         ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-        return FALSE;
+        return;
     }
 
+    DWORD now = GetTickCount();
     if (!forceRefresh && IsSoundFileCacheRecentlyScanned(now)) {
         ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-        return TRUE;
+        return;
     }
 
-    wchar_t (*files)[MAX_PATH] = (wchar_t (*)[MAX_PATH])malloc(
-        (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*files));
-    if (!files) {
-        MarkNotificationSoundCacheScanFailed();
-        ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-        return FALSE;
-    }
-
-    ZeroMemory(files, (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*files));
     LONG generation = InterlockedCompareExchange(&g_soundScanGeneration, 0, 0);
-    int fileCount = ScanNotificationSoundFiles(files, NOTIFICATION_SOUND_ENTRY_LIMIT, generation);
-    if (fileCount >= 0) {
-        refreshed = StoreNotificationSoundCache(files, fileCount, generation);
+    HANDLE hThread = CreateThread(NULL, 0, NotificationSoundScanThread,
+                                  (LPVOID)(INT_PTR)generation, 0, NULL);
+    if (hThread) {
+        g_hSoundScanThread = hThread;
     } else {
         MarkNotificationSoundCacheScanFailed();
     }
 
-    free(files);
     ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-    return refreshed;
 }
 
 static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam) {
@@ -325,38 +316,16 @@ static int CopyNotificationSoundCache(wchar_t files[][MAX_PATH], int capacity, B
 }
 
 void NotificationSoundCache_Initialize(void) {
+    AcquireSRWLockExclusive(&g_soundScanThreadLock);
+    CloseCompletedSoundScanThreadLocked(0);
+    ReleaseSRWLockExclusive(&g_soundScanThreadLock);
+
     InterlockedIncrement(&g_soundScanGeneration);
     InterlockedExchange(&g_soundScanShuttingDown, 0);
 }
 
 void NotificationSoundCache_RequestScanAsync(void) {
-    AcquireSRWLockExclusive(&g_soundScanThreadLock);
-
-    if (IsSoundScanShuttingDown()) {
-        ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-        return;
-    }
-
-    if (!CloseCompletedSoundScanThreadLocked(0)) {
-        ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-        return;
-    }
-
-    if (IsSoundFileCacheRecentlyScanned(GetTickCount())) {
-        ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-        return;
-    }
-
-    LONG generation = InterlockedCompareExchange(&g_soundScanGeneration, 0, 0);
-    HANDLE hThread = CreateThread(NULL, 0, NotificationSoundScanThread,
-                                  (LPVOID)(INT_PTR)generation, 0, NULL);
-    if (hThread) {
-        g_hSoundScanThread = hThread;
-    } else {
-        MarkNotificationSoundCacheScanFailed();
-    }
-
-    ReleaseSRWLockExclusive(&g_soundScanThreadLock);
+    RequestNotificationSoundCacheScanAsync(FALSE);
 }
 
 void NotificationSoundCache_Shutdown(void) {
@@ -373,6 +342,14 @@ void NotificationSoundCache_Shutdown(void) {
         DWORD wait = WaitForSingleObject(hThread, NOTIFICATION_SOUND_SCAN_STOP_TIMEOUT_MS);
         if (wait != WAIT_OBJECT_0) {
             OutputDebugStringW(L"NotificationSoundCache: sound scan stop timed out\n");
+            if (wait == WAIT_TIMEOUT) {
+                AcquireSRWLockExclusive(&g_soundScanThreadLock);
+                if (g_hSoundScanThread == hThread) {
+                    CloseHandle(g_hSoundScanThread);
+                    g_hSoundScanThread = NULL;
+                }
+                ReleaseSRWLockExclusive(&g_soundScanThreadLock);
+            }
         } else {
             AcquireSRWLockExclusive(&g_soundScanThreadLock);
             if (g_hSoundScanThread == hThread) {
@@ -558,7 +535,7 @@ void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo) {
     }
     
     const char* currentFile = (selectedIndex > 0) ? g_AppConfig.notification.sound.sound_file : NULL;
-    RefreshNotificationSoundCacheNow(TRUE);
+    RequestNotificationSoundCacheScanAsync(TRUE);
     PopulateNotificationSoundComboBox(hwndCombo, currentFile);
     
     if (selectedFile[0] != L'\0') {
@@ -581,7 +558,6 @@ void HandleSoundComboDropdown(HWND hwndCombo) {
     }
     
     const char* currentFile = (selectedIndex > 0) ? g_AppConfig.notification.sound.sound_file : NULL;
-    RefreshNotificationSoundCacheNow(FALSE);
     PopulateNotificationSoundComboBox(hwndCombo, currentFile);
     
     if (selectedFile[0] != L'\0') {

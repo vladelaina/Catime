@@ -273,7 +273,8 @@ BOOL InitializeLogSystem(void) {
 }
 
 void WriteLog(LogLevel level, const char* format, ...) {
-    if (hLogFile == INVALID_HANDLE_VALUE) {
+    if (InterlockedCompareExchange(&csInitialized, 0, 0) != LOG_CS_INITIALIZED ||
+        LOG_FILE_PATH[0] == L'\0') {
         return;
     }
 
@@ -291,8 +292,10 @@ void WriteLog(LogLevel level, const char* format, ...) {
 
     EnterCriticalSection(&logCS);
     if (hLogFile == INVALID_HANDLE_VALUE) {
-        LeaveCriticalSection(&logCS);
-        return;
+        if (!EnsureLogFileOpen(false)) {
+            LeaveCriticalSection(&logCS);
+            return;
+        }
     }
 
     /* Check rotation periodically to reduce filesystem metadata calls */

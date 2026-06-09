@@ -203,24 +203,19 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
  */
 BOOL VerifySingleInstanceMutex(HANDLE hMutex) {
     if (!hMutex) return FALSE;
-    
-    /* Try to wait with 0 timeout - just checks if we still own it */
-    DWORD result = WaitForSingleObject(hMutex, 0);
-    
-    if (result == WAIT_OBJECT_0) {
-        /* We own it - immediately release to maintain state */
-        ReleaseMutex(hMutex);
+
+    DWORD flags = 0;
+    if (GetHandleInformation(hMutex, &flags)) {
         return TRUE;
-    } else if (result == WAIT_ABANDONED) {
-        /* This shouldn't happen if we own it, but handle it */
-        LOG_WARNING("Mutex ownership verification detected abandoned state");
-        return TRUE;
-    } else if (result == WAIT_TIMEOUT) {
-        /* Another thread/process owns it - this is bad */
-        LOG_ERROR("Single instance mutex is owned by another process!");
-        return FALSE;
     }
-    
+
+    DWORD error = GetLastError();
+    if (error != ERROR_INVALID_HANDLE) {
+        LOG_WARNING("Failed to verify single instance mutex handle (error=%lu)", error);
+    } else {
+        LOG_ERROR("Single instance mutex handle is invalid");
+    }
+
     return FALSE;
 }
 

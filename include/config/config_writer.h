@@ -38,7 +38,7 @@ typedef struct {
  *
  * Automatically filters dangerous timeout actions (SHUTDOWN/RESTART/SLEEP → MESSAGE).
  */
-void WriteConfig(const char* config_path);
+BOOL WriteConfig(const char* config_path);
 
 /**
  * @brief Collect all current configuration into item array
@@ -83,7 +83,6 @@ BOOL WriteConfigItems(const char* config_path, const ConfigWriteItem* items, int
  * Selectively updates one section (e.g., Timer, Display).
  * Uses atomic update for the specific keys.
  */
-void WriteConfigSection(const char* config_path, const char* section);
+BOOL WriteConfigSection(const char* config_path, const char* section);
 
 #endif /* CONFIG_WRITER_H */
-

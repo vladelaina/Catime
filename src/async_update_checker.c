@@ -27,7 +27,7 @@ typedef struct {
 static HANDLE g_hUpdateThread = NULL;
 static volatile LONG g_updateThreadRunning = 0;
 static SRWLOCK g_updateThreadLock = SRWLOCK_INIT;
-static DWORD g_updateLastStartFailureTick = 0;
+static DWORD g_updateStartFailureCooldownUntil = 0;
 
 /* ============================================================================
  * Internal helpers
@@ -49,13 +49,13 @@ static void ReleaseUpdateThreadHandleLocked(void) {
 }
 
 static BOOL IsUpdateThreadStartFailureCoolingDown(DWORD now) {
-    return g_updateLastStartFailureTick != 0 &&
-           (DWORD)(now - g_updateLastStartFailureTick) <
-               UPDATE_THREAD_START_FAILURE_COOLDOWN_MS;
+    return g_updateStartFailureCooldownUntil != 0 &&
+           (LONG)(g_updateStartFailureCooldownUntil - now) > 0;
 }
 
 static void MarkUpdateThreadStartFailure(DWORD now) {
-    g_updateLastStartFailureTick = now ? now : 1;
+    DWORD cooldownUntil = now + UPDATE_THREAD_START_FAILURE_COOLDOWN_MS;
+    g_updateStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 static void CleanupCompletedUpdateThreadLocked(void) {
@@ -214,7 +214,7 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     
     if (hThread) {
         g_hUpdateThread = hThread;
-        g_updateLastStartFailureTick = 0;
+        g_updateStartFailureCooldownUntil = 0;
     } else {
         HandleThreadCreationFailure(threadParams);
     }

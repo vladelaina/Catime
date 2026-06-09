@@ -15,6 +15,7 @@
 #include "config/config_loader.h"
 #include "language.h"
 #include "log.h"
+#include "utils/path_utils.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
@@ -164,23 +165,63 @@ const char* GetDefaultValue(const char* section, const char* key) {
     return NULL;
 }
 
+static BOOL WidePathToUtf8Local(const wchar_t* wPath, char* utf8Path, size_t utf8PathSize) {
+    if (!utf8Path || utf8PathSize == 0) return FALSE;
+
+    utf8Path[0] = '\0';
+    if (!wPath || utf8PathSize > INT_MAX) return FALSE;
+
+    if (WideCharToMultiByte(CP_UTF8, 0, wPath, -1,
+                            utf8Path, (int)utf8PathSize, NULL, NULL) <= 0) {
+        utf8Path[0] = '\0';
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL CreateDefaultConfigTempPath(const wchar_t* wConfigPath,
+                                        wchar_t* wTempPath,
+                                        size_t wTempPathSize) {
+    if (!wConfigPath || !wTempPath || wTempPathSize < MAX_PATH) return FALSE;
+    wTempPath[0] = L'\0';
+
+    wchar_t wConfigDir[MAX_PATH];
+    if (!ExtractDirectoryW(wConfigPath, wConfigDir, MAX_PATH)) return FALSE;
+
+    return GetTempFileNameW(wConfigDir, L"ctd", 0, wTempPath) != 0;
+}
+
 int DetectSystemLanguage(void) {
     return (int)GetSystemDefaultLanguage();
 }
 
-void WriteDefaultsToConfig(const char* config_path) {
-    if (!config_path) return;
+BOOL WriteDefaultsToConfig(const char* config_path) {
+    if (!config_path) return FALSE;
 
     /* Convert path to wide char for _wfopen */
     wchar_t wconfig_path[MAX_PATH] = {0};
     if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wconfig_path, MAX_PATH) == 0) {
         LOG_ERROR("Failed to convert default config path: %s", config_path);
-        return;
+        return FALSE;
     }
 
-    /* Open file for writing in UTF-8 mode (no BOM needed) */
-    FILE* f = _wfopen(wconfig_path, L"wb");
-    if (!f) return;
+    wchar_t wtemp_path[MAX_PATH] = {0};
+    if (!CreateDefaultConfigTempPath(wconfig_path, wtemp_path, MAX_PATH)) {
+        LOG_ERROR("Failed to create default config temp file: %s", config_path);
+        return FALSE;
+    }
+
+    char temp_path[MAX_PATH] = {0};
+    WidePathToUtf8Local(wtemp_path, temp_path, sizeof(temp_path));
+
+    /* Open temp file for writing in UTF-8 mode (no BOM needed) */
+    FILE* f = _wfopen(wtemp_path, L"wb");
+    if (!f) {
+        DeleteFileW(wtemp_path);
+        LOG_ERROR("Failed to open default config temp file for writing: %s",
+                  temp_path[0] ? temp_path : config_path);
+        return FALSE;
+    }
 
     /* Track current section to insert help docs */
     const char* lastSection = "";
@@ -346,11 +387,21 @@ void WriteDefaultsToConfig(const char* config_path) {
         writeOk = FALSE;
     }
     if (!writeOk) {
+        DeleteFileW(wtemp_path);
         LOG_ERROR("Failed to write default config: %s", config_path);
-        return;
+        return FALSE;
+    }
+
+    if (!MoveFileExW(wtemp_path, wconfig_path,
+                     MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+        DeleteFileW(wtemp_path);
+        LOG_ERROR("Failed to replace default config: %s (error=%lu)",
+                  config_path, GetLastError());
+        return FALSE;
     }
 
     InvalidateIniCache();
+    return TRUE;
 }
 
 void CreateDefaultConfig(const char* config_path) {
@@ -379,10 +430,15 @@ void CreateDefaultConfig(const char* config_path) {
                                    : "English";
     
     /* Write all defaults */
-    WriteDefaultsToConfig(config_path);
+    if (!WriteDefaultsToConfig(config_path)) {
+        LOG_ERROR("Failed to create default config: %s", config_path);
+        return;
+    }
 
     /* Override language with detected value */
-    WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", detectedLangName, config_path);
+    if (!WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", detectedLangName, config_path)) {
+        LOG_ERROR("Failed to write detected language to default config: %s", detectedLangName);
+    }
 }
 
 typedef struct ConfigEntry {
@@ -394,6 +450,34 @@ typedef struct ConfigEntry {
 
 #define CONFIG_MIGRATION_MAX_PARSE_LINES   8192
 #define CONFIG_MIGRATION_MAX_PARSE_ENTRIES 2048
+#define CONFIG_MIGRATION_MAX_FILE_BYTES    (1024ull * 1024ull)
+
+static BOOL GetMigrationFileSizeUtf8(const char* config_path, ULONGLONG* outSize) {
+    if (!config_path || !outSize) return FALSE;
+    *outSize = 0;
+
+    wchar_t wConfigPath[MAX_PATH] = {0};
+    if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) == 0) {
+        return FALSE;
+    }
+
+    HANDLE hFile = CreateFileW(wConfigPath, GENERIC_READ,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    LARGE_INTEGER size;
+    BOOL result = GetFileSizeEx(hFile, &size);
+    CloseHandle(hFile);
+    if (!result || size.QuadPart < 0) {
+        return FALSE;
+    }
+
+    *outSize = (ULONGLONG)size.QuadPart;
+    return TRUE;
+}
 
 static void FreeConfigEntryList(ConfigEntry* head) {
     while (head) {
@@ -446,6 +530,14 @@ static void DiscardRestOfMigrationLine(FILE* f) {
 }
 
 static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
+    ULONGLONG fileSize = 0;
+    if (GetMigrationFileSizeUtf8(config_path, &fileSize) &&
+        fileSize > CONFIG_MIGRATION_MAX_FILE_BYTES) {
+        LOG_WARNING("Config migration skipped oversized config file: %s (%llu bytes, limit %llu bytes)",
+                    config_path, fileSize, (ULONGLONG)CONFIG_MIGRATION_MAX_FILE_BYTES);
+        return NULL;
+    }
+
     /* Open file for reading (UTF-8) */
     wchar_t wConfigPath[MAX_PATH] = {0};
     if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) == 0) {
@@ -628,16 +720,10 @@ void MigrateConfig(const char* config_path) {
         }
     }
 
-    /* Step 3: Delete old config file to remove deprecated items */
-    wchar_t wConfigPath[MAX_PATH] = {0};
-    if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) != 0) {
-        DeleteFileW(wConfigPath);
-    } else {
-        LOG_WARNING("Failed to convert config path for migration delete: %s", config_path);
-    }
+    /* Step 3: Invalidate stale cache before replacing with fresh defaults. */
     InvalidateIniCache();
 
-    /* Step 4: Create fresh default config */
+    /* Step 4: Create fresh default config atomically. */
     CreateDefaultConfig(config_path);
 
     /* Step 5: Restore user values that exist in CONFIG_METADATA */
@@ -668,16 +754,25 @@ void MigrateConfig(const char* config_path) {
                 current = current->next;
             }
 
-            WriteIniMultipleAtomic(config_path, updates, updateCount);
+            if (!WriteIniMultipleAtomic(config_path, updates, updateCount)) {
+                LOG_ERROR("Failed to restore %zu config values during migration", updateCount);
+            }
             free(updates);
         } else {
+            int failedWrites = 0;
             current = oldConfig;
             while (current) {
                 if (strcmp(current->key, "CONFIG_VERSION") != 0 &&
                     IsConfigItemInMetadata(current->section, current->key)) {
-                    WriteIniString(current->section, current->key, current->value, config_path);
+                    if (!WriteIniString(current->section, current->key,
+                                        current->value, config_path)) {
+                        failedWrites++;
+                    }
                 }
                 current = current->next;
+            }
+            if (failedWrites > 0) {
+                LOG_ERROR("Failed to restore %d config values during migration", failedWrites);
             }
         }
     }

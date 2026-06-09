@@ -77,7 +77,7 @@ static volatile LONG g_isRunning = FALSE;
 #define PLUGIN_DATA_WATCHER_START_FAILURE_COOLDOWN_MS 2000
 
 static DWORD g_lastPluginDataRedrawTick = 0;
-static DWORD g_watchLastStartFailureTick = 0;
+static DWORD g_watchStartFailureCooldownUntil = 0;
 static volatile LONG g_pluginDataRedrawQueued = 0;
 static volatile LONG g_pluginDataRedrawTimerArmed = 0;
 static volatile LONG g_pluginDataTimerRecheckQueued = 0;
@@ -278,7 +278,7 @@ static BOOL g_hasLastOutputFileState = FALSE;
 
 /* Dynamic poll interval (controlled by <fps:N> tag) */
 #define DEFAULT_POLL_INTERVAL_MS 500
-#define MIN_POLL_INTERVAL_MS 10
+#define MIN_POLL_INTERVAL_MS PLUGIN_DATA_REDRAW_MIN_INTERVAL_MS
 #define MAX_POLL_INTERVAL_MS 5000
 #define MAX_PLUGIN_OUTPUT_BYTES (10ull * 1024ull * 1024ull)
 #define PLUGIN_DISPLAY_MAX_INPUT_BYTES 4096
@@ -319,13 +319,13 @@ static void SetWatcherRunning(BOOL running) {
 }
 
 static BOOL IsWatcherStartFailureCoolingDown(DWORD now) {
-    return g_watchLastStartFailureTick != 0 &&
-           (DWORD)(now - g_watchLastStartFailureTick) <
-               PLUGIN_DATA_WATCHER_START_FAILURE_COOLDOWN_MS;
+    return g_watchStartFailureCooldownUntil != 0 &&
+           (LONG)(g_watchStartFailureCooldownUntil - now) > 0;
 }
 
 static void MarkWatcherStartFailure(DWORD now) {
-    g_watchLastStartFailureTick = now ? now : 1;
+    DWORD cooldownUntil = now + PLUGIN_DATA_WATCHER_START_FAILURE_COOLDOWN_MS;
+    g_watchStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 static void CloseWatcherEventsIfIdleLocked(void) {
@@ -924,8 +924,27 @@ static BOOL CopyLastOutputFileStateLocked(FILETIME* writeTime, ULONGLONG* fileSi
     return TRUE;
 }
 
+static BOOL GetPluginOutputFileStateW(const wchar_t* filePath,
+                                      FILETIME* writeTime,
+                                      ULONGLONG* fileSize) {
+    if (!filePath || !writeTime || !fileSize) return FALSE;
+
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (!GetFileAttributesExW(filePath, GetFileExInfoStandard, &data)) {
+        return FALSE;
+    }
+
+    *writeTime = data.ftLastWriteTime;
+    *fileSize = ((ULONGLONG)data.nFileSizeHigh << 32) | data.nFileSizeLow;
+    return TRUE;
+}
+
 static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
                                     FILETIME* lastWriteTime, ULONGLONG* lastFileSize) {
+    if (!filePath || !lastWriteTime || !lastFileSize) {
+        return FALSE;
+    }
+
     HANDLE hFile = CreateFileW(
         filePath,
         GENERIC_READ,
@@ -1319,7 +1338,7 @@ static BOOL StartWatcherThreadIfNeeded(void) {
         return FALSE;
     }
 
-    g_watchLastStartFailureTick = 0;
+    g_watchStartFailureCooldownUntil = 0;
     LeaveCriticalSection(&g_watchCS);
     return TRUE;
 }
@@ -1446,7 +1465,7 @@ void PluginData_Init(HWND hwnd) {
     InterlockedExchange(&g_pluginDataRedrawTimerArmed, 0);
     InterlockedExchange(&g_pluginDataTimerRecheckQueued, 0);
     InterlockedExchange(&g_forceNextUpdate, FALSE);
-    g_watchLastStartFailureTick = 0;
+    g_watchStartFailureCooldownUntil = 0;
     SetPollIntervalMs(DEFAULT_POLL_INTERVAL_MS);
     SetWatcherRunning(FALSE);
 
@@ -1594,19 +1613,33 @@ void PluginData_SetText(const wchar_t* text) {
 
     LeaveCriticalSection(&g_dataCS);
     
-    // Clear the plugin data file to prevent showing stale content from previous plugin
+    /* Clear the plugin data file to prevent showing stale content from previous plugin.
+     * If clearing fails, remember the old file state as the baseline so the watcher
+     * does not immediately overwrite the loading text with stale output.
+     */
     wchar_t filePath[MAX_PATH];
+    BOOL outputStateCaptured = FALSE;
     if (GetPluginOutputPathW(filePath, MAX_PATH)) {
-        // Truncate file to zero length
         HANDLE hFile = CreateFileW(filePath, GENERIC_WRITE, PLUGIN_OUTPUT_FILE_SHARE,
                                    NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile != INVALID_HANDLE_VALUE) {
             CloseHandle(hFile);
+        } else {
+            LOG_WARNING("PluginData: Failed to clear output file before setting text (error=%lu)",
+                        GetLastError());
+        }
+
+        FILETIME writeTime = {0};
+        ULONGLONG fileSize = 0;
+        if (GetPluginOutputFileStateW(filePath, &writeTime, &fileSize)) {
+            EnterCriticalSection(&g_dataCS);
+            UpdateLastOutputFileStateLocked(&writeTime, fileSize);
+            LeaveCriticalSection(&g_dataCS);
+            outputStateCaptured = TRUE;
         }
     }
     
-    // Force file watcher to re-read on next cycle
-    InterlockedExchange(&g_forceNextUpdate, TRUE);
+    InterlockedExchange(&g_forceNextUpdate, outputStateCaptured ? FALSE : TRUE);
     StartWatcherThreadIfNeeded();
     WakeWatcherThread();
     PluginData_EndUse();
@@ -1662,12 +1695,19 @@ void PluginData_SetActive(BOOL active) {
     LeaveCriticalSection(&g_dataCS);
 
     if (active) {
-        // If activating, immediately read the file content (don't wait for watcher)
+        /* If activating, immediately read the file content when there is no
+         * current baseline.  Otherwise let the normal change check decide,
+         * which preserves freshly-set loading text when output.txt is stale.
+         */
         wchar_t filePath[MAX_PATH];
         if (GetPluginOutputPathW(filePath, MAX_PATH)) {
             FILETIME currentWriteTime = {0};
             ULONGLONG currentFileSize = 0;
-            ProcessPluginOutputFile(filePath, TRUE, &currentWriteTime, &currentFileSize);
+            BOOL hasBaseline = FALSE;
+            EnterCriticalSection(&g_dataCS);
+            hasBaseline = CopyLastOutputFileStateLocked(&currentWriteTime, &currentFileSize);
+            LeaveCriticalSection(&g_dataCS);
+            ProcessPluginOutputFile(filePath, !hasBaseline, &currentWriteTime, &currentFileSize);
         }
         StartWatcherThreadIfNeeded();
     } else {

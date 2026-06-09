@@ -178,27 +178,34 @@ static BOOL LoadFontInternal(const char* fontFileName, BOOL shouldUpdateConfig) 
         return FALSE;
     }
     
-    /* Update config if requested and this is the active font */
+    BOOL shouldPersistAutoFix = FALSE;
+    char previousFontName[MAX_PATH] = {0};
     if (shouldUpdateConfig && IsFontsFolderPath(FONT_FILE_NAME)) {
         const char* currentRelative = ExtractRelativePath(FONT_FILE_NAME);
         if (currentRelative && strcmp(currentRelative, fontFileName) == 0) {
-            char previousFontName[MAX_PATH] = {0};
             CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
-
-            /* Update global FONT_FILE_NAME */
-            strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
-            FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-
-            /* Write to config */
-            if (WriteConfigFont(pathInfo.relativePath, FALSE)) {
-                FlushConfigToDisk();
-            } else {
-                CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
-            }
+            shouldPersistAutoFix = TRUE;
         }
     }
-    
-    return LoadFontFromFile(pathInfo.absolutePath);
+
+    if (!LoadFontFromFile(pathInfo.absolutePath)) {
+        return FALSE;
+    }
+
+    if (shouldPersistAutoFix) {
+        /* Update global FONT_FILE_NAME only after the repaired font is loaded. */
+        strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
+        FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+
+        if (!WriteConfigFont(pathInfo.relativePath, FALSE) ||
+            !FlushConfigToDisk()) {
+            LOG_WARNING("Failed to persist auto-fixed font path: %s",
+                        pathInfo.relativePath);
+            CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        }
+    }
+
+    return TRUE;
 }
 
 BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
@@ -206,7 +213,7 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName) {
     return LoadFontInternal(fontName, TRUE);
 }
 
-BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, 
+BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
                                   char* realFontName, size_t realFontNameSize) {
     if (!fontFileName || !realFontName || realFontNameSize == 0) return FALSE;
     
@@ -224,31 +231,24 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
     }
     
     /* If not exists, try auto-fix */
+    BOOL shouldPersistAutoFix = FALSE;
+    FontPathInfo pathInfo = {0};
+    char previousFontName[MAX_PATH] = {0};
     if (!fontExists) {
         if (!ShouldAttemptFontAutoFix(fontFileName)) {
             return FALSE;
         }
 
-        FontPathInfo pathInfo;
         if (AutoFixFontPath(fontFileName, &pathInfo)) {
             strncpy(fontPath, pathInfo.absolutePath, MAX_PATH - 1);
             fontPath[MAX_PATH - 1] = '\0';
-            
-            /* Update config if this is the active font */
+
+            /* Defer config/global update until the repaired font has loaded. */
             if (IsFontsFolderPath(FONT_FILE_NAME)) {
                 const char* currentRelative = ExtractRelativePath(FONT_FILE_NAME);
                 if (currentRelative && strcmp(currentRelative, fontFileName) == 0) {
-                    char previousFontName[MAX_PATH] = {0};
                     CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
-
-                    strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
-                    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-
-                    if (WriteConfigFont(pathInfo.relativePath, FALSE)) {
-                        FlushConfigToDisk();
-                    } else {
-                        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
-                    }
+                    shouldPersistAutoFix = TRUE;
                 }
             }
         } else {
@@ -269,7 +269,64 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
     }
     
     /* Load font */
-    return LoadFontFromFile(fontPath);
+    if (!LoadFontFromFile(fontPath)) {
+        return FALSE;
+    }
+
+    if (shouldPersistAutoFix) {
+        strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
+        FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+
+        if (!WriteConfigFont(pathInfo.relativePath, FALSE) ||
+            !FlushConfigToDisk()) {
+            LOG_WARNING("Failed to persist auto-fixed font path: %s",
+                        pathInfo.relativePath);
+            CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        }
+    }
+
+    return TRUE;
+}
+
+BOOL CheckAndReloadCurrentFontPath(void) {
+    if (!IsFontsFolderPath(FONT_FILE_NAME)) {
+        return FALSE;
+    }
+
+    const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+    if (!relativePath) {
+        return FALSE;
+    }
+
+    char fontPath[MAX_PATH];
+    if (!BuildFullFontPath(relativePath, fontPath, MAX_PATH)) {
+        return FALSE;
+    }
+
+    wchar_t wFontPath[MAX_PATH];
+    if (!Utf8ToWide(fontPath, wFontPath, MAX_PATH)) {
+        return FALSE;
+    }
+
+    if (GetFileAttributesW(wFontPath) != INVALID_FILE_ATTRIBUTES) {
+        return FALSE;
+    }
+
+    char previousFontName[MAX_PATH] = {0};
+    char previousInternalName[MAX_PATH] = {0};
+    char loadedInternalName[MAX_PATH] = {0};
+    CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+    CopyStringExactA(FONT_INTERNAL_NAME, previousInternalName, sizeof(previousInternalName));
+
+    if (!LoadFontByNameAndGetRealName(GetModuleHandle(NULL), relativePath,
+                                      loadedInternalName, sizeof(loadedInternalName))) {
+        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+        return FALSE;
+    }
+
+    CopyStringExactA(loadedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+    return TRUE;
 }
 
 BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
@@ -437,12 +494,23 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
     /* Convert path to wide */
     wchar_t wOutputPath[MAX_PATH];
     if (!Utf8ToWide(outputPath, wOutputPath, MAX_PATH)) return FALSE;
-    
-    /* Write to file */
-    HANDLE hFile = CreateFileW(wOutputPath, GENERIC_WRITE, 0, NULL, 
+
+    wchar_t wOutputDir[MAX_PATH];
+    if (!ExtractDirectoryW(wOutputPath, wOutputDir, MAX_PATH)) return FALSE;
+
+    wchar_t wTempPath[MAX_PATH];
+    if (GetTempFileNameW(wOutputDir, L"ctf", 0, wTempPath) == 0) {
+        return FALSE;
+    }
+
+    /* Write to a same-directory temp file, then atomically replace target. */
+    HANDLE hFile = CreateFileW(wTempPath, GENERIC_WRITE, 0, NULL,
                               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) return FALSE;
-    
+    if (hFile == INVALID_HANDLE_VALUE) {
+        DeleteFileW(wTempPath);
+        return FALSE;
+    }
+
     DWORD bytesWritten;
     BOOL result = WriteFile(hFile, fontData, fontLength, &bytesWritten, NULL) &&
                   bytesWritten == fontLength;
@@ -451,6 +519,14 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
     }
     if (!CloseHandle(hFile)) {
         result = FALSE;
+    }
+
+    if (result) {
+        result = MoveFileExW(wTempPath, wOutputPath,
+                             MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+    }
+    if (!result) {
+        DeleteFileW(wTempPath);
     }
 
     return result;

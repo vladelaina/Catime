@@ -55,7 +55,7 @@ void GetGeneratedTrayIconSizeSnapshot(int* outCx, int* outCy);
 
 /**
  * @brief Create 16x16 percent icon with rendered text
- * @param percent Value (0-999, clamped)
+ * @param percent Value (0-100, clamped)
  * @return HICON or NULL on failure
  * 
  * @details

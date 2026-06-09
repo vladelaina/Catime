@@ -36,10 +36,10 @@ HANDLE GetGlobalMutexHandle(void);
 void ClearGlobalMutexHandle(void);
 
 /**
- * Verify single instance mutex is still valid
- * Can be called periodically to ensure single instance state
+ * Verify single instance mutex handle is still valid
+ * Can be called periodically without changing mutex ownership
  * @param hMutex Mutex handle to verify
- * @return TRUE if mutex is valid and owned by this process
+ * @return TRUE if mutex handle is valid
  */
 BOOL VerifySingleInstanceMutex(HANDLE hMutex);
 

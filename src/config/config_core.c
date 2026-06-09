@@ -201,7 +201,9 @@ void ReadConfig() {
 
     /* Write back if migration occurred or validation modified values */
     if (needsWriteBack) {
-        WriteConfig(config_path);
+        if (!WriteConfig(config_path)) {
+            LOG_ERROR("Failed to write migrated or sanitized config: %s", config_path);
+        }
     }
 }
 
@@ -246,13 +248,13 @@ static void CopyTimeoutString(char* dest, size_t destSize, const char* value) {
     dest[destSize - 1] = '\0';
 }
 
-void WriteConfigTimeoutAction(const char* action) {
+BOOL WriteConfigTimeoutAction(const char* action) {
     TimeoutActionType newAction = TimeoutActionType_FromStr(action ? action : "MESSAGE");
     const char* configAction = TimeoutActionType_ToStr(newAction);
 
     if (IsOneTimeTimeoutAction(newAction)) {
         CLOCK_TIMEOUT_ACTION = newAction;
-        return;
+        return TRUE;
     }
 
     char config_path[MAX_PATH];
@@ -265,15 +267,16 @@ void WriteConfigTimeoutAction(const char* action) {
                                                       "MESSAGE");
 
     if (runtimeMatches && configMatches) {
-        return;
+        return TRUE;
     }
 
     if (!configMatches &&
         !UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", configAction)) {
-        return;
+        return FALSE;
     }
 
     CLOCK_TIMEOUT_ACTION = newAction;
+    return TRUE;
 }
 
 /**
@@ -354,7 +357,7 @@ BOOL WriteConfigTopmost(const char* topmost) {
 /**
  * @brief Configure timeout action to open file
  */
-void WriteConfigTimeoutFile(const char* filePath) {
+BOOL WriteConfigTimeoutFile(const char* filePath) {
     char normalizedPath[MAX_PATH];
     CopyTimeoutString(normalizedPath, sizeof(normalizedPath), filePath);
 
@@ -373,7 +376,7 @@ void WriteConfigTimeoutFile(const char* filePath) {
                                                       "");
 
     if (runtimeMatches && configMatches) {
-        return;
+        return TRUE;
     }
 
     const IniKeyValue updates[] = {
@@ -383,17 +386,18 @@ void WriteConfigTimeoutFile(const char* filePath) {
 
     if (!configMatches &&
         !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
-        return;
+        return FALSE;
     }
 
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
     CopyTimeoutString(CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, normalizedPath);
+    return TRUE;
 }
 
 /**
  * @brief Configure timeout action to open website
  */
-void WriteConfigTimeoutWebsite(const char* url) {
+BOOL WriteConfigTimeoutWebsite(const char* url) {
     char normalizedUrl[MAX_PATH];
     CopyTimeoutString(normalizedUrl, sizeof(normalizedUrl), url);
 
@@ -412,7 +416,7 @@ void WriteConfigTimeoutWebsite(const char* url) {
                                                       "");
 
     if (runtimeMatches && configMatches) {
-        return;
+        return TRUE;
     }
 
     const IniKeyValue updates[] = {
@@ -422,9 +426,10 @@ void WriteConfigTimeoutWebsite(const char* url) {
 
     if (!configMatches &&
         !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
-        return;
+        return FALSE;
     }
 
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     CopyTimeoutString(CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, normalizedUrl);
+    return TRUE;
 }

@@ -483,16 +483,16 @@ void PluginProcess_Shutdown(void) {
 
 /* Last error message from plugin launch */
 static wchar_t g_lastLaunchError[128] = {0};
-static DWORD g_lastLaunchStartFailureTick = 0;
+static DWORD g_launchStartFailureCooldownUntil = 0;
 
 static BOOL IsPluginLaunchStartFailureCoolingDown(DWORD now) {
-    return g_lastLaunchStartFailureTick != 0 &&
-           (DWORD)(now - g_lastLaunchStartFailureTick) <
-               PLUGIN_LAUNCH_START_FAILURE_COOLDOWN_MS;
+    return g_launchStartFailureCooldownUntil != 0 &&
+           (LONG)(g_launchStartFailureCooldownUntil - now) > 0;
 }
 
 static void MarkPluginLaunchStartFailure(DWORD now) {
-    g_lastLaunchStartFailureTick = now ? now : 1;
+    DWORD cooldownUntil = now + PLUGIN_LAUNCH_START_FAILURE_COOLDOWN_MS;
+    g_launchStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 /**
@@ -588,7 +588,7 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
         return FALSE;
     }
 
-    g_lastLaunchStartFailureTick = 0;
+    g_launchStartFailureCooldownUntil = 0;
 
     /* Wait for process creation */
     DWORD readyWait = WaitForSingleObject(hReadyEvent, PLUGIN_LAUNCH_READY_TIMEOUT_MS);

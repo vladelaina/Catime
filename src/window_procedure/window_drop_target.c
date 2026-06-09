@@ -200,10 +200,57 @@ static BOOL IsDropImportTargetSubtree(const wchar_t* dirPath,
  * @brief Copy file to target directory and return new filename
  * @param relativeDir Optional relative directory structure to preserve (can be NULL)
  */
-static BOOL ImportResourceFile(const wchar_t* srcPath, ResourceType type, const wchar_t* relativeDir, wchar_t* outNewPath, size_t size) {
+static const wchar_t* GetCachedTargetRoot(ResourceType type, const DropImportState* state) {
+    if (!state) return NULL;
+    if (type == RESOURCE_TYPE_FONT && state->fontTargetRoot[0] != L'\0') {
+        return state->fontTargetRoot;
+    }
+    if (type == RESOURCE_TYPE_ANIMATION && state->animTargetRoot[0] != L'\0') {
+        return state->animTargetRoot;
+    }
+    return NULL;
+}
+
+static BOOL CopyResourceFileAtomicW(const wchar_t* srcPath,
+                                    const wchar_t* targetDir,
+                                    const wchar_t* destPath) {
+    if (!srcPath || !targetDir || !destPath) return FALSE;
+
+    wchar_t tempPath[MAX_PATH] = {0};
+    if (GetTempFileNameW(targetDir, L"ctd", 0, tempPath) == 0) {
+        LOG_ERROR("Failed to create temporary dropped resource file in: %ls (error=%lu)",
+                  targetDir, GetLastError());
+        return FALSE;
+    }
+
+    BOOL success = CopyFileW(srcPath, tempPath, FALSE) &&
+                   MoveFileExW(tempPath, destPath,
+                               MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
+    if (!success) {
+        DWORD error = GetLastError();
+        DeleteFileW(tempPath);
+        SetLastError(error);
+    }
+
+    return success;
+}
+
+static BOOL ImportResourceFile(const wchar_t* srcPath,
+                               ResourceType type,
+                               const DropImportState* state,
+                               const wchar_t* relativeDir,
+                               wchar_t* outNewPath,
+                               size_t size) {
     wchar_t baseDir[MAX_PATH];
     wchar_t targetDir[MAX_PATH];
-    if (!GetTargetFolderPath(type, baseDir, MAX_PATH)) return FALSE;
+    const wchar_t* cachedBaseDir = GetCachedTargetRoot(type, state);
+    if (cachedBaseDir) {
+        if (wcscpy_s(baseDir, MAX_PATH, cachedBaseDir) != 0) {
+            return FALSE;
+        }
+    } else if (!GetTargetFolderPath(type, baseDir, MAX_PATH)) {
+        return FALSE;
+    }
 
     int targetDirLen = (relativeDir && *relativeDir)
         ? _snwprintf_s(targetDir, MAX_PATH, _TRUNCATE, L"%s\\%s", baseDir, relativeDir)
@@ -250,8 +297,8 @@ static BOOL ImportResourceFile(const wchar_t* srcPath, ResourceType type, const 
         return FALSE;
     }
 
-    /* Copy file (replace if exists) */
-    if (CopyFileW(srcPath, outNewPath, FALSE)) {
+    /* Copy through a same-directory temp file so a failed import cannot corrupt an existing resource. */
+    if (CopyResourceFileAtomicW(srcPath, targetDir, outNewPath)) {
         return TRUE;
     }
 
@@ -347,7 +394,7 @@ static void ProcessDirectoryRecursive(const wchar_t* dirPath,
                 }
 
                 wchar_t newPath[MAX_PATH];
-                if (ImportResourceFile(fullPath, type, relativeDir, newPath, MAX_PATH)) {
+                if (ImportResourceFile(fullPath, type, state, relativeDir, newPath, MAX_PATH)) {
                     state->importedCount++;
                     if (type == RESOURCE_TYPE_FONT) {
                         wcscpy_s(state->lastFontPath, MAX_PATH, newPath);
@@ -433,7 +480,7 @@ DropImportResult HandleDropFiles(HWND hwnd, HDROP hDrop) {
             if (type != RESOURCE_TYPE_UNKNOWN) {
                 wchar_t newPath[MAX_PATH];
                 /* NULL relativeDir means put in root of resources/type */
-                if (ImportResourceFile(filePath, type, NULL, newPath, MAX_PATH)) {
+                if (ImportResourceFile(filePath, type, &state, NULL, newPath, MAX_PATH)) {
                     state.importedCount++;
                     if (type == RESOURCE_TYPE_FONT) {
                         wcscpy_s(state.lastFontPath, MAX_PATH, newPath);

@@ -10,6 +10,7 @@
 #ifndef MARKDOWN_PARSER_H
 #define MARKDOWN_PARSER_H
 
+#include <stddef.h>
 #include <windows.h>
 
 /**
@@ -118,6 +119,7 @@ typedef struct {
  */
 typedef struct {
     wchar_t* displayText;
+    size_t displayCapacity;
     MarkdownLink* links;
     int linkCount;
     int linkCapacity;
@@ -367,6 +369,9 @@ BOOL EnsureListItemCapacity(ParseState* state);
 BOOL EnsureBlockquoteCapacity(ParseState* state);
 BOOL EnsureColorTagCapacity(ParseState* state);
 BOOL EnsureFontTagCapacity(ParseState* state);
+BOOL AppendMarkdownOutputSpan(ParseState* state, const wchar_t* text, size_t textLen);
+BOOL AppendMarkdownOutputChar(ParseState* state, wchar_t ch);
+void SyncMarkdownOutputPointer(ParseState* state, wchar_t** dest);
 void CleanupParseState(ParseState* state);
 void DetachParseState(ParseState* state);
 int GetInitialLinkCapacity(int estimatedCount);
@@ -403,6 +408,6 @@ BOOL ParseHorizontalRule(const wchar_t** src, ParseState* state, wchar_t** dest)
 BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest, BOOL* inListItem, int* currentListItemIndex);
 BOOL ParseHeading(const wchar_t** src, ParseState* state, wchar_t** dest, BOOL* inHeading, int* currentHeadingIndex);
 BOOL ParseBlockquote(const wchar_t** src, ParseState* state, wchar_t** dest);
-void ParseBlockquoteContent(const wchar_t** src, ParseState* state, wchar_t** dest, int blockquoteIndex);
+BOOL ParseBlockquoteContent(const wchar_t** src, ParseState* state, wchar_t** dest, int blockquoteIndex);
 
 #endif // MARKDOWN_PARSER_H

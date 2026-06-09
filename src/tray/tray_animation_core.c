@@ -68,7 +68,7 @@ static volatile LONG g_previewRequestSerial = 0;
 static char g_pendingPreviewName[MAX_PATH] = "";
 static BOOL g_pendingPreviewFromPath = FALSE;
 static BOOL g_previewWorkerRetiring = FALSE;
-static DWORD g_previewWorkerLastStartFailureTick = 0;
+static DWORD g_previewWorkerStartFailureCooldownUntil = 0;
 static SRWLOCK g_previewWorkerLock = SRWLOCK_INIT;
 
 /* Resources */
@@ -201,6 +201,28 @@ static void ClearPendingTrayUpdate(void) {
     } else {
         g_pendingTrayUpdate = FALSE;
     }
+}
+
+static void SetPendingTrayUpdate(void) {
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_pendingTrayUpdate = TRUE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_pendingTrayUpdate = TRUE;
+    }
+}
+
+static BOOL HasPendingTrayUpdate(void) {
+    BOOL pending = FALSE;
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        pending = g_pendingTrayUpdate;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        pending = g_pendingTrayUpdate;
+    }
+    return pending;
 }
 
 static void ResetBuiltinIconUpdateCache(void) {
@@ -488,13 +510,13 @@ static void WakePreviewWorkerLocked(void) {
 }
 
 static BOOL IsPreviewWorkerStartFailureCoolingDown(DWORD now) {
-    return g_previewWorkerLastStartFailureTick != 0 &&
-           (DWORD)(now - g_previewWorkerLastStartFailureTick) <
-               PREVIEW_WORKER_START_RETRY_COOLDOWN_MS;
+    return g_previewWorkerStartFailureCooldownUntil != 0 &&
+           (LONG)(g_previewWorkerStartFailureCooldownUntil - now) > 0;
 }
 
 static void MarkPreviewWorkerStartFailure(DWORD now) {
-    g_previewWorkerLastStartFailureTick = now;
+    DWORD cooldownUntil = now + PREVIEW_WORKER_START_RETRY_COOLDOWN_MS;
+    g_previewWorkerStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 static BOOL EnsurePreviewWorkerStartedLocked(void) {
@@ -561,7 +583,7 @@ static BOOL EnsurePreviewWorkerStartedLocked(void) {
     }
 
     g_previewWorkerRetiring = FALSE;
-    g_previewWorkerLastStartFailureTick = 0;
+    g_previewWorkerStartFailureCooldownUntil = 0;
     return TRUE;
 }
 
@@ -660,13 +682,7 @@ static void PostPreviewLoadedMessage(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) return;
 
-    if (IsAnimCriticalSectionReady()) {
-        EnterCriticalSection(&g_animCriticalSection);
-        g_pendingTrayUpdate = TRUE;
-        LeaveCriticalSection(&g_animCriticalSection);
-    } else {
-        g_pendingTrayUpdate = TRUE;
-    }
+    SetPendingTrayUpdate();
 
     if (!PostMessage(trayHwnd, CLOCK_WM_ANIMATION_PREVIEW_LOADED, 0, 0)) {
         ClearPendingTrayUpdate();
@@ -829,9 +845,12 @@ static void UpdateTrayIconToCurrentFrame(void) {
         return;
     }
 
-    ClearPendingTrayUpdate();
+    if (IsTrayInteractionSuspended()) {
+        SetPendingTrayUpdate();
+        return;
+    }
 
-    if (IsTrayInteractionSuspended()) return;
+    ClearPendingTrayUpdate();
 
     BOOL previewActive = FALSE;
     AnimationSourceType sourceType = ANIM_SOURCE_UNKNOWN;
@@ -1003,15 +1022,8 @@ static void RequestTrayIconUpdate(void) {
     if (IsTrayInteractionSuspended()) return;
     
     BOOL alreadyPending = FALSE;
-    if (IsAnimCriticalSectionReady()) {
-        EnterCriticalSection(&g_animCriticalSection);
-        alreadyPending = g_pendingTrayUpdate;
-        g_pendingTrayUpdate = TRUE;
-        LeaveCriticalSection(&g_animCriticalSection);
-    } else {
-        alreadyPending = g_pendingTrayUpdate;
-        g_pendingTrayUpdate = TRUE;
-    }
+    alreadyPending = HasPendingTrayUpdate();
+    SetPendingTrayUpdate();
 
     if (alreadyPending) {
         return;
@@ -2054,13 +2066,7 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
 
     EnsureTrayAnimationTimerState();
     
-    if (IsAnimCriticalSectionReady()) {
-        EnterCriticalSection(&g_animCriticalSection);
-        hasPending = g_pendingTrayUpdate;
-        LeaveCriticalSection(&g_animCriticalSection);
-    } else {
-        hasPending = g_pendingTrayUpdate;
-    }
+    hasPending = HasPendingTrayUpdate();
     
     if (hasPending) {
         UpdateTrayIconToCurrentFrame();

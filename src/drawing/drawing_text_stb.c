@@ -64,7 +64,7 @@ static FontTagGlyphMetricsCacheEntry
 
 typedef struct {
     wchar_t fontName[MAX_PATH];
-    DWORD lastFailureTick;
+    DWORD retryAfterFailureTick;
     BOOL pathResolutionFailure;
 } FailedFontCacheEntry;
 
@@ -739,6 +739,7 @@ void BlendCharBitmapSTBWithEffect(void* destBits, int destWidth, int destHeight,
 static COLORREF g_gradientLUT[LUT_SIZE];
 static GradientType g_lutType = GRADIENT_NONE;
 static char g_lutName[GRADIENT_NAME_BUFFER];
+static DWORD g_lutSignature = 0;
 
 static long long GradientPositionFixed(long long x, int startX, int totalWidth) {
     if (totalWidth <= 0) return 0;
@@ -840,8 +841,26 @@ static void GetGlowGradientColor(int x, int y, int* r, int* g, int* b, void* use
     }
 }
 
+static DWORD ComputeGradientLUTSignature(const GradientInfo* info) {
+    if (!info) return 0;
+
+    DWORD signature = 2166136261u;
+    signature = (signature ^ (DWORD)info->startColor) * 16777619u;
+    signature = (signature ^ (DWORD)info->endColor) * 16777619u;
+    signature = (signature ^ (DWORD)info->paletteCount) * 16777619u;
+
+    if (info->palette && info->paletteCount > 0) {
+        for (int i = 0; i < info->paletteCount; i++) {
+            signature = (signature ^ (DWORD)info->palette[i]) * 16777619u;
+        }
+    }
+
+    return signature ? signature : 1u;
+}
+
 static void SetGradientLUTKey(const GradientInfo* info) {
     g_lutType = info ? info->type : GRADIENT_NONE;
+    g_lutSignature = info ? ComputeGradientLUTSignature(info) : 0;
     g_lutName[0] = '\0';
     if (info && info->type == GRADIENT_CUSTOM && info->name) {
         strncpy(g_lutName, info->name, sizeof(g_lutName) - 1);
@@ -851,6 +870,7 @@ static void SetGradientLUTKey(const GradientInfo* info) {
 
 static BOOL GradientLUTMatches(const GradientInfo* info) {
     if (!info || g_lutType != info->type) return FALSE;
+    if (g_lutSignature != ComputeGradientLUTSignature(info)) return FALSE;
     if (info->type == GRADIENT_CUSTOM) {
         return info->name && strcmp(g_lutName, info->name) == 0;
     }
@@ -1590,7 +1610,7 @@ static BOOL IsRecentFontFailureCached(const wchar_t* fontPath) {
         if (g_failedFontCache[i].fontName[0] == L'\0') continue;
         if (wcscmp(g_failedFontCache[i].fontName, cacheKey) != 0) continue;
 
-        if (now - g_failedFontCache[i].lastFailureTick < FONT_FAILURE_RETRY_MS) {
+        if ((LONG)(g_failedFontCache[i].retryAfterFailureTick - now) > 0) {
             if (g_failedFontCache[i].pathResolutionFailure) {
                 wchar_t resolvedPath[MAX_PATH];
                 if (ResolveFontTagPath(cacheKey, resolvedPath, _countof(resolvedPath))) {
@@ -1627,7 +1647,6 @@ static void RecordFailedFontCacheEntry(const wchar_t* fontPath, BOOL pathResolut
 
     DWORD now = GetTickCount();
     int target = -1;
-    DWORD oldestAge = 0;
 
     for (int i = 0; i < MAX_FAILED_FONT_CACHE; i++) {
         if (g_failedFontCache[i].fontName[0] == L'\0') {
@@ -1640,22 +1659,23 @@ static void RecordFailedFontCacheEntry(const wchar_t* fontPath, BOOL pathResolut
             break;
         }
 
-        DWORD age = now - g_failedFontCache[i].lastFailureTick;
-        if (age >= FONT_FAILURE_RETRY_MS) {
+        if ((LONG)(g_failedFontCache[i].retryAfterFailureTick - now) <= 0) {
             target = i;
             break;
         }
 
-        if (target < 0 || age > oldestAge) {
+        if (target < 0 ||
+            (LONG)(g_failedFontCache[target].retryAfterFailureTick -
+                   g_failedFontCache[i].retryAfterFailureTick) > 0) {
             target = i;
-            oldestAge = age;
         }
     }
 
     if (target < 0) return;
 
     memcpy(g_failedFontCache[target].fontName, cacheKey, sizeof(cacheKey));
-    g_failedFontCache[target].lastFailureTick = now;
+    DWORD retryAfter = now + FONT_FAILURE_RETRY_MS;
+    g_failedFontCache[target].retryAfterFailureTick = retryAfter ? retryAfter : 1;
     g_failedFontCache[target].pathResolutionFailure = pathResolutionFailure;
 }
 

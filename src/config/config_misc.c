@@ -292,11 +292,11 @@ void LoadRecentFiles(void) {
 /**
  * @brief Add file to recent files list with MRU ordering
  */
-void SaveRecentFile(const char* filePath) {
-    if (!filePath || strlen(filePath) == 0) return;
+BOOL SaveRecentFile(const char* filePath) {
+    if (!filePath || strlen(filePath) == 0) return FALSE;
 
     if (!FileExistsUtf8(filePath)) {
-        return;
+        return FALSE;
     }
 
     char config_path[MAX_PATH];
@@ -344,7 +344,7 @@ void SaveRecentFile(const char* filePath) {
         }
     }
     if (!changed) {
-        return;
+        return TRUE;
     }
 
     /** Write back to INI */
@@ -356,7 +356,12 @@ void SaveRecentFile(const char* filePath) {
         updates[i].key = keys[i];
         updates[i].value = (i < writeIdx) ? newList[i] : "";
     }
-    WriteIniMultipleAtomic(config_path, updates, MAX_RECENT_FILES);
+    if (!WriteIniMultipleAtomic(config_path, updates, MAX_RECENT_FILES)) {
+        LOG_WARNING("Failed to persist recent file list after adding: %s", filePath);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 
@@ -457,9 +462,12 @@ const char* GetCurrentFontLicenseVersion(void) {
 /**
  * @brief Write language setting to config file
  */
-void WriteConfigLanguage(int language) {
+BOOL WriteConfigLanguage(int language) {
     const char* langName = GetLanguageConfigKey(language);
-    WriteConfigKeyValue("LANGUAGE", langName);
+    if (!langName) {
+        return FALSE;
+    }
+    return WriteConfigKeyValue("LANGUAGE", langName);
 }
 
 

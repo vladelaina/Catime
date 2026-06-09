@@ -190,10 +190,13 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                     return TRUE;
                 }
 
-                extern void WriteConfigNotificationTimeout(int timeout_ms);
+                extern BOOL WriteConfigNotificationTimeout(int timeout_ms);
                 extern BOOL WriteConfigNotificationOpacity(int opacity);
-                WriteConfigNotificationTimeout(timeInMs);
-                WriteConfigNotificationOpacity(opacity);
+                if (!WriteConfigNotificationTimeout(timeInMs) ||
+                    !WriteConfigNotificationOpacity(opacity)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+                    return TRUE;
+                }
 
                 DestroyWindow(hwndDlg);
                 return TRUE;

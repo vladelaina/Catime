@@ -313,7 +313,9 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
             updates[i].key = g_hotkeyConfigs[i].configKey;
             updates[i].value = hotkeyStrings[i];
         }
-        WriteIniMultipleAtomic(config_path, updates, ARRAY_SIZE(g_hotkeyConfigs));
+        if (!WriteIniMultipleAtomic(config_path, updates, ARRAY_SIZE(g_hotkeyConfigs))) {
+            LOG_WARNING("Failed to persist cleared hotkeys after registration conflicts");
+        }
     }
 
     g_registeredHotkeyHwnd = hwnd;

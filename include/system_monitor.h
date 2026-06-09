@@ -35,7 +35,7 @@ void SystemMonitor_Shutdown(void);
  * @param intervalMs Interval (0 = default 1000ms)
  * 
  * @details
- * Lower = fresher data but more overhead.
+ * Lower = fresher data but more overhead. Values below 500ms are clamped.
  * Recommended: 500-1000ms (real-time), 2000-5000ms (background).
  */
 void SystemMonitor_SetUpdateIntervalMs(DWORD intervalMs);

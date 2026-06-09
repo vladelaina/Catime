@@ -284,6 +284,7 @@ static COLORREF InterpolateGradientColor(const GradientInfo* info, float t) {
 }
 
 #define GRADIENT_STACK_PIXELS 256
+#define GRADIENT_MAX_DRAW_WIDTH 16384
 
 /* ============================================================================
  * Public API
@@ -375,6 +376,7 @@ void DrawGradientRect(HDC hdc, const RECT* rect, const GradientInfo* info) {
     int width = rect->right - rect->left;
     int height = rect->bottom - rect->top;
     if (width <= 0 || height <= 0) return;
+    if (width > GRADIENT_MAX_DRAW_WIDTH) return;
 
     DWORD stackPixels[GRADIENT_STACK_PIXELS];
     DWORD* pixels = (width <= GRADIENT_STACK_PIXELS)

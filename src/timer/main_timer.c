@@ -174,10 +174,17 @@ static BOOL ShouldUseHighPrecision(UINT intervalMs) {
 }
 
 static BOOL AcquireTimerResolution(void) {
-    if (g_timerResolutionMs > 0) return TRUE;
-
     UINT requestedResolutionMs = ClampTimerResolutionToDeviceCaps(
         ChooseTimerResolutionMs(g_timerInterval));
+    if (g_timerResolutionMs == requestedResolutionMs) {
+        return TRUE;
+    }
+
+    if (g_timerResolutionMs > 0) {
+        timeEndPeriod(g_timerResolutionMs);
+        g_timerResolutionMs = 0;
+    }
+
     MMRESULT res = timeBeginPeriod(requestedResolutionMs);
     if (res == TIMERR_NOERROR) {
         g_timerResolutionMs = requestedResolutionMs;

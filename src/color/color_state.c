@@ -23,7 +23,7 @@ char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER] = "#FFFFFF";
 
 void GetConfigPath(char* path, size_t size);
 void CreateDefaultConfig(const char* config_path);
-void WriteConfig(const char* config_path);
+BOOL WriteConfig(const char* config_path);
 
 static void TrimString(char* str) {
     if (!str) return;

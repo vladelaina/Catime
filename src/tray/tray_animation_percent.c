@@ -15,6 +15,8 @@ static COLORREF g_percentBgColor = TRANSPARENT_BG_AUTO;
 #define ICON_MASK_STACK_BYTES 2048u
 #define GENERATED_TRAY_ICON_FALLBACK_SIZE 16
 #define GENERATED_TRAY_ICON_MAX_SIZE 256
+#define GENERATED_PERCENT_ICON_MAX_VALUE 100
+#define GENERATED_PERCENT_ICON_CACHE_SIZE (GENERATED_PERCENT_ICON_MAX_VALUE + 1)
 
 typedef struct {
     HICON icon;
@@ -35,7 +37,7 @@ typedef struct {
     BOOL valid;
 } CapsIconCacheEntry;
 
-static PercentIconCacheEntry g_percentIconCache[1000];
+static PercentIconCacheEntry g_percentIconCache[GENERATED_PERCENT_ICON_CACHE_SIZE];
 static CapsIconCacheEntry g_capsIconCache[2];
 static COLORREF g_cachedThemeTextColor = CLR_INVALID;
 static DWORD g_lastThemeCheckTick = 0;
@@ -294,7 +296,9 @@ static HICON CreatePercentIcon16Uncached(int percent,
                                          COLORREF textColor,
                                          COLORREF bgColor) {
     /* Clamp percent */
-    if (percent > 999) percent = 999;
+    if (percent > GENERATED_PERCENT_ICON_MAX_VALUE) {
+        percent = GENERATED_PERCENT_ICON_MAX_VALUE;
+    }
     if (percent < 0) percent = 0;
 
     BOOL useTransparentBg = (bgColor == TRANSPARENT_BG_AUTO);
@@ -448,7 +452,9 @@ HICON CreatePercentIcon16(int percent) {
     int cy = GENERATED_TRAY_ICON_FALLBACK_SIZE;
     GetGeneratedTrayIconSize(&cx, &cy);
 
-    if (percent > 999) percent = 999;
+    if (percent > GENERATED_PERCENT_ICON_MAX_VALUE) {
+        percent = GENERATED_PERCENT_ICON_MAX_VALUE;
+    }
     if (percent < 0) percent = 0;
 
     COLORREF textColor;

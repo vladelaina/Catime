@@ -81,8 +81,18 @@ BOOL LoadFontByName(HINSTANCE hInstance, const char* fontName);
  *          Falls back to filename without extension on parse failure.
  *          Auto-recovers if file moved.
  */
-BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName, 
+BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
                                   char* realFontName, size_t realFontNameSize);
+
+/**
+ * @brief Repair the active fonts-folder path and reload the GDI font resource
+ * @return TRUE if the active font path was repaired and reloaded
+ *
+ * @details Intended for periodic validation after files are moved inside the
+ *          fonts folder. Keeps config/global state unchanged unless the
+ *          repaired font can actually be loaded.
+ */
+BOOL CheckAndReloadCurrentFontPath(void);
 
 /**
  * @brief Switch to different font permanently

@@ -704,9 +704,10 @@ static const struct {
 BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
     for (size_t i = 0; i < sizeof(LANGUAGE_MAP) / sizeof(LANGUAGE_MAP[0]); i++) {
         if (menuId == LANGUAGE_MAP[i].menuId) {
-            SetLanguage(LANGUAGE_MAP[i].language);
-            WriteConfigLanguage(LANGUAGE_MAP[i].language);
-            InvalidateRect(hwnd, NULL, TRUE);
+            if (WriteConfigLanguage(LANGUAGE_MAP[i].language) &&
+                SetLanguage(LANGUAGE_MAP[i].language)) {
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
             return TRUE;
         }
     }

@@ -40,6 +40,26 @@ typedef struct {
     bool initialized;
 } ComShellLink;
 
+static bool EnsureComInitializedForShortcut(bool* should_uninitialize) {
+    if (!should_uninitialize) {
+        return false;
+    }
+
+    *should_uninitialize = false;
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (SUCCEEDED(hr)) {
+        *should_uninitialize = true;
+        return true;
+    }
+
+    if (hr == RPC_E_CHANGED_MODE) {
+        return true;
+    }
+
+    LOG_ERROR("COM library initialization failed, hr=0x%08X", (unsigned int)hr);
+    return false;
+}
+
 static bool StartsWith(const char* str, const char* prefix) {
     size_t prefix_len = strlen(prefix);
     size_t str_len = strlen(str);
@@ -403,23 +423,28 @@ int CheckAndCreateShortcut(void) {
     wchar_t exe_path_w[MAX_PATH];
     bool shortcut_check_done;
     bool is_package_install;
+    bool should_uninitialize_com = false;
     ShortcutStatus status;
-    HRESULT hr;
     int result = 0;
     
-    hr = CoInitialize(NULL);
-    CHECK_HR_RETURN(hr, "COM library initialization failed", 1);
+    if (!EnsureComInitializedForShortcut(&should_uninitialize_com)) {
+        return 1;
+    }
     
     DWORD exe_path_len = GetModuleFileNameW(NULL, exe_path_w, MAX_PATH);
     if (exe_path_len == 0 || exe_path_len >= MAX_PATH) {
         LOG_ERROR("Failed to get program path");
-        CoUninitialize();
+        if (should_uninitialize_com) {
+            CoUninitialize();
+        }
         return 1;
     }
     
     if (!WideToUtf8(exe_path_w, exe_path, MAX_PATH)) {
         LOG_ERROR("Failed to convert executable path");
-        CoUninitialize();
+        if (should_uninitialize_com) {
+            CoUninitialize();
+        }
         return 1;
     }
     
@@ -434,17 +459,23 @@ int CheckAndCreateShortcut(void) {
             } else if (is_package_install) {
                 LOG_INFO("Package manager installation detected - creating shortcut");
                 result = CreateOrUpdateShortcut(exe_path, NULL) ? 0 : 1;
-                SetShortcutCheckDone(true);
+                if (!SetShortcutCheckDone(true)) {
+                    LOG_WARNING("Failed to persist shortcut check completion flag");
+                }
             } else {
                 LOG_INFO("Manual installation detected - not creating shortcut");
-                SetShortcutCheckDone(true);
+                if (!SetShortcutCheckDone(true)) {
+                    LOG_WARNING("Failed to persist shortcut check completion flag");
+                }
             }
             break;
             
         case SHORTCUT_POINTS_TO_CURRENT:
             LOG_INFO("Desktop shortcut exists and points to current program");
             if (!shortcut_check_done) {
-                SetShortcutCheckDone(true);
+                if (!SetShortcutCheckDone(true)) {
+                    LOG_WARNING("Failed to persist shortcut check completion flag");
+                }
             }
             break;
             
@@ -454,7 +485,9 @@ int CheckAndCreateShortcut(void) {
             LOG_INFO("  New: %s", exe_path);
             result = CreateOrUpdateShortcut(exe_path, shortcut_path) ? 0 : 1;
             if (!shortcut_check_done) {
-                SetShortcutCheckDone(true);
+                if (!SetShortcutCheckDone(true)) {
+                    LOG_WARNING("Failed to persist shortcut check completion flag");
+                }
             }
             break;
             
@@ -464,6 +497,8 @@ int CheckAndCreateShortcut(void) {
             break;
     }
     
-    CoUninitialize();
+    if (should_uninitialize_com) {
+        CoUninitialize();
+    }
     return result;
 }

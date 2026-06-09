@@ -159,11 +159,7 @@ static BOOL StartClickThroughTimer(HWND hwnd) {
     return g_clickThroughTimerActive;
 }
 
-static void DisableSoftClickThroughFallback(HWND hwnd) {
-    StopClickThroughTimer(hwnd);
-    g_clickThroughEnabled = FALSE;
-    g_currentlyTransparent = FALSE;
-
+static void RestoreInteractiveClickThroughStyle(HWND hwnd) {
     if (!IsValidVisualEffectsWindow(hwnd)) {
         return;
     }
@@ -175,6 +171,13 @@ static void DisableSoftClickThroughFallback(HWND hwnd) {
         SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
     }
+    g_currentlyTransparent = FALSE;
+}
+
+static void DisableSoftClickThroughFallback(HWND hwnd) {
+    StopClickThroughTimer(hwnd);
+    g_clickThroughEnabled = FALSE;
+    RestoreInteractiveClickThroughStyle(hwnd);
 }
 
 /* Update WS_EX_TRANSPARENT based on mouse position over clickable regions */
@@ -249,6 +252,7 @@ void RefreshClickThroughState(HWND hwnd) {
     extern BOOL CLOCK_EDIT_MODE;
     if (CLOCK_EDIT_MODE) {
         StopClickThroughTimer(hwnd);
+        RestoreInteractiveClickThroughStyle(hwnd);
         return;
     }
 

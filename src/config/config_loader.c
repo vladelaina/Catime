@@ -78,6 +78,25 @@ static BOOL ParseConfigFloatStrict(const char* text, float* value) {
     return TRUE;
 }
 
+static void LoadConfigStringExactOrDefault(const char* section, const char* key,
+                                           const char* defaultValue,
+                                           char* dest, DWORD destSize,
+                                           const char* config_path) {
+    if (!dest || destSize == 0) return;
+
+    if (!ReadIniStringExact(section, key, defaultValue ? defaultValue : "",
+                            dest, destSize, config_path)) {
+        LOG_WARNING("Config value too long for %s.%s, using default",
+                    section ? section : "(null)",
+                    key ? key : "(null)");
+        if (defaultValue && strlen(defaultValue) < destSize) {
+            memcpy(dest, defaultValue, strlen(defaultValue) + 1);
+        } else {
+            dest[0] = '\0';
+        }
+    }
+}
+
 static void SetDefaultQuickCountdownOptions(ConfigSnapshot* snapshot) {
     if (!snapshot) return;
     memset(snapshot->timeOptions, 0, sizeof(snapshot->timeOptions));
@@ -252,8 +271,11 @@ static void LoadConfigItem(const ConfigItemMeta* meta, const char* config_path, 
     
     switch (meta->type) {
         case CONFIG_TYPE_STRING:
-            ReadIniString(meta->section, meta->key, meta->defaultValue,
-                         (char*)fieldPtr, (DWORD)meta->size, config_path);
+            LoadConfigStringExactOrDefault(meta->section, meta->key,
+                                           meta->defaultValue,
+                                           (char*)fieldPtr,
+                                           (DWORD)meta->size,
+                                           config_path);
             break;
             
         case CONFIG_TYPE_INT:
@@ -423,14 +445,17 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot) {
     /* Handle custom items that need special processing */
     
     /* Font file name needs ProcessFontPath */
-    ReadIniString(INI_SECTION_DISPLAY, "FONT_FILE_NAME", 
-                 FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
-                 snapshot->fontFileName, sizeof(snapshot->fontFileName), config_path);
+    LoadConfigStringExactOrDefault(INI_SECTION_DISPLAY, "FONT_FILE_NAME",
+                                   FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
+                                   snapshot->fontFileName,
+                                   sizeof(snapshot->fontFileName),
+                                   config_path);
     ProcessFontPath(snapshot, config_path);
     
     /* Website URL - now stored as UTF-8 char */
-    ReadIniString(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "",
-                 snapshot->timeoutWebsiteUrl, MAX_PATH, config_path);
+    LoadConfigStringExactOrDefault(INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", "",
+                                   snapshot->timeoutWebsiteUrl,
+                                   MAX_PATH, config_path);
     
     /* Parse time options (comma-separated array) */
     char timeOptionsStr[TIME_OPTIONS_CONFIG_BUFFER_SIZE] = {0};

@@ -23,6 +23,7 @@
 #include "menu_preview.h"
 #include "audio_player.h"
 #include "drag_scale.h"
+#include "font/font_manager.h"
 #include "tray/tray_animation_core.h"
 #include "utils/string_convert.h"
 #include "utils/url_safety.h"
@@ -252,9 +253,7 @@ static BOOL IsActivePomodoroTimer(void) {
 }
 
 static BOOL HandleFontValidation(HWND hwnd) {
-    extern BOOL CheckAndFixFontPath(void);
-    
-    if (CheckAndFixFontPath()) {
+    if (CheckAndReloadCurrentFontPath()) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
     

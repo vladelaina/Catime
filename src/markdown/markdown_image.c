@@ -406,6 +406,83 @@ static int CompareImageCachePruneEntryByAge(const void* lhs, const void* rhs) {
     return CompareFileTime(&a->lastWriteTime, &b->lastWriteTime);
 }
 
+static ULONGLONG AddImageCacheBytesSaturated(ULONGLONG total, ULONGLONG value) {
+    const ULONGLONG maxValue = (ULONGLONG)~0ull;
+    if (value > maxValue - total) {
+        return maxValue;
+    }
+    return total + value;
+}
+
+static int FindNewestImageCachePruneEntry(const ImageCachePruneEntry* entries,
+                                          int entryCount) {
+    int newest = 0;
+    for (int i = 1; i < entryCount; i++) {
+        if (CompareFileTime(&entries[newest].lastWriteTime,
+                            &entries[i].lastWriteTime) < 0) {
+            newest = i;
+        }
+    }
+    return newest;
+}
+
+static BOOL AddImageCachePruneEntry(ImageCachePruneEntry** entries,
+                                    int* entryCount,
+                                    int* entryCapacity,
+                                    int* newestEntry,
+                                    const wchar_t* path,
+                                    const FILETIME* lastWriteTime,
+                                    ULONGLONG size) {
+    if (!entries || !entryCount || !entryCapacity || !newestEntry ||
+        !path || !lastWriteTime) {
+        return FALSE;
+    }
+
+    if (*entryCount < IMAGE_CACHE_PRUNE_SCAN_LIMIT) {
+        if (*entryCount == *entryCapacity) {
+            int newCapacity = *entryCapacity == 0 ? 64 : *entryCapacity * 2;
+            if (newCapacity > IMAGE_CACHE_PRUNE_SCAN_LIMIT) {
+                newCapacity = IMAGE_CACHE_PRUNE_SCAN_LIMIT;
+            }
+            ImageCachePruneEntry* newEntries =
+                (ImageCachePruneEntry*)realloc(*entries,
+                    (size_t)newCapacity * sizeof(ImageCachePruneEntry));
+            if (!newEntries) {
+                return FALSE;
+            }
+            *entries = newEntries;
+            *entryCapacity = newCapacity;
+        }
+
+        ImageCachePruneEntry* entry = &(*entries)[(*entryCount)++];
+        wcscpy_s(entry->path, MAX_PATH, path);
+        entry->lastWriteTime = *lastWriteTime;
+        entry->size = size;
+        if (*entryCount == 1 ||
+            CompareFileTime(&(*entries)[*newestEntry].lastWriteTime,
+                            lastWriteTime) < 0) {
+            *newestEntry = *entryCount - 1;
+        }
+        return TRUE;
+    }
+
+    if (*entryCount <= 0) {
+        return FALSE;
+    }
+
+    if (CompareFileTime(lastWriteTime,
+                        &(*entries)[*newestEntry].lastWriteTime) >= 0) {
+        return TRUE;
+    }
+
+    ImageCachePruneEntry* entry = &(*entries)[*newestEntry];
+    wcscpy_s(entry->path, MAX_PATH, path);
+    entry->lastWriteTime = *lastWriteTime;
+    entry->size = size;
+    *newestEntry = FindNewestImageCachePruneEntry(*entries, *entryCount);
+    return TRUE;
+}
+
 static void PruneImageCacheDirectory(const wchar_t* cacheDir, const wchar_t* keepPath) {
     if (!cacheDir || !*cacheDir) return;
 
@@ -414,101 +491,94 @@ static void PruneImageCacheDirectory(const wchar_t* cacheDir, const wchar_t* kee
         return;
     }
 
-    ImageCachePruneEntry* entries = NULL;
-    int entryCount = 0;
-    int entryCapacity = 0;
-    int cacheFileCount = 0;
-    ULONGLONG cacheBytes = 0;
+    int totalRemoved = 0;
 
-    WIN32_FIND_DATAW findData;
-    HANDLE hFind = FindFirstFileW(searchPath, &findData);
-    if (hFind == INVALID_HANDLE_VALUE) {
-        return;
-    }
+    for (;;) {
+        ImageCachePruneEntry* entries = NULL;
+        int entryCount = 0;
+        int entryCapacity = 0;
+        int newestEntry = 0;
+        int cacheFileCount = 0;
+        ULONGLONG cacheBytes = 0;
 
-    do {
-        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            continue;
-        }
-        if (!IsGeneratedImageCacheFileName(findData.cFileName)) {
-            continue;
+        WIN32_FIND_DATAW findData;
+        HANDLE hFind = FindFirstFileW(searchPath, &findData);
+        if (hFind == INVALID_HANDLE_VALUE) {
+            break;
         }
 
-        wchar_t fullPath[MAX_PATH];
-        if (_snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s",
-                         cacheDir, findData.cFileName) < 0) {
-            continue;
-        }
-
-        ULONGLONG fileSize = ((ULONGLONG)findData.nFileSizeHigh << 32) |
-                             (ULONGLONG)findData.nFileSizeLow;
-        cacheFileCount++;
-        cacheBytes += fileSize;
-
-        if (keepPath && _wcsicmp(fullPath, keepPath) == 0) {
-            continue;
-        }
-        if (entryCount >= IMAGE_CACHE_PRUNE_SCAN_LIMIT) {
-            continue;
-        }
-
-        if (entryCount == entryCapacity) {
-            int newCapacity = entryCapacity == 0 ? 64 : entryCapacity * 2;
-            if (newCapacity > IMAGE_CACHE_PRUNE_SCAN_LIMIT) {
-                newCapacity = IMAGE_CACHE_PRUNE_SCAN_LIMIT;
+        do {
+            if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                continue;
             }
-            ImageCachePruneEntry* newEntries =
-                (ImageCachePruneEntry*)realloc(entries,
-                    (size_t)newCapacity * sizeof(ImageCachePruneEntry));
-            if (!newEntries) {
+            if (!IsGeneratedImageCacheFileName(findData.cFileName)) {
+                continue;
+            }
+
+            wchar_t fullPath[MAX_PATH];
+            if (_snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s",
+                             cacheDir, findData.cFileName) < 0) {
+                continue;
+            }
+
+            ULONGLONG fileSize = ((ULONGLONG)findData.nFileSizeHigh << 32) |
+                                 (ULONGLONG)findData.nFileSizeLow;
+            cacheFileCount++;
+            cacheBytes = AddImageCacheBytesSaturated(cacheBytes, fileSize);
+
+            if (keepPath && _wcsicmp(fullPath, keepPath) == 0) {
+                continue;
+            }
+
+            if (!AddImageCachePruneEntry(&entries, &entryCount, &entryCapacity,
+                                         &newestEntry, fullPath,
+                                         &findData.ftLastWriteTime, fileSize)) {
                 break;
             }
-            entries = newEntries;
-            entryCapacity = newCapacity;
+        } while (FindNextFileW(hFind, &findData));
+
+        FindClose(hFind);
+
+        if ((cacheBytes <= IMAGE_CACHE_MAX_BYTES &&
+             cacheFileCount <= IMAGE_CACHE_MAX_FILES) ||
+            !entries || entryCount == 0) {
+            free(entries);
+            break;
         }
 
-        ImageCachePruneEntry* entry = &entries[entryCount++];
-        wcscpy_s(entry->path, MAX_PATH, fullPath);
-        entry->lastWriteTime = findData.ftLastWriteTime;
-        entry->size = fileSize;
-    } while (FindNextFileW(hFind, &findData));
+        qsort(entries, (size_t)entryCount, sizeof(entries[0]),
+              CompareImageCachePruneEntryByAge);
 
-    FindClose(hFind);
+        int removedThisPass = 0;
+        for (int i = 0;
+             i < entryCount &&
+             (cacheBytes > IMAGE_CACHE_MAX_BYTES ||
+              cacheFileCount > IMAGE_CACHE_MAX_FILES);
+             i++) {
+            if (DeleteFileW(entries[i].path)) {
+                if (entries[i].size <= cacheBytes) {
+                    cacheBytes -= entries[i].size;
+                } else {
+                    cacheBytes = 0;
+                }
+                if (cacheFileCount > 0) {
+                    cacheFileCount--;
+                }
+                removedThisPass++;
+            }
+        }
 
-    if ((cacheBytes <= IMAGE_CACHE_MAX_BYTES &&
-         cacheFileCount <= IMAGE_CACHE_MAX_FILES) ||
-        !entries || entryCount == 0) {
         free(entries);
-        return;
-    }
 
-    qsort(entries, (size_t)entryCount, sizeof(entries[0]),
-          CompareImageCachePruneEntryByAge);
-
-    int removedCount = 0;
-    for (int i = 0;
-         i < entryCount &&
-         (cacheBytes > IMAGE_CACHE_MAX_BYTES ||
-          cacheFileCount > IMAGE_CACHE_MAX_FILES);
-         i++) {
-        if (DeleteFileW(entries[i].path)) {
-            if (entries[i].size <= cacheBytes) {
-                cacheBytes -= entries[i].size;
-            } else {
-                cacheBytes = 0;
-            }
-            if (cacheFileCount > 0) {
-                cacheFileCount--;
-            }
-            removedCount++;
+        if (removedThisPass == 0) {
+            break;
         }
+        totalRemoved += removedThisPass;
     }
 
-    if (removedCount > 0) {
-        LOG_INFO("Pruned %d cached markdown image file(s)", removedCount);
+    if (totalRemoved > 0) {
+        LOG_INFO("Pruned %d cached markdown image file(s)", totalRemoved);
     }
-
-    free(entries);
 }
 
 /* ============================================================================
@@ -742,7 +812,7 @@ BOOL IsImageCached(const wchar_t* url, wchar_t* localPath) {
 static unsigned long long g_downloadingHashes[MAX_DOWNLOADING] = {0};
 static HINTERNET g_activeDownloadHandles[MAX_ACTIVE_DOWNLOAD_HANDLES] = {0};
 static unsigned long long g_failedDownloadHashes[MAX_FAILED_DOWNLOADS] = {0};
-static DWORD g_failedDownloadTicks[MAX_FAILED_DOWNLOADS] = {0};
+static DWORD g_failedDownloadRetryTicks[MAX_FAILED_DOWNLOADS] = {0};
 static SRWLOCK g_downloadLifecycleLock = SRWLOCK_INIT;
 static int g_downloadingCount = 0;
 static int g_failedDownloadCount = 0;
@@ -753,7 +823,7 @@ static volatile LONG g_activeDownloadCount = 0;
 static volatile LONG g_downloadShutdown = 0;
 static volatile LONG g_downloadGeneration = 0;
 static volatile LONG g_downloadRestartPending = 0;
-static volatile LONG g_downloadInitLastFailureTick = 0;
+static volatile LONG g_downloadInitFailureCooldownUntil = 0;
 
 static BOOL IsDownloadShutdownRequested(void) {
     return InterlockedCompareExchange(&g_downloadShutdown, 0, 0) != 0;
@@ -772,19 +842,19 @@ static BOOL IsDownloadCanceled(LONG generation) {
 }
 
 static BOOL IsDownloadInitFailureCoolingDown(DWORD now) {
-    DWORD lastFailureTick =
-        (DWORD)InterlockedCompareExchange(&g_downloadInitLastFailureTick, 0, 0);
-    return lastFailureTick != 0 &&
-           (DWORD)(now - lastFailureTick) <
-               IMAGE_DOWNLOAD_INIT_FAILURE_COOLDOWN_MS;
+    DWORD cooldownUntil =
+        (DWORD)InterlockedCompareExchange(&g_downloadInitFailureCooldownUntil, 0, 0);
+    return cooldownUntil != 0 && (LONG)(cooldownUntil - now) > 0;
 }
 
 static void MarkDownloadInitFailure(DWORD now) {
-    InterlockedExchange(&g_downloadInitLastFailureTick, (LONG)(now ? now : 1));
+    DWORD cooldownUntil = now + IMAGE_DOWNLOAD_INIT_FAILURE_COOLDOWN_MS;
+    InterlockedExchange(&g_downloadInitFailureCooldownUntil,
+                        (LONG)(cooldownUntil ? cooldownUntil : 1));
 }
 
 static void ClearDownloadInitFailure(void) {
-    InterlockedExchange(&g_downloadInitLastFailureTick, 0);
+    InterlockedExchange(&g_downloadInitFailureCooldownUntil, 0);
 }
 
 static LONG GetDownloadCSInitState(void) {
@@ -949,9 +1019,9 @@ static BOOL TryAddDownloadingUrl(const wchar_t* url) {
 static void PruneFailedDownloadEntriesLocked(DWORD now) {
     int i = 0;
     while (i < g_failedDownloadCount) {
-        if ((DWORD)(now - g_failedDownloadTicks[i]) >= IMAGE_DOWNLOAD_FAILURE_RETRY_MS) {
+        if ((LONG)(g_failedDownloadRetryTicks[i] - now) <= 0) {
             g_failedDownloadHashes[i] = g_failedDownloadHashes[--g_failedDownloadCount];
-            g_failedDownloadTicks[i] = g_failedDownloadTicks[g_failedDownloadCount];
+            g_failedDownloadRetryTicks[i] = g_failedDownloadRetryTicks[g_failedDownloadCount];
             continue;
         }
         i++;
@@ -971,7 +1041,7 @@ BOOL GetMarkdownImageDownloadRetryTick(const wchar_t* url, DWORD* retryTick) {
     for (int i = 0; i < g_failedDownloadCount; i++) {
         if (g_failedDownloadHashes[i] == hash) {
             if (retryTick) {
-                *retryTick = g_failedDownloadTicks[i] + IMAGE_DOWNLOAD_FAILURE_RETRY_MS;
+                *retryTick = g_failedDownloadRetryTicks[i];
             }
             found = TRUE;
             break;
@@ -989,7 +1059,7 @@ static void ClearUrlDownloadFailure(const wchar_t* url) {
     for (int i = 0; i < g_failedDownloadCount; i++) {
         if (g_failedDownloadHashes[i] == hash) {
             g_failedDownloadHashes[i] = g_failedDownloadHashes[--g_failedDownloadCount];
-            g_failedDownloadTicks[i] = g_failedDownloadTicks[g_failedDownloadCount];
+            g_failedDownloadRetryTicks[i] = g_failedDownloadRetryTicks[g_failedDownloadCount];
             break;
         }
     }
@@ -1001,13 +1071,15 @@ static void MarkUrlDownloadFailed(const wchar_t* url) {
 
     unsigned long long hash = HashUrl64(url);
     DWORD now = GetTickCount();
+    DWORD retryTick = now + IMAGE_DOWNLOAD_FAILURE_RETRY_MS;
+    retryTick = retryTick ? retryTick : 1;
 
     EnterCriticalSection(&g_downloadCS);
     PruneFailedDownloadEntriesLocked(now);
 
     for (int i = 0; i < g_failedDownloadCount; i++) {
         if (g_failedDownloadHashes[i] == hash) {
-            g_failedDownloadTicks[i] = now;
+            g_failedDownloadRetryTicks[i] = retryTick;
             LeaveCriticalSection(&g_downloadCS);
             return;
         }
@@ -1016,17 +1088,17 @@ static void MarkUrlDownloadFailed(const wchar_t* url) {
     if (g_failedDownloadCount < MAX_FAILED_DOWNLOADS) {
         int idx = g_failedDownloadCount++;
         g_failedDownloadHashes[idx] = hash;
-        g_failedDownloadTicks[idx] = now;
+        g_failedDownloadRetryTicks[idx] = retryTick;
     } else {
-        int oldest = 0;
+        int soonestRetry = 0;
         for (int i = 1; i < g_failedDownloadCount; i++) {
-            if ((DWORD)(now - g_failedDownloadTicks[i]) >
-                (DWORD)(now - g_failedDownloadTicks[oldest])) {
-                oldest = i;
+            if ((LONG)(g_failedDownloadRetryTicks[soonestRetry] -
+                       g_failedDownloadRetryTicks[i]) > 0) {
+                soonestRetry = i;
             }
         }
-        g_failedDownloadHashes[oldest] = hash;
-        g_failedDownloadTicks[oldest] = now;
+        g_failedDownloadHashes[soonestRetry] = hash;
+        g_failedDownloadRetryTicks[soonestRetry] = retryTick;
     }
 
     LeaveCriticalSection(&g_downloadCS);
@@ -1608,7 +1680,7 @@ void ShutdownMarkdownImage(void) {
     ZeroMemory(g_downloadingHashes, sizeof(g_downloadingHashes));
     ZeroMemory(g_activeDownloadHandles, sizeof(g_activeDownloadHandles));
     ZeroMemory(g_failedDownloadHashes, sizeof(g_failedDownloadHashes));
-    ZeroMemory(g_failedDownloadTicks, sizeof(g_failedDownloadTicks));
+    ZeroMemory(g_failedDownloadRetryTicks, sizeof(g_failedDownloadRetryTicks));
     g_downloadingCount = 0;
     g_failedDownloadCount = 0;
     ClearDownloadInitFailure();

@@ -136,14 +136,14 @@ typedef struct {
 static CachedImageEntry g_imageCache[MAX_CACHED_IMAGES] = {0};
 static size_t g_cachedImagePixels = 0;
 static BOOL g_gdiPlusInitFailureRecorded = FALSE;
-static DWORD g_lastGdiPlusInitFailureTick = 0;
+static DWORD g_gdiPlusInitFailureCooldownUntil = 0;
 
 typedef struct {
     BOOL inUse;
     wchar_t path[MAX_PATH];
     FILETIME lastWriteTime;
     BOOL hasWriteTime;
-    DWORD lastFailureTick;
+    DWORD retryAfterFailureTick;
 } FailedImageEntry;
 
 static FailedImageEntry g_failedImageCache[MAX_FAILED_IMAGE_LOADS] = {0};
@@ -283,7 +283,7 @@ static BOOL IsImageLoadFailureCached(const wchar_t* imagePath,
             continue;
         }
 
-        if ((DWORD)(now - entry->lastFailureTick) >= IMAGE_FAILURE_RETRY_MS) {
+        if ((LONG)(entry->retryAfterFailureTick - now) <= 0) {
             ZeroMemory(entry, sizeof(*entry));
             return FALSE;
         }
@@ -320,7 +320,7 @@ static void RecordImageLoadFailure(const wchar_t* imagePath,
             continue;
         }
 
-        if ((DWORD)(now - entry->lastFailureTick) >= IMAGE_FAILURE_RETRY_MS) {
+        if ((LONG)(entry->retryAfterFailureTick - now) <= 0) {
             ZeroMemory(entry, sizeof(*entry));
             if (!freeSlot) freeSlot = entry;
             continue;
@@ -331,9 +331,9 @@ static void RecordImageLoadFailure(const wchar_t* imagePath,
             break;
         }
 
-        if (!oldestSlot || IsTickOlder(entry->lastFailureTick,
-                                       oldestSlot->lastFailureTick,
-                                       now)) {
+        if (!oldestSlot ||
+            (LONG)(oldestSlot->retryAfterFailureTick -
+                   entry->retryAfterFailureTick) > 0) {
             oldestSlot = entry;
         }
     }
@@ -350,7 +350,8 @@ static void RecordImageLoadFailure(const wchar_t* imagePath,
     } else {
         ZeroMemory(&target->lastWriteTime, sizeof(target->lastWriteTime));
     }
-    target->lastFailureTick = now;
+    DWORD retryAfter = now + IMAGE_FAILURE_RETRY_MS;
+    target->retryAfterFailureTick = retryAfter ? retryAfter : 1;
     memcpy(target->path, cachePath, sizeof(cachePath));
 }
 
@@ -514,12 +515,13 @@ static BOOL ShouldRetryGdiPlusInit(void) {
         return TRUE;
     }
 
-    return (DWORD)(GetTickCount() - g_lastGdiPlusInitFailureTick) >= GDIPLUS_INIT_FAILURE_RETRY_MS;
+    return (LONG)(g_gdiPlusInitFailureCooldownUntil - GetTickCount()) <= 0;
 }
 
 static void RecordGdiPlusInitFailure(void) {
+    DWORD cooldownUntil = GetTickCount() + GDIPLUS_INIT_FAILURE_RETRY_MS;
     g_gdiPlusInitFailureRecorded = TRUE;
-    g_lastGdiPlusInitFailureTick = GetTickCount();
+    g_gdiPlusInitFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 static void InitDrawingImageLocked(void) {
@@ -564,7 +566,7 @@ static void InitDrawingImageLocked(void) {
     }
 
     g_gdiPlusInitFailureRecorded = FALSE;
-    g_lastGdiPlusInitFailureTick = 0;
+    g_gdiPlusInitFailureCooldownUntil = 0;
     LOG_INFO("GDI+ initialized successfully");
 }
 
@@ -600,7 +602,7 @@ void ShutdownDrawingImage(void) {
     }
     ResetGdiPlusProcPointers();
     g_gdiPlusInitFailureRecorded = FALSE;
-    g_lastGdiPlusInitFailureTick = 0;
+    g_gdiPlusInitFailureCooldownUntil = 0;
 
     UnlockImageState();
 }

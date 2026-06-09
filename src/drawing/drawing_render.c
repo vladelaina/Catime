@@ -280,7 +280,7 @@ typedef struct {
     char fontFileName[MAX_PATH];
     char absoluteFontPath[MAX_PATH];
     BOOL resolved;
-    DWORD lastFailureTick;
+    DWORD retryAfterFailureTick;
 } FontPathResolveCache;
 
 static FontPathResolveCache g_fontPathResolveCache = {0};
@@ -559,8 +559,8 @@ static BOOL ResolveFontPathFromNameCached(const char* fontFileName,
     if (g_fontPathResolveCache.valid &&
         strcmp(g_fontPathResolveCache.fontFileName, fontFileName) == 0) {
         if (!g_fontPathResolveCache.resolved) {
-            DWORD elapsed = GetTickCount() - g_fontPathResolveCache.lastFailureTick;
-            if (elapsed < FONT_PATH_RESOLVE_FAILURE_RETRY_MS) {
+            DWORD now = GetTickCount();
+            if ((LONG)(g_fontPathResolveCache.retryAfterFailureTick - now) > 0) {
                 return FALSE;
             }
         } else {
@@ -586,7 +586,8 @@ static BOOL ResolveFontPathFromNameCached(const char* fontFileName,
                  sizeof(g_fontPathResolveCache.absoluteFontPath),
                  resolvedPath);
     } else {
-        g_fontPathResolveCache.lastFailureTick = GetTickCount();
+        DWORD retryAfter = GetTickCount() + FONT_PATH_RESOLVE_FAILURE_RETRY_MS;
+        g_fontPathResolveCache.retryAfterFailureTick = retryAfter ? retryAfter : 1;
     }
 
     if (!resolved) {
@@ -776,21 +777,21 @@ static BOOL SetDrawingRenderAnimationTimer(HWND hwnd, UINT interval) {
     HWND previousHwnd = s_renderAnimationTimerHwnd;
     BOOL hadPreviousTimer = s_renderAnimationTimerActive;
 
-    if (!SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL)) {
-        if (!hadPreviousTimer || !IsValidRenderAnimationWindow(previousHwnd)) {
-            s_renderAnimationTimerActive = FALSE;
-            s_renderAnimationTimerInterval = 0;
-            s_renderAnimationTimerHwnd = NULL;
+    if (hadPreviousTimer) {
+        HWND killHwnd = IsValidRenderAnimationWindow(previousHwnd) ? previousHwnd : hwnd;
+        if (IsValidRenderAnimationWindow(killHwnd)) {
+            KillTimer(killHwnd, TIMER_ID_RENDER_ANIMATION);
         }
+    }
+
+    if (!SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL)) {
+        s_renderAnimationTimerActive = FALSE;
+        s_renderAnimationTimerInterval = 0;
+        s_renderAnimationTimerHwnd = NULL;
         WriteLog(LOG_LEVEL_WARNING,
                  "Failed to set render animation timer (interval=%u, error=%lu)",
                  interval, GetLastError());
         return FALSE;
-    }
-
-    if (hadPreviousTimer && previousHwnd != hwnd &&
-        IsValidRenderAnimationWindow(previousHwnd)) {
-        KillTimer(previousHwnd, TIMER_ID_RENDER_ANIMATION);
     }
 
     s_renderAnimationTimerActive = TRUE;
@@ -1053,6 +1054,32 @@ static BOOL EnsurePaintMarkdownImageCapacity(MarkdownImage** images,
     *images = newImages;
     *imageCapacity = newCapacity;
     return TRUE;
+}
+
+static MarkdownImage* MovePaintMarkdownImagesToHeap(MarkdownImage* images,
+                                                    int imageCount,
+                                                    BOOL* heapAllocated,
+                                                    MarkdownImage* stackImages) {
+    if (!images || imageCount <= 0 || !heapAllocated) {
+        return NULL;
+    }
+
+    if (*heapAllocated) {
+        *heapAllocated = FALSE;
+        return images;
+    }
+
+    MarkdownImage* heapImages =
+        (MarkdownImage*)calloc((size_t)imageCount, sizeof(MarkdownImage));
+    if (!heapImages) {
+        return NULL;
+    }
+
+    memcpy(heapImages, images, (size_t)imageCount * sizeof(MarkdownImage));
+    if (images == stackImages && stackImages) {
+        ZeroMemory(stackImages, (size_t)imageCount * sizeof(MarkdownImage));
+    }
+    return heapImages;
 }
 
 typedef struct {
@@ -1329,23 +1356,12 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
             wcscpy_s(g_pluginPaintCache.renderedText, TIME_TEXT_MAX_LEN, result);
 
             if (imageCount > 0) {
-                BOOL cachedImagesReady = FALSE;
+                g_pluginPaintCache.images =
+                    MovePaintMarkdownImagesToHeap(images, imageCount,
+                                                  &imagesHeapAllocated,
+                                                  stackImages);
 
-                if (imagesHeapAllocated) {
-                    g_pluginPaintCache.images = images;
-                    imagesHeapAllocated = FALSE;
-                    cachedImagesReady = TRUE;
-                } else {
-                    g_pluginPaintCache.images =
-                        (MarkdownImage*)calloc((size_t)imageCount, sizeof(MarkdownImage));
-                    if (g_pluginPaintCache.images) {
-                        memcpy(g_pluginPaintCache.images, images,
-                               (size_t)imageCount * sizeof(MarkdownImage));
-                        cachedImagesReady = TRUE;
-                    }
-                }
-
-                if (cachedImagesReady) {
+                if (g_pluginPaintCache.images) {
                     g_pluginPaintCache.imageCount = imageCount;
                     g_pluginPaintCache.valid = TRUE;
                     images = g_pluginPaintCache.images;

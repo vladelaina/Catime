@@ -196,9 +196,14 @@ BOOL ValidateAndSetTimeoutFile(HWND hwnd, const char* filePathUtf8) {
     if (!ws.valid) return FALSE;
     
     if (GetFileAttributesW(ws.buf) != INVALID_FILE_ATTRIBUTES) {
-        WriteConfigTimeoutFile(filePathUtf8);
-        SaveRecentFile(filePathUtf8);
-        return TRUE;
+        if (WriteConfigTimeoutFile(filePathUtf8)) {
+            if (!SaveRecentFile(filePathUtf8)) {
+                LOG_WARNING("Failed to persist recent file entry: %s", filePathUtf8);
+            }
+            return TRUE;
+        }
+        LOG_WARNING("Failed to persist selected timeout file: %s", filePathUtf8);
+        return FALSE;
     } else {
         LOG_WARNING("Selected timeout file does not exist: %s", filePathUtf8);
         return FALSE;
@@ -347,6 +352,6 @@ void RecalculateWindowSize(HWND hwnd) {
  * ============================================================================ */
 
 void SetTimeoutAction(const char* action) {
-    WriteConfigTimeoutAction(action);
+    (void)WriteConfigTimeoutAction(action);
 }
 

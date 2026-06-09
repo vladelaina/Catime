@@ -4,17 +4,9 @@
  */
 
 #include <windows.h>
-#include "drawing/drawing_timer_precision.h"
-#include "timer/timer.h"
-
-/**
- * @file drawing_timer_precision.c
- * @brief High-precision timer state for sub-second display
- */
-
-#include <windows.h>
 #include <stdint.h>
 #include "drawing/drawing_timer_precision.h"
+#include "timer/timer.h"
 
 /* Legacy stubs for compatibility */
 void ResetTimerMilliseconds(void) {}

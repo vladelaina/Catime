@@ -107,7 +107,7 @@ void CreateDefaultConfig(const char* config_path);
  * Used by CreateDefaultConfig and for resetting to defaults.
  * Preserves existing values not in the defaults list.
  */
-void WriteDefaultsToConfig(const char* config_path);
+BOOL WriteDefaultsToConfig(const char* config_path);
 
 /**
  * @brief Get default value for a specific config item

@@ -66,6 +66,31 @@ static const VKeyMapping g_vkeyMap[] = {
     {0, NULL}
 };
 
+static void AppendHotkeyPart(char* buffer, size_t bufferSize, size_t* len, const char* part) {
+    if (!buffer || !len || !part || bufferSize == 0 || *len >= bufferSize - 1) {
+        return;
+    }
+
+    size_t remaining = bufferSize - *len - 1;
+    size_t partLen = strlen(part);
+    if (partLen > remaining) {
+        partLen = remaining;
+    }
+
+    memcpy(buffer + *len, part, partLen);
+    *len += partLen;
+    buffer[*len] = '\0';
+}
+
+static void AppendHotkeySeparator(char* buffer, size_t bufferSize, size_t* len) {
+    if (!buffer || !len || bufferSize == 0 || *len >= bufferSize - 1) {
+        return;
+    }
+
+    buffer[(*len)++] = '+';
+    buffer[*len] = '\0';
+}
+
 /**
  * @brief Convert hotkey code to human-readable string
  */
@@ -87,46 +112,40 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
     
     /** Build modifier string */
     if (mod & HOTKEYF_CONTROL) {
-        strncpy(buffer, "Ctrl", bufferSize - 1);
-        len = strlen(buffer);
+        AppendHotkeyPart(buffer, bufferSize, &len, "Ctrl");
     }
     
     if (mod & HOTKEYF_SHIFT) {
-        if (len > 0 && len < bufferSize - 1) {
-            buffer[len++] = '+';
-            buffer[len] = '\0';
+        if (len > 0) {
+            AppendHotkeySeparator(buffer, bufferSize, &len);
         }
-        strncat(buffer, "Shift", bufferSize - len - 1);
-        len = strlen(buffer);
+        AppendHotkeyPart(buffer, bufferSize, &len, "Shift");
     }
     
     if (mod & HOTKEYF_ALT) {
-        if (len > 0 && len < bufferSize - 1) {
-            buffer[len++] = '+';
-            buffer[len] = '\0';
+        if (len > 0) {
+            AppendHotkeySeparator(buffer, bufferSize, &len);
         }
-        strncat(buffer, "Alt", bufferSize - len - 1);
-        len = strlen(buffer);
+        AppendHotkeyPart(buffer, bufferSize, &len, "Alt");
     }
     
     /** Add separator before key name */
-    if (len > 0 && len < bufferSize - 1 && vk != 0) {
-        buffer[len++] = '+';
-        buffer[len] = '\0';
+    if (len > 0 && vk != 0) {
+        AppendHotkeySeparator(buffer, bufferSize, &len);
     }
     
     /** Handle alphanumeric keys */
     if (vk >= 'A' && vk <= 'Z') {
         const char keyName[2] = {(char)vk, '\0'};
-        strncat(buffer, keyName, bufferSize - len - 1);
+        AppendHotkeyPart(buffer, bufferSize, &len, keyName);
     } else if (vk >= '0' && vk <= '9') {
         const char keyName[2] = {(char)vk, '\0'};
-        strncat(buffer, keyName, bufferSize - len - 1);
+        AppendHotkeyPart(buffer, bufferSize, &len, keyName);
     } else if (vk >= VK_F1 && vk <= VK_F24) {
         /** Handle function keys */
         char keyName[8];
         snprintf(keyName, sizeof(keyName), "F%d", vk - VK_F1 + 1);
-        strncat(buffer, keyName, bufferSize - len - 1);
+        AppendHotkeyPart(buffer, bufferSize, &len, keyName);
     } else {
         /** Look up in mapping table */
         const char* keyName = NULL;
@@ -138,12 +157,12 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize) {
         }
         
         if (keyName) {
-            strncat(buffer, keyName, bufferSize - len - 1);
+            AppendHotkeyPart(buffer, bufferSize, &len, keyName);
         } else {
             /** Fallback to hex code for unknown keys */
             char hexKey[8];
             snprintf(hexKey, sizeof(hexKey), "0x%02X", vk);
-            strncat(buffer, hexKey, bufferSize - len - 1);
+            AppendHotkeyPart(buffer, bufferSize, &len, hexKey);
         }
     }
 }
@@ -302,7 +321,7 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
 }
 
 
-void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
+BOOL WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD customCountdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
@@ -344,7 +363,7 @@ void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         updates[i].value = hotkeyStrings[i];
     }
 
-    WriteIniMultipleAtomic(config_path, updates, HOTKEY_WRITE_COUNT);
+    return WriteIniMultipleAtomic(config_path, updates, HOTKEY_WRITE_COUNT);
 }
 
 

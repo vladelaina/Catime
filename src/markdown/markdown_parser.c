@@ -96,6 +96,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
 
         state.displayText = (wchar_t*)malloc(displayCapacity * sizeof(wchar_t));
         if (!state.displayText) return FALSE;
+        state.displayCapacity = displayCapacity;
         
         int estimatedColorTags = CountMarkdownColorTags(input);
         state.colorTagCapacity = GetInitialColorTagCapacity(estimatedColorTags);
@@ -129,10 +130,13 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             }
             
             // Regular character
-            *dest++ = *src++;
-            state.currentPos++;
+            if (!AppendMarkdownOutputChar(&state, *src++)) {
+                CleanupParseState(&state);
+                return FALSE;
+            }
+            SyncMarkdownOutputPointer(&state, &dest);
         }
-        *dest = L'\0';
+        state.displayText[state.currentPos] = L'\0';
         
         *displayText = state.displayText;
         *links = state.links;
@@ -200,6 +204,7 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
 
     state.displayText = (wchar_t*)malloc(displayCapacity * sizeof(wchar_t));
     if (!state.displayText) { free(mdContent); return FALSE; }
+    state.displayCapacity = displayCapacity;
     
     // Pre-allocate color/font tag arrays early (needed for before section parsing)
     int estimatedColorTags = CountMarkdownColorTags(input);  // Count from full input
@@ -242,8 +247,12 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             }
             
             // Regular character
-            *dest++ = *beforeSrc++;
-            state.currentPos++;
+            if (!AppendMarkdownOutputChar(&state, *beforeSrc++)) {
+                CleanupParseState(&state);
+                free(mdContent);
+                return FALSE;
+            }
+            SyncMarkdownOutputPointer(&state, &dest);
         }
     }
 
@@ -352,7 +361,11 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             /* Blockquote */
             if (ParseBlockquote(&src, &state, &dest)) {
                 int blockquoteIndex = state.blockquoteCount - 1;
-                ParseBlockquoteContent(&src, &state, &dest, blockquoteIndex);
+                if (!ParseBlockquoteContent(&src, &state, &dest, blockquoteIndex)) {
+                    CleanupParseState(&state);
+                    free(mdContent);
+                    return FALSE;
+                }
                 atLineStart = FALSE;
                 continue;
             }
@@ -373,8 +386,12 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                 next == L']' || next == L'(' || next == L')' || next == L'\\' ||
                 next == L'`' || next == L'!' || next == L'|') {
                 src++;  /* Skip backslash */
-                *dest++ = *src++;  /* Copy the escaped character */
-                state.currentPos++;
+                if (!AppendMarkdownOutputChar(&state, *src++)) {
+                    CleanupParseState(&state);
+                    free(mdContent);
+                    return FALSE;
+                }
+                SyncMarkdownOutputPointer(&state, &dest);
                 atLineStart = FALSE;
                 continue;
             }
@@ -393,15 +410,23 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
                 currentHeadingIndex = -1;
             }
             atLineStart = TRUE;
-            *dest++ = *src++;
-            state.currentPos++;
+            if (!AppendMarkdownOutputChar(&state, *src++)) {
+                CleanupParseState(&state);
+                free(mdContent);
+                return FALSE;
+            }
+            SyncMarkdownOutputPointer(&state, &dest);
             continue;
         }
         
         /* Regular character */
         atLineStart = FALSE;
-        *dest++ = *src++;
-        state.currentPos++;
+        if (!AppendMarkdownOutputChar(&state, *src++)) {
+            CleanupParseState(&state);
+            free(mdContent);
+            return FALSE;
+        }
+        SyncMarkdownOutputPointer(&state, &dest);
     }
 
     // Parse text after closing tag (only color/font tags, no full markdown)
@@ -426,11 +451,15 @@ BOOL ParseMarkdownLinks(const wchar_t* input, wchar_t** displayText,
             }
             
             // Regular character
-            *dest++ = *afterSrc++;
-            state.currentPos++;
+            if (!AppendMarkdownOutputChar(&state, *afterSrc++)) {
+                CleanupParseState(&state);
+                free(mdContent);
+                return FALSE;
+            }
+            SyncMarkdownOutputPointer(&state, &dest);
         }
     }
-    *dest = L'\0';
+    state.displayText[state.currentPos] = L'\0';
 
     if (inListItem && currentListItemIndex >= 0) {
         state.listItems[currentListItemIndex].endPos = state.currentPos;

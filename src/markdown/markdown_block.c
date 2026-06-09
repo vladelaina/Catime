@@ -83,18 +83,26 @@ BOOL ParseCodeBlockContent(const wchar_t** src, ParseState* state, wchar_t** des
     MarkdownStyle* style = &state->styles[state->styleCount];
     style->startPos = state->currentPos;
     style->type = STYLE_CODE;
-    
+
     while (**src && **src != L'\n' && **src != L'\r') {
-        *(*dest)++ = *(*src)++;
-        state->currentPos++;
+        if (!AppendMarkdownOutputChar(state, *(*src)++)) {
+            return FALSE;
+        }
+        SyncMarkdownOutputPointer(state, dest);
     }
     
     style->endPos = state->currentPos;
     state->styleCount++;
     
     // Add newline
-    if (**src == L'\r') { *(*dest)++ = *(*src)++; state->currentPos++; }
-    if (**src == L'\n') { *(*dest)++ = *(*src)++; state->currentPos++; }
+    if (**src == L'\r') {
+        if (!AppendMarkdownOutputChar(state, *(*src)++)) return FALSE;
+        SyncMarkdownOutputPointer(state, dest);
+    }
+    if (**src == L'\n') {
+        if (!AppendMarkdownOutputChar(state, *(*src)++)) return FALSE;
+        SyncMarkdownOutputPointer(state, dest);
+    }
     
     return TRUE;
 }
@@ -123,10 +131,10 @@ BOOL ParseHorizontalRule(const wchar_t** src, ParseState* state, wchar_t** dest)
     
     // Insert horizontal rule marker
     *src = hrCheck;
-    *(*dest)++ = L'\x2500';  // ─ Box drawing horizontal
-    *(*dest)++ = L'\x2500';
-    *(*dest)++ = L'\x2500';
-    state->currentPos += 3;
+    if (!AppendMarkdownOutputSpan(state, L"\x2500\x2500\x2500", 3)) {
+        return FALSE;
+    }
+    SyncMarkdownOutputPointer(state, dest);
     
     return TRUE;
 }
@@ -161,8 +169,10 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
     
     // Copy leading spaces
     while (spaceCount > 0 && **src == L' ') {
-        *(*dest)++ = *(*src)++;
-        state->currentPos++;
+        if (!AppendMarkdownOutputChar(state, *(*src)++)) {
+            return FALSE;
+        }
+        SyncMarkdownOutputPointer(state, dest);
         spaceCount--;
     }
     
@@ -206,9 +216,10 @@ BOOL ParseList(const wchar_t** src, ParseState* state, wchar_t** dest,
     }
     
     size_t replLen = wcslen(replacement);
-    wcsncpy(*dest, replacement, replLen);
-    *dest += replLen;
-    state->currentPos += (int)replLen;
+    if (!AppendMarkdownOutputSpan(state, replacement, replLen)) {
+        return FALSE;
+    }
+    SyncMarkdownOutputPointer(state, dest);
     *src += advanceSrc;
     
     *inListItem = TRUE;
@@ -291,15 +302,18 @@ BOOL ParseBlockquote(const wchar_t** src, ParseState* state, wchar_t** dest) {
                     blockquote->alertType = g_alertTypes[i].type;
                     const wchar_t* prefix = g_alertTypes[i].prefix;
                     size_t prefixLen = wcslen(prefix);
-                    wcsncpy(*dest, prefix, prefixLen);
-                    *dest += prefixLen;
-                    state->currentPos += (int)prefixLen;
+                    if (!AppendMarkdownOutputSpan(state, prefix, prefixLen)) {
+                        return FALSE;
+                    }
+                    SyncMarkdownOutputPointer(state, dest);
                     isAlert = TRUE;
-                    
+
                     *src = alertEnd + 1;
                     // Add newline after title so content appears on next line
-                    *(*dest)++ = L'\n';
-                    state->currentPos++;
+                    if (!AppendMarkdownOutputChar(state, L'\n')) {
+                        return FALSE;
+                    }
+                    SyncMarkdownOutputPointer(state, dest);
                     
                     // Skip whitespace after [!TYPE]
                     while (**src == L' ') (*src)++;
@@ -320,10 +334,15 @@ BOOL ParseBlockquote(const wchar_t** src, ParseState* state, wchar_t** dest) {
     if (!isAlert) {
         // Show nesting level with quote markers
         for (int n = 0; n < nestLevel; n++) {
-            *(*dest)++ = L'\x258C';  // U+258C Left Half Block
+            if (!AppendMarkdownOutputChar(state, L'\x258C')) {
+                return FALSE;
+            }
+            SyncMarkdownOutputPointer(state, dest);
         }
-        *(*dest)++ = L' ';
-        state->currentPos += nestLevel + 1;
+        if (!AppendMarkdownOutputChar(state, L' ')) {
+            return FALSE;
+        }
+        SyncMarkdownOutputPointer(state, dest);
     }
     
     state->blockquoteCount++;
@@ -332,15 +351,18 @@ BOOL ParseBlockquote(const wchar_t** src, ParseState* state, wchar_t** dest) {
 }
 
 /* Process blockquote content (inline elements within blockquote) */
-void ParseBlockquoteContent(const wchar_t** src, ParseState* state, wchar_t** dest, int blockquoteIndex) {
+BOOL ParseBlockquoteContent(const wchar_t** src, ParseState* state, wchar_t** dest, int blockquoteIndex) {
     while (**src && **src != L'\n' && **src != L'\r') {
         if (!ProcessInlineElements(src, state, dest)) {
-            *(*dest)++ = *(*src)++;
-            state->currentPos++;
+            if (!AppendMarkdownOutputChar(state, *(*src)++)) {
+                return FALSE;
+            }
+            SyncMarkdownOutputPointer(state, dest);
         }
     }
     
     if (blockquoteIndex >= 0) {
         state->blockquotes[blockquoteIndex].endPos = state->currentPos;
     }
+    return TRUE;
 }

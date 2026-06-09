@@ -270,13 +270,13 @@ static void ValidateAllHotkeys(void) {
     }
 }
 
-static void SaveHotkeyConfiguration(void) {
-    WriteConfigHotkeys(g_dialogHotkeys[0], g_dialogHotkeys[1], g_dialogHotkeys[3],
-                      g_dialogHotkeys[2],
-                      g_dialogHotkeys[4], g_dialogHotkeys[5], g_dialogHotkeys[6],
-                      g_dialogHotkeys[7], g_dialogHotkeys[8], g_dialogHotkeys[9],
-                      g_dialogHotkeys[10], g_dialogHotkeys[11], g_dialogHotkeys[12],
-                      g_dialogHotkeys[13]);
+static BOOL SaveHotkeyConfiguration(void) {
+    return WriteConfigHotkeys(g_dialogHotkeys[0], g_dialogHotkeys[1], g_dialogHotkeys[3],
+                             g_dialogHotkeys[2],
+                             g_dialogHotkeys[4], g_dialogHotkeys[5], g_dialogHotkeys[6],
+                             g_dialogHotkeys[7], g_dialogHotkeys[8], g_dialogHotkeys[9],
+                             g_dialogHotkeys[10], g_dialogHotkeys[11], g_dialogHotkeys[12],
+                             g_dialogHotkeys[13]);
 }
 
 static void SetupHotkeyControlSubclassing(HWND hwndDlg) {
@@ -526,7 +526,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                 case IDOK: {
                     GetHotkeyControlValues(hwndDlg);
                     ValidateAllHotkeys();
-                    SaveHotkeyConfiguration();
+                    if (!SaveHotkeyConfiguration()) {
+                        Dialog_ShowErrorAndRefocus(hwndDlg, IDC_HOTKEY_NOTE);
+                        return TRUE;
+                    }
 
                     /* Re-register hotkeys */
                     PostHotkeyReregister(hwndDlg);

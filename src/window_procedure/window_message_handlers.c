@@ -732,9 +732,18 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
 
     int pluginIndex = GetPendingPluginIndex();
+    const char* pendingPluginPath = GetPendingPluginPath();
 
     if (wp == IDCANCEL) {
         /* User cancelled - just clear pending info, don't change display state */
+        ClearPendingPluginInfo();
+        return 0;
+    }
+    if ((wp != IDYES && wp != IDOK) ||
+        pluginIndex < 0 ||
+        !pendingPluginPath ||
+        pendingPluginPath[0] == '\0') {
+        LOG_WARNING("Ignoring stale plugin security dialog result");
         ClearPendingPluginInfo();
         return 0;
     }

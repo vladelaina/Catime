@@ -245,6 +245,30 @@ static void StartPreview(OleDropTarget* target, const wchar_t* filePath) {
     }
 }
 
+static void ClearFontPreviewStateAfterDropApply(void) {
+    IS_PREVIEWING = FALSE;
+    PREVIEW_FONT_NAME[0] = '\0';
+    PREVIEW_INTERNAL_NAME[0] = '\0';
+}
+
+static void ReleasePreviewResourcesForDrop(OleDropTarget* target) {
+    if (!target) return;
+
+    if (target->isPreviewingFont) {
+        /*
+         * Release the preview font before importing. Keep IS_PREVIEWING intact
+         * so CancelFontPreview can restore the original font if the drop fails.
+         */
+        UnloadCurrentFontResource();
+        target->isPreviewingFont = FALSE;
+    }
+
+    if (target->isPreviewingAnim) {
+        CancelAnimationPreview();
+        target->isPreviewingAnim = FALSE;
+    }
+}
+
 /* ============================================================================
  * IUnknown Implementation
  * ============================================================================ */
@@ -363,16 +387,21 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
     }
 
     /* Release preview-owned resources before moving dropped files. */
-    RestoreOriginalState(target, FALSE);
+    ReleasePreviewResourcesForDrop(target);
+    target->isValidDrop = FALSE;
 
     /* Process Drop */
     if (pDataObj->lpVtbl->GetData(pDataObj, &fmt, &stg) == S_OK) {
         HDROP hDrop = (HDROP)stg.hGlobal;
         DropImportResult result = HandleDropFiles(target->hwnd, hDrop);
         ReleaseStgMedium(&stg);
-        if (hadFontPreview && !result.fontApplied) {
-            CancelFontPreview();
-            InvalidateRect(target->hwnd, NULL, TRUE);
+        if (hadFontPreview) {
+            if (result.fontApplied) {
+                ClearFontPreviewStateAfterDropApply();
+            } else {
+                CancelFontPreview();
+                InvalidateRect(target->hwnd, NULL, TRUE);
+            }
         }
         *pdwEffect = (result.movedCount > 0 || result.fontApplied || result.animationApplied)
             ? DROPEFFECT_COPY

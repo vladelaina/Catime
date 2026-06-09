@@ -11,6 +11,7 @@
 #include "config.h"
 #include "audio_player.h"
 #include "notification.h"
+#include "log.h"
 #include "../resource/resource.h"
 #include <string.h>
 #include <stdio.h>
@@ -397,9 +398,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
                     RECT rect;
                     if (GetWindowRect(g_hwndPreviewNotification, &rect)) {
-                        WriteConfigNotificationWindow(rect.left, rect.top,
-                                                     rect.right - rect.left,
-                                                     rect.bottom - rect.top);
+                        if (!WriteConfigNotificationWindow(rect.left, rect.top,
+                                                           rect.right - rect.left,
+                                                           rect.bottom - rect.top)) {
+                            LOG_WARNING("Failed to save notification preview window placement");
+                            Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
+                            return TRUE;
+                        }
                     }
                 }
 
@@ -451,9 +456,12 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 HWND hwndSlider = GetDlgItem(hwndDlg, IDC_VOLUME_SLIDER);
                 int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
 
-                WriteConfigNotificationSettings(timeout_msg, timeoutMs, opacity,
-                                                notifType, isDisabled, soundFile,
-                                                volume);
+                if (!WriteConfigNotificationSettings(timeout_msg, timeoutMs, opacity,
+                                                     notifType, isDisabled, soundFile,
+                                                     volume)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
+                    return TRUE;
+                }
 
                 StopVolumePreviewPlayback(hwndDlg, &isVolumePreviewPlaying);
 

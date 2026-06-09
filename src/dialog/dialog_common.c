@@ -56,6 +56,16 @@ void Dialog_FreeContext(DialogContext* ctx) {
     free(ctx);
 }
 
+static BOOL EnsureDialogBrush(HBRUSH* brush, COLORREF color) {
+    if (!brush) {
+        return FALSE;
+    }
+    if (!*brush) {
+        *brush = CreateSolidBrush(color);
+    }
+    return *brush != NULL;
+}
+
 void Dialog_SetContext(HWND hwndDlg, DialogContext* ctx) {
     SetWindowLongPtr(hwndDlg, GWLP_USERDATA, (LONG_PTR)ctx);
 }
@@ -241,16 +251,25 @@ BOOL Dialog_HandleColorMessages(UINT msg, WPARAM wParam, DialogContext* ctx, INT
     switch (msg) {
         case WM_CTLCOLORDLG:
         case WM_CTLCOLORSTATIC:
+            if (!EnsureDialogBrush(&ctx->hBackgroundBrush, DIALOG_BG_COLOR)) {
+                return FALSE;
+            }
             SetBkColor((HDC)wParam, DIALOG_BG_COLOR);
             *result = (INT_PTR)ctx->hBackgroundBrush;
             return TRUE;
             
         case WM_CTLCOLOREDIT:
+            if (!EnsureDialogBrush(&ctx->hEditBrush, EDIT_BG_COLOR)) {
+                return FALSE;
+            }
             SetBkColor((HDC)wParam, EDIT_BG_COLOR);
             *result = (INT_PTR)ctx->hEditBrush;
             return TRUE;
             
         case WM_CTLCOLORBTN:
+            if (!EnsureDialogBrush(&ctx->hButtonBrush, BUTTON_BG_COLOR)) {
+                return FALSE;
+            }
             SetBkColor((HDC)wParam, BUTTON_BG_COLOR);
             *result = (INT_PTR)ctx->hButtonBrush;
             return TRUE;

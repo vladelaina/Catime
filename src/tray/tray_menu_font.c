@@ -55,7 +55,6 @@ typedef struct {
     wchar_t fileName[MAX_FONT_NAME_LENGTH];
     wchar_t relativePath[MAX_PATH];
     wchar_t displayName[MAX_FONT_NAME_LENGTH];
-    BOOL isCurrentFont;
 } FontEntry;
 
 /**
@@ -65,7 +64,6 @@ typedef struct {
     FontEntry* entries;
     int count;
     int capacity;
-    wchar_t currentFontRelPath[MAX_PATH];
     int scannedEntries;
     BOOL truncated;
     BOOL full;
@@ -242,9 +240,6 @@ static BOOL AddFontEntry(FontScanContext* ctx, const wchar_t* fileName,
     wchar_t* dotPos = wcsrchr(entry->displayName, L'.');
     if (dotPos) *dotPos = L'\0';
 
-    /* Check if this is the current font */
-    entry->isCurrentFont = (_wcsicmp(relativePath, ctx->currentFontRelPath) == 0);
-
     ctx->count++;
     return TRUE;
 }
@@ -360,15 +355,11 @@ static void ScanFontFolderRecursive(const wchar_t* folderPath,
 /**
  * @brief Scan fonts folder and return entries
  */
-static int ScanFontsFolder(FontEntry* entries, int capacity,
-                           const wchar_t* currentFontRelPath,
-                           LONG generation) {
+static int ScanFontsFolder(FontEntry* entries, int capacity, LONG generation) {
     FontScanContext ctx = {0};
     ctx.entries = entries;
     ctx.count = 0;
     ctx.capacity = capacity;
-    wcsncpy(ctx.currentFontRelPath, currentFontRelPath, MAX_PATH - 1);
-    ctx.currentFontRelPath[MAX_PATH - 1] = L'\0';
 
     wchar_t fontsPath[MAX_PATH];
     if (!GetFontsFolderPath(fontsPath, MAX_PATH)) {
@@ -408,7 +399,7 @@ static DWORD WINAPI FontScanThread(LPVOID lpParam) {
     int count = FONT_MENU_SCAN_FAILED;
     if (entries) {
         ZeroMemory(entries, (size_t)MAX_FONT_ENTRIES * sizeof(*entries));
-        count = ScanFontsFolder(entries, MAX_FONT_ENTRIES, L"", generation);
+        count = ScanFontsFolder(entries, MAX_FONT_ENTRIES, generation);
     } else {
         LOG_WARNING("Failed to allocate font menu scan buffer");
     }
@@ -478,6 +469,16 @@ void FontMenu_RequestScanAsync(void) {
 }
 
 void FontMenu_Initialize(void) {
+    AcquireSRWLockExclusive(&g_fontScanThreadLock);
+    if (g_hFontScanThread) {
+        DWORD wait = WaitForSingleObject(g_hFontScanThread, 0);
+        if (wait == WAIT_OBJECT_0) {
+            CloseHandle(g_hFontScanThread);
+            g_hFontScanThread = NULL;
+        }
+    }
+    ReleaseSRWLockExclusive(&g_fontScanThreadLock);
+
     InterlockedIncrement(&g_fontScanGeneration);
     InterlockedExchange(&g_fontScanShuttingDown, 0);
 }
@@ -498,6 +499,14 @@ void FontMenu_Shutdown(void) {
                         (DWORD)ASYNC_FONT_SCAN_STOP_TIMEOUT_MS,
                         wait,
                         GetLastError());
+            if (wait == WAIT_TIMEOUT) {
+                AcquireSRWLockExclusive(&g_fontScanThreadLock);
+                if (g_hFontScanThread == hThread) {
+                    CloseHandle(g_hFontScanThread);
+                    g_hFontScanThread = NULL;
+                }
+                ReleaseSRWLockExclusive(&g_fontScanThreadLock);
+            }
         } else {
             AcquireSRWLockExclusive(&g_fontScanThreadLock);
             if (g_hFontScanThread == hThread) {
@@ -739,10 +748,25 @@ void BuildFontSubmenu(HMENU hMenu) {
         BOOL cacheReady = FALSE;
         int fontCount = 0;
         BOOL isSystemFont = TRUE;
+        FontEntry* fontSnapshot =
+            (FontEntry*)malloc((size_t)MAX_FONT_ENTRIES * sizeof(*fontSnapshot));
+        if (!fontSnapshot) {
+            LOG_WARNING("Failed to allocate font menu cache snapshot");
+        }
 
         AcquireSRWLockShared(&g_fontMenuCacheLock);
         cacheReady = g_fontMenuCacheReady || g_fontMenuCacheFailed;
         fontCount = g_fontMenuCacheCount;
+        if (fontCount > MAX_FONT_ENTRIES) {
+            fontCount = MAX_FONT_ENTRIES;
+        }
+        if (fontCount > 0 && fontSnapshot) {
+            memcpy(fontSnapshot, g_fontMenuCache, (size_t)fontCount * sizeof(*fontSnapshot));
+        } else if (fontCount > 0) {
+            fontCount = 0;
+            cacheReady = FALSE;
+        }
+        ReleaseSRWLockShared(&g_fontMenuCacheLock);
 
         if (fontCount == 0) {
             AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0,
@@ -751,7 +775,7 @@ void BuildFontSubmenu(HMENU hMenu) {
                             : GetLocalizedString(NULL, L"Loading..."));
             AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
         } else {
-            BuildFontMenuFromEntries(hFontSubMenu, g_fontMenuCache, fontCount,
+            BuildFontMenuFromEntries(hFontSubMenu, fontSnapshot, fontCount,
                                      currentFontRelPath, &g_advancedFontId);
             AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
         }
@@ -773,14 +797,14 @@ void BuildFontSubmenu(HMENU hMenu) {
             if (MultiByteToWideChar(CP_UTF8, 0, FONT_FILE_NAME, -1, wFontName, MAX_PATH) > 0 &&
                 wFontName[0] != L'\0') {
                 for (int i = 0; i < fontCount; i++) {
-                    if (_wcsicmp(GetPathBaseNameW(g_fontMenuCache[i].relativePath), wFontName) == 0) {
+                    if (_wcsicmp(GetPathBaseNameW(fontSnapshot[i].relativePath), wFontName) == 0) {
                         isSystemFont = FALSE;
                         break;
                     }
                 }
             }
         }
-        ReleaseSRWLockShared(&g_fontMenuCacheLock);
+        free(fontSnapshot);
 
         UINT systemFontFlags = MF_STRING;
         if (isSystemFont) systemFontFlags |= MF_CHECKED;

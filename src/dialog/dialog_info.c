@@ -390,13 +390,16 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
                     }
                 }
 
-                extern void WriteConfigTimeoutWebsite(const char* url);
+                extern BOOL WriteConfigTimeoutWebsite(const char* url);
                 char urlUtf8[MAX_PATH * 3] = {0};
                 if (!ConvertWideUrlToUtf8(url, urlUtf8, sizeof(urlUtf8))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                     return TRUE;
                 }
-                WriteConfigTimeoutWebsite(urlUtf8);
+                if (!WriteConfigTimeoutWebsite(urlUtf8)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    return TRUE;
+                }
                 DestroyWindow(hwndDlg);
                 return TRUE;
             } else if (LOWORD(wParam) == IDCANCEL) {

@@ -17,6 +17,7 @@
 
 /* 1000ms update interval balances accuracy with minimal CPU overhead for metrics */
 #define DEFAULT_UPDATE_INTERVAL_MS 1000
+#define MIN_UPDATE_INTERVAL_MS 500
 #define IF_TYPE_SOFTWARE_LOOPBACK 24
 #define COUNTER_MAX_32BIT 0x100000000ULL
 #define MAX_REASONABLE_RATE_BPS 100000000000.0 /* 100 GB/s guardrail for reset/wrap anomalies */
@@ -79,7 +80,7 @@ static HANDLE g_networkRefreshEvent = NULL;
 static HANDLE g_retiredNetworkRefreshThread = NULL;
 static HANDLE g_retiredNetworkRefreshEvent = NULL;
 static volatile LONG g_networkRefreshGeneration = 0;
-static DWORD g_networkRefreshLastStartFailureTick = 0;
+static ULONGLONG g_networkRefreshStartFailureCooldownUntil = 0;
 
 #define NETWORK_REFRESH_SHUTDOWN_WAIT_MS 2000
 
@@ -621,13 +622,13 @@ static BOOL BeginNetworkRefreshIfNeeded(void) {
 }
 
 static BOOL IsNetworkRefreshStartFailureCoolingDown(ULONGLONG now) {
-    return g_networkRefreshLastStartFailureTick != 0 &&
-           (DWORD)(now - g_networkRefreshLastStartFailureTick) <
-               NETWORK_REFRESH_START_FAILURE_COOLDOWN_MS;
+    return g_networkRefreshStartFailureCooldownUntil != 0 &&
+           now < g_networkRefreshStartFailureCooldownUntil;
 }
 
 static void MarkNetworkRefreshStartFailure(ULONGLONG now) {
-    g_networkRefreshLastStartFailureTick = (DWORD)(now ? now : 1);
+    g_networkRefreshStartFailureCooldownUntil =
+        now + NETWORK_REFRESH_START_FAILURE_COOLDOWN_MS;
 }
 
 static void StartNetworkRefreshIfNeeded(void) {
@@ -690,7 +691,7 @@ static BOOL EnsureNetworkRefreshWorkerStarted(void) {
         return FALSE;
     }
 
-    g_networkRefreshLastStartFailureTick = 0;
+    g_networkRefreshStartFailureCooldownUntil = 0;
     return TRUE;
 }
 
@@ -722,6 +723,8 @@ void SystemMonitor_Init(void) {
     AcquireSRWLockExclusive(&g_monitorLifecycleLock);
     if (!CleanupRetiredNetworkRefreshWorkerLocked(NETWORK_REFRESH_SHUTDOWN_WAIT_MS)) {
         OutputDebugStringW(L"SystemMonitor: previous network refresh worker is still retiring\n");
+        ReleaseSRWLockExclusive(&g_monitorLifecycleLock);
+        return;
     }
 
     if (InterlockedCompareExchange(&g_initialized, 1, 0) != 0) {
@@ -733,7 +736,7 @@ void SystemMonitor_Init(void) {
     AcquireSRWLockExclusive(&g_stateLock);
     ZeroMemory(&g_state, sizeof(g_state));
     g_state.updateIntervalMs = DEFAULT_UPDATE_INTERVAL_MS;
-    g_networkRefreshLastStartFailureTick = 0;
+    g_networkRefreshStartFailureCooldownUntil = 0;
     /*
      * Prime CPU baseline during init so the next caller can obtain a
      * delta sample instead of always seeing startup 0%.
@@ -806,7 +809,13 @@ void SystemMonitor_SetUpdateIntervalMs(DWORD intervalMs) {
         EndMonitorUse();
         return;
     }
-    g_state.updateIntervalMs = (intervalMs == 0) ? DEFAULT_UPDATE_INTERVAL_MS : intervalMs;
+    if (intervalMs == 0) {
+        g_state.updateIntervalMs = DEFAULT_UPDATE_INTERVAL_MS;
+    } else if (intervalMs < MIN_UPDATE_INTERVAL_MS) {
+        g_state.updateIntervalMs = MIN_UPDATE_INTERVAL_MS;
+    } else {
+        g_state.updateIntervalMs = intervalMs;
+    }
     ReleaseSRWLockExclusive(&g_stateLock);
     EndMonitorUse();
 }

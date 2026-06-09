@@ -60,7 +60,7 @@ static SRWLOCK g_hotReloadLock = SRWLOCK_INIT;
 static volatile LONG g_hotReloadRequestGeneration = 0;
 static BOOL g_hotReloadRequestPending = FALSE;
 static PluginHotReloadRequest g_hotReloadRequest;
-static DWORD g_hotReloadLastStartFailureTick = 0;
+static DWORD g_hotReloadStartFailureCooldownUntil = 0;
 
 /* Async plugin scan state */
 static HANDLE g_hAsyncScanThread = NULL;
@@ -74,7 +74,7 @@ static PluginDirSnapshot g_asyncScanLastSnapshot;
 static BOOL g_asyncScanHasFailureSnapshot = FALSE;
 static BOOL g_asyncScanFailureHadSnapshot = FALSE;
 static PluginDirSnapshot g_asyncScanFailureSnapshot;
-static volatile LONG g_asyncScanLastFailureTick = 0;
+static volatile LONG g_asyncScanFailureCooldownUntil = 0;
 static BOOL g_pluginLocksInitialized = FALSE;
 static BOOL g_pluginProcessInitialized = FALSE;
 
@@ -136,13 +136,13 @@ static void SetHotReloadRunning(BOOL running) {
 }
 
 static BOOL IsHotReloadStartFailureCoolingDown(DWORD now) {
-    return g_hotReloadLastStartFailureTick != 0 &&
-           (DWORD)(now - g_hotReloadLastStartFailureTick) <
-               HOT_RELOAD_START_FAILURE_COOLDOWN_MS;
+    return g_hotReloadStartFailureCooldownUntil != 0 &&
+           (LONG)(g_hotReloadStartFailureCooldownUntil - now) > 0;
 }
 
 static void MarkHotReloadStartFailure(DWORD now) {
-    g_hotReloadLastStartFailureTick = now;
+    DWORD cooldownUntil = now + HOT_RELOAD_START_FAILURE_COOLDOWN_MS;
+    g_hotReloadStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
 }
 
 static BOOL EnterCriticalSectionWithTimeout(CRITICAL_SECTION* cs, DWORD timeoutMs) {
@@ -404,7 +404,7 @@ static void StartHotReloadIfNeeded(void) {
         SetHotReloadRunning(FALSE);
         MarkHotReloadStartFailure(now);
     } else {
-        g_hotReloadLastStartFailureTick = 0;
+        g_hotReloadStartFailureCooldownUntil = 0;
     }
 
     ReleaseSRWLockExclusive(&g_hotReloadLock);
@@ -520,14 +520,14 @@ void PluginManager_Init(void) {
     InterlockedExchange(&g_asyncScanPending, 0);
     InterlockedExchange(&g_asyncScanShuttingDown, 0);
     InterlockedIncrement(&g_asyncScanGeneration);
-    g_hotReloadLastStartFailureTick = 0;
+    g_hotReloadStartFailureCooldownUntil = 0;
     g_hAsyncScanThread = NULL;
     g_asyncScanHasLastSnapshot = FALSE;
     ZeroMemory(&g_asyncScanLastSnapshot, sizeof(g_asyncScanLastSnapshot));
     g_asyncScanHasFailureSnapshot = FALSE;
     g_asyncScanFailureHadSnapshot = FALSE;
     ZeroMemory(&g_asyncScanFailureSnapshot, sizeof(g_asyncScanFailureSnapshot));
-    InterlockedExchange(&g_asyncScanLastFailureTick, 0);
+    InterlockedExchange(&g_asyncScanFailureCooldownUntil, 0);
 
     /* Initialize process management */
     if (!g_pluginProcessInitialized) {
@@ -675,11 +675,11 @@ static BOOL PluginDirSnapshotsEqual(const PluginDirSnapshot* a,
 static BOOL IsAsyncScanFailureRecentlyCachedLocked(BOOL hasSnapshot,
                                                    const PluginDirSnapshot* snapshot,
                                                    DWORD now) {
-    DWORD lastFailureTick =
-        (DWORD)InterlockedCompareExchange(&g_asyncScanLastFailureTick, 0, 0);
+    DWORD cooldownUntil =
+        (DWORD)InterlockedCompareExchange(&g_asyncScanFailureCooldownUntil, 0, 0);
     if (!g_asyncScanHasFailureSnapshot ||
-        lastFailureTick == 0 ||
-        (DWORD)(now - lastFailureTick) >= ASYNC_PLUGIN_SCAN_FAILURE_COOLDOWN_MS) {
+        cooldownUntil == 0 ||
+        (LONG)(cooldownUntil - now) <= 0) {
         return FALSE;
     }
 
@@ -702,14 +702,17 @@ static void MarkAsyncScanFailureLocked(BOOL hasSnapshot,
     } else {
         ZeroMemory(&g_asyncScanFailureSnapshot, sizeof(g_asyncScanFailureSnapshot));
     }
-    InterlockedExchange(&g_asyncScanLastFailureTick, (LONG)GetTickCount());
+    DWORD now = GetTickCount();
+    DWORD cooldownUntil = now + ASYNC_PLUGIN_SCAN_FAILURE_COOLDOWN_MS;
+    InterlockedExchange(&g_asyncScanFailureCooldownUntil,
+                        (LONG)(cooldownUntil ? cooldownUntil : 1));
 }
 
 static void ClearAsyncScanFailureLocked(void) {
     g_asyncScanHasFailureSnapshot = FALSE;
     g_asyncScanFailureHadSnapshot = FALSE;
     ZeroMemory(&g_asyncScanFailureSnapshot, sizeof(g_asyncScanFailureSnapshot));
-    InterlockedExchange(&g_asyncScanLastFailureTick, 0);
+    InterlockedExchange(&g_asyncScanFailureCooldownUntil, 0);
 }
 
 static int PluginManager_ScanPluginsForGeneration(LONG generation) {

@@ -319,7 +319,7 @@ void ReloadAnimationSpeedFromConfig(void);
  * @brief Write animation speed settings to config
  * @param config_path Path to config file
  */
-void WriteAnimationSpeedToConfig(const char* config_path);
+BOOL WriteAnimationSpeedToConfig(const char* config_path);
 
 /* ============================================================================
  * Core configuration functions
@@ -406,8 +406,9 @@ void GetPluginsFolderPath(char* path, size_t size);
 /**
  * @brief Write timeout action (atomic, validates enum)
  * @param action Action string (MESSAGE, LOCK, SHUTDOWN, etc.)
+ * @return TRUE when the action is applied, and persisted for persistent actions
  */
-void WriteConfigTimeoutAction(const char* action);
+BOOL WriteConfigTimeoutAction(const char* action);
 
 /**
  * @brief Write quick countdown values
@@ -433,11 +434,12 @@ void LoadRecentFiles(void);
 /**
  * @brief Add file to MRU list (atomic)
  * @param filePath Path to add (UTF-8)
+ * @return TRUE if the MRU list is already current or was persisted
  * 
  * @details
  * Adds to top, removes duplicates, maintains limit, updates menu.
  */
-void SaveRecentFile(const char* filePath);
+BOOL SaveRecentFile(const char* filePath);
 
 /* ============================================================================
  * Utility functions
@@ -469,7 +471,7 @@ void CreateDefaultConfig(const char* config_path);
  * @details
  * Writes to temp file, then atomically renames. Mutex-protected.
  */
-void WriteConfig(const char* config_path);
+BOOL WriteConfig(const char* config_path);
 
 /* ============================================================================
  * Specific configuration writers (Pomodoro, Timer, Window)
@@ -498,7 +500,7 @@ BOOL WriteConfigPomodoroLoopCount(int loop_count);
  * @brief Set timeout action to open file
  * @param filePath File path (UTF-8)
  */
-void WriteConfigTimeoutFile(const char* filePath);
+BOOL WriteConfigTimeoutFile(const char* filePath);
 
 /**
  * @brief Write always-on-top setting to config
@@ -511,7 +513,7 @@ BOOL WriteConfigTopmost(const char* topmost);
  * @brief Set timeout action to open URL
  * @param url URL (UTF-8, no validation)
  */
-void WriteConfigTimeoutWebsite(const char* url);
+BOOL WriteConfigTimeoutWebsite(const char* url);
 
 /**
  * @brief Write custom Pomodoro quick times
@@ -528,7 +530,7 @@ BOOL WriteConfigPomodoroTimeOptions(const int* times, int count);
  * @brief Write notification timeout
  * @param timeout_ms Duration (recommended: 3000-10000)
  */
-void WriteConfigNotificationTimeout(int timeout_ms);
+BOOL WriteConfigNotificationTimeout(int timeout_ms);
 
 /**
  * @brief Write notification opacity (auto-clamped to 1-100)
@@ -540,7 +542,7 @@ BOOL WriteConfigNotificationOpacity(int opacity);
  * @brief Write notification messages atomically (placeholder support)
  * @param timeout_msg Timeout message (UTF-8)
  */
-void WriteConfigNotificationMessages(const char* timeout_msg);
+BOOL WriteConfigNotificationMessages(const char* timeout_msg);
 
 /**
  * @brief Write notification type (enum to string)
@@ -555,10 +557,11 @@ void WriteConfigNotificationType(NotificationType type);
 void WriteConfigNotificationDisabled(BOOL disabled);
 
 /**
- * @brief Write language setting (triggers UI reload)
+ * @brief Write language setting
  * @param language AppLanguage enum ID
+ * @return TRUE when the setting is persisted
  */
-void WriteConfigLanguage(int language);
+BOOL WriteConfigLanguage(int language);
 
 /**
  * @brief Get audio folder path (auto-creates)
@@ -589,7 +592,7 @@ void WriteConfigNotificationVolume(int volume);
  * @param sound_file Path, "SYSTEM_BEEP", or empty (UTF-8)
  * @param volume Volume (0-100)
  */
-void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
+BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
                                      int opacity, NotificationType type,
                                      BOOL disabled, const char* sound_file,
                                      int volume);
@@ -600,8 +603,9 @@ void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
  * @param y Y position (-1 for auto)
  * @param width Width (0 for auto)
  * @param height Height (0 for auto)
+ * @return TRUE when the setting is persisted
  */
-void WriteConfigNotificationWindow(int x, int y, int width, int height);
+BOOL WriteConfigNotificationWindow(int x, int y, int width, int height);
 
 /* ============================================================================
  * Hotkey configuration functions
@@ -646,7 +650,7 @@ void ReadCustomCountdownHotkey(WORD* hotkey);
 /**
  * @brief Write all hotkeys atomically (0 = "None")
  */
-void WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
+BOOL WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownHotkey,
                         WORD customCountdownHotkey,
                         WORD quickCountdown1Hotkey, WORD quickCountdown2Hotkey, WORD quickCountdown3Hotkey,
                         WORD pomodoroHotkey, WORD toggleVisibilityHotkey, WORD editModeHotkey,
@@ -672,7 +676,7 @@ BOOL IsShortcutCheckDone(void);
  * @brief Mark shortcut prompt as done
  * @param done TRUE to prevent future prompts
  */
-void SetShortcutCheckDone(BOOL done);
+BOOL SetShortcutCheckDone(BOOL done);
 
 /* ============================================================================
  * Low-level INI file I/O functions (UTF-8 support)
@@ -767,7 +771,7 @@ BOOL IsFirstRun(void);
 /**
  * @brief Mark first run complete
  */
-void SetFirstRunCompleted(void);
+BOOL SetFirstRunCompleted(void);
 
 /**
  * @brief Set font license acceptance
@@ -907,7 +911,7 @@ void WriteConfigScaleSteps(int normal_step, int fast_step);
  *
  * @details Performance impact. Use before shutdown or critical operations.
  */
-void FlushConfigToDisk(void);
+BOOL FlushConfigToDisk(void);
 
 /**
  * @brief Release cached INI state and synchronization primitives.

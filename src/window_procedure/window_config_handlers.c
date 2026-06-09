@@ -914,8 +914,10 @@ LRESULT HandleAppRecentFilesChanged(HWND hwnd) {
             }
         }
 
-        if (!match && recentFilesCount > 0) {
-            WriteConfigTimeoutFile(g_AppConfig.recent_files.files[0].path);
+        if (!match && recentFilesCount > 0 &&
+            !WriteConfigTimeoutFile(g_AppConfig.recent_files.files[0].path)) {
+            LOG_WARNING("Failed to save hot-reloaded timeout file: %s",
+                        g_AppConfig.recent_files.files[0].path);
         }
     }
 

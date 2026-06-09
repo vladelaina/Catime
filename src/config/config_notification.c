@@ -87,7 +87,7 @@ static BOOL NotificationIniValueMatches(const char* config_path, const char* key
 /**
  * @brief Update notification message texts in config
  */
-void WriteConfigNotificationMessages(const char* timeout_msg) {
+BOOL WriteConfigNotificationMessages(const char* timeout_msg) {
     if (!timeout_msg) timeout_msg = "";
 
     char config_path[MAX_PATH];
@@ -98,29 +98,30 @@ void WriteConfigNotificationMessages(const char* timeout_msg) {
     BOOL configMatches =
         NotificationIniValueMatches(config_path, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg);
     if (runtimeMatches && configMatches) {
-        return;
+        return TRUE;
     }
 
     if (!configMatches &&
         !WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT",
                         timeout_msg, config_path)) {
-        return;
+        return FALSE;
     }
 
     strncpy(g_AppConfig.notification.messages.timeout_message, timeout_msg, sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
     g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
+    return TRUE;
 }
 
 
 /**
  * @brief Write notification timeout setting to config file
  */
-void WriteConfigNotificationTimeout(int timeout_ms) {
+BOOL WriteConfigNotificationTimeout(int timeout_ms) {
     if (timeout_ms < 0) timeout_ms = 0;
 
     char timeoutStr[32];
     if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeout_ms) < 0) {
-        return;
+        return FALSE;
     }
 
     char config_path[MAX_PATH];
@@ -130,15 +131,16 @@ void WriteConfigNotificationTimeout(int timeout_ms) {
     BOOL configMatches =
         NotificationIniValueMatches(config_path, "NOTIFICATION_TIMEOUT_MS", timeoutStr);
     if (runtimeMatches && configMatches) {
-        return;
+        return TRUE;
     }
 
     if (!configMatches &&
         !UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", timeout_ms)) {
-        return;
+        return FALSE;
     }
 
     g_AppConfig.notification.display.timeout_ms = timeout_ms;
+    return TRUE;
 }
 
 
@@ -262,7 +264,7 @@ void WriteConfigNotificationSound(const char* sound_file) {
     g_AppConfig.notification.sound.sound_file[sizeof(g_AppConfig.notification.sound.sound_file) - 1] = '\0';
 }
 
-void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
+BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
                                      int opacity, NotificationType type,
                                      BOOL disabled, const char* sound_file,
                                      int volume) {
@@ -282,7 +284,7 @@ void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
     if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeout_ms) < 0 ||
         snprintf(opacityStr, sizeof(opacityStr), "%d", opacity) < 0 ||
         snprintf(volumeStr, sizeof(volumeStr), "%d", volume) < 0) {
-        return;
+        return FALSE;
     }
 
     char cleanSoundPath[MAX_PATH] = {0};
@@ -313,7 +315,7 @@ void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
         NotificationIniValueMatches(config_path, "NOTIFICATION_DISABLED", disabledStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_SOUND_FILE", soundConfigValue) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_SOUND_VOLUME", volumeStr)) {
-        return;
+        return TRUE;
     }
 
     const IniKeyValue updates[] = {
@@ -326,7 +328,7 @@ void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", volumeStr},
     };
     if (!WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
-        return;
+        return FALSE;
     }
 
     strncpy(g_AppConfig.notification.messages.timeout_message, timeout_msg,
@@ -340,6 +342,7 @@ void WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
             sizeof(g_AppConfig.notification.sound.sound_file) - 1);
     g_AppConfig.notification.sound.sound_file[sizeof(g_AppConfig.notification.sound.sound_file) - 1] = '\0';
     g_AppConfig.notification.sound.volume = volume;
+    return TRUE;
 }
 
 
@@ -370,7 +373,7 @@ void WriteConfigNotificationVolume(int volume) {
     g_AppConfig.notification.sound.volume = volume;
 }
 
-void WriteConfigNotificationWindow(int x, int y, int width, int height) {
+BOOL WriteConfigNotificationWindow(int x, int y, int width, int height) {
     char xStr[32];
     char yStr[32];
     char widthStr[32];
@@ -379,7 +382,7 @@ void WriteConfigNotificationWindow(int x, int y, int width, int height) {
         snprintf(yStr, sizeof(yStr), "%d", y) < 0 ||
         snprintf(widthStr, sizeof(widthStr), "%d", width) < 0 ||
         snprintf(heightStr, sizeof(heightStr), "%d", height) < 0) {
-        return;
+        return FALSE;
     }
 
     char config_path[MAX_PATH];
@@ -396,7 +399,7 @@ void WriteConfigNotificationWindow(int x, int y, int width, int height) {
         NotificationIniValueMatches(config_path, "NOTIFICATION_WINDOW_WIDTH", widthStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_WINDOW_HEIGHT", heightStr);
     if (runtimeMatches && configMatches) {
-        return;
+        return TRUE;
     }
 
     const IniKeyValue updates[] = {
@@ -406,11 +409,12 @@ void WriteConfigNotificationWindow(int x, int y, int width, int height) {
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_WINDOW_HEIGHT", heightStr},
     };
     if (!WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
-        return;
+        return FALSE;
     }
 
     g_AppConfig.notification.display.window_x = x;
     g_AppConfig.notification.display.window_y = y;
     g_AppConfig.notification.display.window_width = width;
     g_AppConfig.notification.display.window_height = height;
+    return TRUE;
 }

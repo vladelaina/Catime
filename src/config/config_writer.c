@@ -462,9 +462,13 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
 BOOL WriteConfigItems(const char* config_path, const ConfigWriteItem* items, int count) {
     if (!config_path || !items || count <= 0) return FALSE;
 
-    IniKeyValue* updates = (IniKeyValue*)calloc((size_t)count, sizeof(IniKeyValue));
-    if (!updates) {
-        return FALSE;
+    IniKeyValue stackUpdates[CONFIG_WRITE_ITEM_CAPACITY];
+    IniKeyValue* updates = stackUpdates;
+    if (count > CONFIG_WRITE_ITEM_CAPACITY) {
+        updates = (IniKeyValue*)calloc((size_t)count, sizeof(IniKeyValue));
+        if (!updates) {
+            return FALSE;
+        }
     }
 
     for (int i = 0; i < count; i++) {
@@ -474,25 +478,27 @@ BOOL WriteConfigItems(const char* config_path, const ConfigWriteItem* items, int
     }
 
     BOOL result = WriteIniMultipleAtomic(config_path, updates, (size_t)count);
-    free(updates);
+    if (updates != stackUpdates) {
+        free(updates);
+    }
 
     return result;
 }
 
-void WriteConfig(const char* config_path) {
-    if (!config_path) return;
+BOOL WriteConfig(const char* config_path) {
+    if (!config_path) return FALSE;
 
     ConfigWriteItem* items = (ConfigWriteItem*)calloc(CONFIG_WRITE_ITEM_CAPACITY,
                                                       sizeof(ConfigWriteItem));
     if (!items) {
-        return;
+        return FALSE;
     }
 
     int count = 0;
 
     if (!CollectCurrentConfig(items, CONFIG_WRITE_ITEM_CAPACITY, &count)) {
         free(items);
-        return;
+        return FALSE;
     }
 
     /* Preserve existing animation config; only add current animation when the key is missing. */
@@ -525,35 +531,34 @@ void WriteConfig(const char* config_path) {
         LOG_WARNING("Skipping animation speed config during full config write");
     }
 
-    WriteConfigItems(config_path, items, count);
+    BOOL result = WriteConfigItems(config_path, items, count);
+    if (!result) {
+        LOG_ERROR("Failed to write complete config: %s", config_path);
+    }
     free(items);
+    return result;
 }
 
-void WriteConfigSection(const char* config_path, const char* section) {
+BOOL WriteConfigSection(const char* config_path, const char* section) {
     if (!config_path || !section) {
-        return;
+        return FALSE;
     }
 
     /* Selective section update - collect only items from specified section */
     ConfigWriteItem* allItems = (ConfigWriteItem*)calloc(CONFIG_WRITE_ITEM_CAPACITY,
                                                          sizeof(ConfigWriteItem));
     if (!allItems) {
-        return;
+        return FALSE;
     }
 
     int allCount = 0;
 
     if (!CollectCurrentConfig(allItems, CONFIG_WRITE_ITEM_CAPACITY, &allCount)) {
         free(allItems);
-        return;
+        return FALSE;
     }
 
-    IniKeyValue* updates = (IniKeyValue*)calloc(CONFIG_WRITE_ITEM_CAPACITY,
-                                                sizeof(*updates));
-    if (!updates) {
-        free(allItems);
-        return;
-    }
+    IniKeyValue updates[CONFIG_WRITE_ITEM_CAPACITY];
     size_t updateCount = 0;
 
     for (int i = 0; i < allCount; i++) {
@@ -565,12 +570,16 @@ void WriteConfigSection(const char* config_path, const char* section) {
         }
     }
 
+    BOOL result = TRUE;
     if (updateCount > 0) {
-        WriteIniMultipleAtomic(config_path, updates, updateCount);
+        result = WriteIniMultipleAtomic(config_path, updates, updateCount);
+        if (!result) {
+            LOG_ERROR("Failed to write config section '%s': %s", section, config_path);
+        }
     }
 
-    free(updates);
     free(allItems);
+    return result;
 }
 
 void WriteConfigWindowOpacity(int opacity) {

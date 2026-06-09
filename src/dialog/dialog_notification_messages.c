@@ -111,8 +111,11 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                     return TRUE;
                 }
 
-                extern void WriteConfigNotificationMessages(const char* timeout);
-                WriteConfigNotificationMessages(timeout_msg);
+                extern BOOL WriteConfigNotificationMessages(const char* timeout);
+                if (!WriteConfigNotificationMessages(timeout_msg)) {
+                    Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
+                    return TRUE;
+                }
 
                 DestroyWindow(hwndDlg);
                 return TRUE;

@@ -102,11 +102,14 @@ int CountMarkdownStyles(const wchar_t* input) {
 
     while (*p) {
         if (*p == L'`') {
-            const wchar_t* end = p + 1;
-            while (*end && *end != L'`') end++;
-            if (*end == L'`' && end > p + 1) {
+            p++;
+            BOOL hasContent = FALSE;
+            while (*p && *p != L'`') {
+                hasContent = TRUE;
+                p++;
+            }
+            if (*p == L'`' && hasContent) {
                 IncrementCountSaturated(&count);
-                p = end;
             }
         } else if (*p == L'*' || *p == L'_') {
             wchar_t marker = *p;
@@ -116,28 +119,9 @@ int CountMarkdownStyles(const wchar_t* input) {
                 p++;
             }
             if (markerCount > 0 && *p != L' ' && *p != L'\0') {
-                const wchar_t* searchStart = p;
-                for (int i = markerCount; i >= 1; i--) {
-                    const wchar_t* end = searchStart;
-                    while (*end) {
-                        if (*end == marker) {
-                            int endCount = 0;
-                            const wchar_t* endCheck = end;
-                            while (*endCheck == marker && endCount < i) {
-                                endCount++;
-                                endCheck++;
-                            }
-                            if (endCount == i && end > searchStart) {
-                                IncrementCountSaturated(&count);
-                                p = endCheck - 1;
-                                break;
-                            }
-                        }
-                        end++;
-                    }
-                    if (*p != marker) break;
-                }
+                IncrementCountSaturated(&count);
             }
+            continue;
         }
         p++;
     }
@@ -391,8 +375,10 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
 
     if (urlLen == 0) {
         state->styleCount = originalStyleCount;
-        wcsncpy(state->displayText + state->currentPos, cleanText, cleanLen);
-        state->currentPos += cleanLen;
+        if (!AppendMarkdownOutputSpan(state, cleanText, (size_t)cleanLen)) {
+            free(heapCleanText);
+            return FALSE;
+        }
         *src = urlEnd + 1;
         free(heapCleanText);
         return TRUE;
@@ -426,8 +412,15 @@ BOOL ExtractMarkdownLink(const wchar_t** src, ParseState* state) {
     link->endPos = state->currentPos + cleanLen;
     ZeroMemory(&link->linkRect, sizeof(RECT));
 
-    wcsncpy(state->displayText + state->currentPos, cleanText, cleanLen);
-    state->currentPos += cleanLen;
+    if (!AppendMarkdownOutputSpan(state, cleanText, (size_t)cleanLen)) {
+        free(link->linkUrl);
+        link->linkUrl = NULL;
+        free(link->linkText);
+        link->linkText = NULL;
+        state->styleCount = originalStyleCount;
+        free(heapCleanText);
+        return FALSE;
+    }
     state->linkCount++;
 
     *src = urlEnd + 1;
@@ -487,8 +480,10 @@ static BOOL ExtractMarkdownStyleBounded(const wchar_t** src, ParseState* state,
                 style->startPos = state->currentPos;
 
                 int textLen = (int)(end - textStart);
-                wcsncpy(state->displayText + state->currentPos, textStart, textLen);
-                state->currentPos += textLen;
+                if (!AppendMarkdownOutputSpan(state, textStart, (size_t)textLen)) {
+                    *src = start;
+                    return FALSE;
+                }
 
                 style->endPos = state->currentPos;
 
@@ -538,8 +533,10 @@ BOOL ExtractMarkdownCode(const wchar_t** src, ParseState* state) {
     style->startPos = state->currentPos;
 
     int textLen = (int)(end - textStart);
-    wcsncpy(state->displayText + state->currentPos, textStart, textLen);
-    state->currentPos += textLen;
+    if (!AppendMarkdownOutputSpan(state, textStart, (size_t)textLen)) {
+        *src = start;
+        return FALSE;
+    }
 
     style->endPos = state->currentPos;
     style->type = STYLE_CODE;
@@ -576,8 +573,10 @@ static BOOL ExtractMarkdownStrikethroughBounded(const wchar_t** src, ParseState*
                 style->startPos = state->currentPos;
 
                 int textLen = (int)(end - textStart);
-                wcsncpy(state->displayText + state->currentPos, textStart, textLen);
-                state->currentPos += textLen;
+                if (!AppendMarkdownOutputSpan(state, textStart, (size_t)textLen)) {
+                    *src = start;
+                    return FALSE;
+                }
 
                 style->endPos = state->currentPos;
                 style->type = STYLE_STRIKETHROUGH;
@@ -644,7 +643,7 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
     while (token && colorCount < MAX_COLOR_TAG_COLORS) {
         /* Skip leading whitespace */
         while (*token == L' ') token++;
-        
+
         if (*token == L'#') {
             colors[colorCount++] = ParseWideHexColor(token);
         }
@@ -674,7 +673,7 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
             const wchar_t* nestedClose = wcsstr(contentSrc, L"</font>");
             if (nestedClose && nestedClose < closeTag) {
                 if (ExtractMarkdownFontTag(&contentSrc, state)) {
-                    dest = state->displayText + state->currentPos;
+                    SyncMarkdownOutputPointer(state, &dest);
                     continue;
                 }
             }
@@ -683,7 +682,7 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
         /* Try Markdown styles (bold, italic, strikethrough) */
         if ((*contentSrc == L'*' || *contentSrc == L'_') && contentSrc + 1 < closeTag) {
             if (ExtractMarkdownStyleBounded(&contentSrc, state, closeTag)) {
-                dest = state->displayText + state->currentPos;
+                SyncMarkdownOutputPointer(state, &dest);
                 continue;
             }
         }
@@ -691,14 +690,16 @@ BOOL ExtractMarkdownColorTag(const wchar_t** src, ParseState* state) {
         /* Try strikethrough ~~text~~ */
         if (*contentSrc == L'~' && contentSrc + 1 < closeTag && *(contentSrc + 1) == L'~') {
             if (ExtractMarkdownStrikethroughBounded(&contentSrc, state, closeTag)) {
-                dest = state->displayText + state->currentPos;
+                SyncMarkdownOutputPointer(state, &dest);
                 continue;
             }
         }
-        
+
         /* Regular character */
-        *dest++ = *contentSrc++;
-        state->currentPos++;
+        if (!AppendMarkdownOutputChar(state, *contentSrc++)) {
+            return FALSE;
+        }
+        SyncMarkdownOutputPointer(state, &dest);
     }
     
     state->colorTags[colorTagIndex].endPos = state->currentPos;
@@ -761,7 +762,7 @@ BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
             const wchar_t* nestedClose = wcsstr(contentSrc, L"</color>");
             if (nestedClose && nestedClose < closeTag) {
                 if (ExtractMarkdownColorTag(&contentSrc, state)) {
-                    dest = state->displayText + state->currentPos;
+                    SyncMarkdownOutputPointer(state, &dest);
                     continue;
                 }
             }
@@ -770,7 +771,7 @@ BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
         /* Try Markdown styles (bold, italic, strikethrough) */
         if ((*contentSrc == L'*' || *contentSrc == L'_') && contentSrc + 1 < closeTag) {
             if (ExtractMarkdownStyleBounded(&contentSrc, state, closeTag)) {
-                dest = state->displayText + state->currentPos;
+                SyncMarkdownOutputPointer(state, &dest);
                 continue;
             }
         }
@@ -778,14 +779,16 @@ BOOL ExtractMarkdownFontTag(const wchar_t** src, ParseState* state) {
         /* Try strikethrough ~~text~~ */
         if (*contentSrc == L'~' && contentSrc + 1 < closeTag && *(contentSrc + 1) == L'~') {
             if (ExtractMarkdownStrikethroughBounded(&contentSrc, state, closeTag)) {
-                dest = state->displayText + state->currentPos;
+                SyncMarkdownOutputPointer(state, &dest);
                 continue;
             }
         }
-        
+
         /* Regular character */
-        *dest++ = *contentSrc++;
-        state->currentPos++;
+        if (!AppendMarkdownOutputChar(state, *contentSrc++)) {
+            return FALSE;
+        }
+        SyncMarkdownOutputPointer(state, &dest);
     }
     
     state->fontTags[fontTagIndex].endPos = state->currentPos;
@@ -799,7 +802,7 @@ BOOL ProcessInlineElements(const wchar_t** src, ParseState* state, wchar_t** des
     /* Color tag: <color:#RRGGBB>text</color> */
     if (*src[0] == L'<' && wcsncmp(*src, L"<color:", 7) == 0) {
         if (ExtractMarkdownColorTag(src, state)) {
-            *dest = state->displayText + state->currentPos;
+            SyncMarkdownOutputPointer(state, dest);
             return TRUE;
         }
     }
@@ -807,28 +810,28 @@ BOOL ProcessInlineElements(const wchar_t** src, ParseState* state, wchar_t** des
     /* Font tag: <font:FontName>text</font> */
     if (*src[0] == L'<' && wcsncmp(*src, L"<font:", 6) == 0) {
         if (ExtractMarkdownFontTag(src, state)) {
-            *dest = state->displayText + state->currentPos;
+            SyncMarkdownOutputPointer(state, dest);
             return TRUE;
         }
     }
 
     if (*src[0] == L'[' && ExtractMarkdownLink(src, state)) {
-        *dest = state->displayText + state->currentPos;
+        SyncMarkdownOutputPointer(state, dest);
         return TRUE;
     }
 
     if (*src[0] == L'`' && ExtractMarkdownCode(src, state)) {
-        *dest = state->displayText + state->currentPos;
+        SyncMarkdownOutputPointer(state, dest);
         return TRUE;
     }
 
     if ((*src[0] == L'*' || *src[0] == L'_') && ExtractMarkdownStyle(src, state)) {
-        *dest = state->displayText + state->currentPos;
+        SyncMarkdownOutputPointer(state, dest);
         return TRUE;
     }
 
     if (*src[0] == L'~' && ExtractMarkdownStrikethrough(src, state)) {
-        *dest = state->displayText + state->currentPos;
+        SyncMarkdownOutputPointer(state, dest);
         return TRUE;
     }
 
