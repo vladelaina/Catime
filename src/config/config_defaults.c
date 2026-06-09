@@ -404,8 +404,8 @@ BOOL WriteDefaultsToConfig(const char* config_path) {
     return TRUE;
 }
 
-void CreateDefaultConfig(const char* config_path) {
-    if (!config_path) return;
+BOOL CreateDefaultConfig(const char* config_path) {
+    if (!config_path) return FALSE;
     
     /* Detect system language and override default */
     int detectedLang = DetectSystemLanguage();
@@ -432,13 +432,16 @@ void CreateDefaultConfig(const char* config_path) {
     /* Write all defaults */
     if (!WriteDefaultsToConfig(config_path)) {
         LOG_ERROR("Failed to create default config: %s", config_path);
-        return;
+        return FALSE;
     }
 
     /* Override language with detected value */
+    BOOL result = TRUE;
     if (!WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", detectedLangName, config_path)) {
         LOG_ERROR("Failed to write detected language to default config: %s", detectedLangName);
+        result = FALSE;
     }
+    return result;
 }
 
 typedef struct ConfigEntry {
@@ -682,7 +685,7 @@ void MigrateConfig(const char* config_path) {
     if (!oldConfig) {
         /* If reading fails, just create default config */
         InvalidateIniCache();
-        CreateDefaultConfig(config_path);
+        (void)CreateDefaultConfig(config_path);
         return;
     }
 
@@ -724,7 +727,10 @@ void MigrateConfig(const char* config_path) {
     InvalidateIniCache();
 
     /* Step 4: Create fresh default config atomically. */
-    CreateDefaultConfig(config_path);
+    if (!CreateDefaultConfig(config_path)) {
+        FreeConfigEntryList(oldConfig);
+        return;
+    }
 
     /* Step 5: Restore user values that exist in CONFIG_METADATA */
     int restoreCount = 0;

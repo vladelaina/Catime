@@ -371,7 +371,7 @@ BOOL EnsureColorTagCapacity(ParseState* state);
 BOOL EnsureFontTagCapacity(ParseState* state);
 BOOL AppendMarkdownOutputSpan(ParseState* state, const wchar_t* text, size_t textLen);
 BOOL AppendMarkdownOutputChar(ParseState* state, wchar_t ch);
-void SyncMarkdownOutputPointer(ParseState* state, wchar_t** dest);
+void SyncMarkdownOutputPointer(const ParseState* state, wchar_t** dest);
 void CleanupParseState(ParseState* state);
 void DetachParseState(ParseState* state);
 int GetInitialLinkCapacity(int estimatedCount);

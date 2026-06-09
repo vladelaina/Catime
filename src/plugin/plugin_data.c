@@ -983,12 +983,8 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
     if (hFile == INVALID_HANDLE_VALUE) {
         DWORD error = GetLastError();
         if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) {
-            if (lastWriteTime) {
-                ZeroMemory(lastWriteTime, sizeof(*lastWriteTime));
-            }
-            if (lastFileSize) {
-                *lastFileSize = 0;
-            }
+            ZeroMemory(lastWriteTime, sizeof(*lastWriteTime));
+            *lastFileSize = 0;
 
             EnterCriticalSection(&g_dataCS);
             BOOL hadCatimeTag = PluginDisplayHasCatimeTagLocked();

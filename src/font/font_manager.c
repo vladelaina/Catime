@@ -446,8 +446,13 @@ void CancelFontPreview(void) {
 void ApplyFontPreview(void) {
     if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
 
+    char previousFontName[MAX_PATH] = {0};
+    char previousInternalName[MAX_PATH] = {0};
     char committedFontName[MAX_PATH] = {0};
     char committedInternalName[MAX_PATH] = {0};
+    CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+    CopyStringExactA(FONT_INTERNAL_NAME, previousInternalName, sizeof(previousInternalName));
+
     if (!CopyStringExactA(PREVIEW_FONT_NAME, committedFontName, sizeof(committedFontName)) ||
         !CopyStringExactA(PREVIEW_INTERNAL_NAME, committedInternalName, sizeof(committedInternalName))) {
         CancelFontPreview();
@@ -460,6 +465,8 @@ void ApplyFontPreview(void) {
 
     /* Write to config */
     if (!WriteConfigFont(FONT_FILE_NAME, FALSE)) {
+        CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
         CancelFontPreview();
         return;
     }

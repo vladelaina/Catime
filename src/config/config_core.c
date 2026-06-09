@@ -100,7 +100,9 @@ void ReadConfig() {
     
     /* Create default config if missing */
     if (!FileExists(config_path)) {
-        CreateDefaultConfig(config_path);
+        if (!CreateDefaultConfig(config_path)) {
+            LOG_WARNING("Failed to create default configuration file; using in-memory defaults");
+        }
     }
 
     BOOL needsWriteBack = FALSE;
@@ -134,7 +136,9 @@ void ReadConfig() {
             }
 
             /* Create a fresh default configuration */
-            CreateDefaultConfig(config_path);
+            if (!CreateDefaultConfig(config_path)) {
+                LOG_WARNING("Failed to create default configuration file during forced reset");
+            }
             
             /* Mark for full factory reset after window creation */
             g_PerformFactoryReset = TRUE;

@@ -22,7 +22,7 @@ size_t COLOR_OPTIONS_COUNT = 0;
 char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER] = "#FFFFFF";
 
 void GetConfigPath(char* path, size_t size);
-void CreateDefaultConfig(const char* config_path);
+BOOL CreateDefaultConfig(const char* config_path);
 BOOL WriteConfig(const char* config_path);
 
 static void TrimString(char* str) {
@@ -331,7 +331,9 @@ void LoadColorConfig(void) {
     ClearColorOptions();
 
     if (!FileExists(config_path)) {
-        CreateDefaultConfig(config_path);
+        if (!CreateDefaultConfig(config_path)) {
+            LOG_WARNING("Failed to create default config while loading colors");
+        }
     }
 
     char colors[2048];

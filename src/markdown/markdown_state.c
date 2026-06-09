@@ -83,7 +83,7 @@ BOOL AppendMarkdownOutputChar(ParseState* state, wchar_t ch) {
     return AppendMarkdownOutputSpan(state, &ch, 1);
 }
 
-void SyncMarkdownOutputPointer(ParseState* state, wchar_t** dest) {
+void SyncMarkdownOutputPointer(const ParseState* state, wchar_t** dest) {
     if (!state || !dest || !state->displayText || state->currentPos < 0) return;
     *dest = state->displayText + state->currentPos;
 }

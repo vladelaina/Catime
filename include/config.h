@@ -462,7 +462,7 @@ char* UTF8ToANSI(const char* utf8Str);
  * Creates default settings (25min timer, 25/5/15 Pomodoro, hotkeys, colors).
  * Only creates if doesn't exist.
  */
-void CreateDefaultConfig(const char* config_path);
+BOOL CreateDefaultConfig(const char* config_path);
 
 /**
  * @brief Write complete config atomically

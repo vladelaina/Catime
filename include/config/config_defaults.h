@@ -97,7 +97,7 @@ typedef struct {
  * Detects system language and creates config.ini with appropriate defaults.
  * Calls WriteDefaultsToConfig internally.
  */
-void CreateDefaultConfig(const char* config_path);
+BOOL CreateDefaultConfig(const char* config_path);
 
 /**
  * @brief Write all default values to existing config file
