@@ -209,8 +209,10 @@ void FormatTime(int remaining_time, char* time_text) {
 static int ParseAbsoluteTime(char* input) {
     _tzset();
     time_t now = time(NULL);
-    const struct tm* tm_now = localtime(&now);
-    struct tm tm_target = *tm_now;
+    struct tm tm_target = {0};
+    if (localtime_s(&tm_target, &now) != 0) {
+        return 0;
+    }
     int hour = -1, minute = -1, second = -1;
     int count = 0;
     const char* token = strtok(input, " ");
@@ -252,6 +254,8 @@ static int ParseAbsoluteTime(char* input) {
 
 /** Parse: "14 30t" (absolute), "1h 30m" (units), "25" or "1 30" (shorthand) */
 int ParseInput(const char* input, int* total_seconds) {
+    if (!total_seconds) return 0;
+    *total_seconds = 0;
     if (!TimeParser_Validate(input)) return 0;
 
     char input_copy[256];

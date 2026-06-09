@@ -401,9 +401,13 @@ static BOOL WritePluginOutputContentAtomicW(const wchar_t* filePath,
 
     DWORD bytesWritten = 0;
     BOOL writeOk = WriteFile(hFile, content, contentSize, &bytesWritten, NULL) &&
-                   bytesWritten == contentSize &&
-                   FlushFileBuffers(hFile);
-    CloseHandle(hFile);
+                   bytesWritten == contentSize;
+    if (writeOk && !FlushFileBuffers(hFile)) {
+        writeOk = FALSE;
+    }
+    if (!CloseHandle(hFile)) {
+        writeOk = FALSE;
+    }
 
     if (!writeOk) {
         DeleteFileW(tempPath);

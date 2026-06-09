@@ -74,6 +74,11 @@ static BOOL SeekFileOffset(HANDLE hFile, DWORD offset) {
     return SetFilePointerEx(hFile, distance, NULL, FILE_BEGIN);
 }
 
+static BOOL IsUnicodeNameRecord(WORD platformID, WORD encodingID) {
+    return platformID == 0 ||
+           (platformID == 3 && (encodingID == 1 || encodingID == 10));
+}
+
 /* ============================================================================
  * TTF Table Lookup
  * ============================================================================ */
@@ -254,8 +259,9 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
                 continue;
             }
 
-            /* Prefer Windows Unicode (platform 3, encoding 1) */
-            if (nameRecord.platformID == 3 && nameRecord.encodingID == 1) {
+            /* Prefer Windows Unicode BMP/full repertoire records. */
+            if (nameRecord.platformID == 3 &&
+                (nameRecord.encodingID == 1 || nameRecord.encodingID == 10)) {
                 nameLength = nameRecord.length;
                 nameOffset = nameRecord.offset;
                 isUnicode = TRUE;
@@ -265,7 +271,7 @@ static BOOL ExtractFontNameFromHandle(HANDLE hFile, char* fontName, size_t fontN
                 /* Fallback to first family name found */
                 nameLength = nameRecord.length;
                 nameOffset = nameRecord.offset;
-                isUnicode = (nameRecord.platformID == 0);
+                isUnicode = IsUnicodeNameRecord(nameRecord.platformID, nameRecord.encodingID);
                 foundName = TRUE;
             }
         }

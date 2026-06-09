@@ -267,6 +267,12 @@ static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh) {
     ReleaseSRWLockExclusive(&g_soundScanThreadLock);
 }
 
+static void WaitForNotificationSoundCacheForegroundRefresh(void) {
+    AcquireSRWLockExclusive(&g_soundScanThreadLock);
+    CloseCompletedSoundScanThreadLocked(NOTIFICATION_SOUND_SCAN_FOREGROUND_WAIT_MS);
+    ReleaseSRWLockExclusive(&g_soundScanThreadLock);
+}
+
 static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam) {
     LONG generation = (LONG)(INT_PTR)lpParam;
 
@@ -536,6 +542,7 @@ void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo) {
     
     const char* currentFile = (selectedIndex > 0) ? g_AppConfig.notification.sound.sound_file : NULL;
     RequestNotificationSoundCacheScanAsync(TRUE);
+    WaitForNotificationSoundCacheForegroundRefresh();
     PopulateNotificationSoundComboBox(hwndCombo, currentFile);
     
     if (selectedFile[0] != L'\0') {

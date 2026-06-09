@@ -78,7 +78,9 @@ static BOOL ParseVersionCore(const char* version, int* major, int* minor, int* p
  * @param fieldName Field to extract (e.g., "tag_name", "body")
  * @return TRUE if field found and extracted
  */
-static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char* output, size_t maxLen) {
+static BOOL ExtractJsonStringFieldInternal(const char* json, const char* fieldName,
+                                           char* output, size_t maxLen,
+                                           BOOL allowTruncate) {
     if (!output || maxLen == 0) return FALSE;
     output[0] = '\0';
     if (!json || !fieldName) return FALSE;
@@ -111,15 +113,31 @@ static BOOL ExtractJsonStringField(const char* json, const char* fieldName, char
         }
         valueEnd++;
     }
-    
+
     if (*valueEnd != '\"') return FALSE;
-    
+
     size_t valueLen = valueEnd - valueStart;
-    if (valueLen >= maxLen) valueLen = maxLen - 1;
+    if (valueLen >= maxLen) {
+        if (!allowTruncate) {
+            LOG_ERROR("JSON field too long: %s", fieldName);
+            return FALSE;
+        }
+        valueLen = maxLen - 1;
+    }
     strncpy(output, valueStart, valueLen);
     output[valueLen] = '\0';
-    
+
     return TRUE;
+}
+
+static BOOL ExtractJsonStringFieldExact(const char* json, const char* fieldName,
+                                        char* output, size_t maxLen) {
+    return ExtractJsonStringFieldInternal(json, fieldName, output, maxLen, FALSE);
+}
+
+static BOOL ExtractJsonStringFieldTruncated(const char* json, const char* fieldName,
+                                            char* output, size_t maxLen) {
+    return ExtractJsonStringFieldInternal(json, fieldName, output, maxLen, TRUE);
 }
 
 /** @brief Process JSON escape sequences (\n, \r, \", \\) */
@@ -196,6 +214,14 @@ static void ParsePreReleaseInfo(const char* preRelease, int* outType, int* outNu
  * @return TRUE if pre-release tag found
  */
 static BOOL ExtractPreRelease(const char* version, char* preRelease, size_t maxLen) {
+    if (!preRelease || maxLen == 0) {
+        return FALSE;
+    }
+    preRelease[0] = '\0';
+    if (!version) {
+        return FALSE;
+    }
+
     const char* dash = strchr(version, '-');
     if (dash && *(dash + 1)) {
         size_t len = strlen(dash + 1);
@@ -204,7 +230,6 @@ static BOOL ExtractPreRelease(const char* version, char* preRelease, size_t maxL
         preRelease[len] = '\0';
         return TRUE;
     }
-    preRelease[0] = '\0';
     return FALSE;
 }
 
@@ -272,7 +297,7 @@ BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t ve
     if (downloadUrl && urlMaxLen > 0) downloadUrl[0] = '\0';
     if (releaseNotes && notesMaxLen > 0) releaseNotes[0] = '\0';
 
-    if (!ExtractJsonStringField(jsonResponse, "tag_name", latestVersion, versionMaxLen)) {
+    if (!ExtractJsonStringFieldExact(jsonResponse, "tag_name", latestVersion, versionMaxLen)) {
         return FALSE;
     }
     
@@ -280,7 +305,7 @@ BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t ve
         memmove(latestVersion, latestVersion + 1, strlen(latestVersion));
     }
     
-    if (!ExtractJsonStringField(jsonResponse, "browser_download_url", downloadUrl, urlMaxLen)) {
+    if (!ExtractJsonStringFieldExact(jsonResponse, "browser_download_url", downloadUrl, urlMaxLen)) {
         return FALSE;
     }
     
@@ -289,7 +314,7 @@ BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t ve
         return FALSE;
     }
 
-    if (ExtractJsonStringField(jsonResponse, "body", rawNotes, NOTES_BUFFER_SIZE)) {
+    if (ExtractJsonStringFieldTruncated(jsonResponse, "body", rawNotes, NOTES_BUFFER_SIZE)) {
         ProcessJsonEscapes(rawNotes, releaseNotes, notesMaxLen);
     } else {
         LOG_WARNING("Release notes not found, using default text");

@@ -107,23 +107,29 @@ static void WaitWhileConfigPathCacheInitializing(void) {
 }
 
 const char* GetCachedConfigPath(void) {
-    LONG state = InterlockedCompareExchange(&g_configPathCacheState, 0, 0);
-    if (state == CONFIG_PATH_CACHE_READY) {
-        return g_configPathCache;
-    }
+    for (;;) {
+        LONG state = InterlockedCompareExchange(&g_configPathCacheState, 0, 0);
+        if (state == CONFIG_PATH_CACHE_READY) {
+            return g_configPathCache;
+        }
 
-    if (InterlockedCompareExchange(&g_configPathCacheState,
-                                   CONFIG_PATH_CACHE_INITIALIZING,
-                                   CONFIG_PATH_CACHE_UNINITIALIZED) == CONFIG_PATH_CACHE_UNINITIALIZED) {
-        char tempPath[MAX_PATH] = {0};
-        GetConfigPath(tempPath, MAX_PATH);
-        memcpy(g_configPathCache, tempPath, MAX_PATH);
-        InterlockedExchange(&g_configPathCacheState, CONFIG_PATH_CACHE_READY);
-    } else {
+        if (InterlockedCompareExchange(&g_configPathCacheState,
+                                       CONFIG_PATH_CACHE_INITIALIZING,
+                                       CONFIG_PATH_CACHE_UNINITIALIZED) == CONFIG_PATH_CACHE_UNINITIALIZED) {
+            char tempPath[MAX_PATH] = {0};
+            GetConfigPath(tempPath, MAX_PATH);
+            if (tempPath[0] != '\0') {
+                memcpy(g_configPathCache, tempPath, MAX_PATH);
+                InterlockedExchange(&g_configPathCacheState, CONFIG_PATH_CACHE_READY);
+            } else {
+                g_configPathCache[0] = '\0';
+                InterlockedExchange(&g_configPathCacheState, CONFIG_PATH_CACHE_UNINITIALIZED);
+            }
+            return g_configPathCache;
+        }
+
         WaitWhileConfigPathCacheInitializing();
     }
-
-    return g_configPathCache;
 }
 
 void ReadConfigStr(const char* section, const char* key, 

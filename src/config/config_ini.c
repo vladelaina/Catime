@@ -169,6 +169,11 @@ static void ReleaseConfigWriteLock(void) {
     }
 }
 
+static void ReleaseConfigWriteAndIniLocks(void) {
+    ReleaseIniLock();
+    ReleaseConfigWriteLock();
+}
+
 /* ============================================================================
  * String utilities
  * ============================================================================ */
@@ -971,22 +976,19 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
     AcquireIniLock();
 
     if (!RefreshCleanIniCacheForWrite(filePath)) {
-        ReleaseConfigWriteLock();
-        ReleaseIniLock();
+        ReleaseConfigWriteAndIniLocks();
         return FALSE;
     }
 
     if (g_ConfigIni && !g_ConfigIni->dirty &&
         IniValueMatches(g_ConfigIni, section, key, value)) {
-        ReleaseConfigWriteLock();
-        ReleaseIniLock();
+        ReleaseConfigWriteAndIniLocks();
         return TRUE;
     }
 
     IniFile* pendingIni = CloneIniFile(g_ConfigIni);
     if (!pendingIni) {
-        ReleaseConfigWriteLock();
-        ReleaseIniLock();
+        ReleaseConfigWriteAndIniLocks();
         return FALSE;
     }
 
@@ -1005,8 +1007,7 @@ BOOL WriteIniString(const char* section, const char* key, const char* value,
 
     FreeIniFile(pendingIni);
 
-    ReleaseConfigWriteLock();
-    ReleaseIniLock();
+    ReleaseConfigWriteAndIniLocks();
 
     return result;
 }
@@ -1141,21 +1142,18 @@ BOOL WriteIniMultipleAtomic(const char* filePath, const IniKeyValue* updates, si
     AcquireIniLock();
 
     if (!RefreshCleanIniCacheForWrite(filePath)) {
-        ReleaseConfigWriteLock();
-        ReleaseIniLock();
+        ReleaseConfigWriteAndIniLocks();
         return FALSE;
     }
     if (g_ConfigIni && !g_ConfigIni->dirty &&
         IniUpdatesMatch(g_ConfigIni, updates, count)) {
-        ReleaseConfigWriteLock();
-        ReleaseIniLock();
+        ReleaseConfigWriteAndIniLocks();
         return TRUE;
     }
 
     IniFile* pendingIni = CloneIniFile(g_ConfigIni);
     if (!pendingIni) {
-        ReleaseConfigWriteLock();
-        ReleaseIniLock();
+        ReleaseConfigWriteAndIniLocks();
         return FALSE;
     }
 
@@ -1182,8 +1180,7 @@ BOOL WriteIniMultipleAtomic(const char* filePath, const IniKeyValue* updates, si
 
     FreeIniFile(pendingIni);
 
-    ReleaseConfigWriteLock();
-    ReleaseIniLock();
+    ReleaseConfigWriteAndIniLocks();
 
     return result;
 }
@@ -1205,8 +1202,7 @@ BOOL FlushConfigToDisk(void) {
         }
     }
 
-    ReleaseConfigWriteLock();
-    ReleaseIniLock();
+    ReleaseConfigWriteAndIniLocks();
     return result;
 }
 
