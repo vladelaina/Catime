@@ -21,6 +21,7 @@ static HWND g_hNotifyWnd = NULL;
 #define PROCESS_TREE_MAX_DEPTH 32
 #define PROCESS_TREE_VISITED_CAPACITY (PROCESS_TREE_MAX_DEPTH + 1)
 #define PLUGIN_LAUNCH_READY_TIMEOUT_MS 5000
+#define PLUGIN_LAUNCH_FAILURE_THREAD_WAIT_MS 2000
 #define PLUGIN_LAUNCH_START_FAILURE_COOLDOWN_MS 2000
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
@@ -626,7 +627,14 @@ BOOL PluginProcess_Launch(PluginInfo* plugin) {
         *plugin = args->pluginSnapshot;
         plugin->pi.hThread = hThread;
     } else {
-        WaitForSingleObject(hThread, INFINITE);
+        DWORD threadWait = WaitForSingleObject(hThread, PLUGIN_LAUNCH_FAILURE_THREAD_WAIT_MS);
+        if (threadWait == WAIT_TIMEOUT) {
+            LOG_WARNING("[Process] Launcher thread did not exit after failed launch within %lu ms",
+                        (DWORD)PLUGIN_LAUNCH_FAILURE_THREAD_WAIT_MS);
+        } else if (threadWait == WAIT_FAILED) {
+            LOG_WARNING("[Process] Failed waiting for launcher thread after failed launch: %lu",
+                        GetLastError());
+        }
         CloseHandle(hThread);
     }
 

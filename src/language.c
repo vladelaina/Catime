@@ -317,10 +317,18 @@ static BOOL LoadLanguageResource(AppLanguage language) {
     }
 
     ParseLanguageBuffer(table, buffer);
+    free(buffer);
+
+    if (table->count <= 0) {
+        ClearTranslationTable(table);
+        if (metadata->fallbackLanguage != language) {
+            return LoadLanguageResource(metadata->fallbackLanguage);
+        }
+        return FALSE;
+    }
+
     table->loaded = TRUE;
     g_activeTranslationLanguage = language;
-    
-    free(buffer);
     return TRUE;
 }
 

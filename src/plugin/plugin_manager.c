@@ -100,8 +100,8 @@ static BOOL LaunchPreparedPlugin(int index, const wchar_t* expectedPath);
 static BOOL StopPluginIfPathMatches(int index, const wchar_t* expectedPath, BOOL* pathMatched);
 static void StartHotReloadIfNeeded(void);
 static void CleanupCompletedHotReloadThreadLocked(void);
-static void StopHotReloadThread(BOOL waitIndefinitely);
-static void StopHotReloadThreadLocked(BOOL waitIndefinitely);
+static void StopHotReloadThread(void);
+static void StopHotReloadThreadLocked(void);
 static void StopHotReloadIfIdle(void);
 static BOOL StopAsyncScanThread(void);
 static BOOL CleanupRetiredAsyncScanThread(DWORD waitMs);
@@ -432,7 +432,7 @@ static void CleanupCompletedHotReloadThreadLocked(void) {
     SetHotReloadRunning(FALSE);
 }
 
-static void StopHotReloadThreadLocked(BOOL waitIndefinitely) {
+static void StopHotReloadThreadLocked(void) {
     CleanupCompletedHotReloadThreadLocked();
 
     if (g_hHotReloadThread) {
@@ -440,8 +440,7 @@ static void StopHotReloadThreadLocked(BOOL waitIndefinitely) {
         if (g_hHotReloadStopEvent) {
             SetEvent(g_hHotReloadStopEvent);
         }
-        DWORD waitMs = waitIndefinitely ? INFINITE : HOT_RELOAD_STOP_TIMEOUT_MS;
-        DWORD waitResult = WaitForSingleObject(g_hHotReloadThread, waitMs);
+        DWORD waitResult = WaitForSingleObject(g_hHotReloadThread, HOT_RELOAD_STOP_TIMEOUT_MS);
         if (waitResult == WAIT_TIMEOUT) {
             LOG_WARNING("Hot-reload thread stop timed out after %lu ms",
                         (DWORD)HOT_RELOAD_STOP_TIMEOUT_MS);
@@ -462,9 +461,9 @@ static void StopHotReloadThreadLocked(BOOL waitIndefinitely) {
     }
 }
 
-static void StopHotReloadThread(BOOL waitIndefinitely) {
+static void StopHotReloadThread(void) {
     AcquireSRWLockExclusive(&g_hotReloadLock);
-    StopHotReloadThreadLocked(waitIndefinitely);
+    StopHotReloadThreadLocked();
     ReleaseSRWLockExclusive(&g_hotReloadLock);
 }
 
@@ -484,7 +483,7 @@ static void StopHotReloadIfIdle(void) {
     LeaveCriticalSection(&g_pluginCS);
 
     if (!hasRunningPlugin) {
-        StopHotReloadThreadLocked(FALSE);
+        StopHotReloadThreadLocked();
     }
     ReleaseSRWLockExclusive(&g_hotReloadLock);
 }
@@ -554,7 +553,7 @@ void PluginManager_Shutdown(void) {
     }
 
     if (!lifecycleLockEntered) {
-        StopHotReloadThread(FALSE);
+        StopHotReloadThread();
         if (g_pluginProcessInitialized) {
             PluginProcess_TerminateAllOrphans();
             PluginProcess_Shutdown();
@@ -566,7 +565,7 @@ void PluginManager_Shutdown(void) {
         return;
     }
 
-    StopHotReloadThread(TRUE);
+    StopHotReloadThread();
 
     PluginInfo* detachedPlugins = AllocatePluginSnapshotArray();
 
@@ -1838,7 +1837,7 @@ void PluginManager_StopAllPlugins(void) {
     }
 
     PluginData_Clear();
-    StopHotReloadThread(FALSE);
+    StopHotReloadThread();
     LeaveCriticalSection(&g_pluginLifecycleCS);
 }
 

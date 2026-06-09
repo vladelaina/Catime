@@ -469,7 +469,7 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath, const wchar_
     
     if (!g_engineInitialized && !InitializeAudioEngine()) {
         LOG_WARNING("Failed to initialize miniaudio engine, will try fallback methods");
-        return FALSE;
+        return FallbackToPlaySound(hwnd, wFilePath);
     }
     
     float volume = (float)g_AppConfig.notification.sound.volume / 100.0f;

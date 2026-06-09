@@ -28,6 +28,7 @@ static HANDLE g_exitStopEvent = NULL;
 
 #define MAX_EXIT_COUNTDOWN_SECONDS 3600
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define EXIT_COUNTDOWN_CANCEL_WAIT_MS 2000
 #define EXIT_COUNTDOWN_SHUTDOWN_WAIT_MS 2000
 #define EXIT_COUNTDOWN_START_FAILURE_COOLDOWN_MS 2000
 
@@ -485,6 +486,7 @@ static BOOL PluginExit_CancelWithTimeout(DWORD waitMs) {
     HANDLE waitThread = NULL;
     BOOL ownsThreadStop = FALSE;
     BOOL stopped = TRUE;
+    DWORD waitStart = GetTickCount();
 
     AcquireSRWLockExclusive(&g_exitLock);
     InterlockedExchange(&g_exitInProgress, FALSE);
@@ -493,7 +495,15 @@ static BOOL PluginExit_CancelWithTimeout(DWORD waitMs) {
     }
 
     while (g_exitThreadStopInProgress) {
-        SleepConditionVariableSRW(&g_exitStateChanged, &g_exitLock, INFINITE, 0);
+        DWORD elapsed = GetTickCount() - waitStart;
+        DWORD remaining = elapsed >= waitMs ? 0 : waitMs - elapsed;
+        if (remaining == 0 ||
+            !SleepConditionVariableSRW(&g_exitStateChanged, &g_exitLock, remaining, 0)) {
+            LOG_WARNING("PluginExit: Waiting for concurrent countdown stop timed out after %lu ms",
+                        waitMs);
+            ReleaseSRWLockExclusive(&g_exitLock);
+            return FALSE;
+        }
     }
 
     CleanupCompletedExitThreadHandleLocked();
@@ -544,5 +554,5 @@ static BOOL PluginExit_CancelWithTimeout(DWORD waitMs) {
 }
 
 void PluginExit_Cancel(void) {
-    (void)PluginExit_CancelWithTimeout(INFINITE);
+    (void)PluginExit_CancelWithTimeout(EXIT_COUNTDOWN_CANCEL_WAIT_MS);
 }

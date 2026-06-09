@@ -448,12 +448,11 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
                 COLOR_OPTIONS[i].hexColor, &firstColor, "COLOR_OPTIONS");
         }
     }
-    if (colorOptionsFull && !firstColor) {
-        idx++;
-    } else {
-        LOG_WARNING("Skipping COLOR_OPTIONS write because the palette cannot fit in the config buffer");
-        ZeroMemory(&items[idx], sizeof(items[idx]));
+    if (!colorOptionsFull || firstColor) {
+        LOG_ERROR("Failed to collect COLOR_OPTIONS for full config write");
+        return FALSE;
     }
+    idx++;
     
     *count = idx;
     return TRUE;
@@ -533,7 +532,9 @@ BOOL WriteConfig(const char* config_path) {
     }
 
     if (!CollectAnimationSpeedConfigItems(items, CONFIG_WRITE_ITEM_CAPACITY, &count)) {
-        LOG_WARNING("Skipping animation speed config during full config write");
+        LOG_ERROR("Failed to collect animation speed config during full config write");
+        free(items);
+        return FALSE;
     }
 
     BOOL result = WriteConfigItems(config_path, items, count);

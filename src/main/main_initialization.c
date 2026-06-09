@@ -662,9 +662,6 @@ void CleanupResources(HANDLE hMutex) {
     LOG_INFO("Cleaning up drawing effect buffers");
     CleanupDrawingEffects();
 
-    LOG_INFO("Shutting down markdown image subsystem");
-    ShutdownMarkdownImage();
-
     LOG_INFO("Stopping notification audio playback");
     StopNotificationSound();
 

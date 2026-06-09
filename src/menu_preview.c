@@ -268,7 +268,8 @@ BOOL ApplyPreview(HWND hwnd) {
             break;
             
         case PREVIEW_TYPE_FONT:
-            if (!WriteConfigFont(g_previewState.data.font.fontName, FALSE)) {
+            if (!WriteConfigFont(g_previewState.data.font.fontName, FALSE) ||
+                !FlushConfigToDisk()) {
                 CancelPreview(hwnd);
                 return FALSE;
             }

@@ -84,6 +84,7 @@ static BOOL g_fontMenuCacheFailed = FALSE;
 static SRWLOCK g_fontMenuCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_fontScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hFontScanThread = NULL;
+static HANDLE g_hRetiredFontScanThread = NULL;
 static volatile LONG g_fontScanShuttingDown = 0;
 static volatile LONG g_fontScanGeneration = 0;
 static volatile LONG g_fontMenuLastScanTick = 0;
@@ -118,6 +119,24 @@ static void MarkFontMenuScanStartFailure(DWORD now) {
     g_fontMenuCacheFailed = TRUE;
     InterlockedExchange(&g_fontMenuLastScanTick, (LONG)now);
     ReleaseSRWLockExclusive(&g_fontMenuCacheLock);
+}
+
+static BOOL CleanupRetiredFontScanThreadLocked(DWORD waitMs) {
+    if (!g_hRetiredFontScanThread) {
+        return TRUE;
+    }
+
+    DWORD wait = WaitForSingleObject(g_hRetiredFontScanThread, waitMs);
+    if (wait != WAIT_OBJECT_0) {
+        if (wait == WAIT_FAILED) {
+            LOG_WARNING("Retired font menu scan wait failed: %lu", GetLastError());
+        }
+        return FALSE;
+    }
+
+    CloseHandle(g_hRetiredFontScanThread);
+    g_hRetiredFontScanThread = NULL;
+    return TRUE;
 }
 
 static BOOL CopyStringExactW(const wchar_t* src, wchar_t* out, size_t outSize) {
@@ -433,6 +452,11 @@ static DWORD WINAPI FontScanThread(LPVOID lpParam) {
 void FontMenu_RequestScanAsync(void) {
     AcquireSRWLockExclusive(&g_fontScanThreadLock);
 
+    if (!CleanupRetiredFontScanThreadLocked(0)) {
+        ReleaseSRWLockExclusive(&g_fontScanThreadLock);
+        return;
+    }
+
     if (IsFontMenuScanShuttingDown()) {
         ReleaseSRWLockExclusive(&g_fontScanThreadLock);
         return;
@@ -470,6 +494,11 @@ void FontMenu_RequestScanAsync(void) {
 
 void FontMenu_Initialize(void) {
     AcquireSRWLockExclusive(&g_fontScanThreadLock);
+    if (!CleanupRetiredFontScanThreadLocked(ASYNC_FONT_SCAN_STOP_TIMEOUT_MS)) {
+        ReleaseSRWLockExclusive(&g_fontScanThreadLock);
+        return;
+    }
+
     if (g_hFontScanThread) {
         DWORD wait = WaitForSingleObject(g_hFontScanThread, 0);
         if (wait == WAIT_OBJECT_0) {
@@ -502,7 +531,7 @@ void FontMenu_Shutdown(void) {
             if (wait == WAIT_TIMEOUT) {
                 AcquireSRWLockExclusive(&g_fontScanThreadLock);
                 if (g_hFontScanThread == hThread) {
-                    CloseHandle(g_hFontScanThread);
+                    g_hRetiredFontScanThread = g_hFontScanThread;
                     g_hFontScanThread = NULL;
                 }
                 ReleaseSRWLockExclusive(&g_fontScanThreadLock);

@@ -345,6 +345,14 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                            &g_notesColorTags, &g_notesColorTagCount,
                                            &g_notesFontTags, &g_notesFontTagCount);
                         free(wrappedNotes);
+                    } else {
+                        ParseMarkdownLinks(notesW, &g_notesDisplayText, &g_notesLinks, &g_notesLinkCount,
+                                           &g_notesHeadings, &g_notesHeadingCount,
+                                           &g_notesStyles, &g_notesStyleCount,
+                                           &g_notesListItems, &g_notesListItemCount,
+                                           &g_notesBlockquotes, &g_notesBlockquoteCount,
+                                           &g_notesColorTags, &g_notesColorTagCount,
+                                           &g_notesFontTags, &g_notesFontTagCount);
                     }
                     free(notesW);
                 } else {

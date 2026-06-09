@@ -22,6 +22,7 @@
 #define DEBOUNCE_DELAY_MS 200
 #define WATCH_EVENT_COUNT 2
 #define WATCHER_STOP_TIMEOUT_MS 2000
+#define WATCHER_FINAL_STOP_TIMEOUT_MS 5000
 #define WATCH_CHANGE_FILTER (FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE)
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
@@ -37,6 +38,7 @@ static HANDLE g_stopEvent = NULL;
 static HWND g_targetHwnd = NULL;
 static volatile LONG g_configReloadPending = 0;
 static volatile LONG g_configReloadDirty = 0;
+static volatile LONG g_acceptingChanges = 0;
 
 typedef struct {
     HANDLE stopEvent;
@@ -84,6 +86,7 @@ static void ExtractDirectoryPath(const char* filePath, char* dirPath, size_t dir
 }
 
 static void NotifyConfigChanges(HWND hwnd) {
+    if (InterlockedCompareExchange(&g_acceptingChanges, 0, 0) == 0) return;
     if (!IsValidConfigWatcherTargetWindow(hwnd)) return;
 
     InterlockedExchange(&g_configReloadDirty, 1);
@@ -106,6 +109,13 @@ void ConfigWatcher_EndConfigReloadHandling(HWND hwnd) {
     if (InterlockedExchange(&g_configReloadDirty, 0) != 0) {
         NotifyConfigChanges(hwnd);
     }
+}
+
+static BOOL ConfigWatcher_ShouldProcessChange(HANDLE stopEvent) {
+    if (InterlockedCompareExchange(&g_acceptingChanges, 0, 0) == 0) {
+        return FALSE;
+    }
+    return !stopEvent || WaitForSingleObject(stopEvent, 0) != WAIT_OBJECT_0;
 }
 
 static BOOL BuildConfigWatchPaths(const char* iniPath,
@@ -219,6 +229,10 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
             }
 
             ConfigFileSnapshot currentSnapshot = {0};
+            if (!ConfigWatcher_ShouldProcessChange(stopEvent)) {
+                break;
+            }
+
             BOOL snapshotOk = ReadConfigFileSnapshot(wIni, &currentSnapshot);
             if (!snapshotOk || ConfigFileSnapshotChanged(&lastSnapshot, &currentSnapshot)) {
                 if (snapshotOk) {
@@ -226,8 +240,10 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
                 } else {
                     ZeroMemory(&lastSnapshot, sizeof(lastSnapshot));
                 }
-                InvalidateIniCache();
-                NotifyConfigChanges(targetHwnd);
+                if (ConfigWatcher_ShouldProcessChange(stopEvent)) {
+                    InvalidateIniCache();
+                    NotifyConfigChanges(targetHwnd);
+                }
             }
 
             if (!FindNextChangeNotification(changeEvent)) {
@@ -260,6 +276,7 @@ static void CleanupCompletedWatcherThread(void) {
     }
 
     g_targetHwnd = NULL;
+    InterlockedExchange(&g_acceptingChanges, 0);
     InterlockedExchange(&g_configReloadPending, 0);
     InterlockedExchange(&g_configReloadDirty, 0);
 }
@@ -277,12 +294,14 @@ void ConfigWatcher_Start(HWND hwnd) {
     }
     
     g_targetHwnd = hwnd;
+    InterlockedExchange(&g_acceptingChanges, 1);
     InterlockedExchange(&g_configReloadPending, 0);
     InterlockedExchange(&g_configReloadDirty, 0);
     g_stopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (!g_stopEvent) {
         LOG_ERROR("ConfigWatcher: Failed to create stop event");
         g_targetHwnd = NULL;
+        InterlockedExchange(&g_acceptingChanges, 0);
         return;
     }
 
@@ -293,6 +312,7 @@ void ConfigWatcher_Start(HWND hwnd) {
         CloseHandle(g_stopEvent);
         g_stopEvent = NULL;
         g_targetHwnd = NULL;
+        InterlockedExchange(&g_acceptingChanges, 0);
         InterlockedExchange(&g_configReloadPending, 0);
         InterlockedExchange(&g_configReloadDirty, 0);
         return;
@@ -306,6 +326,7 @@ void ConfigWatcher_Start(HWND hwnd) {
         CloseHandle(g_stopEvent);
         g_stopEvent = NULL;
         g_targetHwnd = NULL;
+        InterlockedExchange(&g_acceptingChanges, 0);
         InterlockedExchange(&g_configReloadPending, 0);
         InterlockedExchange(&g_configReloadDirty, 0);
         return;
@@ -320,6 +341,7 @@ void ConfigWatcher_Start(HWND hwnd) {
         CloseHandle(g_stopEvent);
         g_stopEvent = NULL;
         g_targetHwnd = NULL;
+        InterlockedExchange(&g_acceptingChanges, 0);
         InterlockedExchange(&g_configReloadPending, 0);
         InterlockedExchange(&g_configReloadDirty, 0);
     }
@@ -328,6 +350,7 @@ void ConfigWatcher_Start(HWND hwnd) {
 void ConfigWatcher_Stop(void) {
     CleanupCompletedWatcherThread();
     if (!g_watcherThread) {
+        InterlockedExchange(&g_acceptingChanges, 0);
         if (g_stopEvent) {
             CloseHandle(g_stopEvent);
             g_stopEvent = NULL;
@@ -338,6 +361,7 @@ void ConfigWatcher_Stop(void) {
         return;
     }
     
+    InterlockedExchange(&g_acceptingChanges, 0);
     SetEvent(g_stopEvent);
     DWORD waitResult = WaitForSingleObject(g_watcherThread, WATCHER_STOP_TIMEOUT_MS);
     if (waitResult != WAIT_OBJECT_0) {
@@ -362,6 +386,7 @@ void ConfigWatcher_Stop(void) {
 BOOL ConfigWatcher_Shutdown(void) {
     CleanupCompletedWatcherThread();
     if (!g_watcherThread) {
+        InterlockedExchange(&g_acceptingChanges, 0);
         if (g_stopEvent) {
             CloseHandle(g_stopEvent);
             g_stopEvent = NULL;
@@ -372,11 +397,12 @@ BOOL ConfigWatcher_Shutdown(void) {
         return TRUE;
     }
 
+    InterlockedExchange(&g_acceptingChanges, 0);
     SetEvent(g_stopEvent);
-    DWORD waitResult = WaitForSingleObject(g_watcherThread, INFINITE);
+    DWORD waitResult = WaitForSingleObject(g_watcherThread, WATCHER_FINAL_STOP_TIMEOUT_MS);
     if (waitResult != WAIT_OBJECT_0) {
-        LOG_WARNING("ConfigWatcher: final stop failed (wait=%lu, error=%lu)",
-                    waitResult, GetLastError());
+        LOG_WARNING("ConfigWatcher: final stop timed out after %lu ms (wait=%lu, error=%lu)",
+                    (DWORD)WATCHER_FINAL_STOP_TIMEOUT_MS, waitResult, GetLastError());
         g_targetHwnd = NULL;
         InterlockedExchange(&g_configReloadPending, 0);
         InterlockedExchange(&g_configReloadDirty, 0);

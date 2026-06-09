@@ -73,6 +73,7 @@ static BOOL g_animMenuCacheFailed = FALSE;
 static SRWLOCK g_animMenuCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_animScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hAnimScanThread = NULL;
+static HANDLE g_hRetiredAnimScanThread = NULL;
 static volatile LONG g_animScanShuttingDown = 0;
 static volatile LONG g_animScanGeneration = 0;
 static volatile LONG g_animMenuLastScanTick = 0;
@@ -107,6 +108,24 @@ static void MarkAnimationMenuScanStartFailure(DWORD now) {
     g_animMenuCacheFailed = TRUE;
     InterlockedExchange(&g_animMenuLastScanTick, (LONG)now);
     ReleaseSRWLockExclusive(&g_animMenuCacheLock);
+}
+
+static BOOL CleanupRetiredAnimScanThreadLocked(DWORD waitMs) {
+    if (!g_hRetiredAnimScanThread) {
+        return TRUE;
+    }
+
+    DWORD wait = WaitForSingleObject(g_hRetiredAnimScanThread, waitMs);
+    if (wait != WAIT_OBJECT_0) {
+        if (wait == WAIT_FAILED) {
+            LOG_WARNING("Retired animation menu scan wait failed: %lu", GetLastError());
+        }
+        return FALSE;
+    }
+
+    CloseHandle(g_hRetiredAnimScanThread);
+    g_hRetiredAnimScanThread = NULL;
+    return TRUE;
 }
 
 static BOOL CopyStringExactA(const char* src, char* out, size_t outSize) {
@@ -430,6 +449,11 @@ static DWORD WINAPI AnimationScanThread(LPVOID lpParam) {
 void AnimationMenu_RequestScanAsync(void) {
     AcquireSRWLockExclusive(&g_animScanThreadLock);
 
+    if (!CleanupRetiredAnimScanThreadLocked(0)) {
+        ReleaseSRWLockExclusive(&g_animScanThreadLock);
+        return;
+    }
+
     if (IsAnimationMenuScanShuttingDown()) {
         ReleaseSRWLockExclusive(&g_animScanThreadLock);
         return;
@@ -467,6 +491,11 @@ void AnimationMenu_RequestScanAsync(void) {
 
 void AnimationMenu_Initialize(void) {
     AcquireSRWLockExclusive(&g_animScanThreadLock);
+    if (!CleanupRetiredAnimScanThreadLocked(ASYNC_ANIM_SCAN_STOP_TIMEOUT_MS)) {
+        ReleaseSRWLockExclusive(&g_animScanThreadLock);
+        return;
+    }
+
     if (g_hAnimScanThread) {
         DWORD wait = WaitForSingleObject(g_hAnimScanThread, 0);
         if (wait == WAIT_OBJECT_0) {
@@ -499,7 +528,7 @@ void AnimationMenu_Shutdown(void) {
             if (wait == WAIT_TIMEOUT) {
                 AcquireSRWLockExclusive(&g_animScanThreadLock);
                 if (g_hAnimScanThread == hThread) {
-                    CloseHandle(g_hAnimScanThread);
+                    g_hRetiredAnimScanThread = g_hAnimScanThread;
                     g_hAnimScanThread = NULL;
                 }
                 ReleaseSRWLockExclusive(&g_animScanThreadLock);

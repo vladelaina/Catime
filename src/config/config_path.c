@@ -260,8 +260,8 @@ void GetConfigPath(char* path, size_t size) {
         return;
     }
 
-    /* Critical failure: cannot determine config path */
-    LOG_ERROR("Failed to determine configuration path - all methods failed (SHGetKnownFolderPath, SHGetFolderPathW, USERPROFILE)");
+    /* Avoid project logging here: log initialization itself depends on this path. */
+    OutputDebugStringA("Catime: failed to determine configuration path\n");
     g_cachedConfigPath[0] = '\0';
     g_cachedConfigBaseDir[0] = '\0';
     InterlockedExchange(&g_configPathInitState, CONFIG_PATH_UNINITIALIZED);

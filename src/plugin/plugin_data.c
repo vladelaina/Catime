@@ -101,6 +101,8 @@ static volatile LONG g_isRunning = FALSE;
 #define PLUGIN_DATA_REDRAW_TIMER_ID 42424
 #define PLUGIN_DATA_REDRAW_MIN_INTERVAL_MS 100
 #define PLUGIN_DATA_WATCHER_SHUTDOWN_WAIT_MS 2000
+#define PLUGIN_DATA_WATCHER_UI_STOP_WAIT_MS 1000
+#define PLUGIN_DATA_WATCHER_STOP_GATE_WAIT_MS 1000
 #define PLUGIN_DATA_WATCHER_START_FAILURE_COOLDOWN_MS 2000
 
 static DWORD g_lastPluginDataRedrawTick = 0;
@@ -408,6 +410,21 @@ static void CleanupCompletedWatcherThreadLocked(void) {
         SetWatcherRunning(FALSE);
         WakeAllConditionVariable(&g_watchStopCompleted);
     }
+}
+
+static BOOL WaitForWatcherStopGateLocked(DWORD waitMs) {
+    DWORD waitStart = GetTickCount();
+    while (g_watchStopInProgress) {
+        DWORD elapsed = GetTickCount() - waitStart;
+        DWORD remaining = elapsed >= waitMs ? 0 : waitMs - elapsed;
+        if (remaining == 0 ||
+            !SleepConditionVariableCS(&g_watchStopCompleted, &g_watchCS, remaining)) {
+            LOG_WARNING("PluginData: Timed out waiting for watcher stop gate after %lu ms",
+                        waitMs);
+            return FALSE;
+        }
+    }
+    return TRUE;
 }
 
 /**
@@ -1319,16 +1336,18 @@ static BOOL EnsureWatcherEvents(void) {
 static BOOL StartWatcherThreadIfNeeded(void) {
     EnterCriticalSection(&g_watchCS);
 
-    while (g_watchStopInProgress) {
-        if (!SleepConditionVariableCS(&g_watchStopCompleted, &g_watchCS, INFINITE)) {
-            LOG_WARNING("PluginData: Failed while waiting for watcher stop (error=%lu)", GetLastError());
-            LeaveCriticalSection(&g_watchCS);
-            return FALSE;
-        }
+    if (!WaitForWatcherStopGateLocked(PLUGIN_DATA_WATCHER_STOP_GATE_WAIT_MS)) {
+        LeaveCriticalSection(&g_watchCS);
+        return FALSE;
     }
 
     CleanupCompletedWatcherThreadLocked();
     if (g_hWatchThread) {
+        if (!IsWatcherRunning()) {
+            LOG_WARNING("PluginData: Watcher is still retiring; start deferred");
+            LeaveCriticalSection(&g_watchCS);
+            return FALSE;
+        }
         LeaveCriticalSection(&g_watchCS);
         return TRUE;
     }
@@ -1370,12 +1389,9 @@ static BOOL StopWatcherThreadIfIdle(DWORD waitMs) {
 
     EnterCriticalSection(&g_watchCS);
 
-    while (g_watchStopInProgress) {
-        if (!SleepConditionVariableCS(&g_watchStopCompleted, &g_watchCS, INFINITE)) {
-            LOG_WARNING("PluginData: Failed while waiting for watcher stop (error=%lu)", GetLastError());
-            LeaveCriticalSection(&g_watchCS);
-            return FALSE;
-        }
+    if (!WaitForWatcherStopGateLocked(PLUGIN_DATA_WATCHER_STOP_GATE_WAIT_MS)) {
+        LeaveCriticalSection(&g_watchCS);
+        return FALSE;
     }
 
     CleanupCompletedWatcherThreadLocked();
@@ -1601,7 +1617,9 @@ void PluginData_Clear(void) {
     /* Clear any pending notification to prevent stale notifications */
     g_pendingNotify.pending = FALSE;
     LeaveCriticalSection(&g_dataCS);
-    StopWatcherThreadIfIdle(INFINITE);
+    if (!StopWatcherThreadIfIdle(PLUGIN_DATA_WATCHER_UI_STOP_WAIT_MS)) {
+        LOG_WARNING("PluginData: Watcher stop deferred while clearing plugin data");
+    }
     PluginData_EndUse();
 }
 
@@ -1690,7 +1708,9 @@ void PluginData_SetStatusText(const wchar_t* text) {
     InvalidateLastOutputFileStateLocked();
 
     LeaveCriticalSection(&g_dataCS);
-    StopWatcherThreadIfIdle(INFINITE);
+    if (!StopWatcherThreadIfIdle(PLUGIN_DATA_WATCHER_UI_STOP_WAIT_MS)) {
+        LOG_WARNING("PluginData: Watcher stop deferred while setting status text");
+    }
     PluginData_EndUse();
 }
 
@@ -1729,7 +1749,9 @@ void PluginData_SetActive(BOOL active) {
         StartWatcherThreadIfNeeded();
     } else {
         PluginExit_Cancel();
-        StopWatcherThreadIfIdle(INFINITE);
+        if (!StopWatcherThreadIfIdle(PLUGIN_DATA_WATCHER_UI_STOP_WAIT_MS)) {
+            LOG_WARNING("PluginData: Watcher stop deferred while deactivating plugin data");
+        }
     }
     PluginData_EndUse();
 }
