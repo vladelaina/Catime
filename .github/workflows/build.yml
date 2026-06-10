@@ -649,6 +649,7 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+      artifact-name: ${{ steps.rename_output.outputs.artifact-name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -674,25 +675,30 @@ jobs:
           cp build/catime.exe output/
 
       - name: Rename output file
+        id: rename_output
         run: |
-          mv output/catime.exe output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+          ARTIFACT_NAME="catime_${{ env.VERSION }}_${{ github.run_number }}.exe"
+          mv output/catime.exe "output/$ARTIFACT_NAME"
+          echo "artifact-name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload build artifacts
         id: upload-unsigned
         uses: actions/upload-artifact@v7
         with:
-          name: catime-windows-${{ env.VERSION }}-${{ github.run_number }}
-          path: output/catime_${{ env.VERSION }}_${{ github.run_number }}.exe
+          name: ${{ steps.rename_output.outputs.artifact-name }}
+          path: output/${{ steps.rename_output.outputs.artifact-name }}
+          archive: false
 
   sign:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     uses: ./.github/workflows/signpath-sign.yml
     with:
-      artifact-name: catime-windows-${{ needs.build.outputs.version }}-${{ github.run_number }}
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
       artifact-id: ${{ needs.build.outputs.artifact-id }}
       version: ${{ needs.build.outputs.version }}
       is-release: false
+      archive-signed-artifact: false
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 

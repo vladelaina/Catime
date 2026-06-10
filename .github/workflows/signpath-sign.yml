@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: false
+      archive-signed-artifact:
+        description: 'Whether to zip the signed artifact before upload'
+        required: false
+        type: boolean
+        default: true
     secrets:
       SIGNPATH_API_TOKEN:
         description: 'SignPath API Token'
@@ -133,4 +138,5 @@ jobs:
         path: ./signed-output/*.exe
         retention-days: 90
         overwrite: true
+        archive: ${{ inputs.archive-signed-artifact }}
         
