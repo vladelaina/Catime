@@ -36,6 +36,7 @@ static HHOOK g_mouseHook = NULL;
 static HWND g_mainHwnd = NULL;
 static HINSTANCE g_hInstance = NULL;
 static BOOL g_trayIconActive = FALSE;
+static BOOL g_trayBackgroundWorkEnabled = FALSE;
 
 /** @brief Opacity tooltip mode flag */
 BOOL g_showingOpacityTip = FALSE;
@@ -91,6 +92,16 @@ static BOOL IsTrayIconActiveForWindow(HWND hwnd) {
            g_trayIconActive &&
            nid.hWnd == hwnd &&
            nid.uID == CLOCK_ID_TRAY_APP_ICON;
+}
+
+static void StartTrayTipTimerIfNeeded(HWND hwnd) {
+    if (!g_trayBackgroundWorkEnabled || !IsTrayIconActiveForWindow(hwnd)) {
+        return;
+    }
+
+    if (!SetTimer(hwnd, TRAY_TIP_TIMER_ID, TOOLTIP_UPDATE_INTERVAL_MS, (TIMERPROC)TrayTipTimerProc)) {
+        LOG_WARNING("Failed to start tray tooltip timer (error=%lu)", GetLastError());
+    }
 }
 
 BOOL IsTrayIconActive(HWND hwnd) {
@@ -596,6 +607,7 @@ static void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
     g_lastRectUpdateTime = 0;
 
     if (startBackgroundWork) {
+        g_trayBackgroundWorkEnabled = TRUE;
         ReadPercentIconColorsConfig();
         SystemMonitor_Init();
     }
@@ -645,11 +657,7 @@ static void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
         RegisterTaskbarCreatedMessage();
     }
     
-    if (startBackgroundWork && g_trayIconActive) {
-        if (!SetTimer(hwnd, TRAY_TIP_TIMER_ID, TOOLTIP_UPDATE_INTERVAL_MS, (TIMERPROC)TrayTipTimerProc)) {
-            LOG_WARNING("Failed to start tray tooltip timer (error=%lu)", GetLastError());
-        }
-    }
+    StartTrayTipTimerIfNeeded(hwnd);
 
     /* Mouse hook is now installed on-demand when mouse hovers over tray icon */
 }
@@ -682,6 +690,7 @@ static void RemoveTrayIconInternal(BOOL finalCleanup) {
     if (finalCleanup) {
         SystemMonitor_Shutdown();
         CleanupTraySubmenuResources();
+        g_trayBackgroundWorkEnabled = FALSE;
     }
     if (g_trayIconActive && nid.hWnd) {
         Shell_NotifyIconW(NIM_DELETE, &nid);

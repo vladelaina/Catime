@@ -195,7 +195,6 @@ static void ReleaseUpdateNotesPaintBuffer(void) {
 static BOOL EnsureUpdateNotesPaintBuffer(HDC hdc, int width, int height, HDC* outHdc) {
     if (!hdc || !outHdc || width <= 0 || height <= 0) return FALSE;
     if ((size_t)width > (size_t)UPDATE_NOTES_MAX_PAINT_PIXELS / (size_t)height) {
-        ReleaseUpdateNotesPaintBuffer();
         return FALSE;
     }
 
@@ -218,8 +217,6 @@ static BOOL EnsureUpdateNotesPaintBuffer(HDC hdc, int width, int height, HDC* ou
         return TRUE;
     }
 
-    ReleaseUpdateNotesPaintBuffer();
-
     HDC memDC = CreateCompatibleDC(hdc);
     if (!memDC) {
         return FALSE;
@@ -237,6 +234,8 @@ static BOOL EnsureUpdateNotesPaintBuffer(HDC hdc, int width, int height, HDC* ou
         DeleteDC(memDC);
         return FALSE;
     }
+
+    ReleaseUpdateNotesPaintBuffer();
 
     g_notesPaintBuffer.hdc = memDC;
     g_notesPaintBuffer.bitmap = bitmap;

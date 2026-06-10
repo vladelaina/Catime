@@ -774,24 +774,20 @@ static BOOL SetDrawingRenderAnimationTimer(HWND hwnd, UINT interval) {
         return TRUE;
     }
 
-    HWND previousHwnd = s_renderAnimationTimerHwnd;
-    BOOL hadPreviousTimer = s_renderAnimationTimerActive;
-
-    if (hadPreviousTimer) {
-        HWND killHwnd = IsValidRenderAnimationWindow(previousHwnd) ? previousHwnd : hwnd;
-        if (IsValidRenderAnimationWindow(killHwnd)) {
-            KillTimer(killHwnd, TIMER_ID_RENDER_ANIMATION);
-        }
-    }
-
     if (!SetTimer(hwnd, TIMER_ID_RENDER_ANIMATION, interval, NULL)) {
-        s_renderAnimationTimerActive = FALSE;
-        s_renderAnimationTimerInterval = 0;
-        s_renderAnimationTimerHwnd = NULL;
         WriteLog(LOG_LEVEL_WARNING,
                  "Failed to set render animation timer (interval=%u, error=%lu)",
                  interval, GetLastError());
         return FALSE;
+    }
+
+    HWND previousHwnd = s_renderAnimationTimerHwnd;
+    BOOL hadPreviousTimer = s_renderAnimationTimerActive;
+    if (hadPreviousTimer && previousHwnd != hwnd) {
+        HWND killHwnd = IsValidRenderAnimationWindow(previousHwnd) ? previousHwnd : NULL;
+        if (killHwnd) {
+            KillTimer(killHwnd, TIMER_ID_RENDER_ANIMATION);
+        }
     }
 
     s_renderAnimationTimerActive = TRUE;
@@ -1132,7 +1128,6 @@ static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP*
     }
     if (pixelCount > MAX_RENDER_DIB_PIXELS) {
         WriteLog(LOG_LEVEL_WARNING, "Render DIB too large: %dx%d", rect->right, rect->bottom);
-        ReleaseRenderDibCache();
         return FALSE;
     }
 
@@ -1144,10 +1139,8 @@ static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP*
         return TRUE;
     }
 
-    ReleaseRenderDibCache();
-
-    *memDC = CreateCompatibleDC(hdc);
-    if (!*memDC) {
+    HDC newMemDC = CreateCompatibleDC(hdc);
+    if (!newMemDC) {
         return FALSE;
     }
 
@@ -1160,37 +1153,44 @@ static BOOL SetupDoubleBufferDIB(HDC hdc, const RECT* rect, HDC* memDC, HBITMAP*
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
 
-    *memBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, ppvBits, NULL, 0);
-    if (!*memBitmap) {
-        DeleteDC(*memDC);
+    void* newBits = NULL;
+    HBITMAP newBitmap = CreateDIBSection(hdc, &bmi, DIB_RGB_COLORS, &newBits, NULL, 0);
+    if (!newBitmap || !newBits) {
+        if (newBitmap) DeleteObject(newBitmap);
+        DeleteDC(newMemDC);
         return FALSE;
     }
 
-    *oldBitmap = (HBITMAP)SelectObject(*memDC, *memBitmap);
-    if (!*oldBitmap) {
-        DeleteObject(*memBitmap);
-        DeleteDC(*memDC);
-        *memBitmap = NULL;
-        *memDC = NULL;
+    HBITMAP newOldBitmap = (HBITMAP)SelectObject(newMemDC, newBitmap);
+    if (!newOldBitmap) {
+        DeleteObject(newBitmap);
+        DeleteDC(newMemDC);
         return FALSE;
     }
 
-    SetGraphicsMode(*memDC, GM_ADVANCED);
-    SetBkMode(*memDC, TRANSPARENT);
-    SetStretchBltMode(*memDC, HALFTONE);
-    SetBrushOrgEx(*memDC, 0, 0, NULL);
-    SetTextAlign(*memDC, TA_LEFT | TA_TOP);
-    SetTextCharacterExtra(*memDC, 0);
-    SetMapMode(*memDC, MM_TEXT);
-    SetICMMode(*memDC, ICM_ON);
-    SetLayout(*memDC, 0);
+    SetGraphicsMode(newMemDC, GM_ADVANCED);
+    SetBkMode(newMemDC, TRANSPARENT);
+    SetStretchBltMode(newMemDC, HALFTONE);
+    SetBrushOrgEx(newMemDC, 0, 0, NULL);
+    SetTextAlign(newMemDC, TA_LEFT | TA_TOP);
+    SetTextCharacterExtra(newMemDC, 0);
+    SetMapMode(newMemDC, MM_TEXT);
+    SetICMMode(newMemDC, ICM_ON);
+    SetLayout(newMemDC, 0);
 
-    g_renderDibCache.memDC = *memDC;
-    g_renderDibCache.memBitmap = *memBitmap;
-    g_renderDibCache.oldBitmap = *oldBitmap;
-    g_renderDibCache.bits = *ppvBits;
+    ReleaseRenderDibCache();
+
+    g_renderDibCache.memDC = newMemDC;
+    g_renderDibCache.memBitmap = newBitmap;
+    g_renderDibCache.oldBitmap = newOldBitmap;
+    g_renderDibCache.bits = newBits;
     g_renderDibCache.width = rect->right;
     g_renderDibCache.height = rect->bottom;
+
+    *memDC = g_renderDibCache.memDC;
+    *memBitmap = g_renderDibCache.memBitmap;
+    *oldBitmap = g_renderDibCache.oldBitmap;
+    *ppvBits = g_renderDibCache.bits;
 
     return TRUE;
 }
@@ -1394,16 +1394,12 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     EnsureMarkdownRenderCache(timeText);
 
     BOOL isMarkdown = g_markdownRenderCache.isMarkdown;
-    MarkdownLink* links = g_markdownRenderCache.links; int linkCount = g_markdownRenderCache.linkCount;
-    const MarkdownHeading* headings = g_markdownRenderCache.headings; int headingCount = g_markdownRenderCache.headingCount;
-    MarkdownStyle* styles = g_markdownRenderCache.styles; int styleCount = g_markdownRenderCache.styleCount;
-    MarkdownListItem* listItems = g_markdownRenderCache.listItems; int listItemCount = g_markdownRenderCache.listItemCount;
-    MarkdownBlockquote* blockquotes = g_markdownRenderCache.blockquotes; int blockquoteCount = g_markdownRenderCache.blockquoteCount;
-    MarkdownColorTag* colorTags = g_markdownRenderCache.colorTags; int colorTagCount = g_markdownRenderCache.colorTagCount;
-    const MarkdownFontTag* fontTags = g_markdownRenderCache.fontTags; int fontTagCount = g_markdownRenderCache.fontTagCount;
-
-    (void)listItems;
-    (void)listItemCount;
+    const MarkdownHeading* headings = g_markdownRenderCache.headings;
+    int headingCount = g_markdownRenderCache.headingCount;
+    MarkdownColorTag* colorTags = g_markdownRenderCache.colorTags;
+    int colorTagCount = g_markdownRenderCache.colorTagCount;
+    const MarkdownFontTag* fontTags = g_markdownRenderCache.fontTags;
+    int fontTagCount = g_markdownRenderCache.fontTagCount;
 
     const wchar_t* textToRender = (isMarkdown && g_markdownRenderCache.mdText) ? g_markdownRenderCache.mdText : timeText;
     BOOL hasText = textToRender[0] != L'\0';
@@ -1535,6 +1531,13 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
             }
 
             if (isMarkdown) {
+                MarkdownLink* links = g_markdownRenderCache.links;
+                int linkCount = g_markdownRenderCache.linkCount;
+                MarkdownStyle* styles = g_markdownRenderCache.styles;
+                int styleCount = g_markdownRenderCache.styleCount;
+                MarkdownBlockquote* blockquotes = g_markdownRenderCache.blockquotes;
+                int blockquoteCount = g_markdownRenderCache.blockquoteCount;
+
                 RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
                                   links, linkCount, headings, headingCount, styles, styleCount,
                                   blockquotes, blockquoteCount, colorTags, colorTagCount,

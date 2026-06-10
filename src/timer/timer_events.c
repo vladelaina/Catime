@@ -182,8 +182,6 @@ static BOOL HandleRetryTimer(HWND hwnd, UINT timerId, int* retryCount, RetrySetu
         if (!SetTimer(hwnd, timerId, RETRY_INTERVAL_MS, NULL)) {
             LOG_WARNING("Retry timer %u failed to reschedule (error: %lu)",
                         timerId, GetLastError());
-            *retryCount = 0;
-            KillTimer(hwnd, timerId);
         }
     } else {
         KillTimer(hwnd, timerId);

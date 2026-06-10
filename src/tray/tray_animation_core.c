@@ -591,6 +591,17 @@ static BOOL EnsurePreviewWorkerStartedLocked(void) {
     return TRUE;
 }
 
+static BOOL IsPreviewWorkerRetiringAfterCleanup(void) {
+    BOOL retiring = FALSE;
+
+    AcquireSRWLockExclusive(&g_previewWorkerLock);
+    CleanupCompletedPreviewWorkerLocked();
+    retiring = g_previewWorkerRetiring;
+    ReleaseSRWLockExclusive(&g_previewWorkerLock);
+
+    return retiring;
+}
+
 static BOOL WaitForPreviewRequestQuiet(HANDLE stopEvent, HANDLE requestEvent) {
     HANDLE waitHandles[2] = { stopEvent, requestEvent };
 
@@ -1101,6 +1112,12 @@ static void TrayAnimationTimerCallback(void* userData) {
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     StopAcceptingRuntimeUse();
 
+    if (IsPreviewWorkerRetiringAfterCleanup()) {
+        WriteLog(LOG_LEVEL_WARNING,
+                 "StartTrayAnimation deferred because preview worker is still retiring");
+        return;
+    }
+
     if (!IsValidTrayAnimationWindow(hwnd)) {
         g_trayHwnd = NULL;
         g_pendingTrayUpdate = FALSE;
@@ -1219,29 +1236,33 @@ void StopTrayAnimation(HWND hwnd) {
     }
     InterlockedIncrement(&g_previewRequestSerial);
 
-    if (!ShutdownPreviewWorker()) {
+    BOOL previewWorkerStopped = ShutdownPreviewWorker();
+    if (!previewWorkerStopped) {
         WriteLog(LOG_LEVEL_WARNING,
-                 "Preview worker is still retiring; preview requests will stay disabled until it exits");
+                 "Preview worker is still retiring; animation resources will be retained until process exit");
     }
 
     CleanupAnimationTimer();
 
-    LoadedAnimation_Free(&g_mainAnimation);
-    LoadedAnimation_Free(&g_previewAnimation);
-    g_mainAnimationPreloaded = FALSE;
-    g_preloadedIconCx = 0;
-    g_preloadedIconCy = 0;
+    if (previewWorkerStopped) {
+        LoadedAnimation_Free(&g_mainAnimation);
+        LoadedAnimation_Free(&g_previewAnimation);
+        g_mainAnimationPreloaded = FALSE;
+        g_preloadedIconCx = 0;
+        g_preloadedIconCy = 0;
+    }
     CleanupPercentIconCache();
     CleanupTransparentTrayIcon();
 
-    if (g_memoryPool) {
+    if (previewWorkerStopped && g_memoryPool) {
         MemoryPool_Destroy(g_memoryPool);
         g_memoryPool = NULL;
     }
 
     WaitWhileLongEquals(&g_criticalSectionInitialized, ANIM_CS_INITIALIZING);
 
-    if (InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZED) {
+    if (previewWorkerStopped &&
+        InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZED) {
         DeleteCriticalSection(&g_animCriticalSection);
         InterlockedExchange(&g_criticalSectionInitialized, ANIM_CS_UNINITIALIZED);
     }
@@ -1748,6 +1769,12 @@ done:
  * @brief Preload animation from config
  */
 void PreloadAnimationFromConfig(void) {
+    if (IsPreviewWorkerRetiringAfterCleanup()) {
+        WriteLog(LOG_LEVEL_WARNING,
+                 "PreloadAnimationFromConfig skipped because preview worker is still retiring");
+        return;
+    }
+
     char config_path[MAX_PATH] = {0};
     GetConfigPath(config_path, sizeof(config_path));
     ReadAnimationNameFromConfig(g_animationName, sizeof(g_animationName), config_path);
@@ -1843,17 +1870,11 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (!LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy)) {
-        char config_path[MAX_PATH] = {0};
-        GetConfigPath(config_path, sizeof(config_path));
-        WriteLog(LOG_LEVEL_WARNING, "Failed to apply tray animation '%s', falling back to logo", name);
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Ignoring hot-reloaded tray animation '%s' because it could not be loaded",
+                 name);
         LoadedAnimation_Free(&newMain);
-        if (LoadAnimationByName("__logo__", &newMain, g_memoryPool, cx, cy)) {
-            CopyStringExactA("__logo__", name, sizeof(name));
-            WriteAnimationConfigPathIfChanged(config_path, "__logo__");
-        } else {
-            LoadedAnimation_Free(&newMain);
-            goto done;
-        }
+        goto done;
     }
 
     if (_stricmp(g_animationName, name) == 0) {

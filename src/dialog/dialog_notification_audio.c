@@ -174,7 +174,7 @@ static int ScanNotificationSoundFiles(wchar_t files[][MAX_PATH], int capacity,
     return fileCount;
 }
 
-static BOOL StoreNotificationSoundCache(wchar_t files[][MAX_PATH], int fileCount,
+static BOOL StoreNotificationSoundCache(const wchar_t* files, int fileCount,
                                         LONG generation) {
     if (IsSoundScanCanceled(generation)) {
         return FALSE;
@@ -258,12 +258,17 @@ static BOOL CloseRetiredSoundScanThreadLocked(DWORD waitMs) {
 static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh) {
     AcquireSRWLockExclusive(&g_soundScanThreadLock);
 
-    if (IsSoundScanShuttingDown()) {
+    if (!CloseRetiredSoundScanThreadLocked(0)) {
         ReleaseSRWLockExclusive(&g_soundScanThreadLock);
         return;
     }
 
-    if (!CloseRetiredSoundScanThreadLocked(0)) {
+    if (!g_hRetiredSoundScanThread &&
+        InterlockedCompareExchange(&g_soundScanShuttingDown, 0, 0) != 0) {
+        InterlockedExchange(&g_soundScanShuttingDown, 0);
+    }
+
+    if (IsSoundScanShuttingDown()) {
         ReleaseSRWLockExclusive(&g_soundScanThreadLock);
         return;
     }
@@ -313,7 +318,7 @@ static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam) {
     int fileCount = ScanNotificationSoundFiles(files, NOTIFICATION_SOUND_ENTRY_LIMIT, generation);
 
     if (fileCount >= 0) {
-        StoreNotificationSoundCache(files, fileCount, generation);
+        StoreNotificationSoundCache(&files[0][0], fileCount, generation);
     } else if (!IsSoundScanCanceled(generation)) {
         MarkNotificationSoundCacheScanFailed();
     }
@@ -379,8 +384,12 @@ void NotificationSoundCache_Shutdown(void) {
             if (wait == WAIT_TIMEOUT) {
                 AcquireSRWLockExclusive(&g_soundScanThreadLock);
                 if (g_hSoundScanThread == hThread) {
-                    g_hRetiredSoundScanThread = g_hSoundScanThread;
                     g_hSoundScanThread = NULL;
+                    if (CloseRetiredSoundScanThreadLocked(0)) {
+                        g_hRetiredSoundScanThread = hThread;
+                    } else {
+                        CloseHandle(hThread);
+                    }
                 }
                 ReleaseSRWLockExclusive(&g_soundScanThreadLock);
             }

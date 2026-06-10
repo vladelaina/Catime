@@ -442,12 +442,14 @@ void HandleStartupMode(HWND hwnd) {
             CLOCK_COUNT_UP = false;
             countdown_elapsed_time = 0;
             
-            if (CLOCK_TOTAL_TIME <= 0) {
-                CLOCK_TOTAL_TIME = g_AppConfig.timer.default_start_time;
+            int startupTime = CLOCK_TOTAL_TIME;
+            if (startupTime <= 0) {
+                startupTime = g_AppConfig.timer.default_start_time;
             }
-            if (CLOCK_TOTAL_TIME <= 0) {
-                CLOCK_TOTAL_TIME = 60;
+            if (startupTime <= 0) {
+                startupTime = 60;
             }
+            CLOCK_TOTAL_TIME = startupTime;
             
             ResetTimer();
             break;
@@ -707,10 +709,14 @@ void CleanupResources(HANDLE hMutex) {
     ShutdownWindowVisualEffects();
 
     LOG_INFO("Stopping config watcher");
-    ConfigWatcher_Shutdown();
+    BOOL configWatcherStopped = ConfigWatcher_Shutdown();
 
-    LOG_INFO("Shutting down INI cache");
-    ShutdownIniCache();
+    if (configWatcherStopped) {
+        LOG_INFO("Shutting down INI cache");
+        ShutdownIniCache();
+    } else {
+        LOG_WARNING("Config watcher did not stop; keeping INI cache alive for late watcher cleanup");
+    }
 
     LOG_INFO("Cleaning up language resources");
     CleanupLanguage();

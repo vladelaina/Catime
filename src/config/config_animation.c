@@ -73,6 +73,20 @@ static AnimationSpeedMetric NormalizeAnimationSpeedMetric(AnimationSpeedMetric m
     }
 }
 
+static double NormalizeAnimationSpeedScalePercent(double scalePercent,
+                                                  double fallbackPercent) {
+    if (!isfinite(scalePercent)) {
+        return fallbackPercent;
+    }
+    if (scalePercent < ANIM_SPEED_SCALE_MIN_PERCENT) {
+        return fallbackPercent;
+    }
+    if (scalePercent > ANIM_SPEED_SCALE_MAX_PERCENT) {
+        return ANIM_SPEED_SCALE_MAX_PERCENT;
+    }
+    return scalePercent;
+}
+
 static int CmpAnimSpeedPoint(const void* a, const void* b) {
     const AnimSpeedPoint* pa = (const AnimSpeedPoint*)a;
     const AnimSpeedPoint* pb = (const AnimSpeedPoint*)b;
@@ -163,8 +177,7 @@ static void ParseAnimationSpeedFixedKeys(const char* configPathUtf8,
 
     {
         int def = ReadIniInt("Animation", "ANIMATION_SPEED_DEFAULT", 100, configPathUtf8);
-        if (def <= 0) def = 100;
-        *defaultScalePercent = (double)def;
+        *defaultScalePercent = NormalizeAnimationSpeedScalePercent((double)def, 100.0);
     }
 
     wchar_t wSection[64];

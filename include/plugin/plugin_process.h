@@ -47,6 +47,13 @@ void PluginProcess_SetLastError(const wchar_t* errorMsg);
 BOOL PluginProcess_TerminateDetached(PluginInfo* plugin);
 
 /**
+ * @brief Close a plugin monitor thread handle with optional bounded wait
+ * @param hThread Monitor thread handle to close
+ * @param waitForExit TRUE to wait briefly unless called from that thread
+ */
+void PluginProcess_CloseMonitorThreadHandle(HANDLE hThread, BOOL waitForExit);
+
+/**
  * @brief Terminate all orphaned processes in Job Object
  * @note Call this before starting a new plugin to ensure single-instance
  *       This catches child processes that outlived their parent script

@@ -87,7 +87,7 @@ static BOOL GetJobProcessIdListBufferSize(DWORD processCount, size_t* bufferSize
     return TRUE;
 }
 
-static void CloseMonitorThreadHandle(HANDLE hThread, BOOL waitForExit) {
+void PluginProcess_CloseMonitorThreadHandle(HANDLE hThread, BOOL waitForExit) {
     if (!hThread) return;
 
     if (waitForExit) {
@@ -115,7 +115,7 @@ static void ClearPluginProcessHandles(PluginInfo* plugin, BOOL waitForMonitorThr
         CloseHandle(hProcToClose);
     }
     if (hThreadToClose) {
-        CloseMonitorThreadHandle(hThreadToClose, waitForMonitorThread);
+        PluginProcess_CloseMonitorThreadHandle(hThreadToClose, waitForMonitorThread);
     }
     memset(&plugin->pi, 0, sizeof(plugin->pi));
 }
@@ -878,7 +878,7 @@ BOOL PluginProcess_TerminateDetached(PluginInfo* plugin) {
     }
 
     if (hThread) {
-        CloseMonitorThreadHandle(hThread, TRUE);
+        PluginProcess_CloseMonitorThreadHandle(hThread, TRUE);
     }
 
     return TRUE;

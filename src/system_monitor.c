@@ -782,8 +782,15 @@ void SystemMonitor_Shutdown(void) {
             if (waitResult == WAIT_TIMEOUT) {
                 OutputDebugStringW(L"SystemMonitor: network refresh worker did not exit before shutdown timeout\n");
             }
-            g_retiredNetworkRefreshThread = hRefreshThread;
-            g_retiredNetworkRefreshEvent = hRefreshEvent;
+            if (CleanupRetiredNetworkRefreshWorkerLocked(0)) {
+                g_retiredNetworkRefreshThread = hRefreshThread;
+                g_retiredNetworkRefreshEvent = hRefreshEvent;
+            } else {
+                CloseHandle(hRefreshThread);
+                if (hRefreshEvent) {
+                    CloseHandle(hRefreshEvent);
+                }
+            }
             hRefreshThread = NULL;
             hRefreshEvent = NULL;
         }

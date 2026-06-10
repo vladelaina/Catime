@@ -96,19 +96,25 @@ static void StartTrayHoverDetection(HWND hwnd) {
         return;
     }
 
-    if (g_hoverCheckTimer && IsValidTrayEventWindow(g_trayEventHwnd)) {
-        KillTimer(g_trayEventHwnd, TRAY_HOVER_CHECK_TIMER_ID);
-    }
-
-    g_hoverCheckTimer = 0;
-    g_trayEventHwnd = hwnd;
-    g_hoverCheckTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID,
+    HWND previousHwnd = g_trayEventHwnd;
+    UINT_PTR newTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID,
                                  TRAY_HOVER_CHECK_INTERVAL_MS, TrayHoverCheckTimerProc);
-    if (!g_hoverCheckTimer) {
+    if (!newTimer) {
         LOG_WARNING("Tray hover detection timer creation failed (error=%lu)",
                     GetLastError());
-        g_trayEventHwnd = NULL;
+        if (g_hoverCheckTimer && !IsValidTrayEventWindow(g_trayEventHwnd)) {
+            g_hoverCheckTimer = 0;
+            g_trayEventHwnd = NULL;
+        }
+        return;
     }
+
+    if (g_hoverCheckTimer && previousHwnd != hwnd &&
+        IsValidTrayEventWindow(previousHwnd)) {
+        KillTimer(previousHwnd, TRAY_HOVER_CHECK_TIMER_ID);
+    }
+    g_hoverCheckTimer = newTimer;
+    g_trayEventHwnd = hwnd;
 }
 
 /**

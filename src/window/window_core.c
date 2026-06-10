@@ -309,7 +309,6 @@ BOOL BeginSystemPositionChangeGuard(HWND hwnd) {
         return FALSE;
     }
 
-    KillTimer(hwnd, TIMER_ID_DISPLAY_RESTORE);
     if (!SetTimer(hwnd, TIMER_ID_DISPLAY_RESTORE, 750, NULL)) {
         LOG_WARNING("Failed to schedule display restore timer (error=%lu)",
                     GetLastError());

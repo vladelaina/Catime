@@ -372,13 +372,23 @@ static void BeginNotificationFadeOut(HWND hwnd, NotificationData* data) {
     }
 }
 
+static BOOL TrySavePendingNotificationOpacity(NotificationData* data) {
+    if (!data || !data->opacitySavePending) return TRUE;
+
+    if (!WriteConfigNotificationOpacity(data->pendingOpacity)) {
+        return FALSE;
+    }
+
+    data->opacitySavePending = FALSE;
+    data->opacitySaveRetryCount = 0;
+    return TRUE;
+}
+
 static void FlushPendingNotificationOpacity(HWND hwnd, NotificationData* data, BOOL allowRetry) {
     if (!data || !data->opacitySavePending) return;
 
     KillTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID);
-    if (WriteConfigNotificationOpacity(data->pendingOpacity)) {
-        data->opacitySavePending = FALSE;
-        data->opacitySaveRetryCount = 0;
+    if (TrySavePendingNotificationOpacity(data)) {
         return;
     }
 
@@ -419,7 +429,6 @@ static BOOL EnsureNotificationPaintBuffer(HDC hdc, NotificationData* data,
                                           int width, int height, HDC* outMemDC) {
     if (!hdc || !data || !outMemDC || width <= 0 || height <= 0) return FALSE;
     if ((size_t)width > (size_t)NOTIFICATION_MAX_PAINT_PIXELS / (size_t)height) {
-        ReleaseNotificationPaintBuffer(data);
         return FALSE;
     }
 
@@ -440,8 +449,6 @@ static BOOL EnsureNotificationPaintBuffer(HDC hdc, NotificationData* data,
         return TRUE;
     }
 
-    ReleaseNotificationPaintBuffer(data);
-
     HDC memDC = CreateCompatibleDC(hdc);
     if (!memDC) {
         return FALSE;
@@ -459,6 +466,8 @@ static BOOL EnsureNotificationPaintBuffer(HDC hdc, NotificationData* data,
         DeleteDC(memDC);
         return FALSE;
     }
+
+    ReleaseNotificationPaintBuffer(data);
 
     data->paintDC = memDC;
     data->paintBitmap = bitmap;
@@ -1040,10 +1049,9 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 data->pendingOpacity = currentOpacity;
                 data->opacitySavePending = TRUE;
                 data->opacitySaveRetryCount = 0;
-                KillTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID);
                 if (SetTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID,
                              NOTIFICATION_OPACITY_SAVE_DELAY_MS, NULL) == 0) {
-                    FlushPendingNotificationOpacity(hwnd, data, TRUE);
+                    TrySavePendingNotificationOpacity(data);
                 }
             }
             return 0;

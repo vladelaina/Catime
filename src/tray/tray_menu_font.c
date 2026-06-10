@@ -457,6 +457,11 @@ void FontMenu_RequestScanAsync(void) {
         return;
     }
 
+    if (!g_hRetiredFontScanThread &&
+        InterlockedCompareExchange(&g_fontScanShuttingDown, 0, 0) != 0) {
+        InterlockedExchange(&g_fontScanShuttingDown, 0);
+    }
+
     if (IsFontMenuScanShuttingDown()) {
         ReleaseSRWLockExclusive(&g_fontScanThreadLock);
         return;
@@ -531,8 +536,12 @@ void FontMenu_Shutdown(void) {
             if (wait == WAIT_TIMEOUT) {
                 AcquireSRWLockExclusive(&g_fontScanThreadLock);
                 if (g_hFontScanThread == hThread) {
-                    g_hRetiredFontScanThread = g_hFontScanThread;
                     g_hFontScanThread = NULL;
+                    if (CleanupRetiredFontScanThreadLocked(0)) {
+                        g_hRetiredFontScanThread = hThread;
+                    } else {
+                        CloseHandle(hThread);
+                    }
                 }
                 ReleaseSRWLockExclusive(&g_fontScanThreadLock);
             }
@@ -597,7 +606,7 @@ static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name, BOOL shouldCheck)
         mii.dwTypeData = buffer;
         mii.cch = MAX_PATH;
         if (GetMenuItemInfoW(hParent, i, TRUE, &mii)) {
-            if (mii.hSubMenu && wcscmp(buffer, name) == 0) {
+            if (mii.hSubMenu && _wcsicmp(buffer, name) == 0) {
                 if (shouldCheck && !(mii.fState & MFS_CHECKED)) {
                     mii.fState |= MFS_CHECKED;
                     SetMenuItemInfoW(hParent, i, TRUE, &mii);
@@ -672,7 +681,7 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, const FontEntry* entries, 
 
                     BOOL found = FALSE;
                     for (int j = 0; j < parentDirCount; j++) {
-                        if (wcscmp(parentDirs[j], currentPath) == 0) {
+                        if (_wcsicmp(parentDirs[j], currentPath) == 0) {
                             found = TRUE;
                             break;
                         }
@@ -718,7 +727,7 @@ static void BuildFontMenuFromEntries(HMENU hRootMenu, const FontEntry* entries, 
                 BOOL shouldCheck = FALSE;
                 if (parentDirs) {
                     for (int j = 0; j < parentDirCount; j++) {
-                        if (wcscmp(parentDirs[j], currentPath) == 0) {
+                        if (_wcsicmp(parentDirs[j], currentPath) == 0) {
                             shouldCheck = TRUE;
                             break;
                         }

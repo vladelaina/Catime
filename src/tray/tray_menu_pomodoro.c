@@ -33,7 +33,7 @@ static BOOL ParsePositiveSecondsToken(const char* token, int* seconds) {
     char* end = NULL;
     long parsed = strtol(token, &end, 10);
     if (end == token || errno == ERANGE ||
-        parsed <= 0 || parsed > MAX_POMODORO_OPTION_SECONDS || parsed > INT_MAX) {
+        parsed <= 0 || parsed > MAX_POMODORO_OPTION_SECONDS) {
         return FALSE;
     }
 

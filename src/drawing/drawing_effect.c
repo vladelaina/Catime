@@ -111,8 +111,6 @@ static BOOL EnsureEffectBuffers(int neededSize) {
         ResetEffectBufferShrinkCandidate();
     }
 
-    FreeEffectBuffers();
-
     unsigned char* newBuffer1 = (unsigned char*)malloc((size_t)neededSize);
     unsigned char* newBuffer2 = (unsigned char*)malloc((size_t)neededSize);
     unsigned char* newBuffer3 = (unsigned char*)malloc((size_t)neededSize);
@@ -124,6 +122,7 @@ static BOOL EnsureEffectBuffers(int neededSize) {
         return FALSE;
     }
 
+    FreeEffectBuffers();
     g_effectBuffer1 = newBuffer1;
     g_effectBuffer2 = newBuffer2;
     g_effectBuffer3 = newBuffer3;

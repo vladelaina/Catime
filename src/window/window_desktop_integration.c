@@ -171,6 +171,7 @@ static BOOL ScheduleTopmostApplyRetry(HWND hwnd, BOOL targetTopmost) {
     if (!IsWindow(hwnd)) return FALSE;
 
     BOOL targetChanged = (s_topmostApplyRetryTarget != targetTopmost);
+    BOOL hadActiveRetry = s_topmostApplyRetryActive && !targetChanged;
 
     if (!targetChanged && IsTopmostRetryCoolingDown(targetTopmost)) {
         return FALSE;
@@ -184,8 +185,10 @@ static BOOL ScheduleTopmostApplyRetry(HWND hwnd, BOOL targetTopmost) {
 
     if (!SetTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY, TOPMOST_APPLY_RETRY_INTERVAL_MS, NULL)) {
         LOG_WARNING("Failed to schedule topmost apply retry (err=%lu)", GetLastError());
-        s_topmostApplyRetriesRemaining = 0;
-        s_topmostApplyRetryActive = FALSE;
+        if (!hadActiveRetry) {
+            s_topmostApplyRetriesRemaining = 0;
+            s_topmostApplyRetryActive = FALSE;
+        }
         return FALSE;
     }
     s_topmostApplyRetryActive = TRUE;
@@ -555,8 +558,6 @@ BOOL HandleTopmostApplyRetry(HWND hwnd) {
     } else {
         if (!SetTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY, TOPMOST_APPLY_RETRY_INTERVAL_MS, NULL)) {
             LOG_WARNING("Failed to continue topmost apply retry timer (err=%lu)", GetLastError());
-            s_topmostApplyRetriesRemaining = 0;
-            s_topmostApplyRetryActive = FALSE;
         }
     }
 

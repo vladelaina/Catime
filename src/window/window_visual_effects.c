@@ -149,14 +149,22 @@ static BOOL StartClickThroughTimer(HWND hwnd) {
         return TRUE;
     }
 
-    StopClickThroughTimer(NULL);
-    g_clickThroughTimerActive = SetTimer(hwnd, TIMER_ID_CLICK_THROUGH,
-                                         CLICK_THROUGH_CHECK_INTERVAL, NULL) != 0;
-    if (!g_clickThroughTimerActive) {
+    if (!SetTimer(hwnd, TIMER_ID_CLICK_THROUGH,
+                  CLICK_THROUGH_CHECK_INTERVAL, NULL)) {
         LOG_WARNING("Failed to start click-through timer (error=%lu)", GetLastError());
+        return FALSE;
     }
-    g_clickThroughTimerHwnd = g_clickThroughTimerActive ? hwnd : NULL;
-    return g_clickThroughTimerActive;
+
+    HWND previousHwnd = g_clickThroughTimerHwnd;
+    if (g_clickThroughTimerActive &&
+        previousHwnd != hwnd &&
+        IsValidVisualEffectsWindow(previousHwnd)) {
+        KillTimer(previousHwnd, TIMER_ID_CLICK_THROUGH);
+    }
+
+    g_clickThroughTimerActive = TRUE;
+    g_clickThroughTimerHwnd = hwnd;
+    return TRUE;
 }
 
 static void RestoreInteractiveClickThroughStyle(HWND hwnd) {

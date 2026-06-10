@@ -454,6 +454,11 @@ void AnimationMenu_RequestScanAsync(void) {
         return;
     }
 
+    if (!g_hRetiredAnimScanThread &&
+        InterlockedCompareExchange(&g_animScanShuttingDown, 0, 0) != 0) {
+        InterlockedExchange(&g_animScanShuttingDown, 0);
+    }
+
     if (IsAnimationMenuScanShuttingDown()) {
         ReleaseSRWLockExclusive(&g_animScanThreadLock);
         return;
@@ -528,8 +533,12 @@ void AnimationMenu_Shutdown(void) {
             if (wait == WAIT_TIMEOUT) {
                 AcquireSRWLockExclusive(&g_animScanThreadLock);
                 if (g_hAnimScanThread == hThread) {
-                    g_hRetiredAnimScanThread = g_hAnimScanThread;
                     g_hAnimScanThread = NULL;
+                    if (CleanupRetiredAnimScanThreadLocked(0)) {
+                        g_hRetiredAnimScanThread = hThread;
+                    } else {
+                        CloseHandle(hThread);
+                    }
                 }
                 ReleaseSRWLockExclusive(&g_animScanThreadLock);
             }
@@ -589,7 +598,7 @@ static HMENU EnsureSubMenu(HMENU hParent, const wchar_t* name) {
         mii.dwTypeData = buffer;
         mii.cch = MAX_PATH;
         if (GetMenuItemInfoW(hParent, i, TRUE, &mii)) {
-            if (mii.hSubMenu && wcscmp(buffer, name) == 0) {
+            if (mii.hSubMenu && _wcsicmp(buffer, name) == 0) {
                 return mii.hSubMenu;
             }
         }

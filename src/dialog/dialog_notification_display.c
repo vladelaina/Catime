@@ -90,7 +90,7 @@ static BOOL ParseOpacityInput(const char* text, int* opacity) {
     errno = 0;
     char* end = NULL;
     long parsed = strtol(text, &end, 10);
-    if (end == text || errno == ERANGE || parsed < 1 || parsed > 100 || parsed > INT_MAX) {
+    if (end == text || errno == ERANGE || parsed < 1 || parsed > 100) {
         return FALSE;
     }
 

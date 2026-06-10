@@ -161,6 +161,12 @@ static void ReleaseCachedImageEntry(CachedImageEntry* entry) {
     ZeroMemory(entry, sizeof(*entry));
 }
 
+static void ReleaseStaleReplacementImage(CachedImageEntry* replacementSlot) {
+    if (replacementSlot) {
+        ReleaseCachedImageEntry(replacementSlot);
+    }
+}
+
 static BOOL CalculateImagePixelCount(UINT width, UINT height, size_t* outPixels) {
     if (!outPixels || width == 0 || height == 0) return FALSE;
     if ((size_t)width > ((size_t)-1) / (size_t)height) return FALSE;
@@ -258,6 +264,10 @@ static BOOL CopyFixedCachePathW(const wchar_t* imagePath, wchar_t* outPath) {
     return TRUE;
 }
 
+static BOOL ImageCachePathsEqual(const wchar_t* lhs, const wchar_t* rhs) {
+    return lhs && rhs && _wcsicmp(lhs, rhs) == 0;
+}
+
 static BOOL FailedImageEntryMatches(const FailedImageEntry* entry,
                                     const FILETIME* writeTime,
                                     BOOL hasWriteTime) {
@@ -279,7 +289,7 @@ static BOOL IsImageLoadFailureCached(const wchar_t* imagePath,
 
     for (int i = 0; i < MAX_FAILED_IMAGE_LOADS; i++) {
         FailedImageEntry* entry = &g_failedImageCache[i];
-        if (!entry->inUse || wcscmp(entry->path, cachePath) != 0) {
+        if (!entry->inUse || !ImageCachePathsEqual(entry->path, cachePath)) {
             continue;
         }
 
@@ -326,7 +336,7 @@ static void RecordImageLoadFailure(const wchar_t* imagePath,
             continue;
         }
 
-        if (wcscmp(entry->path, cachePath) == 0) {
+        if (ImageCachePathsEqual(entry->path, cachePath)) {
             target = entry;
             break;
         }
@@ -361,7 +371,7 @@ static void ClearImageLoadFailure(const wchar_t* imagePath) {
 
     for (int i = 0; i < MAX_FAILED_IMAGE_LOADS; i++) {
         FailedImageEntry* entry = &g_failedImageCache[i];
-        if (entry->inUse && wcscmp(entry->path, cachePath) == 0) {
+        if (entry->inUse && ImageCachePathsEqual(entry->path, cachePath)) {
             ZeroMemory(entry, sizeof(*entry));
             return;
         }
@@ -397,7 +407,7 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
             continue;
         }
 
-        if (wcscmp(entry->path, cachePath) == 0) {
+        if (ImageCachePathsEqual(entry->path, cachePath)) {
             if (entry->bitmap &&
                 (DWORD)(now - entry->lastValidateTick) < IMAGE_CACHE_REVALIDATE_MS) {
                 entry->lastAccessTick = now;
@@ -455,16 +465,19 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
     }
 
     if (IsImageLoadFailureCached(cachePath, &fileInfo.lastWriteTime, TRUE, now)) {
+        ReleaseStaleReplacementImage(replacementSlot);
         return NULL;
     }
 
     if (!IsImageFileSizeAllowed(cachePath, fileInfo.fileSizeBytes)) {
+        ReleaseStaleReplacementImage(replacementSlot);
         RecordImageLoadFailure(cachePath, &fileInfo.lastWriteTime, TRUE, now);
         return NULL;
     }
 
     GpBitmap bitmap = NULL;
     if (pGdipCreateBitmapFromFile(cachePath, &bitmap) != Ok || !bitmap) {
+        ReleaseStaleReplacementImage(replacementSlot);
         RecordImageLoadFailure(cachePath, &fileInfo.lastWriteTime, TRUE, now);
         return NULL;
     }
@@ -474,12 +487,14 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
     if (pGdipGetImageWidth((GpImage)bitmap, &w) != Ok ||
         pGdipGetImageHeight((GpImage)bitmap, &h) != Ok) {
         pGdipDisposeImage((GpImage)bitmap);
+        ReleaseStaleReplacementImage(replacementSlot);
         RecordImageLoadFailure(cachePath, &fileInfo.lastWriteTime, TRUE, now);
         return NULL;
     }
 
     if (w == 0 || h == 0 || w > INT_MAX || h > INT_MAX) {
         pGdipDisposeImage((GpImage)bitmap);
+        ReleaseStaleReplacementImage(replacementSlot);
         RecordImageLoadFailure(cachePath, &fileInfo.lastWriteTime, TRUE, now);
         return NULL;
     }
@@ -488,6 +503,7 @@ static CachedImageEntry* GetCachedImageEntry(const wchar_t* imagePath) {
     if (!CalculateImagePixelCount(w, h, &pixelCount) ||
         !EvictCachedImagesForPixelBudget(target, pixelCount)) {
         pGdipDisposeImage((GpImage)bitmap);
+        ReleaseStaleReplacementImage(replacementSlot);
         RecordImageLoadFailure(cachePath, &fileInfo.lastWriteTime, TRUE, now);
         return NULL;
     }

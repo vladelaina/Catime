@@ -333,6 +333,11 @@ typedef struct {
 
 static PendingNotification g_pendingNotify = {0};
 
+static void ResetPendingNotificationLocked(void) {
+    ZeroMemory(&g_pendingNotify, sizeof(g_pendingNotify));
+    g_lastNotifyTime = 0;
+}
+
 typedef enum {
     PLUGIN_PARSE_FAILED = 0,
     PLUGIN_PARSE_OK,
@@ -953,7 +958,7 @@ static void ResetPluginDataStateLocked(void) {
     g_hasPluginData = FALSE;
     FreePluginDataBuffersLocked();
     InvalidateLastOutputFileStateLocked();
-    g_pendingNotify.pending = FALSE;
+    ResetPendingNotificationLocked();
 }
 
 static BOOL CopyLastOutputFileStateLocked(FILETIME* writeTime, ULONGLONG* fileSize) {
@@ -1605,9 +1610,6 @@ void PluginData_Clear(void) {
     /* Reset poll interval to default */
     SetPollIntervalMs(DEFAULT_POLL_INTERVAL_MS);
     
-    /* Reset notification throttle */
-    g_lastNotifyTime = 0;
-    
     EnterCriticalSection(&g_dataCS);
     g_pluginModeActive = FALSE;  // Deactivate plugin mode
     g_hasPluginData = FALSE;
@@ -1615,7 +1617,7 @@ void PluginData_Clear(void) {
     ClearLastContentCacheLocked();
     InvalidateLastOutputFileStateLocked();
     /* Clear any pending notification to prevent stale notifications */
-    g_pendingNotify.pending = FALSE;
+    ResetPendingNotificationLocked();
     LeaveCriticalSection(&g_dataCS);
     if (!StopWatcherThreadIfIdle(PLUGIN_DATA_WATCHER_UI_STOP_WAIT_MS)) {
         LOG_WARNING("PluginData: Watcher stop deferred while clearing plugin data");
@@ -1727,7 +1729,7 @@ void PluginData_SetActive(BOOL active) {
         g_hasPluginData = FALSE;
         ClearPluginDisplayTextLocked();
         // Clear any pending notification
-        g_pendingNotify.pending = FALSE;
+        ResetPendingNotificationLocked();
     }
     LeaveCriticalSection(&g_dataCS);
 

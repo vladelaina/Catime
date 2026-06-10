@@ -238,6 +238,14 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             return 0;
         }
 
+        case WM_CAPTURECHANGED: {
+            if ((INT_PTR)GetProp(hwnd, L"ThumbDragging")) {
+                SetProp(hwnd, L"ThumbDragging", (HANDLE)0);
+                InvalidateRect(hwnd, NULL, TRUE);
+            }
+            break;
+        }
+
         case WM_MOUSEWHEEL: {
             int delta = GET_WHEEL_DELTA_WPARAM(wParam);
 
@@ -282,6 +290,9 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         }
 
         case WM_NCDESTROY:
+            if (GetCapture() == hwnd) {
+                ReleaseCapture();
+            }
             RemoveProp(hwnd, L"ScrollPos");
             RemoveProp(hwnd, L"ScrollMax");
             RemoveProp(hwnd, L"ScrollPage");

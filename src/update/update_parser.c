@@ -29,9 +29,14 @@ static BOOL ParseNonNegativeIntBounded(const char* text, int* value, const char*
     errno = 0;
     char* end = NULL;
     long parsed = strtol(text, &end, 10);
-    if (end == text || errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
+    if (end == text || errno == ERANGE || parsed < 0) {
         return FALSE;
     }
+#if LONG_MAX > INT_MAX
+    if (parsed > INT_MAX) {
+        return FALSE;
+    }
+#endif
 
     *value = (int)parsed;
     if (endOut) {

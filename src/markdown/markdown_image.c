@@ -386,13 +386,17 @@ static BOOL IsHexDigitW(wchar_t ch) {
 static BOOL IsGeneratedImageCacheFileName(const wchar_t* name) {
     if (!name) return FALSE;
 
+    const wchar_t* ext = wcsrchr(name, L'.');
+    if (!ext || ext - name != 16) {
+        return FALSE;
+    }
+
     for (int i = 0; i < 16; i++) {
         if (!IsHexDigitW(name[i])) {
             return FALSE;
         }
     }
 
-    const wchar_t* ext = name + 16;
     return _wcsicmp(ext, L".png") == 0 ||
            _wcsicmp(ext, L".jpg") == 0 ||
            _wcsicmp(ext, L".gif") == 0 ||

@@ -464,6 +464,12 @@ DropImportResult HandleDropFiles(HWND hwnd, HDROP hDrop) {
     InitializeDropImportTargetRoots(&state);
 
     for (UINT i = 0; i < fileCount && !state.truncated; i++) {
+        if (state.scannedEntries >= DROP_IMPORT_SCAN_ENTRY_BUDGET) {
+            state.truncated = TRUE;
+            break;
+        }
+        state.scannedEntries++;
+
         wchar_t filePath[MAX_PATH];
         if (!QueryDropFilePathExactW(hDrop, i, filePath, MAX_PATH)) {
             state.truncated = TRUE;

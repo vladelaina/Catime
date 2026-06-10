@@ -103,7 +103,24 @@ static BOOL GetSystemFontPath(const wchar_t* fontName, char* outPath,
     /* Build font file path - try common patterns */
     wchar_t fontPath[MAX_PATH];
     const wchar_t* extensions[] = {L".ttf", L".otf", L".ttc"};
-    
+
+    wchar_t lowerName[MAX_PATH];
+    if (wcscpy_s(lowerName, MAX_PATH, fontName) != 0 ||
+        _wcslwr_s(lowerName, MAX_PATH) != 0) {
+        return FALSE;
+    }
+
+    wchar_t noSpace[MAX_PATH];
+    const wchar_t* src = lowerName;
+    wchar_t* dst = noSpace;
+    while (*src) {
+        if (*src != L' ') {
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = L'\0';
+
     for (int i = 0; i < 3; i++) {
         if (ShouldStopFontEnumeration(stopEvent)) {
             return FALSE;
@@ -118,11 +135,8 @@ static BOOL GetSystemFontPath(const wchar_t* fontName, char* outPath,
             LOG_DEBUG("FontPath: ✓ '%S' -> %s", fontName, outPath);
             return TRUE;
         }
-        
+
         /* Try lowercase (e.g., "Arial" -> "arial.ttf") */
-        wchar_t lowerName[MAX_PATH];
-        wcscpy_s(lowerName, MAX_PATH, fontName);
-        _wcslwr_s(lowerName, MAX_PATH);
         swprintf_s(fontPath, MAX_PATH, L"%s\\%s%s", fontsDir, lowerName, extensions[i]);
         if (GetFileAttributesW(fontPath) != INVALID_FILE_ATTRIBUTES) {
             if (!WideFontPathToUtf8(fontPath, outPath, outPathSize)) {
@@ -131,16 +145,8 @@ static BOOL GetSystemFontPath(const wchar_t* fontName, char* outPath,
             LOG_DEBUG("FontPath: ✓ '%S' -> %s (lowercase)", fontName, outPath);
             return TRUE;
         }
-        
+
         /* Try without spaces (e.g., "Times New Roman" -> "times.ttf") */
-        wchar_t noSpace[MAX_PATH];
-        const wchar_t* src = lowerName;
-        wchar_t* dst = noSpace;
-        while (*src) {
-            if (*src != L' ') *dst++ = *src;
-            src++;
-        }
-        *dst = L'\0';
         swprintf_s(fontPath, MAX_PATH, L"%s\\%s%s", fontsDir, noSpace, extensions[i]);
         if (GetFileAttributesW(fontPath) != INVALID_FILE_ATTRIBUTES) {
             if (!WideFontPathToUtf8(fontPath, outPath, outPathSize)) {
@@ -333,6 +339,10 @@ static BOOL StopFontEnumerationWithTimeout(DWORD timeoutMs) {
     } else {
         LOG_WARNING("FontPicker: Font enumeration stop wait failed (wait=%lu, error=%lu)",
                     waitResult, GetLastError());
+    }
+    if (g_fontEnumStopEvent) {
+        CloseHandle(g_fontEnumStopEvent);
+        g_fontEnumStopEvent = NULL;
     }
     return FALSE;
 }

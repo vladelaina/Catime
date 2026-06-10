@@ -569,7 +569,6 @@ void StopMenuPreviewTrackingForCommand(HWND hwnd) {
 }
 
 static void StartMenuDebounceTimer(HWND hwnd) {
-    KillTimer(hwnd, IDT_MENU_DEBOUNCE);
     if (!SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL)) {
         LOG_WARNING("MenuPreview: Failed to start debounce timer (error=%lu)",
                     GetLastError());
@@ -699,11 +698,11 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
  */
 LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (wp == 1) {
-        if (lp == 0) {
-            ShowStoredUpdateDialog(hwnd);
-        }
+        ShowStoredUpdateDialog(hwnd);
     } else {
-        ShowStoredNoUpdateDialog(hwnd);
+        if (lp == 0) {
+            ShowStoredNoUpdateDialog(hwnd);
+        }
     }
     return 0;
 }

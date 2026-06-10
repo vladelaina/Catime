@@ -100,8 +100,8 @@ static BOOL LaunchPreparedPlugin(int index, const wchar_t* expectedPath);
 static BOOL StopPluginIfPathMatches(int index, const wchar_t* expectedPath, BOOL* pathMatched);
 static void StartHotReloadIfNeeded(void);
 static void CleanupCompletedHotReloadThreadLocked(void);
-static void StopHotReloadThread(void);
-static void StopHotReloadThreadLocked(void);
+static BOOL StopHotReloadThread(void);
+static BOOL StopHotReloadThreadLocked(void);
 static void StopHotReloadIfIdle(void);
 static BOOL StopAsyncScanThread(void);
 static BOOL CleanupRetiredAsyncScanThread(DWORD waitMs);
@@ -432,7 +432,9 @@ static void CleanupCompletedHotReloadThreadLocked(void) {
     SetHotReloadRunning(FALSE);
 }
 
-static void StopHotReloadThreadLocked(void) {
+static BOOL StopHotReloadThreadLocked(void) {
+    BOOL stopped = TRUE;
+
     CleanupCompletedHotReloadThreadLocked();
 
     if (g_hHotReloadThread) {
@@ -444,11 +446,11 @@ static void StopHotReloadThreadLocked(void) {
         if (waitResult == WAIT_TIMEOUT) {
             LOG_WARNING("Hot-reload thread stop timed out after %lu ms",
                         (DWORD)HOT_RELOAD_STOP_TIMEOUT_MS);
-            return;
+            return FALSE;
         }
         if (waitResult == WAIT_FAILED) {
             LOG_WARNING("Hot-reload thread stop wait failed: %lu", GetLastError());
-            return;
+            return FALSE;
         }
         CloseHandle(g_hHotReloadThread);
         g_hHotReloadThread = NULL;
@@ -459,12 +461,16 @@ static void StopHotReloadThreadLocked(void) {
         CloseHandle(g_hHotReloadStopEvent);
         g_hHotReloadStopEvent = NULL;
     }
+
+    return stopped;
 }
 
-static void StopHotReloadThread(void) {
+static BOOL StopHotReloadThread(void) {
+    BOOL stopped;
     AcquireSRWLockExclusive(&g_hotReloadLock);
-    StopHotReloadThreadLocked();
+    stopped = StopHotReloadThreadLocked();
     ReleaseSRWLockExclusive(&g_hotReloadLock);
+    return stopped;
 }
 
 static void StopHotReloadIfIdle(void) {
@@ -565,7 +571,7 @@ void PluginManager_Shutdown(void) {
         return;
     }
 
-    StopHotReloadThread();
+    BOOL hotReloadStopped = StopHotReloadThread();
 
     PluginInfo* detachedPlugins = AllocatePluginSnapshotArray();
 
@@ -608,12 +614,12 @@ void PluginManager_Shutdown(void) {
     }
 
     LeaveCriticalSection(&g_pluginLifecycleCS);
-    if (asyncScanStopped) {
+    if (asyncScanStopped && hotReloadStopped) {
         DeleteCriticalSection(&g_pluginCS);
         DeleteCriticalSection(&g_pluginLifecycleCS);
         g_pluginLocksInitialized = FALSE;
     } else {
-        LOG_WARNING("Plugin manager locks retained because async scan did not stop before shutdown");
+        LOG_WARNING("Plugin manager locks retained because background plugin threads did not stop before shutdown");
     }
     LOG_INFO("Plugin manager shutdown");
 }
@@ -1941,7 +1947,7 @@ void PluginManager_HandleProcessExit(DWORD processId) {
         CloseHandle(hProcessToClose);
     }
     if (hThreadToClose) {
-        CloseHandle(hThreadToClose);
+        PluginProcess_CloseMonitorThreadHandle(hThreadToClose, TRUE);
     }
 
     if (shouldClearDisplay) {

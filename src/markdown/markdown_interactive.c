@@ -130,9 +130,9 @@ void CleanupMarkdownInteractive(void) {
 
     DeleteCriticalSection(&g_interactiveCS);
     InterlockedExchange(&g_initialized, INTERACTIVE_CS_UNINITIALIZED);
-    ReleaseSRWLockExclusive(&g_interactiveLifecycleLock);
 
     ShutdownMarkdownImage();
+    ReleaseSRWLockExclusive(&g_interactiveLifecycleLock);
 }
 
 /* ============================================================================
