@@ -1,6 +1,7 @@
 # Keep build/ directory structure only
 build/*
 !build/.gitkeep
+build-*/
 
 *.exe
 *.out

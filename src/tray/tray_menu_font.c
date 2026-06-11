@@ -35,6 +35,10 @@
 #error "Font menu command range overlaps animation menu identifiers"
 #endif
 
+#if CLOCK_IDM_SYSTEM_FONT_PICKER >= CLOCK_IDM_ANIMATIONS_BASE && CLOCK_IDM_SYSTEM_FONT_PICKER < CLOCK_IDM_ANIMATIONS_END
+#error "System font picker menu ID overlaps dynamic animation menu command range"
+#endif
+
 /* ============================================================================
  * External dependencies
  * ============================================================================ */
