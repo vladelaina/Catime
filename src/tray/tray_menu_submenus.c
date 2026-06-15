@@ -317,7 +317,13 @@ void BuildFormatSubmenu(HMENU hMenu) {
     AppendMenuW(hFormatMenu, MF_STRING | (g_AppConfig.display.time_format.show_milliseconds ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS,
                 GetLocalizedString(NULL, L"Show Milliseconds"));
-    
+
+    if (CLOCK_SHOW_CURRENT_TIME) {
+        AppendMenuW(hFormatMenu, MF_STRING | (CLOCK_SHOW_SECONDS ? MF_CHECKED : MF_UNCHECKED),
+                    CLOCK_IDM_SHOW_SECONDS,
+                    GetLocalizedString(NULL, L"Show Seconds"));
+    }
+
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFormatMenu,
                      GetLocalizedString(NULL, L"Format"))) {
         DestroyMenu(hFormatMenu);
