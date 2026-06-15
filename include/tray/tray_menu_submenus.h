@@ -62,6 +62,13 @@ void BuildPluginsSubmenu(HMENU hMenu);
 void BuildHelpSubmenu(HMENU hMenu);
 
 /**
+ * @brief Refresh the support item face when the help submenu is about to open
+ * @param hMenu Popup menu being initialized
+ * @return TRUE when the menu was the help submenu and the item was updated
+ */
+BOOL UpdateHelpSubmenuSupportFace(HMENU hMenu);
+
+/**
  * @brief Release cached bitmap resources used by tray submenus
  */
 void CleanupTraySubmenuResources(void);

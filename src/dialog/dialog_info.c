@@ -19,6 +19,7 @@
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define FONT_LICENSE_PARENT_PROP L"Catime.FontLicense.Parent"
+#define ABOUT_LINK_ORIG_PROC_PROP L"Catime.AboutLink.OrigProc"
 
 /* ============================================================================
  * Constants
@@ -66,6 +67,143 @@ static BOOL ConvertWideUrlToUtf8(const wchar_t* source, char* dest, size_t destS
 }
 
 static const size_t g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
+
+static LRESULT CALLBACK AboutLinkSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+static BOOL IsAboutLinkControlId(UINT controlId) {
+    for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
+        if (g_aboutLinkInfos[i].controlId == controlId) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static WNDPROC GetAboutLinkOrigProc(HWND hwndLink) {
+    return (WNDPROC)(LONG_PTR)GetPropW(hwndLink, ABOUT_LINK_ORIG_PROC_PROP);
+}
+
+static BOOL SubclassAboutLinkControl(HWND hwndLink) {
+    if (!hwndLink || GetAboutLinkOrigProc(hwndLink)) {
+        return hwndLink != NULL;
+    }
+
+    WNDPROC origProc = (WNDPROC)(LONG_PTR)SetWindowLongPtrW(
+        hwndLink, GWLP_WNDPROC, (LONG_PTR)AboutLinkSubclassProc);
+    if (!origProc) {
+        return FALSE;
+    }
+
+    if (!SetPropW(hwndLink, ABOUT_LINK_ORIG_PROC_PROP, (HANDLE)(LONG_PTR)origProc)) {
+        SetWindowLongPtrW(hwndLink, GWLP_WNDPROC, (LONG_PTR)origProc);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static void UnsubclassAboutLinkControl(HWND hwndLink) {
+    if (!hwndLink) return;
+
+    WNDPROC origProc = GetAboutLinkOrigProc(hwndLink);
+    if (!origProc) return;
+
+    SetWindowLongPtrW(hwndLink, GWLP_WNDPROC, (LONG_PTR)origProc);
+    RemovePropW(hwndLink, ABOUT_LINK_ORIG_PROC_PROP);
+}
+
+static LRESULT CALLBACK AboutLinkSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    WNDPROC origProc = GetAboutLinkOrigProc(hwnd);
+    if (!origProc) {
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+
+    switch (msg) {
+        case WM_SETCURSOR:
+            SetCursor(LoadCursorW(NULL, IDC_HAND));
+            return TRUE;
+
+        case WM_NCDESTROY:
+            UnsubclassAboutLinkControl(hwnd);
+            return CallWindowProcW(origProc, hwnd, msg, wParam, lParam);
+    }
+
+    return CallWindowProcW(origProc, hwnd, msg, wParam, lParam);
+}
+
+static void ConfigureAboutLinkControls(HWND hwndDlg) {
+    for (size_t i = 0; i < g_aboutLinkInfoCount; i++) {
+        HWND hwndLink = GetDlgItem(hwndDlg, g_aboutLinkInfos[i].controlId);
+        if (!hwndLink) continue;
+
+        LONG_PTR exStyle = GetWindowLongPtrW(hwndLink, GWL_EXSTYLE);
+        SetWindowLongPtrW(hwndLink, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
+        SetWindowPos(hwndLink, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                     SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        SubclassAboutLinkControl(hwndLink);
+    }
+}
+
+static BOOL GetIconPixelSize(HICON hIcon, int* width, int* height) {
+    if (!hIcon || !width || !height) return FALSE;
+
+    ICONINFO iconInfo;
+    if (!GetIconInfo(hIcon, &iconInfo)) {
+        return FALSE;
+    }
+
+    BITMAP bitmap;
+    HBITMAP hBitmap = iconInfo.hbmColor ? iconInfo.hbmColor : iconInfo.hbmMask;
+    BOOL ok = hBitmap && GetObjectW(hBitmap, sizeof(bitmap), &bitmap) > 0;
+
+    if (ok) {
+        *width = bitmap.bmWidth;
+        *height = iconInfo.hbmColor ? bitmap.bmHeight : bitmap.bmHeight / 2;
+    }
+
+    if (iconInfo.hbmColor) DeleteObject(iconInfo.hbmColor);
+    if (iconInfo.hbmMask) DeleteObject(iconInfo.hbmMask);
+    return ok;
+}
+
+static void PaintAboutLinkBackground(HWND hwndDlg, const DRAWITEMSTRUCT* drawItem) {
+    RECT rect = drawItem->rcItem;
+    FillRect(drawItem->hDC, &rect, GetSysColorBrush(COLOR_3DFACE));
+
+    HWND hwndIcon = GetDlgItem(hwndDlg, IDC_ABOUT_ICON);
+    if (!hwndIcon || !drawItem->hwndItem) {
+        return;
+    }
+
+    HICON hIcon = (HICON)SendMessageW(hwndIcon, STM_GETICON, 0, 0);
+    if (!hIcon) {
+        return;
+    }
+
+    RECT iconWindowRect;
+    RECT itemWindowRect;
+    if (!GetWindowRect(hwndIcon, &iconWindowRect) ||
+        !GetWindowRect(drawItem->hwndItem, &itemWindowRect)) {
+        return;
+    }
+
+    int iconWidth = 0;
+    int iconHeight = 0;
+    if (!GetIconPixelSize(hIcon, &iconWidth, &iconHeight)) {
+        iconWidth = iconWindowRect.right - iconWindowRect.left;
+        iconHeight = iconWindowRect.bottom - iconWindowRect.top;
+    }
+
+    int iconX = iconWindowRect.left - itemWindowRect.left;
+    int iconY = iconWindowRect.top - itemWindowRect.top;
+    RECT iconDrawRect = {iconX, iconY, iconX + iconWidth, iconY + iconHeight};
+    RECT overlap;
+    if (IntersectRect(&overlap, &rect, &iconDrawRect)) {
+        DrawIconEx(drawItem->hDC, iconX, iconY, hIcon, iconWidth, iconHeight,
+                   0, NULL, DI_NORMAL);
+    }
+}
 
 /* ============================================================================
  * Global State
@@ -214,6 +352,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 const wchar_t* linkText = GetLocalizedString(g_aboutLinkInfos[i].textCN, g_aboutLinkInfos[i].textEN);
                 SetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, linkText);
             }
+            ConfigureAboutLinkControls(hwndDlg);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
@@ -244,6 +383,16 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
             break;
 
+        case WM_SETCURSOR: {
+            HWND hwndControl = (HWND)wParam;
+            if (LOWORD(lParam) == HTCLIENT &&
+                IsAboutLinkControlId((UINT)GetDlgCtrlID(hwndControl))) {
+                SetCursor(LoadCursorW(NULL, IDC_HAND));
+                return TRUE;
+            }
+            break;
+        }
+
         case WM_DRAWITEM: {
             LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
 
@@ -252,7 +401,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     RECT rect = lpDrawItem->rcItem;
                     HDC hdc = lpDrawItem->hDC;
 
-                    FillRect(hdc, &rect, GetSysColorBrush(COLOR_3DFACE));
+                    PaintAboutLinkBackground(hwndDlg, lpDrawItem);
 
                     wchar_t text[256];
                     GetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, text, sizeof(text)/sizeof(text[0]));

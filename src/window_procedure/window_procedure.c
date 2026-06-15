@@ -163,6 +163,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_SHOWWINDOW, HandleShowWindow},
     {WM_DISPLAYCHANGE, HandleDisplayChange},
     {WM_DPICHANGED, HandleDpiChanged},
+    {WM_INITMENUPOPUP, HandleInitMenuPopup},
     {WM_MENUSELECT, HandleMenuSelect},
     {WM_MEASUREITEM, HandleMeasureItem},
     {WM_DRAWITEM, HandleDrawItem},

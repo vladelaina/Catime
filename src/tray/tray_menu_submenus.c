@@ -594,6 +594,47 @@ void CleanupTraySubmenuResources(void) {
     s_redDotCy = 0;
 }
 
+static void FormatSupportLabel(wchar_t* buffer, size_t bufferCount, const wchar_t* face) {
+    if (!buffer || bufferCount == 0) return;
+
+    _snwprintf_s(buffer, bufferCount, _TRUNCATE, L"%s %s",
+                 GetLocalizedString(NULL, L"Support Catime"), face);
+}
+
+static int FindDirectMenuItemByCommand(HMENU hMenu, UINT commandId) {
+    int itemCount = GetMenuItemCount(hMenu);
+    for (int i = 0; i < itemCount; ++i) {
+        if (GetMenuItemID(hMenu, i) == commandId) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+BOOL UpdateHelpSubmenuSupportFace(HMENU hMenu) {
+    if (!hMenu) return FALSE;
+
+    int supportItemPos = FindDirectMenuItemByCommand(hMenu, CLOCK_IDM_SUPPORT);
+    if (supportItemPos < 0) {
+        return FALSE;
+    }
+
+    static BOOL s_useTrailingEyeSupportFace = FALSE;
+    const wchar_t* supportFace = s_useTrailingEyeSupportFace ? L"ovO" : L"Ovo";
+    MENUITEMINFOW menuItemInfo = {0};
+    wchar_t supportLabel[96];
+
+    s_useTrailingEyeSupportFace = !s_useTrailingEyeSupportFace;
+    FormatSupportLabel(supportLabel, _countof(supportLabel), supportFace);
+
+    menuItemInfo.cbSize = sizeof(menuItemInfo);
+    menuItemInfo.fMask = MIIM_STRING;
+    menuItemInfo.dwTypeData = supportLabel;
+    SetMenuItemInfoW(hMenu, (UINT)supportItemPos, TRUE, &menuItemInfo);
+
+    return TRUE;
+}
+
 void BuildHelpSubmenu(HMENU hMenu) {
     HMENU hAboutMenu = CreatePopupMenu();
     if (!hAboutMenu) return;
@@ -601,8 +642,7 @@ void BuildHelpSubmenu(HMENU hMenu) {
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(NULL, L"About"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-    _snwprintf_s(supportLabel, _countof(supportLabel), _TRUNCATE, L"%s OvO",
-                 GetLocalizedString(NULL, L"Support Catime"));
+    FormatSupportLabel(supportLabel, _countof(supportLabel), L"Ovo");
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, supportLabel);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);

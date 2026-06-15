@@ -824,6 +824,17 @@ LRESULT HandlePluginHotReload(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+LRESULT HandleInitMenuPopup(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)hwnd;
+
+    if (HIWORD(lp)) {
+        return 0;
+    }
+
+    UpdateHelpSubmenuSupportFace((HMENU)wp);
+    return 0;
+}
+
 LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     UINT menuItem = LOWORD(wp);
     UINT flags = HIWORD(wp);
