@@ -6,6 +6,7 @@
 #include "window/window_visual_effects.h"
 #include "log.h"
 #include "markdown/markdown_interactive.h"
+#include "utils/win32_dynamic_loader.h"
 #include <dwmapi.h>
 #include <wchar.h>
 
@@ -74,13 +75,13 @@ BOOL InitDWMFunctions(void) {
         g_hDwmapi = LoadLibraryW(DWMAPI_DLL);
     }
     if (g_hDwmapi) {
-        _DwmEnableBlurBehindWindow = (pfnDwmEnableBlurBehindWindow)GetProcAddress(g_hDwmapi, "DwmEnableBlurBehindWindow");
+        CATIME_LOAD_PROC_ADDRESS(g_hDwmapi, "DwmEnableBlurBehindWindow", _DwmEnableBlurBehindWindow);
     }
     
     /* Load SetWindowCompositionAttribute from user32.dll (undocumented API for acrylic blur) */
     HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
     if (hUser32) {
-        _SetWindowCompositionAttribute = (pfnSetWindowCompositionAttribute)GetProcAddress(hUser32, "SetWindowCompositionAttribute");
+        CATIME_LOAD_PROC_ADDRESS(hUser32, "SetWindowCompositionAttribute", _SetWindowCompositionAttribute);
     }
 
     g_dwmFunctionsInitialized = TRUE;

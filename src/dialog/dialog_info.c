@@ -9,6 +9,7 @@
 #include "dialog/dialog_language.h"
 #include "config.h"
 #include "markdown/markdown_parser.h"
+#include "utils/win32_dynamic_loader.h"
 #include "../resource/resource.h"
 #include <shellapi.h>
 #include <strsafe.h>
@@ -76,16 +77,14 @@ typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
 typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
 
 static GetThreadDpiAwarenessContextFunc LoadGetThreadDpiAwarenessContext(HMODULE module) {
-    FARPROC proc = GetProcAddress(module, "GetThreadDpiAwarenessContext");
     GetThreadDpiAwarenessContextFunc func = NULL;
-    memcpy(&func, &proc, sizeof(func));
+    CATIME_LOAD_PROC_ADDRESS(module, "GetThreadDpiAwarenessContext", func);
     return func;
 }
 
 static SetThreadDpiAwarenessContextFunc LoadSetThreadDpiAwarenessContext(HMODULE module) {
-    FARPROC proc = GetProcAddress(module, "SetThreadDpiAwarenessContext");
     SetThreadDpiAwarenessContextFunc func = NULL;
-    memcpy(&func, &proc, sizeof(func));
+    CATIME_LOAD_PROC_ADDRESS(module, "SetThreadDpiAwarenessContext", func);
     return func;
 }
 

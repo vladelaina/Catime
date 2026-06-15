@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <windows.h>
+#include "utils/win32_dynamic_loader.h"
 #include "log/log_system_info.h"
 #include "log.h"
 
@@ -87,7 +88,8 @@ static bool GetOSVersionInfo(OSVersionInfo* osVersion) {
     
     if (unlikely(!hNtdll)) return false;
     
-    RtlGetVersionPtr pRtlGetVersion = (RtlGetVersionPtr)GetProcAddress(hNtdll, "RtlGetVersion");
+    RtlGetVersionPtr pRtlGetVersion = NULL;
+    CATIME_LOAD_PROC_ADDRESS(hNtdll, "RtlGetVersion", pRtlGetVersion);
     if (unlikely(!pRtlGetVersion)) return false;
     
     RTL_OSVERSIONINFOW rovi = {0};

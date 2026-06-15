@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "system_monitor.h"
+#include "utils/win32_dynamic_loader.h"
 
 /* 1000ms update interval balances accuracy with minimal CPU overhead for metrics */
 #define DEFAULT_UPDATE_INTERVAL_MS 1000
@@ -223,10 +224,8 @@ static BOOL ResolveNetworkApi64(void) {
     }
     if (!g_iphlpapiModule) return FALSE;
 
-    FARPROC getIfTable2Proc = GetProcAddress(g_iphlpapiModule, "GetIfTable2");
-    FARPROC freeMibTableProc = GetProcAddress(g_iphlpapiModule, "FreeMibTable");
-    memcpy(&g_getIfTable2, &getIfTable2Proc, sizeof(g_getIfTable2));
-    memcpy(&g_freeMibTable, &freeMibTableProc, sizeof(g_freeMibTable));
+    CATIME_LOAD_PROC_ADDRESS(g_iphlpapiModule, "GetIfTable2", g_getIfTable2);
+    CATIME_LOAD_PROC_ADDRESS(g_iphlpapiModule, "FreeMibTable", g_freeMibTable);
     return g_getIfTable2 && g_freeMibTable;
 }
 

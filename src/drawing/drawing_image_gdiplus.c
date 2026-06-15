@@ -1,5 +1,6 @@
 #include "drawing/drawing_image.h"
 #include "log.h"
+#include "utils/win32_dynamic_loader.h"
 #include <limits.h>
 #include <string.h>
 
@@ -77,10 +78,7 @@ static void ResetGdiPlusProcPointers(void) {
 }
 
 #define LOAD_GDIPLUS_PROC(module, name, target) \
-    do { \
-        FARPROC proc = GetProcAddress((module), (name)); \
-        memcpy(&(target), &proc, sizeof(target)); \
-    } while (0)
+    CATIME_LOAD_PROC_ADDRESS((module), (name), (target))
 
 static BOOL AreRequiredGdiPlusProcPointersLoaded(void) {
     return pGdiplusStartup &&

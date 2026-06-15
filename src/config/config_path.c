@@ -7,6 +7,7 @@
 #include "config.h"
 #include "utils/string_convert.h"
 #include "utils/path_utils.h"
+#include "utils/win32_dynamic_loader.h"
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -146,8 +147,8 @@ static BOOL ResolveConfigPathUtf8(char* outPathUtf8, size_t outSize) {
     HMODULE hShell = LoadLibraryW(L"shell32.dll");
     if (hShell) {
         typedef HRESULT (WINAPI *PFN_SHGetKnownFolderPath)(const GUID*, DWORD, HANDLE, PWSTR*);
-        PFN_SHGetKnownFolderPath pfn =
-            (PFN_SHGetKnownFolderPath)GetProcAddress(hShell, "SHGetKnownFolderPath");
+        PFN_SHGetKnownFolderPath pfn = NULL;
+        CATIME_LOAD_PROC_ADDRESS(hShell, "SHGetKnownFolderPath", pfn);
         if (pfn) {
             static const GUID folderIdLocalAppDataGuid = {
                 0xF1B32785, 0x6FBA, 0x4FCF,

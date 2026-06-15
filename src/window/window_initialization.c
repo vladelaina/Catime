@@ -12,6 +12,7 @@
 #include "startup.h"
 #include "config.h"
 #include "log.h"
+#include "utils/win32_dynamic_loader.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -58,8 +59,8 @@ static BOOL InitializeDpiAwareness(void) {
     
     /* Try Windows 10 1703+ per-monitor V2 (best quality) */
     typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
-    SetProcessDpiAwarenessContextFunc setDpiCtx = 
-        (SetProcessDpiAwarenessContextFunc)GetProcAddress(hUser32, "SetProcessDpiAwarenessContext");
+    SetProcessDpiAwarenessContextFunc setDpiCtx = NULL;
+    CATIME_LOAD_PROC_ADDRESS(hUser32, "SetProcessDpiAwarenessContext", setDpiCtx);
     
     if (setDpiCtx) {
         if (setDpiCtx(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
@@ -72,8 +73,8 @@ static BOOL InitializeDpiAwareness(void) {
     HMODULE hShcore = LoadLibraryW(SHCORE_DLL);
     if (hShcore) {
         typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
-        SetProcessDpiAwarenessFunc setDpiAwareness = 
-            (SetProcessDpiAwarenessFunc)GetProcAddress(hShcore, "SetProcessDpiAwareness");
+        SetProcessDpiAwarenessFunc setDpiAwareness = NULL;
+        CATIME_LOAD_PROC_ADDRESS(hShcore, "SetProcessDpiAwareness", setDpiAwareness);
         
         if (setDpiAwareness) {
             if (SUCCEEDED(setDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE))) {
@@ -87,8 +88,8 @@ static BOOL InitializeDpiAwareness(void) {
     
     /* Final fallback: basic system DPI awareness (Windows Vista+) */
     typedef BOOL(WINAPI* SetProcessDPIAwareFunc)(VOID);
-    SetProcessDPIAwareFunc setDPIAware = 
-        (SetProcessDPIAwareFunc)GetProcAddress(hUser32, "SetProcessDPIAware");
+    SetProcessDPIAwareFunc setDPIAware = NULL;
+    CATIME_LOAD_PROC_ADDRESS(hUser32, "SetProcessDPIAware", setDPIAware);
     
     if (setDPIAware && setDPIAware()) {
         LOG_INFO("DPI awareness: System (legacy)");
