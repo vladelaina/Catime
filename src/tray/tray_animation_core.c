@@ -853,14 +853,31 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
 /**
  * @brief Update tray icon to current frame (UI thread only)
  */
-static void UpdateTrayIconToCurrentFrame(void) {
+static BOOL IsPreviewUpdateActive(void) {
+    BOOL active = FALSE;
+
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+    }
+
+    active = g_isPreviewActive;
+
+    if (IsAnimCriticalSectionReady()) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+
+    return active;
+}
+
+static void UpdateTrayIconToCurrentFrameInternal(BOOL allowWhileSuspended) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) {
         ClearPendingTrayUpdate();
         return;
     }
 
-    if (IsTrayInteractionSuspended()) {
+    /* Menu tracking pauses background tray work; hover previews still need icon updates. */
+    if (IsTrayInteractionSuspended() && !allowWhileSuspended) {
         SetPendingTrayUpdate();
         return;
     }
@@ -1028,13 +1045,21 @@ applyIcon:
     }
 }
 
+static void UpdateTrayIconToCurrentFrame(void) {
+    UpdateTrayIconToCurrentFrameInternal(FALSE);
+}
+
+static void UpdateTrayIconToCurrentFrameForPreview(void) {
+    UpdateTrayIconToCurrentFrameInternal(TRUE);
+}
+
 /**
  * @brief Request tray update (thread-safe)
  */
 static void RequestTrayIconUpdate(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) return;
-    if (IsTrayInteractionSuspended()) return;
+    if (IsTrayInteractionSuspended() && !IsPreviewUpdateActive()) return;
     
     BOOL alreadyPending = FALSE;
     alreadyPending = HasPendingTrayUpdate();
@@ -1758,7 +1783,7 @@ void CancelAnimationPreview(void) {
     ReleaseSRWLockExclusive(&g_previewWorkerLock);
 
     EnsureTrayAnimationTimerState();
-    UpdateTrayIconToCurrentFrame();
+    UpdateTrayIconToCurrentFrameForPreview();
 
 done:
     LoadedAnimation_Free(&oldPreview);
@@ -2094,7 +2119,7 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
     hasPending = HasPendingTrayUpdate();
     
     if (hasPending) {
-        UpdateTrayIconToCurrentFrame();
+        UpdateTrayIconToCurrentFrameInternal(IsPreviewUpdateActive());
     }
 
 done:
