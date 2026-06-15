@@ -611,6 +611,10 @@ UINT GetTimerInterval(void) {
         return 33;
     }
 
+    if (CLOCK_SHOW_CURRENT_TIME && CLOCK_SHOW_SECONDS) {
+        return 250;
+    }
+
     /* Active timers still tick internally at 10 FPS so completion actions and
      * Pomodoro transitions are not delayed by a full second. Rendering remains
      * second-based when milliseconds are hidden. */

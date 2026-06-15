@@ -12,6 +12,7 @@
 #include "drag_scale.h"
 #include "log.h"
 #include "plugin/plugin_data.h"
+#include "window/window_desktop_integration.h"
 
 #include "color/color_parser.h"
 #include "color/color_state.h"
@@ -122,6 +123,8 @@ void StartDragWindow(HWND hwnd) {
 }
 
 void StartEditMode(HWND hwnd) {
+    EnsureWindowVisibleWithTopmostState(hwnd);
+
     PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
     g_editModeForcedTopmost = FALSE;
     g_editModeTopmostOverride = FALSE;
