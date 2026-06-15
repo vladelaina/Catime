@@ -481,7 +481,7 @@ static BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
     char color[COLOR_HEX_BUFFER];
     if (!GetColorMenuColorFromId(cmd, color, sizeof(color))) {
         CancelPreview(hwnd);
-        return TRUE;
+        return FALSE;
     }
 
     if (WriteConfigColor(color)) {
@@ -540,7 +540,7 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     int recentFilesCount = g_AppConfig.recent_files.count;
     if (recentFilesCount < 0) recentFilesCount = 0;
     if (recentFilesCount > MAX_RECENT_FILES) recentFilesCount = MAX_RECENT_FILES;
-    if (index < 0 || index >= recentFilesCount) return TRUE;
+    if (index < 0 || index >= recentFilesCount) return FALSE;
 
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
         if (RemoveRecentFileAtIndex(index)) {
@@ -566,8 +566,9 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
         }
     } else {
         LOG_ERROR("Failed to get font path from menu ID: %u", cmd);
+        return FALSE;
     }
-    
+
     return TRUE;
 }
 

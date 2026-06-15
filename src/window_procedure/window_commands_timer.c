@@ -259,14 +259,14 @@ BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index) {
     if (index >= 0 && index < timeOptionsCount && time_options[index] > 0) {
         CleanupBeforeTimerAction();
         StartCountdownWithTime(hwnd, time_options[index]);
+        return TRUE;
     }
-    return TRUE;
+    return FALSE;
 }
 
 BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
-    HandlePomodoroTimeConfig(hwnd, index);
-    return TRUE;
+    return HandlePomodoroTimeConfig(hwnd, index);
 }
 
 /* ============================================================================

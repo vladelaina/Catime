@@ -181,9 +181,9 @@
 #define CLOCK_IDM_TOPMOST 187            /**< Window topmost menu item */
 #define CLOCK_IDM_GLOW_EFFECT 189        /**< Neon glow effect toggle */
 #define CLOCK_IDM_GLASS_EFFECT 190       /**< Glass/Liquid crystal effect toggle */
-#define CLOCK_IDM_NEON_EFFECT 260        /**< Hong Kong Neon Tube effect toggle */
-#define CLOCK_IDM_HOLOGRAPHIC_EFFECT 261 /**< Holographic/Prism effect toggle */
-#define CLOCK_IDM_LIQUID_EFFECT 262      /**< Liquid Flow/Caustics effect toggle */
+#define CLOCK_IDM_NEON_EFFECT 5100       /**< Hong Kong Neon Tube effect toggle */
+#define CLOCK_IDM_HOLOGRAPHIC_EFFECT 5101 /**< Holographic/Prism effect toggle */
+#define CLOCK_IDM_LIQUID_EFFECT 5102     /**< Liquid Flow/Caustics effect toggle */
 
 /** @brief Language selection menu identifiers */
 #define CLOCK_IDM_LANGUAGE_MENU 160      /**< Language submenu */
@@ -507,8 +507,8 @@
 #define CLOCK_IDC_FONT_RUBIK_MARKER_HATCH 380   /**< Rubik Marker Hatch font menu item */
 #define CLOCK_IDC_FONT_RUBIK_PUDDLES 381        /**< Rubik Puddles font menu item */
 #define CLOCK_IDC_FONT_WALLPOET 389             /**< Wallpoet font menu item */
-#define CLOCK_IDC_FONT_ADVANCED 395             /**< Font advanced options menu item */
-#define CLOCK_IDC_FONT_LICENSE_AGREE 396        /**< Font license agreement menu item */
+#define CLOCK_IDC_FONT_ADVANCED 5103            /**< Font advanced options menu item */
+#define CLOCK_IDC_FONT_LICENSE_AGREE 5104       /**< Font license agreement menu item */
 
 /** @brief Font license agreement dialog identifiers */
 #define IDD_FONT_LICENSE_DIALOG 740             /**< Font license agreement dialog */
@@ -520,7 +520,7 @@
 #define IDD_FONT_PICKER_SIMPLE 758              /**< Simple system font picker dialog */
 #define IDC_FONT_LIST_SIMPLE 759                /**< System font list control */
 #define IDC_FONT_PICKER_LABEL 757               /**< Font picker label */
-#define CLOCK_IDM_SYSTEM_FONT_PICKER 3200       /**< System font picker menu item */
+#define CLOCK_IDM_SYSTEM_FONT_PICKER 5105       /**< System font picker menu item */
 
 /** @brief Plugin security dialog identifiers */
 #define IDD_PLUGIN_SECURITY_DIALOG 760          /**< Plugin security confirmation dialog */
