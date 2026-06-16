@@ -634,7 +634,7 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
             if (newOpacity < 0) newOpacity = 0;
             if (newOpacity > 100) newOpacity = 100;
             CLOCK_WINDOW_OPACITY = newOpacity;
-            SetBlurBehind(hwnd, TRUE);
+            SetBlurBehind(hwnd, CLOCK_EDIT_MODE);
             changed = TRUE;
         }
     }
