@@ -98,6 +98,20 @@ BOOL HandleDragWindow(HWND hwnd);
  */
 BOOL HandleScaleWindow(HWND hwnd, int delta);
 
+/**
+ * @brief Get the pending mouse anchor for a paint-triggered resize.
+ * @param hwnd Window handle
+ * @param anchor Output screen-space cursor position
+ * @return TRUE if an anchor is available for this window
+ */
+BOOL GetPendingScaleResizeAnchor(HWND hwnd, POINT* anchor);
+
+/**
+ * @brief Clear any pending mouse anchor for a paint-triggered resize.
+ * @param hwnd Window handle
+ */
+void ClearPendingScaleResizeAnchor(HWND hwnd);
+
 /* ============================================================================
  * Utility Functions (Internal Use)
  * ============================================================================ */

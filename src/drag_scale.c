@@ -3,7 +3,7 @@
  * @brief Interactive window dragging and scaling with debounced saves
  * 
  * Debounced config saves reduce disk I/O during continuous operations.
- * Centered scaling maintains visual stability during resize.
+ * Mouse-anchored scaling keeps wheel zoom aligned with the cursor.
  */
 
 #include <windows.h>
@@ -20,6 +20,10 @@
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 static BOOL g_editModeForcedTopmost = FALSE;
 static BOOL g_editModeTopmostOverride = FALSE;
+static BOOL g_pendingScaleResizeAnchorValid = FALSE;
+static HWND g_pendingScaleResizeAnchorHwnd = NULL;
+static POINT g_pendingScaleResizeAnchor = {0};
+static int g_pendingScaleWheelDelta = 0;
 
 static UINT_PTR g_configSaveTimer = 0;
 static HWND g_configSaveTimerHwnd = NULL;
@@ -55,8 +59,46 @@ static inline float ClampScaleFactor(float scale) {
     return scale;
 }
 
-static inline int CalculateCenteredPosition(int originalPos, int originalSize, int newSize) {
-    return originalPos + (originalSize - newSize) / 2;
+static inline int AbsInt(int value) {
+    return value < 0 ? -value : value;
+}
+
+static int CalculateAnchoredPosition(int originalPos, int originalSize, int newSize, int anchorPos) {
+    if (originalSize <= 0) {
+        return originalPos;
+    }
+
+    double anchorRatio = (double)(anchorPos - originalPos) / (double)originalSize;
+    return anchorPos - (int)(anchorRatio * (double)newSize + 0.5);
+}
+
+static void SetPendingScaleResizeAnchor(HWND hwnd, POINT anchor) {
+    g_pendingScaleResizeAnchorValid = TRUE;
+    g_pendingScaleResizeAnchorHwnd = hwnd;
+    g_pendingScaleResizeAnchor = anchor;
+}
+
+BOOL GetPendingScaleResizeAnchor(HWND hwnd, POINT* anchor) {
+    if (!anchor ||
+        !g_pendingScaleResizeAnchorValid ||
+        g_pendingScaleResizeAnchorHwnd != hwnd) {
+        return FALSE;
+    }
+
+    *anchor = g_pendingScaleResizeAnchor;
+    return TRUE;
+}
+
+void ClearPendingScaleResizeAnchor(HWND hwnd) {
+    if (!g_pendingScaleResizeAnchorValid ||
+        (hwnd && g_pendingScaleResizeAnchorHwnd != hwnd)) {
+        return;
+    }
+
+    g_pendingScaleResizeAnchorValid = FALSE;
+    g_pendingScaleResizeAnchorHwnd = NULL;
+    g_pendingScaleResizeAnchor.x = 0;
+    g_pendingScaleResizeAnchor.y = 0;
 }
 
 static VOID CALLBACK ConfigSaveTimerProc(HWND hwnd, UINT msg, UINT_PTR idEvent, DWORD dwTime) {
@@ -135,6 +177,7 @@ void StartEditMode(HWND hwnd) {
     }
     
     CLOCK_EDIT_MODE = TRUE;
+    g_pendingScaleWheelDelta = 0;
     
     RefreshWindow(hwnd, TRUE);
     SetBlurBehind(hwnd, TRUE);
@@ -153,6 +196,8 @@ void EndEditMode(HWND hwnd) {
             ReleaseCapture();
         }
     }
+    ClearPendingScaleResizeAnchor(hwnd);
+    g_pendingScaleWheelDelta = 0;
 
     CLOCK_EDIT_MODE = FALSE;
 
@@ -233,27 +278,49 @@ BOOL HandleDragWindow(HWND hwnd) {
     return TRUE;
 }
 
-/* Mouse wheel scaling: configurable step per notch, centered to maintain stability */
+/* Mouse wheel scaling: configurable step per notch, anchored at the cursor */
 BOOL HandleScaleWindow(HWND hwnd, int delta) {
-    if (!CLOCK_EDIT_MODE) return FALSE;
+    if (!CLOCK_EDIT_MODE) {
+        g_pendingScaleWheelDelta = 0;
+        return FALSE;
+    }
     
     BOOL isPluginMode = PluginData_IsActive();
     float oldScale = isPluginMode ? PLUGIN_FONT_SCALE_FACTOR : CLOCK_FONT_SCALE_FACTOR;
+    if (oldScale <= 0.0f) return FALSE;
+
+    g_pendingScaleWheelDelta += delta;
+    int wheelSteps = g_pendingScaleWheelDelta / WHEEL_DELTA;
+    if (wheelSteps == 0) return FALSE;
+    g_pendingScaleWheelDelta -= wheelSteps * WHEEL_DELTA;
     
     RECT windowRect;
     GetWindowRect(hwnd, &windowRect);
     int oldWidth = windowRect.right - windowRect.left;
     int oldHeight = windowRect.bottom - windowRect.top;
+    if (oldWidth <= 0 || oldHeight <= 0) return FALSE;
+
+    POINT cursorPos;
+    if (!GetCursorPos(&cursorPos) ||
+        cursorPos.x < windowRect.left || cursorPos.x > windowRect.right ||
+        cursorPos.y < windowRect.top || cursorPos.y > windowRect.bottom) {
+        cursorPos.x = windowRect.left + oldWidth / 2;
+        cursorPos.y = windowRect.top + oldHeight / 2;
+    }
     
     BOOL isCtrlDown = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
     int stepPercent = isCtrlDown ? g_AppConfig.display.scale_step_fast 
                                  : g_AppConfig.display.scale_step_normal;
+    if (stepPercent <= 0) stepPercent = 1;
     
     float scaleFactor = 1.0f + (stepPercent / 100.0f);
-    
-    float newScale = (delta > 0) 
-        ? oldScale * scaleFactor
-        : oldScale / scaleFactor;
+    float newScale = oldScale;
+    int stepCount = AbsInt(wheelSteps);
+    for (int i = 0; i < stepCount; i++) {
+        newScale = (wheelSteps > 0)
+            ? newScale * scaleFactor
+            : newScale / scaleFactor;
+    }
     
     newScale = ClampScaleFactor(newScale);
     
@@ -270,13 +337,13 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     int newWidth = (int)(oldWidth * scalingRatio);
     int newHeight = (int)(oldHeight * scalingRatio);
     
-    /* Center scaling to keep window visually stable */
-    int newX = CalculateCenteredPosition(windowRect.left, oldWidth, newWidth);
-    int newY = CalculateCenteredPosition(windowRect.top, oldHeight, newHeight);
+    int newX = CalculateAnchoredPosition(windowRect.left, oldWidth, newWidth, cursorPos.x);
+    int newY = CalculateAnchoredPosition(windowRect.top, oldHeight, newHeight, cursorPos.y);
     
     SetWindowPos(hwnd, NULL, 
         newX, newY, newWidth, newHeight,
         SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+    SetPendingScaleResizeAnchor(hwnd, cursorPos);
 
     CLOCK_WINDOW_POS_X = newX;
     CLOCK_WINDOW_POS_Y = newY;

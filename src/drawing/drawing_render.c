@@ -20,6 +20,7 @@
 #include "window_procedure/window_procedure.h"
 #include "window/window_core.h"
 #include "window/window_visual_effects.h"
+#include "drag_scale.h"
 #include "menu_preview.h"
 #include "font/font_path_manager.h"
 #include "log.h"
@@ -1225,22 +1226,42 @@ static void FixAlphaChannel(void* bits, int width, int height) {
 static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     SIZE targetSize;
     if (!GetConstrainedRenderWindowSize(hwnd, textSize, &targetSize)) {
+        ClearPendingScaleResizeAnchor(hwnd);
         return;
     }
 
+    POINT resizeAnchor = {0};
+    BOOL hasResizeAnchor = GetPendingScaleResizeAnchor(hwnd, &resizeAnchor);
+
     if (targetSize.cx == (rect->right - rect->left) &&
         targetSize.cy == (rect->bottom - rect->top)) {
+        ClearPendingScaleResizeAnchor(hwnd);
         return;
     }
 
     RECT windowRect;
     GetWindowRect(hwnd, &windowRect);
+    int newX = windowRect.left;
+    int newY = windowRect.top;
+    int currentWidth = windowRect.right - windowRect.left;
+    int currentHeight = windowRect.bottom - windowRect.top;
+
+    if (hasResizeAnchor && currentWidth > 0 && currentHeight > 0) {
+        double anchorRatioX = (double)(resizeAnchor.x - windowRect.left) / (double)currentWidth;
+        double anchorRatioY = (double)(resizeAnchor.y - windowRect.top) / (double)currentHeight;
+        newX = resizeAnchor.x - (int)(anchorRatioX * (double)targetSize.cx + 0.5);
+        newY = resizeAnchor.y - (int)(anchorRatioY * (double)targetSize.cy + 0.5);
+    }
 
     SetWindowPos(hwnd, NULL,
-        windowRect.left, windowRect.top,
+        newX, newY,
         targetSize.cx,
         targetSize.cy,
         SWP_NOZORDER | SWP_NOACTIVATE);
+    ClearPendingScaleResizeAnchor(hwnd);
+
+    CLOCK_WINDOW_POS_X = newX;
+    CLOCK_WINDOW_POS_Y = newY;
 
     GetClientRect(hwnd, rect);
 }
