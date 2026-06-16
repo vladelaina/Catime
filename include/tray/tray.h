@@ -32,7 +32,7 @@ void RegisterTaskbarCreatedMessage(void);
  * - Custom animations: First frame
  * - Logo: App icon resource
  * 
- * Starts 1Hz tooltip updates with system metrics.
+ * Starts only the tray background work needed by the visible icon.
  */
 void InitTrayIcon(HWND hwnd, HINSTANCE hInstance);
 
@@ -80,9 +80,20 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed);
  * @param id Timer ID
  * @param time System time
  *
- * @details Updates tooltip with system metrics (CPU, memory, network)
+ * @details Updates tooltip on hover and keeps dynamic built-in icons fresh.
  */
 void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
+
+/**
+ * @brief Mark whether the user is currently hovering the tray icon tooltip area
+ * @param active TRUE while the tray tooltip should be kept fresh
+ */
+void SetTrayTooltipActive(BOOL active);
+
+/**
+ * @brief Re-evaluate whether tray background refresh work is currently needed
+ */
+void RefreshTrayBackgroundWorkState(void);
 
 /**
  * @brief Update tray icon tooltip
@@ -121,6 +132,14 @@ BOOL IsTrayMouseHookInstalled(void);
  * @return TRUE if mouse is over tray icon
  */
 BOOL IsMouseOverTrayIconArea(POINT pt);
+
+/**
+ * @brief Check if mouse is near tray icon area
+ * @param pt Mouse position in screen coordinates
+ * @param marginPx Extra margin around the tray icon rectangle
+ * @return TRUE if mouse is near the tray icon
+ */
+BOOL IsMouseNearTrayIconArea(POINT pt, int marginPx);
 
 /**
  * @brief Suspend or resume tray background work during menu interaction

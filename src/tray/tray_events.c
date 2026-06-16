@@ -22,11 +22,16 @@
 
 /* Timer for detecting mouse hover over tray icon */
 #define TRAY_HOVER_CHECK_TIMER_ID 42422
-#define TRAY_HOVER_CHECK_INTERVAL_MS 200
+#define TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS 200
+#define TRAY_HOVER_CHECK_IDLE_INTERVAL_MS 1000
+#define TRAY_HOVER_NEAR_MARGIN_PX 96
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 static UINT_PTR g_hoverCheckTimer = 0;
+static UINT g_hoverCheckIntervalMs = 0;
 static HWND g_trayEventHwnd = NULL;
+
+static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 
 static BOOL IsValidTrayEventWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
@@ -45,6 +50,31 @@ static BOOL IsValidTrayEventWindow(HWND hwnd) {
     }
 
     return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static BOOL SetTrayHoverCheckInterval(HWND hwnd, UINT intervalMs) {
+    if (!IsValidTrayEventWindow(hwnd) || !IsTrayIconActive(hwnd)) {
+        return FALSE;
+    }
+
+    if (g_hoverCheckTimer &&
+        g_trayEventHwnd == hwnd &&
+        g_hoverCheckIntervalMs == intervalMs) {
+        return TRUE;
+    }
+
+    UINT_PTR newTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID,
+                                 intervalMs, TrayHoverCheckTimerProc);
+    if (!newTimer) {
+        LOG_WARNING("Tray hover detection timer creation failed (error=%lu)",
+                    GetLastError());
+        return FALSE;
+    }
+
+    g_hoverCheckTimer = newTimer;
+    g_hoverCheckIntervalMs = intervalMs;
+    g_trayEventHwnd = hwnd;
+    return TRUE;
 }
 
 /**
@@ -71,15 +101,25 @@ static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, D
     GetCursorPos(&pt);
     
     BOOL isOverIcon = IsMouseOverTrayIconArea(pt);
+    BOOL isNearIcon = isOverIcon ||
+                      IsMouseNearTrayIconArea(pt, TRAY_HOVER_NEAR_MARGIN_PX);
     BOOL hookInstalled = IsTrayMouseHookInstalled();
     
     if (isOverIcon && !hookInstalled) {
         /* Mouse entered tray icon - install hook */
         InstallTrayMouseHook();
+        hookInstalled = TRUE;
     } else if (!isOverIcon && hookInstalled) {
         /* Mouse left tray icon - uninstall hook */
         UninstallTrayMouseHook();
+        hookInstalled = FALSE;
     }
+
+    SetTrayTooltipActive(isOverIcon);
+    SetTrayHoverCheckInterval(hwnd,
+                              (isNearIcon || hookInstalled) ?
+                                  TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS :
+                                  TRAY_HOVER_CHECK_IDLE_INTERVAL_MS);
 }
 
 /**
@@ -98,7 +138,8 @@ static void StartTrayHoverDetection(HWND hwnd) {
 
     HWND previousHwnd = g_trayEventHwnd;
     UINT_PTR newTimer = SetTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID,
-                                 TRAY_HOVER_CHECK_INTERVAL_MS, TrayHoverCheckTimerProc);
+                                 TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS,
+                                 TrayHoverCheckTimerProc);
     if (!newTimer) {
         LOG_WARNING("Tray hover detection timer creation failed (error=%lu)",
                     GetLastError());
@@ -114,6 +155,7 @@ static void StartTrayHoverDetection(HWND hwnd) {
         KillTimer(previousHwnd, TRAY_HOVER_CHECK_TIMER_ID);
     }
     g_hoverCheckTimer = newTimer;
+    g_hoverCheckIntervalMs = TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS;
     g_trayEventHwnd = hwnd;
 }
 
@@ -126,11 +168,13 @@ void StopTrayHoverDetection(void) {
         KillTimer(g_trayEventHwnd, TRAY_HOVER_CHECK_TIMER_ID);
     }
     g_hoverCheckTimer = 0;
+    g_hoverCheckIntervalMs = 0;
     g_trayEventHwnd = NULL;
     /* Also uninstall hook if still active */
     if (IsTrayMouseHookInstalled()) {
         UninstallTrayMouseHook();
     }
+    SetTrayTooltipActive(FALSE);
 }
 
 /**
@@ -198,6 +242,17 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
     StartTrayHoverDetection(hwnd);
 
     switch (uMouseMsg) {
+        case WM_MOUSEMOVE:
+        case NIN_POPUPOPEN:
+            InstallTrayMouseHook();
+            SetTrayTooltipActive(TRUE);
+            SetTrayHoverCheckInterval(hwnd, TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS);
+            break;
+
+        case NIN_POPUPCLOSE:
+            SetTrayTooltipActive(FALSE);
+            break;
+
         case WM_RBUTTONUP:
             SetCursor(LoadCursorW(NULL, IDC_ARROW));
             SetTrayInteractionSuspended(TRUE);

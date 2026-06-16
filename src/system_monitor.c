@@ -807,6 +807,10 @@ void SystemMonitor_Shutdown(void) {
     ReleaseSRWLockExclusive(&g_monitorLifecycleLock);
 }
 
+BOOL SystemMonitor_IsInitialized(void) {
+    return IsMonitorInitialized() != 0;
+}
+
 void SystemMonitor_SetUpdateIntervalMs(DWORD intervalMs) {
     if (!BeginMonitorUse()) return;
     AcquireSRWLockExclusive(&g_stateLock);

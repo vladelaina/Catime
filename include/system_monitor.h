@@ -31,6 +31,12 @@ void SystemMonitor_Init(void);
 void SystemMonitor_Shutdown(void);
 
 /**
+ * @brief Check whether monitor resources are currently initialized
+ * @return TRUE if initialized, FALSE otherwise
+ */
+BOOL SystemMonitor_IsInitialized(void);
+
+/**
  * @brief Set minimum refresh interval
  * @param intervalMs Interval (0 = default 1000ms)
  * 

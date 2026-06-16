@@ -121,6 +121,39 @@ static BOOL IsAnimCriticalSectionReady(void) {
     return InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZED;
 }
 
+static BOOL AnimationNeedsDecodePool(const char* name) {
+    AnimationSourceType type = DetectAnimationSourceType(name);
+    return type == ANIM_SOURCE_GIF || type == ANIM_SOURCE_WEBP;
+}
+
+static MemoryPool* GetTemporaryDecodePoolForAnimation(const char* name) {
+    if (!AnimationNeedsDecodePool(name)) {
+        return NULL;
+    }
+
+    if (!g_memoryPool) {
+        g_memoryPool = MemoryPool_Create(MEMORY_POOL_SIZE);
+    }
+    return g_memoryPool;
+}
+
+static void ReleaseTemporaryDecodePool(void) {
+    if (g_memoryPool) {
+        MemoryPool_Destroy(g_memoryPool);
+        g_memoryPool = NULL;
+    }
+}
+
+static BOOL LoadAnimationByNameWithTemporaryPool(const char* name,
+                                                 LoadedAnimation* anim,
+                                                 int iconWidth,
+                                                 int iconHeight) {
+    MemoryPool* pool = GetTemporaryDecodePoolForAnimation(name);
+    BOOL loaded = LoadAnimationByName(name, anim, pool, iconWidth, iconHeight);
+    ReleaseTemporaryDecodePool();
+    return loaded;
+}
+
 static BOOL IsTrayAnimationRuntimeActive(void) {
     return InterlockedCompareExchange(&g_runtimeActive, 0, 0) != 0;
 }
@@ -1089,6 +1122,14 @@ static void TrayAnimationTimerCallback(void* userData) {
         EnterCriticalSection(&g_animCriticalSection);
     }
 
+    if (IsTrayInteractionSuspended() && !g_isPreviewActive) {
+        if (locked) {
+            LeaveCriticalSection(&g_animCriticalSection);
+        }
+        EndTrayAnimationRuntimeUse();
+        return;
+    }
+
     /* Skip logic for percent icons (updated separately) and __none__ (static). */
     if (!g_isPreviewActive && IsBuiltinAnimationName(g_animationName)) {
         if (locked) {
@@ -1172,10 +1213,6 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
         WaitWhileLongEquals(&g_criticalSectionInitialized, ANIM_CS_INITIALIZING);
     }
     
-    if (!g_memoryPool) {
-        g_memoryPool = MemoryPool_Create(MEMORY_POOL_SIZE);
-    }
-    
     char configAnimationName[MAX_PATH];
     strncpy(configAnimationName, g_animationName, sizeof(configAnimationName) - 1);
     configAnimationName[sizeof(configAnimationName) - 1] = '\0';
@@ -1213,14 +1250,14 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
     /* Load frames unless InitTrayIcon already preloaded the same animation. */
     if (!reusePreloadedMain &&
-        !LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy) &&
+        !LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy) &&
         _stricmp(g_animationName, "__logo__") != 0) {
         WriteLog(LOG_LEVEL_WARNING, "Failed to load tray animation '%s', falling back to logo", g_animationName);
         LoadedAnimation_Free(&g_mainAnimation);
         strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
         g_animationName[sizeof(g_animationName) - 1] = '\0';
         WriteAnimationConfigPathIfChanged(config_path, "__logo__");
-        LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+        LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy);
     }
     g_mainAnimationPreloaded = FALSE;
     g_preloadedIconCx = 0;
@@ -1234,6 +1271,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     }
 
     EnsureTrayAnimationTimerState();
+    RefreshTrayBackgroundWorkState();
 }
 
 /**
@@ -1297,6 +1335,7 @@ void StopTrayAnimation(HWND hwnd) {
     g_pendingTrayUpdate = FALSE;
     ResetBuiltinIconUpdateCache();
     g_trayHwnd = NULL;
+    RefreshTrayBackgroundWorkState();
 }
 
 /**
@@ -1446,7 +1485,7 @@ static BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig
 
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    if (!LoadAnimationByName(requestedName, &newMain, g_memoryPool, cx, cy)) {
+    if (!LoadAnimationByNameWithTemporaryPool(requestedName, &newMain, cx, cy)) {
         LoadedAnimation_Free(&newMain);
         goto done;
     }
@@ -1502,6 +1541,9 @@ static BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig
 
 done:
     EndTrayAnimationRuntimeUse();
+    if (result) {
+        RefreshTrayBackgroundWorkState();
+    }
     return result;
 }
 
@@ -1804,10 +1846,6 @@ void PreloadAnimationFromConfig(void) {
     GetConfigPath(config_path, sizeof(config_path));
     ReadAnimationNameFromConfig(g_animationName, sizeof(g_animationName), config_path);
     
-    if (!g_memoryPool) {
-        g_memoryPool = MemoryPool_Create(MEMORY_POOL_SIZE);
-    }
-    
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     LoadedAnimation_Free(&g_mainAnimation);
@@ -1815,7 +1853,7 @@ void PreloadAnimationFromConfig(void) {
     g_mainAnimationPreloaded = FALSE;
     g_preloadedIconCx = 0;
     g_preloadedIconCy = 0;
-    BOOL loaded = LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+    BOOL loaded = LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy);
     if (!loaded &&
         _stricmp(g_animationName, "__logo__") != 0) {
         WriteLog(LOG_LEVEL_WARNING, "Failed to preload tray animation '%s', falling back to logo", g_animationName);
@@ -1823,7 +1861,7 @@ void PreloadAnimationFromConfig(void) {
         strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
         g_animationName[sizeof(g_animationName) - 1] = '\0';
         WriteAnimationConfigPathIfChanged(config_path, "__logo__");
-        loaded = LoadAnimationByName(g_animationName, &g_mainAnimation, g_memoryPool, cx, cy);
+        loaded = LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy);
     }
     if (loaded) {
         g_mainAnimationPreloaded = TRUE;
@@ -1894,7 +1932,7 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
 
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
-    if (!LoadAnimationByName(name, &newMain, g_memoryPool, cx, cy)) {
+    if (!LoadAnimationByNameWithTemporaryPool(name, &newMain, cx, cy)) {
         WriteLog(LOG_LEVEL_WARNING,
                  "Ignoring hot-reloaded tray animation '%s' because it could not be loaded",
                  name);
@@ -1982,6 +2020,7 @@ void TrayAnimation_SetMinIntervalMs(UINT ms) {
  */
 void TrayAnimation_RecomputeTimerDelay(void) {
     InvalidateSpeedScaleCache();
+    RefreshTrayBackgroundWorkState();
 }
 
 /**
