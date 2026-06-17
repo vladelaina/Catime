@@ -118,6 +118,196 @@ static void MakeIconFullyOpaque(void* pvBits, int cx, int cy) {
     }
 }
 
+static DWORD ComposeAlphaTextPixel(COLORREF color, BYTE alpha) {
+    DWORD r = ((DWORD)GetRValue(color) * alpha + 127u) / 255u;
+    DWORD g = ((DWORD)GetGValue(color) * alpha + 127u) / 255u;
+    DWORD b = ((DWORD)GetBValue(color) * alpha + 127u) / 255u;
+    return ((DWORD)alpha << 24) | (r << 16) | (g << 8) | b;
+}
+
+static BYTE GetMaskPixelAlpha(DWORD pixel) {
+    BYTE r = (BYTE)((pixel >> 16) & 0xFF);
+    BYTE g = (BYTE)((pixel >> 8) & 0xFF);
+    BYTE b = (BYTE)(pixel & 0xFF);
+    return (BYTE)(((unsigned int)r + (unsigned int)g + (unsigned int)b) / 3u);
+}
+
+static BOOL DrawAlphaTextOnTransparentIcon(HDC screenDc,
+                                           void* targetBits,
+                                           int cx,
+                                           int cy,
+                                           HFONT font,
+                                           const wchar_t* text,
+                                           int textLen,
+                                           int x,
+                                           int y,
+                                           COLORREF textColor) {
+    if (!screenDc || !targetBits || !font || !text || textLen <= 0 || cx <= 0 || cy <= 0) {
+        return FALSE;
+    }
+
+    BITMAPINFO bi;
+    ZeroMemory(&bi, sizeof(bi));
+    bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bi.bmiHeader.biWidth = cx;
+    bi.bmiHeader.biHeight = -cy;
+    bi.bmiHeader.biPlanes = 1;
+    bi.bmiHeader.biBitCount = 32;
+    bi.bmiHeader.biCompression = BI_RGB;
+
+    VOID* maskBits = NULL;
+    HBITMAP maskBitmap = CreateDIBSection(NULL, &bi, DIB_RGB_COLORS, &maskBits, NULL, 0);
+    if (!maskBitmap || !maskBits) {
+        if (maskBitmap) DeleteObject(maskBitmap);
+        return FALSE;
+    }
+
+    HDC maskDc = CreateCompatibleDC(screenDc);
+    if (!maskDc) {
+        DeleteObject(maskBitmap);
+        return FALSE;
+    }
+
+    HGDIOBJ oldBitmap = SelectObject(maskDc, maskBitmap);
+    if (!oldBitmap) {
+        DeleteDC(maskDc);
+        DeleteObject(maskBitmap);
+        return FALSE;
+    }
+
+    ZeroMemory(maskBits, (size_t)cx * (size_t)cy * sizeof(DWORD));
+    SetBkMode(maskDc, TRANSPARENT);
+    SetTextColor(maskDc, RGB(255, 255, 255));
+    HGDIOBJ oldFont = SelectObject(maskDc, font);
+    TextOutW(maskDc, x, y, text, textLen);
+    if (oldFont) {
+        SelectObject(maskDc, oldFont);
+    }
+
+    DWORD* src = (DWORD*)maskBits;
+    DWORD* dst = (DWORD*)targetBits;
+    size_t count = (size_t)cx * (size_t)cy;
+    for (size_t i = 0; i < count; ++i) {
+        BYTE alpha = GetMaskPixelAlpha(src[i]);
+        if (alpha != 0) {
+            dst[i] = ComposeAlphaTextPixel(textColor, alpha);
+        }
+    }
+
+    SelectObject(maskDc, oldBitmap);
+    DeleteDC(maskDc);
+    DeleteObject(maskBitmap);
+    return TRUE;
+}
+
+static void GetSystemIconTextLogFont(LOGFONTW* lf, int pixelHeight, LONG weight) {
+    if (!lf) return;
+
+    ZeroMemory(lf, sizeof(*lf));
+    NONCLIENTMETRICSW ncm;
+    ZeroMemory(&ncm, sizeof(ncm));
+    ncm.cbSize = sizeof(ncm);
+
+    if (SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, ncm.cbSize, &ncm, 0)) {
+        *lf = ncm.lfStatusFont;
+        if (lf->lfFaceName[0] == L'\0') {
+            *lf = ncm.lfMessageFont;
+        }
+    }
+
+    if (lf->lfFaceName[0] == L'\0') {
+        wcscpy_s(lf->lfFaceName, _countof(lf->lfFaceName), L"Segoe UI");
+        lf->lfCharSet = DEFAULT_CHARSET;
+        lf->lfPitchAndFamily = DEFAULT_PITCH | FF_SWISS;
+    }
+
+    if (pixelHeight < 1) {
+        pixelHeight = 1;
+    }
+
+    lf->lfHeight = -pixelHeight;
+    lf->lfWidth = 0;
+    lf->lfEscapement = 0;
+    lf->lfOrientation = 0;
+    lf->lfWeight = weight;
+    lf->lfItalic = FALSE;
+    lf->lfUnderline = FALSE;
+    lf->lfStrikeOut = FALSE;
+    lf->lfOutPrecision = OUT_DEFAULT_PRECIS;
+    lf->lfClipPrecision = CLIP_DEFAULT_PRECIS;
+    /*
+     * ClearType can leave colored fringes on transparent tray icons, especially
+     * on Windows 7. Grayscale antialiasing is more predictable for alpha icons.
+     */
+    lf->lfQuality = ANTIALIASED_QUALITY;
+}
+
+static HFONT CreateFittedIconTextFont(HDC hdc,
+                                      const wchar_t* text,
+                                      int textLen,
+                                      int maxWidth,
+                                      int maxHeight,
+                                      LONG weight,
+                                      int minPixelHeight,
+                                      int maxPixelHeight,
+                                      SIZE* outSize) {
+    if (!hdc || !text || textLen <= 0) {
+        return NULL;
+    }
+
+    if (maxWidth < 1) maxWidth = 1;
+    if (maxHeight < 1) maxHeight = 1;
+    if (minPixelHeight < 1) minPixelHeight = 1;
+    if (maxPixelHeight < minPixelHeight) maxPixelHeight = minPixelHeight;
+
+    HFONT fallbackFont = NULL;
+    SIZE fallbackSize = {0};
+
+    for (int pixelHeight = maxPixelHeight; pixelHeight >= minPixelHeight; --pixelHeight) {
+        LOGFONTW lf;
+        GetSystemIconTextLogFont(&lf, pixelHeight, weight);
+        HFONT font = CreateFontIndirectW(&lf);
+        if (!font) {
+            continue;
+        }
+
+        HGDIOBJ oldFont = SelectObject(hdc, font);
+        SIZE measured = {0};
+        BOOL measuredOk = GetTextExtentPoint32W(hdc, text, textLen, &measured);
+        if (oldFont) {
+            SelectObject(hdc, oldFont);
+        }
+
+        if (!measuredOk) {
+            DeleteObject(font);
+            continue;
+        }
+
+        if (measured.cx <= maxWidth && measured.cy <= maxHeight) {
+            if (outSize) {
+                *outSize = measured;
+            }
+            if (font != fallbackFont && fallbackFont) {
+                DeleteObject(fallbackFont);
+            }
+            return font;
+        }
+
+        if (font != fallbackFont) {
+            if (fallbackFont) {
+                DeleteObject(fallbackFont);
+            }
+            fallbackFont = font;
+            fallbackSize = measured;
+        }
+    }
+
+    if (outSize) {
+        *outSize = fallbackSize;
+    }
+    return fallbackFont;
+}
+
 static HBITMAP CreateInitializedMaskBitmap(int cx, int cy, BYTE value) {
     if (cx <= 0 || cy <= 0) return NULL;
 
@@ -342,7 +532,7 @@ static HICON CreatePercentIcon16Uncached(int percent,
     }
 
     if (useTransparentBg) {
-        FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
+        ZeroMemory(pvBits, (size_t)cx * (size_t)cy * sizeof(DWORD));
     } else {
         FillSolidIconBackground(pvBits, cx, cy, bgColor);
     }
@@ -355,28 +545,34 @@ static HICON CreatePercentIcon16Uncached(int percent,
     wchar_t txt[8];
     _snwprintf_s(txt, 8, _TRUNCATE, L"%d", percent);
     
-    /* Dynamic font size: smaller for 3-digit numbers (100) */
-    int fontSize = (percent >= 100) ? -9 : -12;
-
-    HFONT hFont = CreateFontW(fontSize, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
-                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                              ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
-    HFONT oldf = hFont ? (HFONT)SelectObject(mem, hFont) : NULL;
-
     int txtLen = (int)wcsnlen(txt, _countof(txt));
 
+    SIZE sz = {0};
+    HFONT hFont = CreateFittedIconTextFont(mem, txt, txtLen,
+                                           cx - 2, cy,
+                                           FW_NORMAL,
+                                           6, cy - 1,
+                                           &sz);
+    HFONT oldf = hFont ? (HFONT)SelectObject(mem, hFont) : NULL;
+    if (!hFont) {
+        GetTextExtentPoint32W(mem, txt, txtLen, &sz);
+    }
 
     /* Center text */
-    SIZE sz = {0};
-    GetTextExtentPoint32W(mem, txt, txtLen, &sz);
     int x = (cx - sz.cx) / 2;
     int y = (cy - sz.cy) / 2;
-
-    TextOutW(mem, x, y, txt, txtLen);
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
 
     if (useTransparentBg) {
-        RepairTransparentIconAlpha(pvBits, cx, cy, transparentMarker);
+        if (!DrawAlphaTextOnTransparentIcon(hdc, pvBits, cx, cy, hFont,
+                                            txt, txtLen, x, y, textColor)) {
+            FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
+            TextOutW(mem, x, y, txt, txtLen);
+            RepairTransparentIconAlpha(pvBits, cx, cy, transparentMarker);
+        }
     } else {
+        TextOutW(mem, x, y, txt, txtLen);
         MakeIconFullyOpaque(pvBits, cx, cy);
     }
 
@@ -560,7 +756,7 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn,
     }
 
     if (useTransparentBg) {
-        FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
+        ZeroMemory(pvBits, (size_t)cx * (size_t)cy * sizeof(DWORD));
     } else {
         FillSolidIconBackground(pvBits, cx, cy, bgColor);
     }
@@ -572,26 +768,32 @@ static HICON CreateCapsLockIconUncached(BOOL capsOn,
     /* Display "A" or "a" based on Caps Lock state */
     const wchar_t* txt = capsOn ? L"A" : L"a";
 
-    /* Font size - -13 is the standard system icon font size */
-    int fontSize = -13;
-
-    /* Use FW_NORMAL (400) to match system UI look, ANTIALIASED_QUALITY for smooth blending */
-    HFONT hFont = CreateFontW(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
-                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                              ANTIALIASED_QUALITY, VARIABLE_PITCH | FF_SWISS, L"Segoe UI");
+    SIZE sz = {0};
+    HFONT hFont = CreateFittedIconTextFont(mem, txt, 1,
+                                           cx, cy,
+                                           FW_NORMAL,
+                                           7, cy,
+                                           &sz);
     HFONT oldf = hFont ? (HFONT)SelectObject(mem, hFont) : NULL;
+    if (!hFont) {
+        GetTextExtentPoint32W(mem, txt, 1, &sz);
+    }
 
     /* Center text */
-    SIZE sz = {0};
-    GetTextExtentPoint32W(mem, txt, 1, &sz);
     int x = (cx - sz.cx) / 2;
     int y = (cy - sz.cy) / 2;
-
-    TextOutW(mem, x, y, txt, 1);
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
 
     if (useTransparentBg) {
-        RepairTransparentIconAlpha(pvBits, cx, cy, transparentMarker);
+        if (!DrawAlphaTextOnTransparentIcon(hdc, pvBits, cx, cy, hFont,
+                                            txt, 1, x, y, textColor)) {
+            FillTransparentIconBackground(pvBits, cx, cy, transparentMarker);
+            TextOutW(mem, x, y, txt, 1);
+            RepairTransparentIconAlpha(pvBits, cx, cy, transparentMarker);
+        }
     } else {
+        TextOutW(mem, x, y, txt, 1);
         MakeIconFullyOpaque(pvBits, cx, cy);
     }
 

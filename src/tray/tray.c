@@ -234,9 +234,12 @@ static BOOL ShouldKeepSystemMonitorActive(void) {
     HWND hwnd = GetValidTrayMainWindow();
     if (!g_trayBackgroundWorkEnabled ||
         !hwnd ||
-        !IsTrayIconActiveForWindow(hwnd) ||
-        IsTrayInteractionSuspended()) {
+        !IsTrayIconActiveForWindow(hwnd)) {
         return FALSE;
+    }
+
+    if (IsTrayInteractionSuspended()) {
+        return CurrentTrayIconNeedsSystemMonitor();
     }
 
     return g_trayTooltipActive ||
@@ -691,6 +694,9 @@ static HICON GetInitialPercentIcon(AnimationType type) {
         SystemMonitor_ForceRefresh();
         SystemMonitor_GetUsage(&cpu, &mem);
         percent = (type == ANIM_TYPE_CPU) ? (int)(cpu + 0.5f) : (int)(mem + 0.5f);
+        if (type == ANIM_TYPE_CPU && percent == 0) {
+            return NULL;
+        }
     }
     
     if (percent < 0) percent = 0;

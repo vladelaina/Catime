@@ -84,6 +84,8 @@ static COLORREF g_lastBuiltinIconTextColor = CLR_INVALID;
 static COLORREF g_lastBuiltinIconBgColor = CLR_INVALID;
 static int g_lastBuiltinIconCx = 0;
 static int g_lastBuiltinIconCy = 0;
+static char g_lastStablePercentIconName[MAX_PATH] = "";
+static int g_lastStablePercentIconValue = -1;
 
 /* Thread safety */
 static CRITICAL_SECTION g_animCriticalSection;
@@ -282,6 +284,39 @@ static BOOL IsBuiltinIconUpdateCacheCurrent(const char* name,
            g_lastBuiltinIconCy == iconCy;
 }
 
+static BOOL TryGetCachedBuiltinIconValue(const char* name, int* value) {
+    if (!name || !value) {
+        return FALSE;
+    }
+
+    if (g_lastBuiltinIconValue >= 0 &&
+        _stricmp(g_lastBuiltinIconName, name) == 0) {
+        *value = g_lastBuiltinIconValue;
+        return TRUE;
+    }
+
+    if (g_lastStablePercentIconValue >= 0 &&
+        _stricmp(g_lastStablePercentIconName, name) == 0) {
+        *value = g_lastStablePercentIconValue;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static BOOL IsTransientZeroPronePercentIcon(const char* name) {
+    return name &&
+           (_stricmp(name, "__cpu__") == 0 ||
+            _stricmp(name, "__mem__") == 0);
+}
+
+static BOOL ShouldPreserveCachedPercentIconValue(const char* name, int sampledValue) {
+    int cachedValue = -1;
+    return sampledValue == 0 &&
+           IsTransientZeroPronePercentIcon(name) &&
+           (!TryGetCachedBuiltinIconValue(name, &cachedValue) || cachedValue > 0);
+}
+
 static void RecordBuiltinIconUpdateCache(const char* name,
                                          int value,
                                          COLORREF textColor,
@@ -297,6 +332,12 @@ static void RecordBuiltinIconUpdateCache(const char* name,
     g_lastBuiltinIconBgColor = bgColor;
     g_lastBuiltinIconCx = iconCx;
     g_lastBuiltinIconCy = iconCy;
+
+    if (value > 0 && IsTransientZeroPronePercentIcon(name)) {
+        strncpy(g_lastStablePercentIconName, name, sizeof(g_lastStablePercentIconName) - 1);
+        g_lastStablePercentIconName[sizeof(g_lastStablePercentIconName) - 1] = '\0';
+        g_lastStablePercentIconValue = value;
+    }
 }
 
 static BOOL CopyStringExactA(const char* src, char* out, size_t outSize) {
@@ -964,6 +1005,10 @@ static void UpdateTrayIconToCurrentFrameInternal(BOOL allowWhileSuspended) {
 
         if (p < 0) p = 0;
         if (p > 100) p = 100;
+
+        if (ShouldPreserveCachedPercentIconValue(targetName, p)) {
+            return;
+        }
 
         if (!previewActive &&
             GetPercentIconColorSnapshot(&builtinTextColor, &builtinBgColor)) {
@@ -2092,6 +2137,9 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
         if (p < 0) p = 0;
         if (p > 100) p = 100;
         value = p;
+        if (ShouldPreserveCachedPercentIconValue(animationName, value)) {
+            goto done;
+        }
         if (IsBuiltinIconUpdateCacheCurrent(animationName, value,
                                             textColor, bgColor,
                                             iconCx, iconCy)) {

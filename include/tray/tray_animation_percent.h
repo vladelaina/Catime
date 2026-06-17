@@ -60,8 +60,7 @@ void GetGeneratedTrayIconSizeSnapshot(int* outCx, int* outCy);
  * 
  * @details
  * Renders percentage as text on small icon.
- * Uses Segoe UI Bold for clarity.
- * Auto-scales text to fit icon size.
+ * Uses the system UI font and auto-scales text to fit icon size.
  */
 HICON CreatePercentIcon16(int percent);
 
@@ -72,7 +71,7 @@ HICON CreatePercentIcon16(int percent);
  * 
  * @details
  * Renders "A" when Caps Lock is on, "a" when off.
- * Uses same color scheme as percent icons.
+ * Uses the system UI font and the same color scheme as percent icons.
  */
 HICON CreateCapsLockIcon(BOOL capsOn);
 
