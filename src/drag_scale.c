@@ -16,6 +16,7 @@
 
 #include "color/color_parser.h"
 #include "color/color_state.h"
+#include <math.h>
 
 BOOL PREVIOUS_TOPMOST_STATE = FALSE;
 static BOOL g_editModeForcedTopmost = FALSE;
@@ -54,8 +55,8 @@ static inline void RefreshWindow(HWND hwnd, BOOL eraseBackground) {
 }
 
 static inline float ClampScaleFactor(float scale) {
+    if (!isfinite(scale)) return MIN_SCALE_FACTOR;
     if (scale < MIN_SCALE_FACTOR) return MIN_SCALE_FACTOR;
-    if (scale > MAX_SCALE_FACTOR) return MAX_SCALE_FACTOR;
     return scale;
 }
 
@@ -69,7 +70,12 @@ static int CalculateAnchoredPosition(int originalPos, int originalSize, int newS
     }
 
     double anchorRatio = (double)(anchorPos - originalPos) / (double)originalSize;
-    return anchorPos - (int)(anchorRatio * (double)newSize + 0.5);
+    double offset = anchorRatio * (double)newSize + 0.5;
+    double anchored = (double)anchorPos - offset;
+    if (!isfinite(anchored)) return originalPos;
+    if (anchored > (double)INT_MAX) return INT_MAX;
+    if (anchored < (double)INT_MIN) return INT_MIN;
+    return (int)anchored;
 }
 
 static void SetPendingScaleResizeAnchor(HWND hwnd, POINT anchor) {
@@ -334,8 +340,8 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     }
     
     float scalingRatio = newScale / oldScale;
-    int newWidth = (int)(oldWidth * scalingRatio);
-    int newHeight = (int)(oldHeight * scalingRatio);
+    int newWidth = ScaleWindowDimensionClamped(oldWidth, scalingRatio);
+    int newHeight = ScaleWindowDimensionClamped(oldHeight, scalingRatio);
     
     int newX = CalculateAnchoredPosition(windowRect.left, oldWidth, newWidth, cursorPos.x);
     int newY = CalculateAnchoredPosition(windowRect.top, oldHeight, newHeight, cursorPos.y);

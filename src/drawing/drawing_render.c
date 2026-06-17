@@ -43,7 +43,6 @@ extern float PLUGIN_FONT_SCALE_FACTOR;
 #define MAX_RENDER_DIB_DIMENSION 4096
 #define MAX_RENDER_DIB_PIXELS (4096u * 4096u)
 #define RENDER_DIB_SHRINK_THRESHOLD_MULTIPLIER 4u
-#define MAX_RENDER_FONT_SIZE_PIXELS 512
 #define PLUGIN_IMAGE_STACK_CAPACITY 4
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define FONT_PATH_RESOLVE_FAILURE_RETRY_MS 5000u
@@ -191,8 +190,8 @@ static int CalculateRenderFontSize(int baseFontSize, float scaleFactor) {
     if (!isfinite(scaled) || scaled < 1.0) {
         return 1;
     }
-    if (scaled > (double)MAX_RENDER_FONT_SIZE_PIXELS) {
-        return MAX_RENDER_FONT_SIZE_PIXELS;
+    if (scaled > (double)INT_MAX) {
+        return INT_MAX;
     }
     return (int)scaled;
 }

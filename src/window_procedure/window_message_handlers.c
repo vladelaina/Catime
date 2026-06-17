@@ -57,6 +57,14 @@ static void StartAnimationPreviewDelayTimer(HWND hwnd);
 extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;
 
+static BOOL g_suppressRButtonUpAfterEditExit = FALSE;
+static DWORD g_suppressRButtonUpTick = 0;
+
+static void ClearSuppressedRButtonUp(void) {
+    g_suppressRButtonUpAfterEditExit = FALSE;
+    g_suppressRButtonUpTick = 0;
+}
+
 static int HexDigitValue(char ch) {
     if (ch >= '0' && ch <= '9') return ch - '0';
     if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
@@ -293,6 +301,13 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    if (g_suppressRButtonUpAfterEditExit) {
+        DWORD elapsed = GetTickCount() - g_suppressRButtonUpTick;
+        ClearSuppressedRButtonUp();
+        if (elapsed < 1000u) {
+            return 0;
+        }
+    }
     if (CLOCK_EDIT_MODE) {
         EndEditMode(hwnd);
         return 0;
@@ -302,6 +317,15 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    if (CLOCK_EDIT_MODE) {
+        EndEditMode(hwnd);
+        g_suppressRButtonUpAfterEditExit = TRUE;
+        g_suppressRButtonUpTick = GetTickCount();
+        return 0;
+    }
+
+    ClearSuppressedRButtonUp();
+
     if (GetKeyState(VK_CONTROL) & 0x8000) {
         ToggleEditMode(hwnd);
         return 0;

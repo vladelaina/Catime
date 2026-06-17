@@ -91,10 +91,10 @@ BOOL HandleDragWindow(HWND hwnd);
  * @brief Handle mouse wheel scaling
  * @param hwnd Window handle
  * @param delta Wheel delta (positive=zoom in, negative=zoom out)
- * @return TRUE if scaled, FALSE if not in edit mode or limits reached
+ * @return TRUE if scaled, FALSE if not in edit mode or minimum limit reached
  * 
  * @details
- * Proportional scaling, clamped to MIN/MAX_SCALE_FACTOR, schedules save.
+ * Proportional scaling, clamped only to MIN_SCALE_FACTOR, schedules save.
  */
 BOOL HandleScaleWindow(HWND hwnd, int delta);
 

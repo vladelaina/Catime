@@ -4,6 +4,7 @@
  */
 
 #include "window/window_core.h"
+#include "window.h"
 #include "window/window_visual_effects.h"
 #include "window/window_desktop_integration.h"
 #include "window_procedure/window_procedure.h"
@@ -41,8 +42,8 @@ static DWORD g_systemPositionGuardUntil = 0;
 static BOOL g_hasLastSavedWindowSettings = FALSE;
 static int g_lastSavedWindowPosX = 0;
 static int g_lastSavedWindowPosY = 0;
-static char g_lastSavedWindowScale[16] = {0};
-static char g_lastSavedPluginScale[16] = {0};
+static char g_lastSavedWindowScale[64] = {0};
+static char g_lastSavedPluginScale[64] = {0};
 
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
@@ -167,8 +168,8 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         exStyle |= WS_EX_NOACTIVATE;
     }
     
-    int initialWidth = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
-    int initialHeight = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
+    int initialWidth = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_WIDTH, CLOCK_WINDOW_SCALE);
+    int initialHeight = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT, CLOCK_WINDOW_SCALE);
 
     ResolveConfiguredWindowPosition(initialWidth, initialHeight,
                                     &CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
@@ -230,7 +231,7 @@ void SaveWindowSettings(HWND hwnd) {
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
 
-    char posXStr[16], posYStr[16], scaleStr[16], pluginScaleStr[16];
+    char posXStr[16], posYStr[16], scaleStr[64], pluginScaleStr[64];
     snprintf(posXStr, sizeof(posXStr), "%d", CLOCK_WINDOW_POS_X);
     snprintf(posYStr, sizeof(posYStr), "%d", CLOCK_WINDOW_POS_Y);
     snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);

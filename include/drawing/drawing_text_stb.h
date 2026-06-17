@@ -136,6 +136,20 @@ BOOL IsGlyphBitmapVisibleSTB(const stbtt_fontinfo* fontInfo,
                              EffectType effect,
                              int extraMargin);
 
+unsigned char* CreateVisibleGlyphBitmapSTB(const stbtt_fontinfo* fontInfo,
+                                           int glyphIndex,
+                                           float scaleX,
+                                           float scaleY,
+                                           int originX,
+                                           int originY,
+                                           int destWidth,
+                                           int destHeight,
+                                           int extraMargin,
+                                           int* width,
+                                           int* height,
+                                           int* xoff,
+                                           int* yoff);
+
 void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
                         int x_pos, int y_pos,
                         const unsigned char* bitmap, int w, int h,

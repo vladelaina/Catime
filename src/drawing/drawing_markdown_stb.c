@@ -10,6 +10,7 @@
 #include "markdown/markdown_interactive.h"
 #include "color/gradient.h"
 #include "log.h"
+#include <limits.h>
 #include <math.h>
 
 /* Helper Functions */
@@ -27,8 +28,10 @@ static float GetScaleForHeading(int level, float baseScale) {
 }
 
 static int GetLineHeightFromMetric(int fontMetricHeight, float scale) {
-    if (fontMetricHeight <= 0 || scale <= 0.0f) return 0;
-    return (int)(fontMetricHeight * scale);
+    double scaled = (double)fontMetricHeight * (double)scale;
+    if (fontMetricHeight <= 0 || scale <= 0.0f || !isfinite(scaled)) return 0;
+    if (scaled > (double)INT_MAX) return INT_MAX;
+    return (int)scaled;
 }
 
 static int ClampMarkdownPos(size_t pos) {
@@ -691,7 +694,7 @@ void RenderMarkdownSTBMeasured(void* bits, int width, int height, const wchar_t*
                 int h = GetLineHeightFromMetric(lineHeightMetric, scale);
                 if (h > lineMaxHeight) lineMaxHeight = h;
 
-                int asc = (int)(baseAscent * scale); // Approximation
+                int asc = GetLineHeightFromMetric(baseAscent, scale); // Approximation
                 if (asc > maxAscent) maxAscent = asc;
             }
 
@@ -942,15 +945,15 @@ void RenderMarkdownSTBMeasured(void* bits, int width, int height, const wchar_t*
                     }
 
                     int visibilityMargin = isItalic ? lineMaxHeight : 0;
-                    if (!IsGlyphBitmapVisibleSTB(glyphFontInfo, gm.index, glyphScale, glyphScale,
-                                                 currentX, baselineY, width, height,
-                                                 activeEffect, visibilityMargin)) {
-                        currentX = AddMarkdownIntClamped(currentX, gm.advance + gm.kern);
-                        continue;
+                    if (activeEffect != EFFECT_TYPE_NONE) {
+                        visibilityMargin = AddMarkdownIntClamped(visibilityMargin, 24);
                     }
-
-                    bitmap = stbtt_GetGlyphBitmap(glyphFontInfo, glyphScale, glyphScale,
-                                                  gm.index, &w, &h, &xoff, &yoff);
+                    bitmap = CreateVisibleGlyphBitmapSTB(glyphFontInfo, gm.index,
+                                                         glyphScale, glyphScale,
+                                                         currentX, baselineY,
+                                                         width, height,
+                                                         visibilityMargin,
+                                                         &w, &h, &xoff, &yoff);
                     
                     if (bitmap) {
                         float slant = isItalic ? 0.35f : 0.0f;

@@ -483,7 +483,7 @@ static BOOL ParseScaleFactor(const char* text, float* scale) {
     char* end = NULL;
     float parsed = strtof(text, &end);
     if (end == text || errno == ERANGE || !isfinite(parsed) ||
-        parsed < MIN_SCALE_FACTOR || parsed > MAX_SCALE_FACTOR) {
+        parsed < MIN_SCALE_FACTOR) {
         return FALSE;
     }
 
@@ -576,12 +576,12 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
             posY = CLOCK_WINDOW_POS_Y;
         }
 
-        char scaleStr[16];
+        char scaleStr[64];
         ReadConfigStr(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_SCALE, "1.62", scaleStr, sizeof(scaleStr));
         float newScale = CLOCK_WINDOW_SCALE;
         BOOL hasValidScale = ParseScaleFactor(scaleStr, &newScale);
 
-        char pluginScaleStr[16];
+        char pluginScaleStr[64];
         ReadConfigStr(CFG_SECTION_DISPLAY, "PLUGIN_SCALE", "1.0", pluginScaleStr, sizeof(pluginScaleStr));
         float newPluginScale = PLUGIN_FONT_SCALE_FACTOR;
         BOOL hasValidPluginScale = ParseScaleFactor(pluginScaleStr, &newPluginScale);
@@ -605,8 +605,8 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         }
 
         if (posChanged || scaleChanged) {
-            int width = (int)(CLOCK_BASE_WINDOW_WIDTH * CLOCK_WINDOW_SCALE);
-            int height = (int)(CLOCK_BASE_WINDOW_HEIGHT * CLOCK_WINDOW_SCALE);
+            int width = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_WIDTH, CLOCK_WINDOW_SCALE);
+            int height = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT, CLOCK_WINDOW_SCALE);
 
             if (!posChanged) {
                 RECT currentRect;

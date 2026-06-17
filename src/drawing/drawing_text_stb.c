@@ -162,14 +162,25 @@ static int TouchFontCacheSlotLocked(int slot) {
     return g_fontCacheLRU[slot];
 }
 
+static int ScaleTextMetricClamped(int metric, float scale) {
+    double scaled = (double)metric * (double)scale;
+    if (!isfinite(scaled)) {
+        return scaled < 0.0 ? INT_MIN : INT_MAX;
+    }
+    if (scaled > (double)INT_MAX) return INT_MAX;
+    if (scaled < (double)INT_MIN) return INT_MIN;
+    return (int)scaled;
+}
+
 static void ApplyCachedGlyphMetrics(const GlyphMetricsCacheEntry* entry,
                                     float scale,
                                     float fallbackScale,
                                     GlyphMetrics* out) {
     out->index = entry->index;
     out->isFallback = entry->isFallback;
-    out->advance = (int)(entry->advanceUnits * (entry->isFallback ? fallbackScale : scale));
-    out->kern = (int)(entry->kernUnits * scale);
+    out->advance = ScaleTextMetricClamped(entry->advanceUnits,
+                                          entry->isFallback ? fallbackScale : scale);
+    out->kern = ScaleTextMetricClamped(entry->kernUnits, scale);
 }
 
 BOOL BeginFontUseSTB(void) {
@@ -1231,7 +1242,7 @@ BOOL GetCachedFontCharMetricsSTB(const stbtt_fontinfo* fontInfo,
         &g_fontTagGlyphMetricsCache[fontSlot][cacheSlot];
     if (cached->valid && cached->c == c) {
         out->index = cached->index;
-        out->advance = (int)(cached->advanceUnits * scale);
+        out->advance = ScaleTextMetricClamped(cached->advanceUnits, scale);
         return TRUE;
     }
 
@@ -1248,7 +1259,7 @@ BOOL GetCachedFontCharMetricsSTB(const stbtt_fontinfo* fontInfo,
     cached->advanceUnits = advanceUnits;
 
     out->index = glyphIndex;
-    out->advance = (int)(advanceUnits * scale);
+    out->advance = ScaleTextMetricClamped(advanceUnits, scale);
     return TRUE;
 }
 
@@ -1285,6 +1296,104 @@ BOOL IsGlyphBitmapVisibleSTB(const stbtt_fontinfo* fontInfo,
     return right > 0 && bottom > 0 && left < destWidth && top < destHeight;
 }
 
+unsigned char* CreateVisibleGlyphBitmapSTB(const stbtt_fontinfo* fontInfo,
+                                           int glyphIndex,
+                                           float scaleX,
+                                           float scaleY,
+                                           int originX,
+                                           int originY,
+                                           int destWidth,
+                                           int destHeight,
+                                           int extraMargin,
+                                           int* width,
+                                           int* height,
+                                           int* xoff,
+                                           int* yoff) {
+    if (width) *width = 0;
+    if (height) *height = 0;
+    if (xoff) *xoff = 0;
+    if (yoff) *yoff = 0;
+
+    if (!fontInfo || glyphIndex == 0 || destWidth <= 0 || destHeight <= 0 ||
+        !isfinite(scaleX) || !isfinite(scaleY) || scaleX <= 0.0f || scaleY <= 0.0f) {
+        return NULL;
+    }
+
+    int x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+    stbtt_GetGlyphBitmapBox(fontInfo, glyphIndex, scaleX, scaleY, &x0, &y0, &x1, &y1);
+    if (x1 <= x0 || y1 <= y0) {
+        return NULL;
+    }
+
+    if (extraMargin < 0) extraMargin = 0;
+
+    long long glyphLeft = (long long)originX + (long long)x0;
+    long long glyphTop = (long long)originY + (long long)y0;
+    long long glyphRight = (long long)originX + (long long)x1;
+    long long glyphBottom = (long long)originY + (long long)y1;
+    long long clipLeft = glyphLeft < -(long long)extraMargin ? -(long long)extraMargin : glyphLeft;
+    long long clipTop = glyphTop < -(long long)extraMargin ? -(long long)extraMargin : glyphTop;
+    long long clipRightLimit = (long long)destWidth + (long long)extraMargin;
+    long long clipBottomLimit = (long long)destHeight + (long long)extraMargin;
+    long long clipRight = glyphRight > clipRightLimit ? clipRightLimit : glyphRight;
+    long long clipBottom = glyphBottom > clipBottomLimit ? clipBottomLimit : glyphBottom;
+
+    if (clipLeft >= clipRight || clipTop >= clipBottom) {
+        return NULL;
+    }
+
+    long long srcLeft = clipLeft - glyphLeft;
+    long long srcTop = clipTop - glyphTop;
+    long long outW64 = clipRight - clipLeft;
+    long long outH64 = clipBottom - clipTop;
+    long long xoff64 = (long long)x0 + srcLeft;
+    long long yoff64 = (long long)y0 + srcTop;
+
+    if (outW64 <= 0 || outH64 <= 0 ||
+        outW64 > (long long)INT_MAX || outH64 > (long long)INT_MAX ||
+        xoff64 < (long long)INT_MIN || xoff64 > (long long)INT_MAX ||
+        yoff64 < (long long)INT_MIN || yoff64 > (long long)INT_MAX) {
+        return NULL;
+    }
+
+    int outW = (int)outW64;
+    int outH = (int)outH64;
+    size_t pixelCount = 0;
+    if (!CalculateBitmapPixelCount(outW, outH, &pixelCount)) {
+        return NULL;
+    }
+
+    unsigned char* bitmap = (unsigned char*)malloc(pixelCount);
+    if (!bitmap) {
+        return NULL;
+    }
+    memset(bitmap, 0, pixelCount);
+
+    stbtt_vertex* vertices = NULL;
+    int numVerts = stbtt_GetGlyphShape(fontInfo, glyphIndex, &vertices);
+    if (!vertices || numVerts <= 0) {
+        if (vertices) STBTT_free(vertices, fontInfo->userdata);
+        free(bitmap);
+        return NULL;
+    }
+
+    stbtt__bitmap gbm;
+    gbm.w = outW;
+    gbm.h = outH;
+    gbm.stride = outW;
+    gbm.pixels = bitmap;
+    stbtt_Rasterize(&gbm, 0.35f, vertices, numVerts,
+                    scaleX, scaleY, 0.0f, 0.0f,
+                    (int)xoff64, (int)yoff64, 1, fontInfo->userdata);
+    STBTT_free(vertices, fontInfo->userdata);
+
+    if (width) *width = outW;
+    if (height) *height = outH;
+    if (xoff) *xoff = (int)xoff64;
+    if (yoff) *yoff = (int)yoff64;
+    return bitmap;
+}
+
 BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) {
     if (!BeginFontUseSTB()) return FALSE;
     BOOL result = FALSE;
@@ -1316,7 +1425,7 @@ BOOL MeasureTextSTB(const wchar_t* text, int fontSize, int* width, int* height) 
 
     int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(&g_fontInfo, &ascent, &descent, &lineGap);
-    int lineHeight = (int)((ascent - descent + lineGap) * scale);
+    int lineHeight = ScaleTextMetricClamped(ascent - descent + lineGap, scale);
 
     if (width) *width = maxWidth;
     if (height) *height = MulTextIntClamped(lineCount, lineHeight);
@@ -1339,8 +1448,8 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
     
     int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(&g_fontInfo, &ascent, &descent, &lineGap);
-    int lineHeight = (int)((ascent - descent + lineGap) * scale);
-    int baselineOffset = (int)(ascent * scale);
+    int lineHeight = ScaleTextMetricClamped(ascent - descent + lineGap, scale);
+    int baselineOffset = ScaleTextMetricClamped(ascent, scale);
     
     int r = GetRValue(color);
     int g = GetGValue(color);
@@ -1396,15 +1505,13 @@ void RenderTextSTB(void* bits, int width, int height, const wchar_t* text,
 
                     const stbtt_fontinfo* glyphFontInfo = gm.isFallback ? &g_fallbackFontInfo : &g_fontInfo;
                     float glyphScale = gm.isFallback ? fallbackScale : scale;
-                    if (!IsGlyphBitmapVisibleSTB(glyphFontInfo, gm.index, glyphScale, glyphScale,
-                                                 currentX, lineY, width, height,
-                                                 effect, 0)) {
-                        currentX = AddTextIntClamped(currentX, gm.advance + gm.kern);
-                        continue;
-                    }
-
-                    bitmap = stbtt_GetGlyphBitmap(glyphFontInfo, glyphScale, glyphScale,
-                                                  gm.index, &w, &h, &xoff, &yoff);
+                    int glyphMargin = (effect != EFFECT_TYPE_NONE) ? 24 : 0;
+                    bitmap = CreateVisibleGlyphBitmapSTB(glyphFontInfo, gm.index,
+                                                         glyphScale, glyphScale,
+                                                         currentX, lineY,
+                                                         width, height,
+                                                         glyphMargin,
+                                                         &w, &h, &xoff, &yoff);
 
                     if (bitmap) {
                         int glyphX = AddTextIntClamped(currentX, xoff);
