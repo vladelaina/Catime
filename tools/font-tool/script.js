@@ -52,6 +52,36 @@ const engineLoadingContainer = document.getElementById('engineLoadingContainer')
 const engineLoadingStatus = document.getElementById('engineLoadingStatus');
 const engineNotReadyHint = document.getElementById('engineNotReadyHint');
 
+function escapeHTML(value) {
+    const div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
+}
+
+function escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function loadExternalScriptOnce(src, marker) {
+    if (document.querySelector(`script[data-loader="${marker}"]`)) {
+        return new Promise((resolve, reject) => {
+            const existingScript = document.querySelector(`script[data-loader="${marker}"]`);
+            existingScript.addEventListener('load', () => resolve(), { once: true });
+            existingScript.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        });
+    }
+
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.dataset.loader = marker;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Loaded, initializing');
     
@@ -133,6 +163,10 @@ function updateEngineLoadingStatus(message) {
 async function initPyodideAsync() {
     try {
         updateEngineLoadingStatus('Loading processing engine...');
+
+        if (typeof loadPyodide === 'undefined') {
+            await loadExternalScriptOnce('https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js', 'pyodide');
+        }
         
         pyodide = await loadPyodide();
         
@@ -1083,10 +1117,11 @@ function updateFileList() {
     selectedFiles.forEach((file, index) => {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
+        const safeFileName = escapeHTML(file.name);
         
         fileItem.innerHTML = `
             <div class="file-info">
-                <div class="file-name">${file.name}</div>
+                <div class="file-name">${safeFileName}</div>
                 <div class="file-size">${formatFileSize(file.size)}</div>
             </div>
             <button class="file-remove" onclick="removeFile(${index})">
@@ -1825,10 +1860,11 @@ function addSingleDownloadItem(font, index) {
     downloadItem.setAttribute('data-index', index); 
     
     const compressionRatio = ((font.originalSize - font.newSize) / font.originalSize * 100).toFixed(1);
+    const safeFontName = escapeHTML(font.name);
     
     downloadItem.innerHTML = `
         <div class="download-info">
-            <div class="download-name">${font.name}</div>
+            <div class="download-name">${safeFontName}</div>
             <div class="download-size">
                 ${formatFileSize(font.originalSize)} => ${formatFileSize(font.newSize)} 
                 (${translateText('压缩了')} ${compressionRatio}%)
@@ -2021,7 +2057,7 @@ async function downloadFolderAsZip() {
             if (folderStructure.folderNames.length > 1) {
                 fullPath = `${dirPath}/`;
             } else {
-                const relativePath = dirPath.replace(new RegExp(`^${folderStructure.name}/?`), '');
+                const relativePath = dirPath.replace(new RegExp(`^${escapeRegExp(folderStructure.name)}/?`), '');
                 if (relativePath) {
                     fullPath = `${relativePath}/`;
                 } else {
@@ -2055,7 +2091,7 @@ async function downloadFolderAsZip() {
             if (folderStructure.folderNames.length > 1) {
                 finalPath = relativePath;
             } else {
-                const flattenedPath = relativePath.replace(new RegExp(`^${folderStructure.name}/?`), '');
+                const flattenedPath = relativePath.replace(new RegExp(`^${escapeRegExp(folderStructure.name)}/?`), '');
                 finalPath = flattenedPath || file.name; 
             }
             
@@ -2442,10 +2478,11 @@ function showTemporaryMessage(message, type = 'info') {
     
     const messageDiv = document.createElement('div');
     messageDiv.className = `temporary-message ${type}`;
-    messageDiv.innerHTML = `
-        <i class="fas fa-${iconClass}"></i>
-        <span>${message}</span>
-    `;
+    const icon = document.createElement('i');
+    icon.className = `fas fa-${iconClass}`;
+    const text = document.createElement('span');
+    text.textContent = message;
+    messageDiv.append(icon, text);
     
     document.body.insertBefore(messageDiv, document.body.firstChild);
     
@@ -2454,9 +2491,9 @@ function showTemporaryMessage(message, type = 'info') {
     }, 100);
     
     setTimeout(() => {
-        msgEl.classList.remove('show');
+        messageDiv.classList.remove('show');
         setTimeout(() => {
-            msgEl.remove();
+            messageDiv.remove();
         }, 300);
     }, 3000);
 }

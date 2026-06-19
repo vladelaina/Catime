@@ -114,9 +114,12 @@ function initLiquidMotion() {
     // State
     let mouse = { x: 0, y: 0 }; // Normalized (-1 to 1)
     let rawMouse = { x: 0, y: 0 }; // Raw px relative to section
-    let current = { x: 0, y: 0 }; 
-    
-    const LERP_FACTOR = 0.05; 
+    let current = { x: 0, y: 0 };
+    let animationFrameId = null;
+    let isInViewport = true;
+    let isDocumentVisible = !document.hidden;
+
+    const LERP_FACTOR = 0.05;
 
     // --- HUD SYSTEM ---
     const hudCoords = document.getElementById('mouse-coords');
@@ -268,8 +271,46 @@ function initLiquidMotion() {
         // --- Ambient Light Follow ---
         ambientLight.style.background = `radial-gradient(circle 800px at ${rawMouse.x}px ${rawMouse.y}px, rgba(0,0,0,0.04) 0%, transparent 100%)`;
 
-        requestAnimationFrame(animate);
+        if (isInViewport && isDocumentVisible) {
+            animationFrameId = requestAnimationFrame(animate);
+        } else {
+            animationFrameId = null;
+        }
     }
 
-    animate();
+    function startAnimation() {
+        if (animationFrameId) return;
+        animationFrameId = requestAnimationFrame(animate);
+    }
+
+    function stopAnimation() {
+        if (!animationFrameId) return;
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+
+    function syncAnimationState() {
+        if (isInViewport && isDocumentVisible) {
+            startAnimation();
+        } else {
+            stopAnimation();
+        }
+    }
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+            isInViewport = Boolean(entry && entry.isIntersecting);
+            syncAnimationState();
+        }, { rootMargin: '200px 0px' });
+
+        observer.observe(section);
+    }
+
+    document.addEventListener('visibilitychange', () => {
+        isDocumentVisible = !document.hidden;
+        syncAnimationState();
+    });
+
+    syncAnimationState();
 }

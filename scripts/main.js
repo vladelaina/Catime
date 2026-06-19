@@ -1,9 +1,16 @@
-document.addEventListener('DOMContentLoaded', function() {
+function initAOSOnce() {
+    if (!window.AOS || document.documentElement.dataset.aosInitialized) return;
+
     AOS.init({
         duration: 800,
         once: true,
         offset: 50,
     });
+    document.documentElement.dataset.aosInitialized = 'true';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initAOSOnce();
 
     setDownloadUrls();
 
@@ -93,17 +100,26 @@ function initHeaderScroll() {
     const header = document.querySelector('.main-header');
     if (!header) return;
 
-    if (window.scrollY > 50) {
-        header.classList.add('scrolled');
-    }
-
-    window.addEventListener('scroll', () => {
+    const updateHeaderState = () => {
         if (window.scrollY > 50) {
             header.classList.add('scrolled');
         } else {
             header.classList.remove('scrolled');
         }
-    });
+    };
+
+    let ticking = false;
+    window.addEventListener('scroll', () => {
+        if (ticking) return;
+
+        ticking = true;
+        requestAnimationFrame(() => {
+            updateHeaderState();
+            ticking = false;
+        });
+    }, { passive: true });
+
+    updateHeaderState();
 }
 
 function initHeroInteractions() {
@@ -115,11 +131,16 @@ function initHeroInteractions() {
     const parallaxElements = document.querySelectorAll('[data-parallax-speed]');
     const magneticBtns = document.querySelectorAll('.btn-magnetic');
 
-    hero.addEventListener('mousemove', (e) => {
+    let heroPointer = null;
+    let heroRafId = null;
+
+    const updateHeroPointer = () => {
+        if (!heroPointer) return;
+
         const rect = hero.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        
+        const x = heroPointer.clientX - rect.left;
+        const y = heroPointer.clientY - rect.top;
+
         hero.style.setProperty('--mouse-x', `${x}px`);
         hero.style.setProperty('--mouse-y', `${y}px`);
 
@@ -150,9 +171,29 @@ function initHeroInteractions() {
             
             el.style.transform = `translate3d(${moveX}px, ${moveY}px, 0)`;
         });
-    });
+    };
+
+    hero.addEventListener('mousemove', (e) => {
+        heroPointer = {
+            clientX: e.clientX,
+            clientY: e.clientY
+        };
+
+        if (heroRafId) return;
+
+        heroRafId = requestAnimationFrame(() => {
+            heroRafId = null;
+            updateHeroPointer();
+        });
+    }, { passive: true });
 
     hero.addEventListener('mouseleave', () => {
+        heroPointer = null;
+        if (heroRafId) {
+            cancelAnimationFrame(heroRafId);
+            heroRafId = null;
+        }
+
         /*
         if (heroVisual) {
             heroVisual.style.transform = 'perspective(1000px) rotateX(5deg) rotateY(0deg) scale(1)';
@@ -165,10 +206,15 @@ function initHeroInteractions() {
     });
 
     magneticBtns.forEach(btn => {
-        btn.addEventListener('mousemove', (e) => {
+        let pointer = null;
+        let rafId = null;
+
+        const updateButtonPointer = () => {
+            if (!pointer) return;
+
             const rect = btn.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
+            const x = pointer.clientX - rect.left;
+            const y = pointer.clientY - rect.top;
             
             const centerX = rect.width / 2;
             const centerY = rect.height / 2;
@@ -183,9 +229,29 @@ function initHeroInteractions() {
             if (glow) {
                 glow.style.transform = `translate(${deltaX * 0.5}px, ${deltaY * 0.5}px)`;
             }
-        });
+        };
+
+        btn.addEventListener('mousemove', (e) => {
+            pointer = {
+                clientX: e.clientX,
+                clientY: e.clientY
+            };
+
+            if (rafId) return;
+
+            rafId = requestAnimationFrame(() => {
+                rafId = null;
+                updateButtonPointer();
+            });
+        }, { passive: true });
 
         btn.addEventListener('mouseleave', () => {
+            pointer = null;
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+
             btn.style.transform = 'translate(0, 0)';
             const glow = btn.querySelector('.btn-glow');
             if (glow) {
@@ -230,7 +296,7 @@ function initScrollProgressIndicator() {
 
     window.addEventListener('scroll', function() {
         updateScrollProgress();
-    });
+    }, { passive: true });
 
     scrollProgressContainer.addEventListener('click', function() {
         this.classList.add('clicked');

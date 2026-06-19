@@ -111,11 +111,15 @@ function renderSupportTotalImmediate() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    AOS.init({
-        duration: 800, 
-        once: true, 
-        offset: 50, 
-    });
+    if (typeof initAOSOnce === 'function') {
+        initAOSOnce();
+    } else if (window.AOS) {
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50,
+        });
+    }
 
     initScrollProgressIndicator();
 
@@ -265,7 +269,7 @@ function initScrollProgressIndicator() {
 
     window.addEventListener('scroll', function() {
         updateScrollProgress();
-    });
+    }, { passive: true });
 
     scrollProgressContainer.addEventListener('click', function() {
         this.classList.add('clicked');
@@ -825,7 +829,7 @@ function initCapsuleNumberObserver() {
                 window.removeEventListener('scroll', onScroll);
             }
         };
-        window.addEventListener('scroll', onScroll);
+        window.addEventListener('scroll', onScroll, { passive: true });
         onScroll();
     }
 }

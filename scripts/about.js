@@ -4,9 +4,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const videoCover = videoContainer.querySelector('.video-cover');
         const videoFrameContainer = videoContainer.querySelector('.video-frame-container');
         const autoplayIframe = document.getElementById('autoplayIframe');
-        
+
         const preloadImg = new Image();
-        preloadImg.src = 'assets/bilibili video cover.jpg';
+        preloadImg.src = 'assets/bilibili video cover.webp';
         
         videoCover.addEventListener('click', function() {
             videoCover.style.opacity = '0';

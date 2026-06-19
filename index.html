@@ -19,6 +19,14 @@
 
      <link rel="icon" type="image/png" href="assets/catime.webp"> 
 
+    <script src="scripts/galaxy.js" defer></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js" defer></script>
+    <script src="scripts/config.js" defer></script>
+    <script src="scripts/components.js" data-auto-load defer></script>
+    <script src="scripts/navigation.js" defer></script>
+    <script src="scripts/main.js" defer></script>
+    <script src="scripts/index.js" defer></script>
+
 </head>
 <body>
 
@@ -92,7 +100,7 @@
                         <div class="bokeh-orb orb-2"></div>
                     </div>
 
-                    <img src="assets/catime.webp" class="floating-element float-cat" alt="Catime Logo" data-parallax-speed="0.04">
+                    <img src="assets/catime.webp" class="floating-element float-cat" alt="Catime Logo" data-parallax-speed="0.04" fetchpriority="high" decoding="async">
                     <div class="floating-element float-icon-1" data-parallax-speed="0.02"><i class="fas fa-stopwatch"></i></div>
                     <div class="floating-element float-icon-2" data-parallax-speed="0.03"><i class="fas fa-ghost"></i></div>
                     <div class="floating-element float-icon-3" data-parallax-speed="0.025"><i class="fas fa-hourglass-half"></i></div>
@@ -106,7 +114,7 @@
                         <div class="hero-3d-stage">
                             <div class="hero-video-frame">
                                 <div class="frame-glow"></div>
-                                <video src="assets/videos/Catime Showcase.mp4" class="hero-video" autoplay muted loop playsinline></video>
+                                <video src="assets/videos/Catime Showcase.mp4" class="hero-video" autoplay muted loop playsinline preload="metadata"></video>
                             </div>
                         </div>
                     </div>
@@ -280,7 +288,7 @@
                 <div class="scenarios-container">
                     <div class="scenario-card" data-aos="fade-up" data-aos-delay="200" id="scenario-gaming">
                         <div class="scenario-visual">
-                            <img src="assets/Game scene demonstration.webp" alt="Gaming with Catime" class="scenario-img">
+                            <img src="assets/Game scene demonstration.webp" alt="Gaming with Catime" class="scenario-img" loading="lazy" decoding="async">
                         </div>
                         <div class="scenario-content">
                             <div class="scenario-icon">
@@ -294,7 +302,7 @@
                     
                     <div class="scenario-card reverse" data-aos="fade-up" data-aos-delay="300" id="scenario-autoopen">
                         <div class="scenario-visual">
-                            <img src="assets/Open a file or software.webp" alt="Auto Launch Apps" class="scenario-img">
+                            <img src="assets/Open a file or software.webp" alt="Auto Launch Apps" class="scenario-img" loading="lazy" decoding="async">
                         </div>
                         <div class="scenario-content">
                             <div class="scenario-icon">
@@ -308,7 +316,7 @@
                     
                     <div class="scenario-card" data-aos="fade-up" data-aos-delay="400" id="scenario-presentation">
                         <div class="scenario-visual">
-                            <img src="assets/ppt.webp" alt="Presentation Mode" class="scenario-img">
+                            <img src="assets/ppt.webp" alt="Presentation Mode" class="scenario-img" loading="lazy" decoding="async">
                         </div>
                         <div class="scenario-content">
                             <div class="scenario-icon">
@@ -345,139 +353,139 @@
                 <ul class="thanks-list">
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/mL-oDEfYK8jGZkUmbs55AA" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/果核次元.webp" alt="果核剥壳" class="thanks-avatar">
+                            <img src="assets/Contributors/果核次元.webp" alt="果核剥壳" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>果核剥壳</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.douyin.com/video/7472825024232148264" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/潮趣科技本.webp" alt="潮趣科技本" class="thanks-avatar">
+                            <img src="assets/Contributors/潮趣科技本.webp" alt="潮趣科技本" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>潮趣科技本</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/9c9_O4D8EuDfeHeL9Lg3yA" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/it学无止境.webp" alt="it学无止境" class="thanks-avatar">
+                            <img src="assets/Contributors/it学无止境.webp" alt="it学无止境" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>it学无止境</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://hellogithub.com/repository/00a7a32b7bc647e1a62747530bc16115" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub收录" class="thanks-avatar">
+                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub收录" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>HelloGitHub收录</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1iYQUYKE4j/?vd_source=efeaf6f967e48f58317a9291cef584cd" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/玄离199.webp" alt="玄离199" class="thanks-avatar">
+                            <img src="assets/Contributors/玄离199.webp" alt="玄离199" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>玄离199</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1DnQoYjEWR/" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/不言不厌.webp" alt="_不言不厌" class="thanks-avatar">
+                            <img src="assets/Contributors/不言不厌.webp" alt="_不言不厌" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>_不言不厌</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.appinn.com/catime-for-windows/" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/小众软件.webp" alt="小众软件" class="thanks-avatar">
+                            <img src="assets/Contributors/小众软件.webp" alt="小众软件" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>小众软件</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://github.com/521xueweihan/HelloGitHub/blob/master/content/HelloGitHub108.md" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub月刊" class="thanks-avatar">
+                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub月刊" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>HelloGitHub月刊</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/cE6AcVwx4-HPSFM7RBpxmw" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub专栏" class="thanks-avatar">
+                            <img src="assets/Contributors/HelloGitHub.webp" alt="HelloGitHub专栏" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>HelloGitHub专栏</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://api.xiaoheihe.cn/v3/bbs/app/api/web/share?link_id=6f02701abda6" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/学不下去了.webp" alt="学不下去了" class="thanks-avatar">
+                            <img src="assets/Contributors/学不下去了.webp" alt="学不下去了" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>学不下去了</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1e6oPYHEJG" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/夜的藏宝阁.webp" alt="夜的藏宝阁" class="thanks-avatar">
+                            <img src="assets/Contributors/夜的藏宝阁.webp" alt="夜的藏宝阁" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>夜的藏宝阁</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://v.douyin.com/8FS9hQHxCBU/" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/软件盘点.webp" alt="软件盘点" class="thanks-avatar">
+                            <img src="assets/Contributors/软件盘点.webp" alt="软件盘点" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>软件盘点</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1vpVnzNExf" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/世界隐性.webp" alt="世界隐性" class="thanks-avatar">
+                            <img src="assets/Contributors/世界隐性.webp" alt="世界隐性" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>世界隐性</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1AK5LzvEXP" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/资源汇社区.webp" alt="资源汇社区" class="thanks-avatar">
+                            <img src="assets/Contributors/资源汇社区.webp" alt="资源汇社区" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>资源汇社区</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/wAUmMtFbLVgO0m4iM1PZBw" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/星之墨辰.webp" alt="星之墨辰" class="thanks-avatar">
+                            <img src="assets/Contributors/星之墨辰.webp" alt="星之墨辰" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>星之墨辰</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.sakuraxy.top/" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/是玄夜不是玄月.webp" alt="是玄夜不是玄月" class="thanks-avatar">
+                            <img src="assets/Contributors/是玄夜不是玄月.webp" alt="是玄夜不是玄月" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>是玄夜不是玄月</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1hieXzMEra/?vd_source=efeaf6f967e48f58317a9291cef584cd" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/FreeDw资源库.webp" alt="FreeDw资源库" class="thanks-avatar">
+                            <img src="assets/Contributors/FreeDw资源库.webp" alt="FreeDw资源库" class="thanks-avatar" loading="lazy" decoding="async">
                             <span dir="ltr">FreeDw资源库</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/XiirH1ftE7gVgV6LO8lloA" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/胡萝卜周.webp" alt="胡萝卜周" class="thanks-avatar">
+                            <img src="assets/Contributors/胡萝卜周.webp" alt="胡萝卜周" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>胡萝卜周</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://mp.weixin.qq.com/s/U_nQRc0Vh_x2l3cOBnhkyg" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/阿闲说科技.webp" alt="阿闲说科技" class="thanks-avatar">
+                            <img src="assets/Contributors/阿闲说科技.webp" alt="阿闲说科技" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>阿闲说科技</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.xiaoheihe.cn/app/user/profile/78690646" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/crystalz.webp" alt="crystalz" class="thanks-avatar">
+                            <img src="assets/Contributors/crystalz.webp" alt="crystalz" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>crystalz</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.douyin.com/video/7591799636210371890" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/大狸子切切里.webp" alt="大狸子切切里" class="thanks-avatar">
+                            <img src="assets/Contributors/大狸子切切里.webp" alt="大狸子切切里" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>大狸子切切里</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1rR546nEPk" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/衬衫的眼镜.webp" alt="衬衫的眼镜" class="thanks-avatar">
+                            <img src="assets/Contributors/衬衫的眼镜.webp" alt="衬衫的眼镜" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>衬衫的眼镜</span>
                         </a>
                     </li>
                     <li class="thanks-item">
                         <a href="https://www.bilibili.com/video/BV1e9Lp6bEuE" target="_blank" rel="noopener noreferrer">
-                            <img src="assets/Contributors/mua_要早睡呀.webp" alt="mua_要早睡呀" class="thanks-avatar">
+                            <img src="assets/Contributors/mua_要早睡呀.webp" alt="mua_要早睡呀" class="thanks-avatar" loading="lazy" decoding="async">
                             <span>mua_要早睡呀</span>
                         </a>
                     </li>
@@ -512,7 +520,7 @@
                         <a href="https://github.com/MadMaxChow" target="_blank" rel="noopener noreferrer">
                           <div class="contributor-avatar-container">
                             <div class="contributor-avatar-glow"></div>
-                            <img src="assets/Contributors/MAX°孟兆.webp" width="100px;" alt="MAX°孟兆"/>
+                            <img src="assets/Contributors/MAX°孟兆.webp" width="100px;" alt="MAX°孟兆" loading="lazy" decoding="async">
                           </div>
                           <div class="contributor-particles">
                             <span class="contributor-particle" style="--tx: -30; --ty: -20; background-color: #7aa2f7;"></span>
@@ -527,7 +535,7 @@
                         <a href="https://github.com/sumruler" target="_blank" rel="noopener noreferrer">
                           <div class="contributor-avatar-container">
                             <div class="contributor-avatar-glow"></div>
-                            <img src="assets/Contributors/XuJilong.webp" width="100px;" alt="XuJilong"/>
+                            <img src="assets/Contributors/XuJilong.webp" width="100px;" alt="XuJilong" loading="lazy" decoding="async">
                           </div>
                           <div class="contributor-particles">
                             <span class="contributor-particle" style="--tx: -30; --ty: -20; background-color: #7aa2f7;"></span>
@@ -542,7 +550,7 @@
                         <a href="https://www.diandiapp.com/" target="_blank" rel="noopener noreferrer">
                           <div class="contributor-avatar-container">
                             <div class="contributor-avatar-glow"></div>
-                            <img src="assets/Contributors/点滴进度作者.webp" width="100px;" alt="点滴进度作者"/>
+                            <img src="assets/Contributors/点滴进度作者.webp" width="100px;" alt="点滴进度作者" loading="lazy" decoding="async">
                           </div>
                           <div class="contributor-particles">
                             <span class="contributor-particle" style="--tx: -30; --ty: -20; background-color: #7aa2f7;"></span>
@@ -553,90 +561,78 @@
                           <sub><b>点滴进度作者</b></sub>
                         </a>
                       </td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ZGGSONG" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/zggsong.webp" width="100px;" alt="zggsong"/><br /><sub><b>zggsong</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/猫屋敷梨梨Official.webp" width="100px;" alt="猫屋敷梨梨Official"/><br /><sub><b>猫屋敷梨梨Official</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/6189012" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/MOJIもら.webp" width="100px;" alt="MOJIもら"/><br /><sub><b>MOJIもら</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/475437261" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/李康.webp" width="100px;" alt="李康"/><br /><sub><b>李康</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/ZGGSONG" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/zggsong.webp" width="100px;" alt="zggsong" loading="lazy" decoding="async"><br /><sub><b>zggsong</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/猫屋敷梨梨Official.webp" width="100px;" alt="猫屋敷梨梨Official" loading="lazy" decoding="async"><br /><sub><b>猫屋敷梨梨Official</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/6189012" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/MOJIもら.webp" width="100px;" alt="MOJIもら" loading="lazy" decoding="async"><br /><sub><b>MOJIもら</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/475437261" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/李康.webp" width="100px;" alt="李康" loading="lazy" decoding="async"><br /><sub><b>李康</b></sub></a><br /></td>
                     </tr>
                     <tr>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1708573954" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/我是无名吖.webp" width="100px;" alt="我是无名吖"/><br /><sub><b>我是无名吖</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/flying-hilichurl" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/金麟.webp" width="100px;" alt="金麟"/><br /><sub><b>金麟</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/161061562" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/双脚猫.webp" width="100px;" alt="双脚猫"/><br /><sub><b>双脚猫</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/rsyqvthv" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/rsyqvthv.webp" width="100px;" alt="rsyqvthv"/><br /><sub><b>rsyqvthv</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/297146893" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/君影.webp" width="100px;" alt="君影"/><br /><sub><b>君影</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/3546380188519387" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/学习马楼.webp" width="100px;" alt="学习马楼"/><br /><sub><b>学习马楼</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/8010065" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/睡着的火山.webp" width="100px;" alt="睡着的火山"/><br /><sub><b>睡着的火山</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1708573954" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/我是无名吖.webp" width="100px;" alt="我是无名吖" loading="lazy" decoding="async"><br /><sub><b>我是无名吖</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/flying-hilichurl" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/金麟.webp" width="100px;" alt="金麟" loading="lazy" decoding="async"><br /><sub><b>金麟</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/161061562" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/双脚猫.webp" width="100px;" alt="双脚猫" loading="lazy" decoding="async"><br /><sub><b>双脚猫</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/rsyqvthv" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/rsyqvthv.webp" width="100px;" alt="rsyqvthv" loading="lazy" decoding="async"><br /><sub><b>rsyqvthv</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/297146893" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/君影.webp" width="100px;" alt="君影" loading="lazy" decoding="async"><br /><sub><b>君影</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/3546380188519387" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/学习马楼.webp" width="100px;" alt="学习马楼" loading="lazy" decoding="async"><br /><sub><b>学习马楼</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/8010065" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/睡着的火山.webp" width="100px;" alt="睡着的火山" loading="lazy" decoding="async"><br /><sub><b>睡着的火山</b></sub></a><br /></td>
                     </tr>
                     <tr>
-                         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/5549978" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/星空下数羊.webp" width="100px;" alt="星空下数羊"/><br /><sub><b>星空下数羊</b></sub></a><br /></td>
-                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/13129221" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/青阳忘川.webp" width="100px;" alt="青阳忘川"/><br /><sub><b>青阳忘川</b></sub></a><br /></td>
-                        <td align="center" valign="top" width="14.28%"><a href="https://github.com/llfWilliam" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/William.webp" width="100px;" alt="William"/><br /><sub><b>William</b></sub></a><br /></td>
-                                <td align="center" valign="top" width="14.28%"><a href="https://github.com/wangye99" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/王野.webp" width="100px;" alt="王野"/><br /><sub><b>王野</b></sub></a><br /></td>
-                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/572042200" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/煮酒论科技.webp" width="100px;" alt="煮酒论科技"/><br /><sub><b>煮酒论科技</b></sub></a><br /></td>
-                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/470931145" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/风增.webp" width="100px;" alt="风增"/><br /><sub><b>风增</b></sub></a><br /></td>
-                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/266931550" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/田春.webp" width="100px;" alt="田春"/><br /><sub><b>田春</b></sub></a><br /></td>
+                         <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/5549978" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/星空下数羊.webp" width="100px;" alt="星空下数羊" loading="lazy" decoding="async"><br /><sub><b>星空下数羊</b></sub></a><br /></td>
+                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/13129221" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/青阳忘川.webp" width="100px;" alt="青阳忘川" loading="lazy" decoding="async"><br /><sub><b>青阳忘川</b></sub></a><br /></td>
+                        <td align="center" valign="top" width="14.28%"><a href="https://github.com/llfWilliam" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/William.webp" width="100px;" alt="William" loading="lazy" decoding="async"><br /><sub><b>William</b></sub></a><br /></td>
+                                <td align="center" valign="top" width="14.28%"><a href="https://github.com/wangye99" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/王野.webp" width="100px;" alt="王野" loading="lazy" decoding="async"><br /><sub><b>王野</b></sub></a><br /></td>
+                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/572042200" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/煮酒论科技.webp" width="100px;" alt="煮酒论科技" loading="lazy" decoding="async"><br /><sub><b>煮酒论科技</b></sub></a><br /></td>
+                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/470931145" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/风增.webp" width="100px;" alt="风增" loading="lazy" decoding="async"><br /><sub><b>风增</b></sub></a><br /></td>
+                        <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/266931550" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/田春.webp" width="100px;" alt="田春" loading="lazy" decoding="async"><br /><sub><b>田春</b></sub></a><br /></td>
                     </tr>
                     <tr>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/behappy425" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/behappy425.webp" width="100px;" alt="behappy425"/><br /><sub><b>behappy425</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/xxtui-main/xxtui" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/xj.webp" width="100px;" alt="x.j"/><br /><sub><b>x.j</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/kissholic" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/kissholic.webp" width="100px;" alt="kissholic"/><br /><sub><b>kissholic</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="#" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Alnilam.webp" width="100px;" alt="Alnilam"/><br /><sub><b>Alnilam</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/pyqmlp" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/柒.webp" width="100px;" alt="柒"/><br /><sub><b>柒</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Mapaler" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/枫谷剑仙.webp" width="100px;" alt="枫谷剑仙"/><br /><sub><b>枫谷剑仙</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Crazy-A2" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Marial.webp" width="100px;" alt="Marial"/><br /><sub><b>Marial</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/behappy425" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/behappy425.webp" width="100px;" alt="behappy425" loading="lazy" decoding="async"><br /><sub><b>behappy425</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/xxtui-main/xxtui" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/xj.webp" width="100px;" alt="x.j" loading="lazy" decoding="async"><br /><sub><b>x.j</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/kissholic" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/kissholic.webp" width="100px;" alt="kissholic" loading="lazy" decoding="async"><br /><sub><b>kissholic</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="#" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Alnilam.webp" width="100px;" alt="Alnilam" loading="lazy" decoding="async"><br /><sub><b>Alnilam</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/pyqmlp" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/柒.webp" width="100px;" alt="柒" loading="lazy" decoding="async"><br /><sub><b>柒</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Mapaler" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/枫谷剑仙.webp" width="100px;" alt="枫谷剑仙" loading="lazy" decoding="async"><br /><sub><b>枫谷剑仙</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Crazy-A2" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Marial.webp" width="100px;" alt="Marial" loading="lazy" decoding="async"><br /><sub><b>Marial</b></sub></a><br /></td>
                     </tr>
                     <tr>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/507572706" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/卓越方达.webp" width="100px;" alt="卓越方达"/><br /><sub><b>卓越方达</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/choyy" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/choyy.webp" width="100px;" alt="choyy"/><br /><sub><b>choyy</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/378034263" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/益渊Yyuan.webp" width="100px;" alt="益渊Yyuan"/><br /><sub><b>益渊Yyuan</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/xiaodao0036" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/上条教主.webp" width="100px;" alt="上条教主"/><br /><sub><b>上条教主</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jin-gubang" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/jin-gubang.webp" width="100px;" alt="jin-gubang"/><br /><sub><b>jin-gubang</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/xlr134" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/xlr134.webp" width="100px;" alt="xlr134"/><br /><sub><b>xlr134</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/leisure365" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/莫颜.webp" width="100px;" alt="莫颜"/><br /><sub><b>莫颜</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/507572706" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/卓越方达.webp" width="100px;" alt="卓越方达" loading="lazy" decoding="async"><br /><sub><b>卓越方达</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/choyy" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/choyy.webp" width="100px;" alt="choyy" loading="lazy" decoding="async"><br /><sub><b>choyy</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/378034263" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/益渊Yyuan.webp" width="100px;" alt="益渊Yyuan" loading="lazy" decoding="async"><br /><sub><b>益渊Yyuan</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/xiaodao0036" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/上条教主.webp" width="100px;" alt="上条教主" loading="lazy" decoding="async"><br /><sub><b>上条教主</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/jin-gubang" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/jin-gubang.webp" width="100px;" alt="jin-gubang" loading="lazy" decoding="async"><br /><sub><b>jin-gubang</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/xlr134" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/xlr134.webp" width="100px;" alt="xlr134" loading="lazy" decoding="async"><br /><sub><b>xlr134</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/leisure365" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/莫颜.webp" width="100px;" alt="莫颜" loading="lazy" decoding="async"><br /><sub><b>莫颜</b></sub></a><br /></td>
                     </tr>
                     <tr>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/LuSrackhall" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/LuSrackhall.webp" width="100px;" alt="LuSrackhall"/><br /><sub><b>LuSrackhall</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://www.sakuraxy.top/" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/是玄夜不是玄月.webp" width="100px;" alt="是玄夜不是玄月"/><br /><sub><b>是玄夜不是玄月</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/YangCangShu" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/YangCangShu.webp" width="100px;" alt="YangCangShu"/><br /><sub><b>YangCangShu</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://meta.appinn.net/u/valuex/summary" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/valuex.webp" width="100px;" alt="valuex"/><br /><sub><b>valuex</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://meta.appinn.net/u/lxzrjyff/summary" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/lxzrjyff.webp" width="100px;" alt="lxzrjyff"/><br /><sub><b>lxzrjyff</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/darkmatter2048" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/DaYe.webp" width="100px;" alt="DaYe"/><br /><sub><b>DaYe</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/zct4257" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/zct4257.webp" width="100px;" alt="zct4257"/><br /><sub><b>zct4257</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/LuSrackhall" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/LuSrackhall.webp" width="100px;" alt="LuSrackhall" loading="lazy" decoding="async"><br /><sub><b>LuSrackhall</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://www.sakuraxy.top/" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/是玄夜不是玄月.webp" width="100px;" alt="是玄夜不是玄月" loading="lazy" decoding="async"><br /><sub><b>是玄夜不是玄月</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/YangCangShu" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/YangCangShu.webp" width="100px;" alt="YangCangShu" loading="lazy" decoding="async"><br /><sub><b>YangCangShu</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://meta.appinn.net/u/valuex/summary" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/valuex.webp" width="100px;" alt="valuex" loading="lazy" decoding="async"><br /><sub><b>valuex</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://meta.appinn.net/u/lxzrjyff/summary" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/lxzrjyff.webp" width="100px;" alt="lxzrjyff" loading="lazy" decoding="async"><br /><sub><b>lxzrjyff</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/darkmatter2048" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/DaYe.webp" width="100px;" alt="DaYe" loading="lazy" decoding="async"><br /><sub><b>DaYe</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/zct4257" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/zct4257.webp" width="100px;" alt="zct4257" loading="lazy" decoding="async"><br /><sub><b>zct4257</b></sub></a><br /></td>
                     </tr>
                     <tr>
-                      <td align="center" valign="top" width="14.28%"><a href="#" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/小败叶.webp" width="100px;" alt="小败叶"/><br /><sub><b>小败叶</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/25249757" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/闲人不梦君Q.webp" width="100px;" alt="闲人不梦君Q"/><br /><sub><b>闲人不梦君Q</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1191321078" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/李良.webp" width="100px;" alt="李良"/><br /><sub><b>李良</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/imxhe" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/iweek.webp" width="100px;" alt="imxhe"/><br /><sub><b>imxhe</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/haeob" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/mua.webp" width="100px;" alt="mua"/><br /><sub><b>mua</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://b23.tv/iRKb7Ua" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/析木.webp" width="100px;" alt="析木"/><br /><sub><b>析木</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="#" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/溜溜大神校长来了.webp" width="100px;" alt="溜溜大神校长来了"/><br /><sub><b>溜溜大神校长来了</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="#" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/小败叶.webp" width="100px;" alt="小败叶" loading="lazy" decoding="async"><br /><sub><b>小败叶</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/25249757" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/闲人不梦君Q.webp" width="100px;" alt="闲人不梦君Q" loading="lazy" decoding="async"><br /><sub><b>闲人不梦君Q</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://space.bilibili.com/1191321078" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/李良.webp" width="100px;" alt="李良" loading="lazy" decoding="async"><br /><sub><b>李良</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/imxhe" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/iweek.webp" width="100px;" alt="imxhe" loading="lazy" decoding="async"><br /><sub><b>imxhe</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/haeob" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/mua.webp" width="100px;" alt="mua" loading="lazy" decoding="async"><br /><sub><b>mua</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://b23.tv/iRKb7Ua" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/析木.webp" width="100px;" alt="析木" loading="lazy" decoding="async"><br /><sub><b>析木</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="#" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/溜溜大神校长来了.webp" width="100px;" alt="溜溜大神校长来了" loading="lazy" decoding="async"><br /><sub><b>溜溜大神校长来了</b></sub></a><br /></td>
                     </tr>
                     <tr>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Seredo" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Seredo.webp" width="100px;" alt="Seredo"/><br /><sub><b>Seredo</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://b23.tv/HVVVykm" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/红树林.webp" width="100px;" alt="红树林"/><br /><sub><b>红树林</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Snow-kal" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Snow-kal.webp" width="100px;" alt="Snow-kal"/><br /><sub><b>Snow-kal</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/mayjay-wei" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/TCWei.webp" width="100px;" alt="TCWei"/><br /><sub><b>TCWei</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/YuYinLC" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/YuYinLC.webp" width="100px;" alt="YuYinLC"/><br /><sub><b>YuYinLC</b></sub></a><br /></td>
-                      <td align="center" valign="top" width="14.28%"><a href="https://meta.appinn.net/u/fireman" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Fireman.webp" width="100px;" alt="Fireman"/><br /><sub><b>Fireman</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Seredo" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Seredo.webp" width="100px;" alt="Seredo" loading="lazy" decoding="async"><br /><sub><b>Seredo</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://b23.tv/HVVVykm" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/红树林.webp" width="100px;" alt="红树林" loading="lazy" decoding="async"><br /><sub><b>红树林</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/Snow-kal" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Snow-kal.webp" width="100px;" alt="Snow-kal" loading="lazy" decoding="async"><br /><sub><b>Snow-kal</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/mayjay-wei" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/TCWei.webp" width="100px;" alt="TCWei" loading="lazy" decoding="async"><br /><sub><b>TCWei</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://github.com/YuYinLC" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/YuYinLC.webp" width="100px;" alt="YuYinLC" loading="lazy" decoding="async"><br /><sub><b>YuYinLC</b></sub></a><br /></td>
+                      <td align="center" valign="top" width="14.28%"><a href="https://meta.appinn.net/u/fireman" target="_blank" rel="noopener noreferrer"><img src="assets/Contributors/Fireman.webp" width="100px;" alt="Fireman" loading="lazy" decoding="async"><br /><sub><b>Fireman</b></sub></a><br /></td>
                     </tr>
                   </tbody>
                 </table>
             </div>
         </div>
     </section>
-
-    <script src="scripts/galaxy.js"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-    
-    <script src="scripts/config.js"></script>
-    
-    <script src="scripts/components.js" data-auto-load></script>
-    
-    <script src="scripts/navigation.js"></script>
-    <script src="scripts/main.js"></script>
-    <script src="scripts/index.js"></script>
 
 </body>
 </html>

@@ -14,7 +14,7 @@ class ComponentLoader {
         return './components/';
     }
 
-    async loadComponent(componentName, targetSelector = null) {
+    async loadComponent(componentName, targetSelector = null, position = 'beforeend') {
         if (this.loadedComponents.has(componentName)) {
             return;
         }
@@ -30,7 +30,7 @@ class ComponentLoader {
             if (targetSelector) {
                 const target = document.querySelector(targetSelector);
                 if (target) {
-                    target.insertAdjacentHTML('afterend', html);
+                    target.insertAdjacentHTML(position, html);
                 } else {
                     document.body.insertAdjacentHTML('beforeend', html);
                 }

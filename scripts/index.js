@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const supportMethods = document.querySelectorAll('.support-method');
     const isMobile = window.innerWidth <= 768; 
     
@@ -71,13 +71,17 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-AOS.init({
-    duration: 800,
-    once: true,
-    offset: 50,
-});
+if (typeof initAOSOnce === 'function') {
+    initAOSOnce();
+} else if (window.AOS) {
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 50,
+    });
+}
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const heroImage = document.querySelector('.hero-screenshot');
     const heroContainer = document.querySelector('.hero-visual');
     const scenarioImages = document.querySelectorAll('.scenario-img');
@@ -242,9 +246,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 image.style.transition = 'transform 0.2s ease-out';
                 startBreatheEffect();
             });
+        });
+    }
+
     const chartContainer = document.getElementById('star-history-chart');
     if (!chartContainer) return;
-    
+
+    try {
+        await ensureECharts();
+    } catch (error) {
+        console.error('Failed to load chart library:', error);
+        return;
+    }
+
     const chart = echarts.init(chartContainer);
     
     const currentLang = localStorage.getItem('catime-language') || 'zh';
@@ -489,6 +503,29 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+function ensureECharts() {
+    if (window.echarts) {
+        return Promise.resolve();
+    }
+
+    return new Promise((resolve, reject) => {
+        const existingScript = document.querySelector('script[data-echarts-loader]');
+        if (existingScript) {
+            existingScript.addEventListener('load', () => resolve(), { once: true });
+            existingScript.addEventListener('error', () => reject(new Error('ECharts failed to load')), { once: true });
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js';
+        script.async = true;
+        script.dataset.echartsLoader = 'true';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('ECharts failed to load'));
+        document.head.appendChild(script);
+    });
+}
+
 function createCometParticle(x, y) {
     const starParticlesContainer = document.querySelector('.github-chart-container .star-particles');
     if (!starParticlesContainer) return;
@@ -539,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const newHTML = `
                 <div class="contributor-avatar-container">
                     <div class="contributor-avatar-glow"></div>
-                    <img src="${imgSrc}" width="100px;" alt="${imgAlt}"/>
+                    <img src="${imgSrc}" width="100px;" alt="${imgAlt}" loading="lazy" decoding="async">
                 </div>
                 <div class="contributor-particles">
                     <span class="contributor-particle" style="--tx: -${Math.random() * 30 + 10}; --ty: -${Math.random() * 25 + 5}; background-color: ${Math.random() > 0.5 ? '#7aa2f7' : '#f77daa'};"></span>
