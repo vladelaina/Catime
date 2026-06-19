@@ -182,6 +182,12 @@ typedef struct {
  */
 static FormattedBytes FormatBytesPerSecond(double bytes) {
     FormattedBytes result = { bytes, L"B/s" };
+
+    if (result.value <= 0.0) {
+        result.value = 0.0;
+        result.unit = L"KB/s";
+        return result;
+    }
     
     if (result.value >= 1024.0) { result.value /= 1024.0; result.unit = L"KB/s"; }
     if (result.value >= 1024.0) { result.value /= 1024.0; result.unit = L"MB/s"; }
@@ -371,18 +377,23 @@ static void GetSystemMetricsWithWarmup(float* cpu, float* mem) {
 }
 
 /**
- * @brief Build basic tooltip with CPU, memory, optional network
- * @param hasNet Whether to include network speed lines
+ * @brief Build a stable tooltip with CPU, memory, and network lines
+ *
+ * Keep the same layout even before the first network sample is ready so the
+ * shell tooltip does not switch between separate CPU/memory and network views.
  */
 static void BuildBasicTooltip(wchar_t* tip, size_t tipSize, float cpu, float mem,
                               float upBps, float downBps, BOOL hasNet) {
     if (hasNet) {
         FormattedBytes upload = FormatBytesPerSecond((double)upBps);
         FormattedBytes download = FormatBytesPerSecond((double)downBps);
-        _snwprintf_s(tip, tipSize, _TRUNCATE, L"CPU %.1f%%\nMemory %.1f%%\nUpload %.1f %s\nDownload %.1f %s",
+        _snwprintf_s(tip, tipSize, _TRUNCATE,
+                     L"CPU %.1f%%\nMemory %.1f%%\nUpload %.1f %s\nDownload %.1f %s",
                      cpu, mem, upload.value, upload.unit, download.value, download.unit);
     } else {
-        _snwprintf_s(tip, tipSize, _TRUNCATE, L"CPU %.1f%%\nMemory %.1f%%", cpu, mem);
+        _snwprintf_s(tip, tipSize, _TRUNCATE,
+                     L"CPU %.1f%%\nMemory %.1f%%\nUpload\nDownload",
+                     cpu, mem);
     }
 }
 
@@ -766,7 +777,8 @@ static void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
     nid.hIcon = hInitial ? hInitial : LoadIconW(hInstance, MAKEINTRESOURCEW(IDI_CATIME));
     nid.hWnd = hwnd;
     nid.uCallbackMessage = CLOCK_WM_TRAYICON;
-    wcscpy_s(nid.szTip, _countof(nid.szTip), L"CPU --.-%\nMemory --.-%\nUpload --.- ?/s\nDownload --.- ?/s");
+    wcscpy_s(nid.szTip, _countof(nid.szTip),
+             L"CPU\nMemory\nUpload\nDownload");
 
     if (Shell_NotifyIconW(NIM_ADD, &nid)) {
         g_trayIconActive = TRUE;
