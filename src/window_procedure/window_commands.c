@@ -364,6 +364,7 @@ static LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    Timer_ClearTimeoutSystemActionArm();
     LOG_INFO("Reset: UI runtime state reset");
     
     /* Step 8: Reload font */
@@ -545,6 +546,7 @@ static BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
     if (!ValidateAndSetTimeoutFile(hwnd, g_AppConfig.recent_files.files[index].path)) {
         if (RemoveRecentFileAtIndex(index)) {
             CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+            Timer_ClearTimeoutSystemActionArm();
             CLOCK_TIMEOUT_FILE_PATH[0] = '\0';
         }
     }

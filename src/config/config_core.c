@@ -14,6 +14,7 @@
 #include "config/config_applier.h"
 #include "config/config_writer.h"
 #include "timer/timer.h"
+#include "timer/timer_events.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
@@ -257,14 +258,23 @@ static void CopyTimeoutString(char* dest, size_t destSize, const char* value) {
 BOOL WriteConfigTimeoutAction(const char* action) {
     TimeoutActionType newAction = TimeoutActionType_FromStr(action ? action : "MESSAGE");
     const char* configAction = TimeoutActionType_ToStr(newAction);
-
-    if (IsOneTimeTimeoutAction(newAction)) {
-        CLOCK_TIMEOUT_ACTION = newAction;
-        return TRUE;
-    }
-
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
+
+    if (IsOneTimeTimeoutAction(newAction)) {
+        BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
+                                                          "CLOCK_TIMEOUT_ACTION",
+                                                          "MESSAGE",
+                                                          "MESSAGE");
+        if (!configMatches &&
+            !UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE")) {
+            return FALSE;
+        }
+
+        CLOCK_TIMEOUT_ACTION = newAction;
+        Timer_ClearTimeoutSystemActionArm();
+        return TRUE;
+    }
 
     BOOL runtimeMatches = CLOCK_TIMEOUT_ACTION == newAction;
     BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
@@ -282,6 +292,7 @@ BOOL WriteConfigTimeoutAction(const char* action) {
     }
 
     CLOCK_TIMEOUT_ACTION = newAction;
+    Timer_ClearTimeoutSystemActionArm();
     return TRUE;
 }
 

@@ -194,6 +194,7 @@ target_link_libraries(catime PRIVATE
     gdi32
     shlwapi
     advapi32
+    powrprof
     iphlpapi
     windowscodecs
     propsys

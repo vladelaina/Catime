@@ -156,10 +156,13 @@ static const TimeoutActionEntry TIMEOUT_ACTIONS[] = {
 
 LRESULT CmdSetTimeoutAction(HWND hwnd, TimeoutActionType action) {
     (void)hwnd;
+    Timer_ClearTimeoutSystemActionArm();
     
     for (size_t i = 0; i < sizeof(TIMEOUT_ACTIONS)/sizeof(TIMEOUT_ACTIONS[0]); i++) {
         if (TIMEOUT_ACTIONS[i].action == action) {
-            if (!WriteConfigTimeoutAction(TIMEOUT_ACTIONS[i].configStr)) {
+            if (WriteConfigTimeoutAction(TIMEOUT_ACTIONS[i].configStr)) {
+                Timer_ArmTimeoutSystemAction(action);
+            } else {
                 LOG_WARNING("Failed to save timeout action: %s",
                             TIMEOUT_ACTIONS[i].configStr);
             }

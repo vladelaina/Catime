@@ -12,6 +12,7 @@
 
 #include <windows.h>
 #include "../../resource/resource.h"
+#include "timer/timer.h"
 
 /* ============================================================================
  * Public API
@@ -62,5 +63,19 @@ void InitializePomodoro(void);
  *  Reset Pomodoro state back to idle
  */
 void ResetPomodoroState(void);
+
+/**
+ * @brief Arm a one-time system timeout action selected through trusted UI.
+ *
+ * @details Shutdown/restart/sleep are dangerous and are intentionally not
+ * persisted. They only execute when the runtime action still matches this
+ * armed action at countdown completion.
+ */
+void Timer_ArmTimeoutSystemAction(TimeoutActionType action);
+
+/**
+ * @brief Clear any armed one-time system timeout action.
+ */
+void Timer_ClearTimeoutSystemActionArm(void);
 
 #endif

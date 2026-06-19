@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
+#include <powrprof.h>
 
 #include "timer/timer_events.h"
 #include "timer/timer.h"
@@ -50,6 +51,7 @@ static int pomodoro_initial_times[MAX_POMODORO_TIMES] = {0};
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
 static wchar_t g_visibleTimerCurrentText[TIME_TEXT_MAX_LEN] = {0};
+static TimeoutActionType g_armedTimeoutSystemAction = TIMEOUT_ACTION_MESSAGE;
 
 static inline void ForceWindowRedraw(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
@@ -100,69 +102,164 @@ static inline void ResetTimerState(int newTotalTime) {
     countdown_elapsed_time = 0;
 }
 
-typedef struct {
-    TimeoutActionType action;
-    const wchar_t* executable;
-    const wchar_t* arguments;
-} SystemActionConfig;
+static BOOL IsSystemTimeoutAction(TimeoutActionType action) {
+    return action == TIMEOUT_ACTION_SHUTDOWN ||
+           action == TIMEOUT_ACTION_RESTART ||
+           action == TIMEOUT_ACTION_SLEEP;
+}
 
-static const SystemActionConfig SYSTEM_ACTIONS[] = {
-    {TIMEOUT_ACTION_SLEEP,    L"rundll32.exe", L"rundll32.exe powrprof.dll,SetSuspendState 0,1,0"},
-    {TIMEOUT_ACTION_SHUTDOWN, L"shutdown.exe", L"shutdown.exe /s /t 0"},
-    {TIMEOUT_ACTION_RESTART,  L"shutdown.exe", L"shutdown.exe /r /t 0"},
-};
+void Timer_ClearTimeoutSystemActionArm(void) {
+    g_armedTimeoutSystemAction = TIMEOUT_ACTION_MESSAGE;
+}
 
-static BOOL StartSystemActionProcess(const SystemActionConfig* config) {
-    if (!config || !config->executable || !config->arguments) {
+void Timer_ArmTimeoutSystemAction(TimeoutActionType action) {
+    if (IsSystemTimeoutAction(action)) {
+        g_armedTimeoutSystemAction = action;
+    } else {
+        Timer_ClearTimeoutSystemActionArm();
+    }
+}
+
+static BOOL IsSystemTimeoutActionArmed(TimeoutActionType action) {
+    return IsSystemTimeoutAction(action) &&
+           g_armedTimeoutSystemAction == action;
+}
+
+static BOOL IsSystemTimeoutExecutionContextSafe(void) {
+    if (!MainTimer_IsRunning() ||
+        CLOCK_SHOW_CURRENT_TIME ||
+        CLOCK_COUNT_UP ||
+        CLOCK_IS_PAUSED ||
+        CLOCK_TOTAL_TIME <= 0 ||
+        countdown_elapsed_time < CLOCK_TOTAL_TIME ||
+        g_target_end_time <= 0) {
         return FALSE;
     }
 
-    wchar_t commandLine[256];
-    wcsncpy(commandLine, config->arguments, _countof(commandLine) - 1);
-    commandLine[_countof(commandLine) - 1] = L'\0';
+    return GetAbsoluteTimeMs() >= g_target_end_time;
+}
 
-    STARTUPINFOW startupInfo = {0};
-    startupInfo.cb = sizeof(startupInfo);
+static void ConsumeBlockedSystemTimeoutAction(HWND hwnd) {
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    Timer_ClearTimeoutSystemActionArm();
+    ResetTimerState(0);
+    MainTimer_Stop();
+    ForceWindowRedraw(hwnd);
+}
 
-    PROCESS_INFORMATION processInfo = {0};
-    BOOL started = CreateProcessW(
-        config->executable,
-        commandLine,
-        NULL,
-        NULL,
-        FALSE,
-        CREATE_NO_WINDOW,
-        NULL,
-        NULL,
-        &startupInfo,
-        &processInfo
-    );
+static const char* GetSystemActionName(TimeoutActionType action) {
+    switch (action) {
+        case TIMEOUT_ACTION_SHUTDOWN: return "shutdown";
+        case TIMEOUT_ACTION_RESTART: return "restart";
+        case TIMEOUT_ACTION_SLEEP: return "sleep";
+        default: return "unknown";
+    }
+}
 
-    if (started) {
-        CloseHandle(processInfo.hThread);
-        CloseHandle(processInfo.hProcess);
+static BOOL EnableShutdownPrivilege(void) {
+    HANDLE token = NULL;
+    if (!OpenProcessToken(GetCurrentProcess(),
+                          TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+                          &token)) {
+        LOG_WARNING("Failed to open process token for system action (error: %lu)",
+                    GetLastError());
+        return FALSE;
     }
 
-    return started;
+    TOKEN_PRIVILEGES privileges;
+    ZeroMemory(&privileges, sizeof(privileges));
+    privileges.PrivilegeCount = 1;
+    privileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+    if (!LookupPrivilegeValueW(NULL,
+                               SE_SHUTDOWN_NAME,
+                               &privileges.Privileges[0].Luid)) {
+        DWORD error = GetLastError();
+        CloseHandle(token);
+        LOG_WARNING("Failed to look up shutdown privilege (error: %lu)", error);
+        return FALSE;
+    }
+
+    SetLastError(ERROR_SUCCESS);
+    if (!AdjustTokenPrivileges(token, FALSE, &privileges, 0, NULL, NULL)) {
+        DWORD error = GetLastError();
+        CloseHandle(token);
+        LOG_WARNING("Failed to enable shutdown privilege (error: %lu)", error);
+        return FALSE;
+    }
+
+    DWORD adjustError = GetLastError();
+    CloseHandle(token);
+
+    if (adjustError == ERROR_NOT_ALL_ASSIGNED) {
+        LOG_WARNING("Shutdown privilege is not assigned to this process token");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL ExecuteSystemPowerAction(TimeoutActionType action) {
+    switch (action) {
+        case TIMEOUT_ACTION_SHUTDOWN:
+            if (!EnableShutdownPrivilege()) {
+                return FALSE;
+            }
+            return ExitWindowsEx(EWX_POWEROFF | EWX_FORCEIFHUNG,
+                                 SHTDN_REASON_MAJOR_APPLICATION |
+                                 SHTDN_REASON_MINOR_MAINTENANCE |
+                                 SHTDN_REASON_FLAG_PLANNED);
+
+        case TIMEOUT_ACTION_RESTART:
+            if (!EnableShutdownPrivilege()) {
+                return FALSE;
+            }
+            return ExitWindowsEx(EWX_REBOOT | EWX_FORCEIFHUNG,
+                                 SHTDN_REASON_MAJOR_APPLICATION |
+                                 SHTDN_REASON_MINOR_MAINTENANCE |
+                                 SHTDN_REASON_FLAG_PLANNED);
+
+        case TIMEOUT_ACTION_SLEEP:
+            EnableShutdownPrivilege();
+            return SetSuspendState(FALSE, FALSE, FALSE);
+
+        default:
+            return FALSE;
+    }
 }
 
 static BOOL ExecuteSystemAction(HWND hwnd, TimeoutActionType action) {
-    for (size_t i = 0; i < sizeof(SYSTEM_ACTIONS) / sizeof(SYSTEM_ACTIONS[0]); i++) {
-        if (SYSTEM_ACTIONS[i].action == action) {
-            ResetTimerState(0);
-            MainTimer_Stop();
-            ForceWindowRedraw(hwnd);
-
-            if (!StartSystemActionProcess(&SYSTEM_ACTIONS[i])) {
-                LOG_WARNING("System action failed to start (error: %lu). May need administrator privileges.",
-                            GetLastError());
-            }
-            
-            CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
-            return TRUE;
-        }
+    if (!IsSystemTimeoutAction(action)) {
+        return FALSE;
     }
-    return FALSE;
+
+    if (!IsSystemTimeoutActionArmed(action)) {
+        LOG_WARNING("Blocked unarmed timeout system action: %s",
+                    GetSystemActionName(action));
+        ConsumeBlockedSystemTimeoutAction(hwnd);
+        return TRUE;
+    }
+
+    if (!IsSystemTimeoutExecutionContextSafe()) {
+        LOG_WARNING("Blocked timeout system action outside completed countdown: %s",
+                    GetSystemActionName(action));
+        ConsumeBlockedSystemTimeoutAction(hwnd);
+        return TRUE;
+    }
+
+    ResetTimerState(0);
+    MainTimer_Stop();
+    ForceWindowRedraw(hwnd);
+    Timer_ClearTimeoutSystemActionArm();
+
+    if (!ExecuteSystemPowerAction(action)) {
+        LOG_WARNING("Timeout system action failed: %s (error: %lu)",
+                    GetSystemActionName(action),
+                    GetLastError());
+    }
+
+    CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_MESSAGE;
+    return TRUE;
 }
 
 typedef void (*RetrySetupCallback)(HWND);
