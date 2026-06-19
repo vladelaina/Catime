@@ -9,6 +9,7 @@
 #include "../../resource/resource.h"
 #include "config.h"
 #include "font.h"
+#include "menu_preview.h"
 #include "window/window_core.h"
 #include "log.h"
 #include <stdio.h>
@@ -54,6 +55,9 @@ static void SaveOriginalFont(void) {
 }
 
 static void RestoreOriginalFont(void) {
+    HWND hwnd = FindCurrentProcessMainWindow();
+    CancelPreview(hwnd);
+
     strncpy(FONT_INTERNAL_NAME, g_fontState.originalFontName, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
 
@@ -76,9 +80,9 @@ static void RestoreOriginalFont(void) {
         FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
     }
 
-    HWND hwnd = FindCurrentProcessMainWindow();
     if (hwnd) {
         InvalidateRect(hwnd, NULL, TRUE);
+        RestoreWindowVisibility(hwnd);
     }
 }
 
@@ -180,30 +184,24 @@ static BOOL PreviewFontInMainWindow(const wchar_t* fontName, const char* cachedF
         return FALSE;
     }
 
-    /* Load font and get internal name */
-    HINSTANCE hInstance = GetModuleHandleW(NULL);
-    char internalName[MAX_PATH] = {0};
-    if (!LoadFontByNameAndGetRealName(hInstance, fontPath, internalName, sizeof(internalName))) {
-        LOG_WARNING("FontApply: LoadFontByNameAndGetRealName failed, using display name as fallback");
-        if (!WideFontPathToUtf8(fontName, internalName, sizeof(internalName))) {
-            LOG_ERROR("FontApply: Failed to convert fallback font name: %S", fontName);
-            return FALSE;
-        }
-    }
-
-    strncpy(FONT_FILE_NAME, fontPath, sizeof(FONT_FILE_NAME) - 1);
-    FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
-    strncpy(FONT_INTERNAL_NAME, internalName, sizeof(FONT_INTERNAL_NAME) - 1);
-    FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
-
     HWND hwnd = FindCurrentProcessMainWindow();
     if (hwnd) {
-        InvalidateRect(hwnd, NULL, TRUE);
+        if (GetActivePreviewType() == PREVIEW_TYPE_FONT) {
+            CancelPreview(hwnd);
+        }
+
+        ShowWindowForPreview(hwnd);
+        StartPreview(PREVIEW_TYPE_FONT, fontPath, hwnd);
+        if (GetActivePreviewType() != PREVIEW_TYPE_FONT) {
+            RestoreWindowVisibility(hwnd);
+            return FALSE;
+        }
     } else {
         LOG_WARNING("FontApply: Main window not found");
+        return FALSE;
     }
-    
-        /* Restore focus to dialog listbox (main window InvalidateRect may steal focus) */
+
+    /* Restore focus to dialog listbox (main window InvalidateRect may steal focus) */
     if (hwndList && hdlg) {
         SetFocus(hwndList);
         InvalidateRect(hwndList, NULL, TRUE);
@@ -213,23 +211,21 @@ static BOOL PreviewFontInMainWindow(const wchar_t* fontName, const char* cachedF
     return TRUE;
 }
 
-static BOOL CommitCurrentFontSelection(void) {
-    if (FONT_FILE_NAME[0] == '\0') {
-        return FALSE;
-    }
-
-    if (strcmp(FONT_FILE_NAME, g_fontState.originalFileName) == 0 &&
-        strcmp(FONT_INTERNAL_NAME, g_fontState.originalFontName) == 0) {
+static BOOL CommitCurrentFontSelection(HWND hwnd) {
+    if (GetActivePreviewType() != PREVIEW_TYPE_FONT) {
+        if (hwnd) {
+            RestoreWindowVisibility(hwnd);
+        }
         return TRUE;
     }
 
-    if (!WriteConfigFont(FONT_FILE_NAME, FALSE)) {
-        LOG_WARNING("FontPicker: failed to persist selected font: %s", FONT_FILE_NAME);
+    if (!ApplyPreview(hwnd)) {
+        LOG_WARNING("FontPicker: failed to persist selected font preview");
         return FALSE;
     }
-    if (!FlushConfigToDisk()) {
-        LOG_WARNING("FontPicker: failed to flush selected font to disk: %s", FONT_FILE_NAME);
-        return FALSE;
+
+    if (hwnd) {
+        RestoreWindowVisibility(hwnd);
     }
     return TRUE;
 }
@@ -1051,7 +1047,8 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
 
         case WM_COMMAND: {
             if (LOWORD(wp) == IDOK) {
-                if (!CommitCurrentFontSelection()) {
+                HWND hwndMain = FindCurrentProcessMainWindow();
+                if (!CommitCurrentFontSelection(hwndMain)) {
                     RestoreOriginalFont();
                     return TRUE;
                 }

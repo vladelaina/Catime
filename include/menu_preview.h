@@ -163,8 +163,7 @@ EffectType GetActiveEffect(void);
  *
  * @details If window is currently hidden (No Display mode), this will:
  *          - Show the window temporarily
- *          - Set a default countdown time for preview
- *          - Pause the timer
+ *          - Show current time when there is no active timer content
  *          Should be called when user hovers over font/color menu items
  */
 void ShowWindowForPreview(HWND hwnd);
@@ -184,7 +183,7 @@ void RestoreWindowVisibility(HWND hwnd);
  * @param bufferSize Buffer size in wide characters
  * @return TRUE if preview text was generated, FALSE if no preview needed
  *
- * @details Generates preview text based on default_start_time from config.
+ * @details Generates current-time preview text.
  *          Used in edit mode and menu preview to show what the timer would look like.
  *          Returns FALSE if there's already active content to display.
  */

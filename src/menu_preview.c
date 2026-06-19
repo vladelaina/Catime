@@ -61,8 +61,8 @@ typedef struct {
     BOOL needsTimerReset;
     BOOL wasWindowVisible;
     BOOL didShowForPreview;
-    BOOL createdPreviewTimer;
-    BOOL savedTimerState;
+    BOOL createdPreviewContent;
+    BOOL savedDisplayState;
     BOOL previousShowCurrentTime;
     BOOL previousCountUp;
     BOOL previousIsPaused;
@@ -408,12 +408,10 @@ void ShowWindowForPreview(HWND hwnd) {
         g_previewState.didShowForPreview = TRUE;
 
         if (!hasActiveContent) {
-            /* Use 25 minutes (1500 seconds) as preview time for better visual */
-            int previewTime = 1500;
-            LOG_DEBUG("No active content, creating preview timer: %d", previewTime);
+            LOG_DEBUG("No active content, showing current time for preview");
 
-            g_previewState.createdPreviewTimer = TRUE;
-            g_previewState.savedTimerState = TRUE;
+            g_previewState.createdPreviewContent = TRUE;
+            g_previewState.savedDisplayState = TRUE;
             g_previewState.previousShowCurrentTime = CLOCK_SHOW_CURRENT_TIME;
             g_previewState.previousCountUp = CLOCK_COUNT_UP;
             g_previewState.previousIsPaused = CLOCK_IS_PAUSED;
@@ -422,21 +420,20 @@ void ShowWindowForPreview(HWND hwnd) {
             g_previewState.previousTargetEndTime = g_target_end_time;
             g_previewState.previousPauseStartTime = g_pause_start_time;
 
-            CLOCK_SHOW_CURRENT_TIME = false;
+            CLOCK_SHOW_CURRENT_TIME = true;
             CLOCK_COUNT_UP = false;
-            CLOCK_IS_PAUSED = true;
+            CLOCK_IS_PAUSED = false;
 
-            CLOCK_TOTAL_TIME = previewTime;
+            CLOCK_TOTAL_TIME = 0;
             countdown_elapsed_time = 0;
-            
-            /* CRITICAL: Also set g_target_end_time for GetCountDownComponents() */
-            int64_t now = GetAbsoluteTimeMs();
-            g_pause_start_time = now;
-            g_target_end_time = now + ((int64_t)previewTime * 1000);
+            g_pause_start_time = 0;
+            g_target_end_time = 0;
+
+            ResetTimerWithInterval(hwnd);
         } else {
             LOG_DEBUG("Window hidden but has active timer, just showing it");
-            g_previewState.createdPreviewTimer = FALSE;
-            g_previewState.savedTimerState = FALSE;
+            g_previewState.createdPreviewContent = FALSE;
+            g_previewState.savedDisplayState = FALSE;
         }
 
         if (!isVisible) {
@@ -446,20 +443,20 @@ void ShowWindowForPreview(HWND hwnd) {
     } else {
         g_previewState.wasWindowVisible = TRUE;
         g_previewState.didShowForPreview = FALSE;
-        g_previewState.createdPreviewTimer = FALSE;
-        g_previewState.savedTimerState = FALSE;
+        g_previewState.createdPreviewContent = FALSE;
+        g_previewState.savedDisplayState = FALSE;
     }
 }
 
 void RestoreWindowVisibility(HWND hwnd) {
     if (!hwnd || !g_previewState.didShowForPreview) return;
 
-    LOG_DEBUG("RestoreWindowVisibility: was visible=%d, created preview timer=%d",
-             g_previewState.wasWindowVisible, g_previewState.createdPreviewTimer);
+    LOG_DEBUG("RestoreWindowVisibility: was visible=%d, created preview content=%d",
+             g_previewState.wasWindowVisible, g_previewState.createdPreviewContent);
 
-    if (g_previewState.createdPreviewTimer) {
-        LOG_DEBUG("Clearing preview timer that we created");
-        if (g_previewState.savedTimerState) {
+    if (g_previewState.createdPreviewContent) {
+        LOG_DEBUG("Clearing preview content that we created");
+        if (g_previewState.savedDisplayState) {
             CLOCK_SHOW_CURRENT_TIME = g_previewState.previousShowCurrentTime;
             CLOCK_COUNT_UP = g_previewState.previousCountUp;
             CLOCK_IS_PAUSED = g_previewState.previousIsPaused;
@@ -478,7 +475,7 @@ void RestoreWindowVisibility(HWND hwnd) {
         }
         ResetTimerWithInterval(hwnd);
     } else {
-        LOG_DEBUG("Not clearing timer - was showing existing active timer");
+        LOG_DEBUG("Not clearing content - was showing existing active content");
     }
 
     if (!g_previewState.wasWindowVisible) {
@@ -488,8 +485,8 @@ void RestoreWindowVisibility(HWND hwnd) {
     }
 
     g_previewState.didShowForPreview = FALSE;
-    g_previewState.createdPreviewTimer = FALSE;
-    g_previewState.savedTimerState = FALSE;
+    g_previewState.createdPreviewContent = FALSE;
+    g_previewState.savedDisplayState = FALSE;
 }
 
 /* ============================================================================
