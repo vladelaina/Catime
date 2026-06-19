@@ -83,6 +83,13 @@ void EndDragWindow(HWND hwnd);
  */
 BOOL HandleDragWindow(HWND hwnd);
 
+/**
+ * @brief Recover a drag when a left press was ignored during a short scale guard.
+ * @param hwnd Window handle
+ * @return TRUE if dragging is active after the attempt
+ */
+BOOL TryStartDragWindowFromMouseMove(HWND hwnd);
+
 /* ============================================================================
  * Window Scaling Functions
  * ============================================================================ */
@@ -107,10 +114,40 @@ BOOL HandleScaleWindow(HWND hwnd, int delta);
 BOOL GetPendingScaleResizeAnchor(HWND hwnd, POINT* anchor);
 
 /**
+ * @brief Get the pending mouse anchor and stable relative ratios.
+ * @param hwnd Window handle
+ * @param anchor Output screen-space cursor position
+ * @param ratioX Output horizontal anchor ratio in the pre-resize window
+ * @param ratioY Output vertical anchor ratio in the pre-resize window
+ * @return TRUE if anchor data is available for this window
+ */
+BOOL GetPendingScaleResizeAnchorInfo(HWND hwnd, POINT* anchor, double* ratioX, double* ratioY);
+
+/**
+ * @brief Check whether a wheel-scale gesture is currently being coalesced.
+ * @param hwnd Window handle
+ * @return TRUE while continuous wheel scaling is active for this window
+ */
+BOOL IsScaleWindowGestureActive(HWND hwnd);
+
+/**
+ * @brief Get the current wheel-scale gesture serial for this window.
+ * @param hwnd Window handle
+ * @return Non-zero serial while active, otherwise 0
+ */
+DWORD GetScaleWindowGestureSerial(HWND hwnd);
+
+/**
  * @brief Clear any pending mouse anchor for a paint-triggered resize.
  * @param hwnd Window handle
  */
 void ClearPendingScaleResizeAnchor(HWND hwnd);
+
+/**
+ * @brief Consume and clear a pending mouse anchor after a resize used it.
+ * @param hwnd Window handle
+ */
+void ConsumePendingScaleResizeAnchor(HWND hwnd);
 
 /* ============================================================================
  * Utility Functions (Internal Use)

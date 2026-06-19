@@ -63,12 +63,22 @@ typedef struct {
     wchar_t timeText[TIME_TEXT_MAX_LEN];
     wchar_t pluginText[TIME_TEXT_MAX_LEN];
     wchar_t pluginResult[TIME_TEXT_MAX_LEN];
+    wchar_t measureText[TIME_TEXT_MAX_LEN];
 } PaintTextBuffers;
 
 /* Paint runs on the UI thread; keeping these off the stack avoids large frames
  * during animation/plugin redraw bursts without adding per-frame heap churn.
  */
 static PaintTextBuffers g_paintTextBuffers = {0};
+
+typedef struct {
+    BOOL valid;
+    HWND hwnd;
+    DWORD gestureSerial;
+    wchar_t text[TIME_TEXT_MAX_LEN];
+} ScaleGestureTextCache;
+
+static ScaleGestureTextCache g_scaleGestureTextCache = {0};
 
 static BOOL IsValidRenderAnimationWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
@@ -260,6 +270,7 @@ typedef struct {
     BOOL valid;
     BOOL isMarkdown;
     int fontSize;
+    float fontScaleFactor;
     DWORD headingSignature;
     DWORD fontTagSignature;
     DWORD fontStateGeneration;
@@ -380,6 +391,51 @@ static BOOL CachedWideTextEquals(const wchar_t* cached, size_t cachedCount,
 
     return wcsncmp(cached, text, textLen) == 0 &&
            cached[textLen] == L'\0';
+}
+
+static BOOL BuildStableDigitMeasureText(const wchar_t* source, wchar_t* dest, size_t destCount) {
+    if (!source || !dest || destCount == 0) {
+        return FALSE;
+    }
+
+    BOOL changed = FALSE;
+    size_t i = 0;
+    for (; source[i] && i + 1 < destCount; ++i) {
+        wchar_t ch = source[i];
+        if (ch >= L'0' && ch <= L'9') {
+            dest[i] = L'8';
+            changed = TRUE;
+        } else {
+            dest[i] = ch;
+        }
+    }
+    dest[i] = L'\0';
+
+    return changed;
+}
+
+static void StabilizeScaleGestureText(HWND hwnd, wchar_t* text, size_t textCount) {
+    if (!text || textCount == 0) return;
+
+    DWORD gestureSerial = GetScaleWindowGestureSerial(hwnd);
+    if (gestureSerial == 0) {
+        ZeroMemory(&g_scaleGestureTextCache, sizeof(g_scaleGestureTextCache));
+        return;
+    }
+
+    if (g_scaleGestureTextCache.valid &&
+        g_scaleGestureTextCache.hwnd == hwnd &&
+        g_scaleGestureTextCache.gestureSerial == gestureSerial) {
+        wcscpy_s(text, textCount, g_scaleGestureTextCache.text);
+        return;
+    }
+
+    g_scaleGestureTextCache.valid = TRUE;
+    g_scaleGestureTextCache.hwnd = hwnd;
+    g_scaleGestureTextCache.gestureSerial = gestureSerial;
+    wcscpy_s(g_scaleGestureTextCache.text,
+             _countof(g_scaleGestureTextCache.text),
+             text);
 }
 
 static BOOL CanUseMeasureCacheForFontTags(const MarkdownFontTag* fontTags, int fontTagCount) {
@@ -620,7 +676,7 @@ static void CreateRenderContext(RenderContext* ctx) {
 
     /* Use plugin scale when in plugin mode, otherwise use clock scale */
     ctx->fontScaleFactor = PluginData_IsActive() ? PLUGIN_FONT_SCALE_FACTOR : CLOCK_FONT_SCALE_FACTOR;
-    ctx->renderFontSize = CalculateRenderFontSize(CLOCK_BASE_FONT_SIZE, ctx->fontScaleFactor);
+    ctx->renderFontSize = CLOCK_BASE_FONT_SIZE;
 }
 
 static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, SIZE* outSize,
@@ -628,6 +684,7 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
                                const MarkdownFontTag* fontTags, int fontTagCount) {
     if (ctx && ctx->fontPathResolved && text && outSize) {
         int fontSize = ctx->renderFontSize;
+        float fontScaleFactor = ctx->fontScaleFactor;
         BOOL isMarkdown = (headings && headingCount > 0) || (fontTags && fontTagCount > 0);
         DWORD headingSignature = ComputeHeadingSignature(headings, headingCount);
         DWORD fontTagSignature = ComputeFontTagSignature(fontTags, fontTagCount);
@@ -644,6 +701,7 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
             g_textMeasureCache.valid &&
             g_textMeasureCache.isMarkdown == isMarkdown &&
             g_textMeasureCache.fontSize == fontSize &&
+            fabsf(g_textMeasureCache.fontScaleFactor - fontScaleFactor) < 0.0001f &&
             g_textMeasureCache.headingSignature == headingSignature &&
             g_textMeasureCache.fontTagSignature == fontTagSignature &&
             g_textMeasureCache.fontStateGeneration == fontStateGeneration &&
@@ -657,13 +715,14 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
         }
 
         int w, h;
-        if (MeasureMarkdownSTB(text, headings, headingCount, fontTags, fontTagCount,
-                              fontSize, &w, &h)) {
+        if (MeasureMarkdownSTBScaled(text, headings, headingCount, fontTags, fontTagCount,
+                                     fontSize, fontScaleFactor, &w, &h)) {
             outSize->cx = w;
             outSize->cy = h;
             g_textMeasureCache.valid = TRUE;
             g_textMeasureCache.isMarkdown = isMarkdown;
             g_textMeasureCache.fontSize = fontSize;
+            g_textMeasureCache.fontScaleFactor = fontScaleFactor;
             g_textMeasureCache.headingSignature = headingSignature;
             g_textMeasureCache.fontTagSignature = fontTagSignature;
             g_textMeasureCache.fontStateGeneration = GetFontStateGenerationSTB();
@@ -709,7 +768,7 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                                           fontTags, fontTagCount,
                                           ctx->textColor,
                                           ctx->renderFontSize,
-                                          1.0f,
+                                          ctx->fontScaleFactor,
                                           ctx->gradientMode,
                                           ctx->hasGradient ? &ctx->gradientSnapshot.info : NULL,
                                           measuredWidth, measuredHeight);
@@ -723,7 +782,7 @@ static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, c
                                   fontTags, fontTagCount,
                                   ctx->textColor,
                                   ctx->renderFontSize,
-                                  1.0f,
+                                  ctx->fontScaleFactor,
                                   ctx->gradientMode,
                                   ctx->hasGradient ? &ctx->gradientSnapshot.info : NULL);
             }
@@ -1224,17 +1283,38 @@ static void FixAlphaChannel(void* bits, int width, int height) {
 /** @note Skips resize if size unchanged to reduce SetWindowPos overhead */
 static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     SIZE targetSize;
+    DWORD scaleGestureSerial = GetScaleWindowGestureSerial(hwnd);
     if (!GetConstrainedRenderWindowSize(hwnd, textSize, &targetSize)) {
         ClearPendingScaleResizeAnchor(hwnd);
         return;
     }
 
     POINT resizeAnchor = {0};
-    BOOL hasResizeAnchor = GetPendingScaleResizeAnchor(hwnd, &resizeAnchor);
+    double resizeAnchorRatioX = 0.5;
+    double resizeAnchorRatioY = 0.5;
+    BOOL hasResizeAnchor = GetPendingScaleResizeAnchorInfo(hwnd,
+                                                           &resizeAnchor,
+                                                           &resizeAnchorRatioX,
+                                                           &resizeAnchorRatioY);
+    LONG currentClientWidth = rect->right - rect->left;
+    LONG currentClientHeight = rect->bottom - rect->top;
 
-    if (targetSize.cx == (rect->right - rect->left) &&
-        targetSize.cy == (rect->bottom - rect->top)) {
-        ClearPendingScaleResizeAnchor(hwnd);
+    if (CLOCK_EDIT_MODE && scaleGestureSerial == 0) {
+        if (targetSize.cx < currentClientWidth) {
+            targetSize.cx = currentClientWidth;
+        }
+        if (targetSize.cy < currentClientHeight) {
+            targetSize.cy = currentClientHeight;
+        }
+    }
+
+    if (targetSize.cx == currentClientWidth &&
+        targetSize.cy == currentClientHeight) {
+        if (hasResizeAnchor && scaleGestureSerial == 0) {
+            ConsumePendingScaleResizeAnchor(hwnd);
+        } else {
+            ClearPendingScaleResizeAnchor(hwnd);
+        }
         return;
     }
 
@@ -1242,22 +1322,21 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     GetWindowRect(hwnd, &windowRect);
     int newX = windowRect.left;
     int newY = windowRect.top;
-    int currentWidth = windowRect.right - windowRect.left;
-    int currentHeight = windowRect.bottom - windowRect.top;
-
-    if (hasResizeAnchor && currentWidth > 0 && currentHeight > 0) {
-        double anchorRatioX = (double)(resizeAnchor.x - windowRect.left) / (double)currentWidth;
-        double anchorRatioY = (double)(resizeAnchor.y - windowRect.top) / (double)currentHeight;
-        newX = resizeAnchor.x - (int)(anchorRatioX * (double)targetSize.cx + 0.5);
-        newY = resizeAnchor.y - (int)(anchorRatioY * (double)targetSize.cy + 0.5);
+    if (hasResizeAnchor) {
+        newX = resizeAnchor.x - (int)(resizeAnchorRatioX * (double)targetSize.cx + 0.5);
+        newY = resizeAnchor.y - (int)(resizeAnchorRatioY * (double)targetSize.cy + 0.5);
     }
 
     SetWindowPos(hwnd, NULL,
         newX, newY,
         targetSize.cx,
         targetSize.cy,
-        SWP_NOZORDER | SWP_NOACTIVATE);
-    ClearPendingScaleResizeAnchor(hwnd);
+        SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+    if (hasResizeAnchor && scaleGestureSerial == 0) {
+        ConsumePendingScaleResizeAnchor(hwnd);
+    } else {
+        ClearPendingScaleResizeAnchor(hwnd);
+    }
 
     CLOCK_WINDOW_POS_X = newX;
     CLOCK_WINDOW_POS_Y = newY;
@@ -1408,6 +1487,8 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
         GetPreviewTimeText(timeText, TIME_TEXT_MAX_LEN);
     }
 
+    StabilizeScaleGestureText(hwnd, timeText, TIME_TEXT_MAX_LEN);
+
     RenderContext ctx;
     CreateRenderContext(&ctx);
 
@@ -1423,6 +1504,16 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
 
     const wchar_t* textToRender = (isMarkdown && g_markdownRenderCache.mdText) ? g_markdownRenderCache.mdText : timeText;
     BOOL hasText = textToRender[0] != L'\0';
+    const wchar_t* textToMeasure = textToRender;
+    if (CLOCK_EDIT_MODE &&
+        hasText &&
+        !isMarkdown &&
+        !PluginData_IsActive() &&
+        BuildStableDigitMeasureText(textToRender,
+                                    g_paintTextBuffers.measureText,
+                                    _countof(g_paintTextBuffers.measureText))) {
+        textToMeasure = g_paintTextBuffers.measureText;
+    }
 
     // Measure text and resize window BEFORE creating the buffer
     // This prevents buffer overflow if the window grows
@@ -1440,7 +1531,7 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
                                                             headings, headingCount,
                                                             fontTags, fontTagCount);
             } else {
-                measuredTextSizeValid = MeasureTextMarkdown(textToRender, &ctx, &textSize,
+                measuredTextSizeValid = MeasureTextMarkdown(textToMeasure, &ctx, &textSize,
                                                             NULL, 0, NULL, 0);
             }
 
@@ -1486,7 +1577,6 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
                 }
             }
         }
-
         AdjustWindowSize(hwnd, &textSize, &rect);
     }
 
@@ -1602,7 +1692,7 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
                     int loadingTextLen = (int)(_countof(loadingText) - 1);
                     SIZE loadingTextSize = {
                         70,
-                        ctx.renderFontSize
+                        CalculateRenderFontSize(ctx.renderFontSize, ctx.fontScaleFactor)
                     };
                     if (loadingTextSize.cy <= 0) {
                         loadingTextSize.cy = 16;

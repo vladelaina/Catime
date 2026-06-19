@@ -98,10 +98,26 @@ static void ShowWindowNoActivateIfNeeded(HWND hwnd) {
 }
 
 static BOOL TrySetWindowOwner(HWND hwnd, HWND owner) {
+    if (owner == NULL) {
+        SetLastError(0);
+        HWND currentOwner = (HWND)GetWindowLongPtr(hwnd, GWLP_HWNDPARENT);
+        if (currentOwner == NULL && GetLastError() == 0) {
+            return TRUE;
+        }
+    }
+
     SetLastError(0);
     LONG_PTR result = SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (LONG_PTR)owner);
-    if (result == 0 && GetLastError() != 0) {
-        LOG_WARNING("SetWindowLongPtr(GWLP_HWNDPARENT) failed (err=%lu)", GetLastError());
+    DWORD setOwnerError = GetLastError();
+    if (result == 0 && setOwnerError != 0) {
+        if (owner == NULL) {
+            SetLastError(0);
+            HWND currentOwner = (HWND)GetWindowLongPtr(hwnd, GWLP_HWNDPARENT);
+            if (currentOwner == NULL && GetLastError() == 0) {
+                return TRUE;
+            }
+        }
+        LOG_WARNING("SetWindowLongPtr(GWLP_HWNDPARENT) failed (err=%lu)", setOwnerError);
         return FALSE;
     }
     return TRUE;
@@ -227,8 +243,8 @@ static BOOL ScheduleTopmostVisibilityRestore(HWND hwnd, const char* reason) {
         return TRUE;
     }
 
-    LOG_WARNING("Topmost window visibility changed externally; scheduling restore (%s)",
-                reason ? reason : "unknown");
+    LOG_DEBUG("Topmost window visibility changed externally; scheduling restore (%s)",
+              reason ? reason : "unknown");
     if (!SetTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE, 100, NULL)) {
         LOG_WARNING("Failed to schedule topmost visibility restore (err=%lu)", GetLastError());
         s_topmostVisibilityRestoreActive = FALSE;
@@ -308,7 +324,12 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
         zOrderApplied = FALSE;
     }
 
-    if (zOrderApplied && ownerApplied && styleApplied && hasActualTopmost && actualTopmost == topmost) {
+    BOOL topmostStateApplied =
+        zOrderApplied && styleApplied && hasActualTopmost && actualTopmost == topmost;
+    BOOL ownershipRequired = !topmost;
+    BOOL applySucceeded = topmostStateApplied && (!ownershipRequired || ownerApplied);
+
+    if (applySucceeded) {
         s_topmostApplyRetriesRemaining = 0;
         s_topmostApplyRetryActive = FALSE;
         s_topmostApplyRetryCooldownUntil = 0;
@@ -327,7 +348,7 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
         }
     }
 
-    return (zOrderApplied && ownerApplied && styleApplied && hasActualTopmost && actualTopmost == topmost);
+    return applySucceeded;
 }
 
 /* ============================================================================

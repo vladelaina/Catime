@@ -262,7 +262,7 @@ BOOL IsAutoStartEnabled(void) {
     }
     
     BOOL exists = (GetFileAttributesW(startupPath) != INVALID_FILE_ATTRIBUTES);
-    LOG_INFO("Startup shortcut %s", exists ? "exists" : "does not exist");
+    LOG_DEBUG("Startup shortcut %s", exists ? "exists" : "does not exist");
     
     return exists;
 }

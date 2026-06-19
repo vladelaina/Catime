@@ -416,21 +416,26 @@ static void BlendCharBitmapColorTagGradientItalicSTB(void* destBits, int destWid
 
 /* Public API */
 
-BOOL MeasureMarkdownSTB(const wchar_t* text,
-                        const MarkdownHeading* headings, int headingCount,
-                        const MarkdownFontTag* fontTags, int fontTagCount,
-                        int fontSize, int* width, int* height) {
+BOOL MeasureMarkdownSTBScaled(const wchar_t* text,
+                              const MarkdownHeading* headings, int headingCount,
+                              const MarkdownFontTag* fontTags, int fontTagCount,
+                              int fontSize, float fontScale,
+                              int* width, int* height) {
     if (!BeginFontUseSTB()) return FALSE;
     BOOL result = FALSE;
 
     if (!IsFontLoadedSTB() || !text) goto done;
+    if (!isfinite(fontScale) || fontScale <= 0.0f) fontScale = 1.0f;
+
+    float scaledFontSize = (float)((double)fontSize * (double)fontScale);
+    if (!isfinite(scaledFontSize) || scaledFontSize < 1.0f) scaledFontSize = 1.0f;
 
     const stbtt_fontinfo* fontInfo = GetMainFontInfoSTB();
     const stbtt_fontinfo* fallbackFontInfo = GetFallbackFontInfoSTB();
     BOOL fallbackLoaded = IsFallbackFontLoadedSTB();
 
-    float baseScale = stbtt_ScaleForPixelHeight(fontInfo, (float)fontSize);
-    float fallbackBaseScale = fallbackLoaded ? stbtt_ScaleForPixelHeight(fallbackFontInfo, (float)fontSize) : 0;
+    float baseScale = stbtt_ScaleForPixelHeight(fontInfo, scaledFontSize);
+    float fallbackBaseScale = fallbackLoaded ? stbtt_ScaleForPixelHeight(fallbackFontInfo, scaledFontSize) : 0;
 
     int ascent, descent, lineGap;
     stbtt_GetFontVMetrics(fontInfo, &ascent, &descent, &lineGap);
@@ -489,7 +494,7 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
                 cachedFontTagIdx = curFontTagIdx;
                 cachedFontTagInfo = GetCachedFontSTB(fontTags[curFontTagIdx].fontName);
                 cachedFontTagScale = cachedFontTagInfo ?
-                    stbtt_ScaleForPixelHeight(cachedFontTagInfo, (float)fontSize) :
+                    stbtt_ScaleForPixelHeight(cachedFontTagInfo, scaledFontSize) :
                     0.0f;
             }
             if (cachedFontTagInfo) {
@@ -525,6 +530,17 @@ done:
     return result;
 }
 
+BOOL MeasureMarkdownSTB(const wchar_t* text,
+                        const MarkdownHeading* headings, int headingCount,
+                        const MarkdownFontTag* fontTags, int fontTagCount,
+                        int fontSize, int* width, int* height) {
+    return MeasureMarkdownSTBScaled(text,
+                                    headings, headingCount,
+                                    fontTags, fontTagCount,
+                                    fontSize, 1.0f,
+                                    width, height);
+}
+
 /* Alert type colors (GitHub style) */
 static const struct AlertColorInfo {
     BlockquoteAlertType type;
@@ -555,9 +571,9 @@ void RenderMarkdownSTB(void* bits, int width, int height, const wchar_t* text,
                        const GradientInfo* gradientInfo) {
     int measuredTextWidth = 0;
     int measuredTextHeight = 0;
-    if (!MeasureMarkdownSTB(text, headings, headingCount, fontTags, fontTagCount,
-                            (int)(fontSize * fontScale),
-                            &measuredTextWidth, &measuredTextHeight)) {
+    if (!MeasureMarkdownSTBScaled(text, headings, headingCount, fontTags, fontTagCount,
+                                  fontSize, fontScale,
+                                  &measuredTextWidth, &measuredTextHeight)) {
         return;
     }
 

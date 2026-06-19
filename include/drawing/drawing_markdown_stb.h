@@ -18,6 +18,12 @@ BOOL MeasureMarkdownSTB(const wchar_t* text,
                         const MarkdownFontTag* fontTags, int fontTagCount,
                         int fontSize, int* width, int* height);
 
+BOOL MeasureMarkdownSTBScaled(const wchar_t* text,
+                              const MarkdownHeading* headings, int headingCount,
+                              const MarkdownFontTag* fontTags, int fontTagCount,
+                              int fontSize, float fontScale,
+                              int* width, int* height);
+
 /**
  * @brief Render multi-line Markdown text
  */

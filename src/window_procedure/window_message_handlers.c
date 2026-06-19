@@ -169,6 +169,7 @@ LRESULT HandleMouseWheel(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleMouseMove(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    TryStartDragWindowFromMouseMove(hwnd);
     if (HandleDragWindow(hwnd)) return 0;
     return DefWindowProc(hwnd, WM_MOUSEMOVE, wp, lp);
 }

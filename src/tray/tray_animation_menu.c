@@ -24,7 +24,7 @@
 #define MAX_ANIM_NAME_LENGTH 260
 #define MAX_ANIM_SCAN_ENTRIES 4096
 #define ASYNC_ANIM_SCAN_STOP_TIMEOUT_MS 2000
-#define ANIMATION_MENU_SCAN_REFRESH_COOLDOWN_MS 2000
+#define ANIMATION_MENU_SCAN_REFRESH_COOLDOWN_MS 10000
 #define ANIMATION_MENU_SCAN_FAILED (-1)
 
 /* ============================================================================
