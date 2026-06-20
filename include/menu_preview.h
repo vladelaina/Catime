@@ -17,6 +17,7 @@
 #define MENU_PREVIEW_H
 
 #include <windows.h>
+#include "text_effect.h"
 
 /* Forward declaration to avoid circular dependency */
 #ifndef TIME_FORMAT_TYPE_DEFINED
@@ -27,22 +28,6 @@ typedef enum {
 } TimeFormatType;
 #define TIME_FORMAT_TYPE_DEFINED
 #endif
-
-/* ============================================================================
- * Effect Types
- * ============================================================================ */
-
-/**
- * @brief Visual effect type discriminator
- */
-typedef enum {
-    EFFECT_TYPE_NONE = 0,
-    EFFECT_TYPE_GLOW,
-    EFFECT_TYPE_GLASS,
-    EFFECT_TYPE_NEON,
-    EFFECT_TYPE_HOLOGRAPHIC,
-    EFFECT_TYPE_LIQUID
-} EffectType;
 
 /* ============================================================================
  * Preview Types
@@ -153,7 +138,7 @@ BOOL GetActiveShowMilliseconds(void);
 
 /**
  * @brief Get active visual effect (preview takes precedence)
- * @return Active effect type (NONE, GLOW, GLASS, NEON)
+ * @return Active effect type
  */
 EffectType GetActiveEffect(void);
 

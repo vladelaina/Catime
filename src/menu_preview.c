@@ -36,7 +36,6 @@ extern void ResetTimerWithInterval(HWND hwnd);
 extern BOOL WriteConfigColor(const char* color);
 extern BOOL WriteConfigTimeFormat(TimeFormatType format);
 extern BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
-extern void WriteConfigEffect(EffectType effect); /* To be implemented if needed, or use existing logic */
 
 /* ============================================================================
  * Preview State
@@ -84,10 +83,6 @@ BOOL IsPreviewActive(void) {
 
 PreviewType GetActivePreviewType(void) {
     return g_previewState.type;
-}
-
-static BOOL IsConfiguredTextEffectActive(void) {
-    return CLOCK_TEXT_EFFECT != TEXT_EFFECT_NONE;
 }
 
 static BOOL LoadPreviewFontName(const char* fontName, char* internalName, size_t internalNameSize) {
@@ -237,7 +232,8 @@ void CancelPreview(HWND hwnd) {
                             g_previewState.type == PREVIEW_TYPE_COLOR);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
     BOOL needsEffectCleanup = (g_previewState.type == PREVIEW_TYPE_EFFECT &&
-                               !IsConfiguredTextEffectActive());
+                               TextEffect_UsesSharedEffectBuffer(g_previewState.data.effect) &&
+                               !TextEffect_UsesSharedEffectBuffer(CLOCK_TEXT_EFFECT));
 
     if (needsFontReload) {
         RestoreConfiguredFontAfterPreview();
@@ -371,12 +367,9 @@ EffectType GetActiveEffect(void) {
         return g_previewState.data.effect;
     }
     
-    /* Priority matches drawing_text_stb.c original logic */
-    if (CLOCK_LIQUID_EFFECT) return EFFECT_TYPE_LIQUID;
-    if (CLOCK_HOLOGRAPHIC_EFFECT) return EFFECT_TYPE_HOLOGRAPHIC;
-    if (CLOCK_NEON_EFFECT) return EFFECT_TYPE_NEON;
-    if (CLOCK_GLASS_EFFECT) return EFFECT_TYPE_GLASS;
-    if (CLOCK_GLOW_EFFECT) return EFFECT_TYPE_GLOW;
+    if (TextEffect_IsSelectable(CLOCK_TEXT_EFFECT)) {
+        return (EffectType)CLOCK_TEXT_EFFECT;
+    }
     
     return EFFECT_TYPE_NONE;
 }

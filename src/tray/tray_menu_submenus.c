@@ -29,6 +29,7 @@
 #include "utils/string_format.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
+#include "text_effect.h"
 
 /* External dependencies from main.c/config.c */
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
@@ -392,27 +393,17 @@ void BuildColorSubmenu(HMENU hMenu) {
 void BuildStyleSubmenu(HMENU hMenu) {
     HMENU hStyleMenu = CreatePopupMenu();
     if (!hStyleMenu) return;
-    
-    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_GLOW_EFFECT ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_GLOW_EFFECT,
-                GetLocalizedString(NULL, L"Glow Effect"));
 
-    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_GLASS_EFFECT ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_GLASS_EFFECT,
-                GetLocalizedString(NULL, L"Optical Prism"));
+    for (size_t i = 0; i < TextEffect_GetCount(); ++i) {
+        const TextEffectDefinition* effect = TextEffect_GetByIndex(i);
+        if (!effect) continue;
 
-    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_NEON_EFFECT ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_NEON_EFFECT,
-                GetLocalizedString(NULL, L"Neon Tube"));
+        AppendMenuW(hStyleMenu,
+                    MF_STRING | (CLOCK_TEXT_EFFECT == effect->type ? MF_CHECKED : MF_UNCHECKED),
+                    effect->menuId,
+                    GetLocalizedString(NULL, effect->menuLabelKey));
+    }
 
-    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_HOLOGRAPHIC_EFFECT ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_HOLOGRAPHIC_EFFECT,
-                GetLocalizedString(NULL, L"Holographic Effect"));
-
-    AppendMenuW(hStyleMenu, MF_STRING | (CLOCK_LIQUID_EFFECT ? MF_CHECKED : MF_UNCHECKED),
-                CLOCK_IDM_LIQUID_EFFECT,
-                GetLocalizedString(NULL, L"Liquid Flow"));
-    
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu,
                      GetLocalizedString(NULL, L"Style"))) {
         DestroyMenu(hStyleMenu);

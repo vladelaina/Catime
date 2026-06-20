@@ -179,11 +179,8 @@
 #define CLOCK_IDM_24HOUR_FORMAT 151      /**< 24-hour format menu item */
 #define CLOCK_IDM_SHOW_SECONDS 152       /**< Show seconds menu item */
 #define CLOCK_IDM_TOPMOST 187            /**< Window topmost menu item */
-#define CLOCK_IDM_GLOW_EFFECT 189        /**< Neon glow effect toggle */
-#define CLOCK_IDM_GLASS_EFFECT 190       /**< Glass/Liquid crystal effect toggle */
-#define CLOCK_IDM_NEON_EFFECT 5100       /**< Hong Kong Neon Tube effect toggle */
-#define CLOCK_IDM_HOLOGRAPHIC_EFFECT 5101 /**< Holographic/Prism effect toggle */
-#define CLOCK_IDM_LIQUID_EFFECT 5102     /**< Liquid Flow/Caustics effect toggle */
+#define CLOCK_IDM_TEXT_EFFECT_BASE 5300  /**< Text effect menu command range start */
+#define CLOCK_IDM_TEXT_EFFECT_END (CLOCK_IDM_TEXT_EFFECT_BASE + 99) /**< Text effect menu command range end */
 
 /** @brief Language selection menu identifiers */
 #define CLOCK_IDM_LANGUAGE_MENU 160      /**< Language submenu */
@@ -521,6 +518,10 @@
 #define IDC_FONT_LIST_SIMPLE 759                /**< System font list control */
 #define IDC_FONT_PICKER_LABEL 757               /**< Font picker label */
 #define CLOCK_IDM_SYSTEM_FONT_PICKER 5105       /**< System font picker menu item */
+
+#if CLOCK_IDM_TEXT_EFFECT_BASE <= CLOCK_IDM_SYSTEM_FONT_PICKER && CLOCK_IDM_TEXT_EFFECT_END >= CLOCK_IDC_FONT_ADVANCED
+#error "Text effect menu command range overlaps static font menu command IDs"
+#endif
 
 /** @brief Plugin security dialog identifiers */
 #define IDD_PLUGIN_SECURITY_DIALOG 760          /**< Plugin security confirmation dialog */

@@ -92,6 +92,24 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
                        int timeOffset);
 
 /**
+ * @brief Render a hard offset shadow with primary foreground and secondary shadow color
+ */
+void RenderRetroEffect(DWORD* pixels, int destWidth, int destHeight,
+                       int x_pos, int y_pos,
+                       const unsigned char* bitmap, int w, int h,
+                       int r, int g, int b,
+                       int shadowR, int shadowG, int shadowB,
+                       GlowColorCallback colorCb, void* userData);
+
+/**
+ * @brief Render only the hard offset shadow used by the retro effect
+ */
+void RenderRetroShadowEffect(DWORD* pixels, int destWidth, int destHeight,
+                             int x_pos, int y_pos,
+                             const unsigned char* bitmap, int w, int h,
+                             int shadowR, int shadowG, int shadowB);
+
+/**
  * @brief Apply Gaussian blur approximation to a single-channel bitmap
  * 
  * @param src Source bitmap

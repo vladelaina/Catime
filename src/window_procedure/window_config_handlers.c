@@ -12,11 +12,11 @@
 #include "config.h"
 #include "config/config_defaults.h"
 #include "config/config_watcher.h"
+#include "text_effect.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "window.h"
 #include "drawing/drawing_effect.h"
-#include "drawing/drawing_render.h"
 #include "font.h"
 #include "color/color.h"
 #include "color/color_parser.h"
@@ -319,17 +319,6 @@ static void NormalizeStartupModeForHotReload(const char* mode,
              "Ignoring invalid hot-reload startup mode '%s', using SHOW_TIME",
              mode ? mode : "");
     strncpy_s(output, outputSize, "SHOW_TIME", _TRUNCATE);
-}
-
-static TextEffectType ParseTextEffectForHotReload(const char* effect) {
-    if (!effect) return TEXT_EFFECT_NONE;
-
-    if (_stricmp(effect, "GLOW") == 0) return TEXT_EFFECT_GLOW;
-    if (_stricmp(effect, "GLASS") == 0) return TEXT_EFFECT_GLASS;
-    if (_stricmp(effect, "NEON") == 0) return TEXT_EFFECT_NEON;
-    if (_stricmp(effect, "HOLOGRAPHIC") == 0) return TEXT_EFFECT_HOLOGRAPHIC;
-    if (_stricmp(effect, "LIQUID") == 0) return TEXT_EFFECT_LIQUID;
-    return TEXT_EFFECT_NONE;
 }
 
 static BOOL ResolveFontLoadNameForHotReload(const char* configFont,
@@ -673,14 +662,14 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
     char effectBuf[32];
     ReadConfigStr(CFG_SECTION_DISPLAY, "TEXT_EFFECT", "NONE", effectBuf, sizeof(effectBuf));
     TextEffectType previousTextEffect = CLOCK_TEXT_EFFECT;
-    TextEffectType newTextEffect = ParseTextEffectForHotReload(effectBuf);
+    TextEffectType newTextEffect = TextEffect_FromConfigString(effectBuf);
     if (newTextEffect != previousTextEffect) {
         CLOCK_TEXT_EFFECT = newTextEffect;
         g_AppConfig.display.text_effect = newTextEffect;
-        if (previousTextEffect != TEXT_EFFECT_NONE && newTextEffect == TEXT_EFFECT_NONE) {
+        if (TextEffect_UsesSharedEffectBuffer(previousTextEffect) &&
+            !TextEffect_UsesSharedEffectBuffer(newTextEffect)) {
             CleanupDrawingEffects();
         }
-        UpdateDrawingRenderAnimationTimer(hwnd, FALSE, FALSE);
         changed = TRUE;
     }
 

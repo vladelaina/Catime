@@ -12,7 +12,7 @@
 #include "font.h"
 #include "color/color.h"
 #include "drawing/drawing_effect.h"
-#include "drawing/drawing_render.h"
+#include "text_effect.h"
 #include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
@@ -162,7 +162,8 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     CLOCK_TEXT_EFFECT = (TextEffectType)snapshot->textEffect;
     g_AppConfig.display.text_effect = snapshot->textEffect;
 
-    if (previousTextEffect != TEXT_EFFECT_NONE && CLOCK_TEXT_EFFECT == TEXT_EFFECT_NONE) {
+    if (TextEffect_UsesSharedEffectBuffer(previousTextEffect) &&
+        !TextEffect_UsesSharedEffectBuffer(CLOCK_TEXT_EFFECT)) {
         CleanupDrawingEffects();
     }
 
@@ -200,8 +201,6 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
         RefreshWindowTopmostState(hwnd);
-
-        UpdateDrawingRenderAnimationTimer(hwnd, FALSE, FALSE);
 
         InvalidateRect(hwnd, NULL, TRUE);
     } else {

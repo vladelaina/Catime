@@ -15,6 +15,7 @@
 #include "config/config_loader.h"
 #include "language.h"
 #include "log.h"
+#include "text_effect.h"
 #include "utils/path_utils.h"
 #include "../resource/resource.h"
 #include <stdio.h>
@@ -66,7 +67,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_DISPLAY, "OPACITY_STEP_FAST", "5", CONFIG_TYPE_INT, CFG_OFFSET(opacityStepFast), CFG_NO_SIZE, "Opacity Ctrl+scroll step (1-100)"},
     {INI_SECTION_DISPLAY, "SCALE_STEP_NORMAL", "10", CONFIG_TYPE_INT, CFG_OFFSET(scaleStepNormal), CFG_NO_SIZE, "Scale scroll step (1-100)"},
     {INI_SECTION_DISPLAY, "SCALE_STEP_FAST", "15", CONFIG_TYPE_INT, CFG_OFFSET(scaleStepFast), CFG_NO_SIZE, "Scale Ctrl+scroll step (1-100)"},
-    {INI_SECTION_DISPLAY, "TEXT_EFFECT", "NONE", CONFIG_TYPE_ENUM, CFG_OFFSET(textEffect), CFG_NO_SIZE, "Text effect style (NONE/GLOW/GLASS/NEON/HOLOGRAPHIC/LIQUID)"},
+    {INI_SECTION_DISPLAY, "TEXT_EFFECT", "NONE", CONFIG_TYPE_ENUM, CFG_OFFSET(textEffect), CFG_NO_SIZE, "Text effect style (" TEXT_EFFECT_CONFIG_VALUES ")"},
 
     /* Timer settings */
     {INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "1500", CONFIG_TYPE_INT, CFG_OFFSET(defaultStartTime), CFG_NO_SIZE, "Default timer duration (seconds)"},

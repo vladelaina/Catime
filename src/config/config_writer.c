@@ -11,6 +11,7 @@
 #include "font.h"
 #include "color/color.h"
 #include "tray/tray_animation_core.h"
+#include "text_effect.h"
 #include "utils/string_safe.h"
 #include "log.h"
 #include "../resource/resource.h"
@@ -230,13 +231,8 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     idx++;
 
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
-    safe_strncpy(items[idx].key, "TEXT_GLOW_EFFECT", sizeof(items[idx].key));
-    safe_strncpy(items[idx].value, CLOCK_GLOW_EFFECT ? "TRUE" : "FALSE", sizeof(items[idx].value));
-    idx++;
-
-    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
-    safe_strncpy(items[idx].key, "TEXT_GLASS_EFFECT", sizeof(items[idx].key));
-    safe_strncpy(items[idx].value, CLOCK_GLASS_EFFECT ? "TRUE" : "FALSE", sizeof(items[idx].value));
+    safe_strncpy(items[idx].key, "TEXT_EFFECT", sizeof(items[idx].key));
+    safe_strncpy(items[idx].value, TextEffect_ToConfigString(CLOCK_TEXT_EFFECT), sizeof(items[idx].value));
     idx++;
 
     /* Timer section */

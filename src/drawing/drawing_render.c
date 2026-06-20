@@ -22,6 +22,7 @@
 #include "window/window_visual_effects.h"
 #include "drag_scale.h"
 #include "menu_preview.h"
+#include "text_effect.h"
 #include "font/font_path_manager.h"
 #include "log.h"
 #include "plugin/plugin_data.h"
@@ -880,14 +881,15 @@ static BOOL ShouldRunRenderAnimationTimer(BOOL hasRenderableContent,
         return FALSE;
     }
 
-    return GetActiveEffect() == EFFECT_TYPE_LIQUID ||
+    EffectType activeEffect = GetActiveEffect();
+    return TextEffect_NeedsRenderTimer(activeEffect) ||
            hasColorTagGradient ||
-           IsActiveTextColorAnimated();
+           (TextEffect_UsesAnimatedTextColor(activeEffect) && IsActiveTextColorAnimated());
 }
 
-BOOL UpdateDrawingRenderAnimationTimer(HWND hwnd,
-                                       BOOL hasRenderableContent,
-                                       BOOL hasColorTagGradient) {
+static BOOL UpdateDrawingRenderAnimationTimerForFrame(HWND hwnd,
+                                                      BOOL hasRenderableContent,
+                                                      BOOL hasColorTagGradient) {
     if (!IsValidRenderAnimationWindow(hwnd)) {
         StopDrawingRenderAnimationTimer(NULL);
         return FALSE;
@@ -1811,6 +1813,6 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
 
     if (layeredUpdateSucceeded) {
         RefreshClickThroughState(hwnd);
-        UpdateDrawingRenderAnimationTimer(hwnd, hasContent, hasColorTagGradient);
+        UpdateDrawingRenderAnimationTimerForFrame(hwnd, hasContent, hasColorTagGradient);
     }
 }

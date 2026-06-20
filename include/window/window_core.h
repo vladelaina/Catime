@@ -7,6 +7,7 @@
 #define WINDOW_CORE_H
 
 #include <windows.h>
+#include "text_effect.h"
 
 /* ============================================================================
  * Global window state
@@ -32,16 +33,6 @@ extern float CLOCK_FONT_SCALE_FACTOR;
 extern float PLUGIN_FONT_SCALE_FACTOR;
 extern int CLOCK_BASE_FONT_SIZE;
 
-/* Text effect type enumeration */
-typedef enum {
-    TEXT_EFFECT_NONE = 0,
-    TEXT_EFFECT_GLOW,
-    TEXT_EFFECT_GLASS,
-    TEXT_EFFECT_NEON,
-    TEXT_EFFECT_HOLOGRAPHIC,
-    TEXT_EFFECT_LIQUID
-} TextEffectType;
-
 extern TextEffectType CLOCK_TEXT_EFFECT;
 
 /* Legacy compatibility macros - map old BOOL checks to new enum */
@@ -50,6 +41,7 @@ extern TextEffectType CLOCK_TEXT_EFFECT;
 #define CLOCK_NEON_EFFECT        (CLOCK_TEXT_EFFECT == TEXT_EFFECT_NEON)
 #define CLOCK_HOLOGRAPHIC_EFFECT (CLOCK_TEXT_EFFECT == TEXT_EFFECT_HOLOGRAPHIC)
 #define CLOCK_LIQUID_EFFECT      (CLOCK_TEXT_EFFECT == TEXT_EFFECT_LIQUID)
+#define CLOCK_RETRO_EFFECT       (CLOCK_TEXT_EFFECT == TEXT_EFFECT_RETRO)
 
 /* ============================================================================
  * Public API

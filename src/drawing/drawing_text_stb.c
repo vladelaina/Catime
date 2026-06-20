@@ -665,6 +665,16 @@ BOOL InitFontSTB(const char* fontFilePath) {
 /**
  * @brief Blend a single character bitmap into the destination buffer
  */
+static void GetContrastShadowColor(int r, int g, int b,
+                                   int* shadowR, int* shadowG, int* shadowB) {
+    int brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    int shadow = (brightness < 120) ? 255 : 0;
+
+    if (shadowR) *shadowR = shadow;
+    if (shadowG) *shadowG = shadow;
+    if (shadowB) *shadowB = shadow;
+}
+
 void BlendCharBitmapSTB(void* destBits, int destWidth, int destHeight,
                           int x_pos, int y_pos,
                           const unsigned char* bitmap, int w, int h,
@@ -706,6 +716,12 @@ void BlendCharBitmapSTBWithEffect(void* destBits, int destWidth, int destHeight,
     } else if (effect == EFFECT_TYPE_LIQUID) {
         RenderLiquidEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL, timeOffset);
         /* Critical: Return early */
+        return;
+    } else if (effect == EFFECT_TYPE_RETRO) {
+        int shadowR = 0, shadowG = 0, shadowB = 0;
+        GetContrastShadowColor(r, g, b, &shadowR, &shadowG, &shadowB);
+        RenderRetroEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
+                          r, g, b, shadowR, shadowG, shadowB, NULL, NULL);
         return;
     }
 
@@ -1060,6 +1076,13 @@ void BlendCharBitmapGradientSTBWithInfo(void* destBits, int destWidth, int destH
                            liquidR, liquidG, liquidB, GetGlowGradientColor, &ctx, timeOffset);
         /* Critical: Return early */
         return;
+    } else if (effect == EFFECT_TYPE_RETRO) {
+        int shadowR = GetRValue(info->endColor);
+        int shadowG = GetGValue(info->endColor);
+        int shadowB = GetBValue(info->endColor);
+
+        RenderRetroShadowEffect(pixels, destWidth, destHeight, x_pos, y_pos,
+                                bitmap, w, h, shadowR, shadowG, shadowB);
     }
 
     TextBitmapClip clip;

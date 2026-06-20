@@ -22,6 +22,7 @@
 #include "drawing.h"
 #include "color/gradient.h"
 #include "menu_preview.h"
+#include "text_effect.h"
 #include "audio_player.h"
 #include "drag_scale.h"
 #include "font/font_manager.h"
@@ -466,11 +467,13 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
 }
 
 static BOOL IsRenderAnimationActive(void) {
-    /* Holographic does not consume timeOffset, so it should not force
-     * high-frequency redraws by itself.
-     */
-    if (CLOCK_LIQUID_EFFECT) {
+    EffectType activeEffect = GetActiveEffect();
+    if (TextEffect_NeedsRenderTimer(activeEffect)) {
         return TRUE;
+    }
+
+    if (!TextEffect_UsesAnimatedTextColor(activeEffect)) {
+        return FALSE;
     }
 
     char activeColor[COLOR_HEX_BUFFER];

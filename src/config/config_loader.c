@@ -7,6 +7,7 @@
 #include "config/config_recovery.h"
 #include "config/config_defaults.h"
 #include "config.h"
+#include "text_effect.h"
 #include "window/window_core.h"
 #include "log.h"
 #include "../resource/resource.h"
@@ -219,16 +220,6 @@ static const EnumStrMap TIMEOUT_ACTION_MAP[] = {
     {-1, NULL}
 };
 
-static const EnumStrMap TEXT_EFFECT_MAP[] = {
-    {TEXT_EFFECT_NONE,        "NONE"},
-    {TEXT_EFFECT_GLOW,        "GLOW"},
-    {TEXT_EFFECT_GLASS,       "GLASS"},
-    {TEXT_EFFECT_NEON,        "NEON"},
-    {TEXT_EFFECT_HOLOGRAPHIC, "HOLOGRAPHIC"},
-    {TEXT_EFFECT_LIQUID,      "LIQUID"},
-    {-1, NULL}
-};
-
 static int StringToEnum(const EnumStrMap* map, const char* str, int defaultVal) {
     if (!map || !str) return defaultVal;
     for (int i = 0; map[i].str != NULL; i++) {
@@ -250,7 +241,6 @@ static const EnumStrMap* GetEnumMapForKey(const char* key) {
     if (strcmp(key, "CLOCK_TIME_FORMAT") == 0) return TIME_FORMAT_MAP;
     if (strcmp(key, "CLOCK_TIMEOUT_ACTION") == 0) return TIMEOUT_ACTION_MAP;
     if (strcmp(key, "NOTIFICATION_TYPE") == 0) return NOTIFICATION_TYPE_MAP;
-    if (strcmp(key, "TEXT_EFFECT") == 0) return TEXT_EFFECT_MAP;
     return NULL;
 }
 
@@ -301,6 +291,13 @@ static void LoadConfigItem(const ConfigItemMeta* meta, const char* config_path, 
             break;
             
         case CONFIG_TYPE_ENUM: {
+            if (strcmp(meta->key, "TEXT_EFFECT") == 0) {
+                ReadIniString(meta->section, meta->key, meta->defaultValue,
+                             buffer, sizeof(buffer), config_path);
+                *(int*)fieldPtr = TextEffect_FromConfigString(buffer);
+                break;
+            }
+
             const EnumStrMap* enumMap = GetEnumMapForKey(meta->key);
             if (enumMap) {
                 ReadIniString(meta->section, meta->key, meta->defaultValue,

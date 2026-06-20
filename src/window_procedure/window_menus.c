@@ -16,6 +16,7 @@
 #include "utils/natural_sort.h"
 #include "color/color_state.h"
 #include "config.h"
+#include "text_effect.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -77,32 +78,8 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
-    if (menuId == CLOCK_IDM_GLOW_EFFECT) {
-        EffectType effect = EFFECT_TYPE_GLOW;
-        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_GLASS_EFFECT) {
-        EffectType effect = EFFECT_TYPE_GLASS;
-        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_NEON_EFFECT) {
-        EffectType effect = EFFECT_TYPE_NEON;
-        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_HOLOGRAPHIC_EFFECT) {
-        EffectType effect = EFFECT_TYPE_HOLOGRAPHIC;
-        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
-        return TRUE;
-    }
-
-    if (menuId == CLOCK_IDM_LIQUID_EFFECT) {
-        EffectType effect = EFFECT_TYPE_LIQUID;
+    EffectType effect = TextEffect_FromMenuId(menuId);
+    if (effect != TEXT_EFFECT_NONE) {
         StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
         return TRUE;
     }

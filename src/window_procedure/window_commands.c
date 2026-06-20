@@ -27,7 +27,7 @@
 #include "pomodoro.h"
 #include "tray/tray.h"
 #include "drawing/drawing_effect.h"
-#include "drawing/drawing_render.h"
+#include "text_effect.h"
 
 extern void HandleStartupMode(HWND hwnd);
 #include "dialog/dialog_procedure.h"
@@ -79,23 +79,15 @@ static LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
-/* Convert TextEffectType to config string */
-static const char* TextEffectToString(TextEffectType effect) {
-    switch (effect) {
-        case TEXT_EFFECT_GLOW:        return "GLOW";
-        case TEXT_EFFECT_GLASS:       return "GLASS";
-        case TEXT_EFFECT_NEON:        return "NEON";
-        case TEXT_EFFECT_HOLOGRAPHIC: return "HOLOGRAPHIC";
-        case TEXT_EFFECT_LIQUID:      return "LIQUID";
-        default:                      return "NONE";
-    }
-}
-
 /* Toggle effect: if already active, turn off; otherwise switch to it */
 static void ToggleTextEffect(HWND hwnd, TextEffectType effect) {
+    if (effect != TEXT_EFFECT_NONE && !TextEffect_IsSelectable(effect)) {
+        return;
+    }
+
     TextEffectType previousEffect = CLOCK_TEXT_EFFECT;
     TextEffectType newEffect = (previousEffect == effect) ? TEXT_EFFECT_NONE : effect;
-    const char* effectConfigValue = TextEffectToString(newEffect);
+    const char* effectConfigValue = TextEffect_ToConfigString(newEffect);
 
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -107,42 +99,12 @@ static void ToggleTextEffect(HWND hwnd, TextEffectType effect) {
     CLOCK_TEXT_EFFECT = newEffect;
     g_AppConfig.display.text_effect = newEffect;
 
-    if (previousEffect != TEXT_EFFECT_NONE && newEffect == TEXT_EFFECT_NONE) {
+    if (TextEffect_UsesSharedEffectBuffer(previousEffect) &&
+        !TextEffect_UsesSharedEffectBuffer(newEffect)) {
         CleanupDrawingEffects();
     }
 
-    UpdateDrawingRenderAnimationTimer(hwnd, FALSE, FALSE);
     InvalidateRect(hwnd, NULL, TRUE);
-}
-
-static LRESULT CmdToggleGlowEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ToggleTextEffect(hwnd, TEXT_EFFECT_GLOW);
-    return 0;
-}
-
-static LRESULT CmdToggleGlassEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ToggleTextEffect(hwnd, TEXT_EFFECT_GLASS);
-    return 0;
-}
-
-static LRESULT CmdToggleNeonEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ToggleTextEffect(hwnd, TEXT_EFFECT_NEON);
-    return 0;
-}
-
-static LRESULT CmdToggleHolographicEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ToggleTextEffect(hwnd, TEXT_EFFECT_HOLOGRAPHIC);
-    return 0;
-}
-
-static LRESULT CmdToggleLiquidEffect(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
-    ToggleTextEffect(hwnd, TEXT_EFFECT_LIQUID);
-    return 0;
 }
 
 static LRESULT CmdEditMode(HWND hwnd, WPARAM wp, LPARAM lp) {
@@ -452,11 +414,6 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     /* Menu items */
     {CLOCK_IDM_ABOUT, CmdAbout},
     {CLOCK_IDM_TOPMOST, CmdToggleTopmost},
-    {CLOCK_IDM_GLOW_EFFECT, CmdToggleGlowEffect},
-    {CLOCK_IDM_GLASS_EFFECT, CmdToggleGlassEffect},
-    {CLOCK_IDM_NEON_EFFECT, CmdToggleNeonEffect},
-    {CLOCK_IDM_HOLOGRAPHIC_EFFECT, CmdToggleHolographicEffect},
-    {CLOCK_IDM_LIQUID_EFFECT, CmdToggleLiquidEffect},
     {CLOCK_IDM_BROWSE_FILE, CmdBrowseFile},
     {CLOCK_IDM_CHECK_UPDATE, CmdCheckUpdate},
     {CLOCK_IDM_OPEN_WEBSITE, CmdOpenWebsite},
@@ -598,6 +555,12 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     if (cmd == CLOCK_IDM_TIME_FORMAT_DEFAULT) { CmdTimeFormat(hwnd, TIME_FORMAT_DEFAULT); return TRUE; }
     if (cmd == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED) { CmdTimeFormat(hwnd, TIME_FORMAT_ZERO_PADDED); return TRUE; }
     if (cmd == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) { CmdTimeFormat(hwnd, TIME_FORMAT_FULL_PADDED); return TRUE; }
+
+    TextEffectType textEffect = TextEffect_FromMenuId(cmd);
+    if (textEffect != TEXT_EFFECT_NONE) {
+        ToggleTextEffect(hwnd, textEffect);
+        return TRUE;
+    }
 
     /* Timeout action commands */
     if (cmd == CLOCK_IDM_TIMEOUT_SHOW_TIME) { CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_SHOW_TIME); return TRUE; }

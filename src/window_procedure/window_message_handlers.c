@@ -28,6 +28,7 @@
 #include "color/color.h"
 #include "drawing.h"
 #include "menu_preview.h"
+#include "text_effect.h"
 #include "window/window_visual_effects.h"
 #include "window/window_desktop_integration.h"
 #include "../resource/resource.h"
@@ -629,11 +630,7 @@ static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
         menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
         menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
         menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS ||
-        menuItem == CLOCK_IDM_GLOW_EFFECT ||
-        menuItem == CLOCK_IDM_GLASS_EFFECT ||
-        menuItem == CLOCK_IDM_NEON_EFFECT ||
-        menuItem == CLOCK_IDM_HOLOGRAPHIC_EFFECT ||
-        menuItem == CLOCK_IDM_LIQUID_EFFECT) {
+        TextEffect_IsMenuId(menuItem)) {
         colorOrFont = TRUE;
     }
 
