@@ -46,6 +46,14 @@ static const GradientInfo GRADIENT_REGISTRY[] = {
         FALSE, NULL, 0
     },
     {
+        GRADIENT_FROST,
+        "#FFFFFF_#00FFFF",
+        NULL,
+        RGB(255, 255, 255), // #FFFFFF
+        RGB(0, 255, 255),   // #00FFFF
+        FALSE, NULL, 0
+    },
+    {
         GRADIENT_SUNSET,
         "#FF9A56_#56CCBA",
         NULL,

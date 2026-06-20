@@ -43,12 +43,12 @@
 #define ANIMATIONS_PATH_PREFIX         "%LOCALAPPDATA%\\Catime\\resources\\animations\\"
 
 /** @brief Default color values */
-#define DEFAULT_TEXT_COLOR             "#648CFF_#64DC78"
+#define DEFAULT_TEXT_COLOR             "#FFFFFF_#00FFFF"
 #define DEFAULT_WHITE_COLOR            "#FFFFFF"
 #define DEFAULT_BLACK_COLOR            "#000000"
 
 /** @brief Default font settings */
-#define DEFAULT_FONT_NAME              "Rubik Glitch Essence.ttf"
+#define DEFAULT_FONT_NAME              "Terminess Nerd Font Propo Essence.ttf"
 #define DEFAULT_FONT_SIZE              20
 
 /** @brief Default window settings
@@ -64,13 +64,13 @@
 #define DEFAULT_SCALE_STEP_NORMAL      10
 #define DEFAULT_SCALE_STEP_FAST        15
 
-/** @brief Default color palette: 8 solid + 20 gradients, sorted by hue */
+/** @brief Default color palette: 9 solid + 21 gradients, sorted by hue */
 #define DEFAULT_COLOR_OPTIONS_INI \
     "#FFFFFF,#E3E3E5,#000000,#FF5F5F,#F6ABB7,#FB7FA4,#F59E0B,#22C55E,#8771C6," \
     "#FF9A9E_#FECFEF,#FEA5B7_#FFDE9B,#A8EDEA_#FED6E3,#D299C2_#FEF9D7," \
     "#FF9966_#FF5E62,#ED4264_#FFEDBC,#F6D365_#FDA085,#FFE985_#FA742B,#FF9A56_#56CCBA," \
     "#10BD92_#8CE442,#11998E_#38EF7D,#43E97B_#38F9D7," \
-    "#89F7FE_#66A6FF,#00C9FF_#92FE9D,#648CFF_#64DC78,#1F92A9_#EEE0D5," \
+    "#FFFFFF_#00FFFF,#89F7FE_#66A6FF,#00C9FF_#92FE9D,#648CFF_#64DC78,#1F92A9_#EEE0D5," \
     "#8E9EF3_#F774A0,#FF5E96_#56C6FF,#30CFD0_#330867," \
     "#FFA745_#FE869F_#EF7AC8_#A083ED_#43AEFF"
 

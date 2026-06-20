@@ -17,6 +17,7 @@ typedef enum {
     GRADIENT_NONE = 0,
     GRADIENT_CANDY,
     GRADIENT_BREEZE,
+    GRADIENT_FROST,
     GRADIENT_SUNSET,
     GRADIENT_STREAMER,
     GRADIENT_CUSTOM,  // User-defined custom gradient
