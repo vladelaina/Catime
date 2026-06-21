@@ -5,6 +5,7 @@
 
 #include "markdown/markdown_interactive.h"
 #include "markdown/markdown_image.h"
+#include "plugin/plugin_data.h"
 #include "log.h"
 #include "utils/url_safety.h"
 #include <stdlib.h>
@@ -13,15 +14,10 @@
 #include <shellapi.h>
 
 /*
- * Design note: output.txt is intentionally shared by design, but only within
- * plugin mode. It is a local, same-user integration point for plugin-compatible
- * writers while plugin mode is active, not a per-plugin private channel.
- * Outside plugin mode, Catime does not consume this file, and Catime-owned
- * local state text may override file-driven content.
+ * Design note: checkbox writes must use the same output.txt path as the plugin
+ * data watcher, otherwise nested plugins would display one file and update
+ * another.
  */
-/* Plugin output file path */
-#define PLUGIN_OUTPUT_FILENAME "output.txt"
-#define PLUGIN_OUTPUT_FILENAME_W L"output.txt"
 #define CHECKBOX_OUTPUT_MAX_BYTES (1024ll * 1024ll)
 #define CHECKBOX_OUTPUT_FILE_SHARE (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
@@ -357,23 +353,6 @@ void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
  * Click Handling
  * ============================================================================ */
 
-static BOOL GetPluginOutputPathW(wchar_t* buffer, size_t bufferSize) {
-    if (!buffer || bufferSize == 0 || bufferSize > (size_t)MAXDWORD) {
-        return FALSE;
-    }
-    buffer[0] = L'\0';
-
-    DWORD result = ExpandEnvironmentStringsW(
-        L"%LOCALAPPDATA%\\Catime\\resources\\plugins\\" PLUGIN_OUTPUT_FILENAME_W,
-        buffer,
-        (DWORD)bufferSize);
-    if (result == 0 || result >= bufferSize) {
-        buffer[0] = L'\0';
-        return FALSE;
-    }
-    return TRUE;
-}
-
 static BOOL WritePluginOutputContentAtomicW(const wchar_t* filePath,
                                             const char* content,
                                             DWORD contentSize) {
@@ -425,7 +404,7 @@ static BOOL WritePluginOutputContentAtomicW(const wchar_t* filePath,
 
 BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
     wchar_t filePath[MAX_PATH];
-    if (!GetPluginOutputPathW(filePath, MAX_PATH)) {
+    if (!PluginData_GetOutputPath(filePath, MAX_PATH)) {
         return FALSE;
     }
 

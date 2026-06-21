@@ -304,6 +304,7 @@ static size_t g_lastContentCapacity = 0;
 static FILETIME g_lastOutputWriteTime = {0};
 static ULONGLONG g_lastOutputFileSize = 0;
 static BOOL g_hasLastOutputFileState = FALSE;
+static wchar_t g_pluginOutputDirectory[MAX_PATH] = {0};
 
 /* Dynamic poll interval (controlled by <fps:N> tag) */
 #define DEFAULT_POLL_INTERVAL_MS 500
@@ -792,17 +793,69 @@ static PluginParseResult ParseContent(const char* content, size_t contentLen,
 }
 
 /*
- * Design note: output.txt is intentionally a stable, shared local IPC surface,
- * but it is only consumed while plugin mode is active.
- * During plugin mode, the active plugin and other same-user helper processes may
- * write compatible content here to build broader local automation flows.
- * Outside plugin mode, Catime intentionally ignores this file.
+ * Design note: output.txt is a small local IPC surface scoped to the active
+ * plugin folder. Catime starts the plugin script and displays that folder's
+ * output.txt while plugin mode is active. Outside plugin mode, Catime
+ * intentionally ignores this file.
  * Catime-owned local state text such as "Loading..." or "FAIL" is also allowed
  * to override the file-driven content when needed.
  */
 /* Plugin output file name */
 #define PLUGIN_OUTPUT_FILENAME "output.txt"
 #define PLUGIN_OUTPUT_FILENAME_W L"output.txt"
+
+static BOOL GetDefaultPluginOutputDirectoryW(wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0 || bufferSize > (size_t)MAXDWORD) {
+        return FALSE;
+    }
+    buffer[0] = L'\0';
+
+    DWORD result = ExpandEnvironmentStringsW(
+        L"%LOCALAPPDATA%\\Catime\\resources\\plugins",
+        buffer,
+        (DWORD)bufferSize);
+    if (result == 0 || result >= bufferSize) {
+        buffer[0] = L'\0';
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL SetDefaultPluginOutputDirectoryLocked(void) {
+    wchar_t defaultDir[MAX_PATH];
+    if (!GetDefaultPluginOutputDirectoryW(defaultDir, MAX_PATH)) {
+        g_pluginOutputDirectory[0] = L'\0';
+        return FALSE;
+    }
+
+    wcsncpy(g_pluginOutputDirectory, defaultDir, MAX_PATH - 1);
+    g_pluginOutputDirectory[MAX_PATH - 1] = L'\0';
+    return TRUE;
+}
+
+static BOOL EnsurePluginOutputDirectoryLocked(void) {
+    if (g_pluginOutputDirectory[0] != L'\0') {
+        return TRUE;
+    }
+    return SetDefaultPluginOutputDirectoryLocked();
+}
+
+static BOOL GetPluginOutputDirectory(wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0 || bufferSize > (size_t)MAXDWORD) {
+        return FALSE;
+    }
+    buffer[0] = L'\0';
+
+    EnterCriticalSection(&g_dataCS);
+    BOOL ok = EnsurePluginOutputDirectoryLocked();
+    if (ok) {
+        wcsncpy(buffer, g_pluginOutputDirectory, bufferSize - 1);
+        buffer[bufferSize - 1] = L'\0';
+        ok = wcslen(g_pluginOutputDirectory) < bufferSize;
+    }
+    LeaveCriticalSection(&g_dataCS);
+    return ok;
+}
 
 /**
  * @brief Get plugin output file path
@@ -814,15 +867,45 @@ static BOOL GetPluginOutputPathW(wchar_t* buffer, size_t bufferSize) {
     }
     buffer[0] = L'\0';
 
-    DWORD result = ExpandEnvironmentStringsW(
-        L"%LOCALAPPDATA%\\Catime\\resources\\plugins\\" PLUGIN_OUTPUT_FILENAME_W,
-        buffer,
-        (DWORD)bufferSize);
-    if (result == 0 || result >= bufferSize) {
+    wchar_t outputDir[MAX_PATH];
+    if (!GetPluginOutputDirectory(outputDir, MAX_PATH)) {
+        buffer[0] = L'\0';
+        return FALSE;
+    }
+
+    int written = _snwprintf_s(buffer, bufferSize, _TRUNCATE,
+                               L"%s\\%s", outputDir, PLUGIN_OUTPUT_FILENAME_W);
+    if (written < 0 || (size_t)written >= bufferSize) {
         buffer[0] = L'\0';
         return FALSE;
     }
     return TRUE;
+}
+
+static BOOL GetDirectoryFromPathW(const wchar_t* path,
+                                  wchar_t* directory,
+                                  size_t directorySize) {
+    if (!path || !directory || directorySize == 0) return FALSE;
+    directory[0] = L'\0';
+
+    size_t pathLen = wcslen(path);
+    if (pathLen == 0 || pathLen >= directorySize) return FALSE;
+
+    wcsncpy(directory, path, directorySize - 1);
+    directory[directorySize - 1] = L'\0';
+
+    wchar_t* lastSlash = wcsrchr(directory, L'\\');
+    wchar_t* lastForwardSlash = wcsrchr(directory, L'/');
+    if (!lastSlash || (lastForwardSlash && lastForwardSlash > lastSlash)) {
+        lastSlash = lastForwardSlash;
+    }
+    if (!lastSlash || lastSlash == directory) {
+        directory[0] = L'\0';
+        return FALSE;
+    }
+
+    *lastSlash = L'\0';
+    return directory[0] != L'\0';
 }
 
 /**
@@ -845,23 +928,6 @@ static void EnsureOutputDirExistsW(const wchar_t* filePath) {
         /* SHCreateDirectoryExW creates all intermediate directories */
         SHCreateDirectoryExW(NULL, dirPath, NULL);
     }
-}
-
-static BOOL GetPluginOutputDirectory(wchar_t* buffer, size_t bufferSize) {
-    if (!buffer || bufferSize == 0 || bufferSize > (size_t)MAXDWORD) {
-        return FALSE;
-    }
-    buffer[0] = L'\0';
-
-    DWORD result = ExpandEnvironmentStringsW(
-        L"%LOCALAPPDATA%\\Catime\\resources\\plugins",
-        buffer,
-        (DWORD)bufferSize);
-    if (result == 0 || result >= bufferSize) {
-        buffer[0] = L'\0';
-        return FALSE;
-    }
-    return TRUE;
 }
 
 static size_t ChooseLastContentCacheCapacity(size_t requiredSize) {
@@ -959,6 +1025,7 @@ static void ResetPluginDataStateLocked(void) {
     FreePluginDataBuffersLocked();
     InvalidateLastOutputFileStateLocked();
     ResetPendingNotificationLocked();
+    SetDefaultPluginOutputDirectoryLocked();
 }
 
 static BOOL CopyLastOutputFileStateLocked(FILETIME* writeTime, ULONGLONG* fileSize) {
@@ -1472,6 +1539,41 @@ static BOOL HasRetainedWatcherThread(void) {
     return retained;
 }
 
+void PluginData_SetOutputDirectoryFromPluginPath(const wchar_t* pluginPath) {
+    wchar_t pluginDir[MAX_PATH];
+    if (!GetDirectoryFromPathW(pluginPath, pluginDir, MAX_PATH)) {
+        LOG_WARNING("PluginData: Could not derive output directory from plugin path");
+        return;
+    }
+
+    if (!PluginData_BeginUse()) return;
+
+    BOOL changed = FALSE;
+    EnterCriticalSection(&g_dataCS);
+    if (!EnsurePluginOutputDirectoryLocked() ||
+        wcscmp(g_pluginOutputDirectory, pluginDir) != 0) {
+        wcsncpy(g_pluginOutputDirectory, pluginDir, MAX_PATH - 1);
+        g_pluginOutputDirectory[MAX_PATH - 1] = L'\0';
+        ClearLastContentCacheLocked();
+        InvalidateLastOutputFileStateLocked();
+        changed = TRUE;
+    }
+    LeaveCriticalSection(&g_dataCS);
+
+    if (changed && !StopWatcherThreadIfIdle(PLUGIN_DATA_WATCHER_UI_STOP_WAIT_MS)) {
+        LOG_WARNING("PluginData: Watcher stop deferred while changing output directory");
+    }
+
+    PluginData_EndUse();
+}
+
+BOOL PluginData_GetOutputPath(wchar_t* buffer, size_t bufferSize) {
+    if (!PluginData_BeginUse()) return FALSE;
+    BOOL ok = GetPluginOutputPathW(buffer, bufferSize);
+    PluginData_EndUse();
+    return ok;
+}
+
 void PluginData_Init(HWND hwnd) {
     AcquireSRWLockExclusive(&g_pluginDataLifecycleLock);
     if (g_pluginDataInitialized) {
@@ -1616,6 +1718,7 @@ void PluginData_Clear(void) {
     ClearPluginDisplayTextLocked();
     ClearLastContentCacheLocked();
     InvalidateLastOutputFileStateLocked();
+    SetDefaultPluginOutputDirectoryLocked();
     /* Clear any pending notification to prevent stale notifications */
     ResetPendingNotificationLocked();
     LeaveCriticalSection(&g_dataCS);
@@ -1728,6 +1831,9 @@ void PluginData_SetActive(BOOL active) {
         // When deactivating, also clear any stale data
         g_hasPluginData = FALSE;
         ClearPluginDisplayTextLocked();
+        ClearLastContentCacheLocked();
+        InvalidateLastOutputFileStateLocked();
+        SetDefaultPluginOutputDirectoryLocked();
         // Clear any pending notification
         ResetPendingNotificationLocked();
     }

@@ -54,6 +54,7 @@ typedef struct {
         } font;
         TimeFormatType timeFormat;
         BOOL showMilliseconds;
+        BOOL showSeconds;
         char animationPath[MAX_PATH];
         EffectType effect;
     } data;
@@ -195,6 +196,12 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             g_previewState.needsTimerReset = TRUE;
             if (hwnd) ResetTimerWithInterval(hwnd);
             break;
+
+        case PREVIEW_TYPE_SECONDS:
+            g_previewState.data.showSeconds = *(BOOL*)data;
+            g_previewState.needsTimerReset = TRUE;
+            if (hwnd) ResetTimerWithInterval(hwnd);
+            break;
         
         case PREVIEW_TYPE_ANIMATION: {
             const char* animPath = (const char*)data;
@@ -228,7 +235,8 @@ void CancelPreview(HWND hwnd) {
 
     BOOL needsRedraw = (g_previewState.type != PREVIEW_TYPE_ANIMATION &&
                         g_previewState.type != PREVIEW_TYPE_NONE);
-    BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS || 
+    BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS ||
+                            g_previewState.type == PREVIEW_TYPE_SECONDS ||
                             g_previewState.type == PREVIEW_TYPE_COLOR);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
     BOOL needsEffectCleanup = (g_previewState.type == PREVIEW_TYPE_EFFECT &&
@@ -285,6 +293,15 @@ BOOL ApplyPreview(HWND hwnd) {
             if (!WriteConfigShowMilliseconds(g_previewState.data.showMilliseconds)) {
                 return FALSE;
             }
+            break;
+
+        case PREVIEW_TYPE_SECONDS:
+            if (!WriteConfigKeyValue("CLOCK_SHOW_SECONDS",
+                                     g_previewState.data.showSeconds ? "TRUE" : "FALSE")) {
+                return FALSE;
+            }
+            CLOCK_SHOW_SECONDS = g_previewState.data.showSeconds;
+            if (hwnd) ResetTimerWithInterval(hwnd);
             break;
             
         case PREVIEW_TYPE_ANIMATION:
@@ -352,6 +369,11 @@ TimeFormatType GetActiveTimeFormat(void) {
 BOOL GetActiveShowMilliseconds(void) {
     return (g_previewState.type == PREVIEW_TYPE_MILLISECONDS) ?
            g_previewState.data.showMilliseconds : g_AppConfig.display.time_format.show_milliseconds;
+}
+
+BOOL GetActiveShowSeconds(void) {
+    return (g_previewState.type == PREVIEW_TYPE_SECONDS) ?
+           g_previewState.data.showSeconds : CLOCK_SHOW_SECONDS;
 }
 
 EffectType GetActiveEffect(void) {
@@ -504,6 +526,7 @@ BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
 
     TimeFormatType format = GetActiveTimeFormat();
     BOOL showMs = GetActiveShowMilliseconds();
+    BOOL showSeconds = GetActiveShowSeconds();
 
     if (showMs) {
         int centiseconds = st.wMilliseconds / 10;
@@ -515,7 +538,7 @@ BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
                         hours, minutes, seconds, centiseconds);
         }
     } else {
-        if (CLOCK_SHOW_SECONDS) {
+        if (showSeconds) {
             if (format == TIME_FORMAT_FULL_PADDED || format == TIME_FORMAT_ZERO_PADDED) {
                 _snwprintf_s(outText, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", hours, minutes, seconds);
             } else {

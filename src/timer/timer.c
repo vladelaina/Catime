@@ -10,6 +10,7 @@
 #include "config.h"
 #include "timer/timer_events.h"
 #include "drawing.h"
+#include "menu_preview.h"
 #include "utils/time_parser.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -159,7 +160,7 @@ static void FormatSystemClock(char* time_text) {
     
     int display_hour = CLOCK_USE_24HOUR ? st.wHour : ConvertTo12HourFormat(st.wHour);
     
-    if (CLOCK_SHOW_SECONDS) {
+    if (GetActiveShowSeconds()) {
         snprintf(time_text, 64, "%d:%02d:%02d", display_hour, st.wMinute, last_displayed_second);
     } else {
         snprintf(time_text, 64, "%d:%02d", display_hour, st.wMinute);

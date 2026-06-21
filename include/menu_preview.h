@@ -42,6 +42,7 @@ typedef enum {
     PREVIEW_TYPE_FONT,
     PREVIEW_TYPE_TIME_FORMAT,
     PREVIEW_TYPE_MILLISECONDS,
+    PREVIEW_TYPE_SECONDS,
     PREVIEW_TYPE_ANIMATION,
     PREVIEW_TYPE_EFFECT,
 } PreviewType;
@@ -61,6 +62,7 @@ typedef enum {
  * - PREVIEW_TYPE_FONT: data = const char* (font filename)
  * - PREVIEW_TYPE_TIME_FORMAT: data = TimeFormatType*
  * - PREVIEW_TYPE_MILLISECONDS: data = BOOL*
+ * - PREVIEW_TYPE_SECONDS: data = BOOL*
  * - PREVIEW_TYPE_ANIMATION: data = const char* (animation path)
  * - PREVIEW_TYPE_EFFECT: data = EffectType*
  * 
@@ -135,6 +137,12 @@ TimeFormatType GetActiveTimeFormat(void);
  * @return Active milliseconds visibility setting
  */
 BOOL GetActiveShowMilliseconds(void);
+
+/**
+ * @brief Get seconds visibility (preview takes precedence)
+ * @return Active seconds visibility setting
+ */
+BOOL GetActiveShowSeconds(void);
 
 /**
  * @brief Get active visual effect (preview takes precedence)

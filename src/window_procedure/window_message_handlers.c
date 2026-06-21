@@ -59,11 +59,15 @@ extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;
 
 static BOOL g_suppressRButtonUpAfterEditExit = FALSE;
-static DWORD g_suppressRButtonUpTick = 0;
 
 static void ClearSuppressedRButtonUp(void) {
     g_suppressRButtonUpAfterEditExit = FALSE;
-    g_suppressRButtonUpTick = 0;
+}
+
+static void ReleaseEditExitRightClickCapture(HWND hwnd) {
+    if (GetCapture() == hwnd) {
+        ReleaseCapture();
+    }
 }
 
 static int HexDigitValue(char ch) {
@@ -304,11 +308,9 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (g_suppressRButtonUpAfterEditExit) {
-        DWORD elapsed = GetTickCount() - g_suppressRButtonUpTick;
+        ReleaseEditExitRightClickCapture(hwnd);
         ClearSuppressedRButtonUp();
-        if (elapsed < 1000u) {
-            return 0;
-        }
+        return 0;
     }
     if (CLOCK_EDIT_MODE) {
         EndEditMode(hwnd);
@@ -320,12 +322,13 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (CLOCK_EDIT_MODE) {
-        EndEditMode(hwnd);
         g_suppressRButtonUpAfterEditExit = TRUE;
-        g_suppressRButtonUpTick = GetTickCount();
+        SetCapture(hwnd);
+        EndEditMode(hwnd);
         return 0;
     }
 
+    ReleaseEditExitRightClickCapture(hwnd);
     ClearSuppressedRButtonUp();
 
     if (GetKeyState(VK_CONTROL) & 0x8000) {
@@ -630,6 +633,7 @@ static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
         menuItem == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED ||
         menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
         menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS ||
+        menuItem == CLOCK_IDM_SHOW_SECONDS ||
         TextEffect_IsMenuId(menuItem)) {
         colorOrFont = TRUE;
     }
@@ -797,6 +801,7 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     PluginInfo pluginInfo;
     if (PluginManager_CopyPlugin(pluginIndex, &pluginInfo)) {
         wchar_t loadingText[256];
+        PluginData_SetOutputDirectoryFromPluginPath(pluginInfo.path);
         _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo.displayName);
         PluginData_SetText(loadingText);
         PluginData_SetActive(TRUE);

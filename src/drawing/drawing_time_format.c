@@ -224,14 +224,15 @@ void FormatTimeComponentsForDisplay(
 void GetTimeText(wchar_t* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
     
-    
+
     TimeFormatType finalFormat = GetActiveTimeFormat();
     BOOL finalShowMs = GetActiveShowMilliseconds();
-    
+    BOOL finalShowSeconds = GetActiveShowSeconds();
+
     if (CLOCK_SHOW_CURRENT_TIME) {
         TimeComponents tc = GetCurrentTimeComponents(CLOCK_USE_24HOUR);
-        
-        if (CLOCK_SHOW_SECONDS) {
+
+        if (finalShowSeconds) {
             /** Current time always shows hours (even if 0 in 24-hour mode) */
             if (finalShowMs) {
                 if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {

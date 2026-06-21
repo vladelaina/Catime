@@ -33,6 +33,20 @@ BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen);
 void PluginData_Clear(void);
 
 /**
+ * @brief Use the launched plugin's folder as the output.txt directory
+ * @param pluginPath Full path to the plugin script
+ */
+void PluginData_SetOutputDirectoryFromPluginPath(const wchar_t* pluginPath);
+
+/**
+ * @brief Get the current output.txt path used by plugin mode
+ * @param buffer Output buffer
+ * @param bufferSize Buffer size
+ * @return TRUE if path was copied
+ */
+BOOL PluginData_GetOutputPath(wchar_t* buffer, size_t bufferSize);
+
+/**
  * @brief Set plugin display text directly (e.g., for "Loading..." message)
  * @param text Text to display
  */

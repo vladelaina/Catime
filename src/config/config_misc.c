@@ -611,7 +611,7 @@ UINT GetTimerInterval(void) {
         return 33;
     }
 
-    if (CLOCK_SHOW_CURRENT_TIME && CLOCK_SHOW_SECONDS) {
+    if (CLOCK_SHOW_CURRENT_TIME && GetActiveShowSeconds()) {
         return 250;
     }
 

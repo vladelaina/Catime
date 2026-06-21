@@ -19,6 +19,7 @@
 #include <limits.h>
 
 #define MAX_PLUGIN_SCAN_ENTRIES 4096
+#define MAX_PLUGIN_RECURSION_DEPTH 10
 #define ASYNC_PLUGIN_SCAN_STOP_TIMEOUT_MS 2000
 #define ASYNC_PLUGIN_SCAN_FAILURE_COOLDOWN_MS 2000
 #define HOT_RELOAD_STOP_TIMEOUT_MS 2000
@@ -29,7 +30,17 @@
 typedef struct {
     BOOL exists;
     FILETIME lastWriteTime;
+    DWORD entryCount;
+    BOOL truncated;
 } PluginDirSnapshot;
+
+typedef struct {
+    PluginInfo* plugins;
+    int count;
+    int scannedEntries;
+    BOOL full;
+    BOOL failed;
+} PluginScanContext;
 
 typedef struct {
     PluginDirSnapshot snapshot;
@@ -109,6 +120,9 @@ static BOOL HasRetiredAsyncScanThread(void);
 static BOOL GetPluginDirSnapshot(PluginDirSnapshot* snapshot);
 static BOOL PluginDirSnapshotsEqual(const PluginDirSnapshot* a,
                                     const PluginDirSnapshot* b);
+static void ExtractDisplayName(const wchar_t* filename,
+                               wchar_t* displayName,
+                               size_t bufferSize);
 static BOOL IsAsyncScanFailureRecentlyCachedLocked(BOOL hasSnapshot,
                                                    const PluginDirSnapshot* snapshot,
                                                    DWORD now);
@@ -244,6 +258,174 @@ static BOOL IsSupportedPluginFileW(const wchar_t* fileName) {
     }
 
     return FALSE;
+}
+
+static void UpdateLatestWriteTime(FILETIME* target, const FILETIME* candidate) {
+    if (!target || !candidate) return;
+    if (target->dwLowDateTime == 0 && target->dwHighDateTime == 0) {
+        *target = *candidate;
+        return;
+    }
+    if (CompareFileTime(candidate, target) > 0) {
+        *target = *candidate;
+    }
+}
+
+static BOOL BuildRelativePathW(wchar_t* outPath, size_t outSize,
+                               const wchar_t* parentRelativePath,
+                               const wchar_t* fileName) {
+    if (!outPath || outSize == 0 || !fileName) return FALSE;
+
+    if (!parentRelativePath || parentRelativePath[0] == L'\0') {
+        wcsncpy(outPath, fileName, outSize - 1);
+        outPath[outSize - 1] = L'\0';
+        return wcslen(fileName) < outSize;
+    }
+
+    int written = _snwprintf_s(outPath, outSize, _TRUNCATE,
+                               L"%s\\%s", parentRelativePath, fileName);
+    return written >= 0 && (size_t)written < outSize;
+}
+
+static BOOL AddPluginEntry(PluginScanContext* ctx,
+                           const wchar_t* pluginDir,
+                           const wchar_t* fileName,
+                           const wchar_t* relativePath) {
+    if (!ctx || !pluginDir || !fileName || !relativePath) return FALSE;
+
+    if (ctx->count >= MAX_PLUGINS) {
+        if (!ctx->full) {
+            LOG_WARNING("Maximum plugin count reached (%d)", MAX_PLUGINS);
+        }
+        ctx->full = TRUE;
+        return FALSE;
+    }
+
+    PluginInfo* plugin = &ctx->plugins[ctx->count];
+    memset(plugin, 0, sizeof(*plugin));
+
+    wcsncpy(plugin->name, fileName, 63);
+    plugin->name[63] = L'\0';
+    ExtractDisplayName(fileName, plugin->displayName, 64);
+
+    int pathWritten = _snwprintf_s(plugin->path, MAX_PATH, _TRUNCATE,
+                                   L"%s\\%s", pluginDir, relativePath);
+    if (pathWritten < 0 || pathWritten >= MAX_PATH) {
+        LOG_WARNING("Plugin path is too long: %ls", relativePath);
+        return TRUE;
+    }
+
+    plugin->isRunning = FALSE;
+    memset(&plugin->pi, 0, sizeof(plugin->pi));
+    ctx->count++;
+    return TRUE;
+}
+
+static void ScanPluginFolderRecursive(const wchar_t* pluginDir,
+                                      const wchar_t* folderPath,
+                                      const wchar_t* relativePath,
+                                      PluginScanContext* ctx,
+                                      int depth,
+                                      LONG generation) {
+    if (!ctx || ctx->full || ctx->failed ||
+        IsAsyncScanShuttingDown() ||
+        !IsAsyncScanGenerationCurrent(generation)) {
+        return;
+    }
+
+    if (depth >= MAX_PLUGIN_RECURSION_DEPTH) {
+        LOG_WARNING("Plugin scan recursion depth reached at: %ls", folderPath);
+        return;
+    }
+
+    wchar_t searchPath[MAX_PATH];
+    int written = _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE,
+                               L"%s\\*", folderPath);
+    if (written < 0 || written >= MAX_PATH) {
+        LOG_WARNING("Plugin scan path is too long: %ls", folderPath);
+        ctx->failed = TRUE;
+        return;
+    }
+
+    WIN32_FIND_DATAW findData;
+    HANDLE hFind = FindFirstFileW(searchPath, &findData);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        DWORD error = GetLastError();
+        if (error != ERROR_FILE_NOT_FOUND &&
+            error != ERROR_PATH_NOT_FOUND &&
+            error != ERROR_NO_MORE_FILES) {
+            LOG_WARNING("Plugin folder scan failed: %ls (error=%lu)",
+                        folderPath, error);
+            ctx->failed = TRUE;
+        }
+        return;
+    }
+
+    BOOL stoppedEarly = FALSE;
+    do {
+        if (ctx->full || IsAsyncScanShuttingDown() ||
+            !IsAsyncScanGenerationCurrent(generation)) {
+            stoppedEarly = TRUE;
+            break;
+        }
+
+        if (wcscmp(findData.cFileName, L".") == 0 ||
+            wcscmp(findData.cFileName, L"..") == 0) {
+            continue;
+        }
+
+        if (++ctx->scannedEntries > MAX_PLUGIN_SCAN_ENTRIES) {
+            LOG_WARNING("Plugin directory scan limit reached (%d entries)",
+                        MAX_PLUGIN_SCAN_ENTRIES);
+            ctx->full = TRUE;
+            stoppedEarly = TRUE;
+            break;
+        }
+
+        wchar_t childRelativePath[MAX_PATH];
+        if (!BuildRelativePathW(childRelativePath, MAX_PATH,
+                                relativePath, findData.cFileName)) {
+            LOG_WARNING("Plugin relative path is too long: %ls", findData.cFileName);
+            continue;
+        }
+
+        BOOL isDirectory =
+            (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        if (isDirectory) {
+            if (findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+                continue;
+            }
+
+            wchar_t childFullPath[MAX_PATH];
+            int pathWritten = _snwprintf_s(childFullPath, MAX_PATH, _TRUNCATE,
+                                           L"%s\\%s", folderPath, findData.cFileName);
+            if (pathWritten < 0 || pathWritten >= MAX_PATH) {
+                LOG_WARNING("Plugin folder path is too long: %ls", childRelativePath);
+                continue;
+            }
+
+            ScanPluginFolderRecursive(pluginDir, childFullPath, childRelativePath,
+                                      ctx, depth + 1, generation);
+            if (ctx->failed || ctx->full) {
+                stoppedEarly = TRUE;
+                break;
+            }
+        } else if (IsSupportedPluginFileW(findData.cFileName)) {
+            if (!AddPluginEntry(ctx, pluginDir, findData.cFileName,
+                                childRelativePath)) {
+                stoppedEarly = TRUE;
+                break;
+            }
+        }
+    } while (FindNextFileW(hFind, &findData));
+
+    DWORD findError = stoppedEarly ? ERROR_SUCCESS : GetLastError();
+    FindClose(hFind);
+    if (!stoppedEarly && findError != ERROR_NO_MORE_FILES) {
+        LOG_WARNING("Plugin folder enumeration failed: %ls (error=%lu)",
+                    folderPath, findError);
+        ctx->failed = TRUE;
+    }
 }
 
 /**
@@ -638,6 +820,83 @@ BOOL PluginManager_GetPluginDir(char* buffer, size_t bufferSize) {
     return TRUE;
 }
 
+static BOOL ScanPluginDirSnapshotRecursive(const wchar_t* folderPath,
+                                           PluginDirSnapshot* snapshot,
+                                           int depth) {
+    if (!folderPath || !snapshot) return FALSE;
+
+    if (depth >= MAX_PLUGIN_RECURSION_DEPTH) {
+        snapshot->truncated = TRUE;
+        return TRUE;
+    }
+
+    wchar_t searchPath[MAX_PATH];
+    int written = _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE,
+                               L"%s\\*", folderPath);
+    if (written < 0 || written >= MAX_PATH) {
+        snapshot->truncated = TRUE;
+        return TRUE;
+    }
+
+    WIN32_FIND_DATAW findData;
+    HANDLE hFind = FindFirstFileW(searchPath, &findData);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        DWORD error = GetLastError();
+        if (error != ERROR_FILE_NOT_FOUND &&
+            error != ERROR_PATH_NOT_FOUND &&
+            error != ERROR_NO_MORE_FILES) {
+            LOG_WARNING("Failed to snapshot plugin folder: %ls (error=%lu)",
+                        folderPath, error);
+            return FALSE;
+        }
+        return TRUE;
+    }
+
+    BOOL ok = TRUE;
+    do {
+        if (wcscmp(findData.cFileName, L".") == 0 ||
+            wcscmp(findData.cFileName, L"..") == 0) {
+            continue;
+        }
+
+        if (++snapshot->entryCount > MAX_PLUGIN_SCAN_ENTRIES) {
+            snapshot->truncated = TRUE;
+            break;
+        }
+
+        UpdateLatestWriteTime(&snapshot->lastWriteTime, &findData.ftLastWriteTime);
+
+        BOOL isDirectory =
+            (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        if (isDirectory &&
+            !(findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)) {
+            wchar_t childPath[MAX_PATH];
+            int pathWritten = _snwprintf_s(childPath, MAX_PATH, _TRUNCATE,
+                                           L"%s\\%s", folderPath, findData.cFileName);
+            if (pathWritten < 0 || pathWritten >= MAX_PATH) {
+                snapshot->truncated = TRUE;
+                continue;
+            }
+            if (!ScanPluginDirSnapshotRecursive(childPath, snapshot, depth + 1)) {
+                ok = FALSE;
+                break;
+            }
+            if (snapshot->truncated) {
+                break;
+            }
+        }
+    } while (FindNextFileW(hFind, &findData));
+
+    DWORD findError = snapshot->truncated ? ERROR_SUCCESS : GetLastError();
+    FindClose(hFind);
+    if (ok && findError != ERROR_NO_MORE_FILES) {
+        LOG_WARNING("Plugin snapshot enumeration failed: %ls (error=%lu)",
+                    folderPath, findError);
+        ok = FALSE;
+    }
+    return ok;
+}
+
 static BOOL GetPluginDirSnapshot(PluginDirSnapshot* snapshot) {
     if (!snapshot) return FALSE;
     ZeroMemory(snapshot, sizeof(*snapshot));
@@ -665,7 +924,7 @@ static BOOL GetPluginDirSnapshot(PluginDirSnapshot* snapshot) {
 
     snapshot->exists = TRUE;
     snapshot->lastWriteTime = attrs.ftLastWriteTime;
-    return TRUE;
+    return ScanPluginDirSnapshotRecursive(pluginDir, snapshot, 0);
 }
 
 static BOOL PluginDirSnapshotsEqual(const PluginDirSnapshot* a,
@@ -673,6 +932,8 @@ static BOOL PluginDirSnapshotsEqual(const PluginDirSnapshot* a,
     if (!a || !b) return FALSE;
     if (a->exists != b->exists) return FALSE;
     if (!a->exists) return TRUE;
+    if (a->entryCount != b->entryCount) return FALSE;
+    if (a->truncated != b->truncated) return FALSE;
 
     return CompareFileTime(&a->lastWriteTime, &b->lastWriteTime) == 0;
 }
@@ -744,87 +1005,32 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
         goto cleanup;
     }
 
-    wchar_t searchPath[MAX_PATH];
-    int searchWritten = _snwprintf_s(searchPath, MAX_PATH, _TRUNCATE, L"%s\\*", pluginDir);
-    if (searchWritten < 0) {
-        LOG_WARNING("Plugin search path is too long");
+    DWORD pluginDirAttrs = GetFileAttributesW(pluginDir);
+    if (pluginDirAttrs == INVALID_FILE_ATTRIBUTES) {
+        DWORD error = GetLastError();
+        if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) {
+            scanResult = 0;
+        } else {
+            LOG_WARNING("Failed to stat plugin directory (error=%lu)", error);
+        }
+        goto cleanup;
+    }
+    if (!(pluginDirAttrs & FILE_ATTRIBUTE_DIRECTORY)) {
+        LOG_WARNING("Plugin path is not a directory: %ls", pluginDir);
         goto cleanup;
     }
 
-    WIN32_FIND_DATAW findData;
-    HANDLE hFind = FindFirstFileW(searchPath, &findData);
-
-    if (hFind != INVALID_HANDLE_VALUE) {
-        int scannedEntries = 0;
-        BOOL stoppedEarly = FALSE;
-        do {
-            if (IsAsyncScanShuttingDown() ||
-                !IsAsyncScanGenerationCurrent(generation)) {
-                scanCancelled = TRUE;
-                stoppedEarly = TRUE;
-                break;
-            }
-            if (++scannedEntries > MAX_PLUGIN_SCAN_ENTRIES) {
-                LOG_WARNING("Plugin directory scan limit reached (%d entries)",
-                            MAX_PLUGIN_SCAN_ENTRIES);
-                stoppedEarly = TRUE;
-                break;
-            }
-            if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                continue;
-            }
-            if (!IsSupportedPluginFileW(findData.cFileName)) {
-                continue;
-            }
-            if (newPluginCount >= MAX_PLUGINS) {
-                LOG_WARNING("Maximum plugin count reached (%d)", MAX_PLUGINS);
-                stoppedEarly = TRUE;
-                break;
-            }
-
-            PluginInfo* plugin = &newPlugins[newPluginCount];
-            memset(plugin, 0, sizeof(*plugin));
-
-            wcsncpy(plugin->name, findData.cFileName, 63);
-            plugin->name[63] = L'\0';
-            ExtractDisplayName(findData.cFileName, plugin->displayName, 64);
-            int pathWritten = _snwprintf_s(plugin->path, MAX_PATH, _TRUNCATE,
-                                           L"%s\\%s", pluginDir, findData.cFileName);
-            if (pathWritten < 0) {
-                LOG_WARNING("Plugin path is too long: %ls", findData.cFileName);
-                continue;
-            }
-
-            plugin->isRunning = FALSE;
-            memset(&plugin->pi, 0, sizeof(plugin->pi));
-
-            newPluginCount++;
-        } while (FindNextFileW(hFind, &findData));
-
-        DWORD findError = stoppedEarly ? ERROR_SUCCESS : GetLastError();
-        FindClose(hFind);
-        if (scanCancelled || IsAsyncScanShuttingDown() ||
-            !IsAsyncScanGenerationCurrent(generation)) {
-            goto cleanup;
-        }
-        if (!stoppedEarly && findError != ERROR_NO_MORE_FILES) {
-            LOG_WARNING("Plugin directory enumeration failed (error=%lu)", findError);
-            goto cleanup;
-        }
-    } else {
-        DWORD findError = GetLastError();
-        if (IsAsyncScanShuttingDown() ||
-            !IsAsyncScanGenerationCurrent(generation)) {
-            goto cleanup;
-        }
-        if (findError != ERROR_FILE_NOT_FOUND &&
-            findError != ERROR_PATH_NOT_FOUND &&
-            findError != ERROR_NO_MORE_FILES &&
-            findError != ERROR_DIRECTORY) {
-            LOG_WARNING("Failed to scan plugin directory (error=%lu)", findError);
-            goto cleanup;
-        }
+    PluginScanContext scanCtx = {0};
+    scanCtx.plugins = newPlugins;
+    ScanPluginFolderRecursive(pluginDir, pluginDir, L"", &scanCtx, 0, generation);
+    if (IsAsyncScanShuttingDown() || !IsAsyncScanGenerationCurrent(generation)) {
+        scanCancelled = TRUE;
+        goto cleanup;
     }
+    if (scanCtx.failed) {
+        goto cleanup;
+    }
+    newPluginCount = scanCtx.count;
 
     if (scanCancelled || IsAsyncScanShuttingDown() ||
         !IsAsyncScanGenerationCurrent(generation)) {
@@ -854,7 +1060,7 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
     // Preserve state from existing list after the lock is acquired.
     for (int j = 0; j < newPluginCount; j++) {
         for (int i = 0; i < g_pluginCount; i++) {
-            if (wcscmp(g_plugins[i].name, newPlugins[j].name) == 0) {
+            if (wcscmp(g_plugins[i].path, newPlugins[j].path) == 0) {
                 newPlugins[j].isRunning = g_plugins[i].isRunning;
                 newPlugins[j].pi = g_plugins[i].pi;
                 newPlugins[j].lastModTime = g_plugins[i].lastModTime;
@@ -868,7 +1074,7 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
         if (g_plugins[i].isRunning) {
             BOOL found = FALSE;
             for (int j = 0; j < newPluginCount; j++) {
-                if (wcscmp(g_plugins[i].name, newPlugins[j].name) == 0) {
+                if (wcscmp(g_plugins[i].path, newPlugins[j].path) == 0) {
                     found = TRUE;
                     break;
                 }
@@ -888,16 +1094,16 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
         }
     }
 
-    // Remember old plugin names for re-mapping indices
-    wchar_t lastRunningName[64] = {0};
-    wchar_t activePluginName[64] = {0};
+    // Remember old plugin paths for re-mapping indices
+    wchar_t lastRunningPath[MAX_PATH] = {0};
+    wchar_t activePluginPath[MAX_PATH] = {0};
     if (g_lastRunningPluginIndex >= 0 && g_lastRunningPluginIndex < g_pluginCount) {
-        wcsncpy(lastRunningName, g_plugins[g_lastRunningPluginIndex].name, 63);
-        lastRunningName[63] = L'\0';
+        wcsncpy(lastRunningPath, g_plugins[g_lastRunningPluginIndex].path, MAX_PATH - 1);
+        lastRunningPath[MAX_PATH - 1] = L'\0';
     }
     if (g_activePluginIndex >= 0 && g_activePluginIndex < g_pluginCount) {
-        wcsncpy(activePluginName, g_plugins[g_activePluginIndex].name, 63);
-        activePluginName[63] = L'\0';
+        wcsncpy(activePluginPath, g_plugins[g_activePluginIndex].path, MAX_PATH - 1);
+        activePluginPath[MAX_PATH - 1] = L'\0';
     }
 
     // Update global list
@@ -911,10 +1117,10 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
     g_pluginCount = newPluginCount;
 
     // Re-map g_lastRunningPluginIndex to new list
-    if (lastRunningName[0]) {
+    if (lastRunningPath[0]) {
         g_lastRunningPluginIndex = -1;  // Reset first
         for (int i = 0; i < g_pluginCount; i++) {
-            if (wcscmp(g_plugins[i].name, lastRunningName) == 0) {
+            if (wcscmp(g_plugins[i].path, lastRunningPath) == 0) {
                 g_lastRunningPluginIndex = i;
                 break;
             }
@@ -922,10 +1128,10 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
     }
 
     // Re-map g_activePluginIndex to new list
-    if (activePluginName[0]) {
+    if (activePluginPath[0]) {
         g_activePluginIndex = -1;  // Reset first
         for (int i = 0; i < g_pluginCount; i++) {
-            if (wcscmp(g_plugins[i].name, activePluginName) == 0) {
+            if (wcscmp(g_plugins[i].path, activePluginPath) == 0) {
                 g_activePluginIndex = i;
                 break;
             }
@@ -1360,6 +1566,8 @@ static BOOL LaunchPreparedPlugin(int index, const wchar_t* expectedPath) {
         PluginProcess_TerminateDetached(&detachedPlugins[i]);
     }
 
+    PluginData_SetOutputDirectoryFromPluginPath(launchPlugin.path);
+
     if (!PluginProcess_Launch(&launchPlugin)) {
         LOG_ERROR("Failed to launch plugin: %ls", launchPlugin.displayName);
         LeaveCriticalSection(&g_pluginLifecycleCS);
@@ -1632,6 +1840,7 @@ static BOOL RestartPluginInternalWithExpected(int index,
 
     /* Show "Loading..." message */
     wchar_t loadingText[256];
+    PluginData_SetOutputDirectoryFromPluginPath(currentPlugin.path);
     _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", currentPlugin.displayName);
     PluginData_SetText(loadingText);
     PluginData_SetActive(TRUE);

@@ -1081,6 +1081,15 @@ void BlendCharBitmapGradientSTBWithInfo(void* destBits, int destWidth, int destH
         int shadowG = GetGValue(info->endColor);
         int shadowB = GetBValue(info->endColor);
 
+        if (!info->isAnimated) {
+            RenderRetroEffect(pixels, destWidth, destHeight, x_pos, y_pos,
+                              bitmap, w, h,
+                              r1, g1, b1,
+                              shadowR, shadowG, shadowB,
+                              NULL, NULL);
+            return;
+        }
+
         RenderRetroShadowEffect(pixels, destWidth, destHeight, x_pos, y_pos,
                                 bitmap, w, h, shadowR, shadowG, shadowB);
     }

@@ -24,6 +24,8 @@
 /* Large limit for menu display to accommodate folder-based animations with many frames */
 #define MAX_SCAN_ENTRIES 4096
 
+extern TextEffectType CLOCK_TEXT_EFFECT;
+
 #include "../resource/resource.h" // Ensure resource constants are available
 
 /* ============================================================================
@@ -78,9 +80,17 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
+    if (menuId == CLOCK_IDM_SHOW_SECONDS) {
+        BOOL showSeconds = !CLOCK_SHOW_SECONDS;
+        StartPreview(PREVIEW_TYPE_SECONDS, &showSeconds, hwnd);
+        return TRUE;
+    }
+
     EffectType effect = TextEffect_FromMenuId(menuId);
     if (effect != TEXT_EFFECT_NONE) {
-        StartPreview(PREVIEW_TYPE_EFFECT, &effect, hwnd);
+        EffectType previewEffect =
+            (effect == CLOCK_TEXT_EFFECT) ? TEXT_EFFECT_NONE : effect;
+        StartPreview(PREVIEW_TYPE_EFFECT, &previewEffect, hwnd);
         return TRUE;
     }
 

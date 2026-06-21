@@ -94,6 +94,7 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     BOOL hasPluginInfo = PluginManager_CopyPlugin(pluginIndex, &pluginInfo);
     if (hasPluginInfo) {
         wchar_t loadingText[256];
+        PluginData_SetOutputDirectoryFromPluginPath(pluginInfo.path);
         _snwprintf_s(loadingText, 256, _TRUNCATE, L"Loading %ls...", pluginInfo.displayName);
         PluginData_SetText(loadingText);
     }

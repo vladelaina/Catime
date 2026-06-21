@@ -273,6 +273,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 L"`%hs`\n\n"
                 L"%s\n"
                 L"- %s\n"
+                L"- %s\n"
                 L"- %s (%s)\n"
                 L"- %s\n"
                 L"- %s\n\n"
@@ -286,6 +287,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 GetLocalizedString(NULL, L"PluginSecLocation"),
                 g_pluginPath,
                 GetLocalizedString(NULL, L"PluginSecWhatToKnow"),
+                GetLocalizedString(NULL, L"PluginSecOutputRule"),
                 GetLocalizedString(NULL, L"PluginSecPermDefault"),
                 GetLocalizedString(NULL, L"PluginSecPermAdmin"),
                 GetLocalizedString(NULL, L"PluginSecUACPrompt"),
