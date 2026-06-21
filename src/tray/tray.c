@@ -231,8 +231,7 @@ static BOOL CurrentTrayIconNeedsSystemMonitor(void) {
 
 static BOOL CurrentAnimationSpeedNeedsSystemMonitor(void) {
     AnimationSpeedMetric metric = GetAnimationSpeedMetric();
-    return !IsTrayInteractionSuspended() &&
-           TrayAnimation_IsRunning() &&
+    return TrayAnimation_IsRunning() &&
            (metric == ANIMATION_SPEED_CPU || metric == ANIMATION_SPEED_MEMORY);
 }
 
@@ -245,7 +244,8 @@ static BOOL ShouldKeepSystemMonitorActive(void) {
     }
 
     if (IsTrayInteractionSuspended()) {
-        return CurrentTrayIconNeedsSystemMonitor();
+        return CurrentTrayIconNeedsSystemMonitor() ||
+               CurrentAnimationSpeedNeedsSystemMonitor();
     }
 
     return g_trayTooltipActive ||

@@ -19,6 +19,7 @@ static HANDLE g_GlobalMutex = NULL;
 #define SINGLE_INSTANCE_MUTEX_NAME L"Local\\Vladelaina.Catime.SingleInstance"
 #define EXISTING_WINDOW_RETRY_COUNT 20
 #define EXISTING_WINDOW_RETRY_DELAY_MS 100
+#define MUTEX_RECLAIM_WAIT_MS 250
 
 static BOOL IsTrustedExistingInstanceWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) return FALSE;
@@ -96,7 +97,37 @@ static void TryActivateExistingWindow(HWND hwndExisting) {
     SetForegroundWindow(hwndExisting);
 }
 
-static BOOL ExtractCommandArguments(LPCWSTR fullCmdLine, wchar_t* outArgs, size_t outCount) {
+static BOOL IsInternalLaunchArgument(const wchar_t* arg) {
+    if (!arg) return FALSE;
+
+    return wcsncmp(arg, L"--", 2) == 0;
+}
+
+static BOOL AppendForwardedArgument(const wchar_t* arg, wchar_t* outArgs,
+                                    size_t outCount, size_t* used) {
+    if (!arg || !outArgs || !used || outCount == 0) return FALSE;
+
+    size_t argLen = wcslen(arg);
+    if (argLen == 0) return TRUE;
+
+    if (*used > 0) {
+        if (*used + 1 >= outCount) return FALSE;
+        outArgs[(*used)++] = L' ';
+    }
+
+    size_t copyLen = argLen;
+    if (copyLen > outCount - *used - 1) {
+        copyLen = outCount - *used - 1;
+    }
+    if (copyLen == 0) return FALSE;
+
+    memcpy(outArgs + *used, arg, copyLen * sizeof(wchar_t));
+    *used += copyLen;
+    outArgs[*used] = L'\0';
+    return copyLen == argLen;
+}
+
+static BOOL ExtractForwardableCommandArguments(LPCWSTR fullCmdLine, wchar_t* outArgs, size_t outCount) {
     if (!outArgs || outCount == 0) return FALSE;
 
     outArgs[0] = L'\0';
@@ -115,27 +146,35 @@ static BOOL ExtractCommandArguments(LPCWSTR fullCmdLine, wchar_t* outArgs, size_
     for (int i = 1; i < argc; ++i) {
         const wchar_t* arg = argv[i];
         if (!arg || arg[0] == L'\0') continue;
+        if (IsInternalLaunchArgument(arg)) continue;
 
-        size_t argLen = wcslen(arg);
-        if (used > 0) {
-            if (used + 1 >= outCount) break;
-            outArgs[used++] = L' ';
+        if (!AppendForwardedArgument(arg, outArgs, outCount, &used)) {
+            break;
         }
-
-        size_t copyLen = argLen;
-        if (copyLen > outCount - used - 1) {
-            copyLen = outCount - used - 1;
-        }
-        if (copyLen == 0) break;
-
-        memcpy(outArgs + used, arg, copyLen * sizeof(wchar_t));
-        used += copyLen;
-        outArgs[used] = L'\0';
         hasArgs = TRUE;
     }
 
     LocalFree(argv);
     return hasArgs;
+}
+
+static BOOL TryClaimMutexAfterMissingWindow(HANDLE hMutex, HANDLE* outMutex) {
+    if (!hMutex || !outMutex) return FALSE;
+
+    DWORD waitResult = WaitForSingleObject(hMutex, MUTEX_RECLAIM_WAIT_MS);
+    if (waitResult == WAIT_OBJECT_0 || waitResult == WAIT_ABANDONED) {
+        LOG_WARNING("Single-instance mutex was present but no window was found; continuing after taking mutex ownership");
+        g_GlobalMutex = hMutex;
+        *outMutex = hMutex;
+        return TRUE;
+    }
+
+    if (waitResult == WAIT_FAILED) {
+        LOG_WARNING("Failed to wait on single-instance mutex after missing window (error=%lu)",
+                    GetLastError());
+    }
+
+    return FALSE;
 }
 
 BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
@@ -148,12 +187,13 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     *outMutex = NULL;
 
     HANDLE hMutex = CreateMutexW(NULL, TRUE, SINGLE_INSTANCE_MUTEX_NAME);
+    DWORD mutexError = GetLastError();
     if (!hMutex) {
-        LOG_ERROR("CreateMutexW failed for single-instance mutex (err=%lu)", GetLastError());
+        LOG_ERROR("CreateMutexW failed for single-instance mutex (err=%lu)", mutexError);
         return FALSE;
     }
 
-    if (GetLastError() != ERROR_ALREADY_EXISTS) {
+    if (mutexError != ERROR_ALREADY_EXISTS) {
         g_GlobalMutex = hMutex;  /* Store globally for crash cleanup */
         *outMutex = hMutex;
         return TRUE;
@@ -164,7 +204,7 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     HWND hwndExisting = FindExistingInstanceWindowWithRetry();
 
     wchar_t forwardedArgs[512];
-    BOOL hasArgs = ExtractCommandArguments(lpCmdLine, forwardedArgs, sizeof(forwardedArgs) / sizeof(forwardedArgs[0]));
+    BOOL hasArgs = ExtractForwardableCommandArguments(lpCmdLine, forwardedArgs, sizeof(forwardedArgs) / sizeof(forwardedArgs[0]));
 
     if (hasArgs) {
         char* cmdUtf8 = WideToUtf8Alloc(forwardedArgs);
@@ -175,6 +215,9 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     }
 
     if (!hwndExisting) {
+        if (TryClaimMutexAfterMissingWindow(hMutex, outMutex)) {
+            return TRUE;
+        }
         LOG_WARNING("Single-instance mutex exists but no existing window was found. Exiting to enforce single instance.");
         CloseHandle(hMutex);
         return FALSE;

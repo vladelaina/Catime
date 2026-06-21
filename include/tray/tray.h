@@ -142,13 +142,13 @@ BOOL IsMouseOverTrayIconArea(POINT pt);
 BOOL IsMouseNearTrayIconArea(POINT pt, int marginPx);
 
 /**
- * @brief Suspend or resume tray background work during menu interaction
- * @param suspended TRUE to pause hover/tooltip/icon updates
+ * @brief Suspend or resume tray hover and tooltip work during menu interaction
+ * @param suspended TRUE to pause hover hooks and tooltip updates
  */
 void SetTrayInteractionSuspended(BOOL suspended);
 
 /**
- * @brief Check whether tray background work is suspended
+ * @brief Check whether tray hover and tooltip work is suspended
  * @return TRUE if suspended
  */
 BOOL IsTrayInteractionSuspended(void);

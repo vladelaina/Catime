@@ -924,35 +924,10 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
     return scaledDelay;
 }
 
-/**
- * @brief Update tray icon to current frame (UI thread only)
- */
-static BOOL IsPreviewUpdateActive(void) {
-    BOOL active = FALSE;
-
-    if (IsAnimCriticalSectionReady()) {
-        EnterCriticalSection(&g_animCriticalSection);
-    }
-
-    active = g_isPreviewActive;
-
-    if (IsAnimCriticalSectionReady()) {
-        LeaveCriticalSection(&g_animCriticalSection);
-    }
-
-    return active;
-}
-
-static void UpdateTrayIconToCurrentFrameInternal(BOOL allowWhileSuspended) {
+static void UpdateTrayIconToCurrentFrameInternal(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) {
         ClearPendingTrayUpdate();
-        return;
-    }
-
-    /* Menu tracking pauses background tray work; hover previews still need icon updates. */
-    if (IsTrayInteractionSuspended() && !allowWhileSuspended) {
-        SetPendingTrayUpdate();
         return;
     }
 
@@ -1124,11 +1099,11 @@ applyIcon:
 }
 
 static void UpdateTrayIconToCurrentFrame(void) {
-    UpdateTrayIconToCurrentFrameInternal(FALSE);
+    UpdateTrayIconToCurrentFrameInternal();
 }
 
 static void UpdateTrayIconToCurrentFrameForPreview(void) {
-    UpdateTrayIconToCurrentFrameInternal(TRUE);
+    UpdateTrayIconToCurrentFrameInternal();
 }
 
 /**
@@ -1137,7 +1112,6 @@ static void UpdateTrayIconToCurrentFrameForPreview(void) {
 static void RequestTrayIconUpdate(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) return;
-    if (IsTrayInteractionSuspended() && !IsPreviewUpdateActive()) return;
     
     BOOL alreadyPending = FALSE;
     alreadyPending = HasPendingTrayUpdate();
@@ -1165,14 +1139,6 @@ static void TrayAnimationTimerCallback(void* userData) {
     BOOL locked = IsAnimCriticalSectionReady();
     if (locked) {
         EnterCriticalSection(&g_animCriticalSection);
-    }
-
-    if (IsTrayInteractionSuspended() && !g_isPreviewActive) {
-        if (locked) {
-            LeaveCriticalSection(&g_animCriticalSection);
-        }
-        EndTrayAnimationRuntimeUse();
-        return;
     }
 
     /* Skip logic for percent icons (updated separately) and __none__ (static). */
@@ -2206,7 +2172,7 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
     hasPending = HasPendingTrayUpdate();
     
     if (hasPending) {
-        UpdateTrayIconToCurrentFrameInternal(IsPreviewUpdateActive());
+        UpdateTrayIconToCurrentFrameInternal();
     }
 
 done:
