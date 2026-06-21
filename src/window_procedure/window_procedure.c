@@ -151,6 +151,8 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_LBUTTONDBLCLK, HandleLButtonDblClk},
     {WM_RBUTTONDOWN, HandleRButtonDown},
     {WM_RBUTTONUP, HandleRButtonUp},
+    {WM_CONTEXTMENU, HandleContextMenu},
+    {WM_CAPTURECHANGED, HandleCaptureChanged},
     {WM_MOUSEWHEEL, HandleMouseWheel},
     {WM_MOUSEMOVE, HandleMouseMove},
     {WM_PAINT, HandlePaint},
@@ -226,6 +228,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 
     /* Handle WM_NCHITTEST for click-through in non-edit mode */
     if (msg == WM_NCHITTEST) {
+        if (IsEditExitRightClickShieldActive()) {
+            return HTCLIENT;
+        }
         if (!CLOCK_EDIT_MODE) {
             if (!HasClickableRegions()) {
                 return HTTRANSPARENT;  /* Pass through */

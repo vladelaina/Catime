@@ -47,6 +47,8 @@
 #define ANIMATION_PREVIEW_DELAY_MS 30
 #define BUFFER_SIZE_CLI_INPUT 256
 #define BUFFER_SIZE_MENU_ITEM 100
+#define IDT_EDIT_EXIT_RIGHT_CLICK_SHIELD 42427
+#define EDIT_EXIT_RIGHT_CLICK_SHIELD_MS 250u
 
 UINT GetPendingAnimationPreviewItem(void);
 static void ClearPendingMenuPreview(HWND hwnd);
@@ -58,13 +60,89 @@ static void StartAnimationPreviewDelayTimer(HWND hwnd);
 extern UINT WM_TASKBARCREATED;
 extern BOOL CLOCK_EDIT_MODE;
 
-static BOOL g_suppressRButtonUpAfterEditExit = FALSE;
+static BOOL g_pendingEditExitRightClick = FALSE;
+static DWORD g_suppressContextMenuUntilTick = 0;
+static DWORD g_editExitRightClickShieldUntilTick = 0;
 
-static void ClearSuppressedRButtonUp(void) {
-    g_suppressRButtonUpAfterEditExit = FALSE;
+static BOOL IsTickActive(DWORD untilTick) {
+    if (untilTick == 0) {
+        return FALSE;
+    }
+    return (LONG)(GetTickCount() - untilTick) < 0;
 }
 
-static void ReleaseEditExitRightClickCapture(HWND hwnd) {
+static void SuppressContextMenuBriefly(void) {
+    DWORD until = GetTickCount() + 500u;
+    g_suppressContextMenuUntilTick = until ? until : 1u;
+}
+
+static BOOL IsContextMenuSuppressed(void) {
+    if (g_pendingEditExitRightClick) {
+        return TRUE;
+    }
+
+    if (g_suppressContextMenuUntilTick == 0) {
+        return FALSE;
+    }
+
+    if (IsTickActive(g_suppressContextMenuUntilTick)) {
+        return TRUE;
+    }
+
+    g_suppressContextMenuUntilTick = 0;
+    return FALSE;
+}
+
+BOOL IsEditExitRightClickShieldActive(void) {
+    if (g_pendingEditExitRightClick) {
+        return TRUE;
+    }
+
+    if (IsTickActive(g_editExitRightClickShieldUntilTick)) {
+        return TRUE;
+    }
+
+    g_editExitRightClickShieldUntilTick = 0;
+    return FALSE;
+}
+
+static void StartEditExitRightClickShield(HWND hwnd) {
+    DWORD until = GetTickCount() + EDIT_EXIT_RIGHT_CLICK_SHIELD_MS;
+    g_editExitRightClickShieldUntilTick = until ? until : 1u;
+    SetClickThrough(hwnd, FALSE);
+    if (!SetTimer(hwnd,
+                  IDT_EDIT_EXIT_RIGHT_CLICK_SHIELD,
+                  EDIT_EXIT_RIGHT_CLICK_SHIELD_MS,
+                  NULL)) {
+        g_editExitRightClickShieldUntilTick = 0;
+        if (!CLOCK_EDIT_MODE) {
+            SetClickThrough(hwnd, TRUE);
+        }
+        LOG_WARNING("Failed to start edit-exit right-click shield timer (error=%lu)",
+                    GetLastError());
+    }
+}
+
+static void StopEditExitRightClickShield(HWND hwnd) {
+    KillTimer(hwnd, IDT_EDIT_EXIT_RIGHT_CLICK_SHIELD);
+    g_editExitRightClickShieldUntilTick = 0;
+    if (!CLOCK_EDIT_MODE) {
+        SetClickThrough(hwnd, TRUE);
+    }
+}
+
+static void ResetEditExitRightClickState(HWND hwnd) {
+    KillTimer(hwnd, IDT_EDIT_EXIT_RIGHT_CLICK_SHIELD);
+    g_pendingEditExitRightClick = FALSE;
+    g_suppressContextMenuUntilTick = 0;
+    g_editExitRightClickShieldUntilTick = 0;
+    if (GetCapture() == hwnd) {
+        ReleaseCapture();
+    }
+}
+
+static void ClearPendingEditExitRightClick(HWND hwnd) {
+    g_pendingEditExitRightClick = FALSE;
     if (GetCapture() == hwnd) {
         ReleaseCapture();
     }
@@ -212,6 +290,10 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
         DispatchPendingMenuPreview(hwnd);
         return 0;
     }
+    if (wp == IDT_EDIT_EXIT_RIGHT_CLICK_SHIELD) {
+        StopEditExitRightClickShield(hwnd);
+        return 0;
+    }
     /* Handle click-through timer for dynamic WS_EX_TRANSPARENT switching */
     if (wp == GetClickThroughTimerId()) {
         UpdateClickThroughState(hwnd);
@@ -239,6 +321,7 @@ LRESULT HandleMainTimerTick(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    ResetEditExitRightClickState(hwnd);
     StopMenuPreviewTrackingForCommand(hwnd);
     CancelPreview(hwnd);
     UnregisterGlobalHotkeys(hwnd);
@@ -307,13 +390,19 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    if (g_suppressRButtonUpAfterEditExit) {
-        ReleaseEditExitRightClickCapture(hwnd);
-        ClearSuppressedRButtonUp();
+    if (g_pendingEditExitRightClick) {
+        ClearPendingEditExitRightClick(hwnd);
+        if (CLOCK_EDIT_MODE) {
+            EndEditMode(hwnd);
+        }
+        SuppressContextMenuBriefly();
+        StartEditExitRightClickShield(hwnd);
         return 0;
     }
     if (CLOCK_EDIT_MODE) {
         EndEditMode(hwnd);
+        SuppressContextMenuBriefly();
+        StartEditExitRightClickShield(hwnd);
         return 0;
     }
     return DefWindowProc(hwnd, WM_RBUTTONUP, wp, lp);
@@ -322,20 +411,34 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (CLOCK_EDIT_MODE) {
-        g_suppressRButtonUpAfterEditExit = TRUE;
+        g_pendingEditExitRightClick = TRUE;
         SetCapture(hwnd);
-        EndEditMode(hwnd);
         return 0;
     }
 
-    ReleaseEditExitRightClickCapture(hwnd);
-    ClearSuppressedRButtonUp();
+    ClearPendingEditExitRightClick(hwnd);
 
     if (GetKeyState(VK_CONTROL) & 0x8000) {
         ToggleEditMode(hwnd);
         return 0;
     }
     return DefWindowProc(hwnd, WM_RBUTTONDOWN, wp, lp);
+}
+
+LRESULT HandleContextMenu(HWND hwnd, WPARAM wp, LPARAM lp) {
+    BOOL suppressed = CLOCK_EDIT_MODE || IsContextMenuSuppressed();
+    if (suppressed) {
+        return 0;
+    }
+    return DefWindowProc(hwnd, WM_CONTEXTMENU, wp, lp);
+}
+
+LRESULT HandleCaptureChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp;
+    if ((HWND)lp != hwnd && g_pendingEditExitRightClick) {
+        g_pendingEditExitRightClick = FALSE;
+    }
+    return DefWindowProc(hwnd, WM_CAPTURECHANGED, wp, lp);
 }
 
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
