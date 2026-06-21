@@ -334,6 +334,33 @@ static BOOL IsAbsolutePath(const wchar_t* path) {
     return ((path[1] == L':') || (path[0] == L'\\' && path[1] == L'\\'));
 }
 
+static BOOL GetPluginRelativeImageBaseDirectory(wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0) return FALSE;
+    buffer[0] = L'\0';
+
+    wchar_t outputPath[MAX_PATH];
+    if (!PluginData_GetOutputPath(outputPath, MAX_PATH)) {
+        return FALSE;
+    }
+
+    wchar_t* lastBackslash = wcsrchr(outputPath, L'\\');
+    wchar_t* lastSlash = wcsrchr(outputPath, L'/');
+    wchar_t* lastSeparator = lastBackslash;
+    if (lastSlash && (!lastSeparator || lastSlash > lastSeparator)) {
+        lastSeparator = lastSlash;
+    }
+
+    if (lastSeparator && lastSeparator > outputPath) {
+        *lastSeparator = L'\0';
+        if (wcslen(outputPath) < bufferSize) {
+            wcscpy_s(buffer, bufferSize, outputPath);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 /**
  * @brief Generate cache filename from URL
  */
@@ -1329,14 +1356,14 @@ BOOL ResolveImagePath(MarkdownImage* image) {
         return TRUE;
     }
 
-    /* Relative path - resolve relative to plugins directory */
-    wchar_t pluginsDir[MAX_PATH];
-    if (!GetPluginsDirectory(pluginsDir, MAX_PATH)) {
+    /* Relative path - resolve relative to the active plugin output directory. */
+    wchar_t baseDir[MAX_PATH];
+    if (!GetPluginRelativeImageBaseDirectory(baseDir, MAX_PATH)) {
         return FALSE;
     }
 
     wchar_t fullPath[MAX_PATH];
-    int written = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", pluginsDir, path);
+    int written = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", baseDir, path);
     if (written < 0) {
         return FALSE;
     }

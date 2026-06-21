@@ -141,11 +141,10 @@ void RenderRetroEffect(DWORD* pixels, int destWidth, int destHeight,
                 int finalR = r;
                 int finalG = g;
                 int finalB = b;
-                int screenX = foreClip.destLeft + (i - foreClip.srcLeft);
-                int screenY = destY;
 
                 if (colorCb) {
-                    colorCb(screenX, screenY, &finalR, &finalG, &finalB, userData);
+                    colorCb(foreClip.destLeft + (i - foreClip.srcLeft),
+                            destY, &finalR, &finalG, &finalB, userData);
                 }
 
                 BlendSolidColorPixel(destRow, alpha, finalR, finalG, finalB);

@@ -1381,8 +1381,7 @@ unsigned char* CreateVisibleGlyphBitmapSTB(const stbtt_fontinfo* fontInfo,
     long long xoff64 = (long long)x0 + srcLeft;
     long long yoff64 = (long long)y0 + srcTop;
 
-    if (outW64 <= 0 || outH64 <= 0 ||
-        outW64 > (long long)INT_MAX || outH64 > (long long)INT_MAX ||
+    if (outW64 > (long long)INT_MAX || outH64 > (long long)INT_MAX ||
         xoff64 < (long long)INT_MIN || xoff64 > (long long)INT_MAX ||
         yoff64 < (long long)INT_MIN || yoff64 > (long long)INT_MAX) {
         return NULL;

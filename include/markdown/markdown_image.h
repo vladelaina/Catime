@@ -3,7 +3,7 @@
  * @brief Markdown image support ![WxH](path)
  * 
  * Supports:
- * - Local paths (relative to plugins directory or absolute)
+ * - Local paths (relative to active plugin output directory or absolute)
  * - Network images (http/https, cached locally)
  * - Optional size specification: ![100x50](path)
  */
@@ -60,7 +60,7 @@ BOOL ExtractMarkdownImage(const wchar_t** src, MarkdownImage* images,
 /**
  * @brief Resolve image path to local file
  * 
- * - Relative paths: resolved relative to plugins directory
+ * - Relative paths: resolved relative to active plugin output directory
  * - Absolute paths: used as-is
  * - Network URLs: downloaded to cache directory
  * 

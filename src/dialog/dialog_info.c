@@ -153,7 +153,7 @@ static BOOL GetIconPixelSize(HICON hIcon, int* width, int* height) {
         return FALSE;
     }
 
-    BITMAP bitmap;
+    BITMAP bitmap = {0};
     HBITMAP hBitmap = iconInfo.hbmColor ? iconInfo.hbmColor : iconInfo.hbmMask;
     BOOL ok = hBitmap && GetObjectW(hBitmap, sizeof(bitmap), &bitmap) > 0;
 
