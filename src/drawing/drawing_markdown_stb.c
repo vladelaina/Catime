@@ -661,7 +661,7 @@ void RenderMarkdownSTBMeasured(void* bits, int width, int height, const wchar_t*
      * Liquid simulation needs smooth monotonically increasing time (t), not a sawtooth wave.
      * For normal animated gradients, we can use the modulo cycle.
      */
-    if (activeEffect == EFFECT_TYPE_LIQUID) {
+    if (activeEffect == EFFECT_TYPE_LIQUID || activeEffect == EFFECT_TYPE_AQUA) {
         /* Raw continuous time for physics simulation */
         timeOffset = (int)frameTick;
     } else if (frameGradientInfo && frameGradientInfo->isAnimated) {

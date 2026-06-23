@@ -9,6 +9,7 @@
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <windows.h>
 #include <shlobj.h>  /* For SHGetFolderPathW */
@@ -83,11 +84,34 @@ typedef struct {
 
 static GlyphMetricsCacheEntry g_glyphMetricsCache[GLYPH_METRICS_CACHE_SIZE] = {0};
 
+#define GLYPH_BITMAP_CACHE_SIZE 32
+#define GLYPH_BITMAP_CACHE_MAX_BYTES (256u * 1024u)
+
+typedef struct {
+    BOOL valid;
+    const stbtt_fontinfo* fontInfo;
+    DWORD generation;
+    int glyphIndex;
+    DWORD scaleXBits;
+    DWORD scaleYBits;
+    int width;
+    int height;
+    int xoff;
+    int yoff;
+    size_t pixelCount;
+    unsigned char* pixels;
+    DWORD lastUse;
+} GlyphBitmapCacheEntry;
+
+static GlyphBitmapCacheEntry g_glyphBitmapCache[GLYPH_BITMAP_CACHE_SIZE] = {0};
+static DWORD g_glyphBitmapCacheUseCounter = 0;
+
 static INIT_ONCE g_fontStateLockOnce = INIT_ONCE_STATIC_INIT;
 static CRITICAL_SECTION g_fontStateCS;
 
 /* Forward declarations for cleanup paths that already hold g_fontStateCS */
 static void ClearFontCacheSTBLocked(void);
+static void ClearGlyphBitmapCacheLocked(void);
 static void CleanupFontSTBLocked(void);
 
 static void AdvanceFontStateGeneration(void) {
@@ -109,10 +133,146 @@ static void ClearGlyphMetricsCacheLocked(void) {
     ZeroMemory(g_glyphMetricsCache, sizeof(g_glyphMetricsCache));
 }
 
+static void ClearGlyphBitmapCacheLocked(void) {
+    for (int i = 0; i < GLYPH_BITMAP_CACHE_SIZE; ++i) {
+        free(g_glyphBitmapCache[i].pixels);
+        g_glyphBitmapCache[i].pixels = NULL;
+        g_glyphBitmapCache[i].valid = FALSE;
+    }
+    g_glyphBitmapCacheUseCounter = 0;
+}
+
 static DWORD GetGlyphMetricsCacheSlot(wchar_t c, wchar_t nextC) {
     DWORD hash = (DWORD)c * 2654435761u;
     hash ^= ((DWORD)nextC * 2246822519u) + (hash << 6) + (hash >> 2);
     return hash & (GLYPH_METRICS_CACHE_SIZE - 1);
+}
+
+static DWORD FloatBitsForGlyphCache(float value) {
+    DWORD bits = 0;
+    memcpy(&bits, &value, sizeof(bits));
+    return bits;
+}
+
+static DWORD GetGlyphBitmapCacheSlot(const stbtt_fontinfo* fontInfo,
+                                     int glyphIndex,
+                                     DWORD scaleXBits,
+                                     DWORD scaleYBits,
+                                     int width,
+                                     int height,
+                                     int xoff,
+                                     int yoff) {
+    DWORD hash = (DWORD)(uintptr_t)fontInfo;
+    hash ^= (DWORD)((uintptr_t)fontInfo >> 32);
+    hash ^= (DWORD)glyphIndex * 2654435761u;
+    hash ^= scaleXBits * 2246822519u;
+    hash ^= scaleYBits * 3266489917u;
+    hash ^= (DWORD)width * 668265263u;
+    hash ^= (DWORD)height * 374761393u;
+    hash ^= (DWORD)xoff * 1274126177u;
+    hash ^= (DWORD)yoff * 974142619u;
+    return hash & (GLYPH_BITMAP_CACHE_SIZE - 1);
+}
+
+static BOOL GlyphBitmapCacheEntryMatches(const GlyphBitmapCacheEntry* entry,
+                                         const stbtt_fontinfo* fontInfo,
+                                         DWORD generation,
+                                         int glyphIndex,
+                                         DWORD scaleXBits,
+                                         DWORD scaleYBits,
+                                         int width,
+                                         int height,
+                                         int xoff,
+                                         int yoff,
+                                         size_t pixelCount) {
+    return entry && entry->valid &&
+           entry->fontInfo == fontInfo &&
+           entry->generation == generation &&
+           entry->glyphIndex == glyphIndex &&
+           entry->scaleXBits == scaleXBits &&
+           entry->scaleYBits == scaleYBits &&
+           entry->width == width &&
+           entry->height == height &&
+           entry->xoff == xoff &&
+           entry->yoff == yoff &&
+           entry->pixelCount == pixelCount &&
+           entry->pixels != NULL;
+}
+
+static unsigned char* CopyCachedGlyphBitmapLocked(const stbtt_fontinfo* fontInfo,
+                                                  DWORD generation,
+                                                  int glyphIndex,
+                                                  DWORD scaleXBits,
+                                                  DWORD scaleYBits,
+                                                  int width,
+                                                  int height,
+                                                  int xoff,
+                                                  int yoff,
+                                                  size_t pixelCount) {
+    if (pixelCount == 0 || pixelCount > GLYPH_BITMAP_CACHE_MAX_BYTES) {
+        return NULL;
+    }
+
+    DWORD slot = GetGlyphBitmapCacheSlot(fontInfo, glyphIndex,
+                                         scaleXBits, scaleYBits,
+                                         width, height, xoff, yoff);
+    GlyphBitmapCacheEntry* entry = &g_glyphBitmapCache[slot];
+    if (!GlyphBitmapCacheEntryMatches(entry, fontInfo, generation, glyphIndex,
+                                      scaleXBits, scaleYBits,
+                                      width, height, xoff, yoff, pixelCount)) {
+        return NULL;
+    }
+
+    unsigned char* copy = (unsigned char*)malloc(pixelCount);
+    if (!copy) {
+        return NULL;
+    }
+
+    memcpy(copy, entry->pixels, pixelCount);
+    entry->lastUse = ++g_glyphBitmapCacheUseCounter;
+    return copy;
+}
+
+static void StoreGlyphBitmapCacheLocked(const stbtt_fontinfo* fontInfo,
+                                        DWORD generation,
+                                        int glyphIndex,
+                                        DWORD scaleXBits,
+                                        DWORD scaleYBits,
+                                        int width,
+                                        int height,
+                                        int xoff,
+                                        int yoff,
+                                        const unsigned char* pixels,
+                                        size_t pixelCount) {
+    if (!pixels || pixelCount == 0 || pixelCount > GLYPH_BITMAP_CACHE_MAX_BYTES) {
+        return;
+    }
+
+    DWORD slot = GetGlyphBitmapCacheSlot(fontInfo, glyphIndex,
+                                         scaleXBits, scaleYBits,
+                                         width, height, xoff, yoff);
+    GlyphBitmapCacheEntry* entry = &g_glyphBitmapCache[slot];
+
+    unsigned char* cachedPixels = (unsigned char*)malloc(pixelCount);
+    if (!cachedPixels) {
+        return;
+    }
+    memcpy(cachedPixels, pixels, pixelCount);
+
+    free(entry->pixels);
+    entry->pixels = cachedPixels;
+    entry->valid = TRUE;
+    entry->fontInfo = fontInfo;
+    entry->generation = generation;
+    entry->glyphIndex = glyphIndex;
+    entry->scaleXBits = scaleXBits;
+    entry->scaleYBits = scaleYBits;
+    entry->width = width;
+    entry->height = height;
+    entry->xoff = xoff;
+    entry->yoff = yoff;
+    entry->pixelCount = pixelCount;
+    entry->lastUse = ++g_glyphBitmapCacheUseCounter;
 }
 
 static DWORD GetFontTagGlyphMetricsCacheSlot(wchar_t c) {
@@ -547,6 +707,7 @@ static void CleanupFontSTBLocked(void) {
     /* Cleanup font cache */
     ClearFontCacheSTBLocked();
     ClearGlyphMetricsCacheLocked();
+    ClearGlyphBitmapCacheLocked();
     
     g_fontLoaded = FALSE;
     g_fallbackFontLoaded = FALSE;
@@ -716,6 +877,9 @@ void BlendCharBitmapSTBWithEffect(void* destBits, int destWidth, int destHeight,
     } else if (effect == EFFECT_TYPE_LIQUID) {
         RenderLiquidEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL, timeOffset);
         /* Critical: Return early */
+        return;
+    } else if (effect == EFFECT_TYPE_AQUA) {
+        RenderAquaEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h, r, g, b, NULL, NULL, timeOffset);
         return;
     } else if (effect == EFFECT_TYPE_RETRO) {
         int shadowR = 0, shadowG = 0, shadowB = 0;
@@ -1069,12 +1233,23 @@ void BlendCharBitmapGradientSTBWithInfo(void* destBits, int destWidth, int destH
         int liquidR = GetRValue(info->startColor);
         int liquidG = GetGValue(info->startColor);
         int liquidB = GetBValue(info->startColor);
-        
+
         GlowGradientContext ctx;
         InitGlowGradientContext(&ctx, info, startX, totalWidth, timeOffset);
         RenderLiquidEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
                            liquidR, liquidG, liquidB, GetGlowGradientColor, &ctx, timeOffset);
         /* Critical: Return early */
+        return;
+    } else if (effect == EFFECT_TYPE_AQUA) {
+        int aquaR = GetRValue(info->startColor);
+        int aquaG = GetGValue(info->startColor);
+        int aquaB = GetBValue(info->startColor);
+
+        GlowGradientContext ctx;
+        InitGlowGradientContext(&ctx, info, startX, totalWidth, timeOffset);
+        ctx.timeOffset = 0;
+        RenderAquaEffect(pixels, destWidth, destHeight, x_pos, y_pos, bitmap, w, h,
+                         aquaR, aquaG, aquaB, GetGlowGradientColor, &ctx, timeOffset);
         return;
     } else if (effect == EFFECT_TYPE_RETRO) {
         int shadowR = GetRValue(info->endColor);
@@ -1389,9 +1564,35 @@ unsigned char* CreateVisibleGlyphBitmapSTB(const stbtt_fontinfo* fontInfo,
 
     int outW = (int)outW64;
     int outH = (int)outH64;
+    int outXoff = (int)xoff64;
+    int outYoff = (int)yoff64;
     size_t pixelCount = 0;
     if (!CalculateBitmapPixelCount(outW, outH, &pixelCount)) {
         return NULL;
+    }
+
+    BOOL cacheable = (fontInfo == &g_fontInfo || fontInfo == &g_fallbackFontInfo);
+    DWORD fontGeneration = cacheable ? GetFontStateGenerationSTB() : 0;
+    DWORD scaleXBits = cacheable ? FloatBitsForGlyphCache(scaleX) : 0;
+    DWORD scaleYBits = cacheable ? FloatBitsForGlyphCache(scaleY) : 0;
+    if (cacheable) {
+        unsigned char* cachedBitmap = CopyCachedGlyphBitmapLocked(fontInfo,
+                                                                  fontGeneration,
+                                                                  glyphIndex,
+                                                                  scaleXBits,
+                                                                  scaleYBits,
+                                                                  outW,
+                                                                  outH,
+                                                                  outXoff,
+                                                                  outYoff,
+                                                                  pixelCount);
+        if (cachedBitmap) {
+            if (width) *width = outW;
+            if (height) *height = outH;
+            if (xoff) *xoff = outXoff;
+            if (yoff) *yoff = outYoff;
+            return cachedBitmap;
+        }
     }
 
     unsigned char* bitmap = (unsigned char*)malloc(pixelCount);
@@ -1415,13 +1616,27 @@ unsigned char* CreateVisibleGlyphBitmapSTB(const stbtt_fontinfo* fontInfo,
     gbm.pixels = bitmap;
     stbtt_Rasterize(&gbm, 0.35f, vertices, numVerts,
                     scaleX, scaleY, 0.0f, 0.0f,
-                    (int)xoff64, (int)yoff64, 1, fontInfo->userdata);
+                    outXoff, outYoff, 1, fontInfo->userdata);
     STBTT_free(vertices, fontInfo->userdata);
+
+    if (cacheable) {
+        StoreGlyphBitmapCacheLocked(fontInfo,
+                                    fontGeneration,
+                                    glyphIndex,
+                                    scaleXBits,
+                                    scaleYBits,
+                                    outW,
+                                    outH,
+                                    outXoff,
+                                    outYoff,
+                                    bitmap,
+                                    pixelCount);
+    }
 
     if (width) *width = outW;
     if (height) *height = outH;
-    if (xoff) *xoff = (int)xoff64;
-    if (yoff) *yoff = (int)yoff64;
+    if (xoff) *xoff = outXoff;
+    if (yoff) *yoff = outYoff;
     return bitmap;
 }
 

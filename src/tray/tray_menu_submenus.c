@@ -401,7 +401,7 @@ void BuildStyleSubmenu(HMENU hMenu) {
         AppendMenuW(hStyleMenu,
                     MF_STRING | (CLOCK_TEXT_EFFECT == effect->type ? MF_CHECKED : MF_UNCHECKED),
                     effect->menuId,
-                    GetLocalizedString(NULL, effect->menuLabelKey));
+                    effect->menuLabelKey);
     }
 
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hStyleMenu,

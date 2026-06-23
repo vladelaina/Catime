@@ -75,7 +75,7 @@ BOOL TextEffect_NeedsRenderTimer(TextEffectType type) {
 
 BOOL TextEffect_UsesAnimatedTextColor(TextEffectType type) {
     const TextEffectDefinition* effect = TextEffect_GetByType(type);
-    return effect ? effect->usesAnimatedTextColor : TRUE;
+    return effect ? effect->usesAnimatedTextColor : FALSE;
 }
 
 BOOL TextEffect_UsesSharedEffectBuffer(TextEffectType type) {

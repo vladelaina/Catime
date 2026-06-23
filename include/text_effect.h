@@ -5,7 +5,7 @@
 #include <windows.h>
 #include "../resource/resource.h"
 
-#define TEXT_EFFECT_CONFIG_VALUES "NONE/GLOW/GLASS/NEON/HOLOGRAPHIC/LIQUID/RETRO"
+#define TEXT_EFFECT_CONFIG_VALUES "NONE/GLOW/GLASS/NEON/HOLOGRAPHIC/LIQUID/AQUA/RETRO"
 
 #define TEXT_EFFECT_DEFINITION_LIST(X) \
     X(GLOW,        "GLOW",        L"Glow Effect",        FALSE, TRUE, TRUE) \
@@ -13,6 +13,7 @@
     X(NEON,        "NEON",        L"Neon Tube",          FALSE, TRUE, TRUE) \
     X(HOLOGRAPHIC, "HOLOGRAPHIC", L"Holographic Effect", FALSE, TRUE, TRUE) \
     X(LIQUID,      "LIQUID",      L"Liquid Flow",        TRUE,  TRUE, TRUE) \
+    X(AQUA,        "AQUA",        L"Aqua Shimmer",       TRUE,  FALSE, TRUE) \
     X(RETRO,       "RETRO",       L"Retro Shadow",       FALSE, TRUE, FALSE)
 
 typedef enum {

@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <math.h>
 #include <windows.h>
+#include <mmsystem.h>
 #include "drawing/drawing_render.h"
 #include "drawing/drawing_time_format.h"
 #include "drawing/drawing_text_stb.h"
@@ -48,6 +49,8 @@ extern float PLUGIN_FONT_SCALE_FACTOR;
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define FONT_PATH_RESOLVE_FAILURE_RETRY_MS 5000u
 #define MARKDOWN_IMAGE_FILE_RECHECK_MS 1000u
+#define RENDER_TIMER_RESOLUTION_MIN_MS 1u
+#define RENDER_TIMER_RESOLUTION_MAX_MS 10u
 
 static const wchar_t CATIME_OPEN_TAG[] = L"<catime>";
 static const wchar_t CATIME_CLOSE_TAG[] = L"</catime>";
@@ -58,6 +61,7 @@ static const wchar_t CATIME_CLOSE_TAG[] = L"</catime>";
 static BOOL s_renderAnimationTimerActive = FALSE;
 static UINT s_renderAnimationTimerInterval = 0;
 static HWND s_renderAnimationTimerHwnd = NULL;
+static UINT s_renderAnimationTimerResolutionMs = 0;
 static DWORD s_nextMarkdownImageFileCheckTick = 0;
 
 typedef struct {
@@ -812,6 +816,11 @@ static BOOL CalculatePixelCount(int width, int height, size_t* pixelCount) {
 }
 
 static UINT GetRenderAnimationTimerInterval(size_t pixelCount, BOOL hasColorTagGradient) {
+    if (GetActiveEffect() == EFFECT_TYPE_AQUA) {
+        (void)pixelCount;
+        return 120u;
+    }
+
     if (hasColorTagGradient) {
         return (pixelCount < 50000u) ? 33u :
                (pixelCount < 200000u) ? 50u : 80u;
@@ -820,6 +829,65 @@ static UINT GetRenderAnimationTimerInterval(size_t pixelCount, BOOL hasColorTagG
     return (pixelCount < 50000u) ? 33u :
            (pixelCount < 200000u) ? 50u :
            (pixelCount < 500000u) ? 80u : 120u;
+}
+
+static UINT ChooseRenderTimerResolutionMs(UINT intervalMs) {
+    UINT resolution = intervalMs / 2u;
+    if (resolution < RENDER_TIMER_RESOLUTION_MIN_MS) {
+        resolution = RENDER_TIMER_RESOLUTION_MIN_MS;
+    }
+    if (resolution > RENDER_TIMER_RESOLUTION_MAX_MS) {
+        resolution = RENDER_TIMER_RESOLUTION_MAX_MS;
+    }
+    return resolution;
+}
+
+static UINT ClampRenderTimerResolutionToDeviceCaps(UINT requestedMs) {
+    TIMECAPS caps;
+    if (timeGetDevCaps(&caps, sizeof(caps)) != TIMERR_NOERROR) {
+        return requestedMs;
+    }
+
+    if (requestedMs < caps.wPeriodMin) {
+        return caps.wPeriodMin;
+    }
+    if (requestedMs > caps.wPeriodMax) {
+        return caps.wPeriodMax;
+    }
+    return requestedMs;
+}
+
+static void ReleaseRenderAnimationTimerResolution(void) {
+    if (s_renderAnimationTimerResolutionMs > 0) {
+        timeEndPeriod(s_renderAnimationTimerResolutionMs);
+        s_renderAnimationTimerResolutionMs = 0;
+    }
+}
+
+static void UpdateRenderAnimationTimerResolution(UINT interval) {
+    UINT requestedResolutionMs = 0;
+
+    if (interval <= 25u) {
+        requestedResolutionMs = ClampRenderTimerResolutionToDeviceCaps(
+            ChooseRenderTimerResolutionMs(interval));
+    }
+
+    if (s_renderAnimationTimerResolutionMs == requestedResolutionMs) {
+        return;
+    }
+
+    ReleaseRenderAnimationTimerResolution();
+
+    if (requestedResolutionMs > 0) {
+        MMRESULT res = timeBeginPeriod(requestedResolutionMs);
+        if (res == TIMERR_NOERROR) {
+            s_renderAnimationTimerResolutionMs = requestedResolutionMs;
+        } else {
+            WriteLog(LOG_LEVEL_WARNING,
+                     "Failed to set render animation timer resolution (resolution=%u)",
+                     requestedResolutionMs);
+        }
+    }
 }
 
 static BOOL SetDrawingRenderAnimationTimer(HWND hwnd, UINT interval) {
@@ -838,6 +906,7 @@ static BOOL SetDrawingRenderAnimationTimer(HWND hwnd, UINT interval) {
         WriteLog(LOG_LEVEL_WARNING,
                  "Failed to set render animation timer (interval=%u, error=%lu)",
                  interval, GetLastError());
+        StopDrawingRenderAnimationTimer(hwnd);
         return FALSE;
     }
 
@@ -853,6 +922,7 @@ static BOOL SetDrawingRenderAnimationTimer(HWND hwnd, UINT interval) {
     s_renderAnimationTimerActive = TRUE;
     s_renderAnimationTimerInterval = interval;
     s_renderAnimationTimerHwnd = hwnd;
+    UpdateRenderAnimationTimerResolution(interval);
     return TRUE;
 }
 
@@ -927,6 +997,7 @@ void StopDrawingRenderAnimationTimer(HWND hwnd) {
     s_renderAnimationTimerActive = FALSE;
     s_renderAnimationTimerInterval = 0;
     s_renderAnimationTimerHwnd = NULL;
+    ReleaseRenderAnimationTimerResolution();
 }
 
 static int ClampRenderInt64(long long value, int minValue, int maxValue) {

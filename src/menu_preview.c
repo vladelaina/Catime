@@ -78,6 +78,13 @@ static PreviewState g_previewState = {PREVIEW_TYPE_NONE};
  * Core Preview Functions
  * ============================================================================ */
 
+static BOOL ShouldCleanupPreviewEffectBuffers(EffectType previousPreviewEffect,
+                                              EffectType nextPreviewEffect) {
+    return TextEffect_UsesSharedEffectBuffer(previousPreviewEffect) &&
+           !TextEffect_UsesSharedEffectBuffer(nextPreviewEffect) &&
+           !TextEffect_UsesSharedEffectBuffer(CLOCK_TEXT_EFFECT);
+}
+
 BOOL IsPreviewActive(void) {
     return g_previewState.type != PREVIEW_TYPE_NONE;
 }
@@ -135,7 +142,11 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             return;
         }
 
+        EffectType previousEffect = g_previewState.data.effect;
         g_previewState.data.effect = effect;
+        if (ShouldCleanupPreviewEffectBuffers(previousEffect, effect)) {
+            CleanupDrawingEffects();
+        }
         if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
         return;
     }
@@ -240,8 +251,9 @@ void CancelPreview(HWND hwnd) {
                             g_previewState.type == PREVIEW_TYPE_COLOR);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
     BOOL needsEffectCleanup = (g_previewState.type == PREVIEW_TYPE_EFFECT &&
-                               TextEffect_UsesSharedEffectBuffer(g_previewState.data.effect) &&
-                               !TextEffect_UsesSharedEffectBuffer(CLOCK_TEXT_EFFECT));
+                               ShouldCleanupPreviewEffectBuffers(
+                                   g_previewState.data.effect,
+                                   (EffectType)CLOCK_TEXT_EFFECT));
 
     if (needsFontReload) {
         RestoreConfiguredFontAfterPreview();

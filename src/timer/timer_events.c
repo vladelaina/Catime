@@ -20,9 +20,7 @@
 #include "config/config_defaults.h"
 #include "window.h"
 #include "drawing.h"
-#include "color/gradient.h"
 #include "menu_preview.h"
-#include "text_effect.h"
 #include "audio_player.h"
 #include "drag_scale.h"
 #include "font/font_manager.h"
@@ -466,31 +464,6 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     }
 }
 
-static BOOL IsRenderAnimationActive(void) {
-    EffectType activeEffect = GetActiveEffect();
-    if (TextEffect_NeedsRenderTimer(activeEffect)) {
-        return TRUE;
-    }
-
-    if (!TextEffect_UsesAnimatedTextColor(activeEffect)) {
-        return FALSE;
-    }
-
-    char activeColor[COLOR_HEX_BUFFER];
-    GetActiveColor(activeColor, sizeof(activeColor));
-
-    static char s_lastActiveColor[COLOR_HEX_BUFFER] = {0};
-    static BOOL s_lastActiveColorAnimated = FALSE;
-
-    if (strcmp(activeColor, s_lastActiveColor) == 0) {
-        return s_lastActiveColorAnimated;
-    }
-
-    strncpy_s(s_lastActiveColor, sizeof(s_lastActiveColor), activeColor, _TRUNCATE);
-    s_lastActiveColorAnimated = IsGradientNameAnimated(activeColor);
-    return s_lastActiveColorAnimated;
-}
-
 static BOOL HasVisibleTimerTextChanged(wchar_t* lastText, size_t lastTextSize, BOOL* hasLastText) {
     if (!lastText || lastTextSize == 0 || !hasLastText) return TRUE;
 
@@ -509,8 +482,7 @@ static BOOL HasVisibleTimerTextChanged(wchar_t* lastText, size_t lastTextSize, B
 }
 
 static BOOL ShouldRenderMainTimer(wchar_t* lastText, size_t lastTextSize, BOOL* hasLastText) {
-    if (!g_AppConfig.display.time_format.show_milliseconds &&
-        !IsRenderAnimationActive()) {
+    if (!g_AppConfig.display.time_format.show_milliseconds) {
         return HasVisibleTimerTextChanged(lastText, lastTextSize, hasLastText);
     }
 
@@ -523,8 +495,7 @@ static BOOL ShouldCheckActiveTimerRender(int currentElapsedSecond,
                                          BOOL* hasLastCheckedSecond) {
     if (!lastCheckedSecond || !hasLastCheckedSecond) return TRUE;
 
-    if (g_AppConfig.display.time_format.show_milliseconds ||
-        IsRenderAnimationActive()) {
+    if (g_AppConfig.display.time_format.show_milliseconds) {
         *hasLastCheckedSecond = FALSE;
         return TRUE;
     }

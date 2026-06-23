@@ -92,6 +92,17 @@ void RenderLiquidEffect(DWORD* pixels, int destWidth, int destHeight,
                        int timeOffset);
 
 /**
+ * @brief Render underwater aqua shimmer with light ripple distortion
+ * @param timeOffset Time-based offset for shimmer animation
+ */
+void RenderAquaEffect(DWORD* pixels, int destWidth, int destHeight,
+                      int x_pos, int y_pos,
+                      const unsigned char* bitmap, int w, int h,
+                      int r, int g, int b,
+                      GlowColorCallback colorCb, void* userData,
+                      int timeOffset);
+
+/**
  * @brief Render a hard offset shadow with primary foreground and secondary shadow color
  */
 void RenderRetroEffect(DWORD* pixels, int destWidth, int destHeight,
