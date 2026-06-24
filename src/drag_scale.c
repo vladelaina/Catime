@@ -605,7 +605,6 @@ void EndDragWindow(HWND hwnd) {
         ReleaseCapture();
     }
     
-    RefreshWindow(hwnd, TRUE);
     if (CLOCK_EDIT_MODE) {
         ScheduleConfigSave(hwnd);
     }
