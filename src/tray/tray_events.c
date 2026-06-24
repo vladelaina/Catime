@@ -329,6 +329,11 @@ void OpenSupportPage(void) {
     OpenUrlInBrowser(L"https://cati.me/support");
 }
 
+/** @brief Open Vlaina project page in browser */
+void OpenVlainaPage(void) {
+    OpenUrlInBrowser(URL_VLAINA);
+}
+
 /**
  * @brief Open feedback page (language-aware)
  * @note Chinese users → localized form; others → GitHub Issues

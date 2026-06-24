@@ -101,6 +101,7 @@
 #define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"                      /**< GitHub repository URL */
 #define URL_FEEDBACK L"https://message.bilibili.com/#/whisper/mid1862395225"         /**< Feedback URL */
 #define URL_BILIBILI_SPACE L"https://space.bilibili.com/1862395225"                 /**< Bilibili space URL */
+#define URL_VLAINA L"https://vlaina.com"                                            /**< Vlaina project URL */
 
 /** @brief Application icon resource */
 #define IDI_CATIME 101                   /**< Main application icon */
@@ -162,6 +163,7 @@
 #define CLOCK_IDM_HELP 134               /**< Help menu item */
 #define CLOCK_IDM_SUPPORT 139            /**< Support menu item */
 #define CLOCK_IDM_FEEDBACK 141           /**< Feedback menu item */
+#define CLOCK_IDM_VLAINA 142             /**< Vlaina project menu item */
 
 /** @brief Timeout action menu identifiers */
 #define CLOCK_IDM_TIMEOUT_ACTION 120     /**< Timeout action submenu */

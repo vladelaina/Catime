@@ -77,6 +77,11 @@ void OpenUserGuide(void);
 void OpenSupportPage(void);
 
 /**
+ * @brief Open Vlaina project page in browser
+ */
+void OpenVlainaPage(void);
+
+/**
  * @brief Open feedback page (language-aware)
  * 
  * @details Chinese → local form, others → GitHub Issues

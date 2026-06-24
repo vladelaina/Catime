@@ -47,12 +47,22 @@ extern void HandleStartupMode(HWND hwnd);
 #include <shlobj.h>
 #include <shellapi.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 extern TextEffectType CLOCK_TEXT_EFFECT;
 
 extern wchar_t inputText[256];
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
+
+static float ParseDefaultScaleOrFallback(const char* value, float fallback) {
+    char* end = NULL;
+    double parsed = value ? strtod(value, &end) : 0.0;
+    if (!value || end == value || !isfinite(parsed) || parsed <= 0.0) {
+        return fallback;
+    }
+    return (float)parsed;
+}
 
 /* ============================================================================
  * Simple Command Handlers (kept in core)
@@ -237,6 +247,13 @@ static LRESULT CmdSupport(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+static LRESULT CmdVlaina(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp; (void)hwnd;
+    extern void OpenVlainaPage(void);
+    OpenVlainaPage();
+    return 0;
+}
+
 static LRESULT CmdFeedback(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp; (void)hwnd;
     extern void OpenFeedbackPage(void);
@@ -274,18 +291,23 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
         return 0;
     }
     
-    /* Directly apply position (don't rely on hot-reload for special values) */
-    RECT windowRect;
-    GetWindowRect(hwnd, &windowRect);
-    int windowWidth = windowRect.right - windowRect.left;
-    int windowHeight = windowRect.bottom - windowRect.top;
+    /* Apply position and size together so reset does not visually happen in two steps. */
+    float defaultWindowScale = ParseDefaultScaleOrFallback(DEFAULT_WINDOW_SCALE, CLOCK_WINDOW_SCALE);
+    float defaultPluginScale = ParseDefaultScaleOrFallback(DEFAULT_PLUGIN_SCALE, PLUGIN_FONT_SCALE_FACTOR);
+    int windowWidth = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_WIDTH, defaultWindowScale);
+    int windowHeight = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT, defaultWindowScale);
     int posX, posY;
     ResolveConfiguredWindowPosition(windowWidth, windowHeight, &posX, &posY);
-    
+
+    CLOCK_WINDOW_SCALE = defaultWindowScale;
+    CLOCK_FONT_SCALE_FACTOR = defaultWindowScale;
+    PLUGIN_FONT_SCALE_FACTOR = defaultPluginScale;
     CLOCK_WINDOW_POS_X = posX;
     CLOCK_WINDOW_POS_Y = posY;
-    SetWindowPos(hwnd, NULL, posX, posY, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-    
+    SetWindowPos(hwnd, NULL, posX, posY, windowWidth, windowHeight,
+                 SWP_NOZORDER | SWP_NOACTIVATE);
+    InvalidateRect(hwnd, NULL, TRUE);
+
     return 0;
 }
 
@@ -424,8 +446,9 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDM_HOTKEY_SETTINGS, CmdHotkeySettings},
     {CLOCK_IDM_HELP, CmdHelp},
     {CLOCK_IDM_SUPPORT, CmdSupport},
+    {CLOCK_IDM_VLAINA, CmdVlaina},
     {CLOCK_IDM_FEEDBACK, CmdFeedback},
-    
+
     {0, NULL}
 };
 

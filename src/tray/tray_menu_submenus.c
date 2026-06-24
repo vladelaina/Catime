@@ -641,6 +641,8 @@ void BuildHelpSubmenu(HMENU hMenu) {
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     FormatSupportLabel(supportLabel, _countof(supportLabel), L"Ovo");
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, supportLabel);
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_VLAINA,
+                GetLocalizedString(NULL, L"Author's new work: vlaina"));
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));
