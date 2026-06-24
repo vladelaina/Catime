@@ -68,7 +68,7 @@
 
 Your tray icon can now come alive! Catime brings powerful custom animation features:
 
-- **Custom Animations**: Use **GIF**, **WebP**, and static images like **PNG** & **JPG** as your tray icon.
+- **Custom Animations**: Use **GIF**, **WebP**, **ANI**, and static images like **PNG** & **JPG** as your tray icon.
 - **System Status:** Supports real-time display of **CPU %**, **Memory %**, **Battery %**, and **Caps Lock** status.
 
 <div align="center">

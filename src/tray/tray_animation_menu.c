@@ -213,6 +213,7 @@ static BOOL IsAnimationFile(const wchar_t* fileName) {
 
     return _wcsicmp(ext, L".gif") == 0 ||
            _wcsicmp(ext, L".webp") == 0 ||
+           _wcsicmp(ext, L".ani") == 0 ||
            _wcsicmp(ext, L".ico") == 0 ||
            _wcsicmp(ext, L".png") == 0 ||
            _wcsicmp(ext, L".jpg") == 0 ||

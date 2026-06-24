@@ -315,7 +315,7 @@ BOOL WriteDefaultsToConfig(const char* config_path) {
             fputs("; ANIMATION_FOLDER_INTERVAL_MS: base animation playback speed (unit: milliseconds).\n", f);
             fputs(";   Controls how fast the animation plays (higher = slower, lower = faster).\n", f);
             fputs(";   Affects folder sequences and static images (.ico/.png/.bmp/.jpg/.jpeg/.gif/.webp/.tif/.tiff).\n", f);
-            fputs(";   Standalone GIF/WebP files honor embedded per-frame delays before speed scaling.\n", f);
+            fputs(";   Standalone GIF/WebP/ANI files honor embedded per-frame delays before speed scaling.\n", f);
             fputs(";   Default: 150ms (~6.7 fps)\n", f);
             fputs(";   Suggested range: 50-500ms\n", f);
             fputs(";\n", f);

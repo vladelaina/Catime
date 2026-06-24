@@ -9,7 +9,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <limits.h>
 
 #define MAX_ANIMATION_PIXELS (4096u * 4096u)
 #define MAX_ANIMATION_FRAMES 512u

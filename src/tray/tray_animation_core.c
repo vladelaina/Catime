@@ -93,6 +93,7 @@ static volatile LONG g_criticalSectionInitialized = 0;
 static volatile LONG g_runtimeActive = 0;
 static volatile LONG g_runtimeUsers = 0;
 static BOOL g_pendingTrayUpdate = FALSE;
+static BOOL g_trayFrameDirty = FALSE;
 static volatile LONG g_speedScaleCacheInvalidation = 0;
 static SpeedScaleCache g_speedScaleCache = {0};
 
@@ -356,6 +357,11 @@ static void InvalidateSpeedScaleCache(void) {
     InterlockedIncrement(&g_speedScaleCacheInvalidation);
 }
 
+static void ResetFramePlaybackState(void) {
+    g_frameRateCtrl.framePosition = 0.0;
+    g_trayFrameDirty = FALSE;
+}
+
 /* Error recovery:
  * - 5000ms timeout: Reasonable duration before declaring icon update as failed
  */
@@ -482,6 +488,7 @@ static void EnsureTrayAnimationTimerState(void) {
         if (IsAnimationTimerActive()) {
             CleanupAnimationTimer();
         }
+        g_trayFrameDirty = FALSE;
         ClearPendingTrayUpdate();
         return;
     }
@@ -505,8 +512,11 @@ static void EnsureTrayAnimationTimerState(void) {
                 ClearPendingTrayUpdate();
             }
         }
-    } else if (IsAnimationTimerActive()) {
-        CleanupAnimationTimer();
+    } else {
+        g_trayFrameDirty = FALSE;
+        if (IsAnimationTimerActive()) {
+            CleanupAnimationTimer();
+        }
     }
 }
 
@@ -1152,6 +1162,7 @@ static void TrayAnimationTimerCallback(void* userData) {
 
     LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
     int* currentIndex = g_isPreviewActive ? &g_previewIndex : &g_mainIndex;
+    BOOL shouldRequestUpdate = FALSE;
     
     if (currentAnim->count > 0 && currentAnim->isAnimated) {
         UINT baseDelay = currentAnim->delays[*currentIndex];
@@ -1165,21 +1176,25 @@ static void TrayAnimationTimerCallback(void* userData) {
 
         if (FrameRateController_ShouldAdvanceFrame(&g_frameRateCtrl, INTERNAL_TICK_INTERVAL_MS, scaledDelay)) {
             *currentIndex = (*currentIndex + 1) % currentAnim->count;
+            g_trayFrameDirty = TRUE;
         }
     }
     
-    if (FrameRateController_ShouldUpdateTray(&g_frameRateCtrl)) {
-        if (locked) {
-            LeaveCriticalSection(&g_animCriticalSection);
-        }
-        RequestTrayIconUpdate();
-        EndTrayAnimationRuntimeUse();
-        return;
+    if (FrameRateController_ShouldUpdateTray(&g_frameRateCtrl) && g_trayFrameDirty) {
+        g_trayFrameDirty = FALSE;
+        shouldRequestUpdate = TRUE;
     }
 
     if (locked) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
+
+    if (shouldRequestUpdate) {
+        RequestTrayIconUpdate();
+        EndTrayAnimationRuntimeUse();
+        return;
+    }
+
     EndTrayAnimationRuntimeUse();
 }
 
@@ -1198,6 +1213,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     if (!IsValidTrayAnimationWindow(hwnd)) {
         g_trayHwnd = NULL;
         g_pendingTrayUpdate = FALSE;
+        g_trayFrameDirty = FALSE;
         return;
     }
 
@@ -1205,6 +1221,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     UINT baseIntervalMs = ClampAnimationIntervalMs(intervalMs);
     InterlockedExchange(&g_baseFolderInterval, (LONG)baseIntervalMs);
     g_pendingTrayUpdate = FALSE;
+    g_trayFrameDirty = FALSE;
     
     /* Read folder interval from config */
     char config_path[MAX_PATH] = {0};
@@ -1344,6 +1361,7 @@ void StopTrayAnimation(HWND hwnd) {
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = 0;
     g_pendingTrayUpdate = FALSE;
+    g_trayFrameDirty = FALSE;
     ResetBuiltinIconUpdateCache();
     g_trayHwnd = NULL;
     RefreshTrayBackgroundWorkState();
@@ -1516,7 +1534,7 @@ static BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig
     SwapLoadedAnimation(&g_mainAnimation, &newMain);
     LoadedAnimation_Init(&newMain);
     g_mainIndex = 0;
-    g_frameRateCtrl.framePosition = 0.0;
+    ResetFramePlaybackState();
 
     if (g_isPreviewActive || g_pendingPreviewName[0] != '\0') {
         SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
@@ -1696,7 +1714,9 @@ static DWORD WINAPI PreviewWorkerThread(LPVOID param) {
 
         int cx = GetSystemMetrics(SM_CXSMICON);
         int cy = GetSystemMetrics(SM_CYSMICON);
-        MemoryPool* localPool = MemoryPool_Create(MEMORY_POOL_SIZE);
+        MemoryPool* localPool = AnimationNeedsDecodePool(requestedName)
+            ? MemoryPool_Create(MEMORY_POOL_SIZE)
+            : NULL;
         if (requestedFromPath) {
             LoadAnimationFromPathWithCancel(requestedName, &tempAnim, localPool, cx, cy,
                                             g_previewCancelEvent);
@@ -1743,7 +1763,7 @@ static DWORD WINAPI PreviewWorkerThread(LPVOID param) {
                 SwapLoadedAnimation(&g_previewAnimation, &tempAnim);
                 LoadedAnimation_Init(&tempAnim);
                 g_previewIndex = 0;
-                g_frameRateCtrl.framePosition = 0.0;
+                ResetFramePlaybackState();
                 g_isPreviewActive = TRUE;
                 g_previewAnimationFromPath = requestedFromPath;
                 CopyStringExactA(requestedName, g_previewAnimationName,
@@ -1825,7 +1845,7 @@ void CancelAnimationPreview(void) {
     g_pendingPreviewName[0] = '\0';
     SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
     LoadedAnimation_Init(&g_previewAnimation);
-    g_frameRateCtrl.framePosition = 0.0;
+    ResetFramePlaybackState();
 
     if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
@@ -1966,7 +1986,7 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     SwapLoadedAnimation(&g_mainAnimation, &newMain);
     LoadedAnimation_Init(&newMain);
     g_mainIndex = 0;
-    g_frameRateCtrl.framePosition = 0.0;
+    ResetFramePlaybackState();
     
     if (g_isPreviewActive || g_pendingPreviewName[0] != '\0') {
         g_isPreviewActive = FALSE;

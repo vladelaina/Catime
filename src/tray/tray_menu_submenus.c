@@ -422,7 +422,7 @@ void BuildAnimationSubmenu(HMENU hMenu) {
         BuildAnimationMenu(hAnimMenu, currentAnim);
         
         if (GetMenuItemCount(hAnimMenu) <= 4) {
-            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(NULL, L"(Supports GIF, WebP, PNG, etc.)"));
+            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(NULL, L"(Supports GIF, WebP, ANI, PNG, etc.)"));
         }
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);

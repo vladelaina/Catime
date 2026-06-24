@@ -85,6 +85,7 @@ static BOOL IsAnimationFile(const wchar_t* filename) {
     const wchar_t* ext = wcsrchr(filename, L'.');
     if (!ext) return FALSE;
     return (_wcsicmp(ext, L".gif") == 0 || _wcsicmp(ext, L".webp") == 0 ||
+            _wcsicmp(ext, L".ani") == 0 ||
             _wcsicmp(ext, L".ico") == 0 || _wcsicmp(ext, L".png") == 0 ||
             _wcsicmp(ext, L".jpg") == 0 || _wcsicmp(ext, L".jpeg") == 0 ||
             _wcsicmp(ext, L".bmp") == 0 || _wcsicmp(ext, L".tif") == 0 ||

@@ -29,7 +29,7 @@ void ShowContextMenu(HWND hwnd);
  * 
  * @details
  * Comprehensive settings: edit mode, timeout actions, presets, time format,
- * fonts (recursive scan), colors, animations (GIF/WebP + speed metrics),
+ * fonts (recursive scan), colors, animations (GIF/WebP/ANI + speed metrics),
  * help, language.
  * 
  * Modular helpers for maintainability.

@@ -59,6 +59,7 @@ static ResourceType GetResourceType(const wchar_t* filename) {
 
     if (HasExtension(filename, L".gif") ||
         HasExtension(filename, L".webp") ||
+        HasExtension(filename, L".ani") ||
         HasExtension(filename, L".png") ||
         HasExtension(filename, L".jpg") ||
         HasExtension(filename, L".jpeg") ||

@@ -2,7 +2,7 @@
  * @file tray_animation_loader.h
  * @brief Animation resource loading from various sources
  * 
- * Supports: folders (icon sequences), GIF, WebP, static images, builtin icons.
+ * Supports: folders (icon sequences), GIF, WebP, ANI, static images, builtin icons.
  * Natural sorting for folder frames. Memory pool for efficient loading.
  */
 
@@ -23,6 +23,7 @@ typedef enum {
     ANIM_SOURCE_CAPSLOCK,
     ANIM_SOURCE_GIF,
     ANIM_SOURCE_WEBP,
+    ANIM_SOURCE_ANI,
     ANIM_SOURCE_STATIC,
     ANIM_SOURCE_FOLDER
 } AnimationSourceType;

@@ -288,6 +288,7 @@ AnimationSourceType DetectAnimationSourceType(const char* name) {
 
     if (EndsWithIgnoreCase(name, ".gif")) return ANIM_SOURCE_GIF;
     if (EndsWithIgnoreCase(name, ".webp")) return ANIM_SOURCE_WEBP;
+    if (EndsWithIgnoreCase(name, ".ani")) return ANIM_SOURCE_ANI;
     if (EndsWithIgnoreCase(name, ".ico") || EndsWithIgnoreCase(name, ".png") ||
         EndsWithIgnoreCase(name, ".bmp") || EndsWithIgnoreCase(name, ".jpg") ||
         EndsWithIgnoreCase(name, ".jpeg") || EndsWithIgnoreCase(name, ".tif") ||
@@ -380,7 +381,7 @@ static BOOL IsSupportedAnimationExtensionW(const wchar_t* ext) {
 
     static const wchar_t* supportedExtensions[] = {
         L".ico", L".png", L".bmp", L".jpg", L".jpeg",
-        L".gif", L".webp", L".tif", L".tiff"
+        L".gif", L".webp", L".ani", L".tif", L".tiff"
     };
 
     for (size_t i = 0; i < sizeof(supportedExtensions) / sizeof(supportedExtensions[0]); ++i) {
@@ -390,6 +391,11 @@ static BOOL IsSupportedAnimationExtensionW(const wchar_t* ext) {
     }
 
     return FALSE;
+}
+
+static BOOL IsSupportedFolderFrameExtensionW(const wchar_t* ext) {
+    if (!ext || _wcsicmp(ext, L".ani") == 0) return FALSE;
+    return IsSupportedAnimationExtensionW(ext);
 }
 
 /**
@@ -441,7 +447,7 @@ BOOL LoadIconsFromFolderWithCancel(const char* utf8FolderPath, LoadedAnimation* 
             if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
 
             const wchar_t* dot = wcsrchr(ffd.cFileName, L'.');
-            if (!IsSupportedAnimationExtensionW(dot)) continue;
+            if (!IsSupportedFolderFrameExtensionW(dot)) continue;
             if (!IsFindDataFileSizeAllowed(&ffd)) {
                 WriteLog(LOG_LEVEL_WARNING, "Skipping oversized folder animation frame: %ls (%llu bytes)",
                          ffd.cFileName,
@@ -664,7 +670,7 @@ BOOL IsValidAnimationSource(const char* name) {
             if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
             
             const wchar_t* ext = wcsrchr(ffd.cFileName, L'.');
-            if (IsSupportedAnimationExtensionW(ext) &&
+            if (IsSupportedFolderFrameExtensionW(ext) &&
                 IsFindDataFileSizeAllowed(&ffd)) {
                 hasImages = TRUE;
                 break;
@@ -765,6 +771,30 @@ BOOL LoadAnimationByNameWithCancel(const char* name, LoadedAnimation* anim,
             }
         }
         
+        DecodedAnimation_Free(&decoded);
+        LoadedAnimation_Free(&loaded);
+        return FALSE;
+    }
+
+    if (type == ANIM_SOURCE_ANI) {
+        if (!IsAnimationFileSizeAllowed(fullPath)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+
+        DecodedAnimation decoded;
+        DecodedAnimation_Init(&decoded);
+
+        if (DecodeAniCursorWithCancel(fullPath, &decoded,
+                                      iconWidth, iconHeight, cancelEvent)) {
+            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, &loaded);
+            DecodedAnimation_Free(&decoded);
+            if (moved) {
+                MoveLoadedAnimationToOutput(anim, &loaded);
+                return TRUE;
+            }
+        }
+
         DecodedAnimation_Free(&decoded);
         LoadedAnimation_Free(&loaded);
         return FALSE;
@@ -873,6 +903,30 @@ BOOL LoadAnimationFromPathWithCancel(const char* path, LoadedAnimation* anim,
             }
         }
         
+        DecodedAnimation_Free(&decoded);
+        LoadedAnimation_Free(&loaded);
+        return FALSE;
+    }
+
+    if (type == ANIM_SOURCE_ANI) {
+        if (!IsAnimationFileSizeAllowed(path)) {
+            LoadedAnimation_Free(&loaded);
+            return FALSE;
+        }
+
+        DecodedAnimation decoded;
+        DecodedAnimation_Init(&decoded);
+
+        if (DecodeAniCursorWithCancel(path, &decoded,
+                                      iconWidth, iconHeight, cancelEvent)) {
+            BOOL moved = MoveDecodedAnimationToLoaded(&decoded, &loaded);
+            DecodedAnimation_Free(&decoded);
+            if (moved) {
+                MoveLoadedAnimationToOutput(anim, &loaded);
+                return TRUE;
+            }
+        }
+
         DecodedAnimation_Free(&decoded);
         LoadedAnimation_Free(&loaded);
         return FALSE;

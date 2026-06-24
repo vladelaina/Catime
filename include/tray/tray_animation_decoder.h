@@ -2,7 +2,7 @@
  * @file tray_animation_decoder.h
  * @brief Image decoding with WIC (Windows Imaging Component)
  * 
- * Decodes GIF/WebP animations and static images, pre-compositing all frames.
+ * Decodes GIF/WebP/ANI animations and static images, pre-compositing all frames.
  * Uses memory pool for temporary buffers to reduce malloc overhead.
  */
 
@@ -62,6 +62,25 @@ BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
 BOOL DecodeAnimatedImageWithCancel(const char* utf8Path, DecodedAnimation* anim,
                                    MemoryPool* pool, int iconWidth, int iconHeight,
                                    HANDLE cancelEvent);
+
+/**
+ * @brief Decode Windows animated cursor (.ani) to icon frames
+ * @param utf8Path File path
+ * @param anim Output structure
+ * @param iconWidth Target icon width
+ * @param iconHeight Target icon height
+ * @return TRUE on success, FALSE on failure
+ */
+BOOL DecodeAniCursor(const char* utf8Path, DecodedAnimation* anim,
+                     int iconWidth, int iconHeight);
+
+/**
+ * @brief Decode Windows animated cursor (.ani) with cooperative cancellation
+ * @param cancelEvent Optional event; signaled event aborts frame decoding
+ */
+BOOL DecodeAniCursorWithCancel(const char* utf8Path, DecodedAnimation* anim,
+                               int iconWidth, int iconHeight,
+                               HANDLE cancelEvent);
 
 /**
  * @brief Decode static image to single icon

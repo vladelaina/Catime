@@ -155,7 +155,13 @@ BOOL FrameRateController_ShouldAdvanceFrame(FrameRateController* ctrl,
     ctrl->framePosition += frameAdvancement;
 
     if (ctrl->framePosition >= 1.0) {
-        ctrl->framePosition -= 1.0;
+        int skippedFrames = 0;
+        while (ctrl->framePosition >= 1.0 && skippedFrames++ < 1024) {
+            ctrl->framePosition -= 1.0;
+        }
+        if (ctrl->framePosition >= 1.0) {
+            ctrl->framePosition = 0.0;
+        }
         return TRUE;
     }
 
