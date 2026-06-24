@@ -154,6 +154,15 @@ static DWORD FloatBitsForGlyphCache(float value) {
     return bits;
 }
 
+static DWORD PointerBitsForGlyphCache(const void* ptr) {
+    uintptr_t value = (uintptr_t)ptr;
+    DWORD hash = (DWORD)value;
+#if UINTPTR_MAX > 0xFFFFFFFFull
+    hash ^= (DWORD)(value >> 32);
+#endif
+    return hash;
+}
+
 static DWORD GetGlyphBitmapCacheSlot(const stbtt_fontinfo* fontInfo,
                                      int glyphIndex,
                                      DWORD scaleXBits,
@@ -162,8 +171,7 @@ static DWORD GetGlyphBitmapCacheSlot(const stbtt_fontinfo* fontInfo,
                                      int height,
                                      int xoff,
                                      int yoff) {
-    DWORD hash = (DWORD)(uintptr_t)fontInfo;
-    hash ^= (DWORD)((uintptr_t)fontInfo >> 32);
+    DWORD hash = PointerBitsForGlyphCache(fontInfo);
     hash ^= (DWORD)glyphIndex * 2654435761u;
     hash ^= scaleXBits * 2246822519u;
     hash ^= scaleYBits * 3266489917u;
