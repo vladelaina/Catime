@@ -57,6 +57,9 @@ static inline void ForceWindowRedraw(HWND hwnd) {
 }
 
 static inline void RequestWindowRepaint(HWND hwnd) {
+    if (CLOCK_IS_DRAGGING) {
+        return;
+    }
     InvalidateRect(hwnd, NULL, FALSE);
 }
 

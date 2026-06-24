@@ -435,6 +435,9 @@ LRESULT HandleContextMenu(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleCaptureChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
+    if ((HWND)lp != hwnd) {
+        EndDragWindow(hwnd);
+    }
     if ((HWND)lp != hwnd && g_pendingEditExitRightClick) {
         g_pendingEditExitRightClick = FALSE;
     }
@@ -515,10 +518,14 @@ LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
         if (dx != 0 || dy != 0) {
             RECT rect;
             GetWindowRect(hwnd, &rect);
-            SetWindowPos(hwnd, NULL, rect.left + dx, rect.top + dy, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-            CLOCK_WINDOW_POS_X = rect.left + dx;
-            CLOCK_WINDOW_POS_Y = rect.top + dy;
-            ScheduleConfigSave(hwnd);
+            int newX = rect.left + dx;
+            int newY = rect.top + dy;
+            if (SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
+                             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) {
+                CLOCK_WINDOW_POS_X = newX;
+                CLOCK_WINDOW_POS_Y = newY;
+                ScheduleConfigSave(hwnd);
+            }
             return 0;
         }
     }

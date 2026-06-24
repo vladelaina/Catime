@@ -40,6 +40,9 @@ static DWORD g_lastScaleWheelTick = 0;
 static DWORD g_suppressDragUntilTick = 0;
 static BOOL g_dragBlockedUntilLeftUp = FALSE;
 static BOOL g_dragBlockNeedsReleaseCooldown = FALSE;
+static BOOL g_dragAnchorValid = FALSE;
+static POINT g_dragStartCursorPos = {0};
+static RECT g_dragStartWindowRect = {0};
 static BOOL g_pendingScaleResizeAnchorPostScale = FALSE;
 static DWORD g_pendingScaleResizeAnchorUntilTick = 0;
 
@@ -123,6 +126,26 @@ static void BlockDragUntilLeftUp(HWND hwnd) {
 
     g_dragBlockedUntilLeftUp = TRUE;
     g_dragBlockNeedsReleaseCooldown = TRUE;
+}
+
+static void ClearDragAnchor(void) {
+    g_dragAnchorValid = FALSE;
+    g_dragStartCursorPos.x = 0;
+    g_dragStartCursorPos.y = 0;
+    ZeroMemory(&g_dragStartWindowRect, sizeof(g_dragStartWindowRect));
+}
+
+static BOOL SetDragAnchorFromCurrentWindow(HWND hwnd, POINT cursorPos) {
+    RECT windowRect;
+    if (!GetWindowRect(hwnd, &windowRect)) {
+        ClearDragAnchor();
+        return FALSE;
+    }
+
+    g_dragStartCursorPos = cursorPos;
+    g_dragStartWindowRect = windowRect;
+    g_dragAnchorValid = TRUE;
+    return TRUE;
 }
 
 static BOOL IsValidDragScaleWindow(HWND hwnd) {
@@ -474,8 +497,16 @@ void StartDragWindow(HWND hwnd) {
         return;
     }
 
+    POINT cursorPos;
+    if (!GetCursorPos(&cursorPos) ||
+        !SetDragAnchorFromCurrentWindow(hwnd, cursorPos)) {
+        ReleaseCapture();
+        LOG_WARNING("Failed to initialize edit-mode drag anchor");
+        return;
+    }
+
     CLOCK_IS_DRAGGING = TRUE;
-    GetCursorPos(&CLOCK_LAST_MOUSE_POS);
+    CLOCK_LAST_MOUSE_POS = cursorPos;
 }
 
 BOOL TryStartDragWindowFromMouseMove(HWND hwnd) {
@@ -521,6 +552,7 @@ void EndEditMode(HWND hwnd) {
 
     if (CLOCK_IS_DRAGGING) {
         CLOCK_IS_DRAGGING = FALSE;
+        ClearDragAnchor();
         if (GetCapture() == hwnd) {
             ReleaseCapture();
         }
@@ -568,6 +600,7 @@ void EndDragWindow(HWND hwnd) {
     if (!CLOCK_IS_DRAGGING) return;
     
     CLOCK_IS_DRAGGING = FALSE;
+    ClearDragAnchor();
     if (GetCapture() == hwnd) {
         ReleaseCapture();
     }
@@ -583,17 +616,19 @@ static void CancelDragForScale(HWND hwnd) {
     if (!CLOCK_IS_DRAGGING) return;
 
     CLOCK_IS_DRAGGING = FALSE;
+    ClearDragAnchor();
     if (GetCapture() == hwnd) {
         ReleaseCapture();
     }
 }
 
-/* SWP_NOREDRAW + UpdateWindow maintains smooth dragging */
+/* Absolute cursor anchoring keeps movement aligned even when mouse messages coalesce. */
 BOOL HandleDragWindow(HWND hwnd) {
     if (!CLOCK_EDIT_MODE || !CLOCK_IS_DRAGGING) return FALSE;
 
     if (IsDragBlockedUntilLeftUp()) {
         CLOCK_IS_DRAGGING = FALSE;
+        ClearDragAnchor();
         if (GetCapture() == hwnd) {
             ReleaseCapture();
         }
@@ -602,6 +637,7 @@ BOOL HandleDragWindow(HWND hwnd) {
 
     if (IsScaleWindowGestureActive(hwnd) || IsDragSuppressedAfterScale()) {
         CLOCK_IS_DRAGGING = FALSE;
+        ClearDragAnchor();
         if (GetCapture() == hwnd) {
             ReleaseCapture();
         }
@@ -610,6 +646,7 @@ BOOL HandleDragWindow(HWND hwnd) {
 
     if (!IsLeftButtonPhysicallyDown()) {
         CLOCK_IS_DRAGGING = FALSE;
+        ClearDragAnchor();
         if (GetCapture() == hwnd) {
             ReleaseCapture();
         }
@@ -619,32 +656,38 @@ BOOL HandleDragWindow(HWND hwnd) {
 
     if (GetCapture() != hwnd) {
         CLOCK_IS_DRAGGING = FALSE;
+        ClearDragAnchor();
         ScheduleConfigSave(hwnd);
         return FALSE;
     }
     
     POINT currentPos;
-    GetCursorPos(&currentPos);
-    int deltaX = currentPos.x - CLOCK_LAST_MOUSE_POS.x;
-    int deltaY = currentPos.y - CLOCK_LAST_MOUSE_POS.y;
-    if (deltaX == 0 && deltaY == 0) {
+    if (!GetCursorPos(&currentPos)) {
         return TRUE;
     }
-    
-    RECT windowRect;
-    GetWindowRect(hwnd, &windowRect);
-    int width = windowRect.right - windowRect.left;
-    int height = windowRect.bottom - windowRect.top;
-    
-    int newX = windowRect.left + deltaX;
-    int newY = windowRect.top + deltaY;
-    
-    SetWindowPos(hwnd, NULL, newX, newY, width, height,
-                SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
-    
+
+    if (!g_dragAnchorValid &&
+        !SetDragAnchorFromCurrentWindow(hwnd, CLOCK_LAST_MOUSE_POS)) {
+        return TRUE;
+    }
+
+    int deltaFromLastX = currentPos.x - CLOCK_LAST_MOUSE_POS.x;
+    int deltaFromLastY = currentPos.y - CLOCK_LAST_MOUSE_POS.y;
+    if (deltaFromLastX == 0 && deltaFromLastY == 0) {
+        return TRUE;
+    }
+
+    int newX = g_dragStartWindowRect.left + (currentPos.x - g_dragStartCursorPos.x);
+    int newY = g_dragStartWindowRect.top + (currentPos.y - g_dragStartCursorPos.y);
+
+    BOOL moved = SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
+                              SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+
     CLOCK_LAST_MOUSE_POS = currentPos;
-    CLOCK_WINDOW_POS_X = newX;
-    CLOCK_WINDOW_POS_Y = newY;
+    if (moved) {
+        CLOCK_WINDOW_POS_X = newX;
+        CLOCK_WINDOW_POS_Y = newY;
+    }
 
     return TRUE;
 }

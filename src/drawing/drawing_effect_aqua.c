@@ -154,21 +154,18 @@ static inline int SampleAlphaBilinear(const unsigned char* alphaMap,
     int ty = yQ8 - (y << 8);
     const unsigned char* row0 = alphaMap + (size_t)y * (size_t)width;
     const unsigned char* row1 = row0 + width;
+    int a00 = row0[x];
+    int a10 = row0[x + 1];
+    int a01 = row1[x];
+    int a11 = row1[x + 1];
 
-    int top = LerpByte256(row0[x], row0[x + 1], tx);
-    int bottom = LerpByte256(row1[x], row1[x + 1], tx);
-    return LerpByte256(top, bottom, ty);
-}
-
-static inline int SampleAlphaNearest(const unsigned char* alphaMap,
-                                     int width, int height,
-                                     int xQ8, int yQ8) {
-    int x = (xQ8 + 128) >> 8;
-    int y = (yQ8 + 128) >> 8;
-    if (x < 0 || y < 0 || x >= width || y >= height) {
-        return 0;
+    if (a00 == a10 && a00 == a01 && a00 == a11) {
+        return a00;
     }
-    return alphaMap[(size_t)y * (size_t)width + (size_t)x];
+
+    int top = LerpByte256(a00, a10, tx);
+    int bottom = LerpByte256(a01, a11, tx);
+    return LerpByte256(top, bottom, ty);
 }
 
 static inline int AquaErodedAlpha(int alpha, int poreNoise, int displacementNoise) {
@@ -179,6 +176,9 @@ static inline int AquaErodedAlpha(int alpha, int poreNoise, int displacementNois
     int displacementAmount = ClampByteInt(displacementNoise - 104);
     int bite = (poreAmount * (18 + edgeFactor) +
                 displacementAmount * (edgeFactor >> 1)) >> 8;
+    if (alpha < 255) {
+        bite = (bite * alpha) >> 8;
+    }
 
     return ClampByteInt(alpha - bite);
 }
@@ -338,10 +338,9 @@ void RenderAquaEffect(DWORD* pixels, int destWidth, int destHeight,
                       int timeOffset) {
     if (!pixels || !bitmap || destWidth <= 0 || destHeight <= 0) return;
 
-    BOOL useLargeGlyphFastPath = (h >= 120);
     int displacementScale = ClampInt((h + 2) / 8, 5, (h >= 160) ? 14 : 22);
     int shadowOffset = ClampInt((h + 9) / 18, 3, 8);
-    int glowBlur = ClampInt((h + 5) / 14, useLargeGlyphFastPath ? 3 : 4, (h >= 160) ? 5 : 14);
+    int glowBlur = ClampInt((h + 5) / 14, (h >= 120) ? 3 : 4, (h >= 160) ? 5 : 14);
     int padding = displacementScale + shadowOffset + glowBlur + 4;
     int gw = 0;
     int gh = 0;
@@ -436,9 +435,7 @@ void RenderAquaEffect(DWORD* pixels, int destWidth, int destHeight,
 
             int srcXQ8 = (i << 8) + waveXQ8;
             int srcYQ8 = (j << 8) + waveYQ8;
-            int displaced = useLargeGlyphFastPath
-                ? SampleAlphaNearest(alphaMap, gw, gh, srcXQ8, srcYQ8)
-                : SampleAlphaBilinear(alphaMap, gw, gh, srcXQ8, srcYQ8);
+            int displaced = SampleAlphaBilinear(alphaMap, gw, gh, srcXQ8, srcYQ8);
             displacedRow[i] = (unsigned char)AquaErodedAlpha(displaced, poreNoise, displacementNoise);
         }
     }
