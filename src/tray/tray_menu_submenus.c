@@ -462,7 +462,11 @@ void BuildPluginsSubmenu(HMENU hMenu) {
     int pluginCount = PluginManager_GetPluginCount();
 
     int activePluginIndex = PluginManager_GetActivePluginIndex();
-    
+    if (activePluginIndex >= 0 &&
+        !PluginManager_IsPluginRunning(activePluginIndex)) {
+        activePluginIndex = -1;
+    }
+
     if (pluginCount == 0) {
         AppendMenuW(hPluginsMenu, MF_STRING | MF_GRAYED, 0, 
                     GetLocalizedString(NULL, L"No plugins found"));

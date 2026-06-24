@@ -1065,6 +1065,7 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
     int newPluginCount = 0;
     int removedPluginCount = 0;
     BOOL shouldClearDisplay = FALSE;
+    BOOL hasRunningPluginAfterScan = FALSE;
     BOOL scanCancelled = FALSE;
     int scanResult = PLUGIN_SCAN_FAILED;
 
@@ -1129,6 +1130,15 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
     for (int j = 0; j < newPluginCount; j++) {
         for (int i = 0; i < g_pluginCount; i++) {
             if (wcscmp(g_plugins[i].path, newPlugins[j].path) == 0) {
+                if (g_plugins[i].isRunning && !PluginProcess_IsAlive(&g_plugins[i])) {
+                    if (g_activePluginIndex == i) {
+                        g_activePluginIndex = -1;
+                        shouldClearDisplay = TRUE;
+                    }
+                    if (g_lastRunningPluginIndex == i) {
+                        g_lastRunningPluginIndex = -1;
+                    }
+                }
                 newPlugins[j].isRunning = g_plugins[i].isRunning;
                 newPlugins[j].pi = g_plugins[i].pi;
                 newPlugins[j].lastModTime = g_plugins[i].lastModTime;
@@ -1197,24 +1207,35 @@ static int PluginManager_ScanPluginsForGeneration(LONG generation) {
 
     // Re-map g_activePluginIndex to new list
     if (activePluginPath[0]) {
+        BOOL activePluginRemapped = FALSE;
         g_activePluginIndex = -1;  // Reset first
         for (int i = 0; i < g_pluginCount; i++) {
             if (wcscmp(g_plugins[i].path, activePluginPath) == 0) {
                 g_activePluginIndex = i;
+                activePluginRemapped = TRUE;
                 break;
             }
         }
+        if (!activePluginRemapped) {
+            shouldClearDisplay = TRUE;
+        }
     }
+
+    hasRunningPluginAfterScan = AnyPluginRunningLocked();
 
     LeaveCriticalSection(&g_pluginCS);
 
     for (int i = 0; i < removedPluginCount; i++) {
         PluginProcess_TerminateDetached(&removedPlugins[i]);
     }
+    if ((removedPluginCount > 0 || shouldClearDisplay) &&
+        !hasRunningPluginAfterScan) {
+        PluginProcess_TerminateAllOrphans();
+    }
     if (shouldClearDisplay) {
         PluginData_Clear();
     }
-    if (removedPluginCount > 0) {
+    if (removedPluginCount > 0 || shouldClearDisplay) {
         StopHotReloadIfIdle();
     }
     LeaveCriticalSection(&g_pluginLifecycleCS);
@@ -1944,17 +1965,40 @@ static BOOL StopPluginIfPathMatches(int index, const wchar_t* expectedPath, BOOL
 
     PluginInfo detachedPlugin;
     memset(&detachedPlugin, 0, sizeof(detachedPlugin));
+    BOOL wasActive = (g_activePluginIndex == index);
+    BOOL wasLastRunning = (g_lastRunningPluginIndex == index);
     if (!DetachPluginProcessLocked(index, &detachedPlugin)) {
+        if (!wasActive && !wasLastRunning) {
+            LeaveCriticalSection(&g_pluginCS);
+            LeaveCriticalSection(&g_pluginLifecycleCS);
+            return FALSE;
+        }
+        if (wasActive) {
+            g_activePluginIndex = -1;
+        }
+        if (wasLastRunning) {
+            g_lastRunningPluginIndex = -1;
+        }
+        BOOL hasRunningPlugin = AnyPluginRunningLocked();
         LeaveCriticalSection(&g_pluginCS);
+        if (!hasRunningPlugin) {
+            PluginProcess_TerminateAllOrphans();
+        }
+        PluginData_Clear();
+        StopHotReloadIfIdle();
         LeaveCriticalSection(&g_pluginLifecycleCS);
-        return FALSE;
+        return TRUE;
     }
 
     g_lastRunningPluginIndex = -1;
     g_activePluginIndex = -1;
+    BOOL hasRunningPlugin = AnyPluginRunningLocked();
 
     LeaveCriticalSection(&g_pluginCS);
     PluginProcess_TerminateDetached(&detachedPlugin);
+    if (!hasRunningPlugin) {
+        PluginProcess_TerminateAllOrphans();
+    }
     PluginData_Clear();
     StopHotReloadIfIdle();
     LeaveCriticalSection(&g_pluginLifecycleCS);
@@ -1978,19 +2022,42 @@ BOOL PluginManager_StopPlugin(int index) {
     wchar_t pluginDisplayName[64];
     wcsncpy(pluginDisplayName, g_plugins[index].displayName, 63);
     pluginDisplayName[63] = L'\0';
+    BOOL wasActive = (g_activePluginIndex == index);
+    BOOL wasLastRunning = (g_lastRunningPluginIndex == index);
 
     if (!DetachPluginProcessLocked(index, &detachedPlugin)) {
-        LOG_WARNING("Plugin %ls is not running", pluginDisplayName);
+        if (!wasActive && !wasLastRunning) {
+            LOG_WARNING("Plugin %ls is not running", pluginDisplayName);
+            LeaveCriticalSection(&g_pluginCS);
+            LeaveCriticalSection(&g_pluginLifecycleCS);
+            return FALSE;
+        }
+        if (wasActive) {
+            g_activePluginIndex = -1;
+        }
+        if (wasLastRunning) {
+            g_lastRunningPluginIndex = -1;
+        }
+        BOOL hasRunningPlugin = AnyPluginRunningLocked();
         LeaveCriticalSection(&g_pluginCS);
+        if (!hasRunningPlugin) {
+            PluginProcess_TerminateAllOrphans();
+        }
+        PluginData_Clear();
+        StopHotReloadIfIdle();
         LeaveCriticalSection(&g_pluginLifecycleCS);
-        return FALSE;
+        return TRUE;
     }
 
     g_lastRunningPluginIndex = -1;
     g_activePluginIndex = -1;
+    BOOL hasRunningPlugin = AnyPluginRunningLocked();
 
     LeaveCriticalSection(&g_pluginCS);
     PluginProcess_TerminateDetached(&detachedPlugin);
+    if (!hasRunningPlugin) {
+        PluginProcess_TerminateAllOrphans();
+    }
     PluginData_Clear();
     StopHotReloadIfIdle();
     LeaveCriticalSection(&g_pluginLifecycleCS);
@@ -2008,12 +2075,13 @@ BOOL PluginManager_TogglePlugin(int index) {
     }
 
     BOOL isRunning = g_plugins[index].isRunning;
+    BOOL isActive = (g_activePluginIndex == index);
     wchar_t pluginPath[MAX_PATH];
     wcsncpy(pluginPath, g_plugins[index].path, MAX_PATH - 1);
     pluginPath[MAX_PATH - 1] = L'\0';
     LeaveCriticalSection(&g_pluginCS);
 
-    if (isRunning) {
+    if (isRunning || isActive) {
         BOOL pathMatched = FALSE;
         return StopPluginIfPathMatches(index, pluginPath, &pathMatched);
     } else {
@@ -2030,6 +2098,7 @@ BOOL PluginManager_IsPluginRunning(int index) {
 
     BOOL isRunning;
     BOOL shouldClearDisplay = FALSE;
+    BOOL hasRunningPlugin = FALSE;
     EnterCriticalSection(&g_pluginCS);
 
     if (index < 0 || index >= g_pluginCount) {
@@ -2048,13 +2117,27 @@ BOOL PluginManager_IsPluginRunning(int index) {
         if (g_lastRunningPluginIndex == index) {
             g_lastRunningPluginIndex = -1;
         }
+    } else if (!plugin->isRunning && g_activePluginIndex == index) {
+        g_activePluginIndex = -1;
+        shouldClearDisplay = TRUE;
+        if (g_lastRunningPluginIndex == index) {
+            g_lastRunningPluginIndex = -1;
+        }
     }
 
     isRunning = plugin->isRunning;
+    hasRunningPlugin = AnyPluginRunningLocked();
     LeaveCriticalSection(&g_pluginCS);
 
     if (shouldClearDisplay) {
+        if (!hasRunningPlugin) {
+            PluginProcess_TerminateAllOrphans();
+        }
         PluginData_Clear();
+        HWND hwnd = PluginProcess_GetNotifyWindow();
+        if (hwnd) {
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
         StopHotReloadIfIdle();
     }
 
@@ -2108,10 +2191,12 @@ void PluginManager_StopAllPlugins(void) {
         for (int i = 0; i < detachedCount; i++) {
             PluginProcess_TerminateDetached(&detachedPlugins[i]);
         }
+        PluginProcess_TerminateAllOrphans();
         free(detachedPlugins);
     } else {
         LOG_WARNING("Plugin stop-all using one-by-one cleanup after snapshot allocation failed");
         DetachAndTerminateRunningPluginsIndividually(-1);
+        PluginProcess_TerminateAllOrphans();
 
         EnterCriticalSection(&g_pluginCS);
         g_activePluginIndex = -1;
@@ -2191,6 +2276,7 @@ void PluginManager_HandleProcessExit(DWORD processId) {
     if (!g_pluginManagerInitialized || processId == 0) return;
 
     BOOL shouldClearDisplay = FALSE;
+    BOOL hasRunningPlugin = FALSE;
     HANDLE hProcessToClose = NULL;
     HANDLE hThreadToClose = NULL;
 
@@ -2218,6 +2304,7 @@ void PluginManager_HandleProcessExit(DWORD processId) {
         break;
     }
 
+    hasRunningPlugin = AnyPluginRunningLocked();
     LeaveCriticalSection(&g_pluginCS);
 
     if (hProcessToClose) {
@@ -2228,6 +2315,9 @@ void PluginManager_HandleProcessExit(DWORD processId) {
     }
 
     if (shouldClearDisplay) {
+        if (!hasRunningPlugin) {
+            PluginProcess_TerminateAllOrphans();
+        }
         PluginData_Clear();
         HWND hwnd = PluginProcess_GetNotifyWindow();
         if (hwnd) {

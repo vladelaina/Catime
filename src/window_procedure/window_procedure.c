@@ -424,7 +424,6 @@ void CleanupBeforeTimerAction(void) {
     if (!PluginData_HasCatimeTag()) {
         // No <catime> tag, stop all plugins and disable plugin data mode
         PluginManager_StopAllPlugins();
-        PluginData_SetActive(FALSE);
     }
     // If <catime> tag is present, keep plugin running and data active
 }

@@ -38,9 +38,11 @@ extern void GetActiveColor(char* outColor, size_t bufferSize);
  */
 static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     /* Check if this plugin is already running - toggle off */
-    if (PluginManager_IsPluginRunning(pluginIndex)) {
-        PluginManager_StopPlugin(pluginIndex);
-        PluginData_Clear();
+    if (PluginManager_GetActivePluginIndex() == pluginIndex ||
+        PluginManager_IsPluginRunning(pluginIndex)) {
+        if (!PluginManager_StopPlugin(pluginIndex)) {
+            PluginData_Clear();
+        }
 
         /* Prevent countdown completion notification from triggering */
         countdown_message_shown = true;
@@ -210,9 +212,6 @@ void HandlePluginExit(HWND hwnd) {
 
     /* Stop all plugins */
     PluginManager_StopAllPlugins();
-
-    /* Clear plugin data */
-    PluginData_Clear();
 
     /* Prevent countdown completion notification from triggering */
     countdown_message_shown = true;
