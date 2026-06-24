@@ -228,6 +228,12 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
                 break;
             }
 
+            if (!FindNextChangeNotification(changeEvent)) {
+                LOG_WARNING("ConfigWatcher: failed to re-arm directory watch (error=%lu)",
+                            GetLastError());
+                break;
+            }
+
             ConfigFileSnapshot currentSnapshot = {0};
             if (!ConfigWatcher_ShouldProcessChange(stopEvent)) {
                 break;
@@ -244,12 +250,6 @@ static DWORD WINAPI WatcherThreadProc(LPVOID lpParam) {
                     InvalidateIniCache();
                     NotifyConfigChanges(targetHwnd);
                 }
-            }
-
-            if (!FindNextChangeNotification(changeEvent)) {
-                LOG_WARNING("ConfigWatcher: failed to re-arm directory watch (error=%lu)",
-                            GetLastError());
-                break;
             }
         }
     }

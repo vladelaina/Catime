@@ -805,16 +805,16 @@ static PluginParseResult ParseContent(const char* content, size_t contentLen,
 #define PLUGIN_OUTPUT_FILENAME_W L"output.txt"
 
 static BOOL GetDefaultPluginOutputDirectoryW(wchar_t* buffer, size_t bufferSize) {
-    if (!buffer || bufferSize == 0 || bufferSize > (size_t)MAXDWORD) {
+    if (!buffer || bufferSize == 0 || bufferSize > (size_t)INT_MAX) {
         return FALSE;
     }
     buffer[0] = L'\0';
 
-    DWORD result = ExpandEnvironmentStringsW(
-        L"%LOCALAPPDATA%\\Catime\\resources\\plugins",
-        buffer,
-        (DWORD)bufferSize);
-    if (result == 0 || result >= bufferSize) {
+    char pluginDirUtf8[MAX_PATH] = {0};
+    GetPluginsFolderPath(pluginDirUtf8, MAX_PATH);
+    if (pluginDirUtf8[0] == '\0' ||
+        MultiByteToWideChar(CP_UTF8, 0, pluginDirUtf8, -1,
+                            buffer, (int)bufferSize) <= 0) {
         buffer[0] = L'\0';
         return FALSE;
     }

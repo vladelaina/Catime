@@ -302,9 +302,9 @@ BOOL WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric);
  * @return Speed scale (50.0=half, 100.0=normal, 200.0=double)
  * 
  * @details
- * Uses range mappings from [Animation] section.
- * Example: ANIMATION_SPEED_MAP_0-20 = 50 (0-20% usage → 50% speed)
- * Returns 100.0 if no mapping matches.
+ * Uses linear breakpoints from [Animation] section.
+ * Example: ANIMATION_SPEED_MAP_20 = 180 (20% usage -> 180% speed)
+ * Returns ANIMATION_SPEED_DEFAULT if no mapping exists.
  */
 double GetAnimationSpeedScaleForPercent(double percent);
 

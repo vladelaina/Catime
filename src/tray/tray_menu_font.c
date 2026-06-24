@@ -17,6 +17,7 @@
 #include "utils/string_convert.h"
 #include "utils/natural_sort.h"
 #include "utils/string_format.h"
+#include "utils/directory_watcher.h"
 #include "font/font_path_manager.h"
 
 /* ============================================================================
@@ -89,6 +90,7 @@ static SRWLOCK g_fontMenuCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_fontScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hFontScanThread = NULL;
 static HANDLE g_hRetiredFontScanThread = NULL;
+static DirectoryWatcher g_fontFolderWatcher = {0};
 static volatile LONG g_fontScanShuttingDown = 0;
 static volatile LONG g_fontScanGeneration = 0;
 static volatile LONG g_fontMenuLastScanTick = 0;
@@ -501,6 +503,37 @@ void FontMenu_RequestScanAsync(void) {
     ReleaseSRWLockExclusive(&g_fontScanThreadLock);
 }
 
+static void InvalidateFontMenuScanCooldown(void) {
+    InterlockedExchange(&g_fontMenuLastScanTick, 0);
+}
+
+static void OnFontFolderChanged(void* context) {
+    (void)context;
+    InvalidateFontMenuScanCooldown();
+    FontMenu_RequestScanAsync();
+}
+
+static void StartFontFolderWatcher(void) {
+    wchar_t fontsPath[MAX_PATH];
+    if (!GetFontsFolderW(fontsPath, MAX_PATH, TRUE)) {
+        LOG_WARNING("Font folder watcher could not resolve fonts path");
+        return;
+    }
+
+    DirectoryWatcher_Start(&g_fontFolderWatcher,
+                           fontsPath,
+                           TRUE,
+                           DIRECTORY_WATCHER_DEFAULT_FILTER,
+                           DIRECTORY_WATCHER_DEFAULT_DEBOUNCE_MS,
+                           OnFontFolderChanged,
+                           NULL,
+                           "FontFolderWatcher");
+}
+
+static void StopFontFolderWatcher(void) {
+    DirectoryWatcher_Stop(&g_fontFolderWatcher, ASYNC_FONT_SCAN_STOP_TIMEOUT_MS);
+}
+
 void FontMenu_Initialize(void) {
     AcquireSRWLockExclusive(&g_fontScanThreadLock);
     if (!CleanupRetiredFontScanThreadLocked(ASYNC_FONT_SCAN_STOP_TIMEOUT_MS)) {
@@ -519,10 +552,13 @@ void FontMenu_Initialize(void) {
 
     InterlockedIncrement(&g_fontScanGeneration);
     InterlockedExchange(&g_fontScanShuttingDown, 0);
+    StartFontFolderWatcher();
 }
 
 void FontMenu_Shutdown(void) {
     HANDLE hThread = NULL;
+
+    StopFontFolderWatcher();
 
     AcquireSRWLockExclusive(&g_fontScanThreadLock);
     InterlockedIncrement(&g_fontScanGeneration);

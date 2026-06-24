@@ -9,6 +9,7 @@
 #include "config.h"
 #include "log.h"
 #include "language.h"
+#include "utils/directory_watcher.h"
 #include <shlobj.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,6 +75,7 @@ static SRWLOCK g_animMenuCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_animScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hAnimScanThread = NULL;
 static HANDLE g_hRetiredAnimScanThread = NULL;
+static DirectoryWatcher g_animFolderWatcher = {0};
 static volatile LONG g_animScanShuttingDown = 0;
 static volatile LONG g_animScanGeneration = 0;
 static volatile LONG g_animMenuLastScanTick = 0;
@@ -495,6 +497,37 @@ void AnimationMenu_RequestScanAsync(void) {
     ReleaseSRWLockExclusive(&g_animScanThreadLock);
 }
 
+static void InvalidateAnimationMenuScanCooldown(void) {
+    InterlockedExchange(&g_animMenuLastScanTick, 0);
+}
+
+static void OnAnimationFolderChanged(void* context) {
+    (void)context;
+    InvalidateAnimationMenuScanCooldown();
+    AnimationMenu_RequestScanAsync();
+}
+
+static void StartAnimationFolderWatcher(void) {
+    wchar_t animPath[MAX_PATH];
+    if (!GetAnimationsFolderPathW(animPath, MAX_PATH)) {
+        LOG_WARNING("Animation folder watcher could not resolve animations path");
+        return;
+    }
+
+    DirectoryWatcher_Start(&g_animFolderWatcher,
+                           animPath,
+                           TRUE,
+                           DIRECTORY_WATCHER_DEFAULT_FILTER,
+                           DIRECTORY_WATCHER_DEFAULT_DEBOUNCE_MS,
+                           OnAnimationFolderChanged,
+                           NULL,
+                           "AnimationFolderWatcher");
+}
+
+static void StopAnimationFolderWatcher(void) {
+    DirectoryWatcher_Stop(&g_animFolderWatcher, ASYNC_ANIM_SCAN_STOP_TIMEOUT_MS);
+}
+
 void AnimationMenu_Initialize(void) {
     AcquireSRWLockExclusive(&g_animScanThreadLock);
     if (!CleanupRetiredAnimScanThreadLocked(ASYNC_ANIM_SCAN_STOP_TIMEOUT_MS)) {
@@ -513,10 +546,13 @@ void AnimationMenu_Initialize(void) {
 
     InterlockedIncrement(&g_animScanGeneration);
     InterlockedExchange(&g_animScanShuttingDown, 0);
+    StartAnimationFolderWatcher();
 }
 
 void AnimationMenu_Shutdown(void) {
     HANDLE hThread = NULL;
+
+    StopAnimationFolderWatcher();
 
     AcquireSRWLockExclusive(&g_animScanThreadLock);
     InterlockedIncrement(&g_animScanGeneration);
@@ -687,8 +723,8 @@ static void BuildAnimationMenuFromEntries(HMENU hRootMenu, const AnimEntry* entr
 /**
  * @brief Build animation menu with cached folder scan
  */
-void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
-    if (!hMenu) return;
+BOOL BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
+    if (!hMenu) return FALSE;
     ResetAnimationMenuIdMap();
     AnimationMenu_RequestScanAsync();
 
@@ -739,7 +775,12 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
 
     if (animCount <= 0 && !cacheReady) {
         AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(NULL, L"Loading..."));
+    } else if (animCount <= 0) {
+        AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0,
+                    GetLocalizedString(NULL, L"(Supports GIF, WebP, ANI, PNG, etc.)"));
     }
+
+    return animCount > 0;
 }
 
 /**
@@ -748,7 +789,10 @@ void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName) {
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     (void)hwnd;
 
-    if (id == CLOCK_IDM_ANIM_SPEED_MEMORY || id == CLOCK_IDM_ANIM_SPEED_CPU || id == CLOCK_IDM_ANIM_SPEED_TIMER) {
+    if (id == CLOCK_IDM_ANIM_SPEED_ORIGINAL ||
+        id == CLOCK_IDM_ANIM_SPEED_MEMORY ||
+        id == CLOCK_IDM_ANIM_SPEED_CPU ||
+        id == CLOCK_IDM_ANIM_SPEED_TIMER) {
         return FALSE;
     }
 

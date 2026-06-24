@@ -8,9 +8,11 @@
 #include "language.h"
 #include "audio_player.h"
 #include "utils/natural_sort.h"
+#include "utils/directory_watcher.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #define NOTIFICATION_SOUND_ENTRY_LIMIT 256
 #define NOTIFICATION_SOUND_SCAN_ENTRY_LIMIT 4096
@@ -27,11 +29,13 @@ static SRWLOCK g_soundFileCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_soundScanThreadLock = SRWLOCK_INIT;
 static HANDLE g_hSoundScanThread = NULL;
 static HANDLE g_hRetiredSoundScanThread = NULL;
+static DirectoryWatcher g_soundFolderWatcher = {0};
 static volatile LONG g_soundScanShuttingDown = 0;
 static volatile LONG g_soundScanGeneration = 0;
 static volatile LONG g_soundFileLastScanTick = 0;
 
 static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam);
+static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh);
 
 /* ============================================================================
  * Static Helper Functions
@@ -302,6 +306,53 @@ static void WaitForNotificationSoundCacheForegroundRefresh(void) {
     ReleaseSRWLockExclusive(&g_soundScanThreadLock);
 }
 
+static void InvalidateNotificationSoundScanCooldown(void) {
+    InterlockedExchange(&g_soundFileLastScanTick, 0);
+}
+
+static void OnNotificationSoundFolderChanged(void* context) {
+    (void)context;
+    InvalidateNotificationSoundScanCooldown();
+    RequestNotificationSoundCacheScanAsync(FALSE);
+}
+
+static BOOL GetAudioFolderPathW(wchar_t* outPath, size_t outSize) {
+    if (!outPath || outSize == 0 || outSize > INT_MAX) {
+        return FALSE;
+    }
+    outPath[0] = L'\0';
+
+    char audioPath[MAX_PATH] = {0};
+    GetAudioFolderPath(audioPath, MAX_PATH);
+    if (audioPath[0] == '\0') {
+        return FALSE;
+    }
+
+    return MultiByteToWideChar(CP_UTF8, 0, audioPath, -1,
+                               outPath, (int)outSize) > 0;
+}
+
+static void StartNotificationSoundFolderWatcher(void) {
+    wchar_t audioPath[MAX_PATH];
+    if (!GetAudioFolderPathW(audioPath, MAX_PATH)) {
+        OutputDebugStringW(L"NotificationSoundCache: failed to resolve audio folder watcher path\n");
+        return;
+    }
+
+    DirectoryWatcher_Start(&g_soundFolderWatcher,
+                           audioPath,
+                           FALSE,
+                           DIRECTORY_WATCHER_DEFAULT_FILTER,
+                           DIRECTORY_WATCHER_DEFAULT_DEBOUNCE_MS,
+                           OnNotificationSoundFolderChanged,
+                           NULL,
+                           "NotificationSoundFolderWatcher");
+}
+
+static void StopNotificationSoundFolderWatcher(void) {
+    DirectoryWatcher_Stop(&g_soundFolderWatcher, NOTIFICATION_SOUND_SCAN_STOP_TIMEOUT_MS);
+}
+
 static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam) {
     LONG generation = (LONG)(INT_PTR)lpParam;
 
@@ -361,6 +412,7 @@ void NotificationSoundCache_Initialize(void) {
 
     InterlockedIncrement(&g_soundScanGeneration);
     InterlockedExchange(&g_soundScanShuttingDown, 0);
+    StartNotificationSoundFolderWatcher();
 }
 
 void NotificationSoundCache_RequestScanAsync(void) {
@@ -369,6 +421,8 @@ void NotificationSoundCache_RequestScanAsync(void) {
 
 void NotificationSoundCache_Shutdown(void) {
     HANDLE hThread = NULL;
+
+    StopNotificationSoundFolderWatcher();
 
     InterlockedExchange(&g_soundScanShuttingDown, 1);
     InterlockedIncrement(&g_soundScanGeneration);

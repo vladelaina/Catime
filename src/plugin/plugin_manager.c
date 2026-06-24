@@ -7,9 +7,11 @@
 #include "plugin/plugin_process.h"
 #include "plugin/plugin_extensions.h"
 #include "plugin/plugin_data.h"
+#include "config.h"
 #include "config/config_plugin_security.h"
 #include "dialog/dialog_plugin_security.h"
 #include "utils/natural_sort.h"
+#include "utils/directory_watcher.h"
 #include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
@@ -31,7 +33,9 @@ typedef struct {
     BOOL exists;
     FILETIME lastWriteTime;
     DWORD entryCount;
+    DWORD scannedEntries;
     BOOL truncated;
+    ULONGLONG contentHash;
 } PluginDirSnapshot;
 
 typedef struct {
@@ -76,6 +80,7 @@ static DWORD g_hotReloadStartFailureCooldownUntil = 0;
 /* Async plugin scan state */
 static HANDLE g_hAsyncScanThread = NULL;
 static HANDLE g_hRetiredAsyncScanThread = NULL;
+static DirectoryWatcher g_pluginFolderWatcher = {0};
 static volatile LONG g_asyncScanPending = 0;
 static volatile LONG g_asyncScanShuttingDown = 0;
 static volatile LONG g_asyncScanGeneration = 0;
@@ -205,22 +210,47 @@ static BOOL WideToUtf8Fixed(const wchar_t* src, char* dest, int destCount) {
 }
 
 static BOOL PluginManager_GetPluginDirW(wchar_t* buffer, size_t bufferSize) {
-    if (!buffer || bufferSize == 0 || bufferSize > (size_t)MAXDWORD) {
+    if (!buffer || bufferSize == 0 || bufferSize > (size_t)INT_MAX) {
         return FALSE;
     }
     buffer[0] = L'\0';
 
-    DWORD result = ExpandEnvironmentStringsW(
-        L"%LOCALAPPDATA%\\Catime\\resources\\plugins",
-        buffer,
-        (DWORD)bufferSize);
-    if (result == 0 || result >= bufferSize) {
-        LOG_ERROR("Failed to expand plugin directory path");
-        buffer[0] = L'\0';
+    char pluginDirUtf8[MAX_PATH] = {0};
+    GetPluginsFolderPath(pluginDirUtf8, MAX_PATH);
+    if (pluginDirUtf8[0] == '\0' ||
+        MultiByteToWideChar(CP_UTF8, 0, pluginDirUtf8, -1,
+                            buffer, (int)bufferSize) <= 0) {
+        LOG_ERROR("Failed to resolve plugin directory path");
         return FALSE;
     }
 
     return TRUE;
+}
+
+static void OnPluginFolderChanged(void* context) {
+    (void)context;
+    PluginManager_RequestScanAsync();
+}
+
+static void StartPluginFolderWatcher(void) {
+    wchar_t pluginDir[MAX_PATH];
+    if (!PluginManager_GetPluginDirW(pluginDir, MAX_PATH)) {
+        LOG_WARNING("Plugin folder watcher could not resolve plugins path");
+        return;
+    }
+
+    DirectoryWatcher_Start(&g_pluginFolderWatcher,
+                           pluginDir,
+                           TRUE,
+                           FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME,
+                           DIRECTORY_WATCHER_DEFAULT_DEBOUNCE_MS,
+                           OnPluginFolderChanged,
+                           NULL,
+                           "PluginFolderWatcher");
+}
+
+static void StopPluginFolderWatcher(void) {
+    DirectoryWatcher_Stop(&g_pluginFolderWatcher, ASYNC_PLUGIN_SCAN_STOP_TIMEOUT_MS);
 }
 
 static wchar_t ToLowerAsciiW(wchar_t ch) {
@@ -269,6 +299,22 @@ static void UpdateLatestWriteTime(FILETIME* target, const FILETIME* candidate) {
     if (CompareFileTime(candidate, target) > 0) {
         *target = *candidate;
     }
+}
+
+static void MixPluginSnapshotHash(PluginDirSnapshot* snapshot, ULONGLONG value) {
+    if (!snapshot) return;
+    snapshot->contentHash ^= value;
+    snapshot->contentHash *= 1099511628211ull;
+}
+
+static void MixPluginSnapshotPath(PluginDirSnapshot* snapshot, const wchar_t* path) {
+    if (!snapshot || !path) return;
+
+    while (*path) {
+        MixPluginSnapshotHash(snapshot, (ULONGLONG)ToLowerAsciiW(*path));
+        path++;
+    }
+    MixPluginSnapshotHash(snapshot, 0xffull);
 }
 
 static BOOL BuildRelativePathW(wchar_t* outPath, size_t outSize,
@@ -721,11 +767,15 @@ void PluginManager_Init(void) {
         g_pluginProcessInitialized = PluginProcess_Init();
     }
 
+    StartPluginFolderWatcher();
+
     LOG_INFO("Plugin manager initialized");
 }
 
 void PluginManager_Shutdown(void) {
     if (!g_pluginManagerInitialized && !g_pluginLocksInitialized) return;
+
+    StopPluginFolderWatcher();
 
     InterlockedIncrement(&g_asyncScanGeneration);
     BOOL asyncScanStopped = StopAsyncScanThread() &&
@@ -821,6 +871,7 @@ BOOL PluginManager_GetPluginDir(char* buffer, size_t bufferSize) {
 }
 
 static BOOL ScanPluginDirSnapshotRecursive(const wchar_t* folderPath,
+                                           const wchar_t* relativePath,
                                            PluginDirSnapshot* snapshot,
                                            int depth) {
     if (!folderPath || !snapshot) return FALSE;
@@ -859,12 +910,17 @@ static BOOL ScanPluginDirSnapshotRecursive(const wchar_t* folderPath,
             continue;
         }
 
-        if (++snapshot->entryCount > MAX_PLUGIN_SCAN_ENTRIES) {
+        if (++snapshot->scannedEntries > MAX_PLUGIN_SCAN_ENTRIES) {
             snapshot->truncated = TRUE;
             break;
         }
 
-        UpdateLatestWriteTime(&snapshot->lastWriteTime, &findData.ftLastWriteTime);
+        wchar_t childRelativePath[MAX_PATH];
+        if (!BuildRelativePathW(childRelativePath, MAX_PATH,
+                                relativePath, findData.cFileName)) {
+            snapshot->truncated = TRUE;
+            continue;
+        }
 
         BOOL isDirectory =
             (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -877,13 +933,24 @@ static BOOL ScanPluginDirSnapshotRecursive(const wchar_t* folderPath,
                 snapshot->truncated = TRUE;
                 continue;
             }
-            if (!ScanPluginDirSnapshotRecursive(childPath, snapshot, depth + 1)) {
+            if (!ScanPluginDirSnapshotRecursive(childPath, childRelativePath,
+                                                snapshot, depth + 1)) {
                 ok = FALSE;
                 break;
             }
             if (snapshot->truncated) {
                 break;
             }
+        } else if (!isDirectory && IsSupportedPluginFileW(findData.cFileName)) {
+            snapshot->entryCount++;
+            UpdateLatestWriteTime(&snapshot->lastWriteTime, &findData.ftLastWriteTime);
+            MixPluginSnapshotPath(snapshot, childRelativePath);
+            MixPluginSnapshotHash(snapshot,
+                                  ((ULONGLONG)findData.ftLastWriteTime.dwHighDateTime << 32) |
+                                  findData.ftLastWriteTime.dwLowDateTime);
+            MixPluginSnapshotHash(snapshot,
+                                  ((ULONGLONG)findData.nFileSizeHigh << 32) |
+                                  findData.nFileSizeLow);
         }
     } while (FindNextFileW(hFind, &findData));
 
@@ -923,8 +990,8 @@ static BOOL GetPluginDirSnapshot(PluginDirSnapshot* snapshot) {
     }
 
     snapshot->exists = TRUE;
-    snapshot->lastWriteTime = attrs.ftLastWriteTime;
-    return ScanPluginDirSnapshotRecursive(pluginDir, snapshot, 0);
+    snapshot->contentHash = 1469598103934665603ull;
+    return ScanPluginDirSnapshotRecursive(pluginDir, L"", snapshot, 0);
 }
 
 static BOOL PluginDirSnapshotsEqual(const PluginDirSnapshot* a,
@@ -933,6 +1000,7 @@ static BOOL PluginDirSnapshotsEqual(const PluginDirSnapshot* a,
     if (a->exists != b->exists) return FALSE;
     if (!a->exists) return TRUE;
     if (a->entryCount != b->entryCount) return FALSE;
+    if (a->contentHash != b->contentHash) return FALSE;
     if (a->truncated != b->truncated) return FALSE;
 
     return CompareFileTime(&a->lastWriteTime, &b->lastWriteTime) == 0;

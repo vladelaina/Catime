@@ -6,13 +6,13 @@
 #include "drawing/drawing_text_stb.h"
 #include "drawing/drawing_effect.h"
 #include "menu_preview.h"
+#include "config.h"
 #include "log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <windows.h>
-#include <shlobj.h>  /* For SHGetFolderPathW */
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "../../libs/stb/stb_truetype.h"
@@ -1844,15 +1844,11 @@ static BOOL ResolveFontTagPath(const wchar_t* fontPath, wchar_t* outPath, size_t
     } else {
         /* Step 3: Resolve relative path against plugins directory */
         wchar_t pluginsDir[MAX_PATH];
-        if (SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, pluginsDir))) {
-            int written = _snwprintf_s(resolvedPath, MAX_PATH, _TRUNCATE,
-                                       L"%ls\\Catime\\resources\\plugins\\%ls",
-                                       pluginsDir, expandedPath);
-            if (written < 0) {
-                LOG_WARNING("Resolved font path is too long: %ls", expandedPath);
-                return FALSE;
-            }
-        } else {
+        char pluginsDirUtf8[MAX_PATH] = {0};
+        GetPluginsFolderPath(pluginsDirUtf8, MAX_PATH);
+        if (pluginsDirUtf8[0] == '\0' ||
+            MultiByteToWideChar(CP_UTF8, 0, pluginsDirUtf8, -1,
+                                pluginsDir, MAX_PATH) <= 0) {
             /* Fallback: try current directory */
             if (wcslen(expandedPath) >= MAX_PATH) {
                 LOG_WARNING("Font path is too long: %ls", expandedPath);
@@ -1860,6 +1856,14 @@ static BOOL ResolveFontTagPath(const wchar_t* fontPath, wchar_t* outPath, size_t
             }
             wcsncpy(resolvedPath, expandedPath, MAX_PATH - 1);
             resolvedPath[MAX_PATH - 1] = L'\0';
+        } else {
+            int written = _snwprintf_s(resolvedPath, MAX_PATH, _TRUNCATE,
+                                       L"%ls\\%ls",
+                                       pluginsDir, expandedPath);
+            if (written < 0) {
+                LOG_WARNING("Resolved font path is too long: %ls", expandedPath);
+                return FALSE;
+            }
         }
     }
     

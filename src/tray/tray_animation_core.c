@@ -925,7 +925,8 @@ static UINT ComputeScaledDelay(UINT baseDelay) {
     double scale = g_speedScaleCache.scalePercent / 100.0;
     if (scale < 0.1) scale = 0.1;
     
-    UINT scaledDelay = (UINT)(baseDelay / scale);
+    double scaledDelayValue = (double)baseDelay / scale;
+    UINT scaledDelay = (scaledDelayValue < 1.0) ? 1u : (UINT)scaledDelayValue;
     UINT minIntervalMs = g_speedScaleCache.minIntervalMs;
     if (minIntervalMs > 0 && scaledDelay < minIntervalMs) {
         scaledDelay = minIntervalMs;
@@ -1932,6 +1933,7 @@ HICON GetInitialAnimationHicon(void) {
 void ApplyAnimationPathValueNoPersist(const char* value) {
     if (!value || !*value) return;
     if (!BeginTrayAnimationRuntimeUse()) return;
+    BOOL applied = FALSE;
     
     const char* prefix = "%LOCALAPPDATA%\\Catime\\resources\\animations\\";
     char name[MAX_PATH] = {0};
@@ -2017,9 +2019,13 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
     if (g_mainAnimation.count > 0) {
         UpdateTrayIconToCurrentFrame();
     }
+    applied = TRUE;
 
 done:
     EndTrayAnimationRuntimeUse();
+    if (applied) {
+        RefreshTrayBackgroundWorkState();
+    }
 }
 
 /**

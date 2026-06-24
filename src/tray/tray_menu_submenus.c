@@ -419,28 +419,26 @@ void BuildAnimationSubmenu(HMENU hMenu) {
     if (!hAnimMenu) return;
     {
         const char* currentAnim = GetCurrentAnimationName();
-        BuildAnimationMenu(hAnimMenu, currentAnim);
-        
-        if (GetMenuItemCount(hAnimMenu) <= 4) {
-            AppendMenuW(hAnimMenu, MF_STRING | MF_GRAYED, 0, GetLocalizedString(NULL, L"(Supports GIF, WebP, ANI, PNG, etc.)"));
-        }
+        BOOL hasCustomAnimations = BuildAnimationMenu(hAnimMenu, currentAnim);
 
-        AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
+        if (hasCustomAnimations) {
+            AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
 
-        HMENU hAnimSpeedMenu = CreatePopupMenu();
-        if (hAnimSpeedMenu) {
-            AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
-            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_ORIGINAL ? MF_CHECKED : MF_UNCHECKED),
-                        CLOCK_IDM_ANIM_SPEED_ORIGINAL, GetLocalizedString(NULL, L"Original Speed"));
-            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
-                        CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(NULL, L"By Memory Usage"));
-            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),
-                        CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(NULL, L"By CPU Usage"));
-            AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_TIMER ? MF_CHECKED : MF_UNCHECKED),
-                        CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(NULL, L"By Countdown Progress"));
-            if (!AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
-                             GetLocalizedString(NULL, L"Animation Speed Metric"))) {
-                DestroyMenu(hAnimSpeedMenu);
+            HMENU hAnimSpeedMenu = CreatePopupMenu();
+            if (hAnimSpeedMenu) {
+                AnimationSpeedMetric currentMetric = GetAnimationSpeedMetric();
+                AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_ORIGINAL ? MF_CHECKED : MF_UNCHECKED),
+                            CLOCK_IDM_ANIM_SPEED_ORIGINAL, GetLocalizedString(NULL, L"Original Speed"));
+                AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_MEMORY ? MF_CHECKED : MF_UNCHECKED),
+                            CLOCK_IDM_ANIM_SPEED_MEMORY, GetLocalizedString(NULL, L"By Memory Usage"));
+                AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_CPU ? MF_CHECKED : MF_UNCHECKED),
+                            CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(NULL, L"By CPU Usage"));
+                AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_TIMER ? MF_CHECKED : MF_UNCHECKED),
+                            CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(NULL, L"By Countdown Progress"));
+                if (!AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
+                                 GetLocalizedString(NULL, L"Animation Speed Metric"))) {
+                    DestroyMenu(hAnimSpeedMenu);
+                }
             }
         }
 

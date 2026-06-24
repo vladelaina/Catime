@@ -36,6 +36,7 @@ static AnimSpeedPoint g_animSpeedPoints[ANIM_SPEED_POINT_CAPACITY];
 static int g_animSpeedPointCount = 0;
 static double g_animSpeedDefaultScalePercent = 100.0;
 static AnimationSpeedMetric g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
+static int g_animFolderIntervalMs = TRAY_ANIMATION_DEFAULT_INTERVAL_MS;
 static int g_animMinIntervalMs = 0;
 static SRWLOCK g_animSpeedLock = SRWLOCK_INIT;
 
@@ -395,6 +396,7 @@ void ReloadAnimationSpeedFromConfig(void) {
         g_animSpeedMetric != newMetric ||
         g_animSpeedPointCount != newPointCount ||
         fabs(g_animSpeedDefaultScalePercent - newDefaultScalePercent) > 0.000001 ||
+        g_animFolderIntervalMs != folderInterval ||
         g_animMinIntervalMs != minInterval ||
         !AnimationSpeedPointsMatch(g_animSpeedPoints, newPoints, newPointCount);
 
@@ -405,6 +407,7 @@ void ReloadAnimationSpeedFromConfig(void) {
         if (newPointCount > 0) {
             memcpy(g_animSpeedPoints, newPoints, sizeof(newPoints[0]) * (size_t)newPointCount);
         }
+        g_animFolderIntervalMs = folderInterval;
         g_animMinIntervalMs = minInterval;
     }
     ReleaseSRWLockExclusive(&g_animSpeedLock);
@@ -544,6 +547,7 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
     AnimSpeedPoint points[ANIM_SPEED_POINT_CAPACITY] = {0};
     int pointCount = 0;
     double defaultScalePercent = 100.0;
+    int folderIntervalMs = TRAY_ANIMATION_DEFAULT_INTERVAL_MS;
     int minIntervalMs = 0;
 
     AcquireSRWLockShared(&g_animSpeedLock);
@@ -555,6 +559,7 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
         pointCount = ANIM_SPEED_POINT_CAPACITY;
     }
     defaultScalePercent = g_animSpeedDefaultScalePercent;
+    folderIntervalMs = g_animFolderIntervalMs;
     minIntervalMs = g_animMinIntervalMs;
     if (pointCount > 0) {
         memcpy(points, g_animSpeedPoints, sizeof(points[0]) * (size_t)pointCount);
@@ -586,6 +591,13 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
                                        speedMapKey, speedMapValue)) {
             return FALSE;
         }
+    }
+
+    char folderIntervalValue[32];
+    if (snprintf(folderIntervalValue, sizeof(folderIntervalValue), "%d", folderIntervalMs) < 0 ||
+        !AppendAnimationConfigItem(items, itemCapacity, count,
+                                   "ANIMATION_FOLDER_INTERVAL_MS", folderIntervalValue)) {
+        return FALSE;
     }
 
     char minIntervalValue[32];
@@ -630,7 +642,7 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
 BOOL WriteAnimationSpeedToConfig(const char* config_path) {
     if (!config_path) return FALSE;
 
-    const int itemCapacity = ANIM_SPEED_POINT_CAPACITY + 6;
+    const int itemCapacity = ANIM_SPEED_POINT_CAPACITY + 7;
     ConfigWriteItem* items = (ConfigWriteItem*)calloc((size_t)itemCapacity,
                                                       sizeof(ConfigWriteItem));
     if (!items) {

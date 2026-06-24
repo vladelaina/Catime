@@ -61,6 +61,7 @@ static void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
                                  BOOL useAnimationInitialIcon);
 static void RemoveTrayIconInternal(BOOL finalCleanup);
 static void CALLBACK TrayOpacitySaveTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
+static BOOL IsStaticImageFile(const char* filename);
 
 static BOOL IsValidTrayMainWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
@@ -231,8 +232,11 @@ static BOOL CurrentTrayIconNeedsSystemMonitor(void) {
 
 static BOOL CurrentAnimationSpeedNeedsSystemMonitor(void) {
     AnimationSpeedMetric metric = GetAnimationSpeedMetric();
+    const char* animName = GetCurrentAnimationName();
     return TrayAnimation_IsRunning() &&
-           (metric == ANIMATION_SPEED_CPU || metric == ANIMATION_SPEED_MEMORY);
+           (metric == ANIMATION_SPEED_CPU || metric == ANIMATION_SPEED_MEMORY) &&
+           GetAnimationType(animName) == ANIM_TYPE_CUSTOM &&
+           !IsStaticImageFile(animName);
 }
 
 static BOOL ShouldKeepSystemMonitorActive(void) {
@@ -444,7 +448,7 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
     
     BOOL applyScaling = TRUE;
     if (metric == ANIMATION_SPEED_TIMER) {
-        if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0) {
+        if (CLOCK_SHOW_CURRENT_TIME || CLOCK_COUNT_UP || CLOCK_TOTAL_TIME <= 0 || percent >= 100.0) {
             applyScaling = FALSE;
         }
     }

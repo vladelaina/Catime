@@ -22,8 +22,9 @@
  * Folders first, then files (natural sorted).
  * Leaf folders and files become clickable items.
  * Branch folders become submenus.
+ * Returns TRUE when custom animation entries are available.
  */
-void BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName);
+BOOL BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName);
 
 /**
  * @brief Reset shutdown state before using the animation menu cache

@@ -6,6 +6,7 @@
 #include "markdown/markdown_image.h"
 #include "drawing/drawing_image.h"
 #include "plugin/plugin_data.h"
+#include "config.h"
 #include "log.h"
 #include <limits.h>
 #include <stdlib.h>
@@ -232,16 +233,15 @@ BOOL GetPluginsDirectory(wchar_t* buffer, size_t bufferSize) {
         return TRUE;
     }
 
-    wchar_t pluginsDir[MAX_PATH];
-    DWORD result = ExpandEnvironmentStringsW(
-        L"%LOCALAPPDATA%\\Catime\\resources\\plugins",
-        pluginsDir, MAX_PATH);
-    if (result == 0 || result >= MAX_PATH) {
+    char pluginsDirUtf8[MAX_PATH] = {0};
+    GetPluginsFolderPath(pluginsDirUtf8, MAX_PATH);
+    if (pluginsDirUtf8[0] == '\0' ||
+        MultiByteToWideChar(CP_UTF8, 0, pluginsDirUtf8, -1,
+                            g_pluginsDir, MAX_PATH) <= 0) {
         InterlockedExchange(&g_pluginsDirInit, IMAGE_CACHE_DIR_UNINITIALIZED);
         return FALSE;
     }
 
-    wcscpy_s(g_pluginsDir, MAX_PATH, pluginsDir);
     InterlockedExchange(&g_pluginsDirInit, IMAGE_CACHE_DIR_INITIALIZED);
 
     if (wcslen(g_pluginsDir) >= bufferSize) return FALSE;
