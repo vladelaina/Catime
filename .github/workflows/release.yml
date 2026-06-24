@@ -42,6 +42,10 @@ jobs:
         echo "Version: $VERSION"
         # Get tag name without 'v' prefix
         TAG_VERSION=${GITHUB_REF#refs/tags/v}
+        if [ "$TAG_VERSION" != "$VERSION" ]; then
+          echo "::error::Tag version ($TAG_VERSION) does not match resource version ($VERSION)"
+          exit 1
+        fi
         echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
         echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
       
@@ -56,6 +60,12 @@ jobs:
         # Copy and rename the executable from build directory
         mkdir -p output
         cp build/catime.exe ./output/catime_${{ env.TAG_VERSION }}.exe
+        echo "Verifying release binary architecture..."
+        i686-w64-mingw32-objdump -f ./output/catime_${{ env.TAG_VERSION }}.exe | tee ./output/pe-header.txt
+        if ! grep -q "file format pei-i386" ./output/pe-header.txt; then
+          echo "::error::Release binary must be 32-bit Win32 (pei-i386)."
+          exit 1
+        fi
         echo "Build completed using build.sh script"
         
     - name: Upload unsigned release artifact
@@ -89,7 +99,16 @@ jobs:
       with:
         name: catime-release-${{ needs.build.outputs.tag_version }}
         path: ./signed-release
-        
+
+    - name: Validate Winget token
+      env:
+        WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+      run: |
+        if [ -z "$WINGET_TOKEN" ]; then
+          echo "::error::WINGET_TOKEN is required before creating a release with Winget publishing enabled."
+          exit 1
+        fi
+
     - name: Create GitHub Release
       id: create_release
       uses: softprops/action-gh-release@v1
@@ -97,10 +116,10 @@ jobs:
         files: ./signed-release/catime_${{ needs.build.outputs.tag_version }}.exe
         name: ${{ github.ref_name }}
         body: |
-          # 📝 Changelog
+          # Changelog
 
           > [!TIP]
-          > My friend, while downloading Catime, why not check out my friend's [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer)— a super cute and practical countdown timer!
+          > My friend, while downloading Catime, why not check out my friend's [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer) - a super cute and practical countdown timer!
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
@@ -109,7 +128,8 @@ jobs:
       with:
         identifier: VladElaina.Catime
         version: ${{ needs.build.outputs.tag_version }}
-        installers-regex: '\.exe$'
+        release-tag: ${{ github.ref_name }}
+        installers-regex: '^catime_${{ needs.build.outputs.tag_version }}\.exe$'
         token: ${{ secrets.WINGET_TOKEN }}
 
   # Clean up temporary artifacts
