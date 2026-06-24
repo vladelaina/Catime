@@ -18,6 +18,8 @@
 typedef struct {
     wchar_t* english;
     wchar_t* translation;
+    BOOL ownsEnglish;
+    BOOL ownsTranslation;
 } LocalizedString;
 
 typedef struct {
@@ -80,8 +82,12 @@ static void ClearTranslationTable(TranslationTable* table) {
     if (!table) return;
 
     for (int i = 0; i < table->count; i++) {
-        free(table->entries[i].english);
-        free(table->entries[i].translation);
+        if (table->entries[i].ownsEnglish) {
+            free(table->entries[i].english);
+        }
+        if (table->entries[i].ownsTranslation) {
+            free(table->entries[i].translation);
+        }
     }
     ZeroMemory(table, sizeof(*table));
 }
@@ -178,6 +184,29 @@ static BOOL ShouldSkipLine(const wchar_t* line) {
     return (line[0] == L'\0' || line[0] == L';' || line[0] == L'[');
 }
 
+static BOOL AddTranslationEntry(TranslationTable* table,
+                                wchar_t* english,
+                                wchar_t* translation,
+                                BOOL ownsEnglish,
+                                BOOL ownsTranslation) {
+    if (!table || !english || !translation || table->count >= MAX_TRANSLATIONS) {
+        if (ownsEnglish) {
+            free(english);
+        }
+        if (ownsTranslation) {
+            free(translation);
+        }
+        return FALSE;
+    }
+
+    table->entries[table->count].english = english;
+    table->entries[table->count].translation = translation;
+    table->entries[table->count].ownsEnglish = ownsEnglish;
+    table->entries[table->count].ownsTranslation = ownsTranslation;
+    table->count++;
+    return TRUE;
+}
+
 /** Parse line format: "English Key" = "Translated Value" */
 static BOOL ParseIniLine(TranslationTable* table, const wchar_t* line) {
     if (!table) {
@@ -211,10 +240,44 @@ static BOOL ParseIniLine(TranslationTable* table, const wchar_t* line) {
 
     ProcessEscapeSequences(translation);
 
-    table->entries[table->count].english = english;
-    table->entries[table->count].translation = translation;
-    table->count++;
-    return TRUE;
+    return AddTranslationEntry(table, english, translation, TRUE, TRUE);
+}
+
+/** Parse compact line format: "Translated Value"; key comes from en.ini order */
+static BOOL ParseCompactValueLine(TranslationTable* table,
+                                  const TranslationTable* keyTable,
+                                  int* keyIndex,
+                                  const wchar_t* line) {
+    if (!table || !keyTable || !keyIndex) {
+        return FALSE;
+    }
+    if (ShouldSkipLine(line)) {
+        return FALSE;
+    }
+    if (table->count >= MAX_TRANSLATIONS) {
+        return FALSE;
+    }
+
+    while (*keyIndex < keyTable->count &&
+           !keyTable->entries[*keyIndex].english) {
+        (*keyIndex)++;
+    }
+    if (*keyIndex >= keyTable->count) {
+        return FALSE;
+    }
+
+    wchar_t* translation = NULL;
+    const wchar_t* pos = ExtractQuotedString(line, &translation);
+    if (!pos) {
+        return FALSE;
+    }
+
+    ProcessEscapeSequences(translation);
+
+    wchar_t* english = keyTable->entries[*keyIndex].english;
+    (*keyIndex)++;
+
+    return AddTranslationEntry(table, english, translation, FALSE, TRUE);
 }
 
 static int UTF8ToWideChar(const char* utf8, wchar_t* wstr, int wstr_size) {
@@ -271,10 +334,13 @@ static BOOL LoadResourceToBuffer(UINT resourceId, char** outBuffer) {
     return TRUE;
 }
 
-static void ParseLanguageBuffer(TranslationTable* table, char* buffer) {
+static void ParseLanguageBuffer(TranslationTable* table,
+                                char* buffer,
+                                const TranslationTable* keyTable) {
     if (!table) return;
 
     wchar_t wide_buffer[MAX_STRING_LENGTH];
+    int compactKeyIndex = 0;
     
     const char* line = strtok(buffer, "\r\n");
     
@@ -287,7 +353,10 @@ static void ParseLanguageBuffer(TranslationTable* table, char* buffer) {
         line = SkipUTF8BOM(line);
         
         if (UTF8ToWideChar(line, wide_buffer, MAX_STRING_LENGTH) > 0) {
-            ParseIniLine(table, wide_buffer);
+            if (!ParseIniLine(table, wide_buffer) && keyTable) {
+                ParseCompactValueLine(table, keyTable, &compactKeyIndex,
+                                      wide_buffer);
+            }
         }
         
         line = strtok(NULL, "\r\n");
@@ -308,6 +377,15 @@ static BOOL LoadLanguageResource(AppLanguage language) {
     
     const LanguageMetadata* metadata = &g_languageMetadata[language];
     char* buffer = NULL;
+
+    if (language != APP_LANG_ENGLISH &&
+        !g_translationTables[APP_LANG_ENGLISH].loaded) {
+        AppLanguage previousActive = g_activeTranslationLanguage;
+        if (!LoadLanguageResource(APP_LANG_ENGLISH)) {
+            return FALSE;
+        }
+        g_activeTranslationLanguage = previousActive;
+    }
     
     if (!LoadResourceToBuffer(metadata->resourceId, &buffer)) {
         if (metadata->fallbackLanguage != language) {
@@ -316,7 +394,10 @@ static BOOL LoadLanguageResource(AppLanguage language) {
         return FALSE;
     }
 
-    ParseLanguageBuffer(table, buffer);
+    ParseLanguageBuffer(table, buffer,
+                        language == APP_LANG_ENGLISH
+                            ? NULL
+                            : &g_translationTables[APP_LANG_ENGLISH]);
     free(buffer);
 
     if (table->count <= 0) {
