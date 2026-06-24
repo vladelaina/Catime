@@ -266,11 +266,17 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 return TRUE;
             }
 
+            wchar_t pluginPathWide[MAX_PATH];
+            if (!Utf8ToWide(g_pluginPath, pluginPathWide, _countof(pluginPathWide))) {
+                wcscpy_s(pluginPathWide, _countof(pluginPathWide), L"(path unavailable)");
+                LOG_WARNING("Failed to convert plugin security path to UTF-16 for display");
+            }
+
             int written = _snwprintf_s(messageWide, PLUGIN_SECURITY_MESSAGE_BUFFER_CHARS, _TRUNCATE,
                 L"<md>\n"
                 L"%s\n\n"
                 L"%s\n"
-                L"`%hs`\n\n"
+                L"`%ls`\n\n"
                 L"%s\n"
                 L"- %s\n"
                 L"- %s\n"
@@ -285,7 +291,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 L"</md>",
                 GetLocalizedString(NULL, L"PluginSecTitle"),
                 GetLocalizedString(NULL, L"PluginSecLocation"),
-                g_pluginPath,
+                pluginPathWide,
                 GetLocalizedString(NULL, L"PluginSecWhatToKnow"),
                 GetLocalizedString(NULL, L"PluginSecOutputRule"),
                 GetLocalizedString(NULL, L"PluginSecPermDefault"),
