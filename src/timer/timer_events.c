@@ -656,7 +656,8 @@ static BOOL HandleMainTimer(HWND hwnd) {
     }
 
     /* Throttle expensive topmost/taskbar overlap checks. */
-    if (s_lastTopmostCheck == 0 || (now_tick - s_lastTopmostCheck) >= 500) {
+    if (!CLOCK_IS_DRAGGING &&
+        (s_lastTopmostCheck == 0 || (now_tick - s_lastTopmostCheck) >= 500)) {
         EnforceTopmostOverTaskbar(hwnd);
         s_lastTopmostCheck = now_tick;
     }
@@ -796,13 +797,25 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
             return HandleTopmostApplyRetry(hwnd);
 
         case TIMER_ID_TOPMOST_VISIBILITY_RESTORE:
+            if (CLOCK_IS_DRAGGING) {
+                SetTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE, 100, NULL);
+                return TRUE;
+            }
             KillTimer(hwnd, TIMER_ID_TOPMOST_VISIBILITY_RESTORE);
             return HandleTopmostVisibilityChange(hwnd, NULL);
 
         case TIMER_ID_FORCE_REDRAW:
+            if (CLOCK_IS_DRAGGING) {
+                SetTimer(hwnd, TIMER_ID_FORCE_REDRAW, 100, NULL);
+                return TRUE;
+            }
             return HandleForceRedraw(hwnd);
 
         case TIMER_ID_EDIT_MODE_REFRESH:
+            if (CLOCK_IS_DRAGGING) {
+                SetTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH, 100, NULL);
+                return TRUE;
+            }
             KillTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH);
             return HandleForceRedraw(hwnd);
 

@@ -556,6 +556,10 @@ BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
 BOOL HandleTopmostApplyRetry(HWND hwnd) {
     if (!IsValidWindowHandle(hwnd, "HandleTopmostApplyRetry")) return TRUE;
 
+    if (CLOCK_IS_DRAGGING) {
+        return TRUE;
+    }
+
     if (s_topmostApplyRetriesRemaining <= 0) {
         s_topmostApplyRetryActive = FALSE;
         KillTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY);

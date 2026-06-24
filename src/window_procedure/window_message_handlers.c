@@ -360,6 +360,10 @@ LRESULT HandleShowWindow(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    if (CLOCK_IS_DRAGGING) {
+        return 0;
+    }
+
     if (!BeginSystemPositionChangeGuard(hwnd)) {
         RestoreWindowPositionAfterSystemChange(hwnd);
     }
@@ -369,6 +373,10 @@ LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
+    if (CLOCK_IS_DRAGGING) {
+        return 0;
+    }
+
     BOOL restoreScheduled = BeginSystemPositionChangeGuard(hwnd);
 
     RECT* suggested = (RECT*)lp;

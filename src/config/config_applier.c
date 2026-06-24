@@ -169,8 +169,14 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
 
     HWND hwnd = FindCurrentProcessMainWindow();
     if (hwnd) {
-        /* Force apply mode: always use config values (used during reset) */
-        if (g_ForceApplyConfig) {
+        if (CLOCK_IS_DRAGGING) {
+            RECT currentRect;
+            if (GetWindowRect(hwnd, &currentRect)) {
+                CLOCK_WINDOW_POS_X = currentRect.left;
+                CLOCK_WINDOW_POS_Y = currentRect.top;
+            }
+        } else if (g_ForceApplyConfig) {
+            /* Force apply mode: always use config values (used during reset) */
             CLOCK_WINDOW_POS_Y = snapshot->windowPosY;
             
             /* For special position values (-2, -1), don't set position here.
@@ -200,9 +206,13 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
 
         BYTE alphaValue = (BYTE)((CLOCK_WINDOW_OPACITY * 255) / 100);
         SetLayeredWindowAttributes(hwnd, RGB(0, 0, 0), alphaValue, LWA_COLORKEY | LWA_ALPHA);
-        RefreshWindowTopmostState(hwnd);
+        if (!CLOCK_IS_DRAGGING) {
+            RefreshWindowTopmostState(hwnd);
+        }
 
-        InvalidateRect(hwnd, NULL, TRUE);
+        if (!CLOCK_IS_DRAGGING) {
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
     } else {
         /* No window: just update global variables */
         CLOCK_WINDOW_POS_X = snapshot->windowPosX;

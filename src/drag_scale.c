@@ -13,6 +13,7 @@
 #include "log.h"
 #include "plugin/plugin_data.h"
 #include "window/window_desktop_integration.h"
+#include "drawing/drawing_render.h"
 
 #include "color/color_parser.h"
 #include "color/color_state.h"
@@ -169,6 +170,23 @@ static BOOL IsValidDragScaleWindow(HWND hwnd) {
 
 static inline void RefreshWindow(HWND hwnd, BOOL eraseBackground) {
     InvalidateRect(hwnd, NULL, eraseBackground);
+}
+
+static void FinishDragWindow(HWND hwnd, BOOL saveSettings, BOOL refreshAfterDrag) {
+    CLOCK_IS_DRAGGING = FALSE;
+    ClearDragAnchor();
+
+    if (GetCapture() == hwnd) {
+        ReleaseCapture();
+    }
+
+    if (saveSettings && CLOCK_EDIT_MODE) {
+        ScheduleConfigSave(hwnd);
+    }
+
+    if (refreshAfterDrag && IsValidDragScaleWindow(hwnd)) {
+        RefreshWindow(hwnd, FALSE);
+    }
 }
 
 static inline float ClampScaleFactor(double scale) {
@@ -507,6 +525,7 @@ void StartDragWindow(HWND hwnd) {
 
     CLOCK_IS_DRAGGING = TRUE;
     CLOCK_LAST_MOUSE_POS = cursorPos;
+    StopDrawingRenderAnimationTimer(hwnd);
 }
 
 BOOL TryStartDragWindowFromMouseMove(HWND hwnd) {
@@ -551,11 +570,7 @@ void EndEditMode(HWND hwnd) {
     if (!CLOCK_EDIT_MODE) return;
 
     if (CLOCK_IS_DRAGGING) {
-        CLOCK_IS_DRAGGING = FALSE;
-        ClearDragAnchor();
-        if (GetCapture() == hwnd) {
-            ReleaseCapture();
-        }
+        FinishDragWindow(hwnd, FALSE, FALSE);
     }
     ApplyPendingScaleTarget(hwnd);
     StopScaleApplyTimer(hwnd);
@@ -598,27 +613,15 @@ void EndDragWindow(HWND hwnd) {
         ClearDragBlockUntilLeftUp();
     }
     if (!CLOCK_IS_DRAGGING) return;
-    
-    CLOCK_IS_DRAGGING = FALSE;
-    ClearDragAnchor();
-    if (GetCapture() == hwnd) {
-        ReleaseCapture();
-    }
-    
-    if (CLOCK_EDIT_MODE) {
-        ScheduleConfigSave(hwnd);
-    }
+
+    FinishDragWindow(hwnd, TRUE, TRUE);
 }
 
 static void CancelDragForScale(HWND hwnd) {
     BlockDragUntilLeftUp(hwnd);
     if (!CLOCK_IS_DRAGGING) return;
 
-    CLOCK_IS_DRAGGING = FALSE;
-    ClearDragAnchor();
-    if (GetCapture() == hwnd) {
-        ReleaseCapture();
-    }
+    FinishDragWindow(hwnd, FALSE, FALSE);
 }
 
 /* Absolute cursor anchoring keeps movement aligned even when mouse messages coalesce. */
@@ -626,37 +629,22 @@ BOOL HandleDragWindow(HWND hwnd) {
     if (!CLOCK_EDIT_MODE || !CLOCK_IS_DRAGGING) return FALSE;
 
     if (IsDragBlockedUntilLeftUp()) {
-        CLOCK_IS_DRAGGING = FALSE;
-        ClearDragAnchor();
-        if (GetCapture() == hwnd) {
-            ReleaseCapture();
-        }
+        FinishDragWindow(hwnd, TRUE, TRUE);
         return FALSE;
     }
 
     if (IsScaleWindowGestureActive(hwnd) || IsDragSuppressedAfterScale()) {
-        CLOCK_IS_DRAGGING = FALSE;
-        ClearDragAnchor();
-        if (GetCapture() == hwnd) {
-            ReleaseCapture();
-        }
+        FinishDragWindow(hwnd, FALSE, FALSE);
         return FALSE;
     }
 
     if (!IsLeftButtonPhysicallyDown()) {
-        CLOCK_IS_DRAGGING = FALSE;
-        ClearDragAnchor();
-        if (GetCapture() == hwnd) {
-            ReleaseCapture();
-        }
-        ScheduleConfigSave(hwnd);
+        FinishDragWindow(hwnd, TRUE, TRUE);
         return FALSE;
     }
 
     if (GetCapture() != hwnd) {
-        CLOCK_IS_DRAGGING = FALSE;
-        ClearDragAnchor();
-        ScheduleConfigSave(hwnd);
+        FinishDragWindow(hwnd, TRUE, TRUE);
         return FALSE;
     }
     
@@ -680,7 +668,7 @@ BOOL HandleDragWindow(HWND hwnd) {
     int newY = g_dragStartWindowRect.top + (currentPos.y - g_dragStartCursorPos.y);
 
     BOOL moved = SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
-                              SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_NOREDRAW);
+                              SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
     CLOCK_LAST_MOUSE_POS = currentPos;
     if (moved) {

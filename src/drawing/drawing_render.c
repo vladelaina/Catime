@@ -1357,6 +1357,11 @@ static void FixAlphaChannel(void* bits, int width, int height) {
 static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     SIZE targetSize;
     DWORD scaleGestureSerial = GetScaleWindowGestureSerial(hwnd);
+    if (CLOCK_IS_DRAGGING && scaleGestureSerial == 0) {
+        ClearPendingScaleResizeAnchor(hwnd);
+        return;
+    }
+
     if (!GetConstrainedRenderWindowSize(hwnd, textSize, &targetSize)) {
         ClearPendingScaleResizeAnchor(hwnd);
         return;
@@ -1418,6 +1423,10 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
 }
 
 void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
+    if (CLOCK_IS_DRAGGING) {
+        return;
+    }
+
     PaintTextBuffers* paintBuffers = &g_paintTextBuffers;
     wchar_t* timeText = paintBuffers->timeText;
     wchar_t* pluginText = paintBuffers->pluginText;
