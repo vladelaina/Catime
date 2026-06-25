@@ -12,7 +12,7 @@
 /** @brief Application version information */
 #define CATIME_VERSION "1.6.0-alpha5"   /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
-#define CATIME_VERSION_MINOR 4           /**< Minor version number */
+#define CATIME_VERSION_MINOR 6           /**< Minor version number */
 #define CATIME_VERSION_PATCH 0           /**< Patch version number */
 #define CATIME_VERSION_BUILD 0           /**< Build number */
 

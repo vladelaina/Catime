@@ -425,6 +425,17 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
         return;
     }
 
+    if (!IsSafeUpdateDownloadUrlA(downloadUrl)) {
+        LOG_WARNING("Update check rejected unsafe download URL: %s", downloadUrl);
+        free(releaseNotes);
+        CleanupHttpResources(&res);
+        if (!silentCheck && !IsUpdateCancelRequested()) {
+            ShowUpdateErrorDialog(hwnd,
+                GetLocalizedString(NULL, L"Could not parse version information"));
+        }
+        return;
+    }
+
     CleanupHttpResources(&res);
 
     if (IsUpdateCancelRequested()) {

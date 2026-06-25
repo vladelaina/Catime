@@ -4,6 +4,7 @@
  */
 #include "update/update_internal.h"
 #include "log.h"
+#include "utils/url_safety.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -143,6 +144,33 @@ static BOOL ExtractJsonStringFieldExact(const char* json, const char* fieldName,
 static BOOL ExtractJsonStringFieldTruncated(const char* json, const char* fieldName,
                                             char* output, size_t maxLen) {
     return ExtractJsonStringFieldInternal(json, fieldName, output, maxLen, TRUE);
+}
+
+static BOOL ExtractSafeDownloadUrl(const char* json, char* output, size_t maxLen) {
+    if (!output || maxLen == 0) return FALSE;
+    output[0] = '\0';
+    if (!json) return FALSE;
+
+    const char* fieldName = "browser_download_url";
+    char pattern[128];
+    int patternLen = snprintf(pattern, sizeof(pattern), "\"%s\":", fieldName);
+    if (patternLen < 0 || (size_t)patternLen >= sizeof(pattern)) {
+        return FALSE;
+    }
+
+    const char* cursor = json;
+    while ((cursor = strstr(cursor, pattern)) != NULL) {
+        char candidate[URL_BUFFER_SIZE] = {0};
+        if (ExtractJsonStringFieldInternal(cursor, fieldName, candidate, sizeof(candidate), FALSE) &&
+            IsSafeUpdateDownloadUrlA(candidate)) {
+            HRESULT hr = StringCbCopyA(output, maxLen, candidate);
+            return SUCCEEDED(hr);
+        }
+        cursor += patternLen;
+    }
+
+    LOG_ERROR("No safe update download URL found");
+    return FALSE;
 }
 
 /** @brief Process JSON escape sequences (\n, \r, \", \\) */
@@ -310,7 +338,7 @@ BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t ve
         memmove(latestVersion, latestVersion + 1, strlen(latestVersion));
     }
     
-    if (!ExtractJsonStringFieldExact(jsonResponse, "browser_download_url", downloadUrl, urlMaxLen)) {
+    if (!ExtractSafeDownloadUrl(jsonResponse, downloadUrl, urlMaxLen)) {
         return FALSE;
     }
     

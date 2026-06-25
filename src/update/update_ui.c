@@ -740,7 +740,7 @@ void TriggerUpdateDownload(HWND hwnd) {
     if (CopyPendingUpdateDownloadUrl(url, sizeof(url))) {
         LOG_INFO("User chose to update now (from modeless dialog)");
 
-        if (!IsSafeOpenUrlA(url)) {
+        if (!IsSafeUpdateDownloadUrlA(url)) {
             LOG_ERROR("Blocked unsafe update URL: %s", url);
             ShowUpdateErrorDialog(hwnd, GetLocalizedString(NULL, L"Unsafe download URL was blocked"));
             return;
