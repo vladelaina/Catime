@@ -44,6 +44,8 @@ static BOOL g_dragBlockNeedsReleaseCooldown = FALSE;
 static BOOL g_dragAnchorValid = FALSE;
 static POINT g_dragStartCursorPos = {0};
 static RECT g_dragStartWindowRect = {0};
+static UINT_PTR g_dragApplyTimer = 0;
+static HWND g_dragApplyTimerHwnd = NULL;
 static BOOL g_pendingScaleResizeAnchorPostScale = FALSE;
 static DWORD g_pendingScaleResizeAnchorUntilTick = 0;
 
@@ -57,11 +59,132 @@ static HWND g_configSaveTimerHwnd = NULL;
 #define SCALE_DRAG_SUPPRESS_MS 120u
 #define SCALE_DRAG_RELEASE_SUPPRESS_MS 120u
 #define SCALE_POST_RESIZE_ANCHOR_MS 1200u
+#define EDIT_DRAG_APPLY_TIMER_ID 42428
+#define EDIT_DRAG_APPLY_INTERVAL_MS 8u
+static DWORD g_lastDragApplyTick = 0;
 
 static void SetPendingScaleResizeAnchorWithRatio(HWND hwnd, POINT anchor,
                                                  double ratioX, double ratioY);
 static void ForceClearPendingScaleResizeAnchor(void);
 static BOOL IsPostScaleResizeAnchorActive(HWND hwnd);
+static BOOL IsLeftButtonPhysicallyDown(void);
+static BOOL IsValidDragScaleWindow(HWND hwnd);
+
+static DWORD TickElapsedMs(DWORD now, DWORD then) {
+    return (DWORD)(now - then);
+}
+
+static void ResetDragApplyThrottle(void) {
+    g_lastDragApplyTick = 0;
+}
+
+static BOOL ShouldApplyDragMoveNow(DWORD now) {
+    if (g_lastDragApplyTick == 0) {
+        return TRUE;
+    }
+
+    return TickElapsedMs(now, g_lastDragApplyTick) >= EDIT_DRAG_APPLY_INTERVAL_MS;
+}
+
+static BOOL ApplyDragPositionForCursor(HWND hwnd, POINT cursorPos) {
+    if (!g_dragAnchorValid) {
+        return FALSE;
+    }
+
+    int newX = g_dragStartWindowRect.left + (cursorPos.x - g_dragStartCursorPos.x);
+    int newY = g_dragStartWindowRect.top + (cursorPos.y - g_dragStartCursorPos.y);
+
+    RECT beforeRect = {0};
+    BOOL alreadyAtTarget = GetWindowRect(hwnd, &beforeRect) &&
+                           beforeRect.left == newX &&
+                           beforeRect.top == newY;
+
+    if (alreadyAtTarget) {
+        CLOCK_LAST_MOUSE_POS = cursorPos;
+        CLOCK_WINDOW_POS_X = newX;
+        CLOCK_WINDOW_POS_Y = newY;
+        return TRUE;
+    }
+
+    BOOL moved = SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
+                              SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    if (moved) {
+        CLOCK_LAST_MOUSE_POS = cursorPos;
+        CLOCK_WINDOW_POS_X = newX;
+        CLOCK_WINDOW_POS_Y = newY;
+        g_lastDragApplyTick = GetTickCount();
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+static void StopDragApplyTimer(HWND hwnd) {
+    if (g_dragApplyTimer == 0) {
+        return;
+    }
+
+    HWND timerHwnd = g_dragApplyTimerHwnd ? g_dragApplyTimerHwnd : hwnd;
+    if ((!hwnd || timerHwnd == hwnd) && timerHwnd && IsWindow(timerHwnd)) {
+        KillTimer(timerHwnd, EDIT_DRAG_APPLY_TIMER_ID);
+    }
+
+    if (!hwnd || timerHwnd == hwnd) {
+        g_dragApplyTimer = 0;
+        g_dragApplyTimerHwnd = NULL;
+    }
+}
+
+static VOID CALLBACK DragApplyTimerProc(HWND hwnd,
+                                        UINT msg,
+                                        UINT_PTR idEvent,
+                                        DWORD dwTime) {
+    (void)dwTime;
+
+    if (msg != WM_TIMER ||
+        idEvent != EDIT_DRAG_APPLY_TIMER_ID ||
+        hwnd != g_dragApplyTimerHwnd) {
+        return;
+    }
+
+    StopDragApplyTimer(hwnd);
+
+    if (!CLOCK_EDIT_MODE ||
+        !CLOCK_IS_DRAGGING ||
+        !g_dragAnchorValid ||
+        GetCapture() != hwnd ||
+        !IsLeftButtonPhysicallyDown()) {
+        return;
+    }
+
+    POINT cursorPos = {0};
+    if (GetCursorPos(&cursorPos)) {
+        ApplyDragPositionForCursor(hwnd, cursorPos);
+    }
+}
+
+static BOOL EnsureDragApplyTimer(HWND hwnd) {
+    if (!IsValidDragScaleWindow(hwnd)) {
+        return FALSE;
+    }
+
+    if (g_dragApplyTimer != 0 && g_dragApplyTimerHwnd == hwnd) {
+        return TRUE;
+    }
+
+    StopDragApplyTimer(NULL);
+    g_dragApplyTimer = SetTimer(hwnd,
+                                EDIT_DRAG_APPLY_TIMER_ID,
+                                EDIT_DRAG_APPLY_INTERVAL_MS,
+                                (TIMERPROC)DragApplyTimerProc);
+    if (!g_dragApplyTimer) {
+        g_dragApplyTimerHwnd = NULL;
+        return FALSE;
+    }
+
+    g_dragApplyTimerHwnd = hwnd;
+    return TRUE;
+}
 
 static void SuppressDragForDuration(DWORD durationMs) {
     DWORD until = GetTickCount() + durationMs;
@@ -172,9 +295,24 @@ static inline void RefreshWindow(HWND hwnd, BOOL eraseBackground) {
     InvalidateRect(hwnd, NULL, eraseBackground);
 }
 
-static void FinishDragWindow(HWND hwnd, BOOL saveSettings, BOOL refreshAfterDrag) {
+static void FinishDragWindow(HWND hwnd,
+                             BOOL saveSettings,
+                             BOOL refreshAfterDrag,
+                             BOOL applyFinalPosition) {
+    if (applyFinalPosition &&
+        CLOCK_IS_DRAGGING &&
+        g_dragAnchorValid &&
+        IsValidDragScaleWindow(hwnd)) {
+        POINT finalCursor = {0};
+        if (GetCursorPos(&finalCursor)) {
+            ApplyDragPositionForCursor(hwnd, finalCursor);
+        }
+    }
+    StopDragApplyTimer(hwnd);
+
     CLOCK_IS_DRAGGING = FALSE;
     ClearDragAnchor();
+    ResetDragApplyThrottle();
 
     if (GetCapture() == hwnd) {
         ReleaseCapture();
@@ -497,6 +635,10 @@ void CancelScheduledConfigSave(HWND hwnd) {
 void StartDragWindow(HWND hwnd) {
     if (!CLOCK_EDIT_MODE) return;
 
+    if (CLOCK_IS_DRAGGING) {
+        return;
+    }
+
     if (!IsLeftButtonPhysicallyDown()) {
         return;
     }
@@ -525,6 +667,8 @@ void StartDragWindow(HWND hwnd) {
 
     CLOCK_IS_DRAGGING = TRUE;
     CLOCK_LAST_MOUSE_POS = cursorPos;
+    StopDragApplyTimer(hwnd);
+    ResetDragApplyThrottle();
     StopDrawingRenderAnimationTimer(hwnd);
 }
 
@@ -570,7 +714,7 @@ void EndEditMode(HWND hwnd) {
     if (!CLOCK_EDIT_MODE) return;
 
     if (CLOCK_IS_DRAGGING) {
-        FinishDragWindow(hwnd, FALSE, FALSE);
+        FinishDragWindow(hwnd, FALSE, FALSE, TRUE);
     }
     ApplyPendingScaleTarget(hwnd);
     StopScaleApplyTimer(hwnd);
@@ -614,14 +758,14 @@ void EndDragWindow(HWND hwnd) {
     }
     if (!CLOCK_IS_DRAGGING) return;
 
-    FinishDragWindow(hwnd, TRUE, TRUE);
+    FinishDragWindow(hwnd, TRUE, TRUE, TRUE);
 }
 
 static void CancelDragForScale(HWND hwnd) {
     BlockDragUntilLeftUp(hwnd);
     if (!CLOCK_IS_DRAGGING) return;
 
-    FinishDragWindow(hwnd, FALSE, FALSE);
+    FinishDragWindow(hwnd, FALSE, FALSE, FALSE);
 }
 
 /* Absolute cursor anchoring keeps movement aligned even when mouse messages coalesce. */
@@ -629,22 +773,22 @@ BOOL HandleDragWindow(HWND hwnd) {
     if (!CLOCK_EDIT_MODE || !CLOCK_IS_DRAGGING) return FALSE;
 
     if (IsDragBlockedUntilLeftUp()) {
-        FinishDragWindow(hwnd, TRUE, TRUE);
+        FinishDragWindow(hwnd, TRUE, TRUE, TRUE);
         return FALSE;
     }
 
     if (IsScaleWindowGestureActive(hwnd) || IsDragSuppressedAfterScale()) {
-        FinishDragWindow(hwnd, FALSE, FALSE);
+        FinishDragWindow(hwnd, FALSE, FALSE, FALSE);
         return FALSE;
     }
 
     if (!IsLeftButtonPhysicallyDown()) {
-        FinishDragWindow(hwnd, TRUE, TRUE);
+        FinishDragWindow(hwnd, TRUE, TRUE, TRUE);
         return FALSE;
     }
 
     if (GetCapture() != hwnd) {
-        FinishDragWindow(hwnd, TRUE, TRUE);
+        FinishDragWindow(hwnd, TRUE, TRUE, TRUE);
         return FALSE;
     }
     
@@ -658,9 +802,17 @@ BOOL HandleDragWindow(HWND hwnd) {
         return TRUE;
     }
 
+    DWORD now = GetTickCount();
     int deltaFromLastX = currentPos.x - CLOCK_LAST_MOUSE_POS.x;
     int deltaFromLastY = currentPos.y - CLOCK_LAST_MOUSE_POS.y;
     if (deltaFromLastX == 0 && deltaFromLastY == 0) {
+        return TRUE;
+    }
+
+    if (!ShouldApplyDragMoveNow(now)) {
+        if (!EnsureDragApplyTimer(hwnd)) {
+            ApplyDragPositionForCursor(hwnd, currentPos);
+        }
         return TRUE;
     }
 
@@ -669,11 +821,11 @@ BOOL HandleDragWindow(HWND hwnd) {
 
     BOOL moved = SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
                               SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-
-    CLOCK_LAST_MOUSE_POS = currentPos;
     if (moved) {
+        CLOCK_LAST_MOUSE_POS = currentPos;
         CLOCK_WINDOW_POS_X = newX;
         CLOCK_WINDOW_POS_Y = newY;
+        g_lastDragApplyTick = now;
     }
 
     return TRUE;
