@@ -47,6 +47,9 @@
 #include <tlhelp32.h>
 
 #define STARTUP_WINDOW_RECOVERY_DELAY_MS 2000
+#define AUTO_UPDATE_LAST_CHECK_DATE_KEY "AUTO_UPDATE_LAST_CHECK_DATE"
+#define AUTO_UPDATE_LAST_CHECK_VERSION_KEY "AUTO_UPDATE_LAST_CHECK_VERSION"
+#define AUTO_UPDATE_DATE_BUFFER_SIZE 16
 
 static BOOL ContainsFlag(const wchar_t* cmdLine, const wchar_t* flag) {
     const wchar_t* pos;
@@ -120,6 +123,124 @@ static void ScheduleStartupWindowRecovery(HWND hwnd, BOOL topmost) {
         LOG_WARNING("Startup window recovery timer %u creation failed (error: %lu)",
                     timerId, GetLastError());
         EnsureWindowVisibleWithTopmostState(hwnd);
+    }
+}
+
+static BOOL FormatLocalDate(char* outDate, size_t outDateSize) {
+    if (!outDate || outDateSize < AUTO_UPDATE_DATE_BUFFER_SIZE) {
+        return FALSE;
+    }
+
+    SYSTEMTIME now;
+    GetLocalTime(&now);
+
+    return snprintf(outDate, outDateSize, "%04u-%02u-%02u",
+                    (unsigned)now.wYear,
+                    (unsigned)now.wMonth,
+                    (unsigned)now.wDay) > 0;
+}
+
+static BOOL ParseConfigDate(const char* dateText, int* year, int* month, int* day) {
+    char tail = '\0';
+    int parsedYear = 0;
+    int parsedMonth = 0;
+    int parsedDay = 0;
+
+    if (!dateText || !year || !month || !day) {
+        return FALSE;
+    }
+
+    if (sscanf(dateText, "%4d-%2d-%2d%c", &parsedYear, &parsedMonth, &parsedDay, &tail) != 3) {
+        return FALSE;
+    }
+
+    if (parsedYear < 2000 || parsedYear > 9999 ||
+        parsedMonth < 1 || parsedMonth > 12 ||
+        parsedDay < 1 || parsedDay > 31) {
+        return FALSE;
+    }
+
+    *year = parsedYear;
+    *month = parsedMonth;
+    *day = parsedDay;
+    return TRUE;
+}
+
+static int CompareConfigDate(const char* left, const char* right) {
+    int leftYear = 0, leftMonth = 0, leftDay = 0;
+    int rightYear = 0, rightMonth = 0, rightDay = 0;
+
+    if (!ParseConfigDate(left, &leftYear, &leftMonth, &leftDay) ||
+        !ParseConfigDate(right, &rightYear, &rightMonth, &rightDay)) {
+        return 0;
+    }
+
+    if (leftYear != rightYear) return leftYear > rightYear ? 1 : -1;
+    if (leftMonth != rightMonth) return leftMonth > rightMonth ? 1 : -1;
+    if (leftDay != rightDay) return leftDay > rightDay ? 1 : -1;
+    return 0;
+}
+
+static BOOL ShouldRunStartupUpdateCheck(char* today, size_t todaySize) {
+    char configPath[MAX_PATH] = {0};
+    char lastDate[AUTO_UPDATE_DATE_BUFFER_SIZE] = {0};
+    char lastVersion[64] = {0};
+
+    if (!FormatLocalDate(today, todaySize)) {
+        LOG_WARNING("Could not format local date; allowing startup update check");
+        return TRUE;
+    }
+
+    GetConfigPath(configPath, sizeof(configPath));
+    if (configPath[0] == '\0') {
+        LOG_WARNING("Config path unavailable; allowing startup update check");
+        return TRUE;
+    }
+
+    ReadIniString(INI_SECTION_GENERAL, AUTO_UPDATE_LAST_CHECK_DATE_KEY, "",
+                  lastDate, sizeof(lastDate), configPath);
+    ReadIniString(INI_SECTION_GENERAL, AUTO_UPDATE_LAST_CHECK_VERSION_KEY, "",
+                  lastVersion, sizeof(lastVersion), configPath);
+
+    int storedYear = 0;
+    int storedMonth = 0;
+    int storedDay = 0;
+    if (!ParseConfigDate(lastDate, &storedYear, &storedMonth, &storedDay)) {
+        return TRUE;
+    }
+
+    int dateCompare = CompareConfigDate(lastDate, today);
+    if (dateCompare > 0) {
+        LOG_WARNING("Startup update check date is in the future (%s), ignoring it", lastDate);
+        return TRUE;
+    }
+
+    if (strcmp(lastVersion, CATIME_VERSION) != 0) {
+        return TRUE;
+    }
+
+    return dateCompare < 0;
+}
+
+static void MarkStartupUpdateCheckAttempt(const char* today) {
+    char configPath[MAX_PATH] = {0};
+    IniKeyValue updates[] = {
+        {INI_SECTION_GENERAL, AUTO_UPDATE_LAST_CHECK_DATE_KEY, today},
+        {INI_SECTION_GENERAL, AUTO_UPDATE_LAST_CHECK_VERSION_KEY, CATIME_VERSION}
+    };
+
+    if (!today || !*today) {
+        return;
+    }
+
+    GetConfigPath(configPath, sizeof(configPath));
+    if (configPath[0] == '\0') {
+        LOG_WARNING("Config path unavailable; startup update check attempt was not recorded");
+        return;
+    }
+
+    if (!WriteIniMultipleAtomic(configPath, updates, sizeof(updates) / sizeof(updates[0]))) {
+        LOG_WARNING("Failed to record startup update check attempt");
     }
 }
 
@@ -610,8 +731,17 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         LOG_INFO("CI smoke mode enabled, skipping startup-only side effects and auto-exiting in %u ms", exitDelayMs);
         ScheduleCiSmokeExit(hwnd, exitDelayMs);
     } else {
-        LOG_INFO("Starting automatic update check at startup...");
-        CheckForUpdateAsync(hwnd, TRUE);
+        char startupUpdateDate[AUTO_UPDATE_DATE_BUFFER_SIZE] = {0};
+        if (ShouldRunStartupUpdateCheck(startupUpdateDate, sizeof(startupUpdateDate))) {
+            LOG_INFO("Starting automatic update check at startup...");
+            if (CheckForUpdateAsync(hwnd, TRUE)) {
+                MarkStartupUpdateCheckAttempt(startupUpdateDate);
+            } else {
+                LOG_WARNING("Startup automatic update check was not started");
+            }
+        } else {
+            LOG_INFO("Skipping automatic update check at startup; already checked today");
+        }
 
         LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);
         HandleStartupMode(hwnd);

@@ -15,19 +15,20 @@
 /**
  * @brief Check for updates asynchronously in background thread
  * @param hwnd Main window handle for UI callbacks
- * @param silentCheck TRUE for background check (no "up to date" dialog), 
- *                    FALSE for interactive check (always show result)
+ * @param silentCheck TRUE for background check (no dialogs),
+ *                    FALSE for interactive check (show result dialogs)
  * 
  * @details Creates a detached background thread that:
  * - Fetches latest version info from update server
  * - Compares with current version
- * - Shows appropriate UI dialogs based on result and silentCheck flag
+ * - Posts the result back to the main window for UI handling
  * 
  * @note Thread cleans up automatically on completion
  * @note Safe to call multiple times (prevents concurrent checks)
+ * @return TRUE if a new update check thread was started, FALSE otherwise
  * @see CleanupUpdateThread
  */
-void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck);
+BOOL CheckForUpdateAsync(HWND hwnd, BOOL silentCheck);
 
 /**
  * @brief Request update checker cancellation and reap completed thread resources

@@ -838,11 +838,13 @@ LRESULT HandleDialogUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
 /**
  * @brief Handle update check result from background thread
  * @param wp 1 = update available, 0 = no update
- * @param lp Reserved
+ * @param lp 1 = silent startup check, 0 = interactive/manual check
  */
 LRESULT HandleUpdateCheckResult(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (wp == 1) {
-        ShowStoredUpdateDialog(hwnd);
+        if (lp == 0) {
+            ShowStoredUpdateDialog(hwnd);
+        }
     } else {
         if (lp == 0) {
             ShowStoredNoUpdateDialog(hwnd);

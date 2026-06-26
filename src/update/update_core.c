@@ -364,7 +364,7 @@ BOOL GetNewVersionStatus(char* versionBuffer, size_t bufferSize) {
 
 /**
  * @brief Perform update check
- * @param silentCheck TRUE=only show if update found, FALSE=show all results
+ * @param silentCheck TRUE=suppress automatic check dialogs, FALSE=show manual results
  */
 void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
     if (!IsValidUpdateNotifyWindow(hwnd)) {
@@ -416,6 +416,7 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
 
     if (!ParseGitHubRelease(res.buffer, latestVersion, sizeof(latestVersion),
                            downloadUrl, sizeof(downloadUrl), releaseNotes, NOTES_BUFFER_SIZE)) {
+        LOG_WARNING("Update check parse failed (silent=%d)", silentCheck);
         free(releaseNotes);
         CleanupHttpResources(&res);
         if (!silentCheck && !IsUpdateCancelRequested()) {
@@ -447,15 +448,20 @@ void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck) {
 
     int versionCompare = CompareVersions(latestVersion, currentVersion);
     if (versionCompare > 0) {
-        SetNewVersionStatus(TRUE, latestVersion);
-
         StoreUpdateResult(TRUE, currentVersion, latestVersion, downloadUrl, releaseNotes);
-        PostUpdateCheckResult(hwnd, 1, silentCheck ? 1 : 0);
+        SetNewVersionStatus(TRUE, latestVersion);
+        BOOL posted = PostUpdateCheckResult(hwnd, 1, silentCheck ? 1 : 0);
+        if (!posted) {
+            LOG_WARNING("Update check failed to post update-available result (silent=%d)", silentCheck);
+        }
     } else {
         SetNewVersionStatus(FALSE, NULL);
         if (!silentCheck) {
             StoreUpdateResult(FALSE, currentVersion, NULL, NULL, NULL);
-            PostUpdateCheckResult(hwnd, 0, 0);
+            BOOL posted = PostUpdateCheckResult(hwnd, 0, 0);
+            if (!posted) {
+                LOG_WARNING("Update check failed to post no-update result");
+            }
         }
     }
 

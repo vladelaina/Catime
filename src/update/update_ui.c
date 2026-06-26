@@ -646,6 +646,7 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* la
     }
 
     if (!IsValidUpdateDialogParentWindow(hwnd)) {
+        LOG_WARNING("Update dialog not shown: invalid parent window hwnd=0x%p", hwnd);
         return IDNO;
     }
 
@@ -669,8 +670,10 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* la
                           hwnd, UpdateDlgProc);
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
+    } else {
+        LOG_WARNING("Update dialog creation failed: error=%lu", GetLastError());
     }
-    
+
     /* Return IDNO since we can't block for result in modeless mode */
     return IDNO;
 }
@@ -702,6 +705,7 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
     }
 
     if (!IsValidUpdateDialogParentWindow(hwnd)) {
+        LOG_WARNING("No-update dialog not shown: invalid parent window hwnd=0x%p", hwnd);
         return;
     }
 
@@ -712,6 +716,8 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
                    hwnd, NoUpdateDlgProc);
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
+    } else {
+        LOG_WARNING("No-update dialog creation failed: error=%lu", GetLastError());
     }
 }
 
@@ -788,8 +794,10 @@ void ShowStoredUpdateDialog(HWND hwnd) {
     char downloadUrl[URL_BUFFER_SIZE];
     char* releaseNotes = (char*)malloc(NOTES_BUFFER_SIZE);
     const char* releaseNotesToShow = releaseNotes ? releaseNotes : "";
+    BOOL hasUpdate = FALSE;
 
     AcquireSRWLockShared(&g_storedUpdateLock);
+    hasUpdate = g_storedHasUpdate;
     CopyUpdateString(currentVersion, sizeof(currentVersion), g_storedCurrentVersion);
     CopyUpdateString(latestVersion, sizeof(latestVersion), g_storedLatestVersion);
     CopyUpdateString(downloadUrl, sizeof(downloadUrl), g_storedDownloadUrl);
@@ -797,6 +805,12 @@ void ShowStoredUpdateDialog(HWND hwnd) {
         CopyUpdateString(releaseNotes, NOTES_BUFFER_SIZE, g_storedReleaseNotes);
     }
     ReleaseSRWLockShared(&g_storedUpdateLock);
+
+    if (!hasUpdate || latestVersion[0] == '\0') {
+        LOG_WARNING("Stored update dialog requested without complete update data");
+        free(releaseNotes);
+        return;
+    }
 
     ShowUpdateNotification(hwnd, currentVersion, latestVersion, downloadUrl, releaseNotesToShow);
     free(releaseNotes);

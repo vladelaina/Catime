@@ -175,24 +175,24 @@ void CleanupUpdateThreadBlocking(void) {
     ReleaseSRWLockExclusive(&g_updateThreadLock);
 }
 
-void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
+BOOL CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     AcquireSRWLockExclusive(&g_updateThreadLock);
     CleanupCompletedUpdateThreadLocked();
     DWORD now = GetTickCount();
     if (IsUpdateThreadStartFailureCoolingDown(now)) {
         ReleaseSRWLockExclusive(&g_updateThreadLock);
-        return;
+        return FALSE;
     }
 
     if (InterlockedCompareExchange(&g_updateThreadRunning, 1, 0) != 0) {
         ReleaseSRWLockExclusive(&g_updateThreadLock);
-        return;
+        return FALSE;
     }
 
     if (g_hUpdateThread) {
         InterlockedExchange(&g_updateThreadRunning, 0);
         ReleaseSRWLockExclusive(&g_updateThreadLock);
-        return;
+        return FALSE;
     }
 
     UpdateThreadParams* threadParams = PrepareThreadParams(hwnd, silentCheck);
@@ -200,7 +200,7 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
         MarkUpdateThreadStartFailure(now);
         InterlockedExchange(&g_updateThreadRunning, 0);
         ReleaseSRWLockExclusive(&g_updateThreadLock);
-        return;
+        return FALSE;
     }
     ResetUpdateCheckCancel();
     HANDLE hThread = (HANDLE)_beginthreadex(
@@ -215,8 +215,11 @@ void CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     if (hThread) {
         g_hUpdateThread = hThread;
         g_updateStartFailureCooldownUntil = 0;
+        ReleaseSRWLockExclusive(&g_updateThreadLock);
+        return TRUE;
     } else {
         HandleThreadCreationFailure(threadParams);
     }
     ReleaseSRWLockExclusive(&g_updateThreadLock);
+    return FALSE;
 }

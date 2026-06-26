@@ -3,7 +3,7 @@
  * @brief GitHub release checker with semantic versioning
  * 
  * Semantic Versioning 2.0.0 with prerelease support (alpha < beta < rc < stable).
- * Silent mode prevents "up-to-date" spam during automatic checks.
+ * Silent mode keeps automatic checks non-intrusive and stores results for later UI.
  */
 
 #ifndef UPDATE_CHECKER_H
@@ -25,9 +25,9 @@ void CheckForUpdate(HWND hwnd);
 /**
  * @brief Check for updates with optional silent mode
  * @param hwnd Parent window
- * @param silentCheck TRUE to suppress "up-to-date" dialogs
+ * @param silentCheck TRUE to suppress automatic check dialogs
  * 
- * @details Silent mode for startup checks (shows only new versions and errors)
+ * @details Silent mode for startup checks stores update state without prompting.
  * 
  * @warning Blocks UI thread (use async_update_checker.h instead)
  */
