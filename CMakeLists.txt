@@ -13,6 +13,7 @@ option(CATIME_ENABLE_ASAN "Enable AddressSanitizer for analyzer builds" OFF)
 option(CATIME_ENABLE_MSVC_ANALYZE "Enable MSVC static analysis" OFF)
 option(CATIME_ENABLE_BINARY_HARDENING "Enable Win32 binary hardening flags" ON)
 option(CATIME_ENABLE_WIN32_RESOURCES "Enable Win32 resource compilation" ON)
+option(CATIME_VALIDATE_LANGUAGES "Validate language resource key alignment" ON)
 
 # Set default build type to Release
 if(NOT CMAKE_BUILD_TYPE)
@@ -45,6 +46,28 @@ if(CATIME_ENABLE_WIN32_RESOURCES)
         OBJECT_DEPENDS "${LANGUAGE_RC_DEPENDENCIES}"
     )
 
+    if(CATIME_VALIDATE_LANGUAGES)
+        find_program(CATIME_NODE_EXECUTABLE NAMES node node.exe)
+        if(CATIME_NODE_EXECUTABLE)
+            add_custom_target(validate_languages
+                COMMAND "${CATIME_NODE_EXECUTABLE}"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/i18n/validate_languages.js"
+                        "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages"
+                DEPENDS
+                    "${CMAKE_CURRENT_SOURCE_DIR}/i18n/validate_languages.js"
+                    ${LANGUAGE_RESOURCE_FILES}
+                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+                COMMENT "Validating language resources"
+                VERBATIM
+            )
+        else()
+            message(FATAL_ERROR
+                "Node.js is required for language resource validation. "
+                "Install Node.js or configure with -DCATIME_VALIDATE_LANGUAGES=OFF."
+            )
+        endif()
+    endif()
+
     file(GLOB DIALOG_RESOURCE_FILES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/*_dialog.rc"
     )
@@ -63,6 +86,10 @@ endif()
 
 # Create executable
 add_executable(catime ${SOURCES} ${HEADERS} ${RESOURCE_FILES})
+
+if(TARGET validate_languages)
+    add_dependencies(catime validate_languages)
+endif()
 
 # Add include directories
 target_include_directories(catime PRIVATE
