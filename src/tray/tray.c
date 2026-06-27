@@ -465,6 +465,26 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
     wcsncat_s(tip, tipSize, extra, _TRUNCATE);
 }
 
+static void AppendUptimeLine(wchar_t* tip, size_t tipSize) {
+    ULONGLONG totalMinutes = GetTickCount64() / 60000ULL;
+    ULONGLONG days = totalMinutes / (24ULL * 60ULL);
+    ULONGLONG hours = (totalMinutes / 60ULL) % 24ULL;
+    ULONGLONG minutes = totalMinutes % 60ULL;
+
+    wchar_t extra[64];
+    if (days > 0ULL) {
+        _snwprintf_s(extra, _countof(extra), _TRUNCATE,
+                     L"\nUptime %llud %lluh %llum", days, hours, minutes);
+    } else if (hours > 0ULL) {
+        _snwprintf_s(extra, _countof(extra), _TRUNCATE,
+                     L"\nUptime %lluh %llum", hours, minutes);
+    } else {
+        _snwprintf_s(extra, _countof(extra), _TRUNCATE,
+                     L"\nUptime %llum", minutes);
+    }
+    wcsncat_s(tip, tipSize, extra, _TRUNCATE);
+}
+
 /** @brief Update tray icon tooltip */
 void UpdateTrayTooltip(const wchar_t* tip) {
     HWND owner = GetValidTrayMainWindow();
@@ -669,6 +689,7 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
         AnimationSpeedMetric metric = GetAnimationSpeedMetric();
         AppendSpeedLine(tip, _countof(tip), metric, cpu, mem);
     }
+    AppendUptimeLine(tip, _countof(tip));
 
     UpdateTrayTooltip(tip);
     if (dynamicIcon) {
