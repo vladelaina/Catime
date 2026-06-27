@@ -437,6 +437,17 @@ AppLanguage GetSystemDefaultLanguage(void) {
     WORD primaryLang = PRIMARYLANGID(langID);
     WORD subLang = SUBLANGID(langID);
     
+    if (primaryLang == LANG_CHINESE) {
+        switch (subLang) {
+            case SUBLANG_CHINESE_TRADITIONAL:
+            case SUBLANG_CHINESE_HONGKONG:
+            case SUBLANG_CHINESE_MACAU:
+                return APP_LANG_CHINESE_TRAD;
+            default:
+                return APP_LANG_CHINESE_SIMP;
+        }
+    }
+
     for (int i = 0; i < APP_LANG_COUNT; i++) {
         const LanguageMetadata* meta = &g_languageMetadata[i];
         

@@ -135,6 +135,12 @@ const ConfigItemMeta* GetConfigMetadata(int* count);
 int DetectSystemLanguage(void);
 
 /**
+ * @brief Detect system language and return the matching config key
+ * @return Static language config key string, English on fallback
+ */
+const char* GetDetectedSystemLanguageConfigKey(void);
+
+/**
  * @brief Migrate existing config to new version while preserving user settings
  * @param config_path Path to config file (UTF-8)
  *

@@ -149,31 +149,10 @@ void ReadConfig() {
             ConfigSnapshot snapshot;
             InitializeDefaultSnapshot(&snapshot);
             
-            /* Apply detected language if possible, matching CreateDefaultConfig logic */
-            extern int DetectSystemLanguage(void);
-            int detectedLang = DetectSystemLanguage();
-            
-            const char* langNames[] = {
-                "Chinese_Simplified",
-                "Chinese_Traditional",
-                "English",
-                "Spanish",
-                "French",
-                "German",
-                "Russian",
-                "Portuguese",
-                "Japanese",
-                "Korean"
-            };
-            
-            /* Assuming enum values correspond to array indices 0-9 */
-            if (detectedLang >= 0 && detectedLang < (int)(sizeof(langNames)/sizeof(langNames[0]))) {
-                strncpy(snapshot.language, langNames[detectedLang], sizeof(snapshot.language) - 1);
-                snapshot.language[sizeof(snapshot.language) - 1] = '\0';
-            } else {
-                strncpy(snapshot.language, "English", sizeof(snapshot.language) - 1);
-                snapshot.language[sizeof(snapshot.language) - 1] = '\0';
-            }
+            const char* detectedLanguage = GetDetectedSystemLanguageConfigKey();
+            strncpy(snapshot.language, detectedLanguage,
+                    sizeof(snapshot.language) - 1);
+            snapshot.language[sizeof(snapshot.language) - 1] = '\0';
             
             ApplyConfigSnapshot(&snapshot);
             

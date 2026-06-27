@@ -196,6 +196,15 @@ int DetectSystemLanguage(void) {
     return (int)GetSystemDefaultLanguage();
 }
 
+const char* GetDetectedSystemLanguageConfigKey(void) {
+    int detectedLang = DetectSystemLanguage();
+    if (detectedLang < 0 || detectedLang >= APP_LANG_COUNT) {
+        return GetLanguageConfigKey(APP_LANG_ENGLISH);
+    }
+
+    return GetLanguageConfigKey((AppLanguage)detectedLang);
+}
+
 BOOL WriteDefaultsToConfig(const char* config_path) {
     if (!config_path) return FALSE;
 
@@ -407,28 +416,7 @@ BOOL WriteDefaultsToConfig(const char* config_path) {
 
 BOOL CreateDefaultConfig(const char* config_path) {
     if (!config_path) return FALSE;
-    
-    /* Detect system language and override default */
-    int detectedLang = DetectSystemLanguage();
-    
-    /* Language enum to string mapping */
-    const char* langNames[] = {
-        "Chinese_Simplified",
-        "Chinese_Traditional",
-        "English",
-        "Spanish",
-        "French",
-        "German",
-        "Russian",
-        "Portuguese",
-        "Japanese",
-        "Korean",
-        "Italian"
-    };
-    
-    const char* detectedLangName = (detectedLang >= 0 && detectedLang < APP_LANG_COUNT) 
-                                   ? langNames[detectedLang] 
-                                   : "English";
+    const char* detectedLangName = GetDetectedSystemLanguageConfigKey();
     
     /* Write all defaults */
     if (!WriteDefaultsToConfig(config_path)) {
