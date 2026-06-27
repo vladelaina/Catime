@@ -4,19 +4,11 @@
 #include "drawing/drawing_effect.h"
 #include "drawing/drawing_effect_common.h"
 
-#define AQUA_GRADIENT_LUT_SIZE 4096
-#define AQUA_GRADIENT_LUT_MASK (AQUA_GRADIENT_LUT_SIZE - 1)
 #define AQUA_RIPPLE_FLOW_MS 14000U
 #define AQUA_RIPPLE_FLOW_CYCLES 7
 #define AQUA_NOISE_FIXED_ONE 256
 #define AQUA_NOISE_SAMPLE_STEP 2
-#define AQUA_MIN_GRADIENT_PERIOD 640
-#define AQUA_MAX_GRADIENT_PERIOD 1600
 
-static DWORD g_aquaGradientLUT[AQUA_GRADIENT_LUT_SIZE];
-static int g_aquaGradientIndexLUT[AQUA_MAX_GRADIENT_PERIOD];
-static int g_aquaGradientIndexPeriod = 0;
-static BOOL g_aquaTablesInitialized = FALSE;
 
 static inline int ClampByteInt(int value) {
     if (value < 0) return 0;
@@ -30,62 +22,12 @@ static inline int ClampInt(int value, int minValue, int maxValue) {
     return value;
 }
 
-static inline int LerpByteInt(int a, int b, int t4096) {
-    return a + (((b - a) * t4096) >> 12);
-}
-
 static inline int LerpByte256(int a, int b, int t256) {
     return a + (((b - a) * t256) >> 8);
 }
 
 static inline int SmoothStepByte(int t) {
     return (t * t * (768 - (t << 1))) >> 16;
-}
-
-static void InitAquaTables(void) {
-    if (g_aquaTablesInitialized) return;
-
-    for (int i = 0; i < AQUA_GRADIENT_LUT_SIZE; i++) {
-        int r1, g1, b1, r2, g2, b2, start, end;
-        if (i < 1024) {
-            start = 0; end = 1024;
-            r1 = 255; g1 = 255; b1 = 255;
-            r2 = 227; g2 = 250; b2 = 255;
-        } else if (i < 2048) {
-            start = 1024; end = 2048;
-            r1 = 227; g1 = 250; b1 = 255;
-            r2 = 139; g2 = 240; b2 = 255;
-        } else if (i < 3072) {
-            start = 2048; end = 3072;
-            r1 = 139; g1 = 240; b1 = 255;
-            r2 = 255; g2 = 255; b2 = 255;
-        } else {
-            start = 3072; end = 4095;
-            r1 = 255; g1 = 255; b1 = 255;
-            r2 = 174; g2 = 242; b2 = 255;
-        }
-
-        int t4096 = ((i - start) << 12) / (end - start);
-        int r = LerpByteInt(r1, r2, t4096);
-        int g = LerpByteInt(g1, g2, t4096);
-        int b = LerpByteInt(b1, b2, t4096);
-        g_aquaGradientLUT[i] = ((DWORD)r << 16) | ((DWORD)g << 8) | (DWORD)b;
-    }
-
-    g_aquaTablesInitialized = TRUE;
-}
-
-static const int* GetAquaGradientIndexLUT(int period) {
-    period = ClampInt(period, AQUA_MIN_GRADIENT_PERIOD, AQUA_MAX_GRADIENT_PERIOD);
-    if (g_aquaGradientIndexPeriod != period) {
-        for (int i = 0; i < period; i++) {
-            g_aquaGradientIndexLUT[i] =
-                (int)(((long long)i * AQUA_GRADIENT_LUT_SIZE) / period) &
-                AQUA_GRADIENT_LUT_MASK;
-        }
-        g_aquaGradientIndexPeriod = period;
-    }
-    return g_aquaGradientIndexLUT;
 }
 
 static inline unsigned int AquaHashNoise(int x, int y, unsigned int seed) {
@@ -252,8 +194,6 @@ static void BuildAquaNoiseMap(unsigned char* noiseMap,
 }
 
 static inline void GetAquaPixelColor(int screenX, int screenY,
-                                     int aquaPeriod,
-                                     const int* aquaIndexLUT,
                                      int baseR, int baseG, int baseB,
                                      GlowColorCallback colorCb, void* userData,
                                      int* outR, int* outG, int* outB) {
@@ -265,26 +205,13 @@ static inline void GetAquaPixelColor(int screenX, int screenY,
         colorCb(screenX, screenY, &finalR, &finalG, &finalB, userData);
     }
 
-    int coord = screenX + (screenY >> 2);
-    int coordMod = coord % aquaPeriod;
-    if (coordMod < 0) coordMod += aquaPeriod;
-    int aquaIndex = aquaIndexLUT ? aquaIndexLUT[coordMod] : 0;
-    DWORD aquaColor = g_aquaGradientLUT[aquaIndex & AQUA_GRADIENT_LUT_MASK];
-    int aquaR = (aquaColor >> 16) & 0xFF;
-    int aquaG = (aquaColor >> 8) & 0xFF;
-    int aquaB = aquaColor & 0xFF;
-
     finalR = ClampByteInt(finalR);
     finalG = ClampByteInt(finalG);
     finalB = ClampByteInt(finalB);
 
-    if (outR) *outR = ((finalR * 5) + (aquaR * 3)) >> 3;
-    if (outG) *outG = ((finalG * 5) + (aquaG * 3)) >> 3;
-    if (outB) *outB = ((finalB * 5) + (aquaB * 3)) >> 3;
-}
-
-static inline int AquaGlowChannel(int channel) {
-    return ClampByteInt(channel + ((255 - channel) >> 2));
+    if (outR) *outR = finalR;
+    if (outG) *outG = finalG;
+    if (outB) *outB = finalB;
 }
 
 static inline void AddPremultipliedGlow(DWORD* pixel, int r, int g, int b, int alpha) {
@@ -369,9 +296,6 @@ void RenderAquaEffect(DWORD* pixels, int destWidth, int destHeight,
     }
 
     if (!DrawingEffect_BeginBufferUse()) return;
-    InitAquaTables();
-    int aquaPeriod = ClampInt(destWidth * 3, AQUA_MIN_GRADIENT_PERIOD, AQUA_MAX_GRADIENT_PERIOD);
-    const int* aquaIndexLUT = GetAquaGradientIndexLUT(aquaPeriod);
 
     DrawingEffectBuffers buffers;
     if (!DrawingEffect_EnsureBuffers(neededSize, &buffers)) {
@@ -442,7 +366,7 @@ void RenderAquaEffect(DWORD* pixels, int destWidth, int destHeight,
 
     ApplyGaussianBlur(displacedMap, glowMap, alphaMap, gw, gh, glowBlur);
 
-    /* CSS reference: drop-shadow(0 8px 20px rgba(0, 206, 235, 0.35)). */
+    /* The glow follows the configured text color; Aqua only changes the shape. */
     for (int j = firstJ; j < lastJ; j++) {
         int shadowJ = j - shadowOffset;
         if (shadowJ < 0 || shadowJ >= gh) continue;
@@ -462,17 +386,17 @@ void RenderAquaEffect(DWORD* pixels, int destWidth, int destHeight,
             int glowR = r;
             int glowG = g;
             int glowB = b;
-            GetAquaPixelColor(screenX, screenY, aquaPeriod, aquaIndexLUT,
-                              r, g, b, colorCb, userData, &glowR, &glowG, &glowB);
+            GetAquaPixelColor(screenX, screenY, r, g, b, colorCb, userData,
+                              &glowR, &glowG, &glowB);
             AddPremultipliedGlow(destRow + screenX,
-                                 AquaGlowChannel(glowR),
-                                 AquaGlowChannel(glowG),
-                                 AquaGlowChannel(glowB),
+                                 glowR,
+                                 glowG,
+                                 glowB,
                                  alpha);
         }
     }
 
-    /* User color remains dominant; the static Aqua gradient adds water highlights. */
+    /* Keep the visible text color identical to the configured color source. */
     for (int j = firstJ; j < lastJ; j++) {
         int screenY = (int)(startY + (long long)j);
         DWORD* destRow = pixels + (size_t)screenY * (size_t)destWidth;
@@ -486,8 +410,8 @@ void RenderAquaEffect(DWORD* pixels, int destWidth, int destHeight,
             int fillR = r;
             int fillG = g;
             int fillB = b;
-            GetAquaPixelColor(screenX, screenY, aquaPeriod, aquaIndexLUT,
-                              r, g, b, colorCb, userData, &fillR, &fillG, &fillB);
+            GetAquaPixelColor(screenX, screenY, r, g, b, colorCb, userData,
+                              &fillR, &fillG, &fillB);
 
             BlendPremultipliedBody(destRow + screenX,
                                    fillR,

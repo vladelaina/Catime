@@ -24,6 +24,7 @@
 #include "menu_preview.h"
 #include "utils/string_convert.h"
 #include <windows.h>
+#include <commctrl.h>
 #include <shlobj.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,7 @@
 #define CUSTOM_TEXT_DISPLAY_MAX_FILE_BYTES (64u * 1024u)
 #define CUSTOM_TEXT_DISPLAY_FILENAME_W L"custom_display.txt"
 #define CUSTOM_TEXT_DISPLAY_EMPTY_PREVIEW_TEXT_W L"Ciallo\uff5e(\u2220\u30fb\u03c9<)\u2312\u2605"
+#define CUSTOM_TEXT_DISPLAY_EDIT_SUBCLASS_ID 1
 
 typedef struct {
     HWND owner;
@@ -562,6 +564,33 @@ static BOOL ApplyCustomTextDisplayText(HWND hwndDlg, CustomTextDisplayState* sta
     return applied;
 }
 
+static LRESULT CALLBACK CustomTextDisplayEditSubclassProc(HWND hwnd, UINT msg,
+                                                          WPARAM wParam,
+                                                          LPARAM lParam,
+                                                          UINT_PTR subclassId,
+                                                          DWORD_PTR refData) {
+    (void)subclassId;
+    (void)refData;
+
+    if (msg == WM_KEYDOWN &&
+        wParam == VK_RETURN &&
+        (GetKeyState(VK_CONTROL) & 0x8000)) {
+        HWND hwndDlg = GetParent(hwnd);
+        if (hwndDlg) {
+            SendMessageW(hwndDlg, WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED),
+                         (LPARAM)GetDlgItem(hwndDlg, IDOK));
+            return 0;
+        }
+    }
+
+    if (msg == WM_NCDESTROY) {
+        RemoveWindowSubclass(hwnd, CustomTextDisplayEditSubclassProc,
+                             CUSTOM_TEXT_DISPLAY_EDIT_SUBCLASS_ID);
+    }
+
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
 static INT_PTR CALLBACK CustomTextDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     CustomTextDisplayState* state =
         (CustomTextDisplayState*)GetWindowLongPtrW(hwndDlg, GWLP_USERDATA);
@@ -590,6 +619,8 @@ static INT_PTR CALLBACK CustomTextDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM 
             if (state->editFont) {
                 SendMessageW(hwndEdit, WM_SETFONT, (WPARAM)state->editFont, TRUE);
             }
+            SetWindowSubclass(hwndEdit, CustomTextDisplayEditSubclassProc,
+                              CUSTOM_TEXT_DISPLAY_EDIT_SUBCLASS_ID, 0);
             SendMessageW(hwndEdit, EM_LIMITTEXT, CUSTOM_TEXT_DISPLAY_MAX_CHARS, 0);
             SetDlgItemTextW(hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_TEXT,
                             state && state->originalText ? state->originalText : L"");
@@ -652,6 +683,9 @@ static INT_PTR CALLBACK CustomTextDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM 
 
         case WM_DESTROY:
             KillTimer(hwndDlg, CUSTOM_TEXT_DISPLAY_PREVIEW_TIMER_ID);
+            RemoveWindowSubclass(GetDlgItem(hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_TEXT),
+                                 CustomTextDisplayEditSubclassProc,
+                                 CUSTOM_TEXT_DISPLAY_EDIT_SUBCLASS_ID);
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_CUSTOM_TEXT_DISPLAY, hwndDlg);
             if (state) {
                 if (state->editFont) {
