@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include "window_procedure/ole_drop_target.h"
 #include "window_procedure/window_drop_target.h" /* Reuse existing helpers */
+#include "window_procedure/window_commands.h"
 #include "font/font_manager.h"
 #include "tray/tray_animation_core.h"
 #include "config.h"
@@ -221,6 +222,7 @@ static void RestoreOriginalState(OleDropTarget* target, BOOL reloadOriginal) {
 
     if (restoredPreview && reloadOriginal) {
         /* Force repaint if we restored anything */
+        RefreshCustomTextDisplayDialogFont();
         InvalidateRect(target->hwnd, NULL, TRUE);
     }
 }
@@ -235,6 +237,7 @@ static void StartPreview(OleDropTarget* target, const wchar_t* filePath) {
         /* Preview font */
         if (PreviewFont(GetModuleHandle(NULL), pathUtf8)) {
             target->isPreviewingFont = TRUE;
+            RefreshCustomTextDisplayDialogFont();
             InvalidateRect(target->hwnd, NULL, TRUE);
         }
     } 
@@ -401,6 +404,7 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
                 ClearFontPreviewStateAfterDropApply();
             } else {
                 CancelFontPreview();
+                RefreshCustomTextDisplayDialogFont();
                 InvalidateRect(target->hwnd, NULL, TRUE);
             }
         }
@@ -410,6 +414,7 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
     } else {
         if (hadFontPreview) {
             CancelFontPreview();
+            RefreshCustomTextDisplayDialogFont();
             InvalidateRect(target->hwnd, NULL, TRUE);
         }
         *pdwEffect = DROPEFFECT_NONE;

@@ -46,6 +46,26 @@ static HBITMAP s_hSupportHeart = NULL;
 static int s_supportHeartCx = 0;
 static int s_supportHeartCy = 0;
 
+static BOOL IsCustomTextDisplaySourceActive(void) {
+    if (!PluginData_IsActive()) {
+        return FALSE;
+    }
+
+    wchar_t sourcePath[MAX_PATH] = {0};
+    if (!PluginData_GetDisplaySourcePath(sourcePath, MAX_PATH)) {
+        return FALSE;
+    }
+
+    const wchar_t* fileName = wcsrchr(sourcePath, L'\\');
+    const wchar_t* forwardName = wcsrchr(sourcePath, L'/');
+    if (!fileName || (forwardName && forwardName > fileName)) {
+        fileName = forwardName;
+    }
+    fileName = fileName ? fileName + 1 : sourcePath;
+
+    return _wcsicmp(fileName, L"custom_display.txt") == 0;
+}
+
 typedef struct {
     UINT id;
     char color[COLOR_HEX_BUFFER];
@@ -491,14 +511,14 @@ void BuildPluginsSubmenu(HMENU hMenu) {
 
     AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
     
-    // Show plugin file - displays file content without running a plugin
+    // Custom text display - edits and previews custom_display.txt without running a plugin
     {
         UINT flags = MF_STRING;
-        if (PluginData_IsActive() && activePluginIndex < 0) {
+        if (activePluginIndex < 0 && IsCustomTextDisplaySourceActive()) {
             flags |= MF_CHECKED;
         }
-        AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_SHOW_FILE, 
-                    GetLocalizedString(NULL, L"Show plugin file"));
+        AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_CUSTOM_TEXT_DISPLAY,
+                    GetLocalizedString(NULL, L"Custom Text Display"));
     }
     AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hPluginsMenu, MF_STRING, CLOCK_IDM_PLUGINS_OPEN_DIR, 

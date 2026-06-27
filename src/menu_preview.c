@@ -16,6 +16,7 @@
 #include "tray/tray_animation_core.h"
 #include "window/window_core.h"
 #include "window/window_desktop_integration.h"
+#include "window_procedure/window_commands.h"
 #include "log.h"
 
 /* ============================================================================
@@ -167,6 +168,7 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
 
         strncpy_s(g_previewState.data.font.fontName, MAX_PATH, fontName, _TRUNCATE);
         strncpy_s(g_previewState.data.font.internalName, MAX_PATH, internalName, _TRUNCATE);
+        RefreshCustomTextDisplayDialogFont();
         if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
         return;
     }
@@ -195,6 +197,7 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
 
             strncpy_s(g_previewState.data.font.fontName, MAX_PATH, fontName, _TRUNCATE);
             strncpy_s(g_previewState.data.font.internalName, MAX_PATH, internalName, _TRUNCATE);
+            RefreshCustomTextDisplayDialogFont();
             break;
         }
         
@@ -261,6 +264,10 @@ void CancelPreview(HWND hwnd) {
 
     /* Reset preview state */
     g_previewState.type = PREVIEW_TYPE_NONE;
+
+    if (needsFontReload) {
+        RefreshCustomTextDisplayDialogFont();
+    }
 
     if (needsEffectCleanup) {
         CleanupDrawingEffects();
@@ -329,6 +336,9 @@ BOOL ApplyPreview(HWND hwnd) {
     }
     
     g_previewState.type = PREVIEW_TYPE_NONE;
+    if (appliedType == PREVIEW_TYPE_FONT) {
+        RefreshCustomTextDisplayDialogFont();
+    }
     if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
     return TRUE;
 }

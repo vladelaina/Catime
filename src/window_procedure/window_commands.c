@@ -554,6 +554,7 @@ static BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
         HINSTANCE hInstance = (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE);
         if (SwitchFont(hInstance, foundFontPath)) {
             LOG_INFO("Font switched successfully: %s", foundFontPath);
+            RefreshCustomTextDisplayDialogFont();
             InvalidateRect(hwnd, NULL, TRUE);
         } else {
             LOG_ERROR("Failed to switch font: %s", foundFontPath);

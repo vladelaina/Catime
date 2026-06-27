@@ -12,6 +12,7 @@
 #include "log.h"
 #include "font.h"
 #include "tray/tray_animation_core.h"
+#include "window_procedure/window_commands.h"
 #include "window_procedure/window_procedure.h"
 
 #ifdef _MSC_VER
@@ -525,6 +526,7 @@ DropImportResult HandleDropFiles(HWND hwnd, HDROP hDrop) {
 
         if (SwitchFont(GetModuleHandle(NULL), relPathA)) {
             result.fontApplied = TRUE;
+            RefreshCustomTextDisplayDialogFont();
             InvalidateRect(hwnd, NULL, TRUE);
         }
     }

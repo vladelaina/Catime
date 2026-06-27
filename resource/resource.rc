@@ -48,6 +48,7 @@ END
 #include "font_license_dialog.rc"
 #include "system_font_picker_dialog.rc"
 #include "plugin_security_dialog.rc"
+#include "custom_text_display_dialog.rc"
 #include "pomodoro_time_dialog.rc"
 #include "pomodoro_loop_dialog.rc"
 #include "pomodoro_combo_dialog.rc"

@@ -70,6 +70,7 @@ BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
 
 BOOL HandlePluginCommand(HWND hwnd, UINT cmd);
 void HandlePluginExit(HWND hwnd);
+void RefreshCustomTextDisplayDialogFont(void);
 
 #endif /* WINDOW_COMMANDS_H */
 

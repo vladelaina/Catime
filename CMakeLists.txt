@@ -33,6 +33,32 @@ if(CATIME_ENABLE_WIN32_RESOURCES)
         resource/languages.rc
         resource/catime.rc
     )
+
+    file(GLOB LANGUAGE_RESOURCE_FILES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages/*.ini"
+    )
+    set(LANGUAGE_RC_DEPENDENCIES
+        ${LANGUAGE_RESOURCE_FILES}
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
+    )
+    set_source_files_properties(resource/languages.rc PROPERTIES
+        OBJECT_DEPENDS "${LANGUAGE_RC_DEPENDENCIES}"
+    )
+
+    file(GLOB DIALOG_RESOURCE_FILES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/*_dialog.rc"
+    )
+    set(RESOURCE_RC_DEPENDENCIES
+        ${DIALOG_RESOURCE_FILES}
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource/app.manifest"
+    )
+    set_source_files_properties(resource/resource.rc PROPERTIES
+        OBJECT_DEPENDS "${RESOURCE_RC_DEPENDENCIES}"
+    )
+    set_source_files_properties(resource/catime.rc PROPERTIES
+        OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
+    )
 endif()
 
 # Create executable

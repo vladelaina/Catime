@@ -210,7 +210,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     /* Ignore command-line flags (double-dash options) */
     if (input[0] == '-' && input[1] == '-') {
         LOG_INFO("Ignoring command-line flag: %s", input);
-        return TRUE;
+        return FALSE;
     }
     
     NormalizeWhitespace(input);

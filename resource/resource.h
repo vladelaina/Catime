@@ -10,7 +10,7 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.6.0-alpha5"   /**< Version string */
+#define CATIME_VERSION "1.6.0-alpha6"   /**< Version string */
 #define CATIME_VERSION_MAJOR 1           /**< Major version number */
 #define CATIME_VERSION_MINOR 6           /**< Minor version number */
 #define CATIME_VERSION_PATCH 0           /**< Patch version number */
@@ -153,8 +153,8 @@
 /** @brief Plugin menu identifiers */
 #define CLOCK_IDM_PLUGINS 140                /**< Plugins submenu */
 #define CLOCK_IDM_PLUGINS_BASE 4000          /**< Base ID for plugin menu items (4000-4499) */
-#define CLOCK_IDM_PLUGINS_SETTINGS_BASE 4500 /**< Base ID for plugin settings items (4500-4998) */
-#define CLOCK_IDM_PLUGINS_SHOW_FILE 4998     /**< Show plugin file content directly */
+#define CLOCK_IDM_PLUGINS_SETTINGS_BASE 4500 /**< Base ID for plugin settings items (4500-4997) */
+#define CLOCK_IDM_CUSTOM_TEXT_DISPLAY 4998   /**< Display custom text via custom_display.txt */
 #define CLOCK_IDM_PLUGINS_OPEN_DIR 4999      /**< Open plugins folder menu item */
 
 /** @brief Help and application menu identifiers */
@@ -532,6 +532,11 @@
 #define IDC_PLUGIN_SECURITY_CANCEL_BTN 764      /**< Plugin security cancel button */
 #define IDC_PLUGIN_SECURITY_RUN_ONCE_BTN 765    /**< Plugin security run once button */
 #define IDC_PLUGIN_SECURITY_TRUST_BTN 766       /**< Plugin security trust button */
+
+/** @brief Custom text display dialog identifiers */
+#define IDD_CUSTOM_TEXT_DISPLAY_DIALOG 770      /**< Custom text display dialog */
+#define IDC_CUSTOM_TEXT_DISPLAY_HINT 771        /**< Custom text display hint label */
+#define IDC_CUSTOM_TEXT_DISPLAY_TEXT 772        /**< Custom text editor */
 
 /** @brief Color dialog format help text control */
 #define IDC_COLOR_FORMAT_HELP 767               /**< Color format help text label */

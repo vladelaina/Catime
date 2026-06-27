@@ -338,22 +338,22 @@ static BOOL GetPluginRelativeImageBaseDirectory(wchar_t* buffer, size_t bufferSi
     if (!buffer || bufferSize == 0) return FALSE;
     buffer[0] = L'\0';
 
-    wchar_t outputPath[MAX_PATH];
-    if (!PluginData_GetOutputPath(outputPath, MAX_PATH)) {
+    wchar_t sourcePath[MAX_PATH];
+    if (!PluginData_GetDisplaySourcePath(sourcePath, MAX_PATH)) {
         return FALSE;
     }
 
-    wchar_t* lastBackslash = wcsrchr(outputPath, L'\\');
-    wchar_t* lastSlash = wcsrchr(outputPath, L'/');
+    wchar_t* lastBackslash = wcsrchr(sourcePath, L'\\');
+    wchar_t* lastSlash = wcsrchr(sourcePath, L'/');
     wchar_t* lastSeparator = lastBackslash;
     if (lastSlash && (!lastSeparator || lastSlash > lastSeparator)) {
         lastSeparator = lastSlash;
     }
 
-    if (lastSeparator && lastSeparator > outputPath) {
+    if (lastSeparator && lastSeparator > sourcePath) {
         *lastSeparator = L'\0';
-        if (wcslen(outputPath) < bufferSize) {
-            wcscpy_s(buffer, bufferSize, outputPath);
+        if (wcslen(sourcePath) < bufferSize) {
+            wcscpy_s(buffer, bufferSize, sourcePath);
             return TRUE;
         }
     }

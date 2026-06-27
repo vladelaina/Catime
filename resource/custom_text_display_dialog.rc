@@ -1,0 +1,17 @@
+/**
+ * @file custom_text_display_dialog.rc
+ * @brief Custom text display dialog resource
+ */
+#include "resource.h"
+
+IDD_CUSTOM_TEXT_DISPLAY_DIALOG DIALOGEX 0, 0, 420, 260
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Custom Text"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    LTEXT       "", IDC_CUSTOM_TEXT_DISPLAY_HINT, 8, 8, 404, 18
+    EDITTEXT    IDC_CUSTOM_TEXT_DISPLAY_TEXT, 8, 30, 404, 200,
+                ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON  "Close", IDCANCEL, 304, 238, 50, 14
+    DEFPUSHBUTTON "OK", IDOK, 362, 238, 50, 14
+END

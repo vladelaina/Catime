@@ -47,6 +47,18 @@ void PluginData_SetOutputDirectoryFromPluginPath(const wchar_t* pluginPath);
 BOOL PluginData_GetOutputPath(wchar_t* buffer, size_t bufferSize);
 
 /**
+ * @brief Get the source file path for the content currently being displayed
+ * @param buffer Output buffer
+ * @param bufferSize Buffer size
+ * @return TRUE if path was copied
+ *
+ * @details Returns plugin output.txt in plugin mode and the dedicated
+ * custom_display.txt path for custom text display. Markdown checkboxes and
+ * relative images should use this instead of PluginData_GetOutputPath().
+ */
+BOOL PluginData_GetDisplaySourcePath(wchar_t* buffer, size_t bufferSize);
+
+/**
  * @brief Set plugin display text directly (e.g., for "Loading..." message)
  * @param text Text to display
  */
@@ -57,6 +69,25 @@ void PluginData_SetText(const wchar_t* text);
  * @param text Text to display
  */
 void PluginData_SetStatusText(const wchar_t* text);
+
+/**
+ * @brief Preview manually supplied display text using the plugin display parser
+ * @param text UTF-16 text to parse and display
+ * @return TRUE if the preview text was accepted
+ *
+ * @details Used by the custom text display UI. Side-effect tags such as
+ * <notify> and <exit> are rendered or removed without triggering their
+ * plugin-runtime effects.
+ */
+BOOL PluginData_SetPreviewText(const wchar_t* text);
+
+/**
+ * @brief Preview manually supplied display text with a backing source file
+ * @param text UTF-16 text to parse and display
+ * @param sourcePath File path that backs the displayed text
+ * @return TRUE if the preview text was accepted
+ */
+BOOL PluginData_SetPreviewTextWithSource(const wchar_t* text, const wchar_t* sourcePath);
 
 /**
  * @brief Set plugin mode active state

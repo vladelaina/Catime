@@ -7,6 +7,7 @@
 #include "markdown/markdown_image.h"
 #include "plugin/plugin_data.h"
 #include "log.h"
+#include "utils/string_convert.h"
 #include "utils/url_safety.h"
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +15,9 @@
 #include <shellapi.h>
 
 /*
- * Design note: checkbox writes must use the same output.txt path as the plugin
- * data watcher, otherwise nested plugins would display one file and update
- * another.
+ * Design note: checkbox writes must use the same source path as the content
+ * currently being displayed. For plugins this is output.txt; for custom text
+ * display this is custom_display.txt.
  */
 #define CHECKBOX_OUTPUT_MAX_BYTES (1024ll * 1024ll)
 #define CHECKBOX_OUTPUT_FILE_SHARE (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
@@ -353,9 +354,9 @@ void FillClickableRegionsAlpha(DWORD* pixels, int width, int height) {
  * Click Handling
  * ============================================================================ */
 
-static BOOL WritePluginOutputContentAtomicW(const wchar_t* filePath,
-                                            const char* content,
-                                            DWORD contentSize) {
+static BOOL WriteDisplaySourceContentAtomicW(const wchar_t* filePath,
+                                             const char* content,
+                                             DWORD contentSize) {
     if (!filePath || !content) return FALSE;
 
     wchar_t tempDir[MAX_PATH] = {0};
@@ -404,7 +405,7 @@ static BOOL WritePluginOutputContentAtomicW(const wchar_t* filePath,
 
 BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
     wchar_t filePath[MAX_PATH];
-    if (!PluginData_GetOutputPath(filePath, MAX_PATH)) {
+    if (!PluginData_GetDisplaySourcePath(filePath, MAX_PATH)) {
         return FALSE;
     }
 
@@ -445,8 +446,9 @@ BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
     BOOL modified = FALSE;
 
     while (end - p >= 6) {
-        /* Look for checkbox pattern: "- [ ] " or "- [x] " or "- [X] " */
-        if (p[0] == '-' && p[1] == ' ' && p[2] == '[' &&
+        /* Look for checkbox pattern: "- [ ] ", "+ [ ] ", or "* [ ] ". */
+        if ((p[0] == '-' || p[0] == '+' || p[0] == '*') &&
+            p[1] == ' ' && p[2] == '[' &&
             (p[3] == ' ' || p[3] == 'x' || p[3] == 'X') &&
             p[4] == ']' && p[5] == ' ') {
             
@@ -466,8 +468,14 @@ BOOL ToggleCheckboxInOutput(int index, HWND hwnd) {
     }
 
     if (modified) {
-        if (WritePluginOutputContentAtomicW(filePath, content, bytesRead)) {
-            LOG_INFO("Toggled checkbox %d in output file", index);
+        if (WriteDisplaySourceContentAtomicW(filePath, content, bytesRead)) {
+            LOG_INFO("Toggled checkbox %d in display source file", index);
+
+            wchar_t* updatedText = Utf8ToWideAlloc(content);
+            if (updatedText) {
+                PluginData_SetPreviewTextWithSource(updatedText, filePath);
+                free(updatedText);
+            }
 
             /* Force redraw */
             if (IsValidMarkdownInteractiveWindow(hwnd)) {

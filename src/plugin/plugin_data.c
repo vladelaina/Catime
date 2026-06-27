@@ -9,6 +9,7 @@
 #include "notification.h"
 #include "../resource/resource.h"
 #include "log.h"
+#include "utils/string_convert.h"
 #include <windows.h>
 #include <shlobj.h>
 #include <stdio.h>
@@ -19,6 +20,7 @@
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define PLUGIN_DISPLAY_RETAIN_WCHARS 4096
+#define PLUGIN_PREVIEW_MAX_EXIT_COUNTDOWN_SECONDS 3600
 
 /* ============================================================================
  * Shared State (exported for plugin_exit.c)
@@ -305,6 +307,7 @@ static FILETIME g_lastOutputWriteTime = {0};
 static ULONGLONG g_lastOutputFileSize = 0;
 static BOOL g_hasLastOutputFileState = FALSE;
 static wchar_t g_pluginOutputDirectory[MAX_PATH] = {0};
+static wchar_t g_displaySourcePath[MAX_PATH] = {0};
 
 /* Dynamic poll interval (controlled by <fps:N> tag) */
 #define DEFAULT_POLL_INTERVAL_MS 500
@@ -540,8 +543,8 @@ static void RemoveFpsTagW(wchar_t* text) {
  * @note This function posts a message to the main thread to show the notification,
  *       avoiding UI operations from the background watcher thread.
  */
-static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
-    if (!text || !hwnd) return;
+static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd, BOOL showNotification) {
+    if (!text) return;
     
     /* Only process notifications when plugin mode is active */
     if (!g_pluginModeActive) return;
@@ -611,28 +614,30 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
             }
         }
         
-        /* Throttle: check if enough time has passed since last notification */
-        /* Note: GetTickCount wraps around after ~49.7 days, but the subtraction
-         * still works correctly due to unsigned arithmetic */
-        DWORD now = GetTickCount();
-        DWORD elapsed = now - g_lastNotifyTime;
-        if (elapsed >= NOTIFY_MIN_INTERVAL_MS) {
-            /* Store pending notification for main thread to process
-             * Note: This is called from ParseContent which already holds g_dataCS,
-             * so we don't need to acquire the lock here. The main thread will
-             * acquire the lock in PluginData_ProcessPendingNotification. */
-            wcsncpy(g_pendingNotify.message, message, 1024);
-            g_pendingNotify.message[1024] = L'\0';
-            g_pendingNotify.type = notifyType;
-            g_pendingNotify.timeout = customTimeout;
-            g_pendingNotify.pending = TRUE;
-            
-            /* Post message to main thread to show notification */
-            if (!IsValidPluginDataNotifyWindow(hwnd) ||
-                !PostMessage(hwnd, WM_PLUGIN_NOTIFY, 0, 0)) {
-                g_pendingNotify.pending = FALSE;
-            } else {
-                g_lastNotifyTime = now;
+        if (showNotification && hwnd) {
+            /* Throttle: check if enough time has passed since last notification */
+            /* Note: GetTickCount wraps around after ~49.7 days, but the subtraction
+             * still works correctly due to unsigned arithmetic */
+            DWORD now = GetTickCount();
+            DWORD elapsed = now - g_lastNotifyTime;
+            if (elapsed >= NOTIFY_MIN_INTERVAL_MS) {
+                /* Store pending notification for main thread to process
+                 * Note: This is called from ParseContent which already holds g_dataCS,
+                 * so we don't need to acquire the lock here. The main thread will
+                 * acquire the lock in PluginData_ProcessPendingNotification. */
+                wcsncpy(g_pendingNotify.message, message, 1024);
+                g_pendingNotify.message[1024] = L'\0';
+                g_pendingNotify.type = notifyType;
+                g_pendingNotify.timeout = customTimeout;
+                g_pendingNotify.pending = TRUE;
+
+                /* Post message to main thread to show notification */
+                if (!IsValidPluginDataNotifyWindow(hwnd) ||
+                    !PostMessage(hwnd, WM_PLUGIN_NOTIFY, 0, 0)) {
+                    g_pendingNotify.pending = FALSE;
+                } else {
+                    g_lastNotifyTime = now;
+                }
             }
         }
         
@@ -645,6 +650,66 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
     }
 }
 
+static BOOL PreviewReplaceExitTagW(wchar_t* text, int* textLen) {
+    if (!text || !textLen) return FALSE;
+
+    wchar_t* start = wcsstr(text, L"<exit>");
+    wchar_t* end = wcsstr(text, L"</exit>");
+    if (!start || !end || end <= start) {
+        return FALSE;
+    }
+
+    int seconds = 3;
+    const wchar_t* numStart = start + 6;
+    BOOL validNumber = TRUE;
+
+    if (numStart < end) {
+        while (numStart < end && (*numStart == L' ' || *numStart == L'\t')) {
+            numStart++;
+        }
+
+        if (numStart < end) {
+            int parsed = 0;
+            const wchar_t* parsePtr = numStart;
+            while (parsePtr < end && *parsePtr != L' ' && *parsePtr != L'\t') {
+                int digit = (int)(*parsePtr - L'0');
+                if (*parsePtr < L'0' || *parsePtr > L'9' ||
+                    parsed > (INT_MAX - digit) / 10) {
+                    validNumber = FALSE;
+                    break;
+                }
+                parsed = parsed * 10 + digit;
+                parsePtr++;
+            }
+
+            if (validNumber) {
+                if (parsed > 0) {
+                    seconds = parsed > PLUGIN_PREVIEW_MAX_EXIT_COUNTDOWN_SECONDS
+                        ? PLUGIN_PREVIEW_MAX_EXIT_COUNTDOWN_SECONDS
+                        : parsed;
+                } else {
+                    validNumber = FALSE;
+                }
+            }
+        }
+    }
+
+    if (!validNumber) {
+        return FALSE;
+    }
+
+    wchar_t countdownNum[16];
+    _snwprintf_s(countdownNum, 16, _TRUNCATE, L"%d", seconds);
+
+    wchar_t* suffixStart = end + 7;
+    size_t suffixLen = wcslen(suffixStart);
+    size_t numLen = wcslen(countdownNum);
+    memmove(start + numLen, suffixStart, (suffixLen + 1) * sizeof(wchar_t));
+    memcpy(start, countdownNum, numLen * sizeof(wchar_t));
+    *textLen = (int)wcslen(text);
+    return TRUE;
+}
+
 /**
  * @brief Parse plain text content and update display text
  * 
@@ -654,6 +719,7 @@ static void ParseAndShowNotifyTagW(wchar_t* text, HWND hwnd) {
  * - Markdown formatting
  */
 static PluginParseResult ParseContent(const char* content, size_t contentLen,
+                                      BOOL suppressSideEffects,
                                       BOOL* displayChangedOut,
                                       BOOL* timerRecheckOut) {
     if (displayChangedOut) {
@@ -728,7 +794,9 @@ static PluginParseResult ParseContent(const char* content, size_t contentLen,
 
     BOOL hadCatimeTag = PluginDisplayHasCatimeTagLocked();
 
-    ApplyContentPollInterval(hasFpsTag, parsedPollInterval);
+    if (!suppressSideEffects) {
+        ApplyContentPollInterval(hasFpsTag, parsedPollInterval);
+    }
 
     if (PluginExit_IsInProgress()) {
         LeaveCriticalSection(&g_dataCS);
@@ -737,7 +805,7 @@ static PluginParseResult ParseContent(const char* content, size_t contentLen,
     }
 
     /* Process <notify> tags while holding g_dataCS for pending-notification state. */
-    ParseAndShowNotifyTagW(displayText, g_hNotifyWnd);
+    ParseAndShowNotifyTagW(displayText, g_hNotifyWnd, !suppressSideEffects);
 
     len = (int)wcslen(displayText);
     size_t displaySize = (size_t)len + 1;
@@ -764,7 +832,9 @@ static PluginParseResult ParseContent(const char* content, size_t contentLen,
     memcpy(g_pluginDisplayText, displayText, displaySize * sizeof(wchar_t));
 
     /* Process <exit> tag - if countdown starts, set data flag and return */
-    if (PluginExit_ParseTag(g_pluginDisplayText, &len, g_pluginDisplayTextLen)) {
+    if (suppressSideEffects
+            ? PreviewReplaceExitTagW(g_pluginDisplayText, &len)
+            : PluginExit_ParseTag(g_pluginDisplayText, &len, g_pluginDisplayTextLen)) {
         g_hasPluginData = TRUE;
         BOOL hasCatimeTag = PluginDisplayHasCatimeTagLocked();
         LeaveCriticalSection(&g_dataCS);
@@ -882,6 +952,16 @@ static BOOL GetPluginOutputPathW(wchar_t* buffer, size_t bufferSize) {
     return TRUE;
 }
 
+static void SetDisplaySourcePathLocked(const wchar_t* sourcePath) {
+    if (!sourcePath || sourcePath[0] == L'\0' || wcslen(sourcePath) >= MAX_PATH) {
+        g_displaySourcePath[0] = L'\0';
+        return;
+    }
+
+    wcsncpy(g_displaySourcePath, sourcePath, MAX_PATH - 1);
+    g_displaySourcePath[MAX_PATH - 1] = L'\0';
+}
+
 static BOOL GetDirectoryFromPathW(const wchar_t* path,
                                   wchar_t* directory,
                                   size_t directorySize) {
@@ -983,6 +1063,7 @@ static BOOL ClearPluginDisplayDataLocked(void) {
 
     g_hasPluginData = FALSE;
     ClearPluginDisplayTextLocked();
+    SetDisplaySourcePathLocked(NULL);
     SetPollIntervalMs(DEFAULT_POLL_INTERVAL_MS);
 
     return hadDisplayData;
@@ -1024,6 +1105,7 @@ static void ResetPluginDataStateLocked(void) {
     g_hasPluginData = FALSE;
     FreePluginDataBuffersLocked();
     InvalidateLastOutputFileStateLocked();
+    SetDisplaySourcePathLocked(NULL);
     ResetPendingNotificationLocked();
     SetDefaultPluginOutputDirectoryLocked();
 }
@@ -1187,17 +1269,19 @@ static BOOL ProcessPluginOutputFile(const wchar_t* filePath, BOOL forceRefresh,
         *lastWriteTime = currentWriteTime;
         *lastFileSize = fileSize;
         EnterCriticalSection(&g_dataCS);
+        SetDisplaySourcePathLocked(filePath);
         UpdateLastOutputFileStateLocked(&currentWriteTime, fileSize);
         LeaveCriticalSection(&g_dataCS);
     } else {
         BOOL displayChanged = FALSE;
         BOOL timerRecheck = FALSE;
         PluginParseResult parseResult =
-            ParseContent(currentContent, bytesRead, &displayChanged, &timerRecheck);
+            ParseContent(currentContent, bytesRead, FALSE, &displayChanged, &timerRecheck);
         if (parseResult == PLUGIN_PARSE_OK) {
             *lastWriteTime = currentWriteTime;
             *lastFileSize = fileSize;
             EnterCriticalSection(&g_dataCS);
+            SetDisplaySourcePathLocked(filePath);
             UpdateLastContentCache(currentContent, bytesRead);
             UpdateLastOutputFileStateLocked(&currentWriteTime, fileSize);
             LeaveCriticalSection(&g_dataCS);
@@ -1556,6 +1640,7 @@ void PluginData_SetOutputDirectoryFromPluginPath(const wchar_t* pluginPath) {
         g_pluginOutputDirectory[MAX_PATH - 1] = L'\0';
         ClearLastContentCacheLocked();
         InvalidateLastOutputFileStateLocked();
+        SetDisplaySourcePathLocked(NULL);
         changed = TRUE;
     }
     LeaveCriticalSection(&g_dataCS);
@@ -1570,6 +1655,29 @@ void PluginData_SetOutputDirectoryFromPluginPath(const wchar_t* pluginPath) {
 BOOL PluginData_GetOutputPath(wchar_t* buffer, size_t bufferSize) {
     if (!PluginData_BeginUse()) return FALSE;
     BOOL ok = GetPluginOutputPathW(buffer, bufferSize);
+    PluginData_EndUse();
+    return ok;
+}
+
+BOOL PluginData_GetDisplaySourcePath(wchar_t* buffer, size_t bufferSize) {
+    if (!buffer || bufferSize == 0) return FALSE;
+    buffer[0] = L'\0';
+
+    if (!PluginData_BeginUse()) return FALSE;
+
+    BOOL ok = FALSE;
+    EnterCriticalSection(&g_dataCS);
+    if (g_displaySourcePath[0] != L'\0' && wcslen(g_displaySourcePath) < bufferSize) {
+        wcsncpy(buffer, g_displaySourcePath, bufferSize - 1);
+        buffer[bufferSize - 1] = L'\0';
+        ok = TRUE;
+    }
+    LeaveCriticalSection(&g_dataCS);
+
+    if (!ok) {
+        ok = GetPluginOutputPathW(buffer, bufferSize);
+    }
+
     PluginData_EndUse();
     return ok;
 }
@@ -1685,8 +1793,8 @@ BOOL PluginData_GetText(wchar_t* buffer, size_t maxLen) {
     EnterCriticalSection(&g_dataCS);
     
     if (g_pluginModeActive) {
-        if (g_hasPluginData && g_pluginDisplayText && g_pluginDisplayText[0] != L'\0') {
-            /* Has actual data */
+        if (g_hasPluginData && g_pluginDisplayText) {
+            /* Has actual data, including intentionally empty custom display text. */
             wcsncpy(buffer, g_pluginDisplayText, maxLen - 1);
             buffer[maxLen - 1] = L'\0';
             hasData = TRUE;
@@ -1718,6 +1826,7 @@ void PluginData_Clear(void) {
     ClearPluginDisplayTextLocked();
     ClearLastContentCacheLocked();
     InvalidateLastOutputFileStateLocked();
+    SetDisplaySourcePathLocked(NULL);
     SetDefaultPluginOutputDirectoryLocked();
     /* Clear any pending notification to prevent stale notifications */
     ResetPendingNotificationLocked();
@@ -1752,6 +1861,7 @@ void PluginData_SetText(const wchar_t* text) {
     g_pluginModeActive = TRUE;
     ClearLastContentCacheLocked();
     InvalidateLastOutputFileStateLocked();
+    SetDisplaySourcePathLocked(NULL);
 
     LeaveCriticalSection(&g_dataCS);
     
@@ -1811,12 +1921,79 @@ void PluginData_SetStatusText(const wchar_t* text) {
     g_pluginModeActive = TRUE;
     ClearLastContentCacheLocked();
     InvalidateLastOutputFileStateLocked();
+    SetDisplaySourcePathLocked(NULL);
 
     LeaveCriticalSection(&g_dataCS);
     if (!StopWatcherThreadIfIdle(PLUGIN_DATA_WATCHER_UI_STOP_WAIT_MS)) {
         LOG_WARNING("PluginData: Watcher stop deferred while setting status text");
     }
     PluginData_EndUse();
+}
+
+BOOL PluginData_SetPreviewTextWithSource(const wchar_t* text, const wchar_t* sourcePath) {
+    if (!text) return FALSE;
+
+    if (text[0] == L'\0') {
+        if (!PluginData_BeginUse()) {
+            return FALSE;
+        }
+
+        EnterCriticalSection(&g_dataCS);
+        g_pluginModeActive = TRUE;
+        if (EnsurePluginDisplayTextCapacityLocked(1)) {
+            g_pluginDisplayText[0] = L'\0';
+            g_hasPluginData = TRUE;
+        } else {
+            g_hasPluginData = FALSE;
+            ClearPluginDisplayTextLocked();
+        }
+        ClearLastContentCacheLocked();
+        InvalidateLastOutputFileStateLocked();
+        SetDisplaySourcePathLocked(sourcePath);
+        BOOL accepted = g_hasPluginData;
+        LeaveCriticalSection(&g_dataCS);
+
+        PluginData_EndUse();
+        return accepted;
+    }
+
+    char* utf8 = WideToUtf8Alloc(text);
+    if (!utf8) {
+        return FALSE;
+    }
+
+    if (!PluginData_BeginUse()) {
+        free(utf8);
+        return FALSE;
+    }
+
+    EnterCriticalSection(&g_dataCS);
+    g_pluginModeActive = TRUE;
+    SetDisplaySourcePathLocked(sourcePath);
+    LeaveCriticalSection(&g_dataCS);
+
+    BOOL displayChanged = FALSE;
+    BOOL timerRecheck = FALSE;
+    PluginParseResult parseResult =
+        ParseContent(utf8, strlen(utf8), TRUE, &displayChanged, &timerRecheck);
+
+    free(utf8);
+
+    if (parseResult == PLUGIN_PARSE_OK) {
+        if (timerRecheck) {
+            QueuePluginDataTimerRecheck();
+        }
+        if ((displayChanged || timerRecheck) && g_hNotifyWnd) {
+            RequestPluginDataRedraw(g_hNotifyWnd);
+        }
+    }
+
+    PluginData_EndUse();
+    return parseResult != PLUGIN_PARSE_FAILED;
+}
+
+BOOL PluginData_SetPreviewText(const wchar_t* text) {
+    return PluginData_SetPreviewTextWithSource(text, NULL);
 }
 
 void PluginData_SetActive(BOOL active) {
@@ -1833,6 +2010,7 @@ void PluginData_SetActive(BOOL active) {
         ClearPluginDisplayTextLocked();
         ClearLastContentCacheLocked();
         InvalidateLastOutputFileStateLocked();
+        SetDisplaySourcePathLocked(NULL);
         SetDefaultPluginOutputDirectoryLocked();
         // Clear any pending notification
         ResetPendingNotificationLocked();
