@@ -43,6 +43,7 @@ function addAboutTranslations() {
             if (link.textContent === '首页') link.textContent = 'Home';
             if (link.textContent === '指南') link.textContent = 'Guide';
             if (link.textContent === '关于') link.textContent = 'About';
+            if (link.textContent === '插件') link.textContent = 'Plugins';
             if (link.querySelector('span') && link.querySelector('span').textContent === '支持项目') {
                 link.querySelector('span').textContent = 'Support';
             }

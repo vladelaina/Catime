@@ -44,6 +44,7 @@ class CatimeNavigation {
                             <li><a href="${prefix}tools/font-tool/index.html"${this.currentPage === 'font-tool' ? ' class="active"' : ''}><i class="fas fa-font"></i> Font Simplifier</a></li>
                         </ul>
                     </li>
+                    <li><a href="https://github.com/vladelaina/Catime-Plugins" target="_blank" rel="noopener noreferrer">Plugins</a></li>
                     <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
                 </ul>
                 ${this.generateActionButtons(prefix)}
