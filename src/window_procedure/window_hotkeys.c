@@ -24,10 +24,6 @@
 #define HOTKEYF_ALT     0x04
 #endif
 
-#ifndef VK_IME_SHIFT
-#define VK_IME_SHIFT 0xE5
-#endif
-
 extern wchar_t inputText[256];
 extern HWND g_hwndInputDialog;
 extern BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
@@ -189,43 +185,33 @@ static BOOL HasAnyHotkeyValue(const WORD* values, size_t count) {
     return FALSE;
 }
 
-static BOOL IsInvalidIMEHotkeyValue(WORD hotkey) {
-    return (LOBYTE(hotkey) == VK_IME_SHIFT && HIBYTE(hotkey) == HOTKEYF_SHIFT);
-}
-
-static BOOL IsRestrictedSingleHotkeyValue(WORD hotkey) {
-    if (hotkey == 0) return FALSE;
-
-    BYTE vk = LOBYTE(hotkey);
-    BYTE modifiers = HIBYTE(hotkey);
-    if (modifiers != 0) return FALSE;
-
-    if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9') ||
-        (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9)) {
-        return TRUE;
-    }
-
-    switch (vk) {
-        case VK_OEM_1: case VK_OEM_PLUS: case VK_OEM_COMMA:
-        case VK_OEM_MINUS: case VK_OEM_PERIOD: case VK_OEM_2:
-        case VK_OEM_3: case VK_OEM_4: case VK_OEM_5:
-        case VK_OEM_6: case VK_OEM_7: case VK_SPACE:
-        case VK_RETURN: case VK_ESCAPE: case VK_TAB:
-            return TRUE;
-    }
-
-    return FALSE;
-}
-
 static BOOL SanitizeLoadedHotkeyValues(WORD* values, size_t count) {
     if (!values) return FALSE;
 
     BOOL changed = FALSE;
     for (size_t i = 0; i < count; i++) {
-        if (IsInvalidIMEHotkeyValue(values[i]) ||
-            IsRestrictedSingleHotkeyValue(values[i])) {
+        WORD normalized = NormalizeHotkeyValue(values[i]);
+        if (values[i] != normalized) {
+            values[i] = normalized;
+            changed = TRUE;
+        }
+
+        if (!IsHotkeyValueAllowed(values[i])) {
             values[i] = 0;
             changed = TRUE;
+            continue;
+        }
+
+        if (values[i] == 0) {
+            continue;
+        }
+
+        for (size_t previous = 0; previous < i; previous++) {
+            if (values[previous] == values[i]) {
+                values[i] = 0;
+                changed = TRUE;
+                break;
+            }
         }
     }
 
@@ -233,6 +219,7 @@ static BOOL SanitizeLoadedHotkeyValues(WORD* values, size_t count) {
 }
 
 static BOOL RegisterSingleHotkey(HWND hwnd, HotkeyConfig* config) {
+    config->value = NormalizeHotkeyValue(config->value);
     if (config->value == 0) return FALSE;
 
     BYTE vk = LOBYTE(config->value);

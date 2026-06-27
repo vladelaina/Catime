@@ -627,13 +627,27 @@ void HotkeyToString(WORD hotkey, char* buffer, size_t bufferSize);
  * @return Hotkey value (LOWORD=VK, HIWORD=modifiers)
  * 
  * @details
- * Case-insensitive, tolerates whitespace and various separators.
+ * Case-insensitive and tolerates whitespace around '+' separators.
  * Returns 0 for "None" or empty.
  */
 WORD StringToHotkey(const char* str);
 
 /**
- * @brief Read all 12 hotkeys from config (uses defaults if missing)
+ * @brief Remove unsupported hotkey bits while preserving key and Ctrl/Shift/Alt
+ * @param hotkey Hotkey value
+ * @return Normalized hotkey value
+ */
+WORD NormalizeHotkeyValue(WORD hotkey);
+
+/**
+ * @brief Check whether a hotkey value can be saved and registered
+ * @param hotkey Hotkey value (0 = "None")
+ * @return TRUE for "None" or a valid key combination, FALSE for malformed values
+ */
+BOOL IsHotkeyValueAllowed(WORD hotkey);
+
+/**
+ * @brief Read configured hotkeys from config (uses defaults if missing)
  */
 void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdownHotkey,
                       WORD* quickCountdown1Hotkey, WORD* quickCountdown2Hotkey, WORD* quickCountdown3Hotkey,

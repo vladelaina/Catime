@@ -107,9 +107,9 @@ void ApplyColorSettings(const ConfigSnapshot* snapshot);
 /**
  * @brief Apply hotkey settings only
  * @param snapshot Configuration snapshot
- * 
+ *
  * @details
- * Updates: all 12 hotkey global variables
+ * Updates: hotkey-related runtime settings
  * Note: Does not register/unregister system hotkeys (handled by hotkey module)
  */
 void ApplyHotkeySettings(const ConfigSnapshot* snapshot);

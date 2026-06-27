@@ -27,7 +27,7 @@
  * ============================================================================ */
 
 /**
- * @brief Show hotkey config dialog (modal)
+ * @brief Show hotkey config dialog (modeless)
  * @param hwndParent Parent handle
  */
 void ShowHotkeySettingsDialog(HWND hwndParent);

@@ -13,6 +13,18 @@
 #include <limits.h>
 #include <windows.h>
 
+#ifndef HOTKEYF_SHIFT
+#define HOTKEYF_SHIFT   0x01
+#define HOTKEYF_CONTROL 0x02
+#define HOTKEYF_ALT     0x04
+#endif
+
+#ifndef VK_IME_SHIFT
+#define VK_IME_SHIFT 0xE5
+#endif
+
+#define HOTKEY_SUPPORTED_MODIFIERS (HOTKEYF_SHIFT | HOTKEYF_CONTROL | HOTKEYF_ALT)
+
 /**
  * @brief Virtual Key Code to String mapping table
  */
@@ -184,8 +196,25 @@ static BOOL ParseFunctionKeyToken(const char* token, BYTE* vk) {
     return TRUE;
 }
 
+static char* TrimHotkeyToken(char* token) {
+    if (!token) {
+        return NULL;
+    }
+
+    while (isspace((unsigned char)*token)) {
+        token++;
+    }
+
+    char* end = token + strlen(token);
+    while (end > token && isspace((unsigned char)*(end - 1))) {
+        *(--end) = '\0';
+    }
+
+    return token;
+}
+
 static BOOL ParseHexVirtualKeyToken(const char* token, BYTE* vk) {
-    if (!token || !vk || strncmp(token, "0x", 2) != 0 || token[2] == '\0') {
+    if (!token || !vk || _strnicmp(token, "0x", 2) != 0 || token[2] == '\0') {
         return FALSE;
     }
 
@@ -201,37 +230,67 @@ static BOOL ParseHexVirtualKeyToken(const char* token, BYTE* vk) {
     return TRUE;
 }
 
+static BOOL IsModifierVirtualKey(BYTE vk) {
+    switch (vk) {
+        case VK_SHIFT:
+        case VK_CONTROL:
+        case VK_MENU:
+        case VK_LSHIFT:
+        case VK_RSHIFT:
+        case VK_LCONTROL:
+        case VK_RCONTROL:
+        case VK_LMENU:
+        case VK_RMENU:
+        case VK_LWIN:
+        case VK_RWIN:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
 
 /**
  * @brief Parse human-readable hotkey string to Windows hotkey code
  */
 WORD StringToHotkey(const char* str) {
-    if (!str || str[0] == '\0' || strcmp(str, "None") == 0) {
+    if (!str) {
         return 0;
     }
-    
-    BYTE vk = 0;
-    BYTE mod = 0;
-    
+
     /** Create mutable copy for tokenization */
     char buffer[256];
     strncpy(buffer, str, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
-    
+
+    char* input = TrimHotkeyToken(buffer);
+    if (!input || input[0] == '\0' || _stricmp(input, "None") == 0) {
+        return 0;
+    }
+
+    BYTE vk = 0;
+    BYTE mod = 0;
+
     /** Parse modifier and key components */
-    const char* token = strtok(buffer, "+");
+    char* token = strtok(input, "+");
     const char* lastToken = NULL;
     
     while (token) {
-        if (_stricmp(token, "Ctrl") == 0) {
+        char* part = TrimHotkeyToken(token);
+        if (!part || part[0] == '\0') {
+            token = strtok(NULL, "+");
+            continue;
+        }
+
+        if (_stricmp(part, "Ctrl") == 0) {
             mod |= HOTKEYF_CONTROL;
-        } else if (_stricmp(token, "Shift") == 0) {
+        } else if (_stricmp(part, "Shift") == 0) {
             mod |= HOTKEYF_SHIFT;
-        } else if (_stricmp(token, "Alt") == 0) {
+        } else if (_stricmp(part, "Alt") == 0) {
             mod |= HOTKEYF_ALT;
         } else {
             /** Last token is the key name */
-            lastToken = token;
+            lastToken = part;
         }
         token = strtok(NULL, "+");
     }
@@ -266,6 +325,32 @@ WORD StringToHotkey(const char* str) {
     return MAKEWORD(vk, mod);
 }
 
+WORD NormalizeHotkeyValue(WORD hotkey) {
+    if (hotkey == 0) {
+        return 0;
+    }
+
+    return MAKEWORD(LOBYTE(hotkey), HIBYTE(hotkey) & HOTKEY_SUPPORTED_MODIFIERS);
+}
+
+BOOL IsHotkeyValueAllowed(WORD hotkey) {
+    hotkey = NormalizeHotkeyValue(hotkey);
+
+    if (hotkey == 0) {
+        return TRUE;
+    }
+
+    if (LOBYTE(hotkey) == 0) {
+        return FALSE;
+    }
+
+    if (IsModifierVirtualKey(LOBYTE(hotkey))) {
+        return FALSE;
+    }
+
+    return !(LOBYTE(hotkey) == VK_IME_SHIFT &&
+             HIBYTE(hotkey) == HOTKEYF_SHIFT);
+}
 
 /**
  * @brief Hotkey configuration entry (for data-driven read/write)
@@ -316,7 +401,10 @@ void ReadConfigHotkeys(WORD* showTimeHotkey, WORD* countUpHotkey, WORD* countdow
         char hotkeyStr[64];
         ReadIniString(INI_SECTION_HOTKEYS, entries[i].key, "None", 
                      hotkeyStr, sizeof(hotkeyStr), config_path);
-        *(entries[i].value) = StringToHotkey(hotkeyStr);
+        WORD parsedHotkey = NormalizeHotkeyValue(StringToHotkey(hotkeyStr));
+        *(entries[i].value) = IsHotkeyValueAllowed(parsedHotkey)
+                              ? parsedHotkey
+                              : 0;
     }
 }
 
@@ -335,7 +423,6 @@ BOOL WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         {"HOTKEY_SHOW_TIME",           showTimeHotkey},
         {"HOTKEY_COUNT_UP",            countUpHotkey},
         {"HOTKEY_COUNTDOWN",           countdownHotkey},
-        {"HOTKEY_CUSTOM_COUNTDOWN",    customCountdownHotkey},
         {"HOTKEY_QUICK_COUNTDOWN1",    quickCountdown1Hotkey},
         {"HOTKEY_QUICK_COUNTDOWN2",    quickCountdown2Hotkey},
         {"HOTKEY_QUICK_COUNTDOWN3",    quickCountdown3Hotkey},
@@ -344,6 +431,7 @@ BOOL WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
         {"HOTKEY_EDIT_MODE",           editModeHotkey},
         {"HOTKEY_PAUSE_RESUME",        pauseResumeHotkey},
         {"HOTKEY_RESTART_TIMER",       restartTimerHotkey},
+        {"HOTKEY_CUSTOM_COUNTDOWN",    customCountdownHotkey},
         {"HOTKEY_TOGGLE_MILLISECONDS", toggleMillisecondsHotkey},
         {"HOTKEY_TOPMOST",             toggleTopmostHotkey},
     };
@@ -357,7 +445,20 @@ BOOL WriteConfigHotkeys(WORD showTimeHotkey, WORD countUpHotkey, WORD countdownH
 
     /** Write all hotkeys using data-driven approach */
     for (size_t i = 0; i < sizeof(entries) / sizeof(entries[0]); ++i) {
-        HotkeyToString(entries[i].value, hotkeyStrings[i], sizeof(hotkeyStrings[i]));
+        WORD normalizedValue = NormalizeHotkeyValue(entries[i].value);
+        WORD value = IsHotkeyValueAllowed(normalizedValue)
+                     ? normalizedValue
+                     : 0;
+        if (value != 0) {
+            for (size_t previous = 0; previous < i; ++previous) {
+                if (entries[previous].value == value) {
+                    value = 0;
+                    break;
+                }
+            }
+        }
+        entries[i].value = value;
+        HotkeyToString(value, hotkeyStrings[i], sizeof(hotkeyStrings[i]));
         updates[i].section = INI_SECTION_HOTKEYS;
         updates[i].key = entries[i].key;
         updates[i].value = hotkeyStrings[i];
@@ -376,5 +477,6 @@ void ReadCustomCountdownHotkey(WORD* hotkey) {
     char hotkeyStr[64];
     ReadIniString(INI_SECTION_HOTKEYS, "HOTKEY_CUSTOM_COUNTDOWN", "None",
                   hotkeyStr, sizeof(hotkeyStr), config_path);
-    *hotkey = StringToHotkey(hotkeyStr);
+    WORD parsedHotkey = NormalizeHotkeyValue(StringToHotkey(hotkeyStr));
+    *hotkey = IsHotkeyValueAllowed(parsedHotkey) ? parsedHotkey : 0;
 }

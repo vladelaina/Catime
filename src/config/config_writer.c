@@ -386,15 +386,15 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     WORD hotkeys[14];
     ReadConfigHotkeys(&hotkeys[0], &hotkeys[1], &hotkeys[2], &hotkeys[3],
                      &hotkeys[4], &hotkeys[5], &hotkeys[6], &hotkeys[7],
-                     &hotkeys[8], &hotkeys[9], &hotkeys[10], &hotkeys[11], &hotkeys[13]);
-    ReadCustomCountdownHotkey(&hotkeys[12]);
+                     &hotkeys[8], &hotkeys[9], &hotkeys[10], &hotkeys[12], &hotkeys[13]);
+    ReadCustomCountdownHotkey(&hotkeys[11]);
     
     const char* hotkeyNames[] = {
         "HOTKEY_SHOW_TIME", "HOTKEY_COUNT_UP", "HOTKEY_COUNTDOWN",
         "HOTKEY_QUICK_COUNTDOWN1", "HOTKEY_QUICK_COUNTDOWN2", "HOTKEY_QUICK_COUNTDOWN3",
         "HOTKEY_POMODORO", "HOTKEY_TOGGLE_VISIBILITY", "HOTKEY_EDIT_MODE",
-        "HOTKEY_PAUSE_RESUME", "HOTKEY_RESTART_TIMER", "HOTKEY_TOGGLE_MILLISECONDS",
-        "HOTKEY_CUSTOM_COUNTDOWN", "HOTKEY_TOPMOST"
+        "HOTKEY_PAUSE_RESUME", "HOTKEY_RESTART_TIMER", "HOTKEY_CUSTOM_COUNTDOWN",
+        "HOTKEY_TOGGLE_MILLISECONDS", "HOTKEY_TOPMOST"
     };
     
     if (!EnsureConfigItemCapacity(idx, itemCapacity, 14, "Hotkeys")) return FALSE;

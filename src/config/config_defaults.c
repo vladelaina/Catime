@@ -345,12 +345,12 @@ BOOL WriteDefaultsToConfig(const char* config_path) {
             fputs(";========================================================\n", f);
             fputs("; Hotkeys section help (hot reload supported)\n", f);
             fputs(";========================================================\n", f);
-            fputs("; Value examples: Ctrl+Shift+Alt+F5, None, 0xNN (hex VK)\n", f);
-            fputs(";  - Modifiers: Ctrl, Shift, Alt (combine with '+')\n", f);
+            fputs("; Value examples: A, F8, Ctrl+Shift+Alt+F5, None, 0xNN (hex VK)\n", f);
+            fputs(";  - Modifiers: Ctrl, Shift, Alt (optional; combine with '+')\n", f);
             fputs(";  - Keys: A-Z, 0-9, F1..F24, Backspace, Tab, Enter, Esc, Space,\n", f);
             fputs(";           PageUp, PageDown, End, Home, Left, Up, Right, Down, Insert, Delete,\n", f);
             fputs(";           Num0..Num9, Num*, Num+, Num-, Num., Num/\n", f);
-            fputs(";  - Examples: Ctrl+Shift+K  |  Alt+F12  |  None  |  0x5B\n", f);
+            fputs(";  - Examples: A  |  F8  |  Ctrl+Shift+K  |  Alt+F12  |  None  |  0x5B\n", f);
             fputs(";  - Note: Some combinations may be reserved by the system or other apps.\n", f);
             fputs(";\n", f);
             fputs("; Keys in [Hotkeys]:\n", f);

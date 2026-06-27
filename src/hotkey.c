@@ -38,7 +38,6 @@
 #define HOTKEYF_ALT     0x04
 #endif
 
-#define VK_IME_SHIFT 0xE5
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 typedef struct {
@@ -57,7 +56,7 @@ typedef struct {
     BOOL reregisterPosted;
 } HotkeyDialogState;
 
-/** Dialog-local hotkey storage (avoids 12 global variables) */
+/** Dialog-local hotkey storage (avoids per-action global variables) */
 static WORD g_dialogHotkeys[HOTKEY_COUNT] = {0};
 
 static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
@@ -178,51 +177,29 @@ static void PostHotkeyReregister(HWND hwndDlg) {
 }
 
 static inline BOOL IsModifierKey(BYTE vk) {
-    return (vk == VK_SHIFT || vk == VK_CONTROL || vk == VK_MENU || 
+    return (vk == VK_SHIFT || vk == VK_CONTROL || vk == VK_MENU ||
+            vk == VK_LSHIFT || vk == VK_RSHIFT ||
+            vk == VK_LCONTROL || vk == VK_RCONTROL ||
+            vk == VK_LMENU || vk == VK_RMENU ||
             vk == VK_LWIN || vk == VK_RWIN);
-}
-
-/** IME Shift+Shift conflicts with system input switching */
-static inline BOOL IsInvalidIMEHotkey(WORD hotkey) {
-    return (LOBYTE(hotkey) == VK_IME_SHIFT && HIBYTE(hotkey) == HOTKEYF_SHIFT);
-}
-
-/** Prevent single-key hotkeys that would block normal typing */
-static BOOL IsRestrictedSingleKey(WORD hotkey) {
-    if (hotkey == 0) return FALSE;
-
-    BYTE vk = LOBYTE(hotkey);
-    BYTE modifiers = HIBYTE(hotkey);
-
-    if (modifiers != 0) return FALSE;
-
-    if ((vk >= 'A' && vk <= 'Z') || (vk >= '0' && vk <= '9') ||
-        (vk >= VK_NUMPAD0 && vk <= VK_NUMPAD9)) {
-        return TRUE;
-    }
-
-    switch (vk) {
-        case VK_OEM_1: case VK_OEM_PLUS: case VK_OEM_COMMA:
-        case VK_OEM_MINUS: case VK_OEM_PERIOD: case VK_OEM_2:
-        case VK_OEM_3: case VK_OEM_4: case VK_OEM_5:
-        case VK_OEM_6: case VK_OEM_7: case VK_SPACE:
-        case VK_RETURN: case VK_ESCAPE: case VK_TAB:
-            return TRUE;
-    }
-
-    return FALSE;
 }
 
 /** @return TRUE if hotkey was cleared */
 static BOOL ValidateAndSanitizeHotkey(WORD* hotkey) {
     if (!hotkey) return FALSE;
 
-    if (IsInvalidIMEHotkey(*hotkey) || IsRestrictedSingleKey(*hotkey)) {
+    WORD normalized = NormalizeHotkeyValue(*hotkey);
+    BOOL changed = (*hotkey != normalized);
+    if (*hotkey != normalized) {
+        *hotkey = normalized;
+    }
+
+    if (!IsHotkeyValueAllowed(*hotkey)) {
         *hotkey = 0;
         return TRUE;
     }
 
-    return FALSE;
+    return changed;
 }
 
 static void InitializeDialogLabels(HWND hwndDlg) {
@@ -577,7 +554,6 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     return FALSE;
 }
 
-/** Allows Enter key to submit dialog from hotkey control */
 LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                          LPARAM lParam, UINT_PTR uIdSubclass,
                                          DWORD_PTR dwRefData) {
@@ -587,17 +563,6 @@ LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
     switch (uMsg) {
         case WM_GETDLGCODE:
             return DLGC_WANTALLKEYS | DLGC_WANTCHARS;
-
-        case WM_KEYDOWN:
-            if (wParam == VK_RETURN) {
-                HWND hwndDlg = GetParent(hwnd);
-                if (hwndDlg) {
-                    SendMessage(hwndDlg, WM_COMMAND, MAKEWPARAM(IDOK, BN_CLICKED), 
-                              (LPARAM)GetDlgItem(hwndDlg, IDOK));
-                    return 0;
-                }
-            }
-            break;
     }
 
     return DefSubclassProc(hwnd, uMsg, wParam, lParam);
