@@ -19,42 +19,15 @@ function isSkippedLine(line) {
   return /^\s*$/.test(line) || /^\s*[#;]/.test(line) || /^\s*\[/.test(line);
 }
 
-function parseQuoted(line, startIndex = 0) {
-  const start = line.indexOf('"', startIndex);
-  if (start < 0) {
-    return null;
-  }
-
-  const end = line.indexOf('"', start + 1);
-  if (end < 0) {
-    return null;
-  }
-
-  return {
-    value: line.slice(start + 1, end),
-    nextIndex: end + 1,
-  };
-}
-
 function parseKeyValueLine(line) {
-  const key = parseQuoted(line);
-  if (!key) {
-    return null;
-  }
-
-  const equals = line.indexOf('=', key.nextIndex);
-  if (equals < 0) {
-    return null;
-  }
-
-  const value = parseQuoted(line, equals + 1);
-  if (!value || !/^\s*$/.test(line.slice(value.nextIndex))) {
+  const match = line.match(/^\s*"([^"]*)"\s*=\s*"([^"]*)"\s*$/);
+  if (!match) {
     return null;
   }
 
   return {
-    key: key.value,
-    value: value.value,
+    key: match[1],
+    value: match[2],
   };
 }
 
