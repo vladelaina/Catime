@@ -391,6 +391,8 @@ void EnsureWindowVisibleWithTopmostState(HWND hwnd) {
         SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
     }
+
+    TryRestorePendingWindowPosition(hwnd);
 }
 
 void HideWindowIntentionally(HWND hwnd) {
@@ -448,6 +450,7 @@ void HandleTopmostShownEvent(HWND hwnd) {
     if (!IsValidWindowHandle(hwnd, "HandleTopmostShownEvent")) return;
     s_windowIntentionallyHidden = FALSE;
     CancelTopmostVisibilityRestore(hwnd);
+    TryRestorePendingWindowPosition(hwnd);
 }
 
 BOOL HandleTopmostMinimizeCommand(HWND hwnd, UINT sysCommand) {

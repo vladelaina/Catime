@@ -98,6 +98,17 @@ BOOL IsSystemPositionChangeGuardActive(void);
 void RestoreWindowPositionAfterSystemChange(HWND hwnd);
 
 /**
+ * @brief Retry a deferred system-position restore if one is pending
+ * @param hwnd Window handle
+ */
+void TryRestorePendingWindowPosition(HWND hwnd);
+
+/**
+ * @brief Clear deferred system-position restore state after explicit user move/scale
+ */
+void ClearPendingSystemPositionRestore(void);
+
+/**
  * @brief Display file selection dialog
  * @param hwnd Parent window handle
  * @param filePath Output buffer (wide string, pre-allocated)

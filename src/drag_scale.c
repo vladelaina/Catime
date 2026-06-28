@@ -687,6 +687,7 @@ BOOL TryStartDragWindowFromMouseMove(HWND hwnd) {
 }
 
 void StartEditMode(HWND hwnd) {
+    ClearPendingSystemPositionRestore();
     EnsureWindowVisibleWithTopmostState(hwnd);
     StopScaleApplyTimer(hwnd);
     ClearDragBlockUntilLeftUp();

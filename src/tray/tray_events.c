@@ -12,6 +12,7 @@
 #include "timer/main_timer.h"
 #include "language.h"
 #include "window_procedure/window_events.h"
+#include "window/window_core.h"
 #include "timer/timer_events.h"
 #include "drawing.h"
 #include "audio_player.h"
@@ -255,6 +256,7 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
 
         case WM_RBUTTONUP:
             SetCursor(LoadCursorW(NULL, IDC_ARROW));
+            TryRestorePendingWindowPosition(hwnd);
             SetTrayInteractionSuspended(TRUE);
             ShowColorMenu(hwnd);
             SetTrayInteractionSuspended(FALSE);
@@ -262,6 +264,7 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
             
         case WM_LBUTTONUP:
             SetCursor(LoadCursorW(NULL, IDC_ARROW));
+            TryRestorePendingWindowPosition(hwnd);
             SetTrayInteractionSuspended(TRUE);
             ShowContextMenu(hwnd);
             SetTrayInteractionSuspended(FALSE);

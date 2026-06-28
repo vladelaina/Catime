@@ -26,6 +26,8 @@
 #define ALPHA_OPAQUE 255
 #define DEFAULT_TRAY_ANIMATION_SPEED_MS 150  /* 150ms balances smoothness with CPU usage (6.7 FPS) */
 #define SYSTEM_POSITION_GUARD_MS 3000
+#define DISPLAY_RESTORE_DELAY_MS 750
+#define FULLSCREEN_RECT_TOLERANCE_PX 2
 #define WINDOW_VISIBLE_MARGIN 20
 
 /* ============================================================================
@@ -39,6 +41,8 @@ float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 static DWORD g_systemPositionGuardUntil = 0;
+static BOOL g_pendingSystemPositionRestore = FALSE;
+static BOOL g_displayRestoreDeferredForFullscreen = FALSE;
 static BOOL g_hasLastSavedWindowSettings = FALSE;
 static int g_lastSavedWindowPosX = 0;
 static int g_lastSavedWindowPosY = 0;
@@ -105,6 +109,68 @@ static BOOL IsSpecialWindowPositionX(int posX) {
     return posX == DEFAULT_WINDOW_POS_X || posX == -1;
 }
 
+static BOOL IsShellOrDesktopWindow(HWND hwnd) {
+    wchar_t className[64] = {0};
+    if (!hwnd || GetClassNameW(hwnd, className, _countof(className)) == 0) {
+        return FALSE;
+    }
+
+    return wcscmp(className, L"Progman") == 0 ||
+           wcscmp(className, L"WorkerW") == 0 ||
+           wcscmp(className, L"SHELLDLL_DefView") == 0 ||
+           wcscmp(className, L"Shell_TrayWnd") == 0;
+}
+
+static BOOL IsFullscreenForegroundWindowActive(HWND hwnd) {
+    HWND foreground = GetForegroundWindow();
+    if (!foreground || foreground == hwnd || foreground == GetDesktopWindow()) {
+        return FALSE;
+    }
+    if (!IsWindow(foreground) || !IsWindowVisible(foreground) || IsIconic(foreground)) {
+        return FALSE;
+    }
+    if (IsShellOrDesktopWindow(foreground)) {
+        return FALSE;
+    }
+
+    DWORD foregroundProcessId = 0;
+    GetWindowThreadProcessId(foreground, &foregroundProcessId);
+    if (foregroundProcessId == GetCurrentProcessId()) {
+        return FALSE;
+    }
+
+    SetLastError(0);
+    LONG_PTR style = GetWindowLongPtr(foreground, GWL_STYLE);
+    if (style == 0 && GetLastError() != 0) {
+        return FALSE;
+    }
+    if ((style & WS_CHILD) != 0) {
+        return FALSE;
+    }
+    if ((style & (WS_CAPTION | WS_THICKFRAME)) != 0 && IsZoomed(foreground)) {
+        return FALSE;
+    }
+
+    RECT foregroundRect;
+    if (!GetWindowRect(foreground, &foregroundRect) ||
+        foregroundRect.right <= foregroundRect.left ||
+        foregroundRect.bottom <= foregroundRect.top) {
+        return FALSE;
+    }
+
+    HMONITOR hMon = MonitorFromWindow(foreground, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO mi = {0};
+    mi.cbSize = sizeof(mi);
+    if (!GetMonitorInfo(hMon, &mi)) {
+        return FALSE;
+    }
+
+    return foregroundRect.left <= mi.rcMonitor.left + FULLSCREEN_RECT_TOLERANCE_PX &&
+           foregroundRect.top <= mi.rcMonitor.top + FULLSCREEN_RECT_TOLERANCE_PX &&
+           foregroundRect.right >= mi.rcMonitor.right - FULLSCREEN_RECT_TOLERANCE_PX &&
+           foregroundRect.bottom >= mi.rcMonitor.bottom - FULLSCREEN_RECT_TOLERANCE_PX;
+}
+
 static void GetPrimaryMonitorInfo(MONITORINFO* mi) {
     if (!mi) return;
 
@@ -143,6 +209,18 @@ static void ClampWindowPositionToMonitor(int width, int height, int* x, int* y) 
     if (*y + height - WINDOW_VISIBLE_MARGIN < mi.rcMonitor.top) {
         *y = mi.rcMonitor.top - height + WINDOW_VISIBLE_MARGIN;
     }
+}
+
+static BOOL ScheduleDisplayRestoreTimer(HWND hwnd, UINT delayMs) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+    if (!SetTimer(hwnd, TIMER_ID_DISPLAY_RESTORE, delayMs, NULL)) {
+        LOG_WARNING("Failed to schedule display restore timer (delay=%u, error=%lu)",
+                    delayMs, GetLastError());
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /* ============================================================================
@@ -215,7 +293,8 @@ HWND FindCurrentProcessMainWindow(void) {
 void SaveWindowSettings(HWND hwnd) {
     if (!hwnd) return;
 
-    if (IsSystemPositionChangeGuardActive() && !CLOCK_EDIT_MODE) {
+    if ((IsSystemPositionChangeGuardActive() || g_pendingSystemPositionRestore) &&
+        !CLOCK_EDIT_MODE) {
         return;
     }
 
@@ -306,16 +385,8 @@ void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY
 
 BOOL BeginSystemPositionChangeGuard(HWND hwnd) {
     g_systemPositionGuardUntil = GetTickCount() + SYSTEM_POSITION_GUARD_MS;
-    if (!hwnd || !IsWindow(hwnd)) {
-        return FALSE;
-    }
-
-    if (!SetTimer(hwnd, TIMER_ID_DISPLAY_RESTORE, 750, NULL)) {
-        LOG_WARNING("Failed to schedule display restore timer (error=%lu)",
-                    GetLastError());
-        return FALSE;
-    }
-    return TRUE;
+    g_pendingSystemPositionRestore = TRUE;
+    return ScheduleDisplayRestoreTimer(hwnd, DISPLAY_RESTORE_DELAY_MS);
 }
 
 BOOL IsSystemPositionChangeGuardActive(void) {
@@ -328,6 +399,21 @@ BOOL IsSystemPositionChangeGuardActive(void) {
 void RestoreWindowPositionAfterSystemChange(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) return;
     if (CLOCK_EDIT_MODE) return;
+
+    if (IsFullscreenForegroundWindowActive(hwnd)) {
+        g_systemPositionGuardUntil = GetTickCount() + SYSTEM_POSITION_GUARD_MS;
+        g_pendingSystemPositionRestore = TRUE;
+        if (!g_displayRestoreDeferredForFullscreen) {
+            LOG_INFO("Deferring window position restore while fullscreen foreground window is active");
+            g_displayRestoreDeferredForFullscreen = TRUE;
+        }
+        return;
+    }
+
+    if (g_displayRestoreDeferredForFullscreen) {
+        LOG_INFO("Resuming deferred window position restore after fullscreen foreground window ended");
+        g_displayRestoreDeferredForFullscreen = FALSE;
+    }
 
     RECT rect;
     if (!GetWindowRect(hwnd, &rect)) return;
@@ -347,7 +433,19 @@ void RestoreWindowPositionAfterSystemChange(HWND hwnd) {
 
     CLOCK_WINDOW_POS_X = posX;
     CLOCK_WINDOW_POS_Y = posY;
+    g_pendingSystemPositionRestore = FALSE;
     InvalidateRect(hwnd, NULL, FALSE);
+}
+
+void TryRestorePendingWindowPosition(HWND hwnd) {
+    if (!g_pendingSystemPositionRestore) return;
+    RestoreWindowPositionAfterSystemChange(hwnd);
+}
+
+void ClearPendingSystemPositionRestore(void) {
+    g_pendingSystemPositionRestore = FALSE;
+    g_displayRestoreDeferredForFullscreen = FALSE;
+    g_systemPositionGuardUntil = 0;
 }
 
 BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {
