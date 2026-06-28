@@ -614,7 +614,6 @@ BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
 
     // Initialize plugin manager after single-instance ownership is confirmed.
     PluginManager_Init();
-    LOG_INFO("Plugin manager initialized");
 
     if (!InitializeApplication(hInstance)) {
         LOG_ERROR("Application initialization failed. Check log file for details.");

@@ -289,6 +289,7 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
     if (!IsValidVisualEffectsWindow(hwnd)) return;
 
     LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    LONG originalExStyle = exStyle;
 
     BOOL styleTransparent = (exStyle & WS_EX_TRANSPARENT) != 0;
     if (g_clickThroughEnabled == enable &&
@@ -329,8 +330,11 @@ void SetClickThrough(HWND hwnd, BOOL enable) {
         StopClickThroughTimer(hwnd);
     }
 
-    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-    SetWindowPos(hwnd, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    if (exStyle != originalExStyle) {
+        SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+        SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+    }
     if (enable && g_clickThroughTimerActive) {
         UpdateClickThroughState(hwnd);
     }

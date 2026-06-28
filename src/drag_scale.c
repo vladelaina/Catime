@@ -13,6 +13,7 @@
 #include "log.h"
 #include "plugin/plugin_data.h"
 #include "window/window_desktop_integration.h"
+#include "window_procedure/ole_drop_target.h"
 #include "drawing/drawing_render.h"
 
 #include "color/color_parser.h"
@@ -706,6 +707,7 @@ void StartEditMode(HWND hwnd) {
     RefreshWindow(hwnd, TRUE);
     SetBlurBehind(hwnd, TRUE);
     SetClickThrough(hwnd, FALSE);
+    InitializeOleDropTarget(hwnd);
     RefreshWindow(hwnd, TRUE);
     
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
@@ -726,6 +728,7 @@ void EndEditMode(HWND hwnd) {
 
     SetBlurBehind(hwnd, FALSE);
     SetClickThrough(hwnd, TRUE);
+    CleanupOleDropTarget(hwnd);
     CancelScheduledConfigSave(hwnd);
     SaveWindowSettings(hwnd);
     

@@ -19,10 +19,12 @@
 #include <string.h>
 
 #define STARTUP_LINK_FILENAME L"Catime.lnk"
+#define STARTUP_MARKER_FILENAME L"startup_shortcut_target.txt"
 #define STARTUP_CMD_ARG L"--startup"
 #define CONFIG_KEY_STARTUP_MODE "STARTUP_MODE="
 #define STARTUP_MODE_MAX_LEN 20
 #define CONFIG_LINE_BUFFER_SIZE 256
+#define STARTUP_MARKER_BUFFER_SIZE (MAX_PATH * 4)
 #define MODE_NAME_COUNT_UP "COUNT_UP"
 #define MODE_NAME_SHOW_TIME "SHOW_TIME"
 #define MODE_NAME_NO_DISPLAY "NO_DISPLAY"
@@ -103,6 +105,132 @@ static BOOL GetExecutablePath(wchar_t* output, size_t outputSize) {
         return FALSE;
     }
     return TRUE;
+}
+
+static BOOL GetStartupShortcutMarkerPath(wchar_t* output, size_t outputSize) {
+    char configPath[MAX_PATH] = {0};
+    wchar_t configPathW[MAX_PATH] = {0};
+    wchar_t configDir[MAX_PATH] = {0};
+    wchar_t* lastSlash = NULL;
+    wchar_t* lastForwardSlash = NULL;
+
+    if (!output || outputSize == 0 || outputSize > (size_t)MAXDWORD) return FALSE;
+    output[0] = L'\0';
+
+    GetConfigPath(configPath, sizeof(configPath));
+    if (configPath[0] == '\0') {
+        return FALSE;
+    }
+
+    if (MultiByteToWideChar(CP_UTF8, 0, configPath, -1, configPathW, MAX_PATH) == 0) {
+        LOG_WARNING("Failed to convert config path for startup shortcut marker");
+        return FALSE;
+    }
+
+    if (wcscpy_s(configDir, _countof(configDir), configPathW) != 0) {
+        return FALSE;
+    }
+
+    lastSlash = wcsrchr(configDir, L'\\');
+    lastForwardSlash = wcsrchr(configDir, L'/');
+    if (!lastSlash || (lastForwardSlash && lastForwardSlash > lastSlash)) {
+        lastSlash = lastForwardSlash;
+    }
+    if (!lastSlash || lastSlash == configDir) {
+        return FALSE;
+    }
+    *lastSlash = L'\0';
+
+    if (!PathCombineW(output, configDir, STARTUP_MARKER_FILENAME)) {
+        LOG_WARNING("Failed to build startup shortcut marker path");
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static BOOL ReadStartupShortcutMarker(wchar_t* output, size_t outputSize) {
+    wchar_t markerPath[MAX_PATH] = {0};
+    char markerUtf8[STARTUP_MARKER_BUFFER_SIZE] = {0};
+    FILE* markerFile = NULL;
+    size_t bytesRead = 0;
+
+    if (!output || outputSize == 0 || outputSize > (size_t)INT_MAX) return FALSE;
+    output[0] = L'\0';
+
+    if (!GetStartupShortcutMarkerPath(markerPath, _countof(markerPath))) {
+        return FALSE;
+    }
+
+    markerFile = _wfopen(markerPath, L"rb");
+    if (!markerFile) {
+        return FALSE;
+    }
+
+    bytesRead = fread(markerUtf8, 1, sizeof(markerUtf8) - 1, markerFile);
+    fclose(markerFile);
+    markerUtf8[bytesRead] = '\0';
+
+    while (bytesRead > 0 &&
+           (markerUtf8[bytesRead - 1] == '\n' || markerUtf8[bytesRead - 1] == '\r' ||
+            markerUtf8[bytesRead - 1] == ' ' || markerUtf8[bytesRead - 1] == '\t')) {
+        markerUtf8[--bytesRead] = '\0';
+    }
+
+    if (bytesRead == 0) {
+        return FALSE;
+    }
+
+    return MultiByteToWideChar(CP_UTF8, 0, markerUtf8, -1, output, (int)outputSize) > 0;
+}
+
+static BOOL WriteStartupShortcutMarker(const wchar_t* exePath) {
+    wchar_t markerPath[MAX_PATH] = {0};
+    char markerUtf8[STARTUP_MARKER_BUFFER_SIZE] = {0};
+    FILE* markerFile = NULL;
+    int bytes = 0;
+
+    if (!exePath || !*exePath) return FALSE;
+
+    if (!GetStartupShortcutMarkerPath(markerPath, _countof(markerPath))) {
+        return FALSE;
+    }
+
+    bytes = WideCharToMultiByte(CP_UTF8, 0, exePath, -1,
+                                markerUtf8, sizeof(markerUtf8), NULL, NULL);
+    if (bytes <= 0) {
+        LOG_WARNING("Failed to encode startup shortcut marker path");
+        return FALSE;
+    }
+
+    markerFile = _wfopen(markerPath, L"wb");
+    if (!markerFile) {
+        LOG_WARNING("Failed to open startup shortcut marker for writing");
+        return FALSE;
+    }
+
+    fwrite(markerUtf8, 1, (size_t)(bytes - 1), markerFile);
+    fclose(markerFile);
+    return TRUE;
+}
+
+static void RemoveStartupShortcutMarker(void) {
+    wchar_t markerPath[MAX_PATH] = {0};
+
+    if (GetStartupShortcutMarkerPath(markerPath, _countof(markerPath))) {
+        DeleteFileW(markerPath);
+    }
+}
+
+static BOOL IsStartupShortcutMarkerCurrent(const wchar_t* exePath) {
+    wchar_t markerExePath[MAX_PATH] = {0};
+
+    if (!exePath || !*exePath) return FALSE;
+    if (!ReadStartupShortcutMarker(markerExePath, _countof(markerExePath))) {
+        return FALSE;
+    }
+
+    return _wcsicmp(markerExePath, exePath) == 0;
 }
 
 static BOOL EnsureComInitializedForShortcut(BOOL* shouldUninitialize) {
@@ -320,6 +448,9 @@ BOOL CreateShortcut(void) {
     hr = link.persistFile->lpVtbl->Save(link.persistFile, startupPath, TRUE);
     if (SUCCEEDED(hr)) {
         LOG_INFO("Startup shortcut created successfully: %ls", startupPath);
+        if (!WriteStartupShortcutMarker(exePath)) {
+            LOG_WARNING("Startup shortcut marker was not updated");
+        }
         success = TRUE;
     } else {
         LOG_ERROR("Failed to save shortcut, hr=0x%08X", (unsigned int)hr);
@@ -343,11 +474,13 @@ BOOL RemoveShortcut(void) {
     
     if (DeleteFileW(startupPath)) {
         LOG_INFO("Startup shortcut removed successfully");
+        RemoveStartupShortcutMarker();
         return TRUE;
     } else {
         DWORD error = GetLastError();
         if (error == ERROR_FILE_NOT_FOUND) {
             LOG_INFO("Startup shortcut does not exist, nothing to remove");
+            RemoveStartupShortcutMarker();
             return TRUE;
         }
         LOG_ERROR("Failed to delete startup shortcut, error=%lu", error);
@@ -360,6 +493,14 @@ BOOL UpdateStartupShortcut(void) {
     LOG_INFO("Updating startup shortcut if exists");
     
     if (IsAutoStartEnabled()) {
+        wchar_t exePath[MAX_PATH] = {0};
+
+        if (GetExecutablePath(exePath, _countof(exePath)) &&
+            IsStartupShortcutMarkerCurrent(exePath)) {
+            LOG_INFO("Startup shortcut already current; skipping update");
+            return TRUE;
+        }
+
         if (!RemoveShortcut()) {
             LOG_ERROR("Failed to remove old startup shortcut");
             return FALSE;
@@ -375,6 +516,7 @@ BOOL UpdateStartupShortcut(void) {
     }
     
     LOG_INFO("No startup shortcut to update");
+    RemoveStartupShortcutMarker();
     return TRUE;
 }
 

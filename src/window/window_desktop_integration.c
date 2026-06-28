@@ -145,6 +145,35 @@ static BOOL TrySetWindowNoActivate(HWND hwnd, BOOL noActivate) {
     return TRUE;
 }
 
+static BOOL IsWindowTopmostStateAlreadyApplied(HWND hwnd, BOOL topmost) {
+    SetLastError(0);
+    LONG exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+    if (exStyle == 0 && GetLastError() != 0) {
+        return FALSE;
+    }
+
+    BOOL actualTopmost = ((exStyle & WS_EX_TOPMOST) != 0);
+    BOOL actualNoActivate = ((exStyle & WS_EX_NOACTIVATE) != 0);
+    if (actualTopmost != topmost) {
+        return FALSE;
+    }
+
+    SetLastError(0);
+    HWND owner = (HWND)GetWindowLongPtr(hwnd, GWLP_HWNDPARENT);
+    if (GetLastError() != 0) {
+        return FALSE;
+    }
+
+    if (topmost) {
+        return owner == NULL && !actualNoActivate;
+    }
+
+    return owner != NULL &&
+           actualNoActivate &&
+           (IsWindowOfClass(owner, WORKERW_CLASS) ||
+            IsWindowOfClass(owner, PROGMAN_CLASS));
+}
+
 static BOOL GetWindowTopmostState(HWND hwnd, BOOL* outTopmost) {
     if (!outTopmost) return FALSE;
 
@@ -280,6 +309,14 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
     }
     if (updateRuntimeTarget) {
         CLOCK_WINDOW_EFFECTIVE_TOPMOST = topmost;
+    }
+
+    if (IsWindowTopmostStateAlreadyApplied(hwnd, topmost)) {
+        s_topmostApplyRetriesRemaining = 0;
+        s_topmostApplyRetryActive = FALSE;
+        s_topmostApplyRetryCooldownUntil = 0;
+        KillTimer(hwnd, TIMER_ID_TOPMOST_APPLY_RETRY);
+        return TRUE;
     }
 
     if (topmost) {

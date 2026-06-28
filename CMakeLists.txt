@@ -230,6 +230,7 @@ else()
     
     target_link_options(catime PRIVATE
         -mwindows
+        -static
     )
 endif()
 

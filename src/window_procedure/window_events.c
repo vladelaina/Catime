@@ -39,8 +39,7 @@ BOOL HandleWindowCreate(HWND hwnd) {
 
     SetClickThrough(hwnd, !CLOCK_EDIT_MODE);
 
-    /* Enable OLE drag and drop for resource import with preview */
-    InitializeOleDropTarget(hwnd);
+    /* OLE drag/drop is enabled lazily while edit mode is active. */
 
     StopDrawingRenderAnimationTimer(hwnd);
 

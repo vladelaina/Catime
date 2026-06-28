@@ -93,7 +93,8 @@ static void ApplyInitialWindowState(HWND hwnd, int nCmdShow) {
     // Note: SetLayeredWindowAttributes is called by HandleWindowCreate via SetClickThrough
     SetBlurBehind(hwnd, FALSE);
 
-    ShowWindow(hwnd, nCmdShow);
+    int showCommand = (nCmdShow == SW_HIDE) ? SW_HIDE : SW_SHOWNOACTIVATE;
+    ShowWindow(hwnd, showCommand);
     UpdateWindow(hwnd);
     RefreshWindowTopmostState(hwnd);
 }
@@ -242,7 +243,12 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     
     /* WS_EX_TOOLWINDOW prevents taskbar button */
     DWORD exStyle = WS_EX_LAYERED | WS_EX_TOOLWINDOW;
-    if (!CLOCK_WINDOW_TOPMOST) {
+    if (!CLOCK_EDIT_MODE) {
+        exStyle |= WS_EX_TRANSPARENT;
+    }
+    if (CLOCK_WINDOW_EFFECTIVE_TOPMOST) {
+        exStyle |= WS_EX_TOPMOST;
+    } else {
         exStyle |= WS_EX_NOACTIVATE;
     }
     
@@ -268,9 +274,6 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         return NULL;
     }
 
-    EnableWindow(hwnd, TRUE);
-    SetFocus(hwnd);
-    
     InitializeTrayAndAnimation(hwnd, hInstance);
     ApplyInitialWindowState(hwnd, nCmdShow);
     
