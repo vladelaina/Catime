@@ -40,6 +40,8 @@
 #define CUSTOM_TEXT_DISPLAY_FILENAME_W L"custom_display.txt"
 #define CUSTOM_TEXT_DISPLAY_EMPTY_PREVIEW_TEXT_W L"Ciallo\uff5e(\u2220\u30fb\u03c9<)\u2312\u2605"
 #define CUSTOM_TEXT_DISPLAY_EDIT_SUBCLASS_ID 1
+#define CUSTOM_TEXT_DISPLAY_EDIT_FONT_MIN_PX 16
+#define CUSTOM_TEXT_DISPLAY_EDIT_FONT_MAX_PX 28
 
 typedef struct {
     HWND owner;
@@ -382,19 +384,6 @@ static HFONT CreateCustomTextDisplayEditFont(HWND hwndEdit) {
         return NULL;
     }
 
-    char activeFontFile[MAX_PATH] = {0};
-    char activeFontInternalName[MAX_PATH] = {0};
-    GetActiveFont(activeFontFile, activeFontInternalName, sizeof(activeFontInternalName));
-
-    if (activeFontInternalName[0] == '\0') {
-        return NULL;
-    }
-
-    wchar_t activeFaceName[MAX_PATH] = {0};
-    if (!Utf8ToWide(activeFontInternalName, activeFaceName, _countof(activeFaceName))) {
-        return NULL;
-    }
-
     LOGFONTW lf = {0};
     HFONT currentFont = (HFONT)SendMessageW(hwndEdit, WM_GETFONT, 0, 0);
     if (!currentFont || GetObjectW(currentFont, sizeof(lf), &lf) != sizeof(lf)) {
@@ -404,7 +393,24 @@ static HFONT CreateCustomTextDisplayEditFont(HWND hwndEdit) {
         }
     }
 
-    wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), activeFaceName, _TRUNCATE);
+    char activeFontFile[MAX_PATH] = {0};
+    char activeFontInternalName[MAX_PATH] = {0};
+    GetActiveFont(activeFontFile, activeFontInternalName, sizeof(activeFontInternalName));
+    if (activeFontInternalName[0] != '\0') {
+        wchar_t activeFaceName[MAX_PATH] = {0};
+        if (Utf8ToWide(activeFontInternalName, activeFaceName, _countof(activeFaceName))) {
+            wcsncpy_s(lf.lfFaceName, _countof(lf.lfFaceName), activeFaceName, _TRUNCATE);
+        }
+    }
+
+    int editFontSize = CLOCK_BASE_FONT_SIZE;
+    if (editFontSize < CUSTOM_TEXT_DISPLAY_EDIT_FONT_MIN_PX) {
+        editFontSize = CUSTOM_TEXT_DISPLAY_EDIT_FONT_MIN_PX;
+    }
+    if (editFontSize > CUSTOM_TEXT_DISPLAY_EDIT_FONT_MAX_PX) {
+        editFontSize = CUSTOM_TEXT_DISPLAY_EDIT_FONT_MAX_PX;
+    }
+    lf.lfHeight = -editFontSize;
     lf.lfCharSet = DEFAULT_CHARSET;
     lf.lfOutPrecision = OUT_TT_PRECIS;
     lf.lfQuality = CLEARTYPE_QUALITY;
