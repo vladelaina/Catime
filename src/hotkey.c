@@ -190,9 +190,7 @@ static BOOL ValidateAndSanitizeHotkey(WORD* hotkey) {
 
     WORD normalized = NormalizeHotkeyValue(*hotkey);
     BOOL changed = (*hotkey != normalized);
-    if (*hotkey != normalized) {
-        *hotkey = normalized;
-    }
+    *hotkey = normalized;
 
     if (!IsHotkeyValueAllowed(*hotkey)) {
         *hotkey = 0;

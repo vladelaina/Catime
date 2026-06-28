@@ -216,7 +216,7 @@ static void ClampCustomTextDisplayText(wchar_t* text) {
     }
 
     size_t limit = CUSTOM_TEXT_DISPLAY_MAX_CHARS;
-    if (limit > 0 && text[limit - 1] >= 0xD800 && text[limit - 1] <= 0xDBFF) {
+    if (text[limit - 1] >= 0xD800 && text[limit - 1] <= 0xDBFF) {
         limit--;
     }
     text[limit] = L'\0';
