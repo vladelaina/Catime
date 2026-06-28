@@ -9,6 +9,7 @@
 #include "log.h"
 #include "window.h"
 #include "color/gradient.h"
+#include "utils/string_safe.h"
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
@@ -43,9 +44,8 @@ BOOL ValidateFontConfig(ConfigSnapshot* snapshot) {
     /* Validate font path - check for truncation or invalid path */
     if (strlen(snapshot->fontFileName) >= sizeof(snapshot->fontFileName) - 1) {
         LOG_WARNING("Font path appears truncated, resetting to default");
-        strncpy(snapshot->fontFileName, FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
-                sizeof(snapshot->fontFileName) - 1);
-        snapshot->fontFileName[sizeof(snapshot->fontFileName) - 1] = '\0';
+        safe_strncpy(snapshot->fontFileName, FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
+                     sizeof(snapshot->fontFileName));
         modified = TRUE;
     }
     
@@ -55,9 +55,8 @@ BOOL ValidateFontConfig(ConfigSnapshot* snapshot) {
                      strcasecmp(fontExt, ".otf") != 0 &&
                      strcasecmp(fontExt, ".ttc") != 0)) {
         LOG_WARNING("Font path missing valid extension, resetting to default");
-        strncpy(snapshot->fontFileName, FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
-                sizeof(snapshot->fontFileName) - 1);
-        snapshot->fontFileName[sizeof(snapshot->fontFileName) - 1] = '\0';
+        safe_strncpy(snapshot->fontFileName, FONTS_PATH_PREFIX DEFAULT_FONT_NAME,
+                     sizeof(snapshot->fontFileName));
         modified = TRUE;
     }
     
@@ -87,9 +86,8 @@ BOOL ValidateColorConfig(ConfigSnapshot* snapshot) {
     if (snapshot->textColor[0] != '#' || strlen(snapshot->textColor) != 7) {
         LOG_WARNING("Invalid text color format '%s', resetting to default",
                    snapshot->textColor);
-        strncpy(snapshot->textColor, DEFAULT_TEXT_COLOR,
-                sizeof(snapshot->textColor) - 1);
-        snapshot->textColor[sizeof(snapshot->textColor) - 1] = '\0';
+        safe_strncpy(snapshot->textColor, DEFAULT_TEXT_COLOR,
+                     sizeof(snapshot->textColor));
         modified = TRUE;
     } else {
         /* Validate hex digits */
@@ -106,9 +104,8 @@ BOOL ValidateColorConfig(ConfigSnapshot* snapshot) {
         if (!validHex) {
             LOG_WARNING("Invalid hex color '%s', resetting to default",
                        snapshot->textColor);
-            strncpy(snapshot->textColor, DEFAULT_TEXT_COLOR,
-                    sizeof(snapshot->textColor) - 1);
-            snapshot->textColor[sizeof(snapshot->textColor) - 1] = '\0';
+            safe_strncpy(snapshot->textColor, DEFAULT_TEXT_COLOR,
+                         sizeof(snapshot->textColor));
             modified = TRUE;
         }
     }
@@ -116,7 +113,7 @@ BOOL ValidateColorConfig(ConfigSnapshot* snapshot) {
     /* Avoid pure black which causes transparency issues */
     if (strcasecmp(snapshot->textColor, "#000000") == 0) {
         LOG_INFO("Pure black color detected, adjusting to #000001");
-        strncpy(snapshot->textColor, "#000001", sizeof(snapshot->textColor) - 1);
+        safe_strncpy(snapshot->textColor, "#000001", sizeof(snapshot->textColor));
         modified = TRUE;
     }
     
@@ -165,9 +162,8 @@ BOOL ValidateTimerConfig(ConfigSnapshot* snapshot) {
             strcmp(snapshot->startupMode, "POMODORO") != 0) {
             LOG_WARNING("Invalid startup mode '%s', resetting to SHOW_TIME",
                        snapshot->startupMode);
-            strncpy(snapshot->startupMode, "SHOW_TIME",
-                    sizeof(snapshot->startupMode) - 1);
-            snapshot->startupMode[sizeof(snapshot->startupMode) - 1] = '\0';
+            safe_strncpy(snapshot->startupMode, "SHOW_TIME",
+                         sizeof(snapshot->startupMode));
             modified = TRUE;
         }
     }

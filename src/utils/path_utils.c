@@ -4,6 +4,7 @@
  */
 
 #include "utils/path_utils.h"
+#include "utils/string_safe.h"
 #include <string.h>
 #include <wchar.h>
 
@@ -61,8 +62,7 @@ BOOL ExtractFileNameU8(const char* path, char* name, size_t nameSize) {
     if (!filename) return FALSE;
     if (strlen(filename) >= nameSize) return FALSE;
     
-    strncpy(name, filename, nameSize - 1);
-    name[nameSize - 1] = '\0';
+    safe_strncpy(name, filename, nameSize);
     return TRUE;
 }
 
@@ -74,8 +74,7 @@ BOOL ExtractFileNameW(const wchar_t* path, wchar_t* name, size_t nameSize) {
     if (!filename) return FALSE;
     if (wcslen(filename) >= nameSize) return FALSE;
     
-    wcsncpy(name, filename, nameSize - 1);
-    name[nameSize - 1] = L'\0';
+    safe_wcsncpy(name, filename, nameSize);
     return TRUE;
 }
 
@@ -90,8 +89,7 @@ BOOL ExtractDirectoryU8(const char* path, char* dir, size_t dirSize) {
     size_t pathLen = strlen(path);
     if (pathLen >= dirSize) return FALSE;
     
-    strncpy(dir, path, dirSize - 1);
-    dir[dirSize - 1] = '\0';
+    safe_strncpy(dir, path, dirSize);
     
     char* lastBackslash = strrchr(dir, '\\');
     char* lastForwardSlash = strrchr(dir, '/');
@@ -118,8 +116,7 @@ BOOL ExtractDirectoryW(const wchar_t* path, wchar_t* dir, size_t dirSize) {
     size_t pathLen = wcslen(path);
     if (pathLen >= dirSize) return FALSE;
     
-    wcsncpy(dir, path, dirSize - 1);
-    dir[dirSize - 1] = L'\0';
+    safe_wcsncpy(dir, path, dirSize);
     
     wchar_t* lastBackslash = wcsrchr(dir, L'\\');
     wchar_t* lastForwardSlash = wcsrchr(dir, L'/');
@@ -213,8 +210,7 @@ BOOL GetRelativePathU8(const char* root, const char* target,
     while (IsPathSeparatorU8(*rel)) rel++;
     if (strlen(rel) >= relativeSize) return FALSE;
     
-    strncpy(relative, rel, relativeSize - 1);
-    relative[relativeSize - 1] = '\0';
+    safe_strncpy(relative, rel, relativeSize);
     
     return TRUE;
 }
@@ -238,8 +234,7 @@ BOOL GetRelativePathW(const wchar_t* root, const wchar_t* target,
     while (IsPathSeparatorW(*rel)) rel++;
     if (wcslen(rel) >= relativeSize) return FALSE;
     
-    wcsncpy(relative, rel, relativeSize - 1);
-    relative[relativeSize - 1] = L'\0';
+    safe_wcsncpy(relative, rel, relativeSize);
     
     return TRUE;
 }

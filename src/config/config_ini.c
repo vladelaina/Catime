@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "log.h"
+#include "utils/string_safe.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -251,8 +252,7 @@ static BOOL CreateTempFilePathForTargetUtf8(const char* targetPath, char* tempPa
     }
 
     wchar_t wDir[MAX_PATH] = {0};
-    wcsncpy(wDir, wTarget, MAX_PATH - 1);
-    wDir[MAX_PATH - 1] = L'\0';
+    safe_wcsncpy(wDir, wTarget, MAX_PATH);
 
     wchar_t* lastSlash = wcsrchr(wDir, L'\\');
     wchar_t* lastForwardSlash = wcsrchr(wDir, L'/');
@@ -486,7 +486,7 @@ static IniFile* CloneIniFile(const IniFile* src) {
     IniFile* clone = (IniFile*)calloc(1, sizeof(IniFile));
     if (!clone) return NULL;
 
-    strncpy(clone->filePath, src->filePath, MAX_PATH - 1);
+    safe_strncpy(clone->filePath, src->filePath, sizeof(clone->filePath));
     clone->dirty = src->dirty;
     clone->lastWriteTime = src->lastWriteTime;
     clone->lastStatCheckTick = src->lastStatCheckTick;
@@ -548,7 +548,7 @@ static IniFile* ParseIniFile(const char* filePath) {
     IniFile* ini = (IniFile*)calloc(1, sizeof(IniFile));
     if (!ini) return NULL;
 
-    strncpy(ini->filePath, filePath, MAX_PATH - 1);
+    safe_strncpy(ini->filePath, filePath, sizeof(ini->filePath));
     ini->lastStatCheckTick = GetIniCacheTickMs();
 
     ULONGLONG fileSize = 0;

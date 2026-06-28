@@ -9,6 +9,7 @@
 #define STRING_SAFE_H
 
 #include <stddef.h>
+#include <wchar.h>
 
 /**
  * @brief Safe string copy with guaranteed null termination
@@ -20,6 +21,17 @@
  * @details Always null-terminates destination. Returns -1 if source was truncated.
  */
 int safe_strncpy(char* dest, const char* src, size_t dest_size);
+
+/**
+ * @brief Safe wide string copy with guaranteed null termination
+ * @param dest Destination buffer
+ * @param src Source wide string
+ * @param dest_size Total size of destination buffer in wide characters
+ * @return Length of copied string on success, -1 if truncated or error
+ *
+ * @details Always null-terminates destination. Returns -1 if source was truncated.
+ */
+int safe_wcsncpy(wchar_t* dest, const wchar_t* src, size_t dest_size);
 
 /**
  * @brief Safe string concatenation with guaranteed null termination

@@ -17,6 +17,7 @@
 #include "log.h"
 #include "text_effect.h"
 #include "utils/path_utils.h"
+#include "utils/string_safe.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <string.h>
@@ -695,7 +696,7 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
             }
 
             /* Copy section, key, value */
-            strncpy(entry->section, currentSection, sizeof(entry->section) - 1);
+            safe_strncpy(entry->section, currentSection, sizeof(entry->section));
 
             /* Trim key */
             const char* key = trimmed;
@@ -709,7 +710,7 @@ static ConfigEntry* ReadAllConfigEntries(const char* config_path) {
             /* Trim value */
             const char* value = eq + 1;
             while (*value && isspace((unsigned char)*value)) value++;
-            strncpy(entry->value, value, sizeof(entry->value) - 1);
+            safe_strncpy(entry->value, value, sizeof(entry->value));
 
             /* Add to linked list */
             if (!head) {
@@ -767,8 +768,8 @@ void MigrateConfig(const char* config_path) {
 
         /* Convert to new defaults */
         if (isOldBuggyDefault || isOldFixedDefault) {
-            strncpy(textColorEntry->value, "auto", sizeof(textColorEntry->value) - 1);
-            strncpy(bgColorEntry->value, "transparent", sizeof(bgColorEntry->value) - 1);
+            safe_strncpy(textColorEntry->value, "auto", sizeof(textColorEntry->value));
+            safe_strncpy(bgColorEntry->value, "transparent", sizeof(bgColorEntry->value));
         }
     }
 

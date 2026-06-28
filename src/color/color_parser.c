@@ -11,6 +11,7 @@
 #include <errno.h>
 #include "color/color_parser.h"
 #include "color/gradient.h"
+#include "utils/string_safe.h"
 
 /* ============================================================================
  * Constants
@@ -64,11 +65,10 @@ void ReplaceBlackColor(const char* color, char* output, size_t output_size) {
     }
 
     if (strcasecmp(color, "#000000") == 0) {
-        strncpy(output, NEAR_BLACK_COLOR, output_size);
+        safe_strncpy(output, NEAR_BLACK_COLOR, output_size);
     } else {
-        strncpy(output, color, output_size);
+        safe_strncpy(output, color, output_size);
     }
-    output[output_size - 1] = '\0';
 }
 
 /* ============================================================================
@@ -78,8 +78,7 @@ void ReplaceBlackColor(const char* color, char* output, size_t output_size) {
 static BOOL ParseCSSColor(const char* name, char* output, size_t size) {
     for (size_t i = 0; i < CSS_COLORS_COUNT; i++) {
         if (strcmp(name, CSS_COLORS[i].name) == 0) {
-            strncpy(output, CSS_COLORS[i].hex, size);
-            output[size - 1] = '\0';
+            safe_strncpy(output, CSS_COLORS[i].hex, size);
             return TRUE;
         }
     }
@@ -215,8 +214,7 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     
     if (ParseRGBColor(lower, output, output_size)) return;
     
-    strncpy(output, input, output_size);
-    output[output_size - 1] = '\0';
+    safe_strncpy(output, input, output_size);
 }
 
 BOOL isValidColor(const char* input) {

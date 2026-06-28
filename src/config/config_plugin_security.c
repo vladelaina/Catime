@@ -7,6 +7,7 @@
 #include "config.h"
 #include "log.h"
 #include "utils/string_convert.h"
+#include "utils/string_safe.h"
 #include <windows.h>
 #include <wincrypt.h>
 #include <string.h>
@@ -395,12 +396,10 @@ BOOL TrustPluginWithVerifiedHash(const char* pluginPath, const char* verifiedHas
                 return FALSE;
             }
 
-            strncpy(updatedTrust.entries[i].path, compressedPath,
-                    sizeof(updatedTrust.entries[i].path) - 1);
-            updatedTrust.entries[i].path[sizeof(updatedTrust.entries[i].path) - 1] = '\0';
-            strncpy(updatedTrust.entries[i].sha256, verifiedHash,
-                    sizeof(updatedTrust.entries[i].sha256) - 1);
-            updatedTrust.entries[i].sha256[sizeof(updatedTrust.entries[i].sha256) - 1] = '\0';
+            safe_strncpy(updatedTrust.entries[i].path, compressedPath,
+                         sizeof(updatedTrust.entries[i].path));
+            safe_strncpy(updatedTrust.entries[i].sha256, verifiedHash,
+                         sizeof(updatedTrust.entries[i].sha256));
 
             snprintf(key, sizeof(key), "PLUGIN_%d", i);
             snprintf(value, sizeof(value), "%s|%s",

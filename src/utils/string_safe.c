@@ -5,6 +5,7 @@
 
 #include "utils/string_safe.h"
 #include <string.h>
+#include <wchar.h>
 
 int safe_strncpy(char* dest, const char* src, size_t dest_size) {
     if (!dest || dest_size == 0) {
@@ -47,4 +48,25 @@ int safe_strncat(char* dest, const char* src, size_t dest_size) {
     dest[dest_len + copy_len] = '\0';
     
     return (src_len <= remaining) ? (int)(dest_len + src_len) : -1;
+}
+
+int safe_wcsncpy(wchar_t* dest, const wchar_t* src, size_t dest_size) {
+    if (!dest || dest_size == 0) {
+        return -1;
+    }
+
+    if (!src) {
+        dest[0] = L'\0';
+        return 0;
+    }
+
+    size_t src_len = wcslen(src);
+    size_t copy_len = (src_len < dest_size - 1) ? src_len : dest_size - 1;
+
+    if (copy_len > 0) {
+        wmemcpy(dest, src, copy_len);
+    }
+    dest[copy_len] = L'\0';
+
+    return (src_len < dest_size) ? (int)src_len : -1;
 }

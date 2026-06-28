@@ -10,6 +10,7 @@
 #include "log.h"
 #include "language.h"
 #include "utils/directory_watcher.h"
+#include "utils/string_safe.h"
 #include <shlobj.h>
 #include <stdlib.h>
 #include <string.h>
@@ -240,11 +241,8 @@ static BOOL AddAnimEntry(AnimScanContext* ctx, const char* fileName,
     }
 
     AnimEntry* entry = &ctx->entries[ctx->count];
-    strncpy(entry->fileName, fileName, MAX_ANIM_NAME_LENGTH - 1);
-    entry->fileName[MAX_ANIM_NAME_LENGTH - 1] = '\0';
-
-    strncpy(entry->relativePath, relativePath, MAX_PATH - 1);
-    entry->relativePath[MAX_PATH - 1] = '\0';
+    safe_strncpy(entry->fileName, fileName, sizeof(entry->fileName));
+    safe_strncpy(entry->relativePath, relativePath, sizeof(entry->relativePath));
 
     entry->isSpecial = isSpecial;
 
@@ -331,15 +329,13 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
 
         char newRelativePath[MAX_PATH];
         if (relativePathUtf8[0] == '\0') {
-            strncpy(newRelativePath, fileNameUtf8, MAX_PATH - 1);
+            safe_strncpy(newRelativePath, fileNameUtf8, sizeof(newRelativePath));
         } else {
             int relativePathLen = snprintf(newRelativePath, MAX_PATH, "%s\\%s", relativePathUtf8, fileNameUtf8);
             if (relativePathLen < 0 || relativePathLen >= MAX_PATH) {
                 continue;
             }
         }
-        newRelativePath[MAX_PATH - 1] = '\0';
-
         if (isDirectory) {
             if (findData.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
                 continue;
