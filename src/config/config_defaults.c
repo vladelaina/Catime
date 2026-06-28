@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 #ifdef _MSC_VER
 #include <string.h>
 #define strcasecmp _stricmp
@@ -492,6 +493,64 @@ static BOOL IsConfigItemInMetadata(const char* section, const char* key) {
     return FALSE;
 }
 
+typedef struct {
+    const char* section;
+    const char* keyPrefix;
+    int minIndex;
+    int maxIndex;
+} DynamicConfigMigrationRule;
+
+static const DynamicConfigMigrationRule DYNAMIC_CONFIG_MIGRATION_RULES[] = {
+    {INI_SECTION_RECENTFILES, "CLOCK_RECENT_FILE_", 1, MAX_RECENT_FILES},
+    {INI_SECTION_PLUGIN_TRUST, "PLUGIN_", 0, MAX_TRUSTED_PLUGINS - 1},
+};
+
+static BOOL IsIndexedDynamicConfigItem(const char* section, const char* key,
+                                       const DynamicConfigMigrationRule* rule) {
+    if (!section || !key || !rule || strcmp(section, rule->section) != 0) {
+        return FALSE;
+    }
+
+    size_t prefixLen = strlen(rule->keyPrefix);
+    if (strncmp(key, rule->keyPrefix, prefixLen) != 0 || key[prefixLen] == '\0') {
+        return FALSE;
+    }
+
+    int index = 0;
+    for (const char* p = key + prefixLen; *p; ++p) {
+        if (!isdigit((unsigned char)*p)) {
+            return FALSE;
+        }
+        index = index * 10 + (*p - '0');
+        if (index > rule->maxIndex) {
+            return FALSE;
+        }
+    }
+
+    if (index < rule->minIndex || index > rule->maxIndex) {
+        return FALSE;
+    }
+
+    char expectedKey[64];
+    snprintf(expectedKey, sizeof(expectedKey), "%s%d", rule->keyPrefix, index);
+    return strcmp(key, expectedKey) == 0;
+}
+
+static BOOL IsDynamicConfigItemMigratable(const char* section, const char* key) {
+    for (size_t i = 0; i < _countof(DYNAMIC_CONFIG_MIGRATION_RULES); ++i) {
+        if (IsIndexedDynamicConfigItem(section, key, &DYNAMIC_CONFIG_MIGRATION_RULES[i])) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+static BOOL IsConfigItemMigratable(const char* section, const char* key) {
+    return IsConfigItemInMetadata(section, key) ||
+           IsDynamicConfigItemMigratable(section, key);
+}
+
 /* Helper to detect if a string is valid UTF-8 */
 static BOOL IsUtf8String(const char* str) {
     const unsigned char* bytes = (const unsigned char*)str;
@@ -721,12 +780,12 @@ void MigrateConfig(const char* config_path) {
         return;
     }
 
-    /* Step 5: Restore user values that exist in CONFIG_METADATA */
+    /* Step 5: Restore user values that exist in metadata or supported dynamic keys */
     int restoreCount = 0;
     current = oldConfig;
     while (current) {
         if (strcmp(current->key, "CONFIG_VERSION") != 0 &&
-            IsConfigItemInMetadata(current->section, current->key)) {
+            IsConfigItemMigratable(current->section, current->key)) {
             restoreCount++;
         }
         current = current->next;
@@ -740,7 +799,7 @@ void MigrateConfig(const char* config_path) {
             while (current) {
                 /* Skip CONFIG_VERSION - must be updated to current version */
                 if (strcmp(current->key, "CONFIG_VERSION") != 0 &&
-                    IsConfigItemInMetadata(current->section, current->key)) {
+                    IsConfigItemMigratable(current->section, current->key)) {
                     updates[updateCount].section = current->section;
                     updates[updateCount].key = current->key;
                     updates[updateCount].value = current->value;
@@ -758,7 +817,7 @@ void MigrateConfig(const char* config_path) {
             current = oldConfig;
             while (current) {
                 if (strcmp(current->key, "CONFIG_VERSION") != 0 &&
-                    IsConfigItemInMetadata(current->section, current->key)) {
+                    IsConfigItemMigratable(current->section, current->key)) {
                     if (!WriteIniString(current->section, current->key,
                                         current->value, config_path)) {
                         failedWrites++;

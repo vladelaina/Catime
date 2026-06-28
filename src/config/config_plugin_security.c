@@ -14,9 +14,6 @@
 #include <shlobj.h>
 #include <stdlib.h>
 
-/* Plugin trust section name */
-#define INI_SECTION_PLUGIN_TRUST "PluginTrust"
-
 /* Thread safety: Critical section to protect g_AppConfig.plugin_trust */
 static CRITICAL_SECTION g_pluginTrustCS;
 static CRITICAL_SECTION g_pluginTrustMutationCS;

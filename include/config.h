@@ -84,6 +84,7 @@
 #define INI_SECTION_RECENTFILES   "RecentFiles"
 #define INI_SECTION_COLORS        "Colors"
 #define INI_SECTION_OPTIONS       "Options"
+#define INI_SECTION_PLUGIN_TRUST  "PluginTrust"
 
 /* ============================================================================
  * Type definitions
