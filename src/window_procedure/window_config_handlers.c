@@ -829,6 +829,12 @@ LRESULT HandleAppNotificationChanged(HWND hwnd) {
                       DEFAULT_NOTIFICATION_MAX_OPACITY),
         MIN_OPACITY, MAX_OPACITY);
 
+    g_AppConfig.notification.display.corner_radius = ClampHotReloadInt(
+        "NOTIFICATION_CORNER_RADIUS",
+        ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_CORNER_RADIUS",
+                      DEFAULT_NOTIFICATION_CORNER_RADIUS),
+        MIN_NOTIFICATION_CORNER_RADIUS, MAX_NOTIFICATION_CORNER_RADIUS);
+
     char typeBuf[32];
     ReadConfigStr(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", typeBuf, sizeof(typeBuf));
     if (_stricmp(typeBuf, "SYSTEM_MODAL") == 0) {

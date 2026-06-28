@@ -269,12 +269,18 @@ void WriteConfigNotificationSound(const char* sound_file) {
 
 BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
                                      int opacity, NotificationType type,
-                                     BOOL disabled, const char* sound_file,
+                                     int corner_radius, BOOL disabled, const char* sound_file,
                                      int volume) {
     if (!timeout_msg) timeout_msg = "";
     if (timeout_ms < 0) timeout_ms = 0;
     if (opacity < 1) opacity = 1;
     if (opacity > 100) opacity = 100;
+    if (corner_radius < MIN_NOTIFICATION_CORNER_RADIUS) {
+        corner_radius = MIN_NOTIFICATION_CORNER_RADIUS;
+    }
+    if (corner_radius > MAX_NOTIFICATION_CORNER_RADIUS) {
+        corner_radius = MAX_NOTIFICATION_CORNER_RADIUS;
+    }
     if (type < NOTIFICATION_TYPE_CATIME || type > NOTIFICATION_TYPE_OS) {
         type = NOTIFICATION_TYPE_CATIME;
     }
@@ -283,9 +289,11 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
 
     char timeoutStr[32];
     char opacityStr[32];
+    char radiusStr[32];
     char volumeStr[32];
     if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeout_ms) < 0 ||
         snprintf(opacityStr, sizeof(opacityStr), "%d", opacity) < 0 ||
+        snprintf(radiusStr, sizeof(radiusStr), "%d", corner_radius) < 0 ||
         snprintf(volumeStr, sizeof(volumeStr), "%d", volume) < 0) {
         return FALSE;
     }
@@ -302,6 +310,7 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
         strcmp(g_AppConfig.notification.messages.timeout_message, timeout_msg) == 0 &&
         g_AppConfig.notification.display.timeout_ms == timeout_ms &&
         g_AppConfig.notification.display.max_opacity == opacity &&
+        g_AppConfig.notification.display.corner_radius == corner_radius &&
         g_AppConfig.notification.display.type == type &&
         g_AppConfig.notification.display.disabled == disabled &&
         strcmp(g_AppConfig.notification.sound.sound_file, cleanSoundPath) == 0 &&
@@ -314,6 +323,7 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
         NotificationIniValueMatches(config_path, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_TIMEOUT_MS", timeoutStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_MAX_OPACITY", opacityStr) &&
+        NotificationIniValueMatches(config_path, "NOTIFICATION_CORNER_RADIUS", radiusStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_TYPE", typeStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_DISABLED", disabledStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_SOUND_FILE", soundConfigValue) &&
@@ -325,6 +335,7 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
         {INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", timeoutStr},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", opacityStr},
+        {INI_SECTION_NOTIFICATION, "NOTIFICATION_CORNER_RADIUS", radiusStr},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", typeStr},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_DISABLED", disabledStr},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", soundConfigValue},
@@ -339,6 +350,7 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
     g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
     g_AppConfig.notification.display.timeout_ms = timeout_ms;
     g_AppConfig.notification.display.max_opacity = opacity;
+    g_AppConfig.notification.display.corner_radius = corner_radius;
     g_AppConfig.notification.display.type = type;
     g_AppConfig.notification.display.disabled = disabled;
     strncpy(g_AppConfig.notification.sound.sound_file, cleanSoundPath,

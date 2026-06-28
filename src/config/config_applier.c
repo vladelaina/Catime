@@ -298,6 +298,7 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     
     g_AppConfig.notification.display.timeout_ms = snapshot->notificationTimeoutMs;
     g_AppConfig.notification.display.max_opacity = snapshot->notificationMaxOpacity;
+    g_AppConfig.notification.display.corner_radius = snapshot->notificationCornerRadius;
     g_AppConfig.notification.display.type = snapshot->notificationType;
     g_AppConfig.notification.display.disabled = snapshot->notificationDisabled;
     g_AppConfig.notification.display.window_x = snapshot->notificationWindowX;

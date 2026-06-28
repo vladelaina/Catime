@@ -109,6 +109,13 @@ void ShowToastNotificationPreview(HWND hwnd, const wchar_t* message, int opacity
 void SetToastNotificationOpacity(HWND hwnd, int opacityPercent);
 
 /**
+ * @brief Update a toast window corner radius
+ * @param hwnd Toast window handle
+ * @param cornerRadius Corner radius in pixels
+ */
+void SetToastNotificationCornerRadius(HWND hwnd, int cornerRadius);
+
+/**
  * @brief Update a toast window message text
  * @param hwnd Toast window handle
  * @param message Replacement message text

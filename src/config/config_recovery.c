@@ -241,6 +241,15 @@ BOOL ValidateNotificationConfig(ConfigSnapshot* snapshot) {
         modified = TRUE;
     }
 
+    if (snapshot->notificationCornerRadius < MIN_NOTIFICATION_CORNER_RADIUS) {
+        snapshot->notificationCornerRadius = MIN_NOTIFICATION_CORNER_RADIUS;
+        modified = TRUE;
+    }
+    if (snapshot->notificationCornerRadius > MAX_NOTIFICATION_CORNER_RADIUS) {
+        snapshot->notificationCornerRadius = MAX_NOTIFICATION_CORNER_RADIUS;
+        modified = TRUE;
+    }
+
     if (snapshot->notificationSoundVolume < MIN_VOLUME) {
         snapshot->notificationSoundVolume = MIN_VOLUME;
         modified = TRUE;

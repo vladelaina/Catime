@@ -91,6 +91,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     {INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", DEFAULT_TIMEOUT_MESSAGE, CONFIG_TYPE_STRING, CFG_OFFSET(timeoutMessage), CFG_SIZE(timeoutMessage), "Timeout message"},
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", "3000", CONFIG_TYPE_INT, CFG_OFFSET(notificationTimeoutMs), CFG_NO_SIZE, "Notification display duration"},
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", "95", CONFIG_TYPE_INT, CFG_OFFSET(notificationMaxOpacity), CFG_NO_SIZE, "Notification opacity (1-100)"},
+    {INI_SECTION_NOTIFICATION, "NOTIFICATION_CORNER_RADIUS", "12", CONFIG_TYPE_INT, CFG_OFFSET(notificationCornerRadius), CFG_NO_SIZE, "Notification corner radius (0-40 pixels)"},
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", CONFIG_TYPE_ENUM, CFG_OFFSET(notificationType), CFG_NO_SIZE, "Notification display type"},
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE", "", CONFIG_TYPE_STRING, CFG_OFFSET(notificationSoundFile), CFG_SIZE(notificationSoundFile), "Notification sound file"},
     {INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_VOLUME", "100", CONFIG_TYPE_INT, CFG_OFFSET(notificationSoundVolume), CFG_NO_SIZE, "Sound volume (0-100)"},

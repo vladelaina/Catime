@@ -166,6 +166,7 @@ typedef struct {
 typedef struct {
     int timeout_ms;
     int max_opacity;
+    int corner_radius;
     NotificationType type;
     BOOL disabled;
     int window_x;
@@ -589,13 +590,14 @@ void WriteConfigNotificationVolume(int volume);
  * @param timeout_ms Duration in milliseconds (0 disables timeout notification)
  * @param opacity Opacity (1-100)
  * @param type Notification display type
+ * @param corner_radius Corner radius in pixels
  * @param disabled TRUE to suppress all notifications
  * @param sound_file Path, "SYSTEM_BEEP", or empty (UTF-8)
  * @param volume Volume (0-100)
  */
 BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
                                      int opacity, NotificationType type,
-                                     BOOL disabled, const char* sound_file,
+                                     int corner_radius, BOOL disabled, const char* sound_file,
                                      int volume);
 
 /**

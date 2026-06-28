@@ -9,6 +9,7 @@
 #include "dialog/dialog_language.h"
 #include "dialog/dialog_common.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "audio_player.h"
 #include "notification.h"
 #include "log.h"
@@ -109,6 +110,20 @@ static void UpdatePreviewOpacity(int opacity) {
     }
 }
 
+static void UpdatePreviewCornerRadius(int cornerRadius) {
+    if (!g_hwndPreviewNotification ||
+        !IsWindow(g_hwndPreviewNotification) ||
+        !IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
+        g_hwndPreviewNotification = FindPreviewNotificationWindow();
+    }
+
+    if (g_hwndPreviewNotification &&
+        IsWindow(g_hwndPreviewNotification) &&
+        IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
+        SetToastNotificationCornerRadius(g_hwndPreviewNotification, cornerRadius);
+    }
+}
+
 static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, const wchar_t* message) {
     if (!IsValidNotificationSettingsParent(hwndParent)) {
         return;
@@ -150,6 +165,11 @@ static void UpdatePreviewNotificationText(HWND hwndDlg, const wchar_t* newText) 
         int currentOpacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
 
         ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), currentOpacity, newText);
+        HWND hwndRadiusSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER);
+        if (hwndRadiusSlider) {
+            int cornerRadius = (int)SendMessage(hwndRadiusSlider, TBM_GETPOS, 0, 0);
+            UpdatePreviewCornerRadius(cornerRadius);
+        }
         return;
     }
 
@@ -268,6 +288,15 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", g_AppConfig.notification.display.max_opacity);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
 
+            HWND hwndRadiusSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER);
+            SendMessage(hwndRadiusSlider, TBM_SETRANGE, TRUE,
+                        MAKELONG(MIN_NOTIFICATION_CORNER_RADIUS, MAX_NOTIFICATION_CORNER_RADIUS));
+            SendMessage(hwndRadiusSlider, TBM_SETPOS, TRUE, g_AppConfig.notification.display.corner_radius);
+
+            wchar_t radiusText[16];
+            _snwprintf_s(radiusText, 16, _TRUNCATE, L"%dpx", g_AppConfig.notification.display.corner_radius);
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_RADIUS_TEXT, radiusText);
+
             switch (g_AppConfig.notification.display.type) {
                 case NOTIFICATION_TYPE_CATIME:
                     CheckDlgButton(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME, BST_CHECKED);
@@ -307,6 +336,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             int currentOpacity = g_AppConfig.notification.display.max_opacity;
             ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), currentOpacity,
                                          previewMessage[0] != L'\0' ? previewMessage : NULL);
+            UpdatePreviewCornerRadius(g_AppConfig.notification.display.corner_radius);
 
             return TRUE;
         }
@@ -368,6 +398,24 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
                 ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), opacity, currentMessage[0] != L'\0' ? currentMessage : NULL);
                 UpdatePreviewOpacity(opacity);
+
+                return TRUE;
+            }
+            else if (GetDlgItem(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER) == (HWND)lParam) {
+                int cornerRadius = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
+
+                wchar_t radiusText[16];
+                _snwprintf_s(radiusText, 16, _TRUNCATE, L"%dpx", cornerRadius);
+                SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_RADIUS_TEXT, radiusText);
+
+                wchar_t currentMessage[256];
+                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, currentMessage, sizeof(currentMessage)/sizeof(wchar_t));
+
+                HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
+                int currentOpacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
+                ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), currentOpacity,
+                                             currentMessage[0] != L'\0' ? currentMessage : NULL);
+                UpdatePreviewCornerRadius(cornerRadius);
 
                 return TRUE;
             }
@@ -438,6 +486,9 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
                 int opacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
 
+                HWND hwndRadiusSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER);
+                int cornerRadius = (int)SendMessage(hwndRadiusSlider, TBM_GETPOS, 0, 0);
+
                 NotificationType notifType = NOTIFICATION_TYPE_CATIME;
                 if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME)) {
                     notifType = NOTIFICATION_TYPE_CATIME;
@@ -457,8 +508,8 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
 
                 if (!WriteConfigNotificationSettings(timeout_msg, timeoutMs, opacity,
-                                                     notifType, isDisabled, soundFile,
-                                                     volume)) {
+                                                     notifType, cornerRadius, isDisabled,
+                                                     soundFile, volume)) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
                     return TRUE;
                 }

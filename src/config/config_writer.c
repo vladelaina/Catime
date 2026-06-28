@@ -326,7 +326,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     idx++;
     
     /* Notification section */
-    if (!EnsureConfigItemCapacity(idx, itemCapacity, 11, "Notification")) return FALSE;
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 12, "Notification")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_MESSAGE_TEXT", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, g_AppConfig.notification.messages.timeout_message, sizeof(items[idx].value));
@@ -340,6 +340,11 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "NOTIFICATION_MAX_OPACITY", sizeof(items[idx].key));
     snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.max_opacity);
+    idx++;
+
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_CORNER_RADIUS", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.corner_radius);
     idx++;
     
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));

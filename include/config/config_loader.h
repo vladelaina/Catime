@@ -78,6 +78,7 @@ typedef struct {
     char timeoutMessage[100];
     int notificationTimeoutMs;
     int notificationMaxOpacity;
+    int notificationCornerRadius;
     NotificationType notificationType;
     char notificationSoundFile[MAX_PATH];
     int notificationSoundVolume;

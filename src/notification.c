@@ -9,6 +9,7 @@
 #include "language.h"
 #include "notification.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "dialog/dialog_notification.h"
 #include "log.h"
 #include "../resource/resource.h"
@@ -24,6 +25,7 @@ typedef struct {
     BYTE opacity;
     BYTE maxOpacity;
     int opacityPercent;
+    int cornerRadius;
     BOOL isPreview;
     BOOL opacitySavePending;
     int pendingOpacity;
@@ -44,10 +46,8 @@ static HFONT CreateNotificationFont(int size, int weight);
 static HFONT GetNotificationTitleFont(void);
 static HFONT GetNotificationContentFont(void);
 static HBRUSH GetNotificationBgBrush(void);
-static HPEN GetNotificationBorderPen(void);
 static int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font);
 static void CalculateNotificationPosition(int width, int height, int* x, int* y);
-static void DrawNotificationBorder(HDC hdc, RECT rect);
 static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, HFONT font, COLORREF color, DWORD flags);
 static BYTE UpdateAnimationOpacity(AnimationState state, BYTE currentOpacity, BYTE maxOpacity, BOOL* shouldDestroy);
 static NotificationData* GetNotificationData(HWND hwnd);
@@ -60,6 +60,8 @@ static BOOL EnsureNotificationPaintBuffer(HDC hdc, NotificationData* data,
 static void DestroyAllNotifications(void);
 static void FlushPendingNotificationOpacity(HWND hwnd, NotificationData* data, BOOL allowRetry);
 static int ClampOpacityPercent(int opacityPercent);
+static int ClampNotificationCornerRadius(int cornerRadius);
+static void ApplyNotificationCornerRadius(HWND hwnd, int cornerRadius);
 static BYTE OpacityPercentToAlpha(int opacityPercent);
 static BOOL IsCurrentProcessWindow(HWND hwnd);
 static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
@@ -84,7 +86,6 @@ typedef struct {
 static HFONT g_notificationTitleFont = NULL;
 static HFONT g_notificationContentFont = NULL;
 static HBRUSH g_notificationBgBrush = NULL;
-static HPEN g_notificationBorderPen = NULL;
 static SRWLOCK g_notificationResourceLock = SRWLOCK_INIT;
 static volatile LONG g_modalNotificationActive = 0;
 static DWORD g_modalNotificationStartFailureCooldownUntil = 0;
@@ -93,6 +94,16 @@ static int ClampOpacityPercent(int opacityPercent) {
     if (opacityPercent < 1) return 1;
     if (opacityPercent > 100) return 100;
     return opacityPercent;
+}
+
+static int ClampNotificationCornerRadius(int cornerRadius) {
+    if (cornerRadius < MIN_NOTIFICATION_CORNER_RADIUS) {
+        return MIN_NOTIFICATION_CORNER_RADIUS;
+    }
+    if (cornerRadius > MAX_NOTIFICATION_CORNER_RADIUS) {
+        return MAX_NOTIFICATION_CORNER_RADIUS;
+    }
+    return cornerRadius;
 }
 
 static int ClampNotificationWidth(int width) {
@@ -109,6 +120,34 @@ static int ClampNotificationHeight(int height) {
 
 static BYTE OpacityPercentToAlpha(int opacityPercent) {
     return (BYTE)((ClampOpacityPercent(opacityPercent) * 255) / 100);
+}
+
+static void ApplyNotificationCornerRadius(HWND hwnd, int cornerRadius) {
+    if (!hwnd) return;
+
+    cornerRadius = ClampNotificationCornerRadius(cornerRadius);
+    if (cornerRadius <= 0) {
+        SetWindowRgn(hwnd, NULL, TRUE);
+        return;
+    }
+
+    RECT rect = {0};
+    GetClientRect(hwnd, &rect);
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+    if (width <= 0 || height <= 0) {
+        return;
+    }
+
+    int diameter = cornerRadius * 2;
+    HRGN region = CreateRoundRectRgn(0, 0, width + 1, height + 1, diameter, diameter);
+    if (!region) {
+        return;
+    }
+
+    if (SetWindowRgn(hwnd, region, TRUE) == 0) {
+        DeleteObject(region);
+    }
 }
 
 static BOOL IsCurrentProcessWindow(HWND hwnd) {
@@ -210,13 +249,6 @@ static HBRUSH GetNotificationBgBrush(void) {
     return g_notificationBgBrush;
 }
 
-static HPEN GetNotificationBorderPen(void) {
-    if (!g_notificationBorderPen) {
-        g_notificationBorderPen = CreatePen(PS_SOLID, 1, NOTIFICATION_BORDER_COLOR);
-    }
-    return g_notificationBorderPen;
-}
-
 void CleanupNotificationResources(void) {
     DestroyAllNotifications();
 
@@ -232,10 +264,6 @@ void CleanupNotificationResources(void) {
     if (g_notificationBgBrush) {
         DeleteObject(g_notificationBgBrush);
         g_notificationBgBrush = NULL;
-    }
-    if (g_notificationBorderPen) {
-        DeleteObject(g_notificationBorderPen);
-        g_notificationBorderPen = NULL;
     }
     ReleaseSRWLockExclusive(&g_notificationResourceLock);
 }
@@ -274,21 +302,6 @@ static void CalculateNotificationPosition(int width, int height, int* x, int* y)
     
     *x = workArea.right - width - NOTIFICATION_RIGHT_MARGIN;
     *y = workArea.bottom - height - NOTIFICATION_BOTTOM_MARGIN;
-}
-
-static void DrawNotificationBorder(HDC hdc, RECT rect) {
-    HPEN pen = GetNotificationBorderPen();
-    HPEN oldPen = pen ? (HPEN)SelectObject(hdc, pen) : NULL;
-    HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(NULL_BRUSH));
-
-    Rectangle(hdc, rect.left, rect.top, rect.right, rect.bottom);
-
-    if (oldBrush) {
-        SelectObject(hdc, oldBrush);
-    }
-    if (oldPen) {
-        SelectObject(hdc, oldPen);
-    }
 }
 
 static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, 
@@ -695,9 +708,11 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
     notifData->opacityPercent = ClampOpacityPercent(opacityPercent);
     notifData->animState = animate ? ANIM_FADE_IN : ANIM_VISIBLE;
     notifData->opacity = animate ? 0 : notifData->maxOpacity;
+    notifData->cornerRadius = ClampNotificationCornerRadius(g_AppConfig.notification.display.corner_radius);
     notifData->isPreview = isPreview;  /* Controls interactivity and position saving */
     
     SetNotificationData(hNotification, notifData);
+    ApplyNotificationCornerRadius(hNotification, notifData->cornerRadius);
     
     SetLayeredWindowAttributes(hNotification, 0, notifData->opacity, LWA_ALPHA);
     
@@ -747,6 +762,19 @@ void SetToastNotificationOpacity(HWND hwnd, int opacityPercent) {
     }
 
     SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
+}
+
+void SetToastNotificationCornerRadius(HWND hwnd, int cornerRadius) {
+    if (!IsNotificationWindow(hwnd)) return;
+
+    NotificationData* data = GetNotificationData(hwnd);
+    int clampedRadius = ClampNotificationCornerRadius(cornerRadius);
+    if (data) {
+        data->cornerRadius = clampedRadius;
+    }
+
+    ApplyNotificationCornerRadius(hwnd, clampedRadius);
+    InvalidateRect(hwnd, NULL, FALSE);
 }
 
 BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message) {
@@ -844,8 +872,6 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
             HBRUSH bgBrush = GetNotificationBgBrush();
             FillRect(memDC, &clientRect, bgBrush ? bgBrush : (HBRUSH)(COLOR_WINDOW + 1));
-
-            DrawNotificationBorder(memDC, clientRect);
 
             SetBkMode(memDC, TRANSPARENT);
 
@@ -997,6 +1023,15 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         case WM_SIZING: {
             InvalidateRect(hwnd, NULL, FALSE);
             return TRUE;
+        }
+
+        case WM_SIZE: {
+            const NotificationData* data = GetNotificationData(hwnd);
+            if (data) {
+                ApplyNotificationCornerRadius(hwnd, data->cornerRadius);
+            }
+            InvalidateRect(hwnd, NULL, FALSE);
+            return 0;
         }
         
         case WM_EXITSIZEMOVE: {

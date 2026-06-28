@@ -43,6 +43,7 @@ AppConfig g_AppConfig = {
         .display = {
             .timeout_ms = DEFAULT_NOTIFICATION_TIMEOUT_MS,
             .max_opacity = DEFAULT_NOTIFICATION_MAX_OPACITY,
+            .corner_radius = DEFAULT_NOTIFICATION_CORNER_RADIUS,
             .type = NOTIFICATION_TYPE_CATIME,
             .disabled = FALSE,
             .window_x = -1,

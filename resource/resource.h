@@ -101,7 +101,7 @@
 #define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"                      /**< GitHub repository URL */
 #define URL_FEEDBACK L"https://message.bilibili.com/#/whisper/mid1862395225"         /**< Feedback URL */
 #define URL_BILIBILI_SPACE L"https://space.bilibili.com/1862395225"                 /**< Bilibili space URL */
-#define URL_VLAINA L"https://vlaina.com"                                            /**< Vlaina project URL */
+#define URL_VLAINA L"https://vlaina.com/r/catime_win"                               /**< Vlaina project URL */
 
 /** @brief Application icon resource */
 #define IDI_CATIME 101                   /**< Main application icon */
@@ -295,6 +295,9 @@
 #define IDC_NOTIFICATION_DISPLAY_GROUP 2023  /**< Notification display group */
 #define IDC_NOTIFICATION_METHOD_GROUP 2024   /**< Notification method group */
 #define IDC_NOTIFICATION_AUDIO_GROUP 2025    /**< Notification audio settings group */
+#define IDC_NOTIFICATION_RADIUS_LABEL 2026   /**< Notification corner radius label */
+#define IDC_NOTIFICATION_RADIUS_SLIDER 2027  /**< Notification corner radius slider */
+#define IDC_NOTIFICATION_RADIUS_TEXT 2028    /**< Notification corner radius text */
 
 /** @brief Notification type and audio control identifiers */
 #define IDC_NOTIFICATION_TYPE_CATIME 2011      /**< Catime notification type radio */
@@ -338,7 +341,6 @@
 #define NOTIFICATION_BG_COLOR RGB(255, 255, 255)     /**< Background color (white) */
 #define NOTIFICATION_TITLE_COLOR RGB(0, 0, 0)        /**< Title text color (black) */
 #define NOTIFICATION_CONTENT_COLOR RGB(100, 100, 100) /**< Content text color (gray) */
-#define NOTIFICATION_BORDER_COLOR RGB(200, 200, 200)  /**< Border color (light gray) */
 
 /** @brief Global hotkey identifiers for RegisterHotKey */
 #define HOTKEY_ID_SHOW_TIME       100            /**< Show time hotkey ID */

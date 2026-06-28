@@ -427,6 +427,7 @@ void InitializeDefaultSnapshot(ConfigSnapshot* snapshot) {
     snapshot->defaultStartTime = DEFAULT_START_TIME_SECONDS;
     snapshot->notificationTimeoutMs = DEFAULT_NOTIFICATION_TIMEOUT_MS;
     snapshot->notificationMaxOpacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
+    snapshot->notificationCornerRadius = DEFAULT_NOTIFICATION_CORNER_RADIUS;
     snapshot->notificationSoundVolume = DEFAULT_NOTIFICATION_VOLUME;
 }
 
