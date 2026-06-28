@@ -179,8 +179,7 @@ static void NormalizeWhitespace(char* input) {
     }
     normalized[j] = '\0';
     
-    strncpy(input, normalized, INPUT_BUFFER_SIZE - 1);
-    input[INPUT_BUFFER_SIZE - 1] = '\0';
+    snprintf(input, INPUT_BUFFER_SIZE, "%s", normalized);
 }
 
 /**
@@ -199,8 +198,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     }
     
     char input[INPUT_BUFFER_SIZE];
-    strncpy(input, cmdLine, sizeof(input) - 1);
-    input[sizeof(input) - 1] = '\0';
+    snprintf(input, sizeof(input), "%s", cmdLine);
     TrimSpaces(input);
     
     if (input[0] == '\0') {
