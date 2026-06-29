@@ -22,6 +22,7 @@
 #include "color/color_parser.h"
 #include "color/gradient.h"
 #include "tray/tray_animation_core.h"
+#include "notification.h"
 #include "log.h"
 #include <string.h>
 #include <stdlib.h>
@@ -34,7 +35,7 @@
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern char CLOCK_TIMEOUT_WEBSITE_URL[MAX_PATH];
 
-#define NOTIFICATION_MAX_WINDOW_HEIGHT 600
+#define NOTIFICATION_MAX_WINDOW_HEIGHT 900
 #define MIN_BASE_FONT_SIZE 8
 #define MAX_BASE_FONT_SIZE 500
 #define MIN_DEFAULT_START_TIME_SECONDS 1
@@ -257,41 +258,14 @@ static void NormalizeTextColorForHotReload(const char* color,
     const char* fallback = DEFAULT_TEXT_COLOR;
     output[0] = '\0';
 
-    if (!color || color[0] == '\0') {
-        strncpy_s(output, outputSize, fallback, _TRUNCATE);
+    if (NormalizeColorConfigValue(color, output, outputSize)) {
         return;
     }
 
-    GradientInfoSnapshot gradientSnapshot;
-    if (GetGradientInfoSnapshotByName(color, &gradientSnapshot) != GRADIENT_NONE) {
-        strncpy_s(output, outputSize, color, _TRUNCATE);
-        return;
-    }
-
-    if (color[0] != '#' || strlen(color) != 7) {
-        WriteLog(LOG_LEVEL_WARNING,
-                 "Ignoring invalid hot-reload text color '%s', using default '%s'",
-                 color, fallback);
-        strncpy_s(output, outputSize, fallback, _TRUNCATE);
-        return;
-    }
-
-    for (int i = 1; i < 7; i++) {
-        if (!isxdigit((unsigned char)color[i])) {
-            WriteLog(LOG_LEVEL_WARNING,
-                     "Ignoring invalid hot-reload text color '%s', using default '%s'",
-                     color, fallback);
-            strncpy_s(output, outputSize, fallback, _TRUNCATE);
-            return;
-        }
-    }
-
-    if (_stricmp(color, "#000000") == 0) {
-        strncpy_s(output, outputSize, "#000001", _TRUNCATE);
-        return;
-    }
-
-    strncpy_s(output, outputSize, color, _TRUNCATE);
+    WriteLog(LOG_LEVEL_WARNING,
+             "Ignoring invalid hot-reload text color '%s', using default '%s'",
+             color ? color : "", fallback);
+    strncpy_s(output, outputSize, fallback, _TRUNCATE);
 }
 
 static BOOL IsValidStartupModeConfig(const char* mode) {
@@ -492,7 +466,7 @@ static int ClampNotificationConfigWidth(int width) {
 
 static int ClampNotificationConfigHeight(int height) {
     if (height <= 0) return 0;
-    if (height < NOTIFICATION_HEIGHT) return NOTIFICATION_HEIGHT;
+    if (height < NOTIFICATION_MIN_HEIGHT) return NOTIFICATION_MIN_HEIGHT;
     if (height > NOTIFICATION_MAX_WINDOW_HEIGHT) return NOTIFICATION_MAX_WINDOW_HEIGHT;
     return height;
 }
@@ -518,6 +492,7 @@ LRESULT HandleAppConfigChanged(HWND hwnd) {
 
 LRESULT HandleAppDisplayChanged(HWND hwnd) {
     BOOL changed = FALSE;
+    BOOL textColorChanged = FALSE;
 
     /* Text color */
     char textColorBuf[COLOR_HEX_BUFFER];
@@ -531,6 +506,7 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         strncpy_s(CLOCK_TEXT_COLOR, sizeof(CLOCK_TEXT_COLOR),
                   normalizedTextColor, _TRUNCATE);
         changed = TRUE;
+        textColorChanged = TRUE;
     }
 
     /* Font size */
@@ -620,8 +596,8 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         }
 
         if (newOpacity != CLOCK_WINDOW_OPACITY) {
-            if (newOpacity < 0) newOpacity = 0;
-            if (newOpacity > 100) newOpacity = 100;
+            if (newOpacity < MIN_VISIBLE_OPACITY) newOpacity = MIN_VISIBLE_OPACITY;
+            if (newOpacity > MAX_OPACITY) newOpacity = MAX_OPACITY;
             CLOCK_WINDOW_OPACITY = newOpacity;
             SetBlurBehind(hwnd, CLOCK_EDIT_MODE);
             changed = TRUE;
@@ -676,6 +652,9 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
     if (changed) {
         ResetTimerWithInterval(hwnd);
         InvalidateRect(hwnd, NULL, TRUE);
+    }
+    if (textColorChanged) {
+        RefreshToastNotificationColors();
     }
 
     return 0;
@@ -827,13 +806,19 @@ LRESULT HandleAppNotificationChanged(HWND hwnd) {
         "NOTIFICATION_MAX_OPACITY",
         ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY",
                       DEFAULT_NOTIFICATION_MAX_OPACITY),
-        MIN_OPACITY, MAX_OPACITY);
+        MIN_VISIBLE_OPACITY, MAX_OPACITY);
 
     g_AppConfig.notification.display.corner_radius = ClampHotReloadInt(
         "NOTIFICATION_CORNER_RADIUS",
         ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_CORNER_RADIUS",
                       DEFAULT_NOTIFICATION_CORNER_RADIUS),
         MIN_NOTIFICATION_CORNER_RADIUS, MAX_NOTIFICATION_CORNER_RADIUS);
+
+    g_AppConfig.notification.display.font_size = ClampHotReloadInt(
+        "NOTIFICATION_FONT_SIZE",
+        ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_FONT_SIZE",
+                      DEFAULT_NOTIFICATION_FONT_SIZE),
+        MIN_NOTIFICATION_FONT_SIZE, MAX_NOTIFICATION_FONT_SIZE);
 
     char typeBuf[32];
     ReadConfigStr(INI_SECTION_NOTIFICATION, "NOTIFICATION_TYPE", "CATIME", typeBuf, sizeof(typeBuf));

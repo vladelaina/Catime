@@ -5,6 +5,7 @@
 
 #include "config/config_writer.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "language.h"
 #include "timer/timer.h"
 #include "window.h"
@@ -326,7 +327,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     idx++;
     
     /* Notification section */
-    if (!EnsureConfigItemCapacity(idx, itemCapacity, 12, "Notification")) return FALSE;
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 13, "Notification")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_TIMEOUT_MESSAGE_TEXT", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, g_AppConfig.notification.messages.timeout_message, sizeof(items[idx].value));
@@ -345,6 +346,11 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "NOTIFICATION_CORNER_RADIUS", sizeof(items[idx].key));
     snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.corner_radius);
+    idx++;
+
+    safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
+    safe_strncpy(items[idx].key, "NOTIFICATION_FONT_SIZE", sizeof(items[idx].key));
+    snprintf(items[idx].value, sizeof(items[idx].value), "%d", g_AppConfig.notification.display.font_size);
     idx++;
     
     safe_strncpy(items[idx].section, INI_SECTION_NOTIFICATION, sizeof(items[idx].section));
@@ -590,8 +596,8 @@ BOOL WriteConfigSection(const char* config_path, const char* section) {
 }
 
 void WriteConfigWindowOpacity(int opacity) {
-    if (opacity < 0) opacity = 0;
-    if (opacity > 100) opacity = 100;
+    if (opacity < MIN_VISIBLE_OPACITY) opacity = MIN_VISIBLE_OPACITY;
+    if (opacity > MAX_OPACITY) opacity = MAX_OPACITY;
 
     char opacityStr[32];
     if (snprintf(opacityStr, sizeof(opacityStr), "%d", opacity) < 0) {

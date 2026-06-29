@@ -254,8 +254,10 @@ static DWORD ColorRefToDibRgb(COLORREF color) {
            ((DWORD)GetRValue(color) << 16);
 }
 
-static COLORREF InterpolateGradientColor(const GradientInfo* info, float t) {
+COLORREF GetGradientColorAt(const GradientInfo* info, float t) {
     if (!info) return RGB(0, 0, 0);
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
 
     if (info->palette && info->paletteCount > 1) {
         int colorCount = info->paletteCount;
@@ -394,7 +396,7 @@ void DrawGradientRect(HDC hdc, const RECT* rect, const GradientInfo* info) {
 
     for (int x = 0; x < width; x++) {
         float t = (width > 1) ? (float)x / (float)(width - 1) : 0.0f;
-        pixels[x] = ColorRefToDibRgb(InterpolateGradientColor(info, t));
+        pixels[x] = ColorRefToDibRgb(GetGradientColorAt(info, t));
     }
 
     BITMAPINFO bi;

@@ -14,6 +14,7 @@
 #include "tray/tray_animation_percent.h"
 #include "system_monitor.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "preview_display.h"
 #include "tray/tray_events.h"
 #include "tray/tray_menu_submenus.h"
@@ -612,8 +613,8 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
 
     int oldOpacity = CLOCK_WINDOW_OPACITY;
     CLOCK_WINDOW_OPACITY += (wheelDirection > 0) ? step : -step;
-    if (CLOCK_WINDOW_OPACITY < 0) CLOCK_WINDOW_OPACITY = 0;
-    if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
+    if (CLOCK_WINDOW_OPACITY < MIN_VISIBLE_OPACITY) CLOCK_WINDOW_OPACITY = MIN_VISIBLE_OPACITY;
+    if (CLOCK_WINDOW_OPACITY > MAX_OPACITY) CLOCK_WINDOW_OPACITY = MAX_OPACITY;
 
     ShowWindowForPreview(hwnd);
 

@@ -10,6 +10,7 @@
 #include "color/gradient.h"
 #include "color/color_state.h"
 #include "config.h"
+#include "notification.h"
 #include "log.h"
 #include "../resource/resource.h"
 
@@ -422,6 +423,7 @@ BOOL WriteConfigColor(const char* color_input) {
         if (strchr(colorValue, '_') != NULL) {
             GetGradientTypeByName(colorValue);
         }
+        RefreshToastNotificationColors();
         return TRUE;
     }
 
@@ -439,6 +441,7 @@ BOOL WriteConfigColor(const char* color_input) {
         GetGradientTypeByName(colorValue);
     }
 
+    RefreshToastNotificationColors();
     return TRUE;
 }
 

@@ -7,6 +7,7 @@
 #include "dialog/dialog_common.h"
 #include "language.h"
 #include "config.h"
+#include "config/config_defaults.h"
 #include "../resource/resource.h"
 #include <strsafe.h>
 #include <string.h>
@@ -90,7 +91,7 @@ static BOOL ParseOpacityInput(const char* text, int* opacity) {
     errno = 0;
     char* end = NULL;
     long parsed = strtol(text, &end, 10);
-    if (end == text || errno == ERANGE || parsed < 1 || parsed > 100) {
+    if (end == text || errno == ERANGE || parsed < MIN_VISIBLE_OPACITY || parsed > 100) {
         return FALSE;
     }
 
@@ -99,6 +100,16 @@ static BOOL ParseOpacityInput(const char* text, int* opacity) {
 
     *opacity = (int)parsed;
     return TRUE;
+}
+
+static int ClampNotificationOpacityForDisplayDialog(int opacity) {
+    if (opacity < MIN_VISIBLE_OPACITY) {
+        return MIN_VISIBLE_OPACITY;
+    }
+    if (opacity > MAX_OPACITY) {
+        return MAX_OPACITY;
+    }
+    return opacity;
 }
 
 INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -127,7 +138,9 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             }
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, wbuffer);
 
-            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%d", g_AppConfig.notification.display.max_opacity);
+            StringCbPrintfW(wbuffer, sizeof(wbuffer), L"%d",
+                            ClampNotificationOpacityForDisplayDialog(
+                                g_AppConfig.notification.display.max_opacity));
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wbuffer);
 
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL,

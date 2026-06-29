@@ -39,13 +39,18 @@
 #define DEFAULT_NOTIFICATION_TIMEOUT_MS 3000
 #define DEFAULT_NOTIFICATION_MAX_OPACITY 95
 #define DEFAULT_NOTIFICATION_CORNER_RADIUS 12
+/* Stored in the legacy NOTIFICATION_FONT_SIZE key as percent of window height. */
+#define DEFAULT_NOTIFICATION_FONT_SIZE 25
 #define DEFAULT_NOTIFICATION_VOLUME     100
 
 /* Validation Ranges */
 #define MIN_OPACITY                     1
+#define MIN_VISIBLE_OPACITY             10
 #define MAX_OPACITY                     100
 #define MIN_NOTIFICATION_CORNER_RADIUS  0
 #define MAX_NOTIFICATION_CORNER_RADIUS  40
+#define MIN_NOTIFICATION_FONT_SIZE      10
+#define MAX_NOTIFICATION_FONT_SIZE      60
 #define MIN_POMODORO_LOOP_COUNT        1
 #define MAX_POMODORO_LOOP_COUNT        100
 #define MIN_MOVE_STEP                   1

@@ -124,12 +124,46 @@ static void UpdatePreviewCornerRadius(int cornerRadius) {
     }
 }
 
-static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, const wchar_t* message) {
+static void UpdatePreviewFontPercent(int fontPercent) {
+    if (!g_hwndPreviewNotification ||
+        !IsWindow(g_hwndPreviewNotification) ||
+        !IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
+        g_hwndPreviewNotification = FindPreviewNotificationWindow();
+    }
+
+    if (g_hwndPreviewNotification &&
+        IsWindow(g_hwndPreviewNotification) &&
+        IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
+        SetToastNotificationFontPercent(g_hwndPreviewNotification, fontPercent);
+    }
+}
+
+static int GetTrackbarPosition(HWND hwndDlg, int controlId, int fallback) {
+    HWND hwndTrackbar = GetDlgItem(hwndDlg, controlId);
+    if (!hwndTrackbar) {
+        return fallback;
+    }
+
+    return (int)SendMessage(hwndTrackbar, TBM_GETPOS, 0, 0);
+}
+
+static int ClampNotificationOpacityForDialog(int opacity) {
+    if (opacity < MIN_VISIBLE_OPACITY) {
+        return MIN_VISIBLE_OPACITY;
+    }
+    if (opacity > MAX_OPACITY) {
+        return MAX_OPACITY;
+    }
+    return opacity;
+}
+
+static void EnsurePreviewNotification(HWND hwndDlg, const wchar_t* message) {
+    HWND hwndParent = GetNotificationSettingsParent(hwndDlg);
     if (!IsValidNotificationSettingsParent(hwndParent)) {
         return;
     }
 
-    /* Ensure any existing preview window is properly closed first */
+    /* Reuse the existing preview window when it is still open. */
     if (g_hwndPreviewNotification &&
         IsWindow(g_hwndPreviewNotification) &&
         IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
@@ -143,7 +177,7 @@ static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, 
         return;
     }
 
-    wchar_t previewMessage[256] = {0};
+    wchar_t previewMessage[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
     if (message && message[0] != L'\0') {
         wcsncpy(previewMessage, message, sizeof(previewMessage)/sizeof(wchar_t) - 1);
         previewMessage[sizeof(previewMessage)/sizeof(wchar_t) - 1] = L'\0';
@@ -152,24 +186,39 @@ static void ShowOpacityPreviewNotification(HWND hwndParent, int initialOpacity, 
                            previewMessage, sizeof(previewMessage)/sizeof(wchar_t));
     }
 
+    int initialOpacity = ClampNotificationOpacityForDialog(
+        GetTrackbarPosition(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT,
+                            g_AppConfig.notification.display.max_opacity));
     ShowToastNotificationPreview(hwndParent, previewMessage, initialOpacity);
 
     g_hwndPreviewNotification = FindPreviewNotificationWindow();
+}
+
+static void UpdatePreviewAppearanceFromControls(HWND hwndDlg) {
+    UpdatePreviewOpacity(ClampNotificationOpacityForDialog(
+        GetTrackbarPosition(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT,
+                            g_AppConfig.notification.display.max_opacity)));
+    UpdatePreviewCornerRadius(GetTrackbarPosition(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER,
+                                                  g_AppConfig.notification.display.corner_radius));
+    UpdatePreviewFontPercent(GetTrackbarPosition(hwndDlg, IDC_NOTIFICATION_FONT_SIZE_SLIDER,
+                                                 g_AppConfig.notification.display.font_size));
+}
+
+static void RefreshPreviewFromControls(HWND hwndDlg) {
+    wchar_t currentMessage[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE];
+    GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, currentMessage,
+                    sizeof(currentMessage) / sizeof(wchar_t));
+
+    EnsurePreviewNotification(hwndDlg, currentMessage[0] != L'\0' ? currentMessage : NULL);
+    UpdatePreviewAppearanceFromControls(hwndDlg);
 }
 
 static void UpdatePreviewNotificationText(HWND hwndDlg, const wchar_t* newText) {
     if (!g_hwndPreviewNotification ||
         !IsWindow(g_hwndPreviewNotification) ||
         !IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
-        HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
-        int currentOpacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
-
-        ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), currentOpacity, newText);
-        HWND hwndRadiusSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER);
-        if (hwndRadiusSlider) {
-            int cornerRadius = (int)SendMessage(hwndRadiusSlider, TBM_GETPOS, 0, 0);
-            UpdatePreviewCornerRadius(cornerRadius);
-        }
+        EnsurePreviewNotification(hwndDlg, newText);
+        UpdatePreviewAppearanceFromControls(hwndDlg);
         return;
     }
 
@@ -198,7 +247,7 @@ static void StopVolumePreviewPlayback(HWND hwndDlg, BOOL* isVolumePreviewPlaying
 
 /**
  * @brief Update opacity slider and text in settings dialog
- * @param opacity New opacity value (1-100)
+ * @param opacity New opacity value (10-100)
  *
  * @details Called from preview window when opacity changes via mouse wheel
  */
@@ -207,6 +256,8 @@ void UpdateNotificationOpacityControls(int opacity) {
         return;
     }
 
+    opacity = ClampNotificationOpacityForDialog(opacity);
+
     HWND hwndOpacitySlider = GetDlgItem(g_hwndNotificationSettingsDialog, IDC_NOTIFICATION_OPACITY_EDIT);
     if (hwndOpacitySlider) {
         SendMessage(hwndOpacitySlider, TBM_SETPOS, TRUE, opacity);
@@ -214,6 +265,27 @@ void UpdateNotificationOpacityControls(int opacity) {
         wchar_t opacityText[16];
         _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", opacity);
         SetDlgItemTextW(g_hwndNotificationSettingsDialog, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
+    }
+}
+
+/**
+ * @brief Update font percentage slider and text in settings dialog
+ * @param fontPercent Text height as a percentage of the notification window height
+ *
+ * @details Called from preview window when font percentage changes via Ctrl + mouse wheel
+ */
+void UpdateNotificationFontPercentControls(int fontPercent) {
+    if (!IsCurrentNotificationSettingsDialog(g_hwndNotificationSettingsDialog)) {
+        return;
+    }
+
+    HWND hwndFontSizeSlider = GetDlgItem(g_hwndNotificationSettingsDialog, IDC_NOTIFICATION_FONT_SIZE_SLIDER);
+    if (hwndFontSizeSlider) {
+        SendMessage(hwndFontSizeSlider, TBM_SETPOS, TRUE, fontPercent);
+
+        wchar_t fontSizeText[16];
+        _snwprintf_s(fontSizeText, 16, _TRUNCATE, L"%d%%", fontPercent);
+        SetDlgItemTextW(g_hwndNotificationSettingsDialog, IDC_NOTIFICATION_FONT_SIZE_TEXT, fontSizeText);
     }
 }
 
@@ -257,7 +329,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG);
 
-            wchar_t wideText[256] = {0};
+            wchar_t wideText[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
 
             MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1,
                                wideText, sizeof(wideText)/sizeof(wchar_t));
@@ -281,11 +353,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                               GDT_VALID, (LPARAM)&st);
 
             HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
-            SendMessage(hwndOpacitySlider, TBM_SETRANGE, TRUE, MAKELONG(1, 100));
-            SendMessage(hwndOpacitySlider, TBM_SETPOS, TRUE, g_AppConfig.notification.display.max_opacity);
+            int notificationOpacity = ClampNotificationOpacityForDialog(
+                g_AppConfig.notification.display.max_opacity);
+            SendMessage(hwndOpacitySlider, TBM_SETRANGE, TRUE, MAKELONG(MIN_VISIBLE_OPACITY, 100));
+            SendMessage(hwndOpacitySlider, TBM_SETPOS, TRUE, notificationOpacity);
 
             wchar_t opacityText[16];
-            _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", g_AppConfig.notification.display.max_opacity);
+            _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", notificationOpacity);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
 
             HWND hwndRadiusSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER);
@@ -296,6 +370,26 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             wchar_t radiusText[16];
             _snwprintf_s(radiusText, 16, _TRUNCATE, L"%dpx", g_AppConfig.notification.display.corner_radius);
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_RADIUS_TEXT, radiusText);
+
+            int notificationFontPercent = g_AppConfig.notification.display.font_size;
+            if (notificationFontPercent <= 0) {
+                notificationFontPercent = DEFAULT_NOTIFICATION_FONT_SIZE;
+            }
+            if (notificationFontPercent < MIN_NOTIFICATION_FONT_SIZE) {
+                notificationFontPercent = MIN_NOTIFICATION_FONT_SIZE;
+            }
+            if (notificationFontPercent > MAX_NOTIFICATION_FONT_SIZE) {
+                notificationFontPercent = MAX_NOTIFICATION_FONT_SIZE;
+            }
+
+            HWND hwndFontSizeSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_FONT_SIZE_SLIDER);
+            SendMessage(hwndFontSizeSlider, TBM_SETRANGE, TRUE,
+                        MAKELONG(MIN_NOTIFICATION_FONT_SIZE, MAX_NOTIFICATION_FONT_SIZE));
+            SendMessage(hwndFontSizeSlider, TBM_SETPOS, TRUE, notificationFontPercent);
+
+            wchar_t fontSizeText[16];
+            _snwprintf_s(fontSizeText, 16, _TRUNCATE, L"%d%%", notificationFontPercent);
+            SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_FONT_SIZE_TEXT, fontSizeText);
 
             switch (g_AppConfig.notification.display.type) {
                 case NOTIFICATION_TYPE_CATIME:
@@ -330,13 +424,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             isInitializing = FALSE;
 
-            wchar_t previewMessage[256];
-            GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, previewMessage, sizeof(previewMessage)/sizeof(wchar_t));
-
-            int currentOpacity = g_AppConfig.notification.display.max_opacity;
-            ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), currentOpacity,
-                                         previewMessage[0] != L'\0' ? previewMessage : NULL);
-            UpdatePreviewCornerRadius(g_AppConfig.notification.display.corner_radius);
+            RefreshPreviewFromControls(hwndDlg);
 
             return TRUE;
         }
@@ -387,17 +475,14 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 return TRUE;
             }
             else if (GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT) == (HWND)lParam) {
-                int opacity = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
+                int opacity = ClampNotificationOpacityForDialog(
+                    (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0));
 
                 wchar_t opacityText[16];
                 _snwprintf_s(opacityText, 16, _TRUNCATE, L"%d%%", opacity);
                 SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_TEXT, opacityText);
 
-                wchar_t currentMessage[256];
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, currentMessage, sizeof(currentMessage)/sizeof(wchar_t));
-
-                ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), opacity, currentMessage[0] != L'\0' ? currentMessage : NULL);
-                UpdatePreviewOpacity(opacity);
+                RefreshPreviewFromControls(hwndDlg);
 
                 return TRUE;
             }
@@ -408,14 +493,18 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 _snwprintf_s(radiusText, 16, _TRUNCATE, L"%dpx", cornerRadius);
                 SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_RADIUS_TEXT, radiusText);
 
-                wchar_t currentMessage[256];
-                GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, currentMessage, sizeof(currentMessage)/sizeof(wchar_t));
+                RefreshPreviewFromControls(hwndDlg);
 
-                HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
-                int currentOpacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
-                ShowOpacityPreviewNotification(GetNotificationSettingsParent(hwndDlg), currentOpacity,
-                                             currentMessage[0] != L'\0' ? currentMessage : NULL);
-                UpdatePreviewCornerRadius(cornerRadius);
+                return TRUE;
+            }
+            else if (GetDlgItem(hwndDlg, IDC_NOTIFICATION_FONT_SIZE_SLIDER) == (HWND)lParam) {
+                int fontPercent = (int)SendMessage((HWND)lParam, TBM_GETPOS, 0, 0);
+
+                wchar_t fontSizeText[16];
+                _snwprintf_s(fontSizeText, 16, _TRUNCATE, L"%d%%", fontPercent);
+                SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_FONT_SIZE_TEXT, fontSizeText);
+
+                RefreshPreviewFromControls(hwndDlg);
 
                 return TRUE;
             }
@@ -425,11 +514,11 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
         case WM_COMMAND:
             if (LOWORD(wParam) == IDC_NOTIFICATION_EDIT1 && HIWORD(wParam) == EN_CHANGE) {
                 if (!isInitializing) {
-                    wchar_t newText[256];
+                    wchar_t newText[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE];
                     GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, newText, sizeof(newText)/sizeof(wchar_t));
 
                     if (newText[0] == L'\0') {
-                        wcscpy_s(newText, 256, L" ");
+                        wcscpy_s(newText, NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE, L" ");
                     }
                     UpdatePreviewNotificationText(hwndDlg, newText);
                 }
@@ -458,11 +547,11 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
                 ClosePreviewNotification();
 
-                wchar_t wTimeout[256] = {0};
+                wchar_t wTimeout[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
 
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
 
-                char timeout_msg[256] = {0};
+                char timeout_msg[NOTIFICATION_MESSAGE_BUFFER_SIZE] = {0};
 
                 if (!ConvertNotificationSettingsTextToUtf8(wTimeout, timeout_msg, sizeof(timeout_msg))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
@@ -484,10 +573,14 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 }
 
                 HWND hwndOpacitySlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
-                int opacity = (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0);
+                int opacity = ClampNotificationOpacityForDialog(
+                    (int)SendMessage(hwndOpacitySlider, TBM_GETPOS, 0, 0));
 
                 HWND hwndRadiusSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER);
                 int cornerRadius = (int)SendMessage(hwndRadiusSlider, TBM_GETPOS, 0, 0);
+
+                HWND hwndFontSizeSlider = GetDlgItem(hwndDlg, IDC_NOTIFICATION_FONT_SIZE_SLIDER);
+                int fontPercent = (int)SendMessage(hwndFontSizeSlider, TBM_GETPOS, 0, 0);
 
                 NotificationType notifType = NOTIFICATION_TYPE_CATIME;
                 if (IsDlgButtonChecked(hwndDlg, IDC_NOTIFICATION_TYPE_CATIME)) {
@@ -508,7 +601,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
 
                 if (!WriteConfigNotificationSettings(timeout_msg, timeoutMs, opacity,
-                                                     notifType, cornerRadius, isDisabled,
+                                                     notifType, cornerRadius, fontPercent, isDisabled,
                                                      soundFile, volume)) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
                     return TRUE;

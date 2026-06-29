@@ -65,7 +65,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
-            wchar_t wideText[100] = {0};
+            wchar_t wideText[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
 
             MultiByteToWideChar(CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1,
                                 wideText, sizeof(wideText)/sizeof(wchar_t));
@@ -100,11 +100,11 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK) {
-                wchar_t wTimeout[256] = {0};
+                wchar_t wTimeout[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
 
                 GetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wTimeout, sizeof(wTimeout)/sizeof(wchar_t));
 
-                char timeout_msg[256] = {0};
+                char timeout_msg[NOTIFICATION_MESSAGE_BUFFER_SIZE] = {0};
 
                 if (!ConvertNotificationMessageToUtf8(wTimeout, timeout_msg, sizeof(timeout_msg))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);

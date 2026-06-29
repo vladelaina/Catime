@@ -224,10 +224,10 @@ BOOL ValidateNotificationConfig(ConfigSnapshot* snapshot) {
         modified = TRUE;
     }
     
-    if (snapshot->notificationMaxOpacity < MIN_OPACITY) {
+    if (snapshot->notificationMaxOpacity < MIN_VISIBLE_OPACITY) {
         LOG_WARNING("Notification opacity too low (%d), setting to %d",
-                   snapshot->notificationMaxOpacity, MIN_OPACITY);
-        snapshot->notificationMaxOpacity = MIN_OPACITY;
+                   snapshot->notificationMaxOpacity, MIN_VISIBLE_OPACITY);
+        snapshot->notificationMaxOpacity = MIN_VISIBLE_OPACITY;
         modified = TRUE;
     }
     if (snapshot->notificationMaxOpacity > MAX_OPACITY) {
@@ -243,6 +243,15 @@ BOOL ValidateNotificationConfig(ConfigSnapshot* snapshot) {
     }
     if (snapshot->notificationCornerRadius > MAX_NOTIFICATION_CORNER_RADIUS) {
         snapshot->notificationCornerRadius = MAX_NOTIFICATION_CORNER_RADIUS;
+        modified = TRUE;
+    }
+
+    if (snapshot->notificationFontSize < MIN_NOTIFICATION_FONT_SIZE) {
+        snapshot->notificationFontSize = MIN_NOTIFICATION_FONT_SIZE;
+        modified = TRUE;
+    }
+    if (snapshot->notificationFontSize > MAX_NOTIFICATION_FONT_SIZE) {
+        snapshot->notificationFontSize = MAX_NOTIFICATION_FONT_SIZE;
         modified = TRUE;
     }
 
@@ -287,8 +296,8 @@ BOOL ValidateWindowConfig(ConfigSnapshot* snapshot) {
         snapshot->pluginScale = MIN_SCALE_FACTOR;
         modified = TRUE;
     }
-    if (snapshot->windowOpacity < 0) {
-        snapshot->windowOpacity = 0;
+    if (snapshot->windowOpacity < MIN_VISIBLE_OPACITY) {
+        snapshot->windowOpacity = MIN_VISIBLE_OPACITY;
         modified = TRUE;
     }
     if (snapshot->windowOpacity > MAX_OPACITY) {

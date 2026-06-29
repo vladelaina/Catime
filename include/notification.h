@@ -93,7 +93,7 @@ void ShowToastNotificationWithTimeout(HWND hwnd, const wchar_t* message, int tim
  * @brief Show a persistent toast preview with explicit opacity
  * @param hwnd Parent handle
  * @param message Message text
- * @param opacityPercent Initial opacity percentage (1-100)
+ * @param opacityPercent Initial opacity percentage (10-100)
  *
  * @details
  * Used by settings UI to preview appearance without temporarily mutating
@@ -104,7 +104,7 @@ void ShowToastNotificationPreview(HWND hwnd, const wchar_t* message, int opacity
 /**
  * @brief Update a toast window opacity and its internal animation target
  * @param hwnd Toast window handle
- * @param opacityPercent Opacity percentage (1-100)
+ * @param opacityPercent Opacity percentage (10-100)
  */
 void SetToastNotificationOpacity(HWND hwnd, int opacityPercent);
 
@@ -116,12 +116,24 @@ void SetToastNotificationOpacity(HWND hwnd, int opacityPercent);
 void SetToastNotificationCornerRadius(HWND hwnd, int cornerRadius);
 
 /**
+ * @brief Update a toast window notification text height ratio
+ * @param hwnd Toast window handle
+ * @param fontPercent Text height as a percentage of the window height
+ */
+void SetToastNotificationFontPercent(HWND hwnd, int fontPercent);
+
+/**
  * @brief Update a toast window message text
  * @param hwnd Toast window handle
  * @param message Replacement message text
  * @return TRUE if the message was updated, FALSE if the window/data was invalid or allocation failed
  */
 BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message);
+
+/**
+ * @brief Repaint toast notifications after the active text color changes
+ */
+void RefreshToastNotificationColors(void);
 
 /**
  * @brief Check whether a toast window is an interactive preview window

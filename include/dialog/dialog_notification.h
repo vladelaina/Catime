@@ -38,7 +38,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
  * 
  * @details
  * Configures: Display duration, opacity, fade effects
- * Controls: Slider for timeout (1-30s), opacity (0-100%)
+ * Controls: Slider for timeout (1-30s), opacity (10-100%)
  * Persists to: [NOTIFICATIONS]timeout, opacity
  */
 void ShowNotificationDisplayDialog(HWND hwndParent);
@@ -67,9 +67,15 @@ void ShowNotificationSettingsDialog(HWND hwndParent);
 
 /**
  * @brief Update opacity slider and text in settings dialog
- * @param opacity New opacity value (1-100)
+ * @param opacity New opacity value (10-100)
  */
 void UpdateNotificationOpacityControls(int opacity);
+
+/**
+ * @brief Update font percentage slider and text in settings dialog
+ * @param fontPercent Text height as a percentage of the notification window height
+ */
+void UpdateNotificationFontPercentControls(int fontPercent);
 
 /**
  * @brief Full notification settings dialog procedure

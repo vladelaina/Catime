@@ -14,6 +14,7 @@
 #include "drawing/drawing_effect.h"
 #include "tray/tray_animation_core.h"
 #include "window_procedure/window_commands.h"
+#include "notification.h"
 #include "log.h"
 
 /* ============================================================================
@@ -167,6 +168,7 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             strncpy_s(g_previewState.data.colorHex, sizeof(g_previewState.data.colorHex), 
                      colorHex, _TRUNCATE);
             if (hwnd) ResetTimerWithInterval(hwnd);
+            RefreshToastNotificationColors();
             break;
         }
         
@@ -233,6 +235,7 @@ void CancelPreview(HWND hwnd) {
     BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS ||
                             g_previewState.type == PREVIEW_TYPE_SECONDS ||
                             g_previewState.type == PREVIEW_TYPE_COLOR);
+    BOOL needsColorRefresh = (g_previewState.type == PREVIEW_TYPE_COLOR);
     BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
     BOOL needsEffectCleanup = (g_previewState.type == PREVIEW_TYPE_EFFECT &&
                                ShouldCleanupPreviewEffectBuffers(
@@ -248,6 +251,10 @@ void CancelPreview(HWND hwnd) {
 
     if (needsFontReload) {
         RefreshCustomTextDisplayDialogFont();
+    }
+
+    if (needsColorRefresh) {
+        RefreshToastNotificationColors();
     }
 
     if (needsEffectCleanup) {

@@ -75,10 +75,11 @@ typedef struct {
     int pomodoroLoopCount;
     
     /* Notifications */
-    char timeoutMessage[100];
+    char timeoutMessage[NOTIFICATION_MESSAGE_BUFFER_SIZE];
     int notificationTimeoutMs;
     int notificationMaxOpacity;
     int notificationCornerRadius;
+    int notificationFontSize;
     NotificationType notificationType;
     char notificationSoundFile[MAX_PATH];
     int notificationSoundVolume;
@@ -141,7 +142,7 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot);
  * 
  * Security checks:
  * - Filters dangerous timeout actions (SHUTDOWN/RESTART/SLEEP)
- * - Validates opacity range (0-100)
+ * - Validates window and notification opacity ranges (10-100)
  * - Validates volume range (0-100)
  * - Checks file existence for file paths
  */

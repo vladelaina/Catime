@@ -86,6 +86,14 @@ const GradientInfo* GetGradientInfoByIndex(int index);
  */
 void DrawGradientRect(HDC hdc, const RECT* rect, const GradientInfo* info);
 
+/**
+ * @brief Sample a gradient color at normalized position t.
+ * @param info Gradient info
+ * @param t Normalized position, clamped to 0.0-1.0
+ * @return Interpolated COLORREF, or black when info is invalid
+ */
+COLORREF GetGradientColorAt(const GradientInfo* info, float t);
+
 /* Helper to check if a gradient needs animation timer */
 BOOL IsGradientAnimated(GradientType type);
 

@@ -35,6 +35,8 @@
 
 /** @brief Default notification messages */
 #define DEFAULT_TIMEOUT_MESSAGE        "Ding! Time's up~"
+#define NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE 256
+#define NOTIFICATION_MESSAGE_BUFFER_SIZE ((NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE * 4) + 1)
 
 /** @brief Resource path prefixes */
 #define LOCALAPPDATA_PREFIX            "%LOCALAPPDATA%\\Catime"
@@ -157,7 +159,7 @@ typedef struct {
  * @brief Notification messages
  */
 typedef struct {
-    char timeout_message[100];
+    char timeout_message[NOTIFICATION_MESSAGE_BUFFER_SIZE];
 } NotificationMessages;
 
 /**
@@ -167,6 +169,7 @@ typedef struct {
     int timeout_ms;
     int max_opacity;
     int corner_radius;
+    int font_size;
     NotificationType type;
     BOOL disabled;
     int window_x;
@@ -535,7 +538,7 @@ BOOL WriteConfigPomodoroTimeOptions(const int* times, int count);
 BOOL WriteConfigNotificationTimeout(int timeout_ms);
 
 /**
- * @brief Write notification opacity (auto-clamped to 1-100)
+ * @brief Write notification opacity (auto-clamped to 10-100)
  * @param opacity Opacity (100 = fully opaque)
  */
 BOOL WriteConfigNotificationOpacity(int opacity);
@@ -588,17 +591,18 @@ void WriteConfigNotificationVolume(int volume);
  * @brief Write full notification settings in one atomic INI update
  * @param timeout_msg Timeout message (UTF-8)
  * @param timeout_ms Duration in milliseconds (0 disables timeout notification)
- * @param opacity Opacity (1-100)
+ * @param opacity Opacity (10-100)
  * @param type Notification display type
  * @param corner_radius Corner radius in pixels
+ * @param font_percent Text height as a percentage of the notification window height
  * @param disabled TRUE to suppress all notifications
  * @param sound_file Path, "SYSTEM_BEEP", or empty (UTF-8)
  * @param volume Volume (0-100)
  */
 BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
                                      int opacity, NotificationType type,
-                                     int corner_radius, BOOL disabled, const char* sound_file,
-                                     int volume);
+                                     int corner_radius, int font_percent, BOOL disabled,
+                                     const char* sound_file, int volume);
 
 /**
  * @brief Write notification window position and size
@@ -874,7 +878,7 @@ BOOL WriteConfigStartupMode(const char* mode);
 
 /**
  * @brief Write window opacity setting
- * @param opacity Opacity value (0-100)
+ * @param opacity Opacity value (10-100)
  */
 void WriteConfigWindowOpacity(int opacity);
 

@@ -298,6 +298,9 @@
 #define IDC_NOTIFICATION_RADIUS_LABEL 2026   /**< Notification corner radius label */
 #define IDC_NOTIFICATION_RADIUS_SLIDER 2027  /**< Notification corner radius slider */
 #define IDC_NOTIFICATION_RADIUS_TEXT 2028    /**< Notification corner radius text */
+#define IDC_NOTIFICATION_FONT_SIZE_LABEL 2029   /**< Notification text height ratio label */
+#define IDC_NOTIFICATION_FONT_SIZE_SLIDER 2030  /**< Notification text height ratio slider */
+#define IDC_NOTIFICATION_FONT_SIZE_TEXT 2031    /**< Notification text height ratio text */
 
 /** @brief Notification type and audio control identifiers */
 #define IDC_NOTIFICATION_TYPE_CATIME 2011      /**< Catime notification type radio */
@@ -313,8 +316,9 @@
 
 /** @brief Notification window constants */
 #define NOTIFICATION_MIN_WIDTH 350               /**< Ensures readability of typical notification messages */
-#define NOTIFICATION_MAX_WIDTH 800               /**< Prevents excessively wide notifications on large displays */
-#define NOTIFICATION_HEIGHT 80                   /**< Fixed height accommodates title + single-line content */
+#define NOTIFICATION_MAX_WIDTH 1600              /**< Prevents excessively wide notifications on large displays */
+#define NOTIFICATION_MIN_HEIGHT 48               /**< Keeps preview resizing usable */
+#define NOTIFICATION_HEIGHT 80                   /**< Fixed height accommodates single-line content */
 #define NOTIFICATION_TIMER_ID 1001               /**< Notification timer identifier */
 #define NOTIFICATION_CLASS_NAME L"CatimeNotificationClass"  /**< Notification window class */
 #define CLOSE_BTN_SIZE 16                        /**< Standard close button size for easy clicking */
@@ -326,21 +330,17 @@
 /** @brief Notification UI layout constants */
 #define NOTIFICATION_PADDING_H 15                /**< Horizontal padding */
 #define NOTIFICATION_PADDING_V 10                /**< Vertical padding */
-#define NOTIFICATION_TITLE_HEIGHT 25             /**< Title section height */
-#define NOTIFICATION_CONTENT_SPACING 35          /**< Content vertical spacing */
 #define NOTIFICATION_TEXT_PADDING 40             /**< Text width padding */
 #define NOTIFICATION_BOTTOM_MARGIN 20            /**< Bottom margin from screen edge */
 #define NOTIFICATION_RIGHT_MARGIN 20             /**< Right margin from screen edge */
 
 /** @brief Notification font constants */
 #define NOTIFICATION_FONT_NAME L"Microsoft YaHei"  /**< Notification font family */
-#define NOTIFICATION_TITLE_FONT_SIZE 22          /**< Title font size */
 #define NOTIFICATION_CONTENT_FONT_SIZE 20        /**< Content font size */
 
 /** @brief Notification color constants */
 #define NOTIFICATION_BG_COLOR RGB(255, 255, 255)     /**< Background color (white) */
-#define NOTIFICATION_TITLE_COLOR RGB(0, 0, 0)        /**< Title text color (black) */
-#define NOTIFICATION_CONTENT_COLOR RGB(100, 100, 100) /**< Content text color (gray) */
+#define NOTIFICATION_CONTENT_COLOR RGB(100, 100, 100) /**< Fallback content text color (gray) */
 
 /** @brief Global hotkey identifiers for RegisterHotKey */
 #define HOTKEY_ID_SHOW_TIME       100            /**< Show time hotkey ID */

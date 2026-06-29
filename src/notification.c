@@ -4,66 +4,34 @@
  */
 #include <windows.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include "tray/tray.h"
+#include <string.h>
 #include "language.h"
 #include "notification.h"
+#include "notification_internal.h"
 #include "config.h"
 #include "config/config_defaults.h"
 #include "dialog/dialog_notification.h"
 #include "log.h"
-#include "../resource/resource.h"
 #include <windowsx.h>
 
 /** Notification config now in g_AppConfig.notification */
 
-/** Type-safe replacement for SetPropW/GetPropW */
-typedef struct {
-    wchar_t* messageText;
-    int windowWidth;
-    AnimationState animState;
-    BYTE opacity;
-    BYTE maxOpacity;
-    int opacityPercent;
-    int cornerRadius;
-    BOOL isPreview;
-    BOOL opacitySavePending;
-    int pendingOpacity;
-    int opacitySaveRetryCount;
-    HDC paintDC;
-    HBITMAP paintBitmap;
-    HBITMAP oldPaintBitmap;
-    int paintWidth;
-    int paintHeight;
-} NotificationData;
-
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static BOOL RegisterNotificationClass(HINSTANCE hInstance);
 
-static void FallbackToTrayNotification(HWND hwnd, const wchar_t* message);
 static void LoadNotificationConfigs(void);
-static HFONT CreateNotificationFont(int size, int weight);
-static HFONT GetNotificationTitleFont(void);
-static HFONT GetNotificationContentFont(void);
-static HBRUSH GetNotificationBgBrush(void);
-static int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font);
 static void CalculateNotificationPosition(int width, int height, int* x, int* y);
-static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, HFONT font, COLORREF color, DWORD flags);
 static BYTE UpdateAnimationOpacity(AnimationState state, BYTE currentOpacity, BYTE maxOpacity, BOOL* shouldDestroy);
 static NotificationData* GetNotificationData(HWND hwnd);
 static void SetNotificationData(HWND hwnd, NotificationData* data);
 static void FreeNotificationData(HWND hwnd, NotificationData* data);
 static void BeginNotificationFadeOut(HWND hwnd, NotificationData* data);
-static void ReleaseNotificationPaintBuffer(NotificationData* data);
-static BOOL EnsureNotificationPaintBuffer(HDC hdc, NotificationData* data,
-                                          int width, int height, HDC* outMemDC);
 static void DestroyAllNotifications(void);
 static void FlushPendingNotificationOpacity(HWND hwnd, NotificationData* data, BOOL allowRetry);
 static int ClampOpacityPercent(int opacityPercent);
-static int ClampNotificationCornerRadius(int cornerRadius);
-static void ApplyNotificationCornerRadius(HWND hwnd, int cornerRadius);
+static BOOL StartNotificationGradientTimer(HWND hwnd, NotificationData* data);
+static void StopNotificationGradientTimer(HWND hwnd);
 static BYTE OpacityPercentToAlpha(int opacityPercent);
-static BOOL IsCurrentProcessWindow(HWND hwnd);
 static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
                                           BOOL isPreview, int timeoutMs,
                                           int opacityPercent, BOOL animate,
@@ -72,38 +40,11 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
 #define NOTIFICATION_OPACITY_SAVE_TIMER_ID 1003
 #define NOTIFICATION_OPACITY_SAVE_DELAY_MS 300
 #define NOTIFICATION_OPACITY_SAVE_MAX_RETRIES 3
-#define NOTIFICATION_MAX_HEIGHT 600
-#define NOTIFICATION_MAX_PAINT_PIXELS (NOTIFICATION_MAX_WIDTH * NOTIFICATION_MAX_HEIGHT)
-#define NOTIFICATION_PAINT_SHRINK_THRESHOLD_MULTIPLIER 4u
-#define MODAL_NOTIFICATION_START_FAILURE_COOLDOWN_MS 2000
-#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
-
-typedef struct {
-    HWND hwnd;
-    wchar_t* message;
-} DialogThreadParams;
-
-static HFONT g_notificationTitleFont = NULL;
-static HFONT g_notificationContentFont = NULL;
-static HBRUSH g_notificationBgBrush = NULL;
-static SRWLOCK g_notificationResourceLock = SRWLOCK_INIT;
-static volatile LONG g_modalNotificationActive = 0;
-static DWORD g_modalNotificationStartFailureCooldownUntil = 0;
 
 static int ClampOpacityPercent(int opacityPercent) {
-    if (opacityPercent < 1) return 1;
+    if (opacityPercent < MIN_VISIBLE_OPACITY) return MIN_VISIBLE_OPACITY;
     if (opacityPercent > 100) return 100;
     return opacityPercent;
-}
-
-static int ClampNotificationCornerRadius(int cornerRadius) {
-    if (cornerRadius < MIN_NOTIFICATION_CORNER_RADIUS) {
-        return MIN_NOTIFICATION_CORNER_RADIUS;
-    }
-    if (cornerRadius > MAX_NOTIFICATION_CORNER_RADIUS) {
-        return MAX_NOTIFICATION_CORNER_RADIUS;
-    }
-    return cornerRadius;
 }
 
 static int ClampNotificationWidth(int width) {
@@ -113,7 +54,7 @@ static int ClampNotificationWidth(int width) {
 }
 
 static int ClampNotificationHeight(int height) {
-    if (height < NOTIFICATION_HEIGHT) return NOTIFICATION_HEIGHT;
+    if (height < NOTIFICATION_MIN_HEIGHT) return NOTIFICATION_MIN_HEIGHT;
     if (height > NOTIFICATION_MAX_HEIGHT) return NOTIFICATION_MAX_HEIGHT;
     return height;
 }
@@ -122,53 +63,8 @@ static BYTE OpacityPercentToAlpha(int opacityPercent) {
     return (BYTE)((ClampOpacityPercent(opacityPercent) * 255) / 100);
 }
 
-static void ApplyNotificationCornerRadius(HWND hwnd, int cornerRadius) {
-    if (!hwnd) return;
-
-    cornerRadius = ClampNotificationCornerRadius(cornerRadius);
-    if (cornerRadius <= 0) {
-        SetWindowRgn(hwnd, NULL, TRUE);
-        return;
-    }
-
-    RECT rect = {0};
-    GetClientRect(hwnd, &rect);
-    int width = rect.right - rect.left;
-    int height = rect.bottom - rect.top;
-    if (width <= 0 || height <= 0) {
-        return;
-    }
-
-    int diameter = cornerRadius * 2;
-    HRGN region = CreateRoundRectRgn(0, 0, width + 1, height + 1, diameter, diameter);
-    if (!region) {
-        return;
-    }
-
-    if (SetWindowRgn(hwnd, region, TRUE) == 0) {
-        DeleteObject(region);
-    }
-}
-
-static BOOL IsCurrentProcessWindow(HWND hwnd) {
-    DWORD processId = 0;
-    if (!hwnd) return FALSE;
-    GetWindowThreadProcessId(hwnd, &processId);
-    return processId == GetCurrentProcessId();
-}
-
-static BOOL IsModalNotificationStartFailureCoolingDown(DWORD now) {
-    return g_modalNotificationStartFailureCooldownUntil != 0 &&
-           (LONG)(g_modalNotificationStartFailureCooldownUntil - now) > 0;
-}
-
-static void MarkModalNotificationStartFailure(DWORD now) {
-    DWORD cooldownUntil = now + MODAL_NOTIFICATION_START_FAILURE_COOLDOWN_MS;
-    g_modalNotificationStartFailureCooldownUntil = cooldownUntil ? cooldownUntil : 1;
-}
-
 static BOOL IsNotificationWindow(HWND hwnd) {
-    if (!IsCurrentProcessWindow(hwnd) || !IsWindow(hwnd)) {
+    if (!NotificationIsCurrentProcessWindow(hwnd) || !IsWindow(hwnd)) {
         return FALSE;
     }
 
@@ -180,109 +76,34 @@ static BOOL IsNotificationWindow(HWND hwnd) {
     return wcscmp(className, NOTIFICATION_CLASS_NAME) == 0;
 }
 
-static BOOL IsValidNotificationOwnerWindow(HWND hwnd) {
-    if (!IsCurrentProcessWindow(hwnd) || !IsWindow(hwnd)) {
-        return FALSE;
-    }
-
-    wchar_t className[64] = {0};
-    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
-        return FALSE;
-    }
-
-    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
-}
-
-static HWND GetNotificationOwnerWindow(HWND hwnd) {
-    return IsValidNotificationOwnerWindow(hwnd) ? hwnd : NULL;
-}
-
-/** Universal fallback for all notification failures */
-static void FallbackToTrayNotification(HWND hwnd, const wchar_t* message) {
-    if (!message) message = L"";
-    HWND owner = GetNotificationOwnerWindow(hwnd);
-    if (!owner) return;
-
-    wchar_t boundedMessage[sizeof(((NOTIFYICONDATAW*)0)->szInfo) / sizeof(wchar_t)] = {0};
-    wcsncpy_s(boundedMessage, _countof(boundedMessage), message, _TRUNCATE);
-
-    int len = WideCharToMultiByte(CP_UTF8, 0, boundedMessage, -1, NULL, 0, NULL, NULL);
-    if (len > 0) {
-        char* ansiMessage = (char*)malloc(len);
-        if (ansiMessage) {
-            WideCharToMultiByte(CP_UTF8, 0, boundedMessage, -1, ansiMessage, len, NULL, NULL);
-            ShowTrayNotification(owner, ansiMessage);
-            free(ansiMessage);
-        }
-    }
-}
-
 static void LoadNotificationConfigs(void) {
     /* Config is already loaded via ReadConfig() into g_AppConfig */
 }
 
-static HFONT CreateNotificationFont(int size, int weight) {
-    return CreateFontW(size, 0, 0, 0, weight, FALSE, FALSE, FALSE,
-                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
-                      DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, 
-                      NOTIFICATION_FONT_NAME);
+static BOOL StartNotificationGradientTimer(HWND hwnd, NotificationData* data) {
+    if (!hwnd || !data || !data->hasAnimatedGradient || data->isInSizeMove) {
+        return FALSE;
+    }
+
+    if (SetTimer(hwnd, NOTIFICATION_GRADIENT_TIMER_ID,
+                 NOTIFICATION_GRADIENT_INTERVAL_MS, NULL) == 0) {
+        data->hasAnimatedGradient = FALSE;
+        LOG_WARNING("Failed to start notification gradient animation timer");
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
-static HFONT GetNotificationTitleFont(void) {
-    if (!g_notificationTitleFont) {
-        g_notificationTitleFont = CreateNotificationFont(NOTIFICATION_TITLE_FONT_SIZE, FW_BOLD);
+static void StopNotificationGradientTimer(HWND hwnd) {
+    if (hwnd) {
+        KillTimer(hwnd, NOTIFICATION_GRADIENT_TIMER_ID);
     }
-    return g_notificationTitleFont;
-}
-
-static HFONT GetNotificationContentFont(void) {
-    if (!g_notificationContentFont) {
-        g_notificationContentFont = CreateNotificationFont(NOTIFICATION_CONTENT_FONT_SIZE, FW_NORMAL);
-    }
-    return g_notificationContentFont;
-}
-
-static HBRUSH GetNotificationBgBrush(void) {
-    if (!g_notificationBgBrush) {
-        g_notificationBgBrush = CreateSolidBrush(NOTIFICATION_BG_COLOR);
-    }
-    return g_notificationBgBrush;
 }
 
 void CleanupNotificationResources(void) {
     DestroyAllNotifications();
-
-    AcquireSRWLockExclusive(&g_notificationResourceLock);
-    if (g_notificationTitleFont) {
-        DeleteObject(g_notificationTitleFont);
-        g_notificationTitleFont = NULL;
-    }
-    if (g_notificationContentFont) {
-        DeleteObject(g_notificationContentFont);
-        g_notificationContentFont = NULL;
-    }
-    if (g_notificationBgBrush) {
-        DeleteObject(g_notificationBgBrush);
-        g_notificationBgBrush = NULL;
-    }
-    ReleaseSRWLockExclusive(&g_notificationResourceLock);
-}
-
-static int CalculateTextWidth(HDC hdc, const wchar_t* text, HFONT font) {
-    HFONT oldFont = NULL;
-    if (font) {
-        oldFont = (HFONT)SelectObject(hdc, font);
-    }
-
-    SIZE textSize = {0};
-    if (!GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &textSize)) {
-        textSize.cx = 0;
-    }
-
-    if (oldFont) {
-        SelectObject(hdc, oldFont);
-    }
-    return textSize.cx;
+    NotificationCleanupRenderResources();
 }
 
 /** Position in bottom-right of work area */
@@ -302,19 +123,6 @@ static void CalculateNotificationPosition(int width, int height, int* x, int* y)
     
     *x = workArea.right - width - NOTIFICATION_RIGHT_MARGIN;
     *y = workArea.bottom - height - NOTIFICATION_BOTTOM_MARGIN;
-}
-
-static void DrawNotificationText(HDC memDC, const wchar_t* text, RECT rect, 
-                                 HFONT font, COLORREF color, DWORD flags) {
-    HFONT oldFont = NULL;
-    if (font) {
-        oldFont = (HFONT)SelectObject(memDC, font);
-    }
-    SetTextColor(memDC, color);
-    DrawTextW(memDC, text, -1, &rect, flags);
-    if (oldFont) {
-        SelectObject(memDC, oldFont);
-    }
 }
 
 /** Centralized opacity calculation for fade animations */
@@ -365,7 +173,7 @@ static void FreeNotificationData(HWND hwnd, NotificationData* data) {
         SetNotificationData(hwnd, NULL);
     }
 
-    ReleaseNotificationPaintBuffer(data);
+    NotificationReleaseRenderBuffers(data);
     free(data->messageText);
     data->messageText = NULL;
     free(data);
@@ -418,84 +226,9 @@ static void FlushPendingNotificationOpacity(HWND hwnd, NotificationData* data, B
     data->opacitySaveRetryCount = 0;
 }
 
-static void ReleaseNotificationPaintBuffer(NotificationData* data) {
-    if (!data) return;
-
-    if (data->paintDC && data->oldPaintBitmap) {
-        SelectObject(data->paintDC, data->oldPaintBitmap);
-    }
-    if (data->paintBitmap) {
-        DeleteObject(data->paintBitmap);
-    }
-    if (data->paintDC) {
-        DeleteDC(data->paintDC);
-    }
-
-    data->paintDC = NULL;
-    data->paintBitmap = NULL;
-    data->oldPaintBitmap = NULL;
-    data->paintWidth = 0;
-    data->paintHeight = 0;
-}
-
-static BOOL EnsureNotificationPaintBuffer(HDC hdc, NotificationData* data,
-                                          int width, int height, HDC* outMemDC) {
-    if (!hdc || !data || !outMemDC || width <= 0 || height <= 0) return FALSE;
-    if ((size_t)width > (size_t)NOTIFICATION_MAX_PAINT_PIXELS / (size_t)height) {
-        return FALSE;
-    }
-
-    if (data->paintDC && data->paintWidth >= width && data->paintHeight >= height) {
-        size_t requestedPixels = (size_t)width * (size_t)height;
-        size_t cachedPixels = (size_t)data->paintWidth * (size_t)data->paintHeight;
-        if (requestedPixels > 0 &&
-            cachedPixels / NOTIFICATION_PAINT_SHRINK_THRESHOLD_MULTIPLIER <= requestedPixels) {
-            *outMemDC = data->paintDC;
-            return TRUE;
-        }
-    }
-
-    if (data->paintDC &&
-        data->paintWidth == width &&
-        data->paintHeight == height) {
-        *outMemDC = data->paintDC;
-        return TRUE;
-    }
-
-    HDC memDC = CreateCompatibleDC(hdc);
-    if (!memDC) {
-        return FALSE;
-    }
-
-    HBITMAP bitmap = CreateCompatibleBitmap(hdc, width, height);
-    if (!bitmap) {
-        DeleteDC(memDC);
-        return FALSE;
-    }
-
-    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
-    if (!oldBitmap) {
-        DeleteObject(bitmap);
-        DeleteDC(memDC);
-        return FALSE;
-    }
-
-    ReleaseNotificationPaintBuffer(data);
-
-    data->paintDC = memDC;
-    data->paintBitmap = bitmap;
-    data->oldPaintBitmap = oldBitmap;
-    data->paintWidth = width;
-    data->paintHeight = height;
-
-    *outMemDC = memDC;
-    return TRUE;
-}
-
-/** Fallback chain: toast → modal → tray */
 void ShowNotification(HWND hwnd, const wchar_t* message) {
     if (!message) return;
-    if (!GetNotificationOwnerWindow(hwnd)) return;
+    if (!NotificationGetOwnerWindow(hwnd)) return;
 
     LoadNotificationConfigs();
     
@@ -511,87 +244,12 @@ void ShowNotification(HWND hwnd, const wchar_t* message) {
             ShowModalNotification(hwnd, message);
             break;
         case NOTIFICATION_TYPE_OS:
-            FallbackToTrayNotification(hwnd, message);
+            NotificationFallbackToTray(hwnd, message);
             break;
         default:
             ShowToastNotification(hwnd, message);
             break;
     }
-}
-
-static DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
-    DialogThreadParams* params = (DialogThreadParams*)lpParam;
-    HWND owner = GetNotificationOwnerWindow(params->hwnd);
-    if (owner) {
-        MessageBoxW(owner, params->message, L"Catime", MB_OK);
-    }
-    
-    free(params->message);
-    free(params);
-    InterlockedExchange(&g_modalNotificationActive, 0);
-    
-    return 0;
-}
-
-/** Background thread avoids blocking main UI */
-void ShowModalNotification(HWND hwnd, const wchar_t* message) {
-    if (!message) return;
-    HWND owner = GetNotificationOwnerWindow(hwnd);
-    if (!owner) return;
-
-    DWORD now = GetTickCount();
-    if (IsModalNotificationStartFailureCoolingDown(now)) {
-        FallbackToTrayNotification(owner, message);
-        return;
-    }
-
-    if (InterlockedCompareExchange(&g_modalNotificationActive, 1, 0) != 0) {
-        FallbackToTrayNotification(owner, message);
-        return;
-    }
-
-    DialogThreadParams* params = (DialogThreadParams*)malloc(sizeof(DialogThreadParams));
-    if (!params) {
-        MarkModalNotificationStartFailure(now);
-        InterlockedExchange(&g_modalNotificationActive, 0);
-        FallbackToTrayNotification(owner, message);
-        return;
-    }
-    
-    size_t messageLen = wcslen(message) + 1;
-    if (messageLen > SIZE_MAX / sizeof(wchar_t)) {
-        free(params);
-        MarkModalNotificationStartFailure(now);
-        InterlockedExchange(&g_modalNotificationActive, 0);
-        FallbackToTrayNotification(owner, message);
-        return;
-    }
-    params->message = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
-    if (!params->message) {
-        free(params);
-        MarkModalNotificationStartFailure(now);
-        InterlockedExchange(&g_modalNotificationActive, 0);
-        FallbackToTrayNotification(owner, message);
-        return;
-    }
-    
-    params->hwnd = owner;
-    wcscpy_s(params->message, messageLen, message);
-    
-    HANDLE hThread = CreateThread(NULL, 0, ShowModalDialogThread, params, 0, NULL);
-    
-    if (hThread == NULL) {
-        free(params->message);
-        free(params);
-        MarkModalNotificationStartFailure(now);
-        InterlockedExchange(&g_modalNotificationActive, 0);
-        MessageBeep(MB_OK);
-        FallbackToTrayNotification(owner, message);
-        return;
-    }
-    
-    g_modalNotificationStartFailureCooldownUntil = 0;
-    CloseHandle(hThread);
 }
 
 /** Auto-sizes based on text, positioned in bottom-right */
@@ -600,7 +258,7 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
                                           int opacityPercent, BOOL animate,
                                           BOOL requireTimeout) {
     if (!message) return;
-    HWND owner = GetNotificationOwnerWindow(hwnd);
+    HWND owner = NotificationGetOwnerWindow(hwnd);
     if (!owner) return;
 
     static BOOL isClassRegistered = FALSE;
@@ -618,42 +276,44 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
     if (!isClassRegistered) {
         isClassRegistered = RegisterNotificationClass(hInstance);
         if (!isClassRegistered) {
-            FallbackToTrayNotification(owner, message);
+            NotificationFallbackToTray(owner, message);
             return;
         }
     }
     
     NotificationData* notifData = (NotificationData*)calloc(1, sizeof(NotificationData));
     if (!notifData) {
-        FallbackToTrayNotification(owner, message);
+        NotificationFallbackToTray(owner, message);
         return;
     }
     
     size_t messageLen = wcslen(message) + 1;
     if (messageLen > SIZE_MAX / sizeof(wchar_t)) {
         free(notifData);
-        FallbackToTrayNotification(owner, message);
+        NotificationFallbackToTray(owner, message);
         return;
     }
     notifData->messageText = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
     if (!notifData->messageText) {
         free(notifData);
-        FallbackToTrayNotification(owner, message);
+        NotificationFallbackToTray(owner, message);
         return;
     }
     wcscpy_s(notifData->messageText, messageLen, message);
+
+    int notificationFontPercent = NotificationClampFontPercent(g_AppConfig.notification.display.font_size);
+    notifData->fontPercent = notificationFontPercent;
     
     HDC hdc = GetDC(owner);
     if (!hdc) {
         free(notifData->messageText);
         free(notifData);
-        FallbackToTrayNotification(owner, message);
+        NotificationFallbackToTray(owner, message);
         return;
     }
-    AcquireSRWLockExclusive(&g_notificationResourceLock);
-    HFONT contentFont = GetNotificationContentFont();
-    int textWidth = CalculateTextWidth(hdc, message, contentFont);
-    ReleaseSRWLockExclusive(&g_notificationResourceLock);
+    int textWidth = NotificationMeasureTextWidth(hdc, message,
+                                                 NOTIFICATION_HEIGHT,
+                                                 notificationFontPercent);
 
     int notificationWidth = textWidth + NOTIFICATION_TEXT_PADDING;
     
@@ -688,7 +348,7 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
     }
     
     HWND hNotification = CreateWindowExW(
-        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_COMPOSITED,
+        WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW,
         NOTIFICATION_CLASS_NAME,
         L"Catime Notification",
         WS_POPUP,
@@ -700,7 +360,7 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
     if (!hNotification) {
         free(notifData->messageText);
         free(notifData);
-        FallbackToTrayNotification(owner, message);
+        NotificationFallbackToTray(owner, message);
         return;
     }
     
@@ -708,27 +368,32 @@ static void ShowToastNotificationInternal(HWND hwnd, const wchar_t* message,
     notifData->opacityPercent = ClampOpacityPercent(opacityPercent);
     notifData->animState = animate ? ANIM_FADE_IN : ANIM_VISIBLE;
     notifData->opacity = animate ? 0 : notifData->maxOpacity;
-    notifData->cornerRadius = ClampNotificationCornerRadius(g_AppConfig.notification.display.corner_radius);
+    notifData->cornerRadius = NotificationClampCornerRadius(g_AppConfig.notification.display.corner_radius);
+    notifData->hasAnimatedGradient = NotificationCurrentColorIsAnimatedGradient();
     notifData->isPreview = isPreview;  /* Controls interactivity and position saving */
     
     SetNotificationData(hNotification, notifData);
-    ApplyNotificationCornerRadius(hNotification, notifData->cornerRadius);
-    
-    SetLayeredWindowAttributes(hNotification, 0, notifData->opacity, LWA_ALPHA);
+    if (!NotificationRenderLayeredWindow(hNotification, notifData)) {
+        DestroyWindow(hNotification);
+        NotificationFallbackToTray(owner, message);
+        return;
+    }
     
     ShowWindow(hNotification, SW_SHOWNOACTIVATE);
     
     if (animate && SetTimer(hNotification, ANIMATION_TIMER_ID, ANIMATION_INTERVAL, NULL) == 0) {
         DestroyWindow(hNotification);
-        FallbackToTrayNotification(owner, message);
+        NotificationFallbackToTray(owner, message);
         return;
     }
 
     if (timeoutMs > 0 && SetTimer(hNotification, NOTIFICATION_TIMER_ID, timeoutMs, NULL) == 0) {
         DestroyWindow(hNotification);
-        FallbackToTrayNotification(owner, message);
+        NotificationFallbackToTray(owner, message);
         return;
     }
+
+    StartNotificationGradientTimer(hNotification, notifData);
 }
 
 void ShowToastNotificationEx(HWND hwnd, const wchar_t* message, BOOL isPreview) {
@@ -759,22 +424,29 @@ void SetToastNotificationOpacity(HWND hwnd, int opacityPercent) {
         data->maxOpacity = alphaValue;
         data->opacity = alphaValue;
         data->animState = ANIM_VISIBLE;
+        NotificationRenderLayeredWindow(hwnd, data);
     }
-
-    SetLayeredWindowAttributes(hwnd, 0, alphaValue, LWA_ALPHA);
 }
 
 void SetToastNotificationCornerRadius(HWND hwnd, int cornerRadius) {
     if (!IsNotificationWindow(hwnd)) return;
 
     NotificationData* data = GetNotificationData(hwnd);
-    int clampedRadius = ClampNotificationCornerRadius(cornerRadius);
+    int clampedRadius = NotificationClampCornerRadius(cornerRadius);
     if (data) {
         data->cornerRadius = clampedRadius;
+        NotificationRenderLayeredWindow(hwnd, data);
     }
+}
 
-    ApplyNotificationCornerRadius(hwnd, clampedRadius);
-    InvalidateRect(hwnd, NULL, FALSE);
+void SetToastNotificationFontPercent(HWND hwnd, int fontPercent) {
+    if (!IsNotificationWindow(hwnd)) return;
+
+    NotificationData* data = GetNotificationData(hwnd);
+    if (data) {
+        data->fontPercent = NotificationClampFontPercent(fontPercent);
+        NotificationRenderLayeredWindow(hwnd, data);
+    }
 }
 
 BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message) {
@@ -796,9 +468,29 @@ BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message) {
 
     data->messageText = newBuffer;
     wcscpy_s(data->messageText, messageLen, message);
-    InvalidateRect(hwnd, NULL, FALSE);
-    UpdateWindow(hwnd);
+    NotificationRenderLayeredWindow(hwnd, data);
     return TRUE;
+}
+
+void RefreshToastNotificationColors(void) {
+    BOOL activeColorIsAnimated = NotificationCurrentColorIsAnimatedGradient();
+    HWND hwnd = FindWindowExW(NULL, NULL, NOTIFICATION_CLASS_NAME, NULL);
+
+    while (hwnd) {
+        HWND nextHwnd = FindWindowExW(NULL, hwnd, NOTIFICATION_CLASS_NAME, NULL);
+
+        if (IsNotificationWindow(hwnd)) {
+            NotificationData* data = GetNotificationData(hwnd);
+            if (data) {
+                data->hasAnimatedGradient = activeColorIsAnimated;
+                StopNotificationGradientTimer(hwnd);
+                StartNotificationGradientTimer(hwnd, data);
+                NotificationRenderLayeredWindow(hwnd, data);
+            }
+        }
+
+        hwnd = nextHwnd;
+    }
 }
 
 BOOL IsToastNotificationPreviewWindow(HWND hwnd) {
@@ -839,6 +531,7 @@ static BOOL RegisterNotificationClass(HINSTANCE hInstance) {
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_ERASEBKGND:
+            /* The layered-window frame is redrawn as a complete buffer. */
             return 1;
 
         case WM_PAINT: {
@@ -847,61 +540,10 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             if (!hdc) {
                 return 0;
             }
-
-            RECT clientRect;
-            GetClientRect(hwnd, &clientRect);
-
-            HFONT titleFont = NULL;
-            HFONT contentFont = NULL;
-
-            int paintWidth = clientRect.right - clientRect.left;
-            int paintHeight = clientRect.bottom - clientRect.top;
-            if (paintWidth <= 0 || paintHeight <= 0) {
-                EndPaint(hwnd, &ps);
-                return 0;
-            }
-
             NotificationData* data = GetNotificationData(hwnd);
-            HDC memDC = NULL;
-            if (!EnsureNotificationPaintBuffer(hdc, data, paintWidth, paintHeight, &memDC)) {
-                EndPaint(hwnd, &ps);
-                return 0;
+            if (data) {
+                NotificationRenderLayeredWindow(hwnd, data);
             }
-
-            AcquireSRWLockExclusive(&g_notificationResourceLock);
-
-            HBRUSH bgBrush = GetNotificationBgBrush();
-            FillRect(memDC, &clientRect, bgBrush ? bgBrush : (HBRUSH)(COLOR_WINDOW + 1));
-
-            SetBkMode(memDC, TRANSPARENT);
-
-            titleFont = GetNotificationTitleFont();
-            contentFont = GetNotificationContentFont();
-
-            RECT titleRect = {
-                NOTIFICATION_PADDING_H, 
-                NOTIFICATION_PADDING_V, 
-                clientRect.right - NOTIFICATION_PADDING_H, 
-                NOTIFICATION_PADDING_V + NOTIFICATION_TITLE_HEIGHT
-            };
-            DrawNotificationText(memDC, L"Catime", titleRect, titleFont, 
-                               NOTIFICATION_TITLE_COLOR, DT_SINGLELINE);
-
-            if (data && data->messageText) {
-                RECT textRect = {
-                    NOTIFICATION_PADDING_H, 
-                    NOTIFICATION_CONTENT_SPACING, 
-                    clientRect.right - NOTIFICATION_PADDING_H, 
-                    clientRect.bottom - NOTIFICATION_PADDING_V
-                };
-                DrawNotificationText(memDC, data->messageText, textRect, contentFont,
-                                   NOTIFICATION_CONTENT_COLOR, DT_SINGLELINE | DT_END_ELLIPSIS);
-            }
-
-            ReleaseSRWLockExclusive(&g_notificationResourceLock);
-
-            BitBlt(hdc, 0, 0, paintWidth, paintHeight, memDC, 0, 0, SRCCOPY);
-
             EndPaint(hwnd, &ps);
             return 0;
         }
@@ -918,6 +560,12 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 FlushPendingNotificationOpacity(hwnd, data, TRUE);
                 return 0;
             }
+            else if (wParam == NOTIFICATION_GRADIENT_TIMER_ID) {
+                if (data->hasAnimatedGradient && !data->isInSizeMove) {
+                    NotificationRenderLayeredWindow(hwnd, data);
+                }
+                return 0;
+            }
             else if (wParam == ANIMATION_TIMER_ID) {
                 BOOL shouldDestroy = FALSE;
                 
@@ -931,13 +579,26 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 }
                 
                 data->opacity = newOpacity;
-                SetLayeredWindowAttributes(hwnd, 0, newOpacity, LWA_ALPHA);
+                NotificationRenderLayeredWindow(hwnd, data);
                 
                 if (data->animState == ANIM_FADE_IN && newOpacity >= data->maxOpacity) {
                     data->animState = ANIM_VISIBLE;
                     KillTimer(hwnd, ANIMATION_TIMER_ID);
                 }
                 
+                return 0;
+            }
+            break;
+        }
+
+        case WM_GETMINMAXINFO: {
+            NotificationData* data = GetNotificationData(hwnd);
+            if (data && data->isPreview && lParam) {
+                MINMAXINFO* minMaxInfo = (MINMAXINFO*)lParam;
+                minMaxInfo->ptMinTrackSize.x = NOTIFICATION_MIN_WIDTH;
+                minMaxInfo->ptMinTrackSize.y = NOTIFICATION_MIN_HEIGHT;
+                minMaxInfo->ptMaxTrackSize.x = NOTIFICATION_MAX_WIDTH;
+                minMaxInfo->ptMaxTrackSize.y = NOTIFICATION_MAX_HEIGHT;
                 return 0;
             }
             break;
@@ -1019,25 +680,35 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             return 0;
         }
-        
+
+        case WM_ENTERSIZEMOVE: {
+            NotificationData* data = GetNotificationData(hwnd);
+            if (data && data->isPreview) {
+                data->isInSizeMove = TRUE;
+                StopNotificationGradientTimer(hwnd);
+            }
+            return 0;
+        }
+
         case WM_SIZING: {
-            InvalidateRect(hwnd, NULL, FALSE);
             return TRUE;
         }
 
         case WM_SIZE: {
-            const NotificationData* data = GetNotificationData(hwnd);
+            NotificationData* data = GetNotificationData(hwnd);
             if (data) {
-                ApplyNotificationCornerRadius(hwnd, data->cornerRadius);
+                NotificationRenderLayeredWindow(hwnd, data);
             }
-            InvalidateRect(hwnd, NULL, FALSE);
             return 0;
         }
         
         case WM_EXITSIZEMOVE: {
-            const NotificationData* data = GetNotificationData(hwnd);
+            NotificationData* data = GetNotificationData(hwnd);
             /* Save position/size only for preview windows */
             if (data && data->isPreview) {
+                data->isInSizeMove = FALSE;
+                StartNotificationGradientTimer(hwnd, data);
+
                 RECT rect;
                 if (GetWindowRect(hwnd, &rect)) {
                     if (!WriteConfigNotificationWindow(rect.left, rect.top,
@@ -1047,7 +718,9 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                     }
                 }
             }
-            InvalidateRect(hwnd, NULL, FALSE);
+            if (data) {
+                NotificationRenderLayeredWindow(hwnd, data);
+            }
             return 0;
         }
         
@@ -1062,9 +735,26 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         
         case WM_MOUSEWHEEL: {
             NotificationData* data = GetNotificationData(hwnd);
-            /* Only preview windows support opacity adjustment via scroll wheel */
+            /* Preview windows support quick appearance tuning via scroll wheel. */
             if (data && data->isPreview) {
                 int delta = GET_WHEEL_DELTA_WPARAM(wParam);
+                BOOL ctrlDown = (GET_KEYSTATE_WPARAM(wParam) & MK_CONTROL) != 0;
+
+                if (ctrlDown) {
+                    int currentFontPercent = data->fontPercent;
+
+                    if (delta > 0) {
+                        currentFontPercent += 1;
+                    } else {
+                        currentFontPercent -= 1;
+                    }
+
+                    currentFontPercent = NotificationClampFontPercent(currentFontPercent);
+                    SetToastNotificationFontPercent(hwnd, currentFontPercent);
+                    UpdateNotificationFontPercentControls(currentFontPercent);
+                    return 0;
+                }
+
                 int currentOpacity = data->opacityPercent;
                 int step = 5;
                 
@@ -1100,6 +790,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             KillTimer(hwnd, NOTIFICATION_TIMER_ID);
             KillTimer(hwnd, ANIMATION_TIMER_ID);
             KillTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID);
+            KillTimer(hwnd, NOTIFICATION_GRADIENT_TIMER_ID);
 
             if (data) {
                 FreeNotificationData(hwnd, data);
