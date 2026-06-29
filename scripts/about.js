@@ -1,27 +1,8 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const videoContainer = document.getElementById('videoContainer');
-    if (videoContainer) {
-        const videoCover = videoContainer.querySelector('.video-cover');
-        const videoFrameContainer = videoContainer.querySelector('.video-frame-container');
-        const autoplayIframe = document.getElementById('autoplayIframe');
+    CatimeUI.setupVideoCoverPlayer({
+        preloadSrc: 'assets/bilibili video cover.webp'
+    });
 
-        const preloadImg = new Image();
-        preloadImg.src = 'assets/bilibili video cover.webp';
-        
-        videoCover.addEventListener('click', function() {
-            videoCover.style.opacity = '0';
-            videoFrameContainer.style.display = 'block';
-            
-            const realSrc = autoplayIframe.getAttribute('data-src');
-            autoplayIframe.src = realSrc;
-            
-            setTimeout(function() {
-                videoCover.style.display = 'none';
-                autoplayIframe.style.opacity = '1';
-            }, 50);
-        });
-    }
-    
     addAboutTranslations();
 });
 
@@ -39,17 +20,17 @@ function addAboutTranslations() {
             metaDescription.setAttribute('content', 'Catime About - Learn about the origins of Catime, development stories, and the philosophy behind it.');
         }
         
-        document.querySelectorAll('.nav-links li a').forEach(link => {
-            if (link.textContent === '首页') link.textContent = 'Home';
-            if (link.textContent === '指南') link.textContent = 'Guide';
-            if (link.textContent === '关于') link.textContent = 'About';
-            if (link.textContent === '插件') link.textContent = 'Plugins';
-            if (link.querySelector('span') && link.querySelector('span').textContent === '支持项目') {
-                link.querySelector('span').textContent = 'Support';
-            }
-            if (link.querySelector('span') && link.querySelector('span').textContent === '下载') {
-                link.querySelector('span').textContent = 'Download';
-            }
+        CatimeUI.translateNavLinks({
+            linkTranslations: {
+                '首页': 'Home',
+                '指南': 'Guide',
+                '关于': 'About',
+                '插件': 'Plugins',
+            },
+            spanTranslations: {
+                '支持项目': 'Support',
+                '下载': 'Download',
+            },
         });
         
         const guideHeroTitle = document.querySelector('.guide-hero-title');
@@ -124,43 +105,38 @@ function translateAboutElements() {
         "衷心<span class=\"emphasis-text\">感谢</span>每一位关注、使用与贡献 Catime 的朋友。正是因为你们，开源世界才如此精彩！未来，我会继续用心维护 Catime，<span class=\"primary-text\">倾听大家的声音</span>，<span class=\"primary-text\">不断优化体验</span>，让这个小工具变得更加可靠、实用，也更加贴近每一个使用它的你。": "I sincerely <span class=\"emphasis-text\">thank</span> everyone who has followed, used, and contributed to Catime. It's because of you that the open source world is so wonderful! In the future, I will continue to maintain Catime with care, <span class=\"primary-text\">listen to your feedback</span>, and <span class=\"primary-text\">continuously optimize the experience</span>, making this little tool more reliable, practical, and closer to each of you who uses it.",
         "开源是一段<span class=\"emphasis-text\">没有终点的旅程</span>，真正的意义不仅在于写了多少行代码，更在于我们彼此之间的<span class=\"emphasis-text\">连接与共创</span>。希望在未来的路上，仍能与你们一起前行，让 Catime 与这个社区一起持续成长。": "Open source is a <span class=\"emphasis-text\">journey without an end</span>, and its true meaning lies not just in how many lines of code are written, but in the <span class=\"emphasis-text\">connections and co-creation</span> between us. I hope that on the road ahead, we can continue to move forward together, allowing Catime and this community to grow continuously."
     };
-    
-    for (const [key, value] of Object.entries(translations)) {
-        const elements = document.querySelectorAll('h1, h2, h3, h4, p, span.question-text, div.feature-content p, div.quote-highlight');
-        
-        elements.forEach(el => {
-            if (el.innerHTML === key) {
-                el.innerHTML = value;
-            } 
-            else if (el.innerHTML && el.innerHTML.includes(key)) {
-                el.innerHTML = el.innerHTML.replace(new RegExp(escapeRegExp(key), 'g'), value);
-            }
-        });
-    }
-}
 
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    CatimeUI.applyInnerHTMLTranslations(
+        'h1, h2, h3, h4, p, span.question-text, div.feature-content p, div.quote-highlight',
+        translations
+    );
 }
 
 function translateSpecialElements() {
+    const titleTranslations = {
+        '梦开始的地方': 'Where the Dream Began',
+        '关于名字的由来': 'About the Name',
+        '关于 Logo 的故事': 'The Story of the Logo',
+        '结语': 'Conclusion',
+    };
+
     document.querySelectorAll('.story-begin-title, .name-origin-title, .logo-story-title, .conclusion-story-title').forEach(title => {
-        if (title.textContent === '梦开始的地方') title.textContent = 'Where the Dream Began';
-        if (title.textContent === '关于名字的由来') title.textContent = 'About the Name';
-        if (title.textContent === '关于 Logo 的故事') title.textContent = 'The Story of the Logo';
-        if (title.textContent === '结语') title.textContent = 'Conclusion';
+        const translatedTitle = titleTranslations[title.textContent];
+        if (translatedTitle) title.textContent = translatedTitle;
     });
-    
+
+    const questionTranslations = {
+        'Catime 这个名字是怎么来的': 'How did the name \'Catime\' come about',
+        '为什么要用 C 语言写': 'Why was it written in C',
+        '为什么图标是猫猫泥': 'Why is the icon a cat',
+    };
+
     const questionItems = document.querySelectorAll('.question-item .question-text');
     questionItems.forEach(item => {
-        if (item.innerHTML.includes('Catime 这个名字是怎么来的')) {
-            item.innerHTML = item.innerHTML.replace('Catime 这个名字是怎么来的', 'How did the name \'Catime\' come about');
-        }
-        if (item.innerHTML.includes('为什么要用 C 语言写')) {
-            item.innerHTML = item.innerHTML.replace('为什么要用 C 语言写', 'Why was it written in C');
-        }
-        if (item.innerHTML.includes('为什么图标是猫猫泥')) {
-            item.innerHTML = item.innerHTML.replace('为什么图标是猫猫泥', 'Why is the icon a cat');
+        for (const [key, value] of Object.entries(questionTranslations)) {
+            if (item.innerHTML.includes(key)) {
+                item.innerHTML = item.innerHTML.replace(key, value);
+            }
         }
     });
 }

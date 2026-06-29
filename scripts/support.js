@@ -111,21 +111,33 @@ function renderSupportTotalImmediate() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (typeof initAOSOnce === 'function') {
-        initAOSOnce();
-    } else if (window.AOS) {
-        AOS.init({
-            duration: 800,
-            once: true,
-            offset: 50,
-        });
-    }
+    initAOSOnce();
 
     initScrollProgressIndicator();
 
+    initSupportMethodCards();
+    initSupportCardIcons();
+    initHeartAnimation();
+    initCoffeeParticles();
+    addSupportTranslations();
+
+    initCurrency();
+
+    updateSupportTotal();
+    updateSupportCount();
+    initCapsuleSparkles();
+    initCapsuleConfetti();
+    initCapsuleNumberObserver();
+});
+
+document.addEventListener('allComponentsLoaded', function() {
+    addSupportTranslations();
+});
+
+function initSupportMethodCards() {
     const supportMethods = document.querySelectorAll('.support-method');
     const isMobile = window.innerWidth <= 768; 
-    
+
     supportMethods.forEach(card => {
         let rect = card.getBoundingClientRect();
         let centerX = (rect.left + rect.right) / 2;
@@ -193,7 +205,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+}
 
+function initSupportCardIcons() {
     const supportCards = document.querySelectorAll('.support-card');
     supportCards.forEach(card => {
         card.addEventListener('mouseenter', function() {
@@ -211,7 +225,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+}
 
+function initHeartAnimation() {
     const heartAnimation = document.querySelector('.heart-animation');
     if (heartAnimation) {
         heartAnimation.addEventListener('click', function() {
@@ -226,22 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 10);
         });
     }
-
-    initCoffeeParticles();
-    addSupportTranslations();
-    
-    initCurrency();
-
-    updateSupportTotal();
-    updateSupportCount();
-    initCapsuleSparkles();
-    initCapsuleConfetti();
-    initCapsuleNumberObserver();
-});
-
-document.addEventListener('allComponentsLoaded', function() {
-    addSupportTranslations();
-});
+}
 
 function initCoffeeParticles() {
     const coffeeParticlesContainer = document.querySelector('.coffee-particles');
@@ -258,55 +259,6 @@ function initCoffeeParticles() {
         particle.style.animationDuration = `${duration}s`;
         particle.style.left = `${left}%`;
     });
-}
-
-function initScrollProgressIndicator() {
-    const scrollProgressContainer = document.getElementById('scrollProgressContainer');
-    const scrollProgressCircle = document.querySelector('.scroll-progress-circle-fill');
-    const scrollProgressPercentage = document.querySelector('.scroll-progress-percentage');
-
-    if (!scrollProgressContainer || !scrollProgressCircle || !scrollProgressPercentage) return;
-
-    window.addEventListener('scroll', function() {
-        updateScrollProgress();
-    }, { passive: true });
-
-    scrollProgressContainer.addEventListener('click', function() {
-        this.classList.add('clicked');
-        
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
-        
-        setTimeout(() => {
-            this.classList.remove('clicked');
-        }, 500);
-    });
-
-    updateScrollProgress();
-
-    function updateScrollProgress() {
-        const scrollTop = window.scrollY;
-        const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
-        const scrollPercentage = (scrollTop / scrollHeight) * 100;
-        
-        const perimeter = Math.PI * 2 * 45; 
-        const strokeDashoffset = perimeter * (1 - scrollPercentage / 100);
-        scrollProgressCircle.style.strokeDashoffset = strokeDashoffset;
-        
-        scrollProgressPercentage.textContent = `${Math.round(scrollPercentage)}%`;
-        
-        if (scrollTop > 300) {
-            scrollProgressContainer.style.opacity = '1';
-            scrollProgressContainer.style.transform = 'scale(1)';
-            scrollProgressContainer.style.pointerEvents = 'auto';
-        } else {
-            scrollProgressContainer.style.opacity = '0';
-            scrollProgressContainer.style.transform = 'scale(0.8)';
-            scrollProgressContainer.style.pointerEvents = 'none';
-        }
-    }
 }
 
 function addSupportTranslations() {
@@ -327,14 +279,16 @@ function addSupportTranslations() {
             metaDescription.setAttribute('content', 'Support Catime Project - A minimalist, modern, efficient transparent timer and pomodoro clock for Windows, with a cute style.');
         }
         
-        document.querySelectorAll('.nav-links li a').forEach(link => {
-            if (link.textContent === '首页') link.textContent = 'Home';
-            if (link.textContent === '指南') link.textContent = 'Guide';
-            if (link.textContent === '关于') link.textContent = 'About';
-            if (link.textContent === '插件') link.textContent = 'Plugins';
-            if (link.querySelector('span') && link.querySelector('span').textContent === '下载') {
-                link.querySelector('span').textContent = 'Download';
-            }
+        CatimeUI.translateNavLinks({
+            linkTranslations: {
+                '首页': 'Home',
+                '指南': 'Guide',
+                '关于': 'About',
+                '插件': 'Plugins',
+            },
+            spanTranslations: {
+                '下载': 'Download',
+            },
         });
         
         const pageHeader = document.querySelector('.page-header h1');
@@ -354,20 +308,23 @@ function addSupportTranslations() {
 }
 
 function translateSharedChrome(currentLang) {
-    const navLinks = document.querySelectorAll('.nav-links li a');
-    navLinks.forEach(link => {
-        const text = link.textContent.trim();
-        if (currentLang === 'zh') {
-            if (text === 'Home') link.textContent = '首页';
-            if (text === 'Guide') link.textContent = '指南';
-            if (text === 'About') link.textContent = '关于';
-            if (text === 'GitHub') link.textContent = 'GitHub';
-        } else {
-            if (text === '首页') link.textContent = 'Home';
-            if (text === '指南') link.textContent = 'Guide';
-            if (text === '关于') link.textContent = 'About';
-            if (text === '插件') link.textContent = 'Plugins';
+    const navTranslations = currentLang === 'zh'
+        ? {
+            Home: '首页',
+            Guide: '指南',
+            About: '关于',
+            GitHub: 'GitHub',
         }
+        : {
+            '首页': 'Home',
+            '指南': 'Guide',
+            '关于': 'About',
+            '插件': 'Plugins',
+        };
+
+    CatimeUI.translateNavLinks({
+        linkTranslations: navTranslations,
+        trimText: true,
     });
 
     const dropdownToggle = document.querySelector('.dropdown-toggle');
@@ -387,14 +344,19 @@ function translateSharedChrome(currentLang) {
         fontToolLink.innerHTML = '<i class="fas fa-font"></i> Font Simplifier';
     }
 
-    document.querySelectorAll('.nav-actions .nav-button span').forEach(span => {
-        if (currentLang === 'zh') {
-            if (span.textContent === 'Download') span.textContent = '下载';
-            if (span.textContent === 'Support') span.textContent = '支持项目';
-        } else {
-            if (span.textContent === '下载') span.textContent = 'Download';
-            if (span.textContent === '支持项目') span.textContent = 'Support';
+    const actionTranslations = currentLang === 'zh'
+        ? {
+            Download: '下载',
+            Support: '支持项目',
         }
+        : {
+            '下载': 'Download',
+            '支持项目': 'Support',
+        };
+
+    document.querySelectorAll('.nav-actions .nav-button span').forEach(span => {
+        const translatedText = actionTranslations[span.textContent];
+        if (translatedText) span.textContent = translatedText;
     });
 
     const footer = document.querySelector('.main-footer');
@@ -402,24 +364,34 @@ function translateSharedChrome(currentLang) {
 
     const footerParagraphs = footer.querySelectorAll('p');
     if (footerParagraphs.length >= 3) {
-        if (currentLang === 'zh') {
-            footerParagraphs[0].innerHTML = '&copy; 2025-2026 Catime 项目，由 <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a> 开发';
-            footerParagraphs[1].innerHTML = '基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 协议开源';
-            footerParagraphs[2].innerHTML = '图标画师：<a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
-        } else {
-            footerParagraphs[0].innerHTML = '&copy; 2025-2026 Catime Project by <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a>';
-            footerParagraphs[1].innerHTML = 'Open sourced under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> License';
-            footerParagraphs[2].innerHTML = 'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>';
-        }
+        const footerParagraphTranslations = currentLang === 'zh'
+            ? [
+                '&copy; 2025-2026 Catime 项目，由 <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a> 开发',
+                '基于 <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> 协议开源',
+                '图标画师：<a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>',
+            ]
+            : [
+                '&copy; 2025-2026 Catime Project by <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a>',
+                'Open sourced under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> License',
+                'Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>',
+            ];
+
+        footerParagraphTranslations.forEach((html, index) => {
+            footerParagraphs[index].innerHTML = html;
+        });
     }
+
+    const footerLinkTranslations = {
+        'message.bilibili.com': currentLang === 'zh' ? '反馈' : 'Feedback',
+        'PRIVACY.md': currentLang === 'zh' ? '隐私政策' : 'Privacy Policy',
+    };
 
     footer.querySelectorAll('.footer-links a').forEach(link => {
         const href = link.getAttribute('href') || '';
-        if (href.includes('message.bilibili.com')) {
-            link.textContent = currentLang === 'zh' ? '反馈' : 'Feedback';
-        }
-        if (href.includes('PRIVACY.md')) {
-            link.textContent = currentLang === 'zh' ? '隐私政策' : 'Privacy Policy';
+        for (const [hrefPart, text] of Object.entries(footerLinkTranslations)) {
+            if (href.includes(hrefPart)) {
+                link.textContent = text;
+            }
         }
     });
 }
@@ -439,16 +411,12 @@ function fixButtonPositions() {
 
 function fixButtonVisibility() {
     document.querySelectorAll('.support-card .support-btn').forEach(btn => {
-        btn.style.display = 'flex';
-        btn.style.visibility = 'visible';
-        btn.style.opacity = '1';
+        setSupportButtonVisible(btn);
     });
     
     const issuesBtn = document.querySelector('.support-card:nth-child(2) .support-btn');
     if (issuesBtn) {
-        issuesBtn.style.display = 'flex';
-        issuesBtn.style.visibility = 'visible';
-        issuesBtn.style.opacity = '1';
+        setSupportButtonVisible(issuesBtn);
         
         if (issuesBtn.querySelector('i')) {
             issuesBtn.querySelector('i').style.display = 'inline-block';
@@ -456,18 +424,20 @@ function fixButtonVisibility() {
     }
 }
 
+function setSupportButtonVisible(btn) {
+    btn.style.display = 'flex';
+    btn.style.visibility = 'visible';
+    btn.style.opacity = '1';
+}
+
 function translateSupportElements() {
-    document.querySelectorAll('.section-title').forEach(title => {
-        if (title.innerHTML.includes('支持项目')) {
-            title.innerHTML = 'Support the Project <i class="fas fa-mug-hot"></i>';
-        }
-        if (title.innerHTML.includes('其他支持方式')) {
-            title.innerHTML = 'Other Ways to Support <i class="fas fa-gift"></i>';
-        }
-        if (title.innerHTML.includes('感谢支持者')) {
-            title.innerHTML = 'Thanks to Supporters';
-        }
-    });
+    const sectionTitleTranslations = {
+        '支持项目': 'Support the Project <i class="fas fa-mug-hot"></i>',
+        '其他支持方式': 'Other Ways to Support <i class="fas fa-gift"></i>',
+        '感谢支持者': 'Thanks to Supporters',
+    };
+
+    CatimeUI.setInnerHTMLWhenIncludes('.section-title', sectionTitleTranslations);
     
     const projectDesc = document.querySelector('.support-project .section-subtitle');
     if (projectDesc) {
@@ -478,14 +448,12 @@ function translateSupportElements() {
             'Every bit of your support is a powerful drive to keep it moving forward!';
     }
     
-    document.querySelectorAll('.support-label').forEach(label => {
-        if (label.textContent.includes('微信')) {
-            label.innerHTML = '<i class="fab fa-weixin"></i> WeChat';
-        }
-        if (label.textContent.includes('支付宝')) {
-            label.innerHTML = '<i class="fab fa-alipay"></i> Alipay';
-        }
-    });
+    const supportLabelTranslations = {
+        '微信': '<i class="fab fa-weixin"></i> WeChat',
+        '支付宝': '<i class="fab fa-alipay"></i> Alipay',
+    };
+
+    CatimeUI.setInnerHTMLWhenIncludes('.support-label', supportLabelTranslations);
 
     const wechatQr = document.querySelector('.wechat-qr');
     if (wechatQr) {
@@ -501,40 +469,55 @@ function translateSupportElements() {
     if (kofiButton) {
         kofiButton.alt = 'Support me on Ko-fi';
     }
-    
+
+    const starCardTranslation = {
+        title: 'Star Project',
+        description: 'If you like Catime, please give us a Star on GitHub. It\'s the best encouragement for us!',
+        buttonHtml: '<i class="fab fa-github"></i> Star Project',
+    };
+    const issueCardTranslation = {
+        title: 'Submit Issues',
+        description: 'Found a bug or have feature suggestions? Welcome to submit Issues on GitHub to help us continuously improve Catime!',
+        buttonHtml: '<i class="fas fa-exclamation-circle"></i> Submit Issues',
+        forceVisible: true,
+    };
+    const cardTranslations = {
+        '点亮 Star': starCardTranslation,
+        'Star 项目': starCardTranslation,
+        '提交反馈': issueCardTranslation,
+        '提交Issues': issueCardTranslation,
+        '分享推广': {
+            title: 'Share & Promote',
+            description: 'Share Catime with your friends, colleagues, or on social media to help more people discover this tool!',
+            buttonHtml: '<i class="fas fa-users"></i> Join Discord',
+            href: 'https://discord.com/invite/W3tW2gtp6g',
+        },
+    };
+
     const supportCards = document.querySelectorAll('.support-card');
     supportCards.forEach(card => {
         const title = card.querySelector('h3');
         const desc = card.querySelector('p');
         const btn = card.querySelector('.support-btn');
-        
-        if (title && (title.textContent === '点亮 Star' || title.textContent === 'Star 项目')) {
-            title.textContent = 'Star Project';
-            desc.textContent = 'If you like Catime, please give us a Star on GitHub. It\'s the best encouragement for us!';
-            if (btn) btn.innerHTML = '<i class="fab fa-github"></i> Star Project';
-        }
-        
-        if (title && (title.textContent === '提交反馈' || title.textContent === '提交Issues')) {
-            title.textContent = 'Submit Issues';
-            desc.textContent = 'Found a bug or have feature suggestions? Welcome to submit Issues on GitHub to help us continuously improve Catime!';
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-exclamation-circle"></i> Submit Issues';
-                btn.style.display = 'flex';
-                btn.style.visibility = 'visible';
-                btn.style.opacity = '1';
+
+        const translation = title ? cardTranslations[title.textContent] : null;
+        if (!translation) return;
+
+        title.textContent = translation.title;
+        desc.textContent = translation.description;
+
+        if (btn) {
+            btn.innerHTML = translation.buttonHtml;
+            if (translation.href) {
+                btn.href = translation.href;
             }
         }
-        
-        if (title && title.textContent === '分享推广') {
-            title.textContent = 'Share & Promote';
-            desc.textContent = 'Share Catime with your friends, colleagues, or on social media to help more people discover this tool!';
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-users"></i> Join Discord';
-                btn.href = 'https://discord.com/invite/W3tW2gtp6g';
-            }
+
+        if (translation.forceVisible && btn) {
+            setSupportButtonVisible(btn);
         }
     });
-    
+
     const supportersDesc = document.querySelector('.supporters .section-subtitle');
     if (supportersDesc) {
         supportersDesc.textContent = 'Special thanks to those who have supported the Catime project! Your encouragement is our motivation to move forward.';
@@ -552,129 +535,57 @@ function translateSupportElements() {
     
     const tableHeaders = document.querySelectorAll('.supporters-table th');
     if (tableHeaders.length >= 4) {
-        tableHeaders[0].textContent = 'Time';
-        tableHeaders[1].textContent = 'Username';
-        tableHeaders[2].textContent = 'Amount';
-        tableHeaders[3].textContent = 'Message';
+        ['Time', 'Username', 'Amount', 'Message'].forEach((text, index) => {
+            tableHeaders[index].textContent = text;
+        });
     }
     
+    const supporterCellTranslations = {
+        '温州市宇波机车部件有限公司': 'Wenzhou Yubo Locomotive Parts CO.,LTD.',
+        '1.4版本太好了': 'Version 1.4 is great',
+        '坚持就是胜利': 'Perseverance leads to victory',
+        '加油': 'Keep going',
+        '加油啊，你可以的': 'Come on, you can do it!',
+        '加油，你可以的🫡': 'Keep going, you can do it! 🫡',
+        '好用，爱用，希望增加个鼠标悬停时隐藏时钟的功能': 'Love it! Hope to add a feature to hide the clock when hovering with mouse',
+        '催更催更😏': 'Push for updates😏',
+        '番茄钟超赞，期待继续优化': 'Pomodoro timer is great, looking forward to further optimization',
+        '很棒的项目！': 'Great project!',
+        '恭喜': 'Congratulations',
+        '感谢Catime，希望你也能多爱自己，未来可期': 'Thank you Catime, hope you also love yourself more, the future is promising',
+        '建议catime加个倒计时列表功能': 'Suggest adding a countdown list feature to catime',
+        '赞助了一年的域名 vladelaina.com': 'Sponsored one year of domain vladelaina.com',
+        '打赏catime': 'Tipping catime',
+        'catime打赏': 'Tipping catime',
+        '支持catime': 'Support catime',
+        '软件好用，赞赞赞': 'The software is great, praise!',
+        '软件很好用，感谢你的坚持[爱心]': 'The software is very useful, thank you for your persistence [heart]',
+        '极简，可爱，好用，喜欢': 'Minimalist, cute, useful, love it',
+        '不错不错，实用鼓励一下': 'Not bad, very practical, a little encouragement',
+        '在任务栏里吃灰叭（bushi）好用👍': "Let it collect dust in the taskbar (just kidding) It's great👍",
+        '学生党，1块冲你和我一样喜欢蕾娜和伊蕾娜，1块冲你的产品确实挺好': 'As a student, ¥1 because you like Laina and Elaina like me, another ¥1 because your product is really good',
+        '我是最早提出来让你弄这个二维码，我们粉丝可以赞助': 'I was the first to suggest setting up these QR codes so we fans could support you',
+        '不多感谢你的catime，让我下班有了倒计时盼头🤧': 'Just wanted to thank you for catime, it gives me something to look forward to counting down to when getting off work🤧',
+        '为爱发电': 'Powered by love',
+        'catime小小支持': 'A little support for catime',
+        '支持一下': 'Just a little support',
+        '茉莉蜜茶行不行': 'How about jasmine honey tea',
+        '好喜欢catime，请你喝奶茶': 'I really like catime, please have some milk tea',
+        '时钟很不错，帮助页面也很漂亮 支持~*.。(๑･∀･๑)*.。': 'The timer is great, and the help page is beautiful. Support~*.。(๑･∀･๑)*.。',
+        'bro好用狒狒防沉迷组件了已经是': "Bro, it's so useful! Already has anti-addiction component",
+        '非常好的工具，谢谢': 'Very good tool, thank you',
+        '功能简洁明了，谢谢你，cat': 'Simple and clear features, thank you, cat',
+        '好用，respect': 'Useful, respect',
+        '感谢 catime，好用。': 'Thanks to Catime, easy to use.',
+        '入股入股，付费使用来自律': 'Investing, paying for self-discipline.',
+        '非常好小程序': 'Very good app',
+        '我是葱葱哦，想给你加个油，祝你的软件越做越好！': 'I am Congcong, just wanted to cheer you on. Hope your software keeps getting better and better!'
+    };
+
     document.querySelectorAll('.supporters-table td').forEach(td => {
-        if (td.textContent === '温州市宇波机车部件有限公司') {
-            td.textContent = 'Wenzhou Yubo Locomotive Parts CO.,LTD.';
-        }
-        if (td.textContent === '1.4版本太好了') {
-            td.textContent = 'Version 1.4 is great';
-        }
-        if (td.textContent === '坚持就是胜利') {
-            td.textContent = 'Perseverance leads to victory';
-        }
-        if (td.textContent === '加油') {
-            td.textContent = 'Keep going';
-        }
-        if (td.textContent === '加油啊，你可以的') {
-            td.textContent = 'Come on, you can do it!';
-        }
-        if (td.textContent === '加油，你可以的🫡') {
-            td.textContent = 'Keep going, you can do it! 🫡';
-        }
-        if (td.textContent === '好用，爱用，希望增加个鼠标悬停时隐藏时钟的功能') {
-            td.textContent = 'Love it! Hope to add a feature to hide the clock when hovering with mouse';
-        }
-        if (td.textContent === '催更催更😏') {
-            td.textContent = 'Push for updates😏';
-        }
-        if (td.textContent === '番茄钟超赞，期待继续优化') {
-            td.textContent = 'Pomodoro timer is great, looking forward to further optimization';
-        }
-        if (td.textContent === '很棒的项目！') {
-            td.textContent = 'Great project!';
-        }
-        if (td.textContent === '恭喜') {
-            td.textContent = 'Congratulations';
-        }
-        if (td.textContent === '感谢Catime，希望你也能多爱自己，未来可期') {
-            td.textContent = 'Thank you Catime, hope you also love yourself more, the future is promising';
-        }
-        if (td.textContent === '建议catime加个倒计时列表功能') {
-            td.textContent = 'Suggest adding a countdown list feature to catime';
-        }
-        if (td.textContent === '赞助了一年的域名 vladelaina.com') {
-            td.textContent = 'Sponsored one year of domain vladelaina.com';
-        }
-        if (td.textContent === '打赏catime') {
-            td.textContent = 'Tipping catime';
-        }
-        if (td.textContent === 'catime打赏') {
-            td.textContent = 'Tipping catime';
-        }
-        if (td.textContent === '支持catime') {
-            td.textContent = 'Support catime';
-        }
-        if (td.textContent === '软件好用，赞赞赞') {
-            td.textContent = 'The software is great, praise!';
-        }
-        if (td.textContent === '软件很好用，感谢你的坚持[爱心]') {
-            td.textContent = 'The software is very useful, thank you for your persistence [heart]';
-        }
-        if (td.textContent === '极简，可爱，好用，喜欢') {
-            td.textContent = 'Minimalist, cute, useful, love it';
-        }
-        if (td.textContent === '不错不错，实用鼓励一下') {
-            td.textContent = 'Not bad, very practical, a little encouragement';
-        }
-        if (td.textContent === '在任务栏里吃灰叭（bushi）好用👍') {
-            td.textContent = 'Let it collect dust in the taskbar (just kidding) It\'s great👍';
-        }
-        if (td.textContent === '学生党，1块冲你和我一样喜欢蕾娜和伊蕾娜，1块冲你的产品确实挺好') {
-            td.textContent = 'As a student, ¥1 because you like Laina and Elaina like me, another ¥1 because your product is really good';
-        }
-        if (td.textContent === '我是最早提出来让你弄这个二维码，我们粉丝可以赞助') {
-            td.textContent = 'I was the first to suggest setting up these QR codes so we fans could support you';
-        }
-        if (td.textContent === '不多感谢你的catime，让我下班有了倒计时盼头🤧') {
-            td.textContent = 'Just wanted to thank you for catime, it gives me something to look forward to counting down to when getting off work🤧';
-        }
-        if (td.textContent === '为爱发电') {
-            td.textContent = 'Powered by love';
-        }
-        if (td.textContent === 'catime小小支持') {
-            td.textContent = 'A little support for catime';
-        }
-        if (td.textContent === '支持一下') {
-            td.textContent = 'Just a little support';
-        }
-        if (td.textContent === '茉莉蜜茶行不行') {
-            td.textContent = 'How about jasmine honey tea';
-        }
-        if (td.textContent === '好喜欢catime，请你喝奶茶') {
-            td.textContent = 'I really like catime, please have some milk tea';
-        }
-        if (td.textContent === '时钟很不错，帮助页面也很漂亮 支持~*.。(๑･∀･๑)*.。') {
-            td.textContent = 'The timer is great, and the help page is beautiful. Support~*.。(๑･∀･๑)*.。';
-        }
-        if (td.textContent === 'bro好用狒狒防沉迷组件了已经是') {
-            td.textContent = 'Bro, it\'s so useful! Already has anti-addiction component';
-        }
-        if (td.textContent === '非常好的工具，谢谢') {
-            td.textContent = 'Very good tool, thank you';
-        }
-        if (td.textContent === '功能简洁明了，谢谢你，cat') {
-            td.textContent = 'Simple and clear features, thank you, cat';
-        }
-        if (td.textContent === '好用，respect') {
-            td.textContent = 'Useful, respect';
-        }
-        if (td.textContent === '感谢 catime，好用。') {
-            td.textContent = 'Thanks to Catime, easy to use.';
-        }
-        if (td.textContent === '入股入股，付费使用来自律') {
-            td.textContent = 'Investing, paying for self-discipline.';
-        }
-        if (td.textContent === '非常好小程序') {
-            td.textContent = 'Very good app';
-        }
-        if (td.textContent === '我是葱葱哦，想给你加个油，祝你的软件越做越好！') {
-            td.textContent = 'I am Congcong, just wanted to cheer you on. Hope your software keeps getting better and better!';
+        const translatedText = supporterCellTranslations[td.textContent];
+        if (translatedText) {
+            td.textContent = translatedText;
         }
         
         if (td.parentElement && td.cellIndex === 3) { 
@@ -774,11 +685,6 @@ function initCapsuleConfetti() {
 
     capsule.addEventListener('mouseenter', trigger);
     capsule.addEventListener('focus', trigger);
-
-    function randomConfettiColor() {
-        const colors = ['#7aa2f7', '#f799b8', '#ffd45e', '#9ae6b4', '#fbd38d'];
-        return colors[Math.floor(Math.random() * colors.length)];
-    }
 }
 
 function animateNumber(element, from, to, duration, formatter) {

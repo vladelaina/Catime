@@ -58,30 +58,6 @@ function escapeHTML(value) {
     return div.innerHTML;
 }
 
-function escapeRegExp(value) {
-    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function loadExternalScriptOnce(src, marker) {
-    if (document.querySelector(`script[data-loader="${marker}"]`)) {
-        return new Promise((resolve, reject) => {
-            const existingScript = document.querySelector(`script[data-loader="${marker}"]`);
-            existingScript.addEventListener('load', () => resolve(), { once: true });
-            existingScript.addEventListener('error', () => reject(new Error(`Failed to load ${src}`)), { once: true });
-        });
-    }
-
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.async = true;
-        script.dataset.loader = marker;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Failed to load ${src}`));
-        document.head.appendChild(script);
-    });
-}
-
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM Loaded, initializing');
     
@@ -107,6 +83,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('❌ JSZip failed to load, ZIP download will be unavailable');
         }
     }, 2000);
+
+    initFileScrollProgress();
 });
 
 function showEngineLoadingStatus() {
@@ -473,10 +451,6 @@ else:
     }
 }
 
-async function initPyodide() {
-    return await initPyodideAsync();
-}
-
 async function loadFallbackLibrary() {
     try {
         const script = document.createElement('script');
@@ -539,7 +513,11 @@ function initDragAndDrop() {
     });
     
     console.log('Drag functionality initialized');
-    
+
+    initDebugOverlayToggle();
+}
+
+function initDebugOverlayToggle() {
     if (window.location.search.includes('debug=true')) {
         const testBtn = document.createElement('button');
         testBtn.textContent = 'Test Overlay';
@@ -591,51 +569,6 @@ function handleDragOver(e) {
     if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
         showDragOverlay();
     }
-}
-
-function checkDraggedFiles(dataTransfer) {
-    const fontExtensions = ['.ttf', '.otf', '.woff', '.woff2'];
-    
-    for (let i = 0; i < dataTransfer.items.length; i++) {
-        const item = dataTransfer.items[i];
-        
-        if (item.kind === 'file') {
-            const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-            if (entry && entry.isDirectory) {
-                return true;
-            }
-        }
-        
-        if (item.kind === 'file') {
-            const file = item.getAsFile();
-            if (file) {
-                const fileName = file.name.toLowerCase();
-                const hasValidExtension = fontExtensions.some(ext => fileName.endsWith(ext));
-                if (hasValidExtension) {
-                    return true;
-                }
-            }
-        }
-        
-        if (item.type) {
-            const validMimeTypes = [
-                'font/ttf',
-                'font/otf', 
-                'font/woff',
-                'font/woff2',
-                'application/font-woff',
-                'application/font-woff2',
-                'application/x-font-ttf',
-                'application/x-font-otf'
-            ];
-            
-            if (validMimeTypes.some(mime => item.type.includes(mime))) {
-                return true;
-            }
-        }
-    }
-    
-    return false;
 }
 
 function handlePageDrop(e) {
@@ -1072,32 +1005,6 @@ function handleFiles(files) {
     }
 }
 
-function updateScanInfo(totalFiles, fontFiles, nonFontFiles, isFolder) {
-    if (!scanInfo || !scanInfoText) return;
-    
-    if (totalFiles > 0) {
-        scanInfo.style.display = 'flex';
-        
-        let infoText = `${translateText('扫描完成，发现')} ${totalFiles}${translateText('个文件')}`;
-        if (totalFiles > fontFiles) {
-            infoText += ` (${fontFiles}${translateText('个字体文件')}, ${nonFontFiles}${translateText('个其他文件')})`;
-        }
-        
-        if (isFolder) {
-            infoText += ` 📁 ${translateText('文件夹模式')}`;
-        }
-        
-        scanInfoText.textContent = infoText;
-        
-        scanInfo.style.opacity = '0';
-        setTimeout(() => {
-            scanInfo.style.opacity = '1';
-        }, 100);
-    } else {
-        scanInfo.style.display = 'none';
-    }
-}
-
 function hideScanInfo() {
     if (scanInfo) {
         scanInfo.style.display = 'none';
@@ -1251,20 +1158,6 @@ function scrollToDownloadSection() {
             
             setTimeout(() => {
                 downloadSection.style.animation = '';
-            }, 1500);
-        }, 150);
-    }
-}
-
-function scrollToUploadArea() {
-    scrollToElement(uploadSection, '上传卡片区域');
-    
-    if (uploadSection) {
-        setTimeout(() => {
-            uploadSection.style.animation = 'highlightFileList 1.5s ease-in-out';
-            
-            setTimeout(() => {
-                uploadSection.style.animation = '';
             }, 1500);
         }, 150);
     }
@@ -2446,18 +2339,6 @@ function scrollToUploadArea() {
     }
 }
 
-function resetTimingDisplay() {
-    if (timingInterval) {
-        clearInterval(timingInterval);
-        timingInterval = null;
-    }
-    
-    if (timingText) {
-        timingText.remove();
-        timingText = null;
-    }
-}
-
 function showTemporaryMessage(message, type = 'info') {
     let iconClass = 'info-circle';
     switch (type) {
@@ -2524,10 +2405,6 @@ function initFileScrollProgress() {
         observer.observe(fileItems, { childList: true, subtree: true });
     }
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    initFileScrollProgress();
-});
 
 window.addEventListener('error', function(e) {
     console.error(`Error occurred: ${e.message}`);
