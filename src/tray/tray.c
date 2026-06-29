@@ -438,7 +438,7 @@ static double CalculateSpeedMetricPercent(AnimationSpeedMetric metric, float cpu
     return (double)mem;
 }
 
-/** @brief Append "Speed · [Metric] X%" line to tooltip */
+/** @brief Append tray icon animation speed line to tooltip */
 static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric metric,
                            float cpu, float mem) {
     /* Original speed mode: don't show speed line (always 100%, no useful info) */
@@ -457,13 +457,14 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
     
     double scalePercent = GetAnimationSpeedScaleForPercent(applyScaling ? percent : 0.0);
     if (scalePercent <= 0.0) scalePercent = 100.0;
-    
+
     const wchar_t* metricLabel = L"Memory";
     if (metric == ANIMATION_SPEED_CPU) metricLabel = L"CPU";
     else if (metric == ANIMATION_SPEED_TIMER) metricLabel = L"Timer";
-    
+
     wchar_t extra[128];
-    _snwprintf_s(extra, _countof(extra), _TRUNCATE, L"\nSpeed · %s %.1f%%", metricLabel, scalePercent);
+    _snwprintf_s(extra, _countof(extra), _TRUNCATE,
+                 L"\nIcon Speed · %s %.0f%%", metricLabel, scalePercent);
     wcsncat_s(tip, tipSize, extra, _TRUNCATE);
 }
 
@@ -694,11 +695,16 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     BuildBasicTooltip(tip, _countof(tip), cpu, mem, upBps, downBps, hasNet);
 
     const char* animName = GetCurrentAnimationName();
+    AnimationSpeedMetric metric = ANIMATION_SPEED_ORIGINAL;
+    BOOL showAnimationSpeed = FALSE;
     if (ShouldShowAnimationSpeed(animName)) {
-        AnimationSpeedMetric metric = GetAnimationSpeedMetric();
-        AppendSpeedLine(tip, _countof(tip), metric, cpu, mem);
+        metric = GetAnimationSpeedMetric();
+        showAnimationSpeed = (metric != ANIMATION_SPEED_ORIGINAL);
     }
     AppendUptimeLine(tip, _countof(tip));
+    if (showAnimationSpeed) {
+        AppendSpeedLine(tip, _countof(tip), metric, cpu, mem);
+    }
 
     UpdateTrayTooltip(tip);
     if (dynamicIcon) {
