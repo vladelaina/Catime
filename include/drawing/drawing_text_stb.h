@@ -9,7 +9,7 @@
 #include <windows.h>
 #include "../../libs/stb/stb_truetype.h"
 #include "color/gradient.h"
-#include "menu_preview.h"
+#include "text_effect.h"
 
 #define GRADIENT_LUT_SIZE 512
 

@@ -150,37 +150,5 @@ BOOL GetActiveShowSeconds(void);
  */
 EffectType GetActiveEffect(void);
 
-/**
- * @brief Temporarily show hidden window for menu preview
- * @param hwnd Window handle
- *
- * @details If window is currently hidden (No Display mode), this will:
- *          - Show the window temporarily
- *          - Show current time when there is no active timer content
- *          Should be called when user hovers over font/color menu items
- */
-void ShowWindowForPreview(HWND hwnd);
-
-/**
- * @brief Restore window visibility to pre-preview state
- * @param hwnd Window handle
- *
- * @details If window was shown by ShowWindowForPreview(), this will hide it again.
- *          Should be called when menu closes (WM_EXITMENULOOP).
- */
-void RestoreWindowVisibility(HWND hwnd);
-
-/**
- * @brief Get preview time text when no active timer content
- * @param outText Output buffer for preview text
- * @param bufferSize Buffer size in wide characters
- * @return TRUE if preview text was generated, FALSE if no preview needed
- *
- * @details Generates current-time preview text.
- *          Used in edit mode and menu preview to show what the timer would look like.
- *          Returns FALSE if there's already active content to display.
- */
-BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize);
-
 #endif /* MENU_PREVIEW_H */
 

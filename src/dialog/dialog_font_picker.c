@@ -10,6 +10,7 @@
 #include "config.h"
 #include "font.h"
 #include "menu_preview.h"
+#include "preview_display.h"
 #include "window/window_core.h"
 #include "log.h"
 #include <stdio.h>

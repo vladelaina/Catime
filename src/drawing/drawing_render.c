@@ -23,6 +23,7 @@
 #include "window/window_visual_effects.h"
 #include "drag_scale.h"
 #include "menu_preview.h"
+#include "preview_display.h"
 #include "text_effect.h"
 #include "font/font_path_manager.h"
 #include "log.h"

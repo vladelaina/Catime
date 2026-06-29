@@ -28,6 +28,7 @@
 #include "color/color.h"
 #include "drawing.h"
 #include "menu_preview.h"
+#include "preview_display.h"
 #include "text_effect.h"
 #include "window/window_visual_effects.h"
 #include "window/window_desktop_integration.h"

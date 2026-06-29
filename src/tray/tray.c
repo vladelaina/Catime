@@ -14,6 +14,7 @@
 #include "tray/tray_animation_percent.h"
 #include "system_monitor.h"
 #include "config.h"
+#include "preview_display.h"
 #include "tray/tray_events.h"
 #include "tray/tray_menu_submenus.h"
 #include "log.h"
@@ -549,6 +550,10 @@ static void DiscardPendingTrayOpacitySave(void) {
     ClearPendingTrayOpacitySave();
 }
 
+static void EndTrayOpacityPreview(HWND hwnd) {
+    RestoreWindowVisibility(hwnd);
+}
+
 static void ReschedulePendingTrayOpacitySave(HWND hwnd) {
     if (g_pendingOpacityToSave < 0) {
         return;
@@ -571,6 +576,7 @@ static void CompleteTrayOpacityFeedback(HWND hwnd, BOOL refreshTooltip) {
 
     if (g_showingOpacityTip) {
         g_showingOpacityTip = FALSE;
+        EndTrayOpacityPreview(hwnd);
         if (refreshTooltip && g_trayTooltipActive && hwnd && nid.hWnd) {
             TrayTipTimerProc(hwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
         }
@@ -608,6 +614,8 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
     CLOCK_WINDOW_OPACITY += (wheelDirection > 0) ? step : -step;
     if (CLOCK_WINDOW_OPACITY < 0) CLOCK_WINDOW_OPACITY = 0;
     if (CLOCK_WINDOW_OPACITY > 100) CLOCK_WINDOW_OPACITY = 100;
+
+    ShowWindowForPreview(hwnd);
 
     g_showingOpacityTip = TRUE;
     wchar_t opacityTip[64];
@@ -1041,13 +1049,18 @@ BOOL IsMouseNearTrayIconArea(POINT pt, int marginPx) {
 void SetTrayInteractionSuspended(BOOL suspended) {
     InterlockedExchange(&g_trayInteractionSuspended, suspended ? 1L : 0L);
 
+    HWND hwndMain = GetValidTrayMainWindow();
+
     if (suspended) {
         g_trayTooltipActive = FALSE;
+        if (g_showingOpacityTip) {
+            g_showingOpacityTip = FALSE;
+            EndTrayOpacityPreview(hwndMain);
+        }
         if (g_mouseHook) {
             UnhookWindowsHookEx(g_mouseHook);
             g_mouseHook = NULL;
         }
-        HWND hwndMain = GetValidTrayMainWindow();
         if (g_trayTipTimerActive && hwndMain) {
             KillTimer(hwndMain, TRAY_TIP_TIMER_ID);
             g_trayTipTimerActive = FALSE;
@@ -1058,9 +1071,9 @@ void SetTrayInteractionSuspended(BOOL suspended) {
 
     if (g_showingOpacityTip) {
         g_showingOpacityTip = FALSE;
+        EndTrayOpacityPreview(hwndMain);
     }
 
-    HWND hwndMain = GetValidTrayMainWindow();
     if (hwndMain) {
         TrayAnimation_RefreshCurrentIcon();
         RefreshTrayBackgroundWorkState();
@@ -1087,6 +1100,7 @@ void UninstallTrayMouseHook(void) {
     if (g_showingOpacityTip) {
         g_showingOpacityTip = FALSE;
         HWND hwndMain = GetValidTrayMainWindow();
+        EndTrayOpacityPreview(hwndMain);
         if (hwndMain && g_trayTooltipActive) {
             TrayTipTimerProc(hwndMain, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
         }

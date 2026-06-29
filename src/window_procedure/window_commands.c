@@ -41,6 +41,7 @@ extern void HandleStartupMode(HWND hwnd);
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
 #include "menu_preview.h"
+#include "preview_display.h"
 #include "dialog/dialog_font_picker.h"
 #include "../resource/resource.h"
 #include "color/color_parser.h"
