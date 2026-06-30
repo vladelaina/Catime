@@ -57,8 +57,6 @@ BEGIN
     LTEXT           "Always on Top:",IDC_HOTKEY_LABEL14,14,275,80,8
     CONTROL         "",IDC_HOTKEY_EDIT14,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,273,160,14
     
-    /** Instructional note for hotkey usage */
-    LTEXT           "* Hotkeys will work globally",IDC_HOTKEY_NOTE,15,305,200,8
     /** Standard dialog buttons */
     PUSHBUTTON      "Cancel",IDCANCEL,170,320,50,14
     DEFPUSHBUTTON   "OK",IDOK,225,320,50,14

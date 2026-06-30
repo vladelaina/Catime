@@ -366,7 +366,6 @@
 #define IDC_HOTKEY_EDIT2 2104            /**< Hotkey edit control 2 */
 #define IDC_HOTKEY_LABEL3 2105           /**< Hotkey label 3 */
 #define IDC_HOTKEY_EDIT3 2106            /**< Hotkey edit control 3 */
-#define IDC_HOTKEY_NOTE 2107             /**< Hotkey note text */
 #define CLOCK_IDM_HOTKEY_SETTINGS 5000   /**< Hotkey settings menu item (outside animation range 3000-4000) */
 
 /** @brief Additional hotkey control identifiers (4-8) */

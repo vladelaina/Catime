@@ -209,8 +209,6 @@ static void InitializeDialogLabels(HWND hwndDlg) {
                                         g_hotkeyMetadata[i].labelEN));
     }
 
-    SetDlgItemTextW(hwndDlg, IDC_HOTKEY_NOTE,
-                   GetLocalizedString(NULL, L"* Hotkeys will work globally"));
     SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(NULL, L"OK"));
     SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(NULL, L"Cancel"));
 }
@@ -472,10 +470,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             if (hwndHit != NULL && hwndHit != hwndDlg) {
                 int ctrlId = GetDlgCtrlID(hwndHit);
                 if (!IsHotkeyEditControl(ctrlId)) {
-                    SetFocus(GetDlgItem(hwndDlg, IDC_HOTKEY_NOTE));
+                    SetFocus(GetDlgItem(hwndDlg, IDOK));
                 }
             } else if (hwndHit == hwndDlg) {
-                SetFocus(GetDlgItem(hwndDlg, IDC_HOTKEY_NOTE));
+                SetFocus(GetDlgItem(hwndDlg, IDOK));
                 return TRUE;
             }
             break;
@@ -502,7 +500,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
                     GetHotkeyControlValues(hwndDlg);
                     ValidateAllHotkeys();
                     if (!SaveHotkeyConfiguration()) {
-                        Dialog_ShowErrorAndRefocus(hwndDlg, IDC_HOTKEY_NOTE);
+                        Dialog_ShowErrorAndRefocus(hwndDlg, IDOK);
                         return TRUE;
                     }
 
