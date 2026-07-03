@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #define WM_NOTIFICATION_SOUND_PLAYBACK_COMPLETE (WM_APP + 100)
+#define WM_NOTIFICATION_SOUND_CACHE_UPDATED     (WM_APP + 101)
 
 /* ============================================================================
  * Audio File Management
@@ -27,6 +28,12 @@
 void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile);
 
 /**
+ * @brief Refresh combo box from the latest cached audio scan while preserving selection
+ * @param hwndCombo Sound combo box handle
+ */
+void RefreshNotificationSoundComboBox(HWND hwndCombo);
+
+/**
  * @brief Reset shutdown state before using the notification sound cache
  */
 void NotificationSoundCache_Initialize(void);
@@ -35,6 +42,12 @@ void NotificationSoundCache_Initialize(void);
  * @brief Request a background refresh of the notification sound cache
  */
 void NotificationSoundCache_RequestScanAsync(void);
+
+/**
+ * @brief Register a window to receive WM_NOTIFICATION_SOUND_CACHE_UPDATED
+ * @param hwnd Window handle, or NULL to clear notification target
+ */
+void NotificationSoundCache_SetNotifyWindow(HWND hwnd);
 
 /**
  * @brief Stop background notification sound scanning and clear cached state

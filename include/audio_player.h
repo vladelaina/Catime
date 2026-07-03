@@ -32,17 +32,20 @@ typedef void (*AudioPlaybackCompleteCallback)(HWND hwnd);
 void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback callback);
 
 /**
- * @brief Plays notification sound with automatic fallback
+ * @brief Queues notification sound playback with automatic fallback
  * @param hwnd Window handle for error dialogs
- * @return TRUE on success (including beep fallback), FALSE on catastrophic failure
+ * @return TRUE if playback was queued or intentionally silent, FALSE on catastrophic failure
  * 
  * @details
+ * Formal timer notifications use a background worker so large audio files do
+ * not block the countdown display at completion.
+ *
  * Special cases:
  * - Empty NOTIFICATION_SOUND_FILE: Silent success (user disabled audio)
  * - "SYSTEM_BEEP": Direct beep (bypasses file playback)
- * - Invalid path: Shows error once, then falls back to beep
+ * - Invalid path: Falls back to beep in the background
  * 
- * @note Always returns TRUE for beep fallback (notification delivered)
+ * @note The return value means the request was accepted, not that file loading has finished.
  */
 BOOL PlayNotificationSound(HWND hwnd);
 
@@ -53,6 +56,18 @@ BOOL PlayNotificationSound(HWND hwnd);
  * @return TRUE on success (including beep fallback), FALSE on catastrophic failure
  */
 BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile);
+
+/**
+ * @brief Plays a specific notification sound for UI preview/testing
+ * @param hwnd Window handle for timer ownership/callbacks
+ * @param soundFile UTF-8 path, "SYSTEM_BEEP", or empty for silent success
+ * @return TRUE if the selected sound played or was intentionally silent
+ *
+ * @details
+ * Unlike PlayNotificationSoundFile(), file playback failures do not fall back
+ * to system beep. Selecting "SYSTEM_BEEP" still plays the beep explicitly.
+ */
+BOOL PreviewNotificationSoundFile(HWND hwnd, const char* soundFile);
 
 /**
  * @brief Pauses audio playback without losing position

@@ -27,9 +27,11 @@ static BOOL g_soundFileCacheReady = FALSE;
 static BOOL g_soundFileCacheFailed = FALSE;
 static SRWLOCK g_soundFileCacheLock = SRWLOCK_INIT;
 static SRWLOCK g_soundScanThreadLock = SRWLOCK_INIT;
+static SRWLOCK g_soundCacheNotifyLock = SRWLOCK_INIT;
 static HANDLE g_hSoundScanThread = NULL;
 static HANDLE g_hRetiredSoundScanThread = NULL;
 static DirectoryWatcher g_soundFolderWatcher = {0};
+static HWND g_soundCacheNotifyHwnd = NULL;
 static volatile LONG g_soundScanShuttingDown = 0;
 static volatile LONG g_soundScanGeneration = 0;
 static volatile LONG g_soundFileLastScanTick = 0;
@@ -48,6 +50,28 @@ static BOOL IsSoundScanShuttingDown(void) {
 static BOOL IsSoundScanCanceled(LONG generation) {
     return IsSoundScanShuttingDown() ||
            InterlockedCompareExchange(&g_soundScanGeneration, 0, 0) != generation;
+}
+
+static BOOL IsCurrentProcessAudioWindow(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) {
+        return FALSE;
+    }
+
+    DWORD processId = 0;
+    GetWindowThreadProcessId(hwnd, &processId);
+    return processId == GetCurrentProcessId();
+}
+
+static void NotifyNotificationSoundCacheUpdated(void) {
+    HWND hwnd = NULL;
+
+    AcquireSRWLockShared(&g_soundCacheNotifyLock);
+    hwnd = g_soundCacheNotifyHwnd;
+    ReleaseSRWLockShared(&g_soundCacheNotifyLock);
+
+    if (IsCurrentProcessAudioWindow(hwnd)) {
+        PostMessageW(hwnd, WM_NOTIFICATION_SOUND_CACHE_UPDATED, 0, 0);
+    }
 }
 
 static BOOL IsSoundFileCacheRecentlyScanned(DWORD now) {
@@ -208,6 +232,7 @@ static BOOL StoreNotificationSoundCache(const wchar_t* files, int fileCount,
     ReleaseSRWLockExclusive(&g_soundFileCacheLock);
 
     InterlockedExchange(&g_soundFileLastScanTick, (LONG)GetTickCount());
+    NotifyNotificationSoundCacheUpdated();
     return TRUE;
 }
 
@@ -221,6 +246,7 @@ static void MarkNotificationSoundCacheScanFailed(void) {
         InterlockedExchange(&g_soundFileLastScanTick, (LONG)GetTickCount());
     }
     ReleaseSRWLockExclusive(&g_soundFileCacheLock);
+    NotifyNotificationSoundCacheUpdated();
 }
 
 static BOOL CloseCompletedSoundScanThreadLocked(DWORD waitMs) {
@@ -419,6 +445,12 @@ void NotificationSoundCache_RequestScanAsync(void) {
     RequestNotificationSoundCacheScanAsync(FALSE);
 }
 
+void NotificationSoundCache_SetNotifyWindow(HWND hwnd) {
+    AcquireSRWLockExclusive(&g_soundCacheNotifyLock);
+    g_soundCacheNotifyHwnd = IsCurrentProcessAudioWindow(hwnd) ? hwnd : NULL;
+    ReleaseSRWLockExclusive(&g_soundCacheNotifyLock);
+}
+
 void NotificationSoundCache_Shutdown(void) {
     HANDLE hThread = NULL;
 
@@ -535,6 +567,32 @@ void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile) 
     }
 }
 
+void RefreshNotificationSoundComboBox(HWND hwndCombo) {
+    if (!hwndCombo) return;
+
+    int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
+    wchar_t selectedFile[MAX_PATH] = {0};
+    if (selectedIndex > 0) {
+        SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
+    }
+
+    const char* currentFile = (selectedIndex > 0)
+        ? g_AppConfig.notification.sound.sound_file
+        : NULL;
+    PopulateNotificationSoundComboBox(hwndCombo, currentFile);
+
+    if (selectedFile[0] != L'\0') {
+        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT,
+                                        (WPARAM)-1,
+                                        (LPARAM)selectedFile);
+        if (newIndex != CB_ERR) {
+            SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
+        } else {
+            SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
+        }
+    }
+}
+
 BOOL GetSelectedNotificationSoundFile(HWND hwndCombo, char* outSoundFile, size_t outSize) {
     if (!hwndCombo || !outSoundFile || outSize == 0) return FALSE;
 
@@ -595,7 +653,7 @@ BOOL HandleSoundTestButton(HWND hwndDlg, HWND hwndCombo, HWND hwndSlider, BOOL* 
             int volume = (int)SendMessage(hwndSlider, TBM_GETPOS, 0, 0);
             SetAudioVolume(volume);
 
-            if (PlayNotificationSoundFile(hwndDlg, soundFile)) {
+            if (PreviewNotificationSoundFile(hwndDlg, soundFile)) {
                 SetDlgItemTextW(hwndDlg, IDC_TEST_SOUND_BUTTON, GetLocalizedString(NULL, L"Stop"));
                 *isPlaying = TRUE;
             }
@@ -624,46 +682,18 @@ void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo) {
     }
 
     ShellExecuteW(hwndDlg, L"open", wAudioPath, NULL, NULL, SW_SHOWNORMAL);
-    
-    int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
-    wchar_t selectedFile[MAX_PATH] = {0};
-    if (selectedIndex > 0) {
-        SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
-    }
-    
-    const char* currentFile = (selectedIndex > 0) ? g_AppConfig.notification.sound.sound_file : NULL;
+
     RequestNotificationSoundCacheScanAsync(TRUE);
     WaitForNotificationSoundCacheForegroundRefresh();
-    PopulateNotificationSoundComboBox(hwndCombo, currentFile);
-    
-    if (selectedFile[0] != L'\0') {
-        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)selectedFile);
-        if (newIndex != CB_ERR) {
-            SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
-        } else {
-            SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
-        }
-    }
+    RefreshNotificationSoundComboBox(hwndCombo);
 }
 
 void HandleSoundComboDropdown(HWND hwndCombo) {
     if (!hwndCombo) return;
 
-    int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
-    wchar_t selectedFile[MAX_PATH] = {0};
-    if (selectedIndex > 0) {
-        SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
-    }
-    
-    const char* currentFile = (selectedIndex > 0) ? g_AppConfig.notification.sound.sound_file : NULL;
-    PopulateNotificationSoundComboBox(hwndCombo, currentFile);
-    
-    if (selectedFile[0] != L'\0') {
-        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)selectedFile);
-        if (newIndex != CB_ERR) {
-            SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
-        }
-    }
+    RequestNotificationSoundCacheScanAsync(TRUE);
+    WaitForNotificationSoundCacheForegroundRefresh();
+    RefreshNotificationSoundComboBox(hwndCombo);
 }
 
 void SetupAudioPlaybackCallback(HWND hwndDlg) {

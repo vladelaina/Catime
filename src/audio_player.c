@@ -2,12 +2,14 @@
  * @file audio_player.c
  * @brief Three-tier audio fallback (miniaudio → PlaySound → beep)
  * 
- * Why three tiers: Unicode paths fail miniaudio, WAV-only fails PlaySound, beep never fails.
- * Path encoding: UTF-8 → short path (8.3) → ANSI for miniaudio compatibility.
+ * Why three tiers: miniaudio handles MP3/FLAC/WAV, PlaySound covers WAV fallback, beep never fails.
+ * Path handling: UTF-8 → wide path first, then short path/ANSI/temp copy fallback for compatibility.
  * Completion: miniaudio polls 500ms, PlaySound 3s timeout/purge (no API), beep 500ms fixed.
  */
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <strsafe.h>
 #include "../libs/miniaudio/miniaudio.h"
 #include "config.h"
@@ -23,7 +25,8 @@
 #define TIMER_INTERVAL_BEEP        500
 #define AUDIO_TIMER_ID_BASE        ((UINT_PTR)0xA7000000u)
 #define AUDIO_TIMER_ID_MASK        0xFFFFu
-#define MAX_NOTIFICATION_AUDIO_BYTES (32ull * 1024ull * 1024ull)
+#define MAX_NOTIFICATION_AUDIO_BYTES (64ull * 1024ull * 1024ull)
+#define MINIAUDIO_SOUND_FLAGS (MA_SOUND_FLAG_STREAM | MA_SOUND_FLAG_NO_SPATIALIZATION)
 
 typedef void (*AudioPlaybackCompleteCallback)(HWND hwnd);
 
@@ -39,6 +42,12 @@ typedef struct {
     ULONGLONG sizeBytes;
 } AudioFileInfo;
 
+typedef struct {
+    HWND hwnd;
+    char soundFile[MAX_PATH];
+    LONG generation;
+} AudioPlaybackRequest;
+
 static ma_engine g_audioEngine;
 static ma_sound g_sound;
 static ma_bool32 g_engineInitialized = MA_FALSE;
@@ -52,15 +61,21 @@ static UINT_PTR g_audioTimerId = 0;
 static AudioTimerKind g_audioTimerKind = AUDIO_TIMER_NONE;
 static HWND g_audioTimerHwnd = NULL;
 static volatile LONG g_audioTimerSerial = 0;
+static volatile LONG g_audioPlaybackGeneration = 0;
 static wchar_t g_tempAudioFile[MAX_PATH] = {0};
+static SRWLOCK g_audioStateLock = SRWLOCK_INIT;
 
 static void CALLBACK AudioTimerCallback(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime);
+static DWORD WINAPI AudioPlaybackThreadProc(LPVOID lpParam);
 static BOOL FallbackToPlaySound(HWND hwnd, const wchar_t* wFilePath);
 static BOOL FallbackToSystemBeep(HWND hwnd);
 static void ResetPlaybackState(void);
 static BOOL StartPlaybackTimer(HWND hwnd, AudioTimerKind timerKind, UINT interval);
 static void ShutdownAudioEngine(void);
 static void CleanupMiniaudioAttempt(void);
+static void CleanupAudioResourcesLocked(void);
+static BOOL PlayNotificationSoundFileInternalLocked(HWND hwnd, const char* soundFile,
+                                                    BOOL allowFinalBeepFallback);
 static BOOL GetWideCharPath(const char* utf8Path, wchar_t* wPath, size_t wPathSize);
 
 static BOOL IsCurrentProcessAudioWindow(HWND hwnd) {
@@ -442,7 +457,24 @@ static ma_result LoadAudioFile(const char* convertedPath) {
         g_soundInitialized = MA_FALSE;
     }
     
-    ma_result result = ma_sound_init_from_file(&g_audioEngine, convertedPath, 0, NULL, NULL, &g_sound);
+    ma_result result = ma_sound_init_from_file(&g_audioEngine, convertedPath,
+                                               MINIAUDIO_SOUND_FLAGS,
+                                               NULL, NULL, &g_sound);
+    if (result == MA_SUCCESS) {
+        g_soundInitialized = MA_TRUE;
+    }
+    return result;
+}
+
+static ma_result LoadAudioFileWide(const wchar_t* wFilePath) {
+    if (g_soundInitialized) {
+        ma_sound_uninit(&g_sound);
+        g_soundInitialized = MA_FALSE;
+    }
+
+    ma_result result = ma_sound_init_from_file_w(&g_audioEngine, wFilePath,
+                                                 MINIAUDIO_SOUND_FLAGS,
+                                                 NULL, NULL, &g_sound);
     if (result == MA_SUCCESS) {
         g_soundInitialized = MA_TRUE;
     }
@@ -475,17 +507,22 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath, const wchar_
     float volume = (float)g_AppConfig.notification.sound.volume / 100.0f;
     ma_engine_set_volume(&g_audioEngine, volume);
     
-    char convertedPath[MAX_PATH * 4] = {0};
-    if (!ConvertPathForMiniaudio(wFilePath, convertedPath, sizeof(convertedPath))) {
-        CleanupMiniaudioAttempt();
-        return FallbackToPlaySound(hwnd, wFilePath);
-    }
-    
-    ma_result result = LoadAudioFile(convertedPath);
+    ma_result result = LoadAudioFileWide(wFilePath);
     if (result != MA_SUCCESS) {
-        LOG_WARNING("miniaudio failed to load audio file (error: %d), falling back to PlaySound", result);
-        CleanupMiniaudioAttempt();
-        return FallbackToPlaySound(hwnd, wFilePath);
+        LOG_WARNING("miniaudio failed to load wide audio path (error: %d), trying ANSI fallback", result);
+
+        char convertedPath[MAX_PATH * 4] = {0};
+        if (!ConvertPathForMiniaudio(wFilePath, convertedPath, sizeof(convertedPath))) {
+            CleanupMiniaudioAttempt();
+            return FallbackToPlaySound(hwnd, wFilePath);
+        }
+
+        result = LoadAudioFile(convertedPath);
+        if (result != MA_SUCCESS) {
+            LOG_WARNING("miniaudio failed to load audio file (error: %d), falling back to PlaySound", result);
+            CleanupMiniaudioAttempt();
+            return FallbackToPlaySound(hwnd, wFilePath);
+        }
     }
     
     if (StartAudioPlayback() != MA_SUCCESS) {
@@ -515,11 +552,17 @@ static BOOL PlayAudioWithMiniaudio(HWND hwnd, const char* filePath, const wchar_
 static void CALLBACK AudioTimerCallback(HWND hwnd, UINT message, UINT_PTR idEvent, DWORD dwTime) {
     (void)dwTime;
 
+    AudioPlaybackCompleteCallback callback = NULL;
+    HWND callbackHwnd = NULL;
+
+    AcquireSRWLockExclusive(&g_audioStateLock);
+
     if (message != WM_TIMER ||
         idEvent != g_audioTimerId ||
         g_audioTimerKind == AUDIO_TIMER_NONE ||
         hwnd != g_audioTimerHwnd ||
         !IsCurrentProcessAudioWindow(hwnd)) {
+        ReleaseSRWLockExclusive(&g_audioStateLock);
         return;
     }
     
@@ -557,8 +600,8 @@ static void CALLBACK AudioTimerCallback(HWND hwnd, UINT message, UINT_PTR idEven
     
     if (shouldStop) {
         HWND timerHwnd = g_audioTimerHwnd ? g_audioTimerHwnd : hwnd;
-        HWND callbackHwnd = g_audioCallbackHwnd;
-        AudioPlaybackCompleteCallback callback = g_audioCompleteCallback;
+        callbackHwnd = g_audioCallbackHwnd;
+        callback = g_audioCompleteCallback;
         BOOL shouldNotifyCallback = callback &&
                                     callbackHwnd &&
                                     callbackHwnd == timerHwnd &&
@@ -569,9 +612,16 @@ static void CALLBACK AudioTimerCallback(HWND hwnd, UINT message, UINT_PTR idEven
         }
         ResetPlaybackState();
         
-        if (shouldNotifyCallback) {
-            callback(callbackHwnd);
+        if (!shouldNotifyCallback) {
+            callback = NULL;
+            callbackHwnd = NULL;
         }
+    }
+
+    ReleaseSRWLockExclusive(&g_audioStateLock);
+
+    if (callback) {
+        callback(callbackHwnd);
     }
 }
 
@@ -583,6 +633,8 @@ void SetAudioVolume(int volume) {
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
 
+    AcquireSRWLockExclusive(&g_audioStateLock);
+
     if (g_engineInitialized) {
         float volFloat = (float)volume / 100.0f;
         ma_engine_set_volume(&g_audioEngine, volFloat);
@@ -591,9 +643,13 @@ void SetAudioVolume(int volume) {
             ma_sound_set_volume(&g_sound, volFloat);
         }
     }
+
+    ReleaseSRWLockExclusive(&g_audioStateLock);
 }
 
 void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback callback) {
+    AcquireSRWLockExclusive(&g_audioStateLock);
+
     if (callback && IsCurrentProcessAudioWindow(hwnd)) {
         g_audioCallbackHwnd = hwnd;
         g_audioCompleteCallback = callback;
@@ -601,9 +657,11 @@ void SetAudioPlaybackCompleteCallback(HWND hwnd, AudioPlaybackCompleteCallback c
         g_audioCallbackHwnd = NULL;
         g_audioCompleteCallback = NULL;
     }
+
+    ReleaseSRWLockExclusive(&g_audioStateLock);
 }
 
-void CleanupAudioResources(void) {
+static void CleanupAudioResourcesLocked(void) {
     PlaySoundW(NULL, NULL, SND_PURGE);
 
     if (g_engineInitialized && g_soundInitialized) {
@@ -620,8 +678,16 @@ void CleanupAudioResources(void) {
     ResetPlaybackState();
 }
 
-BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile) {
-    CleanupAudioResources();
+void CleanupAudioResources(void) {
+    InterlockedIncrement(&g_audioPlaybackGeneration);
+    AcquireSRWLockExclusive(&g_audioStateLock);
+    CleanupAudioResourcesLocked();
+    ReleaseSRWLockExclusive(&g_audioStateLock);
+}
+
+static BOOL PlayNotificationSoundFileInternalLocked(HWND hwnd, const char* soundFile,
+                                                    BOOL allowFinalBeepFallback) {
+    CleanupAudioResourcesLocked();
 
     if (!soundFile || soundFile[0] == '\0') {
         return TRUE;
@@ -632,35 +698,112 @@ BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile) {
     }
 
     if (!IsValidFilePath(soundFile)) {
-        LOG_WARNING("Invalid audio file path (will fallback to system beep): %s", soundFile);
-        return FallbackToSystemBeep(hwnd);
+        LOG_WARNING("Invalid audio file path%s: %s",
+                    allowFinalBeepFallback ? " (will fallback to system beep)" : "",
+                    soundFile);
+        return allowFinalBeepFallback ? FallbackToSystemBeep(hwnd) : FALSE;
     }
 
     AudioFileInfo fileInfo;
     if (!GetAudioFileInfo(soundFile, &fileInfo)) {
-        LOG_WARNING("Cannot find audio file (will fallback to system beep): %s", soundFile);
-        return FallbackToSystemBeep(hwnd);
+        LOG_WARNING("Cannot find audio file%s: %s",
+                    allowFinalBeepFallback ? " (will fallback to system beep)" : "",
+                    soundFile);
+        return allowFinalBeepFallback ? FallbackToSystemBeep(hwnd) : FALSE;
     }
 
     if (!IsAudioFileSizeAllowed(soundFile, fileInfo.sizeBytes)) {
-        return FallbackToSystemBeep(hwnd);
+        return allowFinalBeepFallback ? FallbackToSystemBeep(hwnd) : FALSE;
     }
 
     if (PlayAudioWithMiniaudio(hwnd, soundFile, fileInfo.path)) {
         return TRUE;
     }
 
-    LOG_WARNING("All audio playback methods failed, using system beep as final fallback");
-    return FallbackToSystemBeep(hwnd);
+    LOG_WARNING("All audio playback methods failed%s",
+                allowFinalBeepFallback ? ", using system beep as final fallback" : "");
+    return allowFinalBeepFallback ? FallbackToSystemBeep(hwnd) : FALSE;
+}
+
+static DWORD WINAPI AudioPlaybackThreadProc(LPVOID lpParam) {
+    AudioPlaybackRequest* request = (AudioPlaybackRequest*)lpParam;
+    if (!request) {
+        return 0;
+    }
+
+    HWND hwnd = request->hwnd;
+    LONG generation = request->generation;
+    char soundFile[MAX_PATH] = {0};
+    strncpy(soundFile, request->soundFile, sizeof(soundFile) - 1);
+    soundFile[sizeof(soundFile) - 1] = '\0';
+    free(request);
+
+    if (InterlockedCompareExchange(&g_audioPlaybackGeneration, 0, 0) != generation) {
+        return 0;
+    }
+
+    AcquireSRWLockExclusive(&g_audioStateLock);
+    if (InterlockedCompareExchange(&g_audioPlaybackGeneration, 0, 0) == generation) {
+        PlayNotificationSoundFileInternalLocked(hwnd, soundFile, TRUE);
+        if (InterlockedCompareExchange(&g_audioPlaybackGeneration, 0, 0) != generation) {
+            CleanupAudioResourcesLocked();
+        }
+    }
+    ReleaseSRWLockExclusive(&g_audioStateLock);
+    return 0;
+}
+
+BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile) {
+    InterlockedIncrement(&g_audioPlaybackGeneration);
+    AcquireSRWLockExclusive(&g_audioStateLock);
+    BOOL result = PlayNotificationSoundFileInternalLocked(hwnd, soundFile, TRUE);
+    ReleaseSRWLockExclusive(&g_audioStateLock);
+    return result;
+}
+
+BOOL PreviewNotificationSoundFile(HWND hwnd, const char* soundFile) {
+    InterlockedIncrement(&g_audioPlaybackGeneration);
+    AcquireSRWLockExclusive(&g_audioStateLock);
+    BOOL result = PlayNotificationSoundFileInternalLocked(hwnd, soundFile, FALSE);
+    ReleaseSRWLockExclusive(&g_audioStateLock);
+    return result;
 }
 
 BOOL PlayNotificationSound(HWND hwnd) {
-    return PlayNotificationSoundFile(hwnd, g_AppConfig.notification.sound.sound_file);
+    if (g_AppConfig.notification.sound.sound_file[0] == '\0') {
+        return TRUE;
+    }
+
+    AudioPlaybackRequest* request = (AudioPlaybackRequest*)calloc(1, sizeof(*request));
+    if (!request) {
+        LOG_WARNING("Failed to allocate async audio playback request");
+        return PlayNotificationSoundFile(hwnd, g_AppConfig.notification.sound.sound_file);
+    }
+
+    request->hwnd = hwnd;
+    request->generation = InterlockedIncrement(&g_audioPlaybackGeneration);
+    strncpy(request->soundFile, g_AppConfig.notification.sound.sound_file,
+            sizeof(request->soundFile) - 1);
+    request->soundFile[sizeof(request->soundFile) - 1] = '\0';
+
+    HANDLE thread = CreateThread(NULL, 0, AudioPlaybackThreadProc, request, 0, NULL);
+    if (!thread) {
+        LOG_WARNING("Failed to start async audio playback thread (error=%lu)", GetLastError());
+        BOOL result = PlayNotificationSoundFile(hwnd, request->soundFile);
+        free(request);
+        return result;
+    }
+
+    CloseHandle(thread);
+    return TRUE;
 }
 
 BOOL PauseNotificationSound(void) {
+    AcquireSRWLockExclusive(&g_audioStateLock);
+
     if (g_isPlaying && !g_isPaused && g_engineInitialized && g_soundInitialized) {
         if (ma_sound_stop(&g_sound) != MA_SUCCESS) {
+            ReleaseSRWLockExclusive(&g_audioStateLock);
             return FALSE;
         }
         g_isPaused = MA_TRUE;
@@ -674,15 +817,21 @@ BOOL PauseNotificationSound(void) {
             g_audioTimerId = 0;
             g_audioTimerHwnd = timerHwnd;
         }
+        ReleaseSRWLockExclusive(&g_audioStateLock);
         return TRUE;
     }
+
+    ReleaseSRWLockExclusive(&g_audioStateLock);
     return FALSE;
 }
 
 BOOL ResumeNotificationSound(void) {
+    AcquireSRWLockExclusive(&g_audioStateLock);
+
     if (g_isPlaying && g_isPaused && g_engineInitialized && g_soundInitialized) {
         HWND timerHwnd = g_audioTimerHwnd ? g_audioTimerHwnd : g_audioCallbackHwnd;
         if (ma_sound_start(&g_sound) != MA_SUCCESS) {
+            ReleaseSRWLockExclusive(&g_audioStateLock);
             return FALSE;
         }
         g_isPaused = MA_FALSE;
@@ -692,11 +841,15 @@ BOOL ResumeNotificationSound(void) {
                 !StartPlaybackTimer(timerHwnd, AUDIO_TIMER_MINIAUDIO, TIMER_INTERVAL_AUDIO_CHECK)) {
                 ma_sound_stop(&g_sound);
                 g_isPaused = MA_TRUE;
+                ReleaseSRWLockExclusive(&g_audioStateLock);
                 return FALSE;
             }
         }
+        ReleaseSRWLockExclusive(&g_audioStateLock);
         return TRUE;
     }
+
+    ReleaseSRWLockExclusive(&g_audioStateLock);
     return FALSE;
 }
 
