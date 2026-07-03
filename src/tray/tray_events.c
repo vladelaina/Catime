@@ -255,6 +255,7 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
             break;
 
         case WM_RBUTTONUP:
+            StopNotificationSound();
             SetCursor(LoadCursorW(NULL, IDC_ARROW));
             TryRestorePendingWindowPosition(hwnd);
             SetTrayInteractionSuspended(TRUE);
@@ -263,6 +264,7 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
             break;
             
         case WM_LBUTTONUP:
+            StopNotificationSound();
             SetCursor(LoadCursorW(NULL, IDC_ARROW));
             TryRestorePendingWindowPosition(hwnd);
             SetTrayInteractionSuspended(TRUE);
