@@ -11,11 +11,11 @@
 /** @brief Compact dialog informing user no updates are available */
 IDD_NO_UPDATE_DIALOG DIALOGEX 0, 0, 160, 60
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Update Check"
+CAPTION "Catime - Update Notice"
 FONT 12, "Microsoft YaHei UI"
 BEGIN
     /** Centered status message */
     CTEXT           "No Update Required", IDC_NO_UPDATE_TEXT, 0, 10, 160, 25
     /** Single acknowledgment button */
     DEFPUSHBUTTON   "OK", IDOK, 60, 40, 40, 15
-END 
+END

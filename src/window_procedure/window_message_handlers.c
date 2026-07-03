@@ -753,6 +753,7 @@ static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
         menuItem == CLOCK_IDM_TIME_FORMAT_FULL_PADDED ||
         menuItem == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS ||
         menuItem == CLOCK_IDM_SHOW_SECONDS ||
+        menuItem == CLOCK_IDM_24HOUR_FORMAT ||
         TextEffect_IsMenuId(menuItem)) {
         colorOrFont = TRUE;
     }

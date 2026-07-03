@@ -161,7 +161,7 @@ BOOL GetPreviewTimeText(wchar_t* outText, size_t bufferSize) {
     SYSTEMTIME st;
     GetLocalTime(&st);
 
-    int hours = CLOCK_USE_24HOUR ? st.wHour : (st.wHour % 12 == 0 ? 12 : st.wHour % 12);
+    int hours = GetActiveUse24Hour() ? st.wHour : (st.wHour % 12 == 0 ? 12 : st.wHour % 12);
     int minutes = st.wMinute;
     int seconds = st.wSecond;
 

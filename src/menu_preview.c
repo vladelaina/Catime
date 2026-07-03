@@ -54,6 +54,7 @@ typedef struct {
         TimeFormatType timeFormat;
         BOOL showMilliseconds;
         BOOL showSeconds;
+        BOOL use24Hour;
         char animationPath[MAX_PATH];
         EffectType effect;
     } data;
@@ -199,6 +200,10 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             g_previewState.data.showSeconds = *(BOOL*)data;
             if (hwnd) ResetTimerWithInterval(hwnd);
             break;
+
+        case PREVIEW_TYPE_24HOUR:
+            g_previewState.data.use24Hour = *(BOOL*)data;
+            break;
         
         case PREVIEW_TYPE_ANIMATION: {
             const char* animPath = (const char*)data;
@@ -310,6 +315,14 @@ BOOL ApplyPreview(HWND hwnd) {
             CLOCK_SHOW_SECONDS = g_previewState.data.showSeconds;
             if (hwnd) ResetTimerWithInterval(hwnd);
             break;
+
+        case PREVIEW_TYPE_24HOUR:
+            if (!WriteConfigKeyValue("CLOCK_USE_24HOUR",
+                                     g_previewState.data.use24Hour ? "TRUE" : "FALSE")) {
+                return FALSE;
+            }
+            CLOCK_USE_24HOUR = g_previewState.data.use24Hour;
+            break;
             
         case PREVIEW_TYPE_ANIMATION:
             /* Animation preview applies itself */
@@ -384,6 +397,11 @@ BOOL GetActiveShowMilliseconds(void) {
 BOOL GetActiveShowSeconds(void) {
     return (g_previewState.type == PREVIEW_TYPE_SECONDS) ?
            g_previewState.data.showSeconds : CLOCK_SHOW_SECONDS;
+}
+
+BOOL GetActiveUse24Hour(void) {
+    return (g_previewState.type == PREVIEW_TYPE_24HOUR) ?
+           g_previewState.data.use24Hour : CLOCK_USE_24HOUR;
 }
 
 EffectType GetActiveEffect(void) {

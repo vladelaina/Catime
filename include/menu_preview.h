@@ -43,6 +43,7 @@ typedef enum {
     PREVIEW_TYPE_TIME_FORMAT,
     PREVIEW_TYPE_MILLISECONDS,
     PREVIEW_TYPE_SECONDS,
+    PREVIEW_TYPE_24HOUR,
     PREVIEW_TYPE_ANIMATION,
     PREVIEW_TYPE_EFFECT,
 } PreviewType;
@@ -63,6 +64,7 @@ typedef enum {
  * - PREVIEW_TYPE_TIME_FORMAT: data = TimeFormatType*
  * - PREVIEW_TYPE_MILLISECONDS: data = BOOL*
  * - PREVIEW_TYPE_SECONDS: data = BOOL*
+ * - PREVIEW_TYPE_24HOUR: data = BOOL*
  * - PREVIEW_TYPE_ANIMATION: data = const char* (animation path)
  * - PREVIEW_TYPE_EFFECT: data = EffectType*
  * 
@@ -143,6 +145,12 @@ BOOL GetActiveShowMilliseconds(void);
  * @return Active seconds visibility setting
  */
 BOOL GetActiveShowSeconds(void);
+
+/**
+ * @brief Get 24-hour clock visibility (preview takes precedence)
+ * @return Active 24-hour setting
+ */
+BOOL GetActiveUse24Hour(void);
 
 /**
  * @brief Get active visual effect (preview takes precedence)

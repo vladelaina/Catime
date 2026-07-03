@@ -594,21 +594,19 @@ static BOOL ShouldRunMainTimer(HWND hwnd) {
  * 
  * @details Performance optimization:
  * - Milliseconds (centiseconds): 20ms = 50 FPS
- *   Rationale: Displays 0.01s precision, 50 FPS provides smooth updates
- *   while being 2x more CPU-efficient than 100 FPS. Imperceptible difference
- *   to human eye while maintaining accuracy.
+ *   Rationale: sample from the real clock often enough for smooth display
+ *   without forcing a costly 100 FPS layered-window redraw loop.
  * - No milliseconds: 1000ms = 1 FPS (sufficient for seconds-only display)
  * - Animated gradient: 66ms = 15 FPS (smooth animation without excessive CPU)
  */
 UINT GetTimerInterval(void) {
+    if (GetActiveShowMilliseconds()) {
+        return 20;
+    }
+
     /* Check for animated gradient */
     if (IsActiveTimerColorAnimated()) {
         return 66; /* 15 FPS - sufficient for smooth gradient animation */
-    }
-
-    /* 30 FPS is enough for centisecond display while reducing DWM wakeups. */
-    if (GetActiveShowMilliseconds()) {
-        return 33;
     }
 
     if (CLOCK_SHOW_CURRENT_TIME && GetActiveShowSeconds()) {

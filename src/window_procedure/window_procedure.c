@@ -455,7 +455,7 @@ void ToggleMilliseconds(HWND hwnd) {
         return;
     }
 
-    /* Reset timer with new interval (10ms for milliseconds, 1000ms without) */
+    /* Reset timer with the interval appropriate for the new display mode. */
     ResetTimerWithInterval(hwnd);
 
     InvalidateRect(hwnd, NULL, TRUE);

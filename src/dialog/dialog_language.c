@@ -52,8 +52,8 @@ static DialogTitleEntry g_dialogTitles[] = {
     {CLOCK_IDD_WEBSITE_DIALOG, L"Open Website"},
     {CLOCK_IDD_DIALOG1, L"Set Countdown"},
     {CLOCK_IDD_STARTUP_DIALOG, L"Startup Settings"},
-    {IDD_NO_UPDATE_DIALOG, L"Update Check"},
-    {IDD_UPDATE_DIALOG, L"Update Available"}
+    {IDD_NO_UPDATE_DIALOG, L"Catime - Update Notice"},
+    {IDD_UPDATE_DIALOG, L"Catime - Update Notice"}
 };
 
 static SpecialControlEntry g_specialControls[] = {

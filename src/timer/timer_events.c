@@ -485,12 +485,7 @@ static BOOL HasVisibleTimerTextChanged(wchar_t* lastText, size_t lastTextSize, B
 }
 
 static BOOL ShouldRenderMainTimer(wchar_t* lastText, size_t lastTextSize, BOOL* hasLastText) {
-    if (!g_AppConfig.display.time_format.show_milliseconds) {
-        return HasVisibleTimerTextChanged(lastText, lastTextSize, hasLastText);
-    }
-
-    if (hasLastText) *hasLastText = FALSE;
-    return TRUE;
+    return HasVisibleTimerTextChanged(lastText, lastTextSize, hasLastText);
 }
 
 static BOOL ShouldCheckActiveTimerRender(int currentElapsedSecond,
@@ -498,7 +493,7 @@ static BOOL ShouldCheckActiveTimerRender(int currentElapsedSecond,
                                          BOOL* hasLastCheckedSecond) {
     if (!lastCheckedSecond || !hasLastCheckedSecond) return TRUE;
 
-    if (g_AppConfig.display.time_format.show_milliseconds) {
+    if (GetActiveShowMilliseconds()) {
         *hasLastCheckedSecond = FALSE;
         return TRUE;
     }

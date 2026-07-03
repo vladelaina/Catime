@@ -407,7 +407,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 
                 SetDlgItemTextW(hwndDlg, IDYES, GetLocalizedString(NULL, L"Update Now"));
                 SetDlgItemTextW(hwndDlg, IDNO, GetLocalizedString(NULL, L"Later"));
-                SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Update Available"));
+                SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Catime - Update Notice"));
 
                 ShowWindow(GetDlgItem(hwndDlg, IDYES), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_SHOW);
@@ -579,6 +579,7 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
             g_hwndNoUpdateDialog = hwndDlg;
             
             InitializeDialog(hwndDlg, IDD_NO_UPDATE_DIALOG);
+            SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Catime - Update Notice"));
             
             if (g_noUpdateVersion[0]) {
                 const wchar_t* baseText = GetDialogLocalizedString(IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT);

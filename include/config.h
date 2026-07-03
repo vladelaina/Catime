@@ -850,17 +850,17 @@ BOOL WriteConfigTimeFormat(TimeFormatType format);
 
 /**
  * @brief Write centiseconds display setting (affects timer interval)
- * @param showMilliseconds TRUE for 10ms updates, FALSE for 1s
+ * @param showMilliseconds TRUE for high-frequency updates, FALSE for low-frequency updates
  * 
- * @details Changes timer frequency for performance (10ms vs 1000ms)
+ * @details Changes timer frequency for performance
  */
 BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
 
 /**
  * @brief Get timer interval based on centiseconds setting
- * @return 10ms if showing centiseconds, 1000ms otherwise
+ * @return High-frequency interval when showing centiseconds, lower interval otherwise
  * 
- * @details Performance optimization: only update 100x/sec when needed
+ * @details Performance optimization: only update frequently when needed
  */
 UINT GetTimerInterval(void);
 

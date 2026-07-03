@@ -86,6 +86,12 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
         return TRUE;
     }
 
+    if (menuId == CLOCK_IDM_24HOUR_FORMAT) {
+        BOOL use24Hour = !CLOCK_USE_24HOUR;
+        StartPreview(PREVIEW_TYPE_24HOUR, &use24Hour, hwnd);
+        return TRUE;
+    }
+
     EffectType effect = TextEffect_FromMenuId(menuId);
     if (effect != TEXT_EFFECT_NONE) {
         EffectType previewEffect =

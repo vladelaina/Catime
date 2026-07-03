@@ -158,7 +158,7 @@ static void FormatSystemClock(char* time_text) {
         last_displayed_second = st.wSecond;
     }
     
-    int display_hour = CLOCK_USE_24HOUR ? st.wHour : ConvertTo12HourFormat(st.wHour);
+    int display_hour = GetActiveUse24Hour() ? st.wHour : ConvertTo12HourFormat(st.wHour);
     
     if (GetActiveShowSeconds()) {
         snprintf(time_text, 64, "%d:%02d:%02d", display_hour, st.wMinute, last_displayed_second);

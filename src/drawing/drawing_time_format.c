@@ -98,7 +98,7 @@ TimeComponents GetCountDownComponents(void) {
     /* With centiseconds shown, use real second value to avoid +1s display skew.
      * Without centiseconds, keep round-up behavior for UX (e.g. 10:00 not 9:59). */
     int total_seconds;
-    if (g_AppConfig.display.time_format.show_milliseconds) {
+    if (GetActiveShowMilliseconds()) {
         total_seconds = ClampMillisecondsToSecondsFloor(remaining_ms);
     } else {
         total_seconds = ClampMillisecondsToSecondsCeil(remaining_ms);
@@ -230,7 +230,7 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
     BOOL finalShowSeconds = GetActiveShowSeconds();
 
     if (CLOCK_SHOW_CURRENT_TIME) {
-        TimeComponents tc = GetCurrentTimeComponents(CLOCK_USE_24HOUR);
+        TimeComponents tc = GetCurrentTimeComponents(GetActiveUse24Hour());
 
         if (finalShowSeconds) {
             /** Current time always shows hours (even if 0 in 24-hour mode) */

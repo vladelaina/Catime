@@ -955,7 +955,7 @@ static BOOL ShouldRunRenderAnimationTimer(BOOL hasRenderableContent,
     EffectType activeEffect = GetActiveEffect();
     return TextEffect_NeedsRenderTimer(activeEffect) ||
            hasColorTagGradient ||
-           (TextEffect_UsesAnimatedTextColor(activeEffect) && IsActiveTextColorAnimated());
+           IsActiveTextColorAnimated();
 }
 
 static BOOL UpdateDrawingRenderAnimationTimerForFrame(HWND hwnd,
@@ -1588,8 +1588,7 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     const wchar_t* textToRender = (isMarkdown && g_markdownRenderCache.mdText) ? g_markdownRenderCache.mdText : timeText;
     BOOL hasText = textToRender[0] != L'\0';
     const wchar_t* textToMeasure = textToRender;
-    if (CLOCK_EDIT_MODE &&
-        hasText &&
+    if (hasText &&
         !isMarkdown &&
         !PluginData_IsActive() &&
         BuildStableDigitMeasureText(textToRender,
