@@ -4,7 +4,6 @@
  */
 #include "notification_internal.h"
 
-#include <stdint.h>
 #include <stdlib.h>
 #include <wchar.h>
 
@@ -14,11 +13,13 @@
 
 typedef struct {
     HWND hwnd;
-    wchar_t* message;
+    wchar_t message[NOTIFICATION_MESSAGE_BUFFER_SIZE];
 } DialogThreadParams;
 
 static volatile LONG g_modalNotificationActive = 0;
 static DWORD g_modalNotificationStartFailureCooldownUntil = 0;
+/* A single static payload is safe because modal notifications are serialized. */
+static DialogThreadParams g_modalDialogParams = {0};
 
 static BOOL IsModalNotificationStartFailureCoolingDown(DWORD now) {
     return g_modalNotificationStartFailureCooldownUntil != 0 &&
@@ -50,14 +51,15 @@ void NotificationFallbackToTray(HWND hwnd, const wchar_t* message) {
 }
 
 static DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
-    DialogThreadParams* params = (DialogThreadParams*)lpParam;
-    HWND owner = NotificationGetOwnerWindow(params->hwnd);
+    (void)lpParam;
+
+    HWND owner = NotificationGetOwnerWindow(g_modalDialogParams.hwnd);
     if (owner) {
-        MessageBoxW(owner, params->message, L"Catime", MB_OK);
+        MessageBoxW(owner, g_modalDialogParams.message, L"Catime", MB_OK);
     }
 
-    free(params->message);
-    free(params);
+    g_modalDialogParams.hwnd = NULL;
+    g_modalDialogParams.message[0] = L'\0';
     InterlockedExchange(&g_modalNotificationActive, 0);
 
     return 0;
@@ -80,39 +82,15 @@ void ShowModalNotification(HWND hwnd, const wchar_t* message) {
         return;
     }
 
-    DialogThreadParams* params = (DialogThreadParams*)malloc(sizeof(DialogThreadParams));
-    if (!params) {
-        MarkModalNotificationStartFailure(now);
-        InterlockedExchange(&g_modalNotificationActive, 0);
-        NotificationFallbackToTray(owner, message);
-        return;
-    }
+    g_modalDialogParams.hwnd = owner;
+    wcsncpy_s(g_modalDialogParams.message, _countof(g_modalDialogParams.message),
+              message, _TRUNCATE);
 
-    size_t messageLen = wcslen(message) + 1;
-    if (messageLen > SIZE_MAX / sizeof(wchar_t)) {
-        free(params);
-        MarkModalNotificationStartFailure(now);
-        InterlockedExchange(&g_modalNotificationActive, 0);
-        NotificationFallbackToTray(owner, message);
-        return;
-    }
-    params->message = (wchar_t*)malloc(messageLen * sizeof(wchar_t));
-    if (!params->message) {
-        free(params);
-        MarkModalNotificationStartFailure(now);
-        InterlockedExchange(&g_modalNotificationActive, 0);
-        NotificationFallbackToTray(owner, message);
-        return;
-    }
-
-    params->hwnd = owner;
-    wcscpy_s(params->message, messageLen, message);
-
-    HANDLE hThread = CreateThread(NULL, 0, ShowModalDialogThread, params, 0, NULL);
+    HANDLE hThread = CreateThread(NULL, 0, ShowModalDialogThread, NULL, 0, NULL);
 
     if (hThread == NULL) {
-        free(params->message);
-        free(params);
+        g_modalDialogParams.hwnd = NULL;
+        g_modalDialogParams.message[0] = L'\0';
         MarkModalNotificationStartFailure(now);
         InterlockedExchange(&g_modalNotificationActive, 0);
         MessageBeep(MB_OK);
