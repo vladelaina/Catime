@@ -95,6 +95,12 @@ static BOOL CopyPendingUpdateDownloadUrl(char* dest, size_t destSize) {
     return dest[0] != '\0';
 }
 
+static void ClearPendingUpdateDownloadUrl(void) {
+    AcquireSRWLockExclusive(&g_downloadUrlLock);
+    g_downloadUrlCopy[0] = '\0';
+    ReleaseSRWLockExclusive(&g_downloadUrlLock);
+}
+
 static BOOL IsValidUpdateDialogParentWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
         return FALSE;
@@ -117,6 +123,13 @@ static BOOL IsValidUpdateDialogParentWindow(HWND hwnd) {
 static HWND GetUpdateDialogParent(HWND hwndDlg) {
     HWND hwndParent = hwndDlg ? GetParent(hwndDlg) : NULL;
     return IsValidUpdateDialogParentWindow(hwndParent) ? hwndParent : NULL;
+}
+
+static void CloseUpdateDialogInstance(DialogInstanceType type) {
+    HWND hwndDlg = Dialog_GetInstance(type);
+    if (hwndDlg && IsWindow(hwndDlg)) {
+        DestroyWindow(hwndDlg);
+    }
 }
 
 /** @brief Initialize dialog (center, localize) */
@@ -640,16 +653,13 @@ void ShowExitMessageDialog(HWND hwnd) {
 
 int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion,
                                   const char* downloadUrl, const char* releaseNotes) {
-    if (Dialog_IsOpen(DIALOG_INSTANCE_UPDATE)) {
-        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_UPDATE);
-        SetForegroundWindow(existing);
-        return IDNO;
-    }
-
     if (!IsValidUpdateDialogParentWindow(hwnd)) {
         LOG_WARNING("Update dialog not shown: invalid parent window hwnd=0x%p", hwnd);
         return IDNO;
     }
+
+    CloseUpdateDialogInstance(DIALOG_INSTANCE_NO_UPDATE);
+    CloseUpdateDialogInstance(DIALOG_INSTANCE_UPDATE);
 
     CopyUpdateString(g_dialogCurrentVersion, sizeof(g_dialogCurrentVersion), currentVersion);
     CopyUpdateString(g_dialogLatestVersion, sizeof(g_dialogLatestVersion), latestVersion);
@@ -699,6 +709,9 @@ void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
 }
 
 void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
+    CloseUpdateDialogInstance(DIALOG_INSTANCE_UPDATE);
+    ClearPendingUpdateDownloadUrl();
+
     if (Dialog_IsOpen(DIALOG_INSTANCE_NO_UPDATE)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_NO_UPDATE);
         SetForegroundWindow(existing);

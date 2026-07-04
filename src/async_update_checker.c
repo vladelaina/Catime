@@ -26,6 +26,8 @@ typedef struct {
 
 static HANDLE g_hUpdateThread = NULL;
 static volatile LONG g_updateThreadRunning = 0;
+/* Preserve a user-initiated check while a background check is already running. */
+static volatile LONG g_manualUpdateCheckQueued = 0;
 static SRWLOCK g_updateThreadLock = SRWLOCK_INIT;
 static DWORD g_updateStartFailureCooldownUntil = 0;
 
@@ -35,6 +37,7 @@ static DWORD g_updateStartFailureCooldownUntil = 0;
 
 static void ResetThreadStateLocked(void) {
     InterlockedExchange(&g_updateThreadRunning, 0);
+    InterlockedExchange(&g_manualUpdateCheckQueued, 0);
     if (g_hUpdateThread) {
         CloseHandle(g_hUpdateThread);
         g_hUpdateThread = NULL;
@@ -94,6 +97,14 @@ static void HandleThreadCreationFailure(UpdateThreadParams* params) {
     ResetThreadStateLocked();
 }
 
+static void QueueManualUpdateCheck(void) {
+    InterlockedExchange(&g_manualUpdateCheckQueued, 1);
+}
+
+static BOOL ConsumeQueuedManualUpdateCheck(void) {
+    return InterlockedExchange(&g_manualUpdateCheckQueued, 0) != 0;
+}
+
 /* ============================================================================
  * Thread procedure
  * ============================================================================ */
@@ -111,7 +122,20 @@ unsigned __stdcall UpdateCheckThreadProc(void* param) {
     BOOL silentCheck = threadParams->silentCheck;
     free(threadParams);
     
-    CheckForUpdateInternal(hwnd, silentCheck);
+    BOOL currentSilentCheck = silentCheck;
+    for (;;) {
+        if (!currentSilentCheck) {
+            ConsumeQueuedManualUpdateCheck();
+        }
+
+        CheckForUpdateInternal(hwnd, currentSilentCheck);
+
+        if (!ConsumeQueuedManualUpdateCheck()) {
+            break;
+        }
+
+        currentSilentCheck = FALSE;
+    }
 
     InterlockedExchange(&g_updateThreadRunning, 0);
     _endthreadex(0);
@@ -185,6 +209,11 @@ BOOL CheckForUpdateAsync(HWND hwnd, BOOL silentCheck) {
     }
 
     if (InterlockedCompareExchange(&g_updateThreadRunning, 1, 0) != 0) {
+        if (!silentCheck) {
+            QueueManualUpdateCheck();
+            ReleaseSRWLockExclusive(&g_updateThreadLock);
+            return TRUE;
+        }
         ReleaseSRWLockExclusive(&g_updateThreadLock);
         return FALSE;
     }

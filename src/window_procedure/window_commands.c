@@ -223,14 +223,6 @@ static LRESULT CmdNotificationSettings(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdCheckUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
 
-    char latestVersion[32] = {0};
-    if (GetNewVersionStatus(latestVersion, sizeof(latestVersion))) {
-        if (!PostMessage(hwnd, WM_UPDATE_CHECK_RESULT, 1, 0)) {
-            LOG_WARNING("Manual update check failed to post cached result message: %lu", GetLastError());
-        }
-        return 0;
-    }
-
     BOOL started = CheckForUpdateAsync(hwnd, FALSE);
     if (!started) {
         LOG_WARNING("Manual update check was not started");
