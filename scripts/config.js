@@ -1,9 +1,18 @@
+const CATIME_DOWNLOAD_VERSION = '1.4.0';
+const CATIME_DOWNLOAD_FILE = `catime_${CATIME_DOWNLOAD_VERSION}.exe`;
+const CATIME_GITHUB_URL = 'https://github.com/vladelaina/Catime';
+
 window.CATIME_CONFIG = {
-    DOWNLOAD_URL: 'https://github.com/vladelaina/Catime/releases/download/v1.4.0/catime_1.4.0.exe',
-    
-    GITHUB_URL: 'https://github.com/vladelaina/Catime',
-    
-    VERSION: '1.0.0',
+    DOWNLOAD_FILE: CATIME_DOWNLOAD_FILE,
+    DOWNLOAD_VERSION: CATIME_DOWNLOAD_VERSION,
+    DOWNLOAD_URL: new URL(`../downloads/${CATIME_DOWNLOAD_FILE}`, document.currentScript.src).href,
+    DOWNLOAD_MANIFEST_URL: new URL('../downloads/releases.json', document.currentScript.src).href,
+    GITHUB_DOWNLOAD_URL: `${CATIME_GITHUB_URL}/releases/download/v${CATIME_DOWNLOAD_VERSION}/${CATIME_DOWNLOAD_FILE}`,
+
+    GITHUB_URL: CATIME_GITHUB_URL,
+    GITHUB_RELEASES_URL: `${CATIME_GITHUB_URL}/releases`,
+
+    VERSION: CATIME_DOWNLOAD_VERSION,
     
     AUTHOR: {
         name: 'vladelaina',

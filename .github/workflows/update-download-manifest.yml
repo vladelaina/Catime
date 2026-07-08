@@ -1,0 +1,42 @@
+name: Update download manifest
+
+on:
+  push:
+    paths:
+      - 'downloads/catime_*.exe'
+      - 'scripts/generate-download-manifest.js'
+      - '.github/workflows/update-download-manifest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate manifest
+        run: node scripts/generate-download-manifest.js
+
+      - name: Commit manifest
+        run: |
+          if [ -z "$(git status --porcelain -- downloads/releases.json)" ]; then
+            echo "No manifest changes."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/releases.json
+          git commit -m "Update download manifest"
+          git push

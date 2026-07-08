@@ -6,6 +6,7 @@ build/*
 
 # 可执行文件
 *.exe
+!downloads/*.exe
 *.out
 *.app
 

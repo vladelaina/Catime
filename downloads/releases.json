@@ -1,0 +1,18 @@
+{
+  "latest": {
+    "version": "1.4.0",
+    "file": "catime_1.4.0.exe",
+    "url": "catime_1.4.0.exe",
+    "size": 1019176,
+    "sha256": "55e60a358965b55fa423d0a0689774823931369816c61957b28733fae4e70457"
+  },
+  "files": [
+    {
+      "version": "1.4.0",
+      "file": "catime_1.4.0.exe",
+      "url": "catime_1.4.0.exe",
+      "size": 1019176,
+      "sha256": "55e60a358965b55fa423d0a0689774823931369816c61957b28733fae4e70457"
+    }
+  ]
+}
