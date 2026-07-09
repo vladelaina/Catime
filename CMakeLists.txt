@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # Project information
-project(Catime VERSION 1.0.0 LANGUAGES C RC)
+project(Catime VERSION 1.5.0 LANGUAGES C RC)
 
 # Set C standard
 set(CMAKE_C_STANDARD 11)

@@ -1,6 +1,6 @@
 <div align="center">
 
-# v1.4.0 è stato pubblicato! 🎉 [Scarica ora](https://github.com/vladelaina/Catime/releases/latest) - `Solo 995KB`！
+# v1.5.0 è stato pubblicato! 🎉 [Scarica ora](https://github.com/vladelaina/Catime/releases/latest) - `Solo 995KB`！
 </div>
 
 

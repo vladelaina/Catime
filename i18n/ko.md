@@ -1,6 +1,6 @@
 <div align="center">
 
-# v1.4.0이 출시되었습니다! 🎉 [지금 다운로드](https://github.com/vladelaina/Catime/releases/latest) - `995KB만`！
+# v1.5.0이 출시되었습니다! 🎉 [지금 다운로드](https://github.com/vladelaina/Catime/releases/latest) - `995KB만`！
 </div>
 
 
