@@ -592,7 +592,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         }
 
         case WM_GETMINMAXINFO: {
-            NotificationData* data = GetNotificationData(hwnd);
+            const NotificationData* data = GetNotificationData(hwnd);
             if (data && data->isPreview && lParam) {
                 MINMAXINFO* minMaxInfo = (MINMAXINFO*)lParam;
                 minMaxInfo->ptMinTrackSize.x = NOTIFICATION_MIN_WIDTH;
