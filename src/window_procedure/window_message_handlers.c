@@ -734,6 +734,28 @@ static void StartAnimationPreviewDelayTimer(HWND hwnd) {
     }
 }
 
+static BOOL IsSelectableCommandMenuItem(HMENU hMenu, UINT menuItem) {
+    if (!hMenu) {
+        return FALSE;
+    }
+
+    MENUITEMINFOW itemInfo = {0};
+    itemInfo.cbSize = sizeof(itemInfo);
+    itemInfo.fMask = MIIM_FTYPE | MIIM_STATE | MIIM_SUBMENU;
+
+    if (!GetMenuItemInfoW(hMenu, menuItem, FALSE, &itemInfo)) {
+        return FALSE;
+    }
+
+    if (itemInfo.hSubMenu ||
+        (itemInfo.fType & MFT_SEPARATOR) ||
+        (itemInfo.fState & (MFS_DISABLED | MFS_GRAYED))) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
                               BOOL* isAnimationPreview) {
     BOOL colorOrFont = FALSE;
@@ -1000,7 +1022,7 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     if (hMenu == NULL) return 0;
 
-    if (!(flags & MF_POPUP)) {
+    if (!(flags & MF_POPUP) && IsSelectableCommandMenuItem(hMenu, menuItem)) {
         BOOL isColorOrFontPreview = FALSE;
         BOOL isAnimationPreview = FALSE;
         BOOL isPreviewItem = IsPreviewMenuItem(menuItem, &isColorOrFontPreview,
