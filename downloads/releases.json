@@ -1,18 +1,18 @@
 {
   "latest": {
-    "version": "1.4.0",
-    "file": "catime_1.4.0.exe",
-    "url": "catime_1.4.0.exe",
-    "size": 1019176,
-    "sha256": "55e60a358965b55fa423d0a0689774823931369816c61957b28733fae4e70457"
+    "version": "1.5.0",
+    "file": "catime_1.5.0.exe",
+    "url": "catime_1.5.0.exe",
+    "size": 1218856,
+    "sha256": "f89c30c2d076d22870eceee79672d9ed0f5742f994c624a9bb1a7dd61bea1e8d"
   },
   "files": [
     {
-      "version": "1.4.0",
-      "file": "catime_1.4.0.exe",
-      "url": "catime_1.4.0.exe",
-      "size": 1019176,
-      "sha256": "55e60a358965b55fa423d0a0689774823931369816c61957b28733fae4e70457"
+      "version": "1.5.0",
+      "file": "catime_1.5.0.exe",
+      "url": "catime_1.5.0.exe",
+      "size": 1218856,
+      "sha256": "f89c30c2d076d22870eceee79672d9ed0f5742f994c624a9bb1a7dd61bea1e8d"
     }
   ]
 }
