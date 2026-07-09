@@ -213,6 +213,7 @@ char g_websiteInput[512] = {0};
 
 typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
 typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
+typedef UINT (WINAPI* GetDpiForWindowFunc)(HWND);
 
 static GetThreadDpiAwarenessContextFunc LoadGetThreadDpiAwarenessContext(HMODULE module) {
     GetThreadDpiAwarenessContextFunc func = NULL;
@@ -224,6 +225,56 @@ static SetThreadDpiAwarenessContextFunc LoadSetThreadDpiAwarenessContext(HMODULE
     SetThreadDpiAwarenessContextFunc func = NULL;
     CATIME_LOAD_PROC_ADDRESS(module, "SetThreadDpiAwarenessContext", func);
     return func;
+}
+
+static UINT GetAboutDialogDpi(HWND hwndDlg) {
+    HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
+    if (hUser32) {
+        GetDpiForWindowFunc getDpiForWindowFunc = NULL;
+        CATIME_LOAD_PROC_ADDRESS(hUser32, "GetDpiForWindow", getDpiForWindowFunc);
+        if (getDpiForWindowFunc) {
+            UINT dpi = getDpiForWindowFunc(hwndDlg);
+            if (dpi > 0) {
+                return dpi;
+            }
+        }
+    }
+
+    HDC hdc = GetDC(hwndDlg);
+    if (hdc) {
+        int dpi = GetDeviceCaps(hdc, LOGPIXELSX);
+        ReleaseDC(hwndDlg, hdc);
+        if (dpi > 0) {
+            return (UINT)dpi;
+        }
+    }
+
+    return 96;
+}
+
+static void ReloadAboutDialogIcon(HWND hwndDlg) {
+    UINT dpi = GetAboutDialogDpi(hwndDlg);
+    int iconSize = MulDiv(ABOUT_ICON_SIZE, (int)dpi, 96);
+    if (iconSize <= 0) {
+        iconSize = ABOUT_ICON_SIZE;
+    }
+
+    HICON hIcon = (HICON)LoadImageW(GetModuleHandleW(NULL),
+                                    MAKEINTRESOURCEW(IDI_CATIME),
+                                    IMAGE_ICON,
+                                    iconSize,
+                                    iconSize,
+                                    LR_DEFAULTCOLOR);
+    if (!hIcon) {
+        return;
+    }
+
+    HICON hOldIcon = (HICON)SendDlgItemMessageW(hwndDlg, IDC_ABOUT_ICON,
+                                                STM_SETICON,
+                                                (WPARAM)hIcon, 0);
+    if (hOldIcon && hOldIcon != hIcon) {
+        DestroyIcon(hOldIcon);
+    }
 }
 
 /* ============================================================================
@@ -277,21 +328,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_INITDIALOG: {
             Dialog_RegisterInstance(DIALOG_INSTANCE_ABOUT, hwndDlg);
 
-            HICON hLargeIcon = (HICON)LoadImage(GetModuleHandle(NULL),
-                MAKEINTRESOURCE(IDI_CATIME),
-                IMAGE_ICON,
-                ABOUT_ICON_SIZE,
-                ABOUT_ICON_SIZE,
-                LR_DEFAULTCOLOR);
-
-            if (hLargeIcon) {
-                HICON hOldIcon = (HICON)SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON,
-                                                           STM_SETICON,
-                                                           (WPARAM)hLargeIcon, 0);
-                if (hOldIcon && hOldIcon != hLargeIcon) {
-                    DestroyIcon(hOldIcon);
-                }
-            }
+            ReloadAboutDialogIcon(hwndDlg);
 
             ApplyDialogLanguage(hwndDlg, IDD_ABOUT_DIALOG);
 
@@ -358,6 +395,10 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             return TRUE;
         }
+
+        case WM_DPICHANGED:
+            ReloadAboutDialogIcon(hwndDlg);
+            break;
 
         case WM_DESTROY: {
             HICON hLargeIcon = (HICON)SendDlgItemMessage(hwndDlg, IDC_ABOUT_ICON,
