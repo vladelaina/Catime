@@ -541,7 +541,7 @@ function translateSupportElements() {
     }
     
     const supporterCellTranslations = {
-        '温州市宇波机车部件有限公司': 'Wenzhou Yubo Locomotive Parts CO.,LTD.',
+        '软件做得好棒，要一直热爱下去呀': 'The software is wonderfully made. Keep that passion alive!',
         '1.4版本太好了': 'Version 1.4 is great',
         '坚持就是胜利': 'Perseverance leads to victory',
         '加油': 'Keep going',
