@@ -4,6 +4,7 @@
 </div>
 
 
+
 <div align="center">
   <a href="https://cati.me" target="_blank">
     <img src="Images/catime_resize.png" alt="Catime" width="249">
@@ -439,6 +440,29 @@ With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.co
       <td align="center" valign="top" width="14.28%">
         <a href="https://meta.appinn.net/u/fireman"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Fireman.webp" width="100px;" alt="Fireman"/><br /><sub><b>Fireman</b></sub></a><br />
       </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/Kder"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Kder.png" width="100px;" alt="Kder"/><br /><sub><b>Kder</b></sub></a><br />
+      </td>
+    </tr>
+    <tr>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/DZAladan"><img src="https://vladelaina.github.io/Catime/assets/Contributors/DZAladan.png" width="100px;" alt="DZAladan"/><br /><sub><b>DZAladan</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/shi-jian520"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E5%9F%98%E9%96%93.png" width="100px;" alt="埘間"/><br /><sub><b>埘間</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/NisQz"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Mei_Fsto.png" width="100px;" alt="Mei_Fsto"/><br /><sub><b>Mei_Fsto</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://linux.do/u/r1cky/summary"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%96%B9%E5%8B%BE%E5%8B%BE.png" width="100px;" alt="方勾勾"/><br /><sub><b>方勾勾</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://space.bilibili.com/34952098?spm_id_from=333.337.0.0"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%AD%A4%E5%90%8E%E6%AF%8F%E5%A4%A9%E5%A4%A9%E5%A4%A9%E4%B8%8D%E5%8F%8A%E9%82%A3%E5%A4%A9.webp" width="100px;" alt="此后每天天天不及那天"/><br /><sub><b>此后每天天天不及那天</b></sub></a><br />
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://space.bilibili.com/627799460"><img src="https://vladelaina.github.io/Catime/assets/Contributors/O-Illusions.webp" width="100px;" alt="O-Illusions"/><br /><sub><b>O-Illusions</b></sub></a><br />
+      </td>
     </tr>
   </tbody>
 </table>
@@ -476,5 +500,3 @@ By vladelaina\
 Made with ❤️ & ⌨️
 
 </div>
-
-
