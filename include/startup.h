@@ -26,7 +26,8 @@ BOOL IsAutoStartEnabled(void);
  * @return TRUE on success
  * 
  * @details
- * Points to current executable with --startup arg.
+ * Points to a stable executable path with --startup arg. Scoop installs use
+ * the apps\\catime\\current path so the shortcut survives package upgrades.
  * Handles COM initialization internally.
  */
 BOOL CreateShortcut(void);
@@ -40,7 +41,7 @@ BOOL CreateShortcut(void);
 BOOL RemoveShortcut(void);
 
 /**
- * @brief Update shortcut to current executable (handles moved apps)
+ * @brief Update shortcut to stable executable path (handles moved apps)
  * @return TRUE on success or if no shortcut
  * 
  * @details Implemented as Remove + Create for simplicity
@@ -62,5 +63,11 @@ BOOL UpdateStartupShortcut(void);
  * @note Call during init after window creation
  */
 void ApplyStartupMode(HWND hwnd);
+
+/**
+ * @brief Open Windows Startup Apps settings for packaged Store/MSIX builds
+ * @return TRUE when the Settings page was launched
+ */
+BOOL OpenPackagedStartupSettings(void);
 
 #endif /* STARTUP_H */

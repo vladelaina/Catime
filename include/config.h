@@ -335,9 +335,32 @@ BOOL WriteAnimationSpeedToConfig(const char* config_path);
  * @param path Output buffer (UTF-8)
  * @param size Buffer size
  * 
- * @details Returns %APPDATA%\Catime\config.ini
+ * @details Returns the deployment-specific Catime config.ini path
  */
 void GetConfigPath(char* path, size_t size);
+
+/**
+ * @brief Get the effective LocalAppData root for the current deployment mode
+ * @param path Output buffer (UTF-8)
+ * @param size Output buffer size
+ * @return TRUE on success
+ *
+ * @details Returns the normal LocalAppData directory for unpackaged builds.
+ * For Store/MSIX builds, returns the package-private LocalCache\\Local path so
+ * file operations and folders opened through Explorer refer to the same data.
+ */
+BOOL GetEffectiveLocalAppDataPath(char* path, size_t size);
+
+/**
+ * @brief Expand a leading %LOCALAPPDATA% token using the effective app root
+ * @param value Source path
+ * @param expanded Output buffer
+ * @param expandedSize Output buffer size
+ * @return TRUE on success
+ */
+BOOL ExpandEffectiveLocalAppDataPath(const char* value,
+                                     char* expanded,
+                                     size_t expandedSize);
 
 /**
  * @brief Check if file exists with UTF-8 path support
@@ -390,7 +413,7 @@ void ReadConfig();
 /**
  * @brief Create resource folders (idempotent)
  * 
- * @details Creates %APPDATA%\Catime\resources\{audio,fonts,animations}
+ * @details Creates resources\{audio,fonts,animations,plugins} beside config.ini
  */
 void CheckAndCreateAudioFolder();
 

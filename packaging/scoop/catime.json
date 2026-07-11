@@ -1,0 +1,21 @@
+{
+    "version": "1.5.0",
+    "description": "An ultra-lightweight Windows countdown and Pomodoro timer",
+    "homepage": "https://github.com/vladelaina/Catime",
+    "license": "Apache-2.0",
+    "url": "https://github.com/vladelaina/Catime/releases/download/v1.5.0/catime_1.5.0.exe#/catime.exe",
+    "hash": "f89c30c2d076d22870eceee79672d9ed0f5742f994c624a9bb1a7dd61bea1e8d",
+    "bin": "catime.exe",
+    "shortcuts": [
+        [
+            "catime.exe",
+            "Catime"
+        ]
+    ],
+    "checkver": {
+        "github": "https://github.com/vladelaina/Catime"
+    },
+    "autoupdate": {
+        "url": "https://github.com/vladelaina/Catime/releases/download/v$version/catime_$version.exe#/catime.exe"
+    }
+}

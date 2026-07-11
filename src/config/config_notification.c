@@ -58,8 +58,8 @@ static void BuildNotificationSoundConfigValue(const char* sound_file,
     }
     *dst = '\0';
 
-    const char* localAppData = getenv("LOCALAPPDATA");
-    if (localAppData) {
+    char localAppData[MAX_PATH] = {0};
+    if (GetEffectiveLocalAppDataPath(localAppData, sizeof(localAppData))) {
         size_t localLen = strlen(localAppData);
         if (_strnicmp(clean_path, localAppData, localLen) == 0) {
             const char* rest = clean_path + localLen;

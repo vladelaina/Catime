@@ -576,6 +576,10 @@ static void EnsureMarkdownRenderCache(const wchar_t* text) {
 static BOOL ExpandFontPathEnvironmentUtf8(const char* fontFileName, char* outPath, size_t outPathSize) {
     if (!fontFileName || !outPath || outPathSize == 0) return FALSE;
 
+    if (_strnicmp(fontFileName, "%LOCALAPPDATA%", strlen("%LOCALAPPDATA%")) == 0) {
+        return ExpandEffectiveLocalAppDataPath(fontFileName, outPath, outPathSize);
+    }
+
     wchar_t fontFileNameW[MAX_PATH] = {0};
     wchar_t expandedW[MAX_PATH] = {0};
     if (!Utf8ToWide(fontFileName, fontFileNameW, MAX_PATH)) {

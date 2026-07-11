@@ -32,6 +32,7 @@
 #include "shortcut_checker.h"
 #include "font.h"
 #include "utils/string_convert.h"
+#include "utils/package_identity.h"
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "tray/tray_animation_menu.h"
@@ -730,16 +731,20 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         LOG_INFO("CI smoke mode enabled, skipping startup-only side effects and auto-exiting in %u ms", exitDelayMs);
         ScheduleCiSmokeExit(hwnd, exitDelayMs);
     } else {
-        char startupUpdateDate[AUTO_UPDATE_DATE_BUFFER_SIZE] = {0};
-        if (ShouldRunStartupUpdateCheck(startupUpdateDate, sizeof(startupUpdateDate))) {
-            LOG_INFO("Starting automatic update check at startup...");
-            if (CheckForUpdateAsync(hwnd, TRUE)) {
-                MarkStartupUpdateCheckAttempt(startupUpdateDate);
-            } else {
-                LOG_WARNING("Startup automatic update check was not started");
-            }
+        if (IsRunningPackagedApp()) {
+            LOG_INFO("Skipping GitHub update check for Microsoft Store/MSIX package");
         } else {
-            LOG_INFO("Skipping automatic update check at startup; already checked today");
+            char startupUpdateDate[AUTO_UPDATE_DATE_BUFFER_SIZE] = {0};
+            if (ShouldRunStartupUpdateCheck(startupUpdateDate, sizeof(startupUpdateDate))) {
+                LOG_INFO("Starting automatic update check at startup...");
+                if (CheckForUpdateAsync(hwnd, TRUE)) {
+                    MarkStartupUpdateCheckAttempt(startupUpdateDate);
+                } else {
+                    LOG_WARNING("Startup automatic update check was not started");
+                }
+            } else {
+                LOG_INFO("Skipping automatic update check at startup; already checked today");
+            }
         }
 
         LOG_INFO("Handling startup mode: %s", CLOCK_STARTUP_MODE);

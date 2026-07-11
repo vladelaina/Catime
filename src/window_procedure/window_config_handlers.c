@@ -857,23 +857,10 @@ LRESULT HandleAppNotificationChanged(HWND hwnd) {
     BOOL soundConfigComplete = ReadHotReloadStringExact(
         INI_SECTION_NOTIFICATION, "NOTIFICATION_SOUND_FILE",
         "", soundBuf, sizeof(soundBuf));
-    /* Expand %LOCALAPPDATA% placeholder */
     if (soundConfigComplete && soundBuf[0] != '\0') {
-        const char* varToken = "%LOCALAPPDATA%";
-        size_t tokenLen = strlen(varToken);
-        if (_strnicmp(soundBuf, varToken, tokenLen) == 0) {
-            const char* localAppData = getenv("LOCALAPPDATA");
-            if (localAppData && localAppData[0] != '\0') {
-                char resolved[MAX_PATH] = {0};
-                int written = snprintf(resolved, sizeof(resolved), "%s%s", localAppData, soundBuf + tokenLen);
-                if (written >= 0 && (size_t)written < sizeof(resolved)) {
-                    strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
-                } else {
-                    g_AppConfig.notification.sound.sound_file[0] = '\0';
-                }
-            } else {
-                strncpy(g_AppConfig.notification.sound.sound_file, soundBuf, MAX_PATH - 1);
-            }
+        char resolved[MAX_PATH] = {0};
+        if (ExpandEffectiveLocalAppDataPath(soundBuf, resolved, sizeof(resolved))) {
+            strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
         } else {
             strncpy(g_AppConfig.notification.sound.sound_file, soundBuf, MAX_PATH - 1);
         }

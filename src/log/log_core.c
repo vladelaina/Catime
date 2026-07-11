@@ -270,6 +270,12 @@ BOOL InitializeLogSystem(void) {
 
     LogOSVersion();
     LogCPUArchitecture();
+    LogPackageIdentity();
+    char configPathUtf8[MAX_PATH] = {0};
+    GetConfigPath(configPathUtf8, sizeof(configPathUtf8));
+    if (configPathUtf8[0] != '\0') {
+        WriteLog(LOG_LEVEL_INFO, "Configuration Path: %s", configPathUtf8);
+    }
     LogMemoryInfo();
     LogUACStatus();
     LogAdminPrivileges();

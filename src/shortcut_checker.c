@@ -5,6 +5,7 @@
 #include "shortcut_checker.h"
 #include "config.h"
 #include "log.h"
+#include "utils/path_utils.h"
 #include "utils/string_convert.h"
 #include <stdio.h>
 #include <shlobj.h>
@@ -431,8 +432,7 @@ int CheckAndCreateShortcut(void) {
         return 1;
     }
     
-    DWORD exe_path_len = GetModuleFileNameW(NULL, exe_path_w, MAX_PATH);
-    if (exe_path_len == 0 || exe_path_len >= MAX_PATH) {
+    if (!GetShortcutExecutablePathW(exe_path_w, MAX_PATH)) {
         LOG_ERROR("Failed to get program path");
         if (should_uninitialize_com) {
             CoUninitialize();

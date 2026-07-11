@@ -88,6 +88,48 @@ jobs:
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 
+  # Build Microsoft Store / Partner Center packages from the signed EXE.
+  # These remain workflow artifacts and are not attached to the GitHub Release.
+  store-package:
+    needs: [build, sign]
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Download signed executable
+      uses: actions/download-artifact@v8
+      with:
+        name: catime-release-${{ needs.build.outputs.tag_version }}
+        path: ./signed-release
+
+    - name: Build Microsoft Store package
+      shell: pwsh
+      run: |
+        ./packaging/microsoft-store/build-store-package.ps1 `
+          -ExecutablePath "./signed-release/catime_${{ needs.build.outputs.tag_version }}.exe" `
+          -Version "${{ needs.build.outputs.tag_version }}" `
+          -OutputDirectory "./store-output"
+
+    - name: Upload Microsoft Store MSIX
+      uses: actions/upload-artifact@v7
+      with:
+        name: catime-store-msix-${{ needs.build.outputs.tag_version }}
+        path: store-output/catime_${{ needs.build.outputs.tag_version }}_x86.msix
+        if-no-files-found: error
+        retention-days: 90
+        archive: false
+
+    - name: Upload Partner Center package
+      uses: actions/upload-artifact@v7
+      with:
+        name: catime-store-upload-${{ needs.build.outputs.tag_version }}
+        path: store-output/catime_${{ needs.build.outputs.tag_version }}_x86.msixupload
+        if-no-files-found: error
+        retention-days: 90
+        archive: false
+
   # Release job
   release:
     needs: [build, sign]
@@ -134,7 +176,7 @@ jobs:
 
   # Clean up temporary artifacts
   cleanup:
-    needs: [sign, release]
+    needs: [sign, store-package, release]
     runs-on: ubuntu-latest
     permissions:
       actions: write

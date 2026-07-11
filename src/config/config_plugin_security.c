@@ -127,8 +127,10 @@ static BOOL CompressPath(const char* fullPath, char* compressedPath, size_t buff
 
     wchar_t fullPathWide[MAX_PATH];
     wchar_t localAppData[MAX_PATH];
+    char localAppDataUtf8[MAX_PATH] = {0};
     if (Utf8ToWide(fullPath, fullPathWide, MAX_PATH) &&
-        SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, localAppData))) {
+        GetEffectiveLocalAppDataPath(localAppDataUtf8, sizeof(localAppDataUtf8)) &&
+        Utf8ToWide(localAppDataUtf8, localAppData, MAX_PATH)) {
         size_t len = wcslen(localAppData);
         if (_wcsnicmp(fullPathWide, localAppData, len) == 0 &&
             (fullPathWide[len] == L'\0' || fullPathWide[len] == L'\\')) {
@@ -164,6 +166,14 @@ static BOOL CompressPath(const char* fullPath, char* compressedPath, size_t buff
  */
 static BOOL ExpandPath(const char* compressedPath, char* expandedPath, size_t bufferSize) {
     if (!compressedPath || !expandedPath || bufferSize == 0) return FALSE;
+
+    if (_strnicmp(compressedPath, "%LOCALAPPDATA%", strlen("%LOCALAPPDATA%")) == 0) {
+        if (ExpandEffectiveLocalAppDataPath(compressedPath, expandedPath, bufferSize)) {
+            return TRUE;
+        }
+        CopyPluginTrustPathFallback(compressedPath, expandedPath, bufferSize);
+        return FALSE;
+    }
 
     wchar_t compressedWide[MAX_PATH];
     wchar_t expandedWide[MAX_PATH];
