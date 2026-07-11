@@ -774,16 +774,3 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           archive: false
-
-  cleanup:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [sign, store-package]
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - name: Delete temporary signing package
-        uses: geekyeggo/delete-artifact@v6
-        with:
-          name: catime-signing-package
-          failOnError: false

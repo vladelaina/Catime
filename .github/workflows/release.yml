@@ -173,16 +173,3 @@ jobs:
         release-tag: ${{ github.ref_name }}
         installers-regex: '^catime_${{ needs.build.outputs.tag_version }}\.exe$'
         token: ${{ secrets.WINGET_TOKEN }}
-
-  # Clean up temporary artifacts
-  cleanup:
-    needs: [sign, store-package, release]
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-    - name: Delete temporary signing package
-      uses: geekyeggo/delete-artifact@v6
-      with:
-        name: catime-signing-package
-        failOnError: false

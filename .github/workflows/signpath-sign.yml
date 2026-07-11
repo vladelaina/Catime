@@ -48,48 +48,6 @@ jobs:
       signing-request-id: ${{ steps.signpath-submit.outputs.signing-request-id }}
     
     steps:
-    - name: Download unsigned artifact
-      uses: actions/download-artifact@v8
-      with:
-        name: ${{ inputs.artifact-name }}
-        path: ./unsigned-artifacts
-        
-    - name: Display artifact contents
-      run: |
-        echo "Contents of unsigned artifacts:"
-        find ./unsigned-artifacts -name "*.exe" -exec ls -la {} \;
-        
-    - name: Create signing directory
-      run: |
-        mkdir -p ./signing-input
-        mkdir -p ./signed-output
-        
-        # Copy all .exe files to signing directory
-        find ./unsigned-artifacts -name "*.exe" -exec cp {} ./signing-input/ \;
-        
-        echo "Files to be signed:"
-        ls -la ./signing-input/
-        
-        # Check if there are files to be signed
-        FILE_COUNT=$(find ./signing-input -name "*.exe" | wc -l)
-        if [ "$FILE_COUNT" -eq 0 ]; then
-          echo "Warning: No .exe files found for signing!"
-          exit 1
-        fi
-        
-    - name: Prepare file for signing
-      run: |
-        echo "Files ready for signing (keeping original names):"
-        ls -la ./signing-input/
-        
-    - name: Upload signing package as artifact (temporary)
-      id: upload-signing-package
-      uses: actions/upload-artifact@v7
-      with:
-        name: catime-signing-package
-        path: ./signing-input/*.exe
-        retention-days: 1  # Temporary file, can be deleted after signing
-        
     - name: Submit to SignPath for signing
       id: signpath-submit
       uses: signpath/github-action-submit-signing-request@v2
@@ -98,7 +56,7 @@ jobs:
         organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
         project-slug: 'Catime'
         signing-policy-slug: ${{ inputs.is-release && 'release-signing' || 'test-signing' }}  # Use conditional signing policy
-        github-artifact-id: ${{ steps.upload-signing-package.outputs.artifact-id }}
+        github-artifact-id: ${{ inputs.artifact-id }}
         wait-for-completion: true
         output-artifact-directory: './signed-output'
         parameters: |
