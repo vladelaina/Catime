@@ -36,3 +36,7 @@ build/*
 .roo/
 .augment/
 .kiro/
+
+# Web development output
+node_modules/
+dist/

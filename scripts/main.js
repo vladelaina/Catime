@@ -7,8 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initHeroInteractions();
 
-    initHeaderScroll();
-
     document.addEventListener('allComponentsLoaded', function() {
         console.log('📄 Components loaded');
     });
@@ -25,32 +23,6 @@ function initAnimatedImageInteractions() {
         scaleAmplitude: 0.015,
         enablePress: true,
     });
-}
-
-function initHeaderScroll() {
-    const header = document.querySelector('.main-header');
-    if (!header) return;
-
-    const updateHeaderState = () => {
-        if (window.scrollY > 50) {
-            header.classList.add('scrolled');
-        } else {
-            header.classList.remove('scrolled');
-        }
-    };
-
-    let ticking = false;
-    window.addEventListener('scroll', () => {
-        if (ticking) return;
-
-        ticking = true;
-        requestAnimationFrame(() => {
-            updateHeaderState();
-            ticking = false;
-        });
-    }, { passive: true });
-
-    updateHeaderState();
 }
 
 function initHeroInteractions() {

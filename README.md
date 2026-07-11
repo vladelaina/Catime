@@ -1,12 +1,24 @@
 # ✨ Welcome to **Catime**  
 Your one-stop hub for our website, blog, book, and more!
 
-✨ 欢迎来到 **Catime**  
+✨ 欢迎来到 **Catime**
 这里是我们的网站、博客、书籍等内容的集中入口！
 
 ---
 
-## 📥 Quick Start  
+## Local Development
+
+```bash
+pnpm install
+pnpm dev
+```
+
+The Vite development server provides clean routes such as `/guide`, `/about`,
+`/support`, and `/tray-animations/` without exposing `.html` filenames.
+
+---
+
+## 📥 Quick Start
 To clone only the `gh-pages` branch, run:
 
 要仅克隆 `gh-pages` 分支，请执行以下命令：

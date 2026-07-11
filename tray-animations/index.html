@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="浏览、预览并下载适用于 Catime 的托盘动画资源。">
+    <title>Catime</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="../styles/style.css">
+    <link rel="stylesheet" href="styles/tray-animations.css">
+    <link rel="icon" type="image/png" href="../assets/catime.webp">
+
+    <script src="../scripts/config.js" defer></script>
+    <script src="../scripts/ui-utils.js" defer></script>
+    <script src="../scripts/components.js" data-auto-load defer></script>
+    <script src="../scripts/navigation.js" defer></script>
+    <script src="scripts/tray-animations.js" type="module"></script>
+</head>
+<body class="tray-library-page">
+    <header class="main-header"></header>
+
+    <main>
+        <section class="tray-board-section">
+            <div class="container">
+                <div class="tray-board" id="trayBoard" aria-live="polite">
+                    <div class="board-loading">
+                        <span></span><span></span><span></span>
+                        <p>正在整理动画看板…</p>
+                    </div>
+                </div>
+                <div class="board-empty" id="boardEmpty" hidden>
+                    <i class="fas fa-cat"></i>
+                    <h3>没有找到对应资源</h3>
+                    <p>换一个关键词再试试吧。</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <aside class="tray-simulator" aria-label="Windows 托盘动画效果预览">
+        <div class="windows-taskbar">
+            <span class="taskbar-caret"><i class="fas fa-chevron-up"></i></span>
+            <span class="taskbar-animation"><img id="trayIconImage" src="../assets/catime.webp" alt="托盘图标效果"></span>
+            <span><i class="fas fa-wifi"></i></span>
+            <span><i class="fas fa-volume-high"></i></span>
+            <span class="taskbar-clock"><strong id="trayClock">12:00</strong><small id="trayDate">2026/01/01</small></span>
+        </div>
+    </aside>
+</body>
+</html>

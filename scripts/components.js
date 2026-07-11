@@ -7,7 +7,11 @@ class ComponentLoader {
     getComponentsPath() {
         const currentPath = window.location.pathname;
         const depth = (currentPath.match(/\//g) || []).length - 1;
-        
+
+        if (currentPath.includes('/tray-animations/')) {
+            return '../components/';
+        }
+
         if (currentPath.includes('/tools/') || depth > 1) {
             return '../../components/';
         }
