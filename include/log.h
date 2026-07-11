@@ -142,6 +142,11 @@ void LogUACStatus(void);
  */
 void LogAdminPrivileges(void);
 
+/**
+ * @brief Log whether Catime is running as a packaged Store/MSIX app
+ */
+void LogPackageIdentity(void);
+
 /* ============================================================================
  * Public API - Error Handling
  * ============================================================================ */

@@ -162,5 +162,18 @@ void RemoveTrailingSeparatorW(wchar_t* path);
  */
 BOOL PathStartsWith(const char* path, const char* prefix);
 
+/**
+ * @brief Get the executable path to use for persistent shortcuts
+ * @param path Output buffer
+ * @param pathSize Buffer size in wide characters
+ * @return TRUE on success
+ *
+ * @details Normally returns the current module path. When Catime is running
+ * from a Scoop version directory, returns the stable
+ * apps\\catime\\current\\catime.exe path so shortcuts survive upgrades and
+ * cleanup of old Scoop versions.
+ */
+BOOL GetShortcutExecutablePathW(wchar_t* path, size_t pathSize);
+
 #endif /* UTILS_PATH_UTILS_H */
 

@@ -33,6 +33,11 @@ void LogUACStatus(void);
  */
 void LogAdminPrivileges(void);
 
+/**
+ * Log MSIX/Microsoft Store package identity status
+ */
+void LogPackageIdentity(void);
+
 
 #endif /* LOG_SYSTEM_INFO_H */
 

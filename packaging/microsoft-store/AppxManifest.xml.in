@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+
+  <Identity
+    Name="vladelaina.Catime"
+    Publisher="CN=5503A135-7FA4-466B-815C-DBE627F4065F"
+    Version="@PACKAGE_VERSION@"
+    ProcessorArchitecture="x86" />
+
+  <Properties>
+    <DisplayName>Catime</DisplayName>
+    <PublisherDisplayName>vladelaina</PublisherDisplayName>
+    <Description>An ultra-lightweight countdown and Pomodoro timer.</Description>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily
+      Name="Windows.Desktop"
+      MinVersion="10.0.17763.0"
+      MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="en-us" />
+    <Resource Language="de-de" />
+    <Resource Language="es-es" />
+    <Resource Language="fr-fr" />
+    <Resource Language="it-it" />
+    <Resource Language="ja-jp" />
+    <Resource Language="ko-kr" />
+    <Resource Language="pt-pt" />
+    <Resource Language="ru-ru" />
+    <Resource Language="zh-cn" />
+    <Resource Language="zh-hant" />
+  </Resources>
+
+  <Applications>
+    <Application
+      Id="Catime"
+      Executable="catime.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Catime"
+        Description="An ultra-lightweight countdown and Pomodoro timer."
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png" />
+      <Extensions>
+        <desktop:Extension
+          Category="windows.startupTask"
+          Executable="catime.exe"
+          EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask
+            TaskId="CatimeStartup"
+            Enabled="false"
+            DisplayName="Catime" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

@@ -27,6 +27,7 @@
 #include "update_checker.h"
 #include "utils/string_convert.h"
 #include "utils/string_format.h"
+#include "utils/package_identity.h"
 #include "color/gradient.h"
 #include "color/color_parser.h"
 #include "text_effect.h"
@@ -291,7 +292,7 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
         AppendMenuW(hStartupSettingsMenu, MF_SEPARATOR, 0, NULL);
 
         AppendMenuW(hStartupSettingsMenu, MF_STRING |
-                (IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
+                (!IsRunningPackagedApp() && IsAutoStartEnabled() ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDC_AUTO_START,
                 GetLocalizedString(NULL, L"Start with Windows"));
 

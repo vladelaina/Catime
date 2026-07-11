@@ -310,28 +310,15 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     g_AppConfig.notification.display.window_width = snapshot->notificationWindowWidth;
     g_AppConfig.notification.display.window_height = snapshot->notificationWindowHeight;
     
-    /* Copy sound file path and expand %LOCALAPPDATA% placeholder if needed */
-    strncpy(g_AppConfig.notification.sound.sound_file, snapshot->notificationSoundFile, MAX_PATH - 1);
-    g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
-    
-    /* Normalize %LOCALAPPDATA% placeholder to absolute path */
-    if (g_AppConfig.notification.sound.sound_file[0] != '\0') {
-        const char* varToken = "%LOCALAPPDATA%";
-        size_t tokenLen = strlen(varToken);
-        if (_strnicmp(g_AppConfig.notification.sound.sound_file, varToken, tokenLen) == 0) {
-            const char* localAppData = getenv("LOCALAPPDATA");
-            if (localAppData && localAppData[0] != '\0') {
-                char resolved[MAX_PATH] = {0};
-                int written = snprintf(resolved, sizeof(resolved), "%s%s",
-                                       localAppData,
-                                       g_AppConfig.notification.sound.sound_file + tokenLen);
-                if (written >= 0 && (size_t)written < sizeof(resolved)) {
-                    strncpy(g_AppConfig.notification.sound.sound_file, resolved, MAX_PATH - 1);
-                    g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
-                }
-            }
-        }
+    char resolvedSoundPath[MAX_PATH] = {0};
+    const char* soundPathToApply = snapshot->notificationSoundFile;
+    if (ExpandEffectiveLocalAppDataPath(snapshot->notificationSoundFile,
+                                        resolvedSoundPath,
+                                        sizeof(resolvedSoundPath))) {
+        soundPathToApply = resolvedSoundPath;
     }
+    strncpy(g_AppConfig.notification.sound.sound_file, soundPathToApply, MAX_PATH - 1);
+    g_AppConfig.notification.sound.sound_file[MAX_PATH - 1] = '\0';
     
     g_AppConfig.notification.sound.volume = snapshot->notificationSoundVolume;
 }

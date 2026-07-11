@@ -5,8 +5,11 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <windows.h>
 #include "utils/win32_dynamic_loader.h"
+#include "utils/package_identity.h"
+#include "utils/string_convert.h"
 #include "log/log_system_info.h"
 #include "log.h"
 
@@ -195,5 +198,24 @@ void LogAdminPrivileges(void) {
     }
     
     WriteLog(LOG_LEVEL_INFO, "Administrator Privileges: %s", isAdmin ? "Yes" : "No");
+}
+
+void LogPackageIdentity(void) {
+    wchar_t familyName[MAX_PATH] = {0};
+    if (!IsRunningPackagedApp()) {
+        WriteLog(LOG_LEVEL_INFO, "Package Identity: Unpackaged Win32");
+        return;
+    }
+
+    if (GetCurrentPackageFamilyNameSafeW(familyName, _countof(familyName))) {
+        char* familyNameUtf8 = WideToUtf8Alloc(familyName);
+        if (familyNameUtf8) {
+            WriteLog(LOG_LEVEL_INFO, "Package Identity: MSIX (%s)", familyNameUtf8);
+            free(familyNameUtf8);
+            return;
+        }
+    }
+
+    WriteLog(LOG_LEVEL_INFO, "Package Identity: MSIX");
 }
 

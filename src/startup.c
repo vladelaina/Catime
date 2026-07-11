@@ -7,8 +7,11 @@
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
+#include "utils/path_utils.h"
+#include "utils/package_identity.h"
 #include "log.h"
 #include <windows.h>
+#include <shellapi.h>
 #include <shlobj.h>
 #include <objbase.h>
 #include <shobjidl.h>
@@ -95,12 +98,7 @@ static BOOL GetStartupShortcutPath(wchar_t* output, size_t outputSize) {
 }
 
 static BOOL GetExecutablePath(wchar_t* output, size_t outputSize) {
-    if (!output || outputSize == 0 || outputSize > (size_t)MAXDWORD) return FALSE;
-    output[0] = L'\0';
-
-    DWORD result = GetModuleFileNameW(NULL, output, (DWORD)outputSize);
-    if (result == 0 || result >= outputSize) {
-        output[0] = L'\0';
+    if (!GetShortcutExecutablePathW(output, outputSize)) {
         LOG_ERROR("Failed to get executable path");
         return FALSE;
     }
@@ -383,6 +381,10 @@ static const StartupModeConfig* GetDefaultModeConfig(void) {
 }
 
 BOOL IsAutoStartEnabled(void) {
+    if (IsRunningPackagedApp()) {
+        return FALSE;
+    }
+
     wchar_t startupPath[MAX_PATH];
     
     if (!GetStartupShortcutPath(startupPath, MAX_PATH)) {
@@ -404,6 +406,10 @@ BOOL CreateShortcut(void) {
     BOOL success = FALSE;
     BOOL shouldUninitializeCom = FALSE;
     
+    if (IsRunningPackagedApp()) {
+        return OpenPackagedStartupSettings();
+    }
+
     LOG_INFO("Creating startup shortcut");
     
     if (!GetExecutablePath(exePath, MAX_PATH)) {
@@ -466,6 +472,10 @@ BOOL CreateShortcut(void) {
 BOOL RemoveShortcut(void) {
     wchar_t startupPath[MAX_PATH];
     
+    if (IsRunningPackagedApp()) {
+        return OpenPackagedStartupSettings();
+    }
+
     LOG_INFO("Removing startup shortcut");
     
     if (!GetStartupShortcutPath(startupPath, MAX_PATH)) {
@@ -491,6 +501,11 @@ BOOL RemoveShortcut(void) {
 /** Recreates shortcut to handle app relocations */
 BOOL UpdateStartupShortcut(void) {
     LOG_INFO("Updating startup shortcut if exists");
+
+    if (IsRunningPackagedApp()) {
+        LOG_INFO("Packaged app uses the Windows Startup Apps registration");
+        return TRUE;
+    }
     
     if (IsAutoStartEnabled()) {
         wchar_t exePath[MAX_PATH] = {0};
@@ -512,6 +527,18 @@ BOOL UpdateStartupShortcut(void) {
     
     LOG_INFO("No startup shortcut to update");
     RemoveStartupShortcutMarker();
+    return TRUE;
+}
+
+BOOL OpenPackagedStartupSettings(void) {
+    HINSTANCE result = ShellExecuteW(NULL, L"open", L"ms-settings:startupapps",
+                                     NULL, NULL, SW_SHOWNORMAL);
+    if ((INT_PTR)result <= 32) {
+        LOG_WARNING("Failed to open Windows Startup Apps settings");
+        return FALSE;
+    }
+
+    LOG_INFO("Opened Windows Startup Apps settings for packaged app");
     return TRUE;
 }
 

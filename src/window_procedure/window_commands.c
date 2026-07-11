@@ -28,6 +28,7 @@
 #include "tray/tray.h"
 #include "drawing/drawing_effect.h"
 #include "text_effect.h"
+#include "utils/package_identity.h"
 
 extern void HandleStartupMode(HWND hwnd);
 #include "dialog/dialog_procedure.h"
@@ -162,6 +163,11 @@ static LRESULT CmdSystemFontPicker(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdAutoStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    if (IsRunningPackagedApp()) {
+        OpenPackagedStartupSettings();
+        return 0;
+    }
+
     BOOL isEnabled = IsAutoStartEnabled();
     if (isEnabled) {
         if (RemoveShortcut()) CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_UNCHECKED);
@@ -222,6 +228,17 @@ static LRESULT CmdNotificationSettings(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 static LRESULT CmdCheckUpdate(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+
+    if (IsRunningPackagedApp()) {
+        HINSTANCE result = ShellExecuteW(hwnd, L"open", URL_MICROSOFT_STORE,
+                                         NULL, NULL, SW_SHOWNORMAL);
+        if ((INT_PTR)result <= 32) {
+            LOG_WARNING("Failed to open Microsoft Store update page");
+        } else {
+            LOG_INFO("Opened Microsoft Store update page");
+        }
+        return 0;
+    }
 
     BOOL started = CheckForUpdateAsync(hwnd, FALSE);
     if (!started) {

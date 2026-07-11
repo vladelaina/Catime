@@ -8,6 +8,7 @@
 #include "menu_preview.h"
 #include "config.h"
 #include "log.h"
+#include "utils/string_convert.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -1813,8 +1814,22 @@ static BOOL ResolveFontTagPath(const wchar_t* fontPath, wchar_t* outPath, size_t
     wchar_t expandedPath[MAX_PATH];
     wchar_t resolvedPath[MAX_PATH];
     
-    /* Step 1: Expand environment variables if present */
-    if (wcschr(fontPath, L'%') != NULL) {
+    /* Step 1: Expand environment variables if present. Package-aware
+     * LocalAppData expansion keeps Store font tags inside the MSIX data root. */
+    static const wchar_t localAppDataToken[] = L"%LOCALAPPDATA%";
+    size_t localAppDataTokenLen = _countof(localAppDataToken) - 1;
+    if (_wcsnicmp(fontPath, localAppDataToken, localAppDataTokenLen) == 0) {
+        char fontPathUtf8[MAX_PATH] = {0};
+        char expandedPathUtf8[MAX_PATH] = {0};
+        if (!WideToUtf8(fontPath, fontPathUtf8, MAX_PATH) ||
+            !ExpandEffectiveLocalAppDataPath(fontPathUtf8,
+                                             expandedPathUtf8,
+                                             sizeof(expandedPathUtf8)) ||
+            !Utf8ToWide(expandedPathUtf8, expandedPath, MAX_PATH)) {
+            LOG_WARNING("Failed to expand effective LocalAppData font path: %ls", fontPath);
+            return FALSE;
+        }
+    } else if (wcschr(fontPath, L'%') != NULL) {
         DWORD result = ExpandEnvironmentStringsW(fontPath, expandedPath, MAX_PATH);
         if (result == 0 || result > MAX_PATH) {
             LOG_WARNING("Failed to expand environment variables in font path: %ls", fontPath);

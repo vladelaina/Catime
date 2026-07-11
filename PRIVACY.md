@@ -20,6 +20,10 @@ Catime explicitly commits to:
 
 Catime only saves the following information locally in `%LOCALAPPDATA%\Catime\`:
 
+The Microsoft Store/MSIX version uses private AppData storage associated with
+Catime's package identity. The data remains local to the device and is managed
+by Windows as part of the package.
+
 1. **Configuration Data**
    Includes interface settings, timer configurations, and user preferences, stored in `config.ini`.
 

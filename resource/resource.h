@@ -98,6 +98,8 @@
 
 /** @brief Application URLs */
 #define URL_GITHUB_REPO L"https://github.com/vladelaina/Catime"                      /**< GitHub repository URL */
+#define URL_MICROSOFT_STORE L"ms-windows-store://pdp/?productid=9N3MZDF1Z34V"       /**< Microsoft Store product page */
+#define URL_MICROSOFT_STORE_WEB L"https://apps.microsoft.com/detail/9N3MZDF1Z34V"   /**< Microsoft Store web page */
 #define URL_FEEDBACK L"https://message.bilibili.com/#/whisper/mid1862395225"         /**< Feedback URL */
 #define URL_BILIBILI_SPACE L"https://space.bilibili.com/1862395225"                 /**< Bilibili space URL */
 #define URL_VLAINA L"https://vlaina.com/r/catime_win"                               /**< Vlaina project URL */
