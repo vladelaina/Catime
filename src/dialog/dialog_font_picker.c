@@ -24,6 +24,7 @@ extern char FONT_INTERNAL_NAME[MAX_PATH];
 typedef struct {
     char originalFontName[MAX_PATH];
     char originalFileName[MAX_PATH];
+    char originalRuntimeFileName[MAX_PATH];
     BOOL closeHandled;
 } FontDialogState;
 
@@ -52,6 +53,9 @@ static void SaveOriginalFont(void) {
 
     strncpy(g_fontState.originalFileName, FONT_FILE_NAME, sizeof(g_fontState.originalFileName) - 1);
     g_fontState.originalFileName[sizeof(g_fontState.originalFileName) - 1] = '\0';
+    strncpy(g_fontState.originalRuntimeFileName, FONT_RUNTIME_FILE_NAME,
+            sizeof(g_fontState.originalRuntimeFileName) - 1);
+    g_fontState.originalRuntimeFileName[sizeof(g_fontState.originalRuntimeFileName) - 1] = '\0';
     g_fontState.closeHandled = FALSE;
 }
 
@@ -64,11 +68,14 @@ static void RestoreOriginalFont(void) {
 
     strncpy(FONT_FILE_NAME, g_fontState.originalFileName, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+    strncpy(FONT_RUNTIME_FILE_NAME, g_fontState.originalRuntimeFileName,
+            sizeof(FONT_RUNTIME_FILE_NAME) - 1);
+    FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
 
     HINSTANCE hInstance = GetModuleHandleW(NULL);
-    const char* loadFontName = FONT_FILE_NAME;
-    if (IsFontsFolderPath(FONT_FILE_NAME)) {
-        const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+    const char* loadFontName = FONT_RUNTIME_FILE_NAME;
+    if (IsFontsFolderPath(FONT_RUNTIME_FILE_NAME)) {
+        const char* relativePath = ExtractRelativePath(FONT_RUNTIME_FILE_NAME);
         if (relativePath) {
             loadFontName = relativePath;
         }

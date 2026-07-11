@@ -387,10 +387,13 @@ BOOL ValidateTimeoutAction(ConfigSnapshot* snapshot) {
 
     /* Validate file paths only for OPEN_FILE action */
     if (snapshot->timeoutAction == TIMEOUT_ACTION_OPEN_FILE) {
-        if (strlen(snapshot->timeoutFilePath) == 0 || !FileExistsUtf8(snapshot->timeoutFilePath)) {
-            LOG_WARNING("Timeout file path invalid or missing, resetting action to MESSAGE");
+        if (strlen(snapshot->timeoutFilePath) == 0) {
+            LOG_WARNING("Timeout file path is empty, resetting action to MESSAGE");
             snapshot->timeoutAction = TIMEOUT_ACTION_MESSAGE;
             modified = TRUE;
+        } else if (!FileExistsUtf8(snapshot->timeoutFilePath)) {
+            LOG_WARNING("Timeout file is currently unavailable; preserving OPEN_FILE action: %s",
+                        snapshot->timeoutFilePath);
         }
     }
 

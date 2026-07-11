@@ -33,6 +33,9 @@
 #define WM_TRAY_UPDATE_ICON (WM_USER + 100)
 #define MEMORY_POOL_SIZE (256 * 1024)
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define STARTUP_ANIMATION_RETRY_TIMER_ID 42429u
+#define STARTUP_ANIMATION_RETRY_INTERVAL_MS 1500u
+#define STARTUP_ANIMATION_RETRY_MAX_ATTEMPTS 5
 
 /* Global state */
 static char g_animationName[MAX_PATH] = "__logo__";
@@ -86,6 +89,9 @@ static int g_lastBuiltinIconCx = 0;
 static int g_lastBuiltinIconCy = 0;
 static char g_lastStablePercentIconName[MAX_PATH] = "";
 static int g_lastStablePercentIconValue = -1;
+static char g_startupRetryAnimationName[MAX_PATH] = "";
+static HWND g_startupRetryHwnd = NULL;
+static int g_startupRetryAttemptCount = 0;
 
 /* Thread safety */
 static CRITICAL_SECTION g_animCriticalSection;
@@ -373,6 +379,10 @@ static DWORD g_lastSuccessfulUpdateTime = 0;
 static void TrayAnimationTimerCallback(void* userData);
 static void NormalizeAnimConfigValue(char* s);
 static BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig);
+static void CancelStartupAnimationRetry(void);
+static void ScheduleStartupAnimationRetry(HWND hwnd, const char* animationName);
+static void CALLBACK TrayAnimationStartupRetryTimerProc(HWND hwnd, UINT msg,
+                                                        UINT_PTR id, DWORD time);
 
 static BOOL IsValidTrayAnimationWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
@@ -825,13 +835,13 @@ static void RecordFrameRateLatency(void) {
 
 /**
  * @brief Record failed update
- * @return TRUE if should fallback
+ * @return TRUE if repeated failures should trigger recovery handling
  */
 static BOOL RecordFailedUpdate(void) {
     g_consecutiveUpdateFailures++;
     
     if (g_consecutiveUpdateFailures >= MAX_CONSECUTIVE_FAILURES) {
-        WriteLog(LOG_LEVEL_WARNING, "Animation update failed %d times, entering fallback mode",
+        WriteLog(LOG_LEVEL_WARNING, "Animation update failed %d times, requesting recovery",
                  g_consecutiveUpdateFailures);
         return TRUE;
     }
@@ -840,7 +850,7 @@ static BOOL RecordFailedUpdate(void) {
     if (g_lastSuccessfulUpdateTime > 0) {
         DWORD elapsed = currentTime - g_lastSuccessfulUpdateTime;
         if (elapsed > UPDATE_TIMEOUT_MS) {
-            WriteLog(LOG_LEVEL_WARNING, "No successful update for %dms, entering fallback mode", elapsed);
+            WriteLog(LOG_LEVEL_WARNING, "No successful tray update for %dms, requesting recovery", elapsed);
             return TRUE;
         }
     }
@@ -849,13 +859,13 @@ static BOOL RecordFailedUpdate(void) {
 }
 
 /**
- * @brief Fallback to logo icon
+ * @brief Keep the selected animation alive across transient Shell failures
  */
-static void FallbackToLogoIcon(void) {
-    WriteLog(LOG_LEVEL_INFO, "Falling back to logo icon due to errors");
+static void HandleRepeatedTrayUpdateFailure(void) {
+    WriteLog(LOG_LEVEL_WARNING,
+             "Tray icon update is temporarily unavailable; retaining the selected animation and retrying");
     g_consecutiveUpdateFailures = 0;
-    g_lastSuccessfulUpdateTime = GetTickCount();
-    SetCurrentAnimationNameInternal("__logo__", FALSE);
+    g_lastSuccessfulUpdateTime = 0;
 }
 
 /**
@@ -1034,7 +1044,7 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
         }
         if (locked) LeaveCriticalSection(&g_animCriticalSection);
         if (RecordFailedUpdate()) {
-            FallbackToLogoIcon();
+            HandleRepeatedTrayUpdateFailure();
         }
         return;
     }
@@ -1051,7 +1061,7 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
         }
         if (locked) LeaveCriticalSection(&g_animCriticalSection);
         if (RecordFailedUpdate()) {
-            FallbackToLogoIcon();
+            HandleRepeatedTrayUpdateFailure();
         }
         return;
     }
@@ -1071,7 +1081,7 @@ applyIcon:
             LeaveCriticalSection(&g_animCriticalSection);
         }
         if (!previewActive && RecordFailedUpdate()) {
-            FallbackToLogoIcon();
+            HandleRepeatedTrayUpdateFailure();
         }
         return;
     }
@@ -1104,7 +1114,7 @@ applyIcon:
     } else {
         WriteLog(LOG_LEVEL_WARNING, "Shell_NotifyIconW failed");
         if (!previewActive && RecordFailedUpdate()) {
-            FallbackToLogoIcon();
+            HandleRepeatedTrayUpdateFailure();
         }
     }
 }
@@ -1204,6 +1214,7 @@ static void TrayAnimationTimerCallback(void* userData) {
  */
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     StopAcceptingRuntimeUse();
+    CancelStartupAnimationRetry();
 
     if (IsPreviewWorkerRetiringAfterCleanup()) {
         WriteLog(LOG_LEVEL_WARNING,
@@ -1278,14 +1289,17 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     g_animationName[sizeof(g_animationName) - 1] = '\0';
 
     /* Load frames unless InitTrayIcon already preloaded the same animation. */
+    BOOL startupAnimationLoadFailed = FALSE;
     if (!reusePreloadedMain &&
         !LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy) &&
         _stricmp(g_animationName, "__logo__") != 0) {
-        WriteLog(LOG_LEVEL_WARNING, "Failed to load tray animation '%s', falling back to logo", g_animationName);
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Failed to load tray animation '%s' during startup; using logo temporarily and preserving the configured animation",
+                 g_animationName);
+        startupAnimationLoadFailed = TRUE;
         LoadedAnimation_Free(&g_mainAnimation);
         strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
         g_animationName[sizeof(g_animationName) - 1] = '\0';
-        WriteAnimationConfigPathIfChanged(config_path, "__logo__");
         LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy);
     }
     g_mainAnimationPreloaded = FALSE;
@@ -1294,6 +1308,10 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 
     InterlockedExchange(&g_runtimeActive, 1);
     ResetBuiltinIconUpdateCache();
+
+    if (startupAnimationLoadFailed) {
+        ScheduleStartupAnimationRetry(hwnd, configAnimationName);
+    }
     
     if (g_mainAnimation.count > 0) {
         UpdateTrayIconToCurrentFrame();
@@ -1310,6 +1328,7 @@ void StopTrayAnimation(HWND hwnd) {
     (void)hwnd;
 
     StopAcceptingRuntimeUse();
+    CancelStartupAnimationRetry();
 
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
@@ -1582,6 +1601,81 @@ done:
  */
 BOOL SetCurrentAnimationName(const char* name) {
     return SetCurrentAnimationNameInternal(name, TRUE);
+}
+
+static void CancelStartupAnimationRetry(void) {
+    if (g_startupRetryHwnd) {
+        KillTimer(g_startupRetryHwnd, STARTUP_ANIMATION_RETRY_TIMER_ID);
+    }
+    g_startupRetryHwnd = NULL;
+    g_startupRetryAnimationName[0] = '\0';
+    g_startupRetryAttemptCount = 0;
+}
+
+static void ScheduleStartupAnimationRetry(HWND hwnd, const char* animationName) {
+    if (!IsValidTrayAnimationWindow(hwnd) || !animationName || !*animationName ||
+        _stricmp(animationName, "__logo__") == 0 ||
+        !CopyStringExactA(animationName, g_startupRetryAnimationName,
+                          sizeof(g_startupRetryAnimationName))) {
+        return;
+    }
+
+    g_startupRetryAttemptCount = 0;
+    if (SetTimer(hwnd, STARTUP_ANIMATION_RETRY_TIMER_ID,
+                 STARTUP_ANIMATION_RETRY_INTERVAL_MS,
+                 TrayAnimationStartupRetryTimerProc) == 0) {
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Failed to schedule startup tray animation retry (error=%lu)",
+                 GetLastError());
+        g_startupRetryAnimationName[0] = '\0';
+        return;
+    }
+
+    g_startupRetryHwnd = hwnd;
+    WriteLog(LOG_LEVEL_INFO,
+             "Scheduled retry for startup tray animation '%s'", animationName);
+}
+
+static void CALLBACK TrayAnimationStartupRetryTimerProc(HWND hwnd, UINT msg,
+                                                        UINT_PTR id, DWORD time) {
+    (void)msg;
+    (void)time;
+
+    if (id != STARTUP_ANIMATION_RETRY_TIMER_ID) return;
+    if (!IsValidTrayAnimationWindow(hwnd) || hwnd != g_startupRetryHwnd ||
+        !IsTrayAnimationRuntimeActive()) {
+        CancelStartupAnimationRetry();
+        return;
+    }
+
+    char configPath[MAX_PATH] = {0};
+    char configuredAnimation[MAX_PATH] = "__logo__";
+    GetConfigPath(configPath, sizeof(configPath));
+    ReadAnimationNameFromConfig(configuredAnimation,
+                                sizeof(configuredAnimation), configPath);
+
+    if (_stricmp(configuredAnimation, g_startupRetryAnimationName) != 0 ||
+        _stricmp(g_animationName, configuredAnimation) == 0 ||
+        _stricmp(g_animationName, "__logo__") != 0) {
+        CancelStartupAnimationRetry();
+        return;
+    }
+
+    g_startupRetryAttemptCount++;
+    if (SetCurrentAnimationNameInternal(g_startupRetryAnimationName, FALSE)) {
+        WriteLog(LOG_LEVEL_INFO,
+                 "Recovered startup tray animation '%s' on retry %d",
+                 configuredAnimation, g_startupRetryAttemptCount);
+        CancelStartupAnimationRetry();
+        return;
+    }
+
+    if (g_startupRetryAttemptCount >= STARTUP_ANIMATION_RETRY_MAX_ATTEMPTS) {
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Startup tray animation '%s' remained unavailable after %d retries; keeping its configuration for the next launch",
+                 configuredAnimation, g_startupRetryAttemptCount);
+        CancelStartupAnimationRetry();
+    }
 }
 
 static BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath) {
@@ -1888,11 +1982,12 @@ void PreloadAnimationFromConfig(void) {
     BOOL loaded = LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy);
     if (!loaded &&
         _stricmp(g_animationName, "__logo__") != 0) {
-        WriteLog(LOG_LEVEL_WARNING, "Failed to preload tray animation '%s', falling back to logo", g_animationName);
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Failed to preload tray animation '%s'; using logo temporarily without changing the configured animation",
+                 g_animationName);
         LoadedAnimation_Free(&g_mainAnimation);
         strncpy(g_animationName, "__logo__", sizeof(g_animationName) - 1);
         g_animationName[sizeof(g_animationName) - 1] = '\0';
-        WriteAnimationConfigPathIfChanged(config_path, "__logo__");
         loaded = LoadAnimationByNameWithTemporaryPool(g_animationName, &g_mainAnimation, cx, cy);
     }
     if (loaded) {

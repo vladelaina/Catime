@@ -15,8 +15,11 @@
  * Global Font State
  * ============================================================================ */
 
-/** @brief Current active font filename (config-style path) */
+/** @brief Configured font filename */
 extern char FONT_FILE_NAME[MAX_PATH];
+
+/** @brief Font filename currently used for rendering */
+extern char FONT_RUNTIME_FILE_NAME[MAX_PATH];
 
 /** @brief Current active font internal name (from TTF) */
 extern char FONT_INTERNAL_NAME[MAX_PATH];

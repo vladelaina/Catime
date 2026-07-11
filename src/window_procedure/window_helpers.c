@@ -276,6 +276,8 @@ void ReloadDefaultFont(void) {
     
     /* Update FONT_FILE_NAME to default */
     snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", FONTS_PATH_PREFIX, defaultFontName);
+    snprintf(FONT_RUNTIME_FILE_NAME, sizeof(FONT_RUNTIME_FILE_NAME), "%s%s",
+             FONTS_PATH_PREFIX, defaultFontName);
     
     /* Load the default font */
     LoadFontByNameAndGetRealName(GetModuleHandle(NULL), defaultFontName, 

@@ -335,6 +335,8 @@ static BOOL ApplyFontForHotReload(const char* configFont) {
     }
 
     strncpy_s(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), configFont, _TRUNCATE);
+    strncpy_s(FONT_RUNTIME_FILE_NAME, sizeof(FONT_RUNTIME_FILE_NAME),
+              configFont, _TRUNCATE);
     strncpy_s(FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME), internalName, _TRUNCATE);
     return TRUE;
 }
@@ -910,27 +912,12 @@ LRESULT HandleAppRecentFilesChanged(HWND hwnd) {
         LoadRecentFiles();
     }
 
-    /* Validate current timeout file against recent files */
     if (CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE) {
-        BOOL match = FALSE;
         int recentFilesCount = g_AppConfig.recent_files.count;
         if (recentFilesCount < 0) recentFilesCount = 0;
         if (recentFilesCount > MAX_RECENT_FILES) recentFilesCount = MAX_RECENT_FILES;
-        for (int i = 0; i < recentFilesCount; ++i) {
-            if (strcmp(g_AppConfig.recent_files.files[i].path, CLOCK_TIMEOUT_FILE_PATH) == 0) {
-                match = TRUE;
-                break;
-            }
-        }
 
-        if (match) {
-            WideString ws = ToWide(CLOCK_TIMEOUT_FILE_PATH);
-            if (!ws.valid || GetFileAttributesW(ws.buf) == INVALID_FILE_ATTRIBUTES) {
-                match = FALSE;
-            }
-        }
-
-        if (!match && recentFilesCount > 0 &&
+        if (CLOCK_TIMEOUT_FILE_PATH[0] == '\0' && recentFilesCount > 0 &&
             !WriteConfigTimeoutFile(g_AppConfig.recent_files.files[0].path)) {
             LOG_WARNING("Failed to save hot-reloaded timeout file: %s",
                         g_AppConfig.recent_files.files[0].path);

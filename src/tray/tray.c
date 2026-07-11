@@ -983,7 +983,7 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     }
     g_trayIconActive = FALSE;
     ZeroMemory(&nid, sizeof(nid));
-    InitTrayIconInternal(hwnd, hInstance, FALSE, FALSE, FALSE);
+    InitTrayIconInternal(hwnd, hInstance, FALSE, FALSE, TRUE);
     if (!IsTrayIconActive(hwnd)) {
         KillTimer(hwnd, TRAY_TIP_TIMER_ID);
         g_trayTipTimerActive = FALSE;

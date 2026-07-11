@@ -140,6 +140,9 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
     
     strncpy(FONT_FILE_NAME, snapshot->fontFileName, sizeof(FONT_FILE_NAME) - 1);
     FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+    strncpy(FONT_RUNTIME_FILE_NAME, snapshot->fontFileName,
+            sizeof(FONT_RUNTIME_FILE_NAME) - 1);
+    FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
     
     strncpy(FONT_INTERNAL_NAME, snapshot->fontInternalName, sizeof(FONT_INTERNAL_NAME) - 1);
     FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';

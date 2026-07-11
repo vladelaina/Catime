@@ -36,7 +36,6 @@
 #include "utils/string_convert.h"
 #include "../resource/resource.h"
 
-extern char FONT_FILE_NAME[MAX_PATH];
 extern char FONT_INTERNAL_NAME[MAX_PATH];
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 extern int CLOCK_BASE_FONT_SIZE;

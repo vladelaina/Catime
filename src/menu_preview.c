@@ -96,13 +96,13 @@ static BOOL LoadPreviewFontName(const char* fontName, char* internalName, size_t
 }
 
 static BOOL RestoreConfiguredFontAfterPreview(void) {
-    if (FONT_FILE_NAME[0] == '\0') {
+    if (FONT_RUNTIME_FILE_NAME[0] == '\0') {
         return FALSE;
     }
 
-    const char* loadName = FONT_FILE_NAME;
-    if (IsFontsFolderPath(FONT_FILE_NAME)) {
-        const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+    const char* loadName = FONT_RUNTIME_FILE_NAME;
+    if (IsFontsFolderPath(FONT_RUNTIME_FILE_NAME)) {
+        const char* relativePath = ExtractRelativePath(FONT_RUNTIME_FILE_NAME);
         if (!relativePath || relativePath[0] == '\0') {
             return FALSE;
         }
@@ -112,7 +112,8 @@ static BOOL RestoreConfiguredFontAfterPreview(void) {
     HINSTANCE hInstance = GetModuleHandle(NULL);
     if (!LoadFontByNameAndGetRealName(hInstance, loadName,
                                       FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
-        LOG_WARNING("Preview: failed to restore font after preview: %s", FONT_FILE_NAME);
+        LOG_WARNING("Preview: failed to restore font after preview: %s",
+                    FONT_RUNTIME_FILE_NAME);
         return FALSE;
     }
 
@@ -291,6 +292,8 @@ BOOL ApplyPreview(HWND hwnd) {
             }
             strncpy_s(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), 
                      g_previewState.data.font.fontName, _TRUNCATE);
+            strncpy_s(FONT_RUNTIME_FILE_NAME, sizeof(FONT_RUNTIME_FILE_NAME),
+                     g_previewState.data.font.fontName, _TRUNCATE);
             strncpy_s(FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME),
                      g_previewState.data.font.internalName, _TRUNCATE);
             break;
@@ -379,7 +382,7 @@ void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) 
         strncpy_s(outFontName, bufferSize, PREVIEW_FONT_NAME, _TRUNCATE);
         strncpy_s(outInternalName, bufferSize, PREVIEW_INTERNAL_NAME, _TRUNCATE);
     } else {
-        strncpy_s(outFontName, bufferSize, FONT_FILE_NAME, _TRUNCATE);
+        strncpy_s(outFontName, bufferSize, FONT_RUNTIME_FILE_NAME, _TRUNCATE);
         strncpy_s(outInternalName, bufferSize, FONT_INTERNAL_NAME, _TRUNCATE);
     }
 }

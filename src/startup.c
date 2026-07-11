@@ -501,13 +501,8 @@ BOOL UpdateStartupShortcut(void) {
             return TRUE;
         }
 
-        if (!RemoveShortcut()) {
-            LOG_ERROR("Failed to remove old startup shortcut");
-            return FALSE;
-        }
-        
         if (!CreateShortcut()) {
-            LOG_ERROR("Failed to recreate startup shortcut");
+            LOG_ERROR("Failed to update startup shortcut; existing shortcut was preserved when possible");
             return FALSE;
         }
         

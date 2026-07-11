@@ -138,7 +138,7 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
     }
     
     /* Try to load configured font */
-    if (!LoadFontByNameAndGetRealName(hInstance, actualFontFileName, 
+    if (!LoadFontByNameAndGetRealName(hInstance, actualFontFileName,
                                       FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
         LOG_WARNING("Failed to load font: %s, attempting fallback to default font", actualFontFileName);
         
@@ -147,17 +147,8 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
         if (LoadFontByNameAndGetRealName(hInstance, defaultFont,
                                         FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
             LOG_INFO("Successfully loaded default font: %s", FONT_INTERNAL_NAME);
-            
-            /* Update config to default font */
-            snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
-                    FONTS_PATH_PREFIX, defaultFont);
-            
-            if (WriteConfigFont(FONT_FILE_NAME, FALSE) &&
-                FlushConfigToDisk()) {
-                LOG_INFO("Font configuration auto-corrected to default font");
-            } else {
-                LOG_WARNING("Loaded default font, but failed to persist font auto-correction");
-            }
+            snprintf(FONT_RUNTIME_FILE_NAME, sizeof(FONT_RUNTIME_FILE_NAME),
+                     "%s%s", FONTS_PATH_PREFIX, defaultFont);
             return TRUE;
         }
         
@@ -167,16 +158,8 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
             if (LoadFontByNameAndGetRealName(hInstance, defaultFont,
                                             FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
                 LOG_INFO("Successfully loaded default font after extraction: %s", FONT_INTERNAL_NAME);
-                
-                snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
-                        FONTS_PATH_PREFIX, defaultFont);
-                
-                if (WriteConfigFont(FONT_FILE_NAME, FALSE) &&
-                    FlushConfigToDisk()) {
-                    LOG_INFO("Font configuration auto-corrected after re-extraction");
-                } else {
-                    LOG_WARNING("Loaded default font after extraction, but failed to persist font auto-correction");
-                }
+                snprintf(FONT_RUNTIME_FILE_NAME, sizeof(FONT_RUNTIME_FILE_NAME),
+                         "%s%s", FONTS_PATH_PREFIX, defaultFont);
                 return TRUE;
             }
         }
@@ -188,17 +171,8 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
             if (LoadFontByNameAndGetRealName(hInstance, fontResources[i].fontName,
                                             FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
                 LOG_INFO("Successfully loaded fallback font: %s", FONT_INTERNAL_NAME);
-                
-                snprintf(FONT_FILE_NAME, sizeof(FONT_FILE_NAME), "%s%s", 
-                        FONTS_PATH_PREFIX, fontResources[i].fontName);
-                
-                if (WriteConfigFont(FONT_FILE_NAME, FALSE) &&
-                    FlushConfigToDisk()) {
-                    LOG_INFO("Font configuration auto-corrected to: %s", fontResources[i].fontName);
-                } else {
-                    LOG_WARNING("Loaded fallback font, but failed to persist font auto-correction: %s",
-                                fontResources[i].fontName);
-                }
+                snprintf(FONT_RUNTIME_FILE_NAME, sizeof(FONT_RUNTIME_FILE_NAME),
+                         "%s%s", FONTS_PATH_PREFIX, fontResources[i].fontName);
                 return TRUE;
             }
         }
@@ -207,10 +181,16 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
         LOG_ERROR("All font loading attempts failed, using system default font name");
         strncpy(FONT_INTERNAL_NAME, "Arial", sizeof(FONT_INTERNAL_NAME) - 1);
         FONT_INTERNAL_NAME[sizeof(FONT_INTERNAL_NAME) - 1] = '\0';
+        strncpy(FONT_RUNTIME_FILE_NAME, "%WINDIR%\\Fonts\\arial.ttf",
+                sizeof(FONT_RUNTIME_FILE_NAME) - 1);
+        FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
         
         return TRUE;  /* Continue even with system font */
     }
     
+    strncpy(FONT_RUNTIME_FILE_NAME, FONT_FILE_NAME,
+            sizeof(FONT_RUNTIME_FILE_NAME) - 1);
+    FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
     LOG_INFO("Font loaded successfully: %s", FONT_INTERNAL_NAME);
     return TRUE;
 }

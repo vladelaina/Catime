@@ -20,6 +20,7 @@
  * ============================================================================ */
 
 char FONT_FILE_NAME[MAX_PATH] = FONT_FOLDER_PREFIX "Wallpoet Essence.ttf";
+char FONT_RUNTIME_FILE_NAME[MAX_PATH] = FONT_FOLDER_PREFIX "Wallpoet Essence.ttf";
 char FONT_INTERNAL_NAME[MAX_PATH];
 char PREVIEW_FONT_NAME[MAX_PATH] = "";
 char PREVIEW_INTERNAL_NAME[MAX_PATH] = "";
@@ -196,6 +197,9 @@ static BOOL LoadFontInternal(const char* fontFileName, BOOL shouldUpdateConfig) 
         /* Update global FONT_FILE_NAME only after the repaired font is loaded. */
         strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
         FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+        strncpy(FONT_RUNTIME_FILE_NAME, pathInfo.configPath,
+                sizeof(FONT_RUNTIME_FILE_NAME) - 1);
+        FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
 
         if (!WriteConfigFont(pathInfo.relativePath, FALSE) ||
             !FlushConfigToDisk()) {
@@ -276,6 +280,9 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
     if (shouldPersistAutoFix) {
         strncpy(FONT_FILE_NAME, pathInfo.configPath, sizeof(FONT_FILE_NAME) - 1);
         FONT_FILE_NAME[sizeof(FONT_FILE_NAME) - 1] = '\0';
+        strncpy(FONT_RUNTIME_FILE_NAME, pathInfo.configPath,
+                sizeof(FONT_RUNTIME_FILE_NAME) - 1);
+        FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
 
         if (!WriteConfigFont(pathInfo.relativePath, FALSE) ||
             !FlushConfigToDisk()) {
@@ -289,6 +296,33 @@ BOOL LoadFontByNameAndGetRealName(HINSTANCE hInstance, const char* fontFileName,
 }
 
 BOOL CheckAndReloadCurrentFontPath(void) {
+    if (strcmp(FONT_RUNTIME_FILE_NAME, FONT_FILE_NAME) != 0) {
+        char previousRuntimeFontName[MAX_PATH] = {0};
+        CopyStringExactA(FONT_RUNTIME_FILE_NAME, previousRuntimeFontName,
+                         sizeof(previousRuntimeFontName));
+        const char* loadName = FONT_FILE_NAME;
+        if (IsFontsFolderPath(FONT_FILE_NAME)) {
+            const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+            if (relativePath) loadName = relativePath;
+        }
+
+        char loadedInternalName[MAX_PATH] = {0};
+        if (!loadName[0] ||
+            !LoadFontByNameAndGetRealName(GetModuleHandle(NULL), loadName,
+                                          loadedInternalName, sizeof(loadedInternalName))) {
+            return FALSE;
+        }
+
+        if (strcmp(FONT_RUNTIME_FILE_NAME, previousRuntimeFontName) == 0) {
+            CopyStringExactA(FONT_FILE_NAME, FONT_RUNTIME_FILE_NAME,
+                             sizeof(FONT_RUNTIME_FILE_NAME));
+        }
+        CopyStringExactA(loadedInternalName, FONT_INTERNAL_NAME,
+                         sizeof(FONT_INTERNAL_NAME));
+        LOG_INFO("Recovered configured font: %s", FONT_FILE_NAME);
+        return TRUE;
+    }
+
     if (!IsFontsFolderPath(FONT_FILE_NAME)) {
         return FALSE;
     }
@@ -313,9 +347,12 @@ BOOL CheckAndReloadCurrentFontPath(void) {
     }
 
     char previousFontName[MAX_PATH] = {0};
+    char previousRuntimeFontName[MAX_PATH] = {0};
     char previousInternalName[MAX_PATH] = {0};
     char loadedInternalName[MAX_PATH] = {0};
     CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+    CopyStringExactA(FONT_RUNTIME_FILE_NAME, previousRuntimeFontName,
+                     sizeof(previousRuntimeFontName));
     CopyStringExactA(FONT_INTERNAL_NAME, previousInternalName, sizeof(previousInternalName));
 
     if (!LoadFontByNameAndGetRealName(GetModuleHandle(NULL), relativePath,
@@ -326,6 +363,10 @@ BOOL CheckAndReloadCurrentFontPath(void) {
     }
 
     CopyStringExactA(loadedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+    if (strcmp(FONT_RUNTIME_FILE_NAME, previousRuntimeFontName) == 0) {
+        CopyStringExactA(FONT_FILE_NAME, FONT_RUNTIME_FILE_NAME,
+                         sizeof(FONT_RUNTIME_FILE_NAME));
+    }
     return TRUE;
 }
 
@@ -363,6 +404,7 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     if (!fontName) return FALSE;
 
     char previousFontName[MAX_PATH] = {0};
+    char previousRuntimeFontName[MAX_PATH] = {0};
     char previousInternalName[MAX_PATH] = {0};
     char pendingFontName[MAX_PATH] = {0};
     char loadedInternalName[MAX_PATH] = {0};
@@ -373,6 +415,8 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     }
 
     CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+    CopyStringExactA(FONT_RUNTIME_FILE_NAME, previousRuntimeFontName,
+                     sizeof(previousRuntimeFontName));
     CopyStringExactA(FONT_INTERNAL_NAME, previousInternalName, sizeof(previousInternalName));
 
     /* Load and extract internal name */
@@ -384,13 +428,17 @@ BOOL SwitchFont(HINSTANCE hInstance, const char* fontName) {
     }
 
     CopyStringExactA(pendingFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+    CopyStringExactA(pendingFontName, FONT_RUNTIME_FILE_NAME,
+                     sizeof(FONT_RUNTIME_FILE_NAME));
     CopyStringExactA(loadedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
 
     /* Write to config (without reload) */
     if (!WriteConfigFont(FONT_FILE_NAME, FALSE)) {
         CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousRuntimeFontName, FONT_RUNTIME_FILE_NAME,
+                         sizeof(FONT_RUNTIME_FILE_NAME));
         CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
-        if (!ReloadFontFromConfigName(hInstance, previousFontName,
+        if (!ReloadFontFromConfigName(hInstance, previousRuntimeFontName,
                                       FONT_INTERNAL_NAME,
                                       sizeof(FONT_INTERNAL_NAME))) {
             LOG_WARNING("Failed to restore previous font after config write failure: %s",
@@ -456,15 +504,15 @@ void CancelFontPreview(void) {
     /* Reload original font */
     HINSTANCE hInstance = GetModuleHandle(NULL);
     
-    if (IsFontsFolderPath(FONT_FILE_NAME)) {
-        const char* relativePath = ExtractRelativePath(FONT_FILE_NAME);
+    if (IsFontsFolderPath(FONT_RUNTIME_FILE_NAME)) {
+        const char* relativePath = ExtractRelativePath(FONT_RUNTIME_FILE_NAME);
         if (relativePath) {
             LoadFontByNameAndGetRealName(hInstance, relativePath, 
                                         FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
         }
-    } else if (FONT_FILE_NAME[0] != '\0') {
-        LoadFontByNameAndGetRealName(hInstance, FONT_FILE_NAME, 
-                                    FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
+    } else if (FONT_RUNTIME_FILE_NAME[0] != '\0') {
+        LoadFontByNameAndGetRealName(hInstance, FONT_RUNTIME_FILE_NAME,
+                                     FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
     }
 }
 
@@ -472,10 +520,13 @@ void ApplyFontPreview(void) {
     if (!IS_PREVIEWING || strlen(PREVIEW_FONT_NAME) == 0) return;
 
     char previousFontName[MAX_PATH] = {0};
+    char previousRuntimeFontName[MAX_PATH] = {0};
     char previousInternalName[MAX_PATH] = {0};
     char committedFontName[MAX_PATH] = {0};
     char committedInternalName[MAX_PATH] = {0};
     CopyStringExactA(FONT_FILE_NAME, previousFontName, sizeof(previousFontName));
+    CopyStringExactA(FONT_RUNTIME_FILE_NAME, previousRuntimeFontName,
+                     sizeof(previousRuntimeFontName));
     CopyStringExactA(FONT_INTERNAL_NAME, previousInternalName, sizeof(previousInternalName));
 
     if (!CopyStringExactA(PREVIEW_FONT_NAME, committedFontName, sizeof(committedFontName)) ||
@@ -486,13 +537,17 @@ void ApplyFontPreview(void) {
 
     /* Commit preview to active font */
     CopyStringExactA(committedFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+    CopyStringExactA(committedFontName, FONT_RUNTIME_FILE_NAME,
+                     sizeof(FONT_RUNTIME_FILE_NAME));
     CopyStringExactA(committedInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
 
     /* Write to config */
     if (!WriteConfigFont(FONT_FILE_NAME, FALSE)) {
         CopyStringExactA(previousFontName, FONT_FILE_NAME, sizeof(FONT_FILE_NAME));
+        CopyStringExactA(previousRuntimeFontName, FONT_RUNTIME_FILE_NAME,
+                         sizeof(FONT_RUNTIME_FILE_NAME));
         CopyStringExactA(previousInternalName, FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME));
-        if (!ReloadFontFromConfigName(GetModuleHandle(NULL), previousFontName,
+        if (!ReloadFontFromConfigName(GetModuleHandle(NULL), previousRuntimeFontName,
                                       FONT_INTERNAL_NAME,
                                       sizeof(FONT_INTERNAL_NAME))) {
             LOG_WARNING("Failed to restore previous preview font after config write failure: %s",

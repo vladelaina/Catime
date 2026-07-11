@@ -115,7 +115,7 @@ static ULONGLONG GetLogFileSize(void) {
     return 0;
 }
 
-/** Open log file with shared delete permission */
+/** Open log file with shared delete permission and preserve previous launches */
 static BOOL OpenLogFile(void) {
     if (hLogFile != INVALID_HANDLE_VALUE) {
         return true;
@@ -123,10 +123,10 @@ static BOOL OpenLogFile(void) {
 
     hLogFile = CreateFileW(
         LOG_FILE_PATH,
-        GENERIC_WRITE,
+        FILE_APPEND_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
-        CREATE_ALWAYS,
+        OPEN_ALWAYS,
         FILE_ATTRIBUTE_NORMAL,
         NULL
     );
@@ -135,12 +135,20 @@ static BOOL OpenLogFile(void) {
         return false;
     }
 
-    /* Write UTF-8 BOM */
-    DWORD written = 0;
-    if (!WriteFile(hLogFile, UTF8_BOM, 3, &written, NULL) || written != 3) {
+    LARGE_INTEGER fileSize = {0};
+    if (!GetFileSizeEx(hLogFile, &fileSize)) {
         CloseHandle(hLogFile);
         hLogFile = INVALID_HANDLE_VALUE;
         return false;
+    }
+
+    if (fileSize.QuadPart == 0) {
+        DWORD written = 0;
+        if (!WriteFile(hLogFile, UTF8_BOM, 3, &written, NULL) || written != 3) {
+            CloseHandle(hLogFile);
+            hLogFile = INVALID_HANDLE_VALUE;
+            return false;
+        }
     }
 
     return true;
