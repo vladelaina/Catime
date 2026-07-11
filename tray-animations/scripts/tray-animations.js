@@ -181,7 +181,6 @@ function createAnimationItem(collection, index) {
     item.className = 'animation-item';
     item.href = url;
     item.download = filename;
-    item.title = `点击下载 ${filename}`;
     item.innerHTML = `<img src="${escapeAttribute(url)}" alt="${escapeAttribute(collection.title)} ${index}" loading="lazy" decoding="async">`;
     item.addEventListener('mouseenter', () => setTrayPreview(url));
     item.addEventListener('focus', () => setTrayPreview(url));
