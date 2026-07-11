@@ -1,15 +1,10 @@
 # Microsoft Store packaging
 
-The release workflow uploads the raw Store files as two separate GitHub Actions
-artifacts because `actions/upload-artifact` only supports one unarchived file per
-artifact:
-
-- `catime-store-msix-<version>` contains `catime_<version>_x86.msix`.
-- `catime-store-upload-<version>` contains `catime_<version>_x86.msixupload`.
-
-Daily builds append the GitHub run number to both artifact names. These files
-are not attached to the public GitHub Release and are not submitted or
-published to Partner Center automatically.
+The release workflow uploads `catime_<version>_x86.msix` as the raw
+`catime-store-msix-<version>` GitHub Actions artifact. Daily builds append the
+GitHub run number to the artifact name. The MSIX is ready for manual upload to
+Partner Center, but is not attached to the public GitHub Release and is not
+submitted or published automatically.
 
 ## Store identity
 
@@ -51,10 +46,10 @@ Run on Windows with the Windows 10/11 SDK installed:
   -Version 1.5.0
 ```
 
-The output is placed in `output\microsoft-store` by default. The
-`.msixupload` contains the signed x86 MSIX package. It intentionally omits an
-`.appxsym` file because the current MinGW release build does not produce PDB
-symbols.
+The signed x86 MSIX is placed in `output\microsoft-store` by default and can be
+uploaded directly to Partner Center. A separate `.msixupload` wrapper is not
+created because the current MinGW release build does not produce PDB symbols or
+an `.appxsym` file.
 
 The package version is derived as `Major.Minor.Patch.0`; the fourth component
 must remain zero for Microsoft Store submissions. Before uploading, confirm
