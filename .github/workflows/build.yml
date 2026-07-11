@@ -703,9 +703,54 @@ jobs:
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
 
+  store-package:
+    name: package / microsoft-store
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build, sign]
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Download signed executable
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.artifact-name }}
+          path: signed-build
+
+      - name: Locate signed executable
+        id: locate-executable
+        shell: pwsh
+        run: |
+          $executable = Get-ChildItem -Path "signed-build" -Filter "*.exe" -File -Recurse |
+            Select-Object -First 1
+          if (-not $executable) {
+            Write-Output "::error::Signed Catime executable was not found"
+            exit 1
+          }
+          "path=$($executable.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Build Partner Center package
+        shell: pwsh
+        run: |
+          ./packaging/microsoft-store/build-store-package.ps1 `
+            -ExecutablePath "${{ steps.locate-executable.outputs.path }}" `
+            -Version "${{ needs.build.outputs.version }}" `
+            -OutputDirectory "./store-output"
+
+      - name: Upload Partner Center artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: catime-store-${{ needs.build.outputs.version }}-${{ github.run_number }}
+          path: |
+            store-output/catime_${{ needs.build.outputs.version }}_x86.msix
+            store-output/catime_${{ needs.build.outputs.version }}_x86.msixupload
+          if-no-files-found: error
+          retention-days: 90
+
   cleanup:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: sign
+    needs: [sign, store-package]
     runs-on: ubuntu-latest
     permissions:
       actions: write
