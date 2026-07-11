@@ -738,13 +738,20 @@ jobs:
             -Version "${{ needs.build.outputs.version }}" `
             -OutputDirectory "./store-output"
 
-      - name: Upload Partner Center artifacts
+      - name: Upload Microsoft Store MSIX
         uses: actions/upload-artifact@v7
         with:
-          name: catime-store-${{ needs.build.outputs.version }}-${{ github.run_number }}
-          path: |
-            store-output/catime_${{ needs.build.outputs.version }}_x86.msix
-            store-output/catime_${{ needs.build.outputs.version }}_x86.msixupload
+          name: catime-store-msix-${{ needs.build.outputs.version }}-${{ github.run_number }}
+          path: store-output/catime_${{ needs.build.outputs.version }}_x86.msix
+          if-no-files-found: error
+          retention-days: 90
+          archive: false
+
+      - name: Upload Partner Center package
+        uses: actions/upload-artifact@v7
+        with:
+          name: catime-store-upload-${{ needs.build.outputs.version }}-${{ github.run_number }}
+          path: store-output/catime_${{ needs.build.outputs.version }}_x86.msixupload
           if-no-files-found: error
           retention-days: 90
           archive: false
