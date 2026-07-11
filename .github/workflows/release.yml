@@ -121,6 +121,7 @@ jobs:
           store-output/catime_${{ needs.build.outputs.tag_version }}_x86.msixupload
         if-no-files-found: error
         retention-days: 90
+        archive: false
 
   # Release job
   release:
