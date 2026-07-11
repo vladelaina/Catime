@@ -63,6 +63,24 @@ jobs:
         run: |
           set +e
           mkdir -p quality-cppcheck
+          VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
+          VERSION_CORE=${VERSION%%-*}
+          IFS=. read -r VERSION_MAJOR VERSION_MINOR VERSION_PATCH <<< "$VERSION_CORE"
+          if [[ ! "$VERSION_MAJOR" =~ ^[0-9]+$ ||
+                ! "$VERSION_MINOR" =~ ^[0-9]+$ ||
+                ! "$VERSION_PATCH" =~ ^[0-9]+$ ]]; then
+            echo "Unable to parse CATIME_VERSION: $VERSION" >&2
+            echo "exit_code=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p quality-cppcheck/generated
+          sed \
+            -e "s/@CATIME_VERSION_MAJOR@/$VERSION_MAJOR/g" \
+            -e "s/@CATIME_VERSION_MINOR@/$VERSION_MINOR/g" \
+            -e "s/@CATIME_VERSION_PATCH@/$VERSION_PATCH/g" \
+            -e "s/@CATIME_VERSION_BUILD@/0/g" \
+            resource/catime_version_numeric.h.in \
+            > quality-cppcheck/generated/catime_version_numeric.h
           cppcheck \
             --enable=warning,style,performance,portability,information \
             --inconclusive \
@@ -76,6 +94,7 @@ jobs:
             -i src/audio_player.c \
             --xml \
             --xml-version=2 \
+            -I quality-cppcheck/generated \
             -I include \
             -I src \
             src > quality-cppcheck/cppcheck.stdout 2> quality-cppcheck/cppcheck.xml
