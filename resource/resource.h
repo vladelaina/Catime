@@ -10,7 +10,7 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.6.0-alpha1"   /**< Version string */
+#define CATIME_VERSION "1.5.0"          /**< Version string */
 #include "catime_version_numeric.h"
 
 /** 
