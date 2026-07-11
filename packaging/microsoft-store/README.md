@@ -1,9 +1,15 @@
 # Microsoft Store packaging
 
-The release workflow creates both an `.msix` package and an `.msixupload` file
-inside the `catime-store-<version>` GitHub Actions artifact. These files are not
-attached to the public GitHub Release and are not submitted or published to
-Partner Center automatically.
+The release workflow uploads the raw Store files as two separate GitHub Actions
+artifacts because `actions/upload-artifact` only supports one unarchived file per
+artifact:
+
+- `catime-store-msix-<version>` contains `catime_<version>_x86.msix`.
+- `catime-store-upload-<version>` contains `catime_<version>_x86.msixupload`.
+
+Daily builds append the GitHub run number to both artifact names. These files
+are not attached to the public GitHub Release and are not submitted or
+published to Partner Center automatically.
 
 ## Store identity
 
