@@ -1,7 +1,29 @@
 cmake_minimum_required(VERSION 3.16)
 
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h" CATIME_VERSION_LINE
+    REGEX "^#define[ \t]+CATIME_VERSION[ \t]+\"[0-9]+\\.[0-9]+\\.[0-9]+")
+string(REGEX MATCH
+    "\"([0-9]+)\\.([0-9]+)\\.([0-9]+)(-[^\"]+)?\""
+    CATIME_VERSION_MATCH "${CATIME_VERSION_LINE}")
+if(NOT CATIME_VERSION_MATCH)
+    message(FATAL_ERROR "CATIME_VERSION in resource/resource.h is invalid")
+endif()
+
+set(CATIME_VERSION_MAJOR "${CMAKE_MATCH_1}")
+set(CATIME_VERSION_MINOR "${CMAKE_MATCH_2}")
+set(CATIME_VERSION_PATCH "${CMAKE_MATCH_3}")
+set(CATIME_VERSION_BUILD 0)
+
 # Project information
-project(Catime VERSION 1.5.0 LANGUAGES C RC)
+project(Catime VERSION
+    "${CATIME_VERSION_MAJOR}.${CATIME_VERSION_MINOR}.${CATIME_VERSION_PATCH}"
+    LANGUAGES C RC)
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/resource/catime_version_numeric.h.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated/catime_version_numeric.h"
+    @ONLY
+)
 
 # Set C standard
 set(CMAKE_C_STANDARD 11)
@@ -93,6 +115,7 @@ endif()
 
 # Add include directories
 target_include_directories(catime PRIVATE
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
     include
     src
     libs/miniaudio

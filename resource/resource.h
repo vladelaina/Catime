@@ -10,11 +10,8 @@
 #define CATIME_RESOURCE_H
 
 /** @brief Application version information */
-#define CATIME_VERSION "1.5.0"          /**< Version string */
-#define CATIME_VERSION_MAJOR 1           /**< Major version number */
-#define CATIME_VERSION_MINOR 5           /**< Minor version number */
-#define CATIME_VERSION_PATCH 0           /**< Patch version number */
-#define CATIME_VERSION_BUILD 0           /**< Build number */
+#define CATIME_VERSION "1.6.0-alpha1"   /**< Version string */
+#include "catime_version_numeric.h"
 
 /** 
  * @brief Configuration Reset Switch
