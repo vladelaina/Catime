@@ -104,31 +104,15 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 </a>
 
 
-## Sponsors
-
-<div align="center">
-  <a href="https://www.dkdun.cn/aff/SCEYKYCH">
-    <img width="732" height="246" alt="dk" src="https://github.com/user-attachments/assets/6d06ac2a-ae1d-4b3f-b828-65b653f6e189" />
-  </a>
-
-  <br><br>
-
-  <table align="center">
-    <tr>
-      <td style="vertical-align: middle; padding-right: 10px;">
-        <img alt="SignPath" src="https://signpath.org/assets/favicon-50x50.png" />
-      </td>
-      <td style="vertical-align: middle;">
-        Free code signing on Windows provided by
-        <a href="https://signpath.io">SignPath.io</a>, certificate by
-        <a href="https://signpath.org/">SignPath Foundation</a>
-      </td>
-    </tr>
-  </table>
-</div>
 
 
 ## 📥 Download
+
+
+<a href="https://get.microsoft.com/installer/download/9n3mzdf1z34v?referrer=appbadge" target="_self" >
+	<img src="https://get.microsoft.com/images/en-us%20light.svg" width="600"/>
+</a>
+
 
 - GitHub Releases
 
@@ -235,6 +219,29 @@ build.bat                         # Windows
     alt="image"
   />
 </a>
+
+## Sponsors
+
+<div align="center">
+  <a href="https://www.dkdun.cn/aff/SCEYKYCH">
+    <img width="732" height="246" alt="dk" src="https://github.com/user-attachments/assets/6d06ac2a-ae1d-4b3f-b828-65b653f6e189" />
+  </a>
+
+  <br><br>
+
+  <table align="center">
+    <tr>
+      <td style="vertical-align: middle; padding-right: 10px;">
+        <img alt="SignPath" src="https://signpath.org/assets/favicon-50x50.png" />
+      </td>
+      <td style="vertical-align: middle;">
+        Free code signing on Windows provided by
+        <a href="https://signpath.io">SignPath.io</a>, certificate by
+        <a href="https://signpath.org/">SignPath Foundation</a>
+      </td>
+    </tr>
+  </table>
+</div>
 
 
 ## Project Status
