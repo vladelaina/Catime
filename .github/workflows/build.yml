@@ -28,6 +28,16 @@ permissions:
   actions: read
 
 jobs:
+  publishing-policy:
+    name: security / publishing-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Validate publishing guards
+        run: python3 .github/scripts/ci/check_publish_guards.py
+
   codeql:
     name: quality / codeql
     runs-on: ubuntu-latest
@@ -657,6 +667,7 @@ jobs:
   build:
     name: build / mingw-release
     needs:
+      - publishing-policy
       - codeql
       - cppcheck
       - gitleaks

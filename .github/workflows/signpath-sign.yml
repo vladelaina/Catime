@@ -42,6 +42,7 @@ on:
 
 jobs:
   code-signing:
+    if: github.repository == 'vladelaina/Catime'
     runs-on: ubuntu-latest
     outputs:
       signed-artifact-id: ${{ steps.upload-signed.outputs.artifact-id }}
