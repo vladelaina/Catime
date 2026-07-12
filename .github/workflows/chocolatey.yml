@@ -1,0 +1,134 @@
+name: Publish Chocolatey Package
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Catime release version without the v prefix'
+        required: true
+        type: string
+    secrets:
+      CHOCOLATEY_API_KEY:
+        description: 'Chocolatey Community Repository API key'
+        required: true
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Published Catime version without the v prefix'
+        required: true
+        type: string
+        default: '1.5.0'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: package / chocolatey
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Validate Chocolatey API key
+        shell: pwsh
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:CHOCOLATEY_API_KEY)) {
+            Write-Output "::error::CHOCOLATEY_API_KEY is required to publish the package."
+            exit 1
+          }
+
+      - name: Download signed release executable
+        id: release
+        shell: pwsh
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if ($env:VERSION -notmatch '^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$') {
+            Write-Output "::error::Invalid Chocolatey package version: $env:VERSION"
+            exit 1
+          }
+
+          $url = "https://github.com/vladelaina/Catime/releases/download/v$env:VERSION/catime_$env:VERSION.exe"
+          $outputDirectory = Join-Path $PWD "chocolatey-input"
+          $executable = Join-Path $outputDirectory "catime_$env:VERSION.exe"
+          New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
+          Invoke-WebRequest -Uri $url -OutFile $executable
+
+          $checksum = (Get-FileHash $executable -Algorithm SHA256).Hash.ToLowerInvariant()
+          "checksum=$checksum" >> $env:GITHUB_OUTPUT
+          Write-Host "Downloaded signed Catime $env:VERSION"
+          Write-Host "SHA256: $checksum"
+
+      - name: Prepare Chocolatey metadata
+        shell: pwsh
+        run: |
+          ./packaging/chocolatey/update-package.ps1 `
+            -Version "${{ inputs.version }}" `
+            -Checksum "${{ steps.release.outputs.checksum }}"
+
+      - name: Build Chocolatey package
+        id: pack
+        shell: pwsh
+        run: |
+          $outputDirectory = Join-Path $PWD "chocolatey-output"
+          New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
+          choco pack ./packaging/chocolatey/catime.nuspec `
+            --output-directory $outputDirectory `
+            --limit-output
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          $package = Get-ChildItem $outputDirectory -Filter "catime.${{ inputs.version }}.nupkg" -File |
+            Select-Object -First 1
+          if (-not $package) {
+            Write-Output "::error::Chocolatey package was not created."
+            exit 1
+          }
+          "path=$($package.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Test Chocolatey package installation
+        shell: pwsh
+        run: |
+          choco install catime `
+            --source "${{ github.workspace }}\chocolatey-output" `
+            --version "${{ inputs.version }}" `
+            --yes `
+            --force `
+            --no-progress `
+            --limit-output
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+          $shim = Join-Path $env:ChocolateyInstall "bin\catime.exe"
+          if (-not (Test-Path $shim)) {
+            Write-Output "::error::Chocolatey did not create the catime command shim."
+            exit 1
+          }
+
+      - name: Uninstall test package
+        if: always()
+        shell: pwsh
+        run: |
+          choco uninstall catime --yes --no-progress --limit-output
+          if ($LASTEXITCODE -ne 0) {
+            Write-Output "::warning::Chocolatey test package cleanup failed."
+          }
+          exit 0
+
+      - name: Push package to Chocolatey Community Repository
+        shell: pwsh
+        env:
+          CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
+        run: |
+          choco push "${{ steps.pack.outputs.path }}" `
+            --source https://push.chocolatey.org/ `
+            --api-key $env:CHOCOLATEY_API_KEY `
+            --limit-output
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }

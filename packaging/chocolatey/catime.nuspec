@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>catime</id>
+    <version>1.5.0</version>
+    <title>Catime</title>
+    <authors>vladelaina</authors>
+    <owners>vladelaina</owners>
+    <projectUrl>https://cati.me</projectUrl>
+    <projectSourceUrl>https://github.com/vladelaina/Catime</projectSourceUrl>
+    <packageSourceUrl>https://github.com/vladelaina/Catime/tree/main/packaging/chocolatey</packageSourceUrl>
+    <licenseUrl>https://github.com/vladelaina/Catime/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <iconUrl>https://raw.githubusercontent.com/vladelaina/Catime/main/Images/catime.png</iconUrl>
+    <summary>An ultra-lightweight Windows countdown and Pomodoro timer.</summary>
+    <description>Catime is an ultra-lightweight, portable Windows countdown and Pomodoro timer. It supports command-line timers such as `catime 25m`, left-click tray shortcuts, right-click configuration menus, custom fonts, tray animations, notification sounds, and plugins.</description>
+    <releaseNotes>https://github.com/vladelaina/Catime/releases/tag/v1.5.0</releaseNotes>
+    <tags>catime timer countdown pomodoro clock tray portable windows</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

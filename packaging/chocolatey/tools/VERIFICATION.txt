@@ -1,0 +1,16 @@
+VERIFICATION
+
+Verification is intended to assist the Chocolatey moderators and community in
+verifying that this package's contents are trustworthy.
+
+The installer downloads the official Catime release executable from:
+
+https://github.com/vladelaina/Catime/releases/download/v1.5.0/catime_1.5.0.exe
+
+The expected SHA256 checksum is:
+
+f89c30c2d076d22870eceee79672d9ed0f5742f994c624a9bb1a7dd61bea1e8d
+
+To verify manually, download the file and run:
+
+Get-FileHash .\catime_1.5.0.exe -Algorithm SHA256

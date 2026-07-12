@@ -171,3 +171,11 @@ jobs:
         release-tag: ${{ github.ref_name }}
         installers-regex: '^catime_${{ needs.build.outputs.tag_version }}\.exe$'
         token: ${{ secrets.WINGET_TOKEN }}
+
+  chocolatey:
+    needs: [build, release]
+    uses: ./.github/workflows/chocolatey.yml
+    with:
+      version: ${{ needs.build.outputs.tag_version }}
+    secrets:
+      CHOCOLATEY_API_KEY: ${{ secrets.CHOCOLATEY_API_KEY }}
