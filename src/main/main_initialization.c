@@ -608,6 +608,7 @@ BOOL InitializeSubsystems(void) {
 }
 
 BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
+    InitializeAppConfigDefaults();
     LOG_INFO("Starting application initialization...");
     
     /* Initialize markdown interactive system */

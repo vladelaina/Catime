@@ -90,7 +90,6 @@ static BOOL IsSoundFileCacheRecentlyScanned(DWORD now) {
 static BOOL IsSupportedAudioFileName(const wchar_t* fileName) {
     const wchar_t* ext = fileName ? wcsrchr(fileName, L'.') : NULL;
     return ext && (
-        _wcsicmp(ext, L".flac") == 0 ||
         _wcsicmp(ext, L".mp3") == 0 ||
         _wcsicmp(ext, L".wav") == 0
     );

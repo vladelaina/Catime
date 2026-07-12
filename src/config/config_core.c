@@ -23,60 +23,36 @@
  * Global configuration - single source of truth
  * ============================================================================ */
 
-AppConfig g_AppConfig = {
-    .recent_files = {
-        .files = {{{0}}},
-        .count = 0
-    },
-    .pomodoro = {
-        .work_time = 0,
-        .short_break = 0,
-        .long_break = 0,
-        .times = {0},
-        .times_count = 0,
-        .loop_count = 1
-    },
-    .notification = {
-        .messages = {
-            .timeout_message = DEFAULT_TIMEOUT_MESSAGE
-        },
-        .display = {
-            .timeout_ms = DEFAULT_NOTIFICATION_TIMEOUT_MS,
-            .max_opacity = DEFAULT_NOTIFICATION_MAX_OPACITY,
-            .corner_radius = DEFAULT_NOTIFICATION_CORNER_RADIUS,
-            .type = NOTIFICATION_TYPE_CATIME,
-            .disabled = FALSE,
-            .window_x = -1,
-            .window_y = -1,
-            .window_width = 0,
-            .window_height = 0
-        },
-        .sound = {
-            .sound_file = "",
-            .volume = DEFAULT_NOTIFICATION_VOLUME
-        }
-    },
-    .font_license = {
-        .accepted = FALSE,
-        .version_accepted = ""
-    },
-    .display = {
-        .time_format = {
-            .format = TIME_FORMAT_DEFAULT,
-            .show_milliseconds = FALSE
-        },
-        .move_step_small = DEFAULT_MOVE_STEP_SMALL,
-        .move_step_large = DEFAULT_MOVE_STEP_LARGE,
-        .opacity_step_normal = MIN_OPACITY,
-        .opacity_step_fast = 5,
-        .scale_step_normal = DEFAULT_SCALE_STEP_NORMAL,
-        .scale_step_fast = DEFAULT_SCALE_STEP_FAST
-    },
-    .timer = {
-        .default_start_time = DEFAULT_QUICK_COUNTDOWN_3
-    },
-    .last_config_time = 0
-};
+AppConfig g_AppConfig;
+
+void InitializeAppConfigDefaults(void) {
+    memset(&g_AppConfig, 0, sizeof(g_AppConfig));
+
+    g_AppConfig.pomodoro.loop_count = 1;
+
+    strncpy(g_AppConfig.notification.messages.timeout_message,
+            DEFAULT_TIMEOUT_MESSAGE,
+            sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
+    g_AppConfig.notification.messages.timeout_message[
+        sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
+    g_AppConfig.notification.display.timeout_ms = DEFAULT_NOTIFICATION_TIMEOUT_MS;
+    g_AppConfig.notification.display.max_opacity = DEFAULT_NOTIFICATION_MAX_OPACITY;
+    g_AppConfig.notification.display.corner_radius = DEFAULT_NOTIFICATION_CORNER_RADIUS;
+    g_AppConfig.notification.display.type = NOTIFICATION_TYPE_CATIME;
+    g_AppConfig.notification.display.window_x = -1;
+    g_AppConfig.notification.display.window_y = -1;
+    g_AppConfig.notification.sound.volume = DEFAULT_NOTIFICATION_VOLUME;
+
+    g_AppConfig.display.time_format.format = TIME_FORMAT_DEFAULT;
+    g_AppConfig.display.move_step_small = DEFAULT_MOVE_STEP_SMALL;
+    g_AppConfig.display.move_step_large = DEFAULT_MOVE_STEP_LARGE;
+    g_AppConfig.display.opacity_step_normal = MIN_OPACITY;
+    g_AppConfig.display.opacity_step_fast = 5;
+    g_AppConfig.display.scale_step_normal = DEFAULT_SCALE_STEP_NORMAL;
+    g_AppConfig.display.scale_step_fast = DEFAULT_SCALE_STEP_FAST;
+
+    g_AppConfig.timer.default_start_time = DEFAULT_QUICK_COUNTDOWN_3;
+}
 
 /** @brief Global flag to trigger factory reset after window creation */
 BOOL g_PerformFactoryReset = FALSE;

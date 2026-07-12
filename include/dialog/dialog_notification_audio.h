@@ -22,7 +22,7 @@
  * @param currentFile Current selected file path (UTF-8, can be NULL or empty)
  * 
  * @details
- * Uses the cached audio folder scan for .mp3/.wav/.flac files and populates combo box.
+ * Uses the cached audio folder scan for .mp3/.wav files and populates combo box.
  * First two items are always "None" and "System Beep".
  */
 void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile);

@@ -234,6 +234,22 @@ endif()
 # Create executable
 add_executable(catime ${SOURCES} ${HEADERS} ${RESOURCE_FILES})
 
+# Recent MinGW GCC distributions automatically append default-manifest.o,
+# which conflicts with Catime's complete application manifest. Shadow that
+# startup object with an empty linker script; app.manifest carries the retained
+# longPathAware declaration explicitly.
+if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND
+   CATIME_ENABLE_WIN32_RESOURCES)
+    set(CATIME_EMPTY_MANIFEST_DIR
+        "${CMAKE_CURRENT_BINARY_DIR}/generated/no-default-manifest"
+    )
+    file(MAKE_DIRECTORY "${CATIME_EMPTY_MANIFEST_DIR}")
+    file(WRITE "${CATIME_EMPTY_MANIFEST_DIR}/default-manifest.o"
+        "/* Intentionally empty linker script. */\n"
+    )
+    target_link_options(catime PRIVATE "-B${CATIME_EMPTY_MANIFEST_DIR}/")
+endif()
+
 if(CATIME_ENABLE_WIN32_RESOURCES AND CATIME_COMPRESS_EMBEDDED_ASSETS)
     target_sources(catime PRIVATE
         src/utils/compressed_resource.c
@@ -274,6 +290,10 @@ target_compile_definitions(catime PRIVATE
     $<$<COMPILE_LANGUAGE:C>:MA_NO_ENCODING>
     $<$<COMPILE_LANGUAGE:C>:MA_NO_VORBIS>
     $<$<COMPILE_LANGUAGE:C>:MA_NO_OPUS>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_FLAC>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_RESOURCE_MANAGER>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_NODE_GRAPH>
+    $<$<COMPILE_LANGUAGE:C>:MA_NO_ENGINE>
     $<$<COMPILE_LANGUAGE:C>:MA_ENABLE_ONLY_SPECIFIC_BACKENDS>
     $<$<COMPILE_LANGUAGE:C>:MA_ENABLE_WASAPI>
     $<$<COMPILE_LANGUAGE:C>:MA_ENABLE_DSOUND>
@@ -405,13 +425,23 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     )
 
     if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        set(CATIME_DISCARD_EH_FRAME_SCRIPT
+            "${CMAKE_CURRENT_BINARY_DIR}/generated/discard-eh-frame.ld"
+        )
+        file(WRITE "${CATIME_DISCARD_EH_FRAME_SCRIPT}"
+            "SECTIONS\n{\n  /DISCARD/ : { *(.eh_frame*) }\n}\nINSERT AFTER .data;\n"
+        )
+
         target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:-fipa-pta>
             $<$<COMPILE_LANGUAGE:C>:-fwhole-program>
-            $<$<COMPILE_LANGUAGE:C>:-flto-partition=one>
+            $<$<COMPILE_LANGUAGE:C>:-flto-partition=none>
         )
         target_link_options(catime PRIVATE
+            -fipa-pta
             -fwhole-program
-            -flto-partition=one
+            -flto-partition=none
+            "LINKER:-T,${CATIME_DISCARD_EH_FRAME_SCRIPT}"
         )
     endif()
 

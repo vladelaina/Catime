@@ -274,6 +274,9 @@ typedef struct {
 /** @brief Global application configuration instance */
 extern AppConfig g_AppConfig;
 
+/** Initialize the in-memory defaults before any subsystem reads g_AppConfig. */
+void InitializeAppConfigDefaults(void);
+
 /** 
  * @brief Flag to trigger factory reset after window creation
  * Set by ReadConfig when version mismatch and forced reset is active.

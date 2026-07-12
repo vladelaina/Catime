@@ -42,7 +42,7 @@ BEGIN
     /** Audio feedback configuration */
     GROUPBOX        "Audio Settings", IDC_NOTIFICATION_AUDIO_GROUP, 10, 220, 330, 80
     
-    LTEXT           "Sound (supports .mp3/.wav/.flac):", IDC_NOTIFICATION_SOUND_LABEL, 20, 240, 150, 15
+    LTEXT           "Sound (supports .mp3/.wav):", IDC_NOTIFICATION_SOUND_LABEL, 20, 240, 150, 15
     COMBOBOX        IDC_NOTIFICATION_SOUND_COMBO, 150, 238, 80, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Test", IDC_TEST_SOUND_BUTTON, 235, 238, 35, 20
     PUSHBUTTON      "Audio Dir", IDC_OPEN_SOUND_DIR_BUTTON, 275, 238, 65, 20

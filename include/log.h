@@ -180,7 +180,13 @@ void SetupExceptionHandler(void);
  * ============================================================================ */
 
 /** @brief Log debug message (only if DEBUG level enabled) */
+#ifdef NDEBUG
+#define LOG_DEBUG(format, ...) do { \
+    if (0) WriteLog(LOG_LEVEL_DEBUG, format, ##__VA_ARGS__); \
+} while (0)
+#else
 #define LOG_DEBUG(format, ...) WriteLog(LOG_LEVEL_DEBUG, format, ##__VA_ARGS__)
+#endif
 
 /** @brief Log informational message */
 #define LOG_INFO(format, ...) WriteLog(LOG_LEVEL_INFO, format, ##__VA_ARGS__)

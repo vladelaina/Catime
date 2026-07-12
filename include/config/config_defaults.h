@@ -90,7 +90,6 @@ typedef struct {
     ConfigValueType type;
     size_t offset;           /* offsetof(ConfigSnapshot, field), SIZE_MAX for custom */
     size_t size;             /* sizeof(field) for strings, 0 for fixed-size types */
-    const char* description;
 } ConfigItemMeta;
 
 /* ============================================================================

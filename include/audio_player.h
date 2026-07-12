@@ -2,7 +2,7 @@
  * @file audio_player.h
  * @brief Audio notification system with three-tier fallback for reliability
  * 
- * 1. miniaudio (MP3/FLAC/WAV support)
+ * 1. miniaudio (MP3/WAV support)
  * 2. PlaySound (WAV fallback)
  * 3. System beep (guaranteed notification)
  * 

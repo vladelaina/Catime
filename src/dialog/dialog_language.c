@@ -34,7 +34,6 @@ typedef struct {
     int dialogID;
     int controlID;
     wchar_t* textKey;
-    wchar_t* fallbackText;
 } SpecialControlEntry;
 
 typedef struct {
@@ -57,72 +56,67 @@ static DialogTitleEntry g_dialogTitles[] = {
 };
 
 static SpecialControlEntry g_specialControls[] = {
-    {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"About", L"About"},
-    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs", L"Version: %hs"},
-    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:", L"Build Date:"},
-    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT", L"COPYRIGHT_TEXT"},
-    {IDD_ABOUT_DIALOG, IDC_CREDITS, L"Credits", L"Credits"},
+    {IDD_ABOUT_DIALOG, IDC_ABOUT_TITLE, L"About"},
+    {IDD_ABOUT_DIALOG, IDC_VERSION_TEXT, L"Version: %hs"},
+    {IDD_ABOUT_DIALOG, IDC_BUILD_DATE, L"Build Date:"},
+    {IDD_ABOUT_DIALOG, IDC_COPYRIGHT, L"COPYRIGHT_TEXT"},
+    {IDD_ABOUT_DIALOG, IDC_CREDITS, L"Credits"},
 
-    {IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT, L"NoUpdateRequired", L"You are already using the latest version!"},
+    {IDD_NO_UPDATE_DIALOG, IDC_NO_UPDATE_TEXT, L"NoUpdateRequired"},
 
-    {IDD_UPDATE_DIALOG, IDC_UPDATE_TEXT, L"CurrentVersion: %s\nNewVersion: %s", L"Current Version: %s\nNew Version: %s"},
-    {IDD_UPDATE_DIALOG, IDC_UPDATE_EXIT_TEXT, L"The application will exit now", L"The application will exit now"},
+    {IDD_UPDATE_DIALOG, IDC_UPDATE_TEXT, L"CurrentVersion: %s\nNewVersion: %s"},
+    {IDD_UPDATE_DIALOG, IDC_UPDATE_EXIT_TEXT, L"The application will exit now"},
 
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content", L"Notification Content"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"Countdown timeout message:", L"Countdown timeout message:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_RADIUS_LABEL, L"Corner radius:", L"Corner radius:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_DISPLAY_GROUP, L"Catime Window Settings", L"Catime Window Settings"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TIME_LABEL, L"Notification display time:", L"Notification display time:"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_LABEL, L"Maximum notification opacity (10-100%):", L"Maximum notification opacity (10-100%):"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_DISABLE_NOTIFICATION_CHECK, L"Disable notifications", L"Disable notifications"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_AUDIO_GROUP, L"Audio Settings", L"Audio Settings"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_METHOD_GROUP, L"Notification Method", L"Notification Method"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_CATIME, L"Catime notification window", L"Catime notification window"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_OS, L"System notification", L"System notification"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, L"System modal window", L"System modal window"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_SOUND_LABEL, L"Sound (supports .mp3/.wav/.flac):", L"Sound (supports .mp3/.wav/.flac):"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_LABEL, L"Volume (0-100%):", L"Volume (0-100%):"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_TEXT, L"100%", L"100%"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_TEXT, L"100%", L"100%"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_CONTENT_GROUP, L"Notification Content"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_LABEL1, L"Countdown timeout message:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_RADIUS_LABEL, L"Corner radius:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_DISPLAY_GROUP, L"Catime Window Settings"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TIME_LABEL, L"Notification display time:"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_LABEL, L"Maximum notification opacity (10-100%):"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_DISABLE_NOTIFICATION_CHECK, L"Disable notifications"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_AUDIO_GROUP, L"Audio Settings"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_METHOD_GROUP, L"Notification Method"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_CATIME, L"Catime notification window"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_OS, L"System notification"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_TYPE_SYSTEM_MODAL, L"System modal window"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_SOUND_LABEL, L"Sound (supports .mp3/.wav):"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_LABEL, L"Volume (0-100%):"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_VOLUME_TEXT, L"100%"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_TEXT, L"100%"},
 
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC,
-     L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n1 30 20=1 hour 30 minutes 20 seconds",
-     L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n1 30 20=1 hour 30 minutes 20 seconds"},
+     L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n1 30 20=1 hour 30 minutes 20 seconds"},
 
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC,
-     L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min",
-     L"Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},
+     L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},
 
     {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_STATIC,
-     L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime",
-     L"Enter the website URL to open when the countdown ends:\nExample: https://github.com/vladelaina/Catime"},
+     L"Enter the website URL to open when the countdown ends:\\nExample: https://github.com/vladelaina/Catime"},
 
     {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_STATIC,
-     L"CountdownPresetDialogStaticText",
-     L"Enter numbers (minutes), separated by spaces\n\n25 10 5\n\nThis will create options for 25 minutes, 10 minutes, and 5 minutes"},
+     L"CountdownPresetDialogStaticText"},
 
     {CLOCK_IDD_DIALOG1, CLOCK_IDC_STATIC,
-     L"CountdownDialogStaticText",
-     L"25=25 minutes\n25h=25 hours\n25s=25 seconds\n25 30=25 minutes 30 seconds\n1 30 20=1 hour 30 minutes 20 seconds\n17 20t=Countdown to 17:20\n9 9 9t=Countdown to 09:09:09"}
+     L"CountdownDialogStaticText"}
 };
 
 static SpecialControlEntry g_specialButtons[] = {
-    {IDD_UPDATE_DIALOG, IDYES, L"Yes", L"Yes"},
-    {IDD_UPDATE_DIALOG, IDNO, L"No", L"No"},
-    {IDD_UPDATE_DIALOG, IDOK, L"OK", L"OK"},
+    {IDD_UPDATE_DIALOG, IDYES, L"Yes"},
+    {IDD_UPDATE_DIALOG, IDNO, L"No"},
+    {IDD_UPDATE_DIALOG, IDOK, L"OK"},
 
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"Test", L"Test"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"Audio folder", L"Audio folder"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"OK", L"OK"},
-    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"Cancel", L"Cancel"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_TEST_SOUND_BUTTON, L"Test"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_OPEN_SOUND_DIR_BUTTON, L"Audio folder"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDOK, L"OK"},
+    {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDCANCEL, L"Cancel"},
 
-    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_STARTUP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"},
-    {CLOCK_IDD_DIALOG1, CLOCK_IDC_BUTTON_OK, L"OK", L"OK"}
+    {CLOCK_IDD_POMODORO_LOOP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"},
+    {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"},
+    {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"},
+    {CLOCK_IDD_WEBSITE_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"},
+    {CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"},
+    {CLOCK_IDD_STARTUP_DIALOG, CLOCK_IDC_BUTTON_OK, L"OK"},
+    {CLOCK_IDD_DIALOG1, CLOCK_IDC_BUTTON_OK, L"OK"}
 };
 
 /** Convert \\n to \n */
@@ -195,8 +189,7 @@ static const wchar_t* FindSpecialControlText(int dialogID, int controlID) {
     for (size_t i = 0; i < ARRAY_SIZE(g_specialControls); i++) {
         if (g_specialControls[i].dialogID == searchID &&
             g_specialControls[i].controlID == controlID) {
-            const wchar_t* localizedText = GetLocalizedString(NULL, g_specialControls[i].textKey);
-            return localizedText ? localizedText : g_specialControls[i].fallbackText;
+            return GetLocalizedString(NULL, g_specialControls[i].textKey);
         }
     }
     return NULL;
@@ -241,7 +234,7 @@ static BOOL LocalizeControl(HWND hwndCtl, int dialogID, int controlID) {
         SetWindowTextW(hwndCtl, specialText);
         return TRUE;
     }
-    
+
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         SetWindowTextW(hwndCtl, buttonText);
@@ -301,7 +294,7 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     if (specialText) {
         return specialText;
     }
-    
+
     const wchar_t* buttonText = FindSpecialButtonText(dialogID, controlID);
     if (buttonText) {
         return buttonText;
