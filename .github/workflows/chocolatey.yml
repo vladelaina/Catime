@@ -25,6 +25,7 @@ permissions:
 jobs:
   publish:
     name: package / chocolatey
+    if: github.repository == 'vladelaina/Catime'
     runs-on: windows-latest
     steps:
       - name: Checkout code

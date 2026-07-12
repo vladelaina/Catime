@@ -85,6 +85,7 @@ jobs:
 
   # Code signing job
   sign:
+    if: github.repository == 'vladelaina/Catime'
     needs: build
     uses: ./.github/workflows/signpath-sign.yml
     with:
@@ -98,6 +99,7 @@ jobs:
   # Build the Microsoft Store package from the signed EXE.
   # It remains a workflow artifact and is not attached to the GitHub Release.
   store-package:
+    if: github.repository == 'vladelaina/Catime'
     needs: [build, sign]
     runs-on: windows-latest
 
@@ -130,6 +132,7 @@ jobs:
 
   # Release job
   release:
+    if: github.repository == 'vladelaina/Catime'
     needs: [build, sign]
     runs-on: ubuntu-latest
     
@@ -173,6 +176,7 @@ jobs:
         token: ${{ secrets.WINGET_TOKEN }}
 
   chocolatey:
+    if: github.repository == 'vladelaina/Catime'
     needs: [build, release]
     uses: ./.github/workflows/chocolatey.yml
     with:

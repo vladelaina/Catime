@@ -713,7 +713,10 @@ jobs:
           compression-level: 0
 
   sign:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository == 'vladelaina/Catime' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
     needs: build
     uses: ./.github/workflows/signpath-sign.yml
     with:
@@ -727,7 +730,10 @@ jobs:
 
   store-package:
     name: package / microsoft-store
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository == 'vladelaina/Catime' &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
     needs: [build, sign]
     runs-on: windows-latest
     steps:
