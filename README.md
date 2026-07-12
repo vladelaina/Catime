@@ -116,6 +116,14 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
   Download the latest release from [GitHub Releases](https://github.com/vladelaina/Catime/releases/latest).
 
+- Scoop
+
+  ```
+  scoop bucket add extras
+
+  scoop install catime
+  ```
+
 -  Winget
 
     ```
