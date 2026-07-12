@@ -38,11 +38,9 @@ if ($versionParts[0] -eq 0 -or ($versionParts | Where-Object { $_ -gt 65535 })) 
 $packageVersion = "$($versionParts[0]).$($versionParts[1]).$($versionParts[2]).0"
 $packageBaseName = "catime_${Version}_x86"
 $msixPath = Join-Path $OutputDirectory "$packageBaseName.msix"
-$uploadPath = Join-Path $OutputDirectory "$packageBaseName.msixupload"
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("CatimeStorePackage_" + [guid]::NewGuid())
 $stagingDirectory = Join-Path $temporaryRoot "package"
 $assetsDirectory = Join-Path $stagingDirectory "Assets"
-$uploadDirectory = Join-Path $temporaryRoot "upload"
 $certificatePath = Join-Path $temporaryRoot "CatimeStoreTemporary.pfx"
 $certificate = $null
 
@@ -111,8 +109,8 @@ function New-StoreLogo {
 }
 
 try {
-    New-Item -ItemType Directory -Force -Path $OutputDirectory, $stagingDirectory, $assetsDirectory, $uploadDirectory | Out-Null
-    Remove-Item $msixPath, $uploadPath -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $OutputDirectory, $stagingDirectory, $assetsDirectory | Out-Null
+    Remove-Item $msixPath -Force -ErrorAction SilentlyContinue
 
     Copy-Item $ExecutablePath (Join-Path $stagingDirectory "catime.exe")
 
@@ -161,14 +159,7 @@ try {
         throw "SignTool failed with exit code $LASTEXITCODE."
     }
 
-    Copy-Item $msixPath (Join-Path $uploadDirectory (Split-Path $msixPath -Leaf))
-    $zipPath = [System.IO.Path]::ChangeExtension($uploadPath, ".zip")
-    Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
-    Compress-Archive -Path (Join-Path $uploadDirectory "*") -DestinationPath $zipPath -CompressionLevel Optimal
-    Move-Item $zipPath $uploadPath
-
     Write-Host "Microsoft Store package created: $msixPath"
-    Write-Host "Partner Center upload created: $uploadPath"
     Write-Host "Package identity version: $packageVersion"
 }
 finally {

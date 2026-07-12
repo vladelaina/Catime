@@ -707,7 +707,10 @@ jobs:
         with:
           name: ${{ steps.rename_output.outputs.artifact-name }}
           path: output/${{ steps.rename_output.outputs.artifact-name }}
-          archive: false
+          # SignPath requires the standard archived GitHub artifact format.
+          # The signing job overwrites this with the final raw signed EXE.
+          archive: true
+          compression-level: 0
 
   sign:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -749,7 +752,7 @@ jobs:
           }
           "path=$($executable.FullName)" >> $env:GITHUB_OUTPUT
 
-      - name: Build Partner Center package
+      - name: Build Microsoft Store package
         shell: pwsh
         run: |
           ./packaging/microsoft-store/build-store-package.ps1 `
@@ -765,25 +768,3 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           archive: false
-
-      - name: Upload Partner Center package
-        uses: actions/upload-artifact@v7
-        with:
-          name: catime-store-upload-${{ needs.build.outputs.version }}-${{ github.run_number }}
-          path: store-output/catime_${{ needs.build.outputs.version }}_x86.msixupload
-          if-no-files-found: error
-          retention-days: 90
-          archive: false
-
-  cleanup:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [sign, store-package]
-    runs-on: ubuntu-latest
-    permissions:
-      actions: write
-    steps:
-      - name: Delete temporary signing package
-        uses: geekyeggo/delete-artifact@v6
-        with:
-          name: catime-signing-package
-          failOnError: false
