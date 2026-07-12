@@ -108,11 +108,9 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 ## 📥 Download
 
-
-<a href="https://get.microsoft.com/installer/download/9n3mzdf1z34v?referrer=appbadge" target="_self" >
+<a href="https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&mode=full" target="_blank"  rel="noopener noreferrer">
 	<img src="https://get.microsoft.com/images/en-us%20light.svg" width="600"/>
 </a>
-
 
 - GitHub Releases
 
