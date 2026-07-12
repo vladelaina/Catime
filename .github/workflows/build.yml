@@ -707,7 +707,10 @@ jobs:
         with:
           name: ${{ steps.rename_output.outputs.artifact-name }}
           path: output/${{ steps.rename_output.outputs.artifact-name }}
-          archive: false
+          # SignPath requires the standard archived GitHub artifact format.
+          # The signing job overwrites this with the final raw signed EXE.
+          archive: true
+          compression-level: 0
 
   sign:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
