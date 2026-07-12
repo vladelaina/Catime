@@ -1,0 +1,110 @@
+{
+  "formatVersion": 1,
+  "containerResource": "IDR_COMPRESSED_ASSETS",
+  "languages": [
+    {
+      "resource": "LANG_ES_INI",
+      "source": "languages/es.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_PT_INI",
+      "source": "languages/pt.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_FR_INI",
+      "source": "languages/fr.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_DE_INI",
+      "source": "languages/de.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_EN_INI",
+      "source": "languages/en.ini",
+      "mode": "english"
+    },
+    {
+      "resource": "LANG_RU_INI",
+      "source": "languages/ru.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_KO_INI",
+      "source": "languages/ko.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_ZH_CN_INI",
+      "source": "languages/zh_CN.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_ZH_TW_INI",
+      "source": "languages/zh-Hant.ini",
+      "mode": "translation"
+    },
+    {
+      "resource": "LANG_JA_INI",
+      "source": "languages/ja.ini",
+      "mode": "translation"
+    }
+  ],
+  "fonts": [
+    {
+      "resource": "IDR_FONT_RECMONO",
+      "source": "../asset/font/SIL/Rec Mono Casual Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_PROFONT",
+      "source": "../asset/font/MIT/ProFontWindows Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_WALLPOET",
+      "source": "../asset/font/OFL/Wallpoet Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_JACQUARDA",
+      "source": "../asset/font/OFL/Jacquarda Bastarda 9 Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_JACQUARD",
+      "source": "../asset/font/OFL/Jacquard 12 Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_PIXELIFY",
+      "source": "../asset/font/OFL/Pixelify Sans Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_RUBIK_GLITCH",
+      "source": "../asset/font/OFL/Rubik Glitch Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_RUBIK_BURNED",
+      "source": "../asset/font/OFL/Rubik Burned Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_RUBIK_PUDDLES",
+      "source": "../asset/font/OFL/Rubik Puddles Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_RUBIK_MARKER_HATCH",
+      "source": "../asset/font/OFL/Rubik Marker Hatch Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_DEPARTURE",
+      "source": "../asset/font/SIL/DepartureMono Essence.otf"
+    },
+    {
+      "resource": "IDR_FONT_TERMINESS",
+      "source": "../asset/font/SIL/Terminess Nerd Font Essence.ttf"
+    },
+    {
+      "resource": "IDR_FONT_DADDYTIME",
+      "source": "../asset/font/SIL/DaddyTimeMono Essence.otf"
+    }
+  ]
+}

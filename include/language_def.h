@@ -29,7 +29,6 @@
     X(APP_LANG_ENGLISH,      "en",      L"English",   "English",             "English",             LANG_EN_INI,    CLOCK_IDM_LANG_ENGLISH,      LANG_ENGLISH, SUBLANG_NEUTRAL,              FALSE) \
     X(APP_LANG_FRENCH,       "fr",      L"Français",  "French",              "French",              LANG_FR_INI,    CLOCK_IDM_LANG_FRENCH,       LANG_FRENCH,  SUBLANG_NEUTRAL,              FALSE) \
     X(APP_LANG_GERMAN,       "de",      L"Deutsch",   "German",              "German",              LANG_DE_INI,    CLOCK_IDM_LANG_GERMAN,       LANG_GERMAN,  SUBLANG_NEUTRAL,              FALSE) \
-    X(APP_LANG_ITALIAN,      "it",      L"Italiano",  "Italian",             "Italian",             LANG_IT_INI,    CLOCK_IDM_LANG_ITALIAN,      LANG_ITALIAN, SUBLANG_NEUTRAL,              FALSE) \
     X(APP_LANG_JAPANESE,     "ja",      L"日本語",     "Japanese",            "Japanese",            LANG_JA_INI,    CLOCK_IDM_LANG_JAPANESE,     LANG_JAPANESE, SUBLANG_NEUTRAL,              FALSE) \
     X(APP_LANG_KOREAN,       "ko",      L"한국어",     "Korean",              "Korean",              LANG_KO_INI,    CLOCK_IDM_LANG_KOREAN,       LANG_KOREAN,  SUBLANG_NEUTRAL,              FALSE) \
     X(APP_LANG_PORTUGUESE,   "pt",      L"Português", "Portuguese",          "Portuguese",          LANG_PT_INI,    CLOCK_IDM_LANG_PORTUGUESE,   LANG_PORTUGUESE, SUBLANG_NEUTRAL,           FALSE) \

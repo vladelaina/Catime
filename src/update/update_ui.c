@@ -11,6 +11,9 @@
 #include "log.h"
 #include "utils/string_convert.h"
 #include "utils/url_safety.h"
+#ifdef CATIME_USE_WIN32_FLS
+#include "utils/thread_local_buffer.h"
+#endif
 #include "../../resource/resource.h"
 #include <strsafe.h>
 #include <commctrl.h>
@@ -34,6 +37,10 @@ static char g_dialogReleaseNotes[NOTES_BUFFER_SIZE] = {0};
 /* Store download URL copy for async update */
 static char g_downloadUrlCopy[512] = {0};
 static SRWLOCK g_downloadUrlLock = SRWLOCK_INIT;
+#ifdef CATIME_USE_WIN32_FLS
+static ThreadLocalBuffer g_downloadUrlSnapshotStorage =
+    THREAD_LOCAL_BUFFER_STATIC_INIT(sizeof(g_downloadUrlCopy));
+#endif
 
 /* Release notes markdown state owned by the modeless update dialog. */
 static wchar_t* g_notesDisplayText = NULL;
@@ -740,14 +747,20 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
  * @return Pointer to stored download URL, or NULL if none
  */
 const char* GetPendingUpdateDownloadUrl(void) {
-#if defined(_MSC_VER)
+#if defined(CATIME_USE_WIN32_FLS)
+    char* urlSnapshot =
+        (char*)ThreadLocalBuffer_Get(&g_downloadUrlSnapshotStorage);
+    if (!urlSnapshot) {
+        return NULL;
+    }
+#elif defined(_MSC_VER)
     __declspec(thread) static char urlSnapshot[sizeof(g_downloadUrlCopy)] = {0};
 #elif defined(__GNUC__)
     static __thread char urlSnapshot[sizeof(g_downloadUrlCopy)] = {0};
 #else
     static char urlSnapshot[sizeof(g_downloadUrlCopy)] = {0};
 #endif
-    return CopyPendingUpdateDownloadUrl(urlSnapshot, sizeof(urlSnapshot)) ? urlSnapshot : NULL;
+    return CopyPendingUpdateDownloadUrl(urlSnapshot, sizeof(g_downloadUrlCopy)) ? urlSnapshot : NULL;
 }
 
 /**

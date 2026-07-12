@@ -36,14 +36,37 @@ option(CATIME_ENABLE_MSVC_ANALYZE "Enable MSVC static analysis" OFF)
 option(CATIME_ENABLE_BINARY_HARDENING "Enable Win32 binary hardening flags" ON)
 option(CATIME_ENABLE_WIN32_RESOURCES "Enable Win32 resource compilation" ON)
 option(CATIME_VALIDATE_LANGUAGES "Validate language resource key alignment" ON)
+option(CATIME_COMPACT_LANGUAGE_RESOURCES "Compact language resources when bundle compression is disabled" ON)
+option(CATIME_COMPRESS_EMBEDDED_ASSETS "Compress embedded language and font resources" ON)
+option(CATIME_AVOID_GNU_EMULATED_TLS "Use Win32 FLS with GNU POSIX thread-model compilers" ON)
 
 # Set default build type to Release
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+set(CATIME_USE_WIN32_FLS OFF)
+if(CATIME_AVOID_GNU_EMULATED_TLS AND WIN32 AND
+   CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    execute_process(
+        COMMAND "${CMAKE_C_COMPILER}" -v
+        RESULT_VARIABLE CATIME_COMPILER_INFO_RESULT
+        OUTPUT_VARIABLE CATIME_COMPILER_INFO_STDOUT
+        ERROR_VARIABLE CATIME_COMPILER_INFO_STDERR
+    )
+    string(CONCAT CATIME_COMPILER_INFO
+        "${CATIME_COMPILER_INFO_STDOUT}" "${CATIME_COMPILER_INFO_STDERR}"
+    )
+    if(CATIME_COMPILER_INFO_RESULT EQUAL 0 AND
+       CATIME_COMPILER_INFO MATCHES "Thread model:[ \t]*posix")
+        set(CATIME_USE_WIN32_FLS ON)
+        message(STATUS "Using Win32 FLS instead of GNU emulated TLS")
+    endif()
+endif()
+
 # Collect all source files
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.c")
+list(FILTER SOURCES EXCLUDE REGEX "[/\\\\]compressed_resource\\.c$")
 
 # Collect all header files
 file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "include/*.h")
@@ -51,44 +74,142 @@ file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS "include/*.h")
 # Collect resource files
 set(RESOURCE_FILES)
 if(CATIME_ENABLE_WIN32_RESOURCES)
-    set(RESOURCE_FILES
-        resource/resource.rc
-        resource/languages.rc
-        resource/catime.rc
-    )
-
     file(GLOB LANGUAGE_RESOURCE_FILES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages/*.ini"
     )
-    set(LANGUAGE_RC_DEPENDENCIES
-        ${LANGUAGE_RESOURCE_FILES}
-        "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
+    file(GLOB_RECURSE FONT_RESOURCE_FILES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/asset/font/MIT/*.otf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/asset/font/MIT/*.ttf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/asset/font/OFL/*.otf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/asset/font/OFL/*.ttf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/asset/font/SIL/*.otf"
+        "${CMAKE_CURRENT_SOURCE_DIR}/asset/font/SIL/*.ttf"
     )
-    set_source_files_properties(resource/languages.rc PROPERTIES
-        OBJECT_DEPENDS "${LANGUAGE_RC_DEPENDENCIES}"
-    )
+    list(SORT LANGUAGE_RESOURCE_FILES)
+    list(SORT FONT_RESOURCE_FILES)
 
-    if(CATIME_VALIDATE_LANGUAGES)
-        find_program(CATIME_NODE_EXECUTABLE NAMES node node.exe)
-        if(CATIME_NODE_EXECUTABLE)
-            add_custom_target(validate_languages
-                COMMAND "${CATIME_NODE_EXECUTABLE}"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/i18n/validate_languages.js"
-                        "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages"
-                DEPENDS
-                    "${CMAKE_CURRENT_SOURCE_DIR}/i18n/validate_languages.js"
-                    ${LANGUAGE_RESOURCE_FILES}
-                WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-                COMMENT "Validating language resources"
-                VERBATIM
-            )
-        else()
+    if(CATIME_VALIDATE_LANGUAGES OR CATIME_COMPACT_LANGUAGE_RESOURCES OR
+       CATIME_COMPRESS_EMBEDDED_ASSETS)
+        find_program(CATIME_NODE_EXECUTABLE NAMES node node.exe
+            NO_CMAKE_FIND_ROOT_PATH
+        )
+        if(NOT CATIME_NODE_EXECUTABLE)
             message(FATAL_ERROR
-                "Node.js is required for language resource validation. "
-                "Install Node.js or configure with -DCATIME_VALIDATE_LANGUAGES=OFF."
+                "Node.js is required for language validation, compaction, or "
+                "embedded resource compression. Install Node.js or disable the "
+                "corresponding CATIME options."
             )
         endif()
     endif()
+
+    if(CATIME_VALIDATE_LANGUAGES)
+        add_custom_target(validate_languages
+            COMMAND "${CATIME_NODE_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/i18n/validate_languages.js"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages"
+            DEPENDS
+                "${CMAKE_CURRENT_SOURCE_DIR}/i18n/validate_languages.js"
+                ${LANGUAGE_RESOURCE_FILES}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Validating language resources"
+            VERBATIM
+        )
+    endif()
+
+    set(CATIME_LANGUAGE_RC "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages.rc")
+    if(CATIME_COMPRESS_EMBEDDED_ASSETS)
+        set(CATIME_EMBEDDED_ASSET_DIR
+            "${CMAKE_CURRENT_BINARY_DIR}/generated/assets"
+        )
+        set(CATIME_EMBEDDED_ASSET_BIN
+            "${CATIME_EMBEDDED_ASSET_DIR}/catime-assets.bin"
+        )
+        set(CATIME_EMBEDDED_ASSET_RC
+            "${CATIME_EMBEDDED_ASSET_DIR}/catime-assets.rc"
+        )
+        set(CATIME_EMBEDDED_ASSET_AUDIT
+            "${CATIME_EMBEDDED_ASSET_DIR}/catime-assets.audit.json"
+        )
+        add_custom_target(prepare_embedded_assets
+            BYPRODUCTS
+                "${CATIME_EMBEDDED_ASSET_BIN}"
+                "${CATIME_EMBEDDED_ASSET_RC}"
+                "${CATIME_EMBEDDED_ASSET_AUDIT}"
+            COMMAND "${CATIME_NODE_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_embedded_resources.js"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/resource/embedded_assets.json"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
+                    "${CATIME_EMBEDDED_ASSET_BIN}"
+                    "${CATIME_EMBEDDED_ASSET_RC}"
+                    "${CATIME_EMBEDDED_ASSET_AUDIT}"
+            DEPENDS
+                "${CMAKE_CURRENT_SOURCE_DIR}/tools/prepare_embedded_resources.js"
+                "${CMAKE_CURRENT_SOURCE_DIR}/resource/embedded_assets.json"
+                "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
+                ${LANGUAGE_RESOURCE_FILES}
+                ${FONT_RESOURCE_FILES}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Compressing embedded language and font resources"
+            VERBATIM
+        )
+
+        set(CATIME_LANGUAGE_RC "${CATIME_EMBEDDED_ASSET_RC}")
+        set_source_files_properties("${CATIME_EMBEDDED_ASSET_RC}" PROPERTIES
+            GENERATED TRUE
+        )
+    elseif(CATIME_COMPACT_LANGUAGE_RESOURCES)
+        set(CATIME_EMBEDDED_LANGUAGE_DIR
+            "${CMAKE_CURRENT_BINARY_DIR}/embedded_languages"
+        )
+        set(CATIME_EMBEDDED_LANGUAGE_RC
+            "${CMAKE_CURRENT_BINARY_DIR}/embedded_languages.rc"
+        )
+        set(CATIME_EMBEDDED_LANGUAGE_FILES)
+        foreach(LANGUAGE_RESOURCE_FILE IN LISTS LANGUAGE_RESOURCE_FILES)
+            get_filename_component(LANGUAGE_RESOURCE_NAME
+                "${LANGUAGE_RESOURCE_FILE}" NAME
+            )
+            list(APPEND CATIME_EMBEDDED_LANGUAGE_FILES
+                "${CATIME_EMBEDDED_LANGUAGE_DIR}/${LANGUAGE_RESOURCE_NAME}"
+            )
+        endforeach()
+
+        add_custom_command(
+            OUTPUT
+                "${CATIME_EMBEDDED_LANGUAGE_RC}"
+                ${CATIME_EMBEDDED_LANGUAGE_FILES}
+            COMMAND "${CATIME_NODE_EXECUTABLE}"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/i18n/prepare_embedded_languages.js"
+                    "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages.rc"
+                    "${CATIME_EMBEDDED_LANGUAGE_DIR}"
+                    "${CATIME_EMBEDDED_LANGUAGE_RC}"
+            DEPENDS
+                "${CMAKE_CURRENT_SOURCE_DIR}/i18n/prepare_embedded_languages.js"
+                "${CMAKE_CURRENT_SOURCE_DIR}/resource/languages.rc"
+                ${LANGUAGE_RESOURCE_FILES}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Preparing compact embedded language resources"
+            VERBATIM
+        )
+
+        set(CATIME_LANGUAGE_RC "${CATIME_EMBEDDED_LANGUAGE_RC}")
+        set_source_files_properties("${CATIME_EMBEDDED_LANGUAGE_RC}" PROPERTIES
+            GENERATED TRUE
+            OBJECT_DEPENDS
+                "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h;${CATIME_EMBEDDED_LANGUAGE_FILES}"
+        )
+    else()
+        set_source_files_properties("${CATIME_LANGUAGE_RC}" PROPERTIES
+            OBJECT_DEPENDS
+                "${LANGUAGE_RESOURCE_FILES};${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
+        )
+    endif()
+
+    set(RESOURCE_FILES
+        resource/resource.rc
+        "${CATIME_LANGUAGE_RC}"
+        resource/catime.rc
+    )
 
     file(GLOB DIALOG_RESOURCE_FILES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/*_dialog.rc"
@@ -97,7 +218,11 @@ if(CATIME_ENABLE_WIN32_RESOURCES)
         ${DIALOG_RESOURCE_FILES}
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/resource.h"
         "${CMAKE_CURRENT_SOURCE_DIR}/resource/app.manifest"
+        "${CMAKE_CURRENT_SOURCE_DIR}/asset/icon/catime.ico"
     )
+    if(NOT CATIME_COMPRESS_EMBEDDED_ASSETS)
+        list(APPEND RESOURCE_RC_DEPENDENCIES ${FONT_RESOURCE_FILES})
+    endif()
     set_source_files_properties(resource/resource.rc PROPERTIES
         OBJECT_DEPENDS "${RESOURCE_RC_DEPENDENCIES}"
     )
@@ -109,8 +234,18 @@ endif()
 # Create executable
 add_executable(catime ${SOURCES} ${HEADERS} ${RESOURCE_FILES})
 
+if(CATIME_ENABLE_WIN32_RESOURCES AND CATIME_COMPRESS_EMBEDDED_ASSETS)
+    target_sources(catime PRIVATE
+        src/utils/compressed_resource.c
+        libs/miniz/miniz_tinfl.c
+    )
+endif()
+
 if(TARGET validate_languages)
     add_dependencies(catime validate_languages)
+endif()
+if(TARGET prepare_embedded_assets)
+    add_dependencies(catime prepare_embedded_assets)
 endif()
 
 # Add include directories
@@ -120,6 +255,14 @@ target_include_directories(catime PRIVATE
     src
     libs/miniaudio
 )
+
+if(CATIME_ENABLE_WIN32_RESOURCES AND CATIME_COMPRESS_EMBEDDED_ASSETS)
+    target_include_directories(catime PRIVATE
+        "${CATIME_EMBEDDED_ASSET_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/resource"
+        "${CMAKE_CURRENT_SOURCE_DIR}/libs/miniz"
+    )
+endif()
 
 # Add compile definitions
 target_compile_definitions(catime PRIVATE
@@ -131,7 +274,26 @@ target_compile_definitions(catime PRIVATE
     $<$<COMPILE_LANGUAGE:C>:MA_NO_ENCODING>
     $<$<COMPILE_LANGUAGE:C>:MA_NO_VORBIS>
     $<$<COMPILE_LANGUAGE:C>:MA_NO_OPUS>
+    $<$<COMPILE_LANGUAGE:C>:MA_ENABLE_ONLY_SPECIFIC_BACKENDS>
+    $<$<COMPILE_LANGUAGE:C>:MA_ENABLE_WASAPI>
+    $<$<COMPILE_LANGUAGE:C>:MA_ENABLE_DSOUND>
+    $<$<COMPILE_LANGUAGE:C>:MA_ENABLE_WINMM>
 )
+
+if(CATIME_ENABLE_WIN32_RESOURCES AND CATIME_COMPRESS_EMBEDDED_ASSETS)
+    target_compile_definitions(catime PRIVATE
+        CATIME_COMPRESSED_EMBEDDED_RESOURCES=1
+        $<$<COMPILE_LANGUAGE:C>:MINIZ_NO_STDIO>
+        $<$<COMPILE_LANGUAGE:C>:MINIZ_NO_TIME>
+        $<$<COMPILE_LANGUAGE:C>:MINIZ_NO_MALLOC>
+    )
+endif()
+
+if(CATIME_USE_WIN32_FLS)
+    target_compile_definitions(catime PRIVATE
+        $<$<COMPILE_LANGUAGE:C>:CATIME_USE_WIN32_FLS=1>
+    )
+endif()
 
 if(MSVC)
     target_compile_definitions(catime PRIVATE
@@ -210,9 +372,18 @@ if(MSVC)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_definitions(catime PRIVATE NDEBUG)
 
+    set(CATIME_SIZE_OPTIMIZATION_FLAG -Os)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        include(CheckCCompilerFlag)
+        check_c_compiler_flag("-Oz" CATIME_COMPILER_SUPPORTS_OZ)
+        if(CATIME_COMPILER_SUPPORTS_OZ)
+            set(CATIME_SIZE_OPTIMIZATION_FLAG -Oz)
+        endif()
+    endif()
+
     # Optimization flags for MinGW (size-optimized)
     target_compile_options(catime PRIVATE
-        $<$<COMPILE_LANGUAGE:C>:-Os>
+        $<$<COMPILE_LANGUAGE:C>:${CATIME_SIZE_OPTIMIZATION_FLAG}>
         $<$<COMPILE_LANGUAGE:C>:-mtune=generic>
         $<$<COMPILE_LANGUAGE:C>:-ffunction-sections>
         $<$<COMPILE_LANGUAGE:C>:-fdata-sections>
@@ -232,6 +403,17 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         $<$<COMPILE_LANGUAGE:C>:-fno-stack-protector>
         $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:Clang>>:-Wno-unknown-warning-option>
     )
+
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:-fwhole-program>
+            $<$<COMPILE_LANGUAGE:C>:-flto-partition=one>
+        )
+        target_link_options(catime PRIVATE
+            -fwhole-program
+            -flto-partition=one
+        )
+    endif()
 
     # Link-time optimization and size reduction
     target_link_options(catime PRIVATE

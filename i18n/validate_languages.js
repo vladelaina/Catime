@@ -4,8 +4,9 @@
  *
  * en.ini is the translation key template. Every other language file must use
  * the same key=value format and the same key sequence. This prevents the old
- * compact value format from shifting translations when the English template is
- * edited.
+ * compact source format from shifting translations when the English template
+ * is edited. The build may generate compact embedded copies only after this
+ * key sequence has been validated.
  */
 
 const fs = require('node:fs');

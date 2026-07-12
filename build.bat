@@ -9,6 +9,8 @@ REM Configuration
 set BUILD_TYPE=%1
 if "%BUILD_TYPE%"=="" set BUILD_TYPE=Release
 set BUILD_DIR=build
+set BUILD_JOBS=%CATIME_BUILD_JOBS%
+if "%BUILD_JOBS%"=="" set BUILD_JOBS=2
 
 REM Record start time
 set START_TIME=%TIME%
@@ -68,6 +70,7 @@ echo Build configuration:
 echo   Compiler: %COMPILER_ARCH%
 echo   Target: %ARCH_TYPE%
 echo   Build type: %BUILD_TYPE%
+echo   Parallel jobs: %BUILD_JOBS%
 echo.
 
 REM Create build directory
@@ -81,9 +84,10 @@ if exist "CMakeCache.txt" (
         for /f "tokens=2 delims==" %%i in ('findstr /C:"CMAKE_HOME_DIRECTORY" CMakeCache.txt') do (
             set CACHED_PATH=%%i
         )
-        REM Compare cached path with current path (case-insensitive)
-        echo !CACHED_PATH! | findstr /i /C:"%CD%\.." >nul
-        if errorlevel 1 (
+        REM Compare normalized source paths (CMake stores forward slashes).
+        for %%i in ("!CD!\..") do set EXPECTED_SOURCE=%%~fi
+        set EXPECTED_SOURCE=!EXPECTED_SOURCE:\=/!
+        if /i not "!CACHED_PATH!"=="!EXPECTED_SOURCE!" (
             echo.
             echo Detected stale CMake cache from different build environment
             echo Cleaning build directory...
@@ -120,9 +124,10 @@ powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;147
 REM Step 3: Build with real-time progress monitoring
 REM Clean up any previous build completion marker
 if exist "build_complete.tmp" del build_complete.tmp
+if exist "build_exit_code.tmp" del build_exit_code.tmp
 
 REM Start build in background
-start /b "" cmd /c "cmake --build . --config %BUILD_TYPE% -j8 >build.log 2>&1 & echo DONE >build_complete.tmp"
+start /b "" cmd /c call "%CD%\..\build_worker.bat" "%BUILD_TYPE%" "%BUILD_JOBS%"
 
 REM Start progress monitor
 REM Get absolute path to the script
@@ -130,13 +135,22 @@ set SCRIPT_PATH=%CD%\..\build_monitor.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" -BuildDir "." -TotalFiles %TOTAL_FILES%
 
 REM Check build result
-if exist "catime.exe" (
+set BUILD_EXIT_CODE=1
+if exist "build_exit_code.tmp" set /p BUILD_EXIT_CODE=<build_exit_code.tmp
+set BUILD_OUTPUT_SIZE=0
+if exist "catime.exe" for %%A in (catime.exe) do set BUILD_OUTPUT_SIZE=%%~zA
+set BUILD_OK=0
+if "!BUILD_EXIT_CODE!"=="0" if !BUILD_OUTPUT_SIZE! GTR 0 set BUILD_OK=1
+
+if "!BUILD_OK!"=="1" (
     del build_complete.tmp 2>nul
+    del build_exit_code.tmp 2>nul
 ) else (
     echo.
     powershell -NoProfile -Command "$e=[char]27; Write-Host \"${e}[91m✗ Build failed!${e}[0m\""
     echo Check build.log for details
     del build_complete.tmp 2>nul
+    del build_exit_code.tmp 2>nul
     pause
     exit /b 1
 )
@@ -147,7 +161,7 @@ timeout /t 1 /nobreak >nul
 powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;147;112;219m[100%%]${e}[0m ${e}[38;2;138;43;226m########################################${e}[0m ${e}[38;2;100;255;150mFinalizing build... ✓${e}[0m\""
 
 REM Check if build was successful
-if exist "catime.exe" (
+if "!BUILD_OK!"=="1" (
     REM Calculate elapsed time
     set END_TIME=%TIME%
     
@@ -159,7 +173,7 @@ if exist "catime.exe" (
     powershell -NoProfile -Command "$e=[char]27; Write-Host \"${e}[92m✓ Build completed successfully!${e}[0m\""
     
     REM Calculate time difference (simplified - shows end time)
-    powershell -NoProfile -Command "$e=[char]27; Write-Host \"${e}[95mBuild time: %START_TIME% - %END_TIME%${e}[0m\""
+    powershell -NoProfile -Command "$e=[char]27; Write-Host \"${e}[95mBuild time: %START_TIME% - !END_TIME!${e}[0m\""
     powershell -NoProfile -Command "$e=[char]27; Write-Host \"${e}[96mSize: !SIZE_KB! KB${e}[0m\""
     powershell -NoProfile -Command "$e=[char]27; Write-Host \"${e}[96mOutput: %CD%\catime.exe${e}[0m\""
     

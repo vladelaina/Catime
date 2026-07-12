@@ -15,6 +15,10 @@
 #include "config.h"
 #include "log.h"
 
+#if defined(MA_NO_DECODING) || defined(MA_NO_MP3) || defined(MA_NO_WAV) || defined(MA_NO_FLAC)
+#error "Catime requires MP3, WAV, and FLAC decoding support"
+#endif
+
 /* Audio polling intervals:
  * - 500ms for miniaudio: Frequent checks detect completion quickly while minimizing overhead
  * - 3000ms for PlaySound: API lacks completion callback, timeout based on typical notification length

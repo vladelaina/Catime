@@ -8,6 +8,7 @@
 /** @brief Application icon resource */
 IDI_CATIME ICON "../asset/icon/catime.ico"
 
+#ifndef CATIME_COMPRESSED_EMBEDDED_RESOURCES
 /** @brief MIT-licensed monospace font for terminal-style display */
 IDR_FONT_PROFONT         FONT "../asset/font/MIT/ProFontWindows Essence.ttf"
 
@@ -26,6 +27,7 @@ IDR_FONT_RUBIK_GLITCH      FONT "../asset/font/OFL/Rubik Glitch Essence.ttf"
 IDR_FONT_RUBIK_MARKER_HATCH FONT "../asset/font/OFL/Rubik Marker Hatch Essence.ttf"
 IDR_FONT_RUBIK_PUDDLES     FONT "../asset/font/OFL/Rubik Puddles Essence.ttf"
 IDR_FONT_WALLPOET          FONT "../asset/font/OFL/Wallpoet Essence.ttf"
+#endif
 
 /** @brief Generic input dialog for user text entry */
 IDD_INPUTBOX DIALOGEX 0, 0, 240, 90

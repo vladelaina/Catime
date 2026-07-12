@@ -9,6 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "language.h"
+#ifdef CATIME_USE_WIN32_FLS
+#include "utils/thread_local_buffer.h"
+#endif
+#ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
+#include "utils/compressed_resource.h"
+#endif
 #include "../resource/resource.h"
 
 #define MAX_TRANSLATIONS 600
@@ -46,6 +52,16 @@ static AppLanguage g_activeTranslationLanguage = APP_LANG_ENGLISH;
 static BOOL g_initialized = FALSE;
 static INIT_ONCE g_languageLockOnce = INIT_ONCE_STATIC_INIT;
 static CRITICAL_SECTION g_languageCS;
+
+#ifdef CATIME_USE_WIN32_FLS
+typedef struct {
+    wchar_t buffers[LOCALIZED_RETURN_SLOT_COUNT][MAX_STRING_LENGTH];
+    unsigned int nextSlot;
+} LocalizedReturnStorage;
+
+static ThreadLocalBuffer g_localizedReturnStorage =
+    THREAD_LOCAL_BUFFER_STATIC_INIT(sizeof(LocalizedReturnStorage));
+#endif
 
 /** Adding a new language = one entry here (Auto-generated via X-Macro) */
 static const LanguageMetadata g_languageMetadata[APP_LANG_COUNT] = {
@@ -97,7 +113,15 @@ static const wchar_t* CopyLocalizedReturnValue(const wchar_t* value) {
         return L"";
     }
 
-#if defined(_MSC_VER)
+#if defined(CATIME_USE_WIN32_FLS)
+    LocalizedReturnStorage* storage =
+        (LocalizedReturnStorage*)ThreadLocalBuffer_Get(&g_localizedReturnStorage);
+    if (!storage) {
+        return value;
+    }
+    wchar_t* slot = storage->buffers[
+        storage->nextSlot++ % LOCALIZED_RETURN_SLOT_COUNT];
+#elif defined(_MSC_VER)
     __declspec(thread) static wchar_t buffers[LOCALIZED_RETURN_SLOT_COUNT][MAX_STRING_LENGTH];
     __declspec(thread) static unsigned int nextSlot = 0;
 #elif defined(__GNUC__)
@@ -108,7 +132,9 @@ static const wchar_t* CopyLocalizedReturnValue(const wchar_t* value) {
     static unsigned int nextSlot = 0;
 #endif
 
+#if !defined(CATIME_USE_WIN32_FLS)
     wchar_t* slot = buffers[nextSlot++ % LOCALIZED_RETURN_SLOT_COUNT];
+#endif
     wcsncpy_s(slot, MAX_STRING_LENGTH, value, _TRUNCATE);
     return slot;
 }
@@ -303,6 +329,29 @@ static const char* SkipUTF8BOM(const char* str) {
 
 /** @param outBuffer Caller must free */
 static BOOL LoadResourceToBuffer(UINT resourceId, char** outBuffer) {
+#ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
+    if (!outBuffer) {
+        return FALSE;
+    }
+    *outBuffer = NULL;
+
+    CompressedResourceGroup* group = NULL;
+    if (!CompressedResource_LoadGroup(NULL,
+                                      COMPRESSED_RESOURCE_GROUP_LANGUAGES,
+                                      &group)) {
+        return FALSE;
+    }
+
+    BOOL result = CompressedResource_CopyTextMember(group, resourceId,
+                                                     outBuffer, NULL);
+    CompressedResource_FreeGroup(group);
+    return result;
+#else
+    if (!outBuffer) {
+        return FALSE;
+    }
+    *outBuffer = NULL;
+
     HRSRC hResInfo = FindResourceW(NULL, MAKEINTRESOURCE(resourceId), RT_RCDATA);
     if (!hResInfo) {
         return FALSE;
@@ -323,7 +372,11 @@ static BOOL LoadResourceToBuffer(UINT resourceId, char** outBuffer) {
         return FALSE;
     }
     
-    *outBuffer = (char*)malloc(dwSize + 1);
+    if (dwSize == MAXDWORD) {
+        return FALSE;
+    }
+
+    *outBuffer = (char*)malloc((size_t)dwSize + 1);
     if (!*outBuffer) {
         return FALSE;
     }
@@ -332,6 +385,7 @@ static BOOL LoadResourceToBuffer(UINT resourceId, char** outBuffer) {
     (*outBuffer)[dwSize] = '\0';
     
     return TRUE;
+#endif
 }
 
 static void ParseLanguageBuffer(TranslationTable* table,

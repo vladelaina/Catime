@@ -9,6 +9,9 @@
 #include "font/font_config.h"
 #include "utils/string_convert.h"
 #include "utils/path_utils.h"
+#ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
+#include "utils/compressed_resource.h"
+#endif
 #include "config.h"
 #include "log.h"
 #include "../../resource/resource.h"
@@ -566,25 +569,12 @@ void ApplyFontPreview(void) {
  * Embedded Font Resources
  * ============================================================================ */
 
-BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* outputPath) {
-    if (!outputPath) return FALSE;
-    
-    /* Find resource */
-    HRSRC hResource = FindResourceW(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
-    if (hResource == NULL) return FALSE;
-    
-    /* Load resource */
-    HGLOBAL hMemory = LoadResource(hInstance, hResource);
-    if (hMemory == NULL) return FALSE;
-    
-    /* Lock resource */
-    const void* fontData = LockResource(hMemory);
-    if (fontData == NULL) return FALSE;
-    
-    /* Get size */
-    DWORD fontLength = SizeofResource(hInstance, hResource);
-    if (fontLength == 0) return FALSE;
-    
+static BOOL WriteFontDataToFile(const void* fontData, size_t fontLength,
+                                const char* outputPath) {
+    if (!fontData || fontLength == 0 || fontLength > MAXDWORD || !outputPath) {
+        return FALSE;
+    }
+
     /* Convert path to wide */
     wchar_t wOutputPath[MAX_PATH];
     if (!Utf8ToWide(outputPath, wOutputPath, MAX_PATH)) return FALSE;
@@ -606,8 +596,9 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
     }
 
     DWORD bytesWritten;
-    BOOL result = WriteFile(hFile, fontData, fontLength, &bytesWritten, NULL) &&
-                  bytesWritten == fontLength;
+    DWORD writeLength = (DWORD)fontLength;
+    BOOL result = WriteFile(hFile, fontData, writeLength, &bytesWritten, NULL) &&
+                  bytesWritten == writeLength;
     if (result && !FlushFileBuffers(hFile)) {
         result = FALSE;
     }
@@ -626,6 +617,42 @@ BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* 
     return result;
 }
 
+BOOL ExtractFontResourceToFile(HINSTANCE hInstance, int resourceId, const char* outputPath) {
+#ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
+    CompressedResourceGroup* group = NULL;
+    if (!CompressedResource_LoadGroup(hInstance,
+                                      COMPRESSED_RESOURCE_GROUP_FONTS,
+                                      &group)) {
+        return FALSE;
+    }
+
+    const BYTE* fontData = NULL;
+    size_t fontLength = 0;
+    BOOL result =
+        CompressedResource_GetMember(group, (UINT)resourceId, &fontData,
+                                     &fontLength, NULL) &&
+        WriteFontDataToFile(fontData, fontLength, outputPath);
+    CompressedResource_FreeGroup(group);
+    return result;
+#else
+    if (!outputPath) return FALSE;
+
+    HRSRC hResource = FindResourceW(hInstance, MAKEINTRESOURCE(resourceId), RT_FONT);
+    if (hResource == NULL) return FALSE;
+
+    HGLOBAL hMemory = LoadResource(hInstance, hResource);
+    if (hMemory == NULL) return FALSE;
+
+    const void* fontData = LockResource(hMemory);
+    if (fontData == NULL) return FALSE;
+
+    DWORD fontLength = SizeofResource(hInstance, hResource);
+    if (fontLength == 0) return FALSE;
+
+    return WriteFontDataToFile(fontData, (size_t)fontLength, outputPath);
+#endif
+}
+
 BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
     /* Get fonts folder path */
     wchar_t wFontsFolderPath[MAX_PATH] = {0};
@@ -634,6 +661,15 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
     char fontsFolderPath[MAX_PATH];
     if (!WideToUtf8(wFontsFolderPath, fontsFolderPath, MAX_PATH)) return FALSE;
     
+#ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
+    CompressedResourceGroup* group = NULL;
+    if (!CompressedResource_LoadGroup(hInstance,
+                                      COMPRESSED_RESOURCE_GROUP_FONTS,
+                                      &group)) {
+        return FALSE;
+    }
+#endif
+
     /* Extract each font */
     BOOL allExtracted = TRUE;
     for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
@@ -644,11 +680,28 @@ BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance) {
             allExtracted = FALSE;
             continue;
         }
-        if (!ExtractFontResourceToFile(hInstance, fontResources[i].resourceId, outputPath)) {
+#ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
+        const BYTE* fontData = NULL;
+        size_t fontLength = 0;
+        BOOL extracted =
+            CompressedResource_GetMember(group,
+                                         (UINT)fontResources[i].resourceId,
+                                         &fontData, &fontLength, NULL) &&
+            WriteFontDataToFile(fontData, fontLength, outputPath);
+#else
+        BOOL extracted = ExtractFontResourceToFile(hInstance,
+                                                   fontResources[i].resourceId,
+                                                   outputPath);
+#endif
+        if (!extracted) {
             LOG_WARNING("Failed to extract embedded font: %s", fontResources[i].fontName);
             allExtracted = FALSE;
         }
     }
+
+#ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
+    CompressedResource_FreeGroup(group);
+#endif
 
     return allExtracted;
 }

@@ -104,6 +104,9 @@
 /** @brief Application icon resource */
 #define IDI_CATIME 101                   /**< Main application icon */
 
+/** @brief Compressed embedded language and font asset container */
+#define IDR_COMPRESSED_ASSETS 1200
+
 /** @brief Language resource identifiers */
 #define LANG_EN_INI       1001           /**< English language pack */
 #define LANG_ZH_CN_INI    1002           /**< Simplified Chinese language pack */
@@ -115,7 +118,6 @@
 #define LANG_PT_INI       1008           /**< Portuguese language pack */
 #define LANG_JA_INI       1009           /**< Japanese language pack */
 #define LANG_KO_INI       1010           /**< Korean language pack */
-#define LANG_IT_INI       1011           /**< Italian language pack */
 
 /** @brief Dialog resource identifiers */
 #define CLOCK_ID_TRAY_APP_ICON 1001      /**< Tray icon identifier */
@@ -194,7 +196,6 @@
 #define CLOCK_IDM_LANG_PORTUGUESE 168    /**< Portuguese language */
 #define CLOCK_IDM_LANG_JAPANESE    40110
 #define CLOCK_IDM_LANG_KOREAN      40111
-#define CLOCK_IDM_LANG_ITALIAN     40112
 
 /** @brief Timer control menu identifiers */
 #define CLOCK_IDM_COUNT_UP 153           /**< Count-up timer menu item */
