@@ -713,11 +713,6 @@ jobs:
           sha256sum output/catime.exe
           i686-w64-mingw32-objdump -f output/catime.exe
 
-          MAX_SIZE_KB=820
-          if [ "$SIZE_BYTES" -gt $((MAX_SIZE_KB * 1024)) ]; then
-            echo "::notice::Unsigned x86 EXE exceeds the reference size of ${MAX_SIZE_KB} KB (${SIZE_KB} KB); build continues"
-          fi
-
       - name: Rename output file
         id: rename_output
         run: |
@@ -735,6 +730,7 @@ jobs:
           # The signing job overwrites this with the final raw signed EXE.
           archive: true
           compression-level: 0
+          overwrite: true
 
       - name: Preserve unsigned EXE
         uses: actions/upload-artifact@v7
@@ -743,6 +739,7 @@ jobs:
           path: output/${{ steps.rename_output.outputs.artifact-name }}
           retention-days: 30
           archive: false
+          overwrite: true
 
   sign:
     if: >-
@@ -812,3 +809,4 @@ jobs:
           if-no-files-found: error
           retention-days: 90
           archive: false
+          overwrite: true
