@@ -20,7 +20,7 @@ on:
 permissions:
   contents: read
   security-events: write
-  actions: read
+  actions: write
 
 jobs:
   publishing-policy:
@@ -724,22 +724,20 @@ jobs:
         id: upload-unsigned
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.rename_output.outputs.artifact-name }}
+          name: catime-signing-input-${{ github.run_id }}-${{ github.run_attempt }}
           path: output/${{ steps.rename_output.outputs.artifact-name }}
           # SignPath requires the standard archived GitHub artifact format.
-          # The signing job overwrites this with the final raw signed EXE.
+          # The signing workflow deletes this input after a successful request.
           archive: true
           compression-level: 0
-          overwrite: true
 
       - name: Preserve unsigned EXE
         uses: actions/upload-artifact@v7
         with:
-          name: catime-unsigned-${{ env.VERSION }}-${{ github.run_number }}
+          name: catime-unsigned_${{ env.VERSION }}_${{ github.run_number }}_${{ github.run_attempt }}.exe
           path: output/${{ steps.rename_output.outputs.artifact-name }}
           retention-days: 30
           archive: false
-          overwrite: true
 
   sign:
     if: >-
@@ -749,7 +747,7 @@ jobs:
     needs: build
     uses: ./.github/workflows/signpath-sign.yml
     with:
-      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      artifact-name: catime_${{ needs.build.outputs.version }}_${{ github.run_number }}_${{ github.run_attempt }}.exe
       artifact-id: ${{ needs.build.outputs.artifact-id }}
       version: ${{ needs.build.outputs.version }}
       is-release: false
@@ -772,7 +770,7 @@ jobs:
       - name: Download signed executable
         uses: actions/download-artifact@v8
         with:
-          name: ${{ needs.build.outputs.artifact-name }}
+          name: catime_${{ needs.build.outputs.version }}_${{ github.run_number }}_${{ github.run_attempt }}.exe
           path: signed-build
 
       - name: Locate signed executable
@@ -804,9 +802,8 @@ jobs:
       - name: Upload Microsoft Store MSIX
         uses: actions/upload-artifact@v7
         with:
-          name: catime-store-msix-${{ needs.build.outputs.version }}-${{ github.run_number }}
+          name: catime-store-msix-${{ needs.build.outputs.version }}-${{ github.run_number }}-${{ github.run_attempt }}
           path: store-output/catime_${{ needs.build.outputs.version }}_x86.msix
           if-no-files-found: error
           retention-days: 90
           archive: false
-          overwrite: true

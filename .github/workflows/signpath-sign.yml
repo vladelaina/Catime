@@ -44,6 +44,9 @@ jobs:
   code-signing:
     if: github.repository == 'vladelaina/Catime'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     outputs:
       signed-artifact-id: ${{ steps.upload-signed.outputs.artifact-id }}
       signing-request-id: ${{ steps.signpath-submit.outputs.signing-request-id }}
@@ -63,6 +66,22 @@ jobs:
         parameters: |
           version: ${{ toJSON(inputs.version) }}
           build_type: ${{ toJSON(inputs.is-release && 'release' || 'development') }}
+
+    - name: Delete unsigned signing input
+      continue-on-error: true
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const artifactId = Number(${{ toJSON(inputs.artifact-id) }});
+          if (!Number.isSafeInteger(artifactId) || artifactId <= 0) {
+            core.setFailed(`Invalid unsigned artifact ID: ${{ inputs.artifact-id }}`);
+            return;
+          }
+          await github.rest.actions.deleteArtifact({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            artifact_id: artifactId,
+          });
           
     - name: Extract signed files
       run: |
@@ -96,6 +115,5 @@ jobs:
         name: ${{ inputs.artifact-name }}
         path: ./signed-output/*.exe
         retention-days: 90
-        overwrite: true
         archive: ${{ inputs.archive-signed-artifact }}
         
