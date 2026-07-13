@@ -731,14 +731,6 @@ jobs:
           archive: true
           compression-level: 0
 
-      - name: Preserve unsigned EXE
-        uses: actions/upload-artifact@v7
-        with:
-          name: catime-unsigned_${{ env.VERSION }}_${{ github.run_number }}_${{ github.run_attempt }}.exe
-          path: output/${{ steps.rename_output.outputs.artifact-name }}
-          retention-days: 30
-          archive: false
-
   sign:
     if: >-
       github.repository == 'vladelaina/Catime' &&
