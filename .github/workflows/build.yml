@@ -6,11 +6,6 @@ env:
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "README.md"
-      - "README_EN.md"
-      - "SECURITY.md"
-      - "PRIVACY.md"
   pull_request:
     branches: [main]
     paths-ignore:
@@ -685,6 +680,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Set up deterministic Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.18.0'
+
       - name: Install MinGW compiler and CMake
         run: |
           sudo apt-get update
@@ -700,10 +700,23 @@ jobs:
 
       - name: Build application
         run: |
+          node -e "const expected='1.3.1-e00f703'; if (process.versions.zlib !== expected) { console.error('Unexpected zlib: ' + process.versions.zlib); process.exit(1); }"
           mkdir -p output
           chmod +x build.sh
           ./build.sh Release
           cp build/catime.exe output/
+
+          SIZE_BYTES=$(stat -c%s output/catime.exe)
+          SIZE_KB=$(awk "BEGIN { printf \"%.2f\", $SIZE_BYTES / 1024 }")
+          echo "Unsigned x86 EXE size: ${SIZE_KB} KB"
+          sha256sum output/catime.exe
+          i686-w64-mingw32-objdump -f output/catime.exe
+
+          MAX_SIZE_KB=820
+          if [ "$SIZE_BYTES" -gt $((MAX_SIZE_KB * 1024)) ]; then
+            echo "::error::Unsigned x86 EXE exceeds ${MAX_SIZE_KB} KB (${SIZE_KB} KB)"
+            exit 1
+          fi
 
       - name: Rename output file
         id: rename_output
@@ -722,6 +735,14 @@ jobs:
           # The signing job overwrites this with the final raw signed EXE.
           archive: true
           compression-level: 0
+
+      - name: Preserve unsigned EXE
+        uses: actions/upload-artifact@v7
+        with:
+          name: catime-unsigned-${{ env.VERSION }}-${{ github.run_number }}
+          path: output/${{ steps.rename_output.outputs.artifact-name }}
+          retention-days: 30
+          archive: false
 
   sign:
     if: >-
@@ -767,6 +788,8 @@ jobs:
             Write-Output "::error::Signed Catime executable was not found"
             exit 1
           }
+          $sizeKB = [math]::Round($executable.Length / 1KB, 2)
+          Write-Host "Signed x86 EXE size: $sizeKB KB"
           "path=$($executable.FullName)" >> $env:GITHUB_OUTPUT
 
       - name: Build Microsoft Store package
@@ -776,6 +799,10 @@ jobs:
             -ExecutablePath "${{ steps.locate-executable.outputs.path }}" `
             -Version "${{ needs.build.outputs.version }}" `
             -OutputDirectory "./store-output"
+
+          $msix = Get-Item "store-output/catime_${{ needs.build.outputs.version }}_x86.msix"
+          $sizeKB = [math]::Round($msix.Length / 1KB, 2)
+          Write-Host "Microsoft Store MSIX size: $sizeKB KB"
 
       - name: Upload Microsoft Store MSIX
         uses: actions/upload-artifact@v7
