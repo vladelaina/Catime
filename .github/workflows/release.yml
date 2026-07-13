@@ -122,7 +122,7 @@ jobs:
     - name: Download signed executable
       uses: actions/download-artifact@v8
       with:
-        name: catime-release-${{ needs.build.outputs.tag_version }}-${{ github.run_attempt }}
+        artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
         path: ./signed-release
 
     - name: Build Microsoft Store package
@@ -152,7 +152,7 @@ jobs:
     - name: Download signed artifact
       uses: actions/download-artifact@v8
       with:
-        name: catime-release-${{ needs.build.outputs.tag_version }}-${{ github.run_attempt }}
+        artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
         path: ./signed-release
 
     - name: Validate Winget token

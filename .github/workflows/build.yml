@@ -770,7 +770,7 @@ jobs:
       - name: Download signed executable
         uses: actions/download-artifact@v8
         with:
-          name: catime_${{ needs.build.outputs.version }}_${{ github.run_number }}_${{ github.run_attempt }}.exe
+          artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
           path: signed-build
 
       - name: Locate signed executable
