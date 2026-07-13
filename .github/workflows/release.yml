@@ -1,5 +1,11 @@
 name: Release Catime
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  WINLIBS_ARCHIVE_NAME: winlibs-i686-posix-dwarf-gcc-16.1.0-mingw-w64ucrt-14.0.0-r3.zip
+  WINLIBS_URL: https://github.com/brechtsanders/winlibs_mingw/releases/download/16.1.0posix-14.0.0-ucrt-r3/winlibs-i686-posix-dwarf-gcc-16.1.0-mingw-w64ucrt-14.0.0-r3.zip
+  WINLIBS_SHA256: C4C7419F2820AC2E169DC86F1397A07DEFF20297A107C7A1CA486643D8D435BE
+
 on:
   push:
     tags:
@@ -23,7 +29,7 @@ jobs:
 
   build:
     needs: publishing-policy
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       tag_version: ${{ steps.get_version.outputs.tag_version }}
@@ -38,54 +44,52 @@ jobs:
       with:
         node-version: '24.18.0'
 
+    - name: Cache pinned WinLibs archive
+      uses: actions/cache@v5
+      with:
+        path: ${{ runner.temp }}\winlibs-cache
+        key: winlibs-i686-gcc-16.1.0-${{ env.WINLIBS_SHA256 }}
+
+    - name: Set up pinned WinLibs i686 compiler
+      shell: pwsh
+      run: |
+        ./.github/scripts/ci/setup_winlibs_i686.ps1 `
+          -ArchiveDirectory "${{ runner.temp }}\winlibs-cache" `
+          -InstallDirectory "${{ runner.temp }}\winlibs-toolchain" `
+          -ArchiveName "${{ env.WINLIBS_ARCHIVE_NAME }}" `
+          -DownloadUrl "${{ env.WINLIBS_URL }}" `
+          -ExpectedSha256 "${{ env.WINLIBS_SHA256 }}"
+
     - name: Set up China timezone
-      run: |
-        sudo timedatectl set-timezone Asia/Shanghai
-        echo "Current timezone: $(date +%Z)"
-        echo "Current time: $(date)"
-        
-    - name: Install MinGW compiler and CMake
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y mingw-w64 cmake
-        cmake --version
+      shell: pwsh
+      run: Set-TimeZone -Id "China Standard Time"
         
     - name: Extract version number
       id: get_version
+      shell: pwsh
       run: |
-        VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Version: $VERSION"
-        # Get tag name without 'v' prefix
-        TAG_VERSION=${GITHUB_REF#refs/tags/v}
-        if [ "$TAG_VERSION" != "$VERSION" ]; then
-          echo "::error::Tag version ($TAG_VERSION) does not match resource version ($VERSION)"
-          exit 1
-        fi
-        echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
-        echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+        $header = Get-Content "resource/resource.h" -Raw
+        if ($header -notmatch '#define\s+CATIME_VERSION\s+"([^"]+)"') {
+          throw "Unable to extract CATIME_VERSION"
+        }
+        $version = $Matches[1]
+        $tagVersion = $env:GITHUB_REF -replace '^refs/tags/v', ''
+        if ($tagVersion -ne $version) {
+          throw "Tag version ($tagVersion) does not match resource version ($version)"
+        }
+        "VERSION=$version" >> $env:GITHUB_ENV
+        "version=$version" >> $env:GITHUB_OUTPUT
+        "TAG_VERSION=$tagVersion" >> $env:GITHUB_ENV
+        "tag_version=$tagVersion" >> $env:GITHUB_OUTPUT
+        Write-Host "Version: $version"
       
     - name: Build application
+      shell: pwsh
       run: |
-        node -e "const expected='1.3.1-e00f703'; if (process.versions.zlib !== expected) { console.error('Unexpected zlib: ' + process.versions.zlib); process.exit(1); }"
-
-        # Make build script executable
-        chmod +x build.sh
-        
-        # Build using the same script as local development
-        ./build.sh Release
-        
-        # Copy and rename the executable from build directory
-        mkdir -p output
-        cp build/catime.exe ./output/catime_${{ env.TAG_VERSION }}.exe
-        echo "Verifying release binary architecture..."
-        i686-w64-mingw32-objdump -f ./output/catime_${{ env.TAG_VERSION }}.exe | tee ./output/pe-header.txt
-        if ! grep -q "file format pei-i386" ./output/pe-header.txt; then
-          echo "::error::Release binary must be 32-bit Win32 (pei-i386)."
-          exit 1
-        fi
-        echo "Build completed using build.sh script"
+        ./.github/scripts/ci/build_mingw_i686.ps1
+        New-Item -ItemType Directory -Path "output" -Force | Out-Null
+        Copy-Item -LiteralPath "build/catime.exe" `
+          -Destination "output/catime_${{ env.TAG_VERSION }}.exe"
         
     - name: Upload unsigned release artifact
       id: upload-unsigned
