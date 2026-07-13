@@ -12,6 +12,7 @@
 #include "window.h"
 #include "dialog/dialog_procedure.h"
 #include "notification.h"
+#include "audio_player.h"
 #include "window_procedure/window_procedure.h"
 #include "log.h"
 #include "../resource/resource.h"
@@ -104,6 +105,9 @@ BOOL DispatchHotkey(HWND hwnd, int hotkeyId) {
     for (size_t i = 0; i < ARRAY_SIZE(HOTKEY_DISPATCH_TABLE); i++) {
         if (HOTKEY_DISPATCH_TABLE[i].id == hotkeyId) {
             const HotkeyDescriptor* descriptor = &HOTKEY_DISPATCH_TABLE[i];
+
+            /* Match tray clicks: any configured hotkey dismisses active audio. */
+            StopNotificationSound();
 
             if (descriptor->quickCountdownIndex > 0) {
                 HotkeyQuickCountdown(hwnd, descriptor->quickCountdownIndex);
