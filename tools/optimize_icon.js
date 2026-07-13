@@ -80,18 +80,26 @@ function decodeRgba(scanlines, width, height) {
   return rgba;
 }
 
-function encodeRgbaWithZeroOptimizedFilters(rgba, width, height) {
+const iconCompressionOptions = Object.freeze({
+  level: 1,
+  windowBits: 15,
+  memLevel: 9,
+  strategy: zlib.constants.Z_RLE,
+});
+
+function optimizeRgbaFilters(rgba, width, height) {
   const bytesPerPixel = 4;
   const rowBytes = width * bytesPerPixel;
   const scanlines = Buffer.alloc(height * (rowBytes + 1));
-  let outputOffset = 0;
+  const filteredRows = [];
+  const selectedFilters = [];
 
   for (let y = 0; y < height; y += 1) {
     const rowOffset = y * rowBytes;
     const previousRowOffset = rowOffset - rowBytes;
+    const candidates = [];
     let bestFilter = 0;
     let bestZeroCount = -1;
-    let bestRow = null;
 
     for (let filter = 0; filter <= 4; filter += 1) {
       const filteredRow = Buffer.allocUnsafe(rowBytes);
@@ -115,21 +123,62 @@ function encodeRgbaWithZeroOptimizedFilters(rgba, width, height) {
         filteredRow[x] = encoded;
         if (encoded === 0) zeroCount += 1;
       }
+      candidates.push(filteredRow);
 
       if (zeroCount > bestZeroCount) {
         bestFilter = filter;
         bestZeroCount = zeroCount;
-        bestRow = filteredRow;
       }
     }
 
+    filteredRows.push(candidates);
+    selectedFilters.push(bestFilter);
+    const outputOffset = y * (rowBytes + 1);
     scanlines[outputOffset] = bestFilter;
-    outputOffset += 1;
-    bestRow.copy(scanlines, outputOffset);
-    outputOffset += rowBytes;
+    candidates[bestFilter].copy(scanlines, outputOffset + 1);
   }
 
-  return scanlines;
+  const setRowFilter = (row, filter) => {
+    const outputOffset = row * (rowBytes + 1);
+    selectedFilters[row] = filter;
+    scanlines[outputOffset] = filter;
+    filteredRows[row][filter].copy(scanlines, outputOffset + 1);
+  };
+  const compressedSize = () =>
+    zlib.deflateSync(scanlines, iconCompressionOptions).length;
+
+  let bestSize = compressedSize();
+  for (;;) {
+    let changedRows = 0;
+    for (let row = 0; row < height; row += 1) {
+      const originalFilter = selectedFilters[row];
+      let bestFilter = originalFilter;
+      let bestRowSize = bestSize;
+
+      for (let filter = 0; filter <= 4; filter += 1) {
+        if (filter === originalFilter) continue;
+        setRowFilter(row, filter);
+        const candidateSize = compressedSize();
+        if (candidateSize < bestRowSize ||
+            (candidateSize === bestRowSize && filter < bestFilter)) {
+          bestFilter = filter;
+          bestRowSize = candidateSize;
+        }
+      }
+
+      setRowFilter(row, bestFilter);
+      if (bestFilter !== originalFilter) {
+        bestSize = bestRowSize;
+        changedRows += 1;
+      }
+    }
+    if (changedRows === 0) break;
+  }
+
+  return {
+    scanlines,
+    compressed: zlib.deflateSync(scanlines, iconCompressionOptions),
+  };
 }
 
 const ico = fs.readFileSync(iconPath);
@@ -186,13 +235,9 @@ const originalScanlines = zlib.inflateSync(originalIdat);
 const width = ihdr.readUInt32BE(0);
 const height = ihdr.readUInt32BE(4);
 const rgba = decodeRgba(originalScanlines, width, height);
-const optimizedScanlines = encodeRgbaWithZeroOptimizedFilters(rgba, width, height);
-const optimizedIdat = zlib.deflateSync(optimizedScanlines, {
-  level: 9,
-  windowBits: 15,
-  memLevel: 8,
-  strategy: zlib.constants.Z_RLE,
-});
+const optimized = optimizeRgbaFilters(rgba, width, height);
+const optimizedScanlines = optimized.scanlines;
+const optimizedIdat = optimized.compressed;
 const verifiedScanlines = zlib.inflateSync(optimizedIdat);
 if (!verifiedScanlines.equals(optimizedScanlines) ||
     !decodeRgba(verifiedScanlines, width, height).equals(rgba)) {
