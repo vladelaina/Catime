@@ -80,6 +80,58 @@ function decodeRgba(scanlines, width, height) {
   return rgba;
 }
 
+function encodeRgbaWithZeroOptimizedFilters(rgba, width, height) {
+  const bytesPerPixel = 4;
+  const rowBytes = width * bytesPerPixel;
+  const scanlines = Buffer.alloc(height * (rowBytes + 1));
+  let outputOffset = 0;
+
+  for (let y = 0; y < height; y += 1) {
+    const rowOffset = y * rowBytes;
+    const previousRowOffset = rowOffset - rowBytes;
+    let bestFilter = 0;
+    let bestZeroCount = -1;
+    let bestRow = null;
+
+    for (let filter = 0; filter <= 4; filter += 1) {
+      const filteredRow = Buffer.allocUnsafe(rowBytes);
+      let zeroCount = 0;
+
+      for (let x = 0; x < rowBytes; x += 1) {
+        const value = rgba[rowOffset + x];
+        const left = x >= bytesPerPixel ? rgba[rowOffset + x - bytesPerPixel] : 0;
+        const above = y > 0 ? rgba[previousRowOffset + x] : 0;
+        const upperLeft = y > 0 && x >= bytesPerPixel
+          ? rgba[previousRowOffset + x - bytesPerPixel]
+          : 0;
+        let predictor = 0;
+
+        if (filter === 1) predictor = left;
+        else if (filter === 2) predictor = above;
+        else if (filter === 3) predictor = Math.floor((left + above) / 2);
+        else if (filter === 4) predictor = paeth(left, above, upperLeft);
+
+        const encoded = (value - predictor) & 0xff;
+        filteredRow[x] = encoded;
+        if (encoded === 0) zeroCount += 1;
+      }
+
+      if (zeroCount > bestZeroCount) {
+        bestFilter = filter;
+        bestZeroCount = zeroCount;
+        bestRow = filteredRow;
+      }
+    }
+
+    scanlines[outputOffset] = bestFilter;
+    outputOffset += 1;
+    bestRow.copy(scanlines, outputOffset);
+    outputOffset += rowBytes;
+  }
+
+  return scanlines;
+}
+
 const ico = fs.readFileSync(iconPath);
 if (ico.length < 22 || ico.readUInt16LE(0) !== 0 ||
     ico.readUInt16LE(2) !== 1 || ico.readUInt16LE(4) !== 1) {
@@ -130,18 +182,23 @@ if (ihdr.length !== 13 || ihdr[8] !== 8 || ihdr[9] !== 6 ||
 }
 
 const originalIdat = Buffer.concat(idatParts);
-const scanlines = zlib.inflateSync(originalIdat);
-const optimizedIdat = zlib.deflateSync(scanlines, {
-  level: 1,
-  strategy: zlib.constants.Z_RLE,
-});
-if (!zlib.inflateSync(optimizedIdat).equals(scanlines)) {
-  fail('Recompressed IDAT does not reproduce the original scanlines');
-}
-
+const originalScanlines = zlib.inflateSync(originalIdat);
 const width = ihdr.readUInt32BE(0);
 const height = ihdr.readUInt32BE(4);
-const rgba = decodeRgba(scanlines, width, height);
+const rgba = decodeRgba(originalScanlines, width, height);
+const optimizedScanlines = encodeRgbaWithZeroOptimizedFilters(rgba, width, height);
+const optimizedIdat = zlib.deflateSync(optimizedScanlines, {
+  level: 9,
+  windowBits: 15,
+  memLevel: 8,
+  strategy: zlib.constants.Z_RLE,
+});
+const verifiedScanlines = zlib.inflateSync(optimizedIdat);
+if (!verifiedScanlines.equals(optimizedScanlines) ||
+    !decodeRgba(verifiedScanlines, width, height).equals(rgba)) {
+  fail('Recompressed IDAT does not reproduce the original pixels');
+}
+
 const rgbaHash = crypto.createHash('sha256').update(rgba).digest('hex');
 
 const rebuiltChunks = [];
