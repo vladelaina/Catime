@@ -132,6 +132,20 @@ try {
         $sourceLogo.Dispose()
     }
 
+    $node = Get-Command "node" -ErrorAction SilentlyContinue
+    if ($node) {
+        & $node.Source (Join-Path $repositoryRoot "tools\optimize_png.js") `
+            (Join-Path $assetsDirectory "StoreLogo.png") `
+            (Join-Path $assetsDirectory "Square44x44Logo.png") `
+            (Join-Path $assetsDirectory "Square150x150Logo.png")
+        if ($LASTEXITCODE -ne 0) {
+            throw "Lossless Store logo optimization failed with exit code $LASTEXITCODE."
+        }
+    }
+    else {
+        Write-Warning "Node.js was not found; Store logos will use default PNG compression."
+    }
+
     $makeAppx = Get-WindowsSdkTool "makeappx.exe"
     $signTool = Get-WindowsSdkTool "signtool.exe"
 

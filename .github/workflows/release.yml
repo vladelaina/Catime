@@ -123,6 +123,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
 
+    - name: Set up deterministic Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: '24.18.0'
+
     - name: Download signed executable
       uses: actions/download-artifact@v8
       with:
