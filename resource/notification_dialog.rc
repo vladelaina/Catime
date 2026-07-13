@@ -36,7 +36,7 @@ BEGIN
 
     LTEXT           "Text height ratio:", IDC_NOTIFICATION_FONT_SIZE_LABEL, 20, 185, 110, 15
     CONTROL         "", IDC_NOTIFICATION_FONT_SIZE_SLIDER, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 183, 180, 15
-    LTEXT           "25%", IDC_NOTIFICATION_FONT_SIZE_TEXT, 315, 185, 35, 15
+    LTEXT           "100%", IDC_NOTIFICATION_FONT_SIZE_TEXT, 315, 185, 35, 15
 
 
     /** Audio feedback configuration */
