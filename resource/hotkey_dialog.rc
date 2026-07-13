@@ -15,13 +15,13 @@ CAPTION "Hotkey Settings"
 FONT 9, "Segoe UI"
 BEGIN
     /** Primary hotkey assignments using Windows hotkey controls */
-    LTEXT           "Show Current Time:",IDC_HOTKEY_LABEL1,14,15,80,8
+    LTEXT           "Show Current Time",IDC_HOTKEY_LABEL1,14,15,80,8
     CONTROL         "",IDC_HOTKEY_EDIT1,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,13,160,14
     
-    LTEXT           "Count Up:",IDC_HOTKEY_LABEL2,14,35,80,8
+    LTEXT           "Count Up",IDC_HOTKEY_LABEL2,14,35,80,8
     CONTROL         "",IDC_HOTKEY_EDIT2,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,33,160,14
     
-    LTEXT           "Countdown:",IDC_HOTKEY_LABEL12,14,55,80,8
+    LTEXT           "Countdown",IDC_HOTKEY_LABEL12,14,55,80,8
     CONTROL         "",IDC_HOTKEY_EDIT12,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,53,160,14
     
     LTEXT           "Default Countdown:",IDC_HOTKEY_LABEL3,14,75,80,8
@@ -51,10 +51,10 @@ BEGIN
     LTEXT           "Restart Timer:",IDC_HOTKEY_LABEL8,14,235,80,8
     CONTROL         "",IDC_HOTKEY_EDIT8,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,233,160,14
     
-    LTEXT           "Toggle Milliseconds:",IDC_HOTKEY_LABEL13,14,255,80,8
+    LTEXT           "Show Milliseconds",IDC_HOTKEY_LABEL13,14,255,80,8
     CONTROL         "",IDC_HOTKEY_EDIT13,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,253,160,14
     
-    LTEXT           "Always on Top:",IDC_HOTKEY_LABEL14,14,275,80,8
+    LTEXT           "Always on Top",IDC_HOTKEY_LABEL14,14,275,80,8
     CONTROL         "",IDC_HOTKEY_EDIT14,"msctls_hotkey32",WS_BORDER | WS_TABSTOP,105,273,160,14
     
     /** Standard dialog buttons */

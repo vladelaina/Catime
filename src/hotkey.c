@@ -60,9 +60,9 @@ typedef struct {
 static WORD g_dialogHotkeys[HOTKEY_COUNT] = {0};
 
 static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
-    {IDC_HOTKEY_EDIT1,  IDC_HOTKEY_LABEL1,  NULL, L"Show Current Time:"},
-    {IDC_HOTKEY_EDIT2,  IDC_HOTKEY_LABEL2,  NULL, L"Count Up:"},
-    {IDC_HOTKEY_EDIT12, IDC_HOTKEY_LABEL12, NULL, L"Countdown:"},
+    {IDC_HOTKEY_EDIT1,  IDC_HOTKEY_LABEL1,  NULL, L"Show Current Time"},
+    {IDC_HOTKEY_EDIT2,  IDC_HOTKEY_LABEL2,  NULL, L"Count Up"},
+    {IDC_HOTKEY_EDIT12, IDC_HOTKEY_LABEL12, NULL, L"Countdown"},
     {IDC_HOTKEY_EDIT3,  IDC_HOTKEY_LABEL3,  NULL, L"Default Countdown:"},
     {IDC_HOTKEY_EDIT9,  IDC_HOTKEY_LABEL9,  NULL, L"Quick Countdown 1:"},
     {IDC_HOTKEY_EDIT10, IDC_HOTKEY_LABEL10, NULL, L"Quick Countdown 2:"},
@@ -72,8 +72,8 @@ static const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT] = {
     {IDC_HOTKEY_EDIT6,  IDC_HOTKEY_LABEL6,  NULL, L"Enter Edit Mode:"},
     {IDC_HOTKEY_EDIT7,  IDC_HOTKEY_LABEL7,  NULL, L"Pause/Resume Timer:"},
     {IDC_HOTKEY_EDIT8,  IDC_HOTKEY_LABEL8,  NULL, L"Restart Timer:"},
-    {IDC_HOTKEY_EDIT13, IDC_HOTKEY_LABEL13, NULL, L"Show Milliseconds:"},
-    {IDC_HOTKEY_EDIT14, IDC_HOTKEY_LABEL14, NULL, L"Always on Top:"},
+    {IDC_HOTKEY_EDIT13, IDC_HOTKEY_LABEL13, NULL, L"Show Milliseconds"},
+    {IDC_HOTKEY_EDIT14, IDC_HOTKEY_LABEL14, NULL, L"Always on Top"},
 };
 
 static inline BOOL IsHotkeyEditControl(DWORD ctrlId) {

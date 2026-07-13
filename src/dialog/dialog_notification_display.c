@@ -144,7 +144,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT, wbuffer);
 
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL,
-                           GetLocalizedString(L"Notification display time (sec):", L"Notification display time (sec):"));
+                           GetLocalizedString(NULL, L"Notification display time:"));
 
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
             LONG style = GetWindowLong(hEditTime, GWL_STYLE);
