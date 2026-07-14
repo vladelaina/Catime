@@ -13,6 +13,9 @@ static void Expect(const char* name, BOOL actual, BOOL expected) {
 }
 
 int main(void) {
+    const unsigned char enabledState[] = {0x02, 0x00, 0x00, 0x00};
+    const unsigned char disabledState[] = {0x03, 0x00, 0x00, 0x00};
+    const unsigned char unknownState[] = {0x7f, 0x00, 0x00, 0x00};
     Expect("new install defaults enabled",
            StartupPolicy_ShouldEnable(AUTO_START_PREFERENCE_STATE_DEFAULT,
                                       TRUE, FALSE), TRUE);
@@ -41,6 +44,17 @@ int main(void) {
                       AUTO_START_PREFERENCE_STATE_DISABLED),
                   AUTO_START_PREFERENCE_DISABLED) == 0,
            TRUE);
+    Expect("Windows disabled state is recognized",
+           StartupPolicy_IsWindowsStartupDisabled(
+               disabledState, sizeof(disabledState)), TRUE);
+    Expect("Windows enabled state stays enabled",
+           StartupPolicy_IsWindowsStartupDisabled(
+               enabledState, sizeof(enabledState)), FALSE);
+    Expect("unknown Windows state fails open",
+           StartupPolicy_IsWindowsStartupDisabled(
+               unknownState, sizeof(unknownState)), FALSE);
+    Expect("missing Windows state fails open",
+           StartupPolicy_IsWindowsStartupDisabled(NULL, 0), FALSE);
 
     if (failures == 0) {
         puts("startup policy tests passed");

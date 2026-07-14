@@ -13,11 +13,19 @@
 #include <windows.h>
 #include <shlobj.h>
 
+typedef enum {
+    AUTO_START_STATUS_ABSENT = 0,
+    AUTO_START_STATUS_ENABLED,
+    AUTO_START_STATUS_DISABLED_BY_WINDOWS,
+    AUTO_START_STATUS_BROKEN
+} AutoStartStatus;
+
+/** @brief Return the effective Windows startup state. */
+AutoStartStatus GetAutoStartStatus(void);
+
 /**
  * @brief Check if auto-start enabled
- * @return TRUE if shortcut exists
- * 
- * @note Existence only; EnsureAutoStart performs full shortcut validation
+ * @return TRUE only when the shortcut is valid and Windows has not disabled it
  */
 BOOL IsAutoStartEnabled(void);
 
@@ -28,9 +36,15 @@ BOOL IsAutoStartEnabled(void);
  * @details
  * Points to a stable executable path with --startup arg. Scoop installs use
  * the apps\\catime\\current path so the shortcut survives package upgrades.
- * Handles COM initialization internally.
+ * Handles COM initialization internally and preserves a Windows-level opt-out.
  */
 BOOL CreateShortcut(void);
+
+/** @brief Explicitly enable startup, clearing a stale Windows disable record. */
+BOOL EnableAutoStart(void);
+
+/** @brief Explicitly disable startup and persist the choice before removal. */
+BOOL DisableAutoStart(void);
 
 /**
  * @brief Remove startup shortcut (idempotent)
@@ -80,10 +94,10 @@ BOOL UpdateStartupShortcut(void);
  */
 void ApplyStartupMode(HWND hwnd);
 
-/**
- * @brief Open Windows Startup Apps settings for packaged Store/MSIX builds
- * @return TRUE when the Settings page was launched
- */
+/** @brief Open the Windows Startup Apps settings page. */
+BOOL OpenStartupSettings(void);
+
+/** @brief Compatibility wrapper for OpenStartupSettings. */
 BOOL OpenPackagedStartupSettings(void);
 
 #endif /* STARTUP_H */

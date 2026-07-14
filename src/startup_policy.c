@@ -34,3 +34,10 @@ BOOL StartupPolicy_ShouldEnable(AutoStartPreference preference,
             return isFirstRun || shortcutExists;
     }
 }
+
+BOOL StartupPolicy_IsWindowsStartupDisabled(const unsigned char* data,
+                                            size_t dataSize) {
+    /* Explorer currently uses 0x03 for disabled StartupFolder entries.
+     * Unknown or truncated values fail open for forward compatibility. */
+    return data && dataSize > 0 && data[0] == 0x03;
+}

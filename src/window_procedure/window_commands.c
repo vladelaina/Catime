@@ -164,15 +164,17 @@ static LRESULT CmdSystemFontPicker(HWND hwnd, WPARAM wp, LPARAM lp) {
 static LRESULT CmdAutoStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (IsRunningPackagedApp()) {
-        OpenPackagedStartupSettings();
+        OpenStartupSettings();
         return 0;
     }
 
-    BOOL isEnabled = IsAutoStartEnabled();
-    if (isEnabled) {
-        if (RemoveShortcut()) CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_UNCHECKED);
+    AutoStartStatus status = GetAutoStartStatus();
+    if (status == AUTO_START_STATUS_DISABLED_BY_WINDOWS) {
+        OpenStartupSettings();
+    } else if (status == AUTO_START_STATUS_ENABLED) {
+        if (DisableAutoStart()) CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_UNCHECKED);
     } else {
-        if (CreateShortcut()) CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_CHECKED);
+        if (EnableAutoStart()) CheckMenuItem(GetMenu(hwnd), CLOCK_IDC_AUTO_START, MF_CHECKED);
     }
     return 0;
 }

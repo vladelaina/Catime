@@ -10,6 +10,7 @@
 #include "font.h"
 #include "font/font_config.h"
 #include "startup.h"
+#include "main/main_initialization.h"
 #include "config.h"
 #include "log.h"
 #include "utils/win32_dynamic_loader.h"
@@ -208,7 +209,7 @@ static BOOL InitializeDefaultSettings(void) {
     ReadConfig();
     CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
     
-    if (!EnsureAutoStart()) {
+    if (!IsCiSmokeMode() && !EnsureAutoStart()) {
         LOG_WARNING("Auto-start registration could not be fully initialized");
     }
     InitializeDefaultLanguage();

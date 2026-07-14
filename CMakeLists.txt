@@ -253,6 +253,20 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
     )
     add_test(NAME startup_policy COMMAND startup_policy_tests)
+
+    add_executable(startup_shortcut_tests
+        tests/startup_shortcut_tests.c
+        src/startup_shortcut.c
+    )
+    target_include_directories(startup_shortcut_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    target_link_libraries(startup_shortcut_tests PRIVATE
+        ole32
+        uuid
+        shlwapi
+    )
+    add_test(NAME startup_shortcut COMMAND startup_shortcut_tests)
 endif()
 
 # Recent MinGW GCC distributions automatically append default-manifest.o,

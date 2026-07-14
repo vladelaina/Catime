@@ -2,6 +2,7 @@
 #define STARTUP_POLICY_H
 
 #include <windows.h>
+#include <stddef.h>
 
 #define AUTO_START_PREFERENCE_DEFAULT "DEFAULT"
 #define AUTO_START_PREFERENCE_ENABLED "ENABLED"
@@ -17,5 +18,7 @@ AutoStartPreference StartupPolicy_ParsePreference(const char* value);
 const char* StartupPolicy_PreferenceName(AutoStartPreference preference);
 BOOL StartupPolicy_ShouldEnable(AutoStartPreference preference,
                                 BOOL isFirstRun, BOOL shortcutExists);
+BOOL StartupPolicy_IsWindowsStartupDisabled(const unsigned char* data,
+                                            size_t dataSize);
 
 #endif /* STARTUP_POLICY_H */
