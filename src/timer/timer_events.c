@@ -653,6 +653,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
     /* Throttle expensive topmost/taskbar overlap checks. */
     if (!CLOCK_IS_DRAGGING &&
         (s_lastTopmostCheck == 0 || (now_tick - s_lastTopmostCheck) >= 500)) {
+        TryRestorePendingWindowPosition(hwnd);
         EnforceTopmostOverTaskbar(hwnd);
         s_lastTopmostCheck = now_tick;
     }

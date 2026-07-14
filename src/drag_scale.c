@@ -603,6 +603,9 @@ static VOID CALLBACK ConfigSaveTimerProc(HWND hwnd, UINT msg, UINT_PTR idEvent, 
 void ScheduleConfigSave(HWND hwnd) {
     if (!IsValidDragScaleWindow(hwnd)) return;
 
+    /* This API is reached only by explicit drag/keyboard/scale gestures. */
+    CLOCK_WINDOW_POSITION_MANUAL = TRUE;
+
     if (g_configSaveTimer != 0) {
         HWND timerHwnd = g_configSaveTimerHwnd ? g_configSaveTimerHwnd : hwnd;
         if (IsValidDragScaleWindow(timerHwnd)) {

@@ -77,6 +77,12 @@ static LRESULT HandlePowerBroadcast(HWND hwnd, WPARAM wp, LPARAM lp) {
         /* Step 3: Recreate tray icon with newly loaded animation */
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
 
+        /* Some dock/monitor changes during sleep do not deliver a reliable
+         * WM_DISPLAYCHANGE after resume. Revalidate the saved placement. */
+        if (!BeginSystemPositionChangeGuard(hwnd)) {
+            RestoreWindowPositionAfterSystemChange(hwnd);
+        }
+
         InterlockedExchange(&s_handling, 0);
     }
 
@@ -165,6 +171,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_SHOWWINDOW, HandleShowWindow},
     {WM_DISPLAYCHANGE, HandleDisplayChange},
     {WM_DPICHANGED, HandleDpiChanged},
+    {WM_SETTINGCHANGE, HandleSettingChange},
     {WM_INITMENUPOPUP, HandleInitMenuPopup},
     {WM_MENUSELECT, HandleMenuSelect},
     {WM_MEASUREITEM, HandleMeasureItem},
@@ -173,6 +180,8 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_SYSCOMMAND, HandleSysCommand},
     {WM_SIZE, HandleSize},
     {WM_CLOSE, HandleClose},
+    {WM_QUERYENDSESSION, HandleQueryEndSession},
+    {WM_ENDSESSION, HandleEndSession},
     {WM_KEYDOWN, HandleKeyDown},
     {WM_HOTKEY, HandleHotkey},
     {WM_COPYDATA, HandleCopyData},
@@ -206,6 +215,9 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     if (msg == WM_TASKBARCREATED) {
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         RefreshWindowTopmostState(hwnd);
+        if (!BeginSystemPositionChangeGuard(hwnd)) {
+            RestoreWindowPositionAfterSystemChange(hwnd);
+        }
         return 0;
     }
 

@@ -709,6 +709,13 @@ BOOL WriteConfigKeyValue(const char* key, const char* value) {
            strncmp(key, "PLUGIN_SCALE", 12) == 0 ||
            strncmp(key, "CLOCK_WINDOW_POS_X", 18) == 0 ||
            strncmp(key, "CLOCK_WINDOW_POS_Y", 18) == 0 ||
+           strcmp(key, WINDOW_POSITION_MANUAL_KEY) == 0 ||
+           strcmp(key, WINDOW_MONITOR_ID_KEY) == 0 ||
+           strcmp(key, WINDOW_MONITOR_OFFSET_X_KEY) == 0 ||
+           strcmp(key, WINDOW_MONITOR_OFFSET_Y_KEY) == 0 ||
+           strcmp(key, WINDOW_TASKBAR_ANCHORED_KEY) == 0 ||
+           strcmp(key, WINDOW_TASKBAR_AXIS_RATIO_KEY) == 0 ||
+           strcmp(key, WINDOW_TASKBAR_CROSS_OFFSET_KEY) == 0 ||
            strncmp(key, "WINDOW_TOPMOST", 14) == 0 ||
            strncmp(key, "WINDOW_OPACITY", 14) == 0 ||
            strncmp(key, "TEXT_", 5) == 0) {

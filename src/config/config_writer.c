@@ -155,7 +155,7 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     idx++;
     
     /* Display section */
-    if (!EnsureConfigItemCapacity(idx, itemCapacity, 17, "Display")) return FALSE;
+    if (!EnsureConfigItemCapacity(idx, itemCapacity, 15, "Display")) return FALSE;
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "CLOCK_TEXT_COLOR", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, CLOCK_TEXT_COLOR, sizeof(items[idx].value));
@@ -169,16 +169,6 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "FONT_FILE_NAME", sizeof(items[idx].key));
     safe_strncpy(items[idx].value, FONT_FILE_NAME, sizeof(items[idx].value));
-    idx++;
-    
-    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
-    safe_strncpy(items[idx].key, "CLOCK_WINDOW_POS_X", sizeof(items[idx].key));
-    snprintf(items[idx].value, sizeof(items[idx].value), "%d", CLOCK_WINDOW_POS_X);
-    idx++;
-    
-    safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
-    safe_strncpy(items[idx].key, "CLOCK_WINDOW_POS_Y", sizeof(items[idx].key));
-    snprintf(items[idx].value, sizeof(items[idx].value), "%d", CLOCK_WINDOW_POS_Y);
     idx++;
     
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));

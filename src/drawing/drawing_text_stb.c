@@ -158,8 +158,8 @@ static DWORD FloatBitsForGlyphCache(float value) {
 static DWORD PointerBitsForGlyphCache(const void* ptr) {
     uintptr_t value = (uintptr_t)ptr;
     DWORD hash = (DWORD)value;
-#if UINTPTR_MAX > 0xFFFFFFFFull
-    hash ^= (DWORD)(value >> 32);
+#if defined(_WIN64)
+    hash ^= (DWORD)(((uint64_t)value) >> 32);
 #endif
     return hash;
 }

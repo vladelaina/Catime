@@ -20,6 +20,8 @@
 #include "config.h"
 #include "window_procedure/window_procedure.h"
 #include "window/window_core.h"
+#include "window/window_desktop_integration.h"
+#include "window/window_placement.h"
 #include "window/window_visual_effects.h"
 #include "drag_scale.h"
 #include "menu_preview.h"
@@ -1407,7 +1409,30 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
     if (hasResizeAnchor) {
         newX = resizeAnchor.x - (int)(resizeAnchorRatioX * (double)targetSize.cx + 0.5);
         newY = resizeAnchor.y - (int)(resizeAnchorRatioY * (double)targetSize.cy + 0.5);
+    } else {
+        HMONITOR monitor = MonitorFromRect(&windowRect, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO monitorInfo = {0};
+        RECT taskbarRect = {0};
+        RECT intersection = {0};
+        monitorInfo.cbSize = sizeof(monitorInfo);
+        if (monitor && GetMonitorInfo(monitor, &monitorInfo) &&
+            GetTaskbarRectForMonitor(monitor, &taskbarRect) &&
+            IntersectRect(&intersection, &windowRect, &taskbarRect)) {
+            int axisRatio = 0;
+            int crossOffset = 0;
+            if (WindowPlacement_CaptureTaskbarAnchor(
+                    &windowRect, &taskbarRect, &monitorInfo.rcMonitor,
+                    &axisRatio, &crossOffset)) {
+                WindowPlacement_ResolveTaskbarAnchor(
+                    &taskbarRect, &monitorInfo.rcMonitor,
+                    targetSize.cx, targetSize.cy,
+                    axisRatio, crossOffset, &newX, &newY);
+            }
+        }
     }
+
+    ClampWindowPositionToVisibleMonitor(targetSize.cx, targetSize.cy,
+                                        &newX, &newY);
 
     SetWindowPos(hwnd, NULL,
         newX, newY,

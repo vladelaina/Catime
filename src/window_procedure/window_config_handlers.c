@@ -532,12 +532,17 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         int configPosX = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_X, CLOCK_WINDOW_POS_X);
         int posY = ReadConfigInt(CFG_SECTION_DISPLAY, CFG_KEY_WINDOW_POS_Y, CLOCK_WINDOW_POS_Y);
         int posX = configPosX;
+        BOOL manualPosition = ReadConfigBool(CFG_SECTION_DISPLAY,
+                                             CFG_KEY_WINDOW_POSITION_MANUAL,
+                                             FALSE);
+        CLOCK_WINDOW_POSITION_MANUAL = manualPosition;
 
         /* Skip position handling for special/default sentinels during hot-reload.
          * Reset/apply paths resolve them with finalized window dimensions. */
-        BOOL skipPositionUpdate = (configPosX == -2 || configPosX == -1 ||
-                                   posY == DEFAULT_WINDOW_POS_Y ||
-                                   IsSystemPositionChangeGuardActive());
+        BOOL skipPositionUpdate = ((!manualPosition &&
+                                    (configPosX == -2 || configPosX == -1 ||
+                                     posY == DEFAULT_WINDOW_POS_Y)) ||
+                                    IsSystemPositionChangeGuardActive());
         if (skipPositionUpdate) {
             posX = CLOCK_WINDOW_POS_X;
             posY = CLOCK_WINDOW_POS_Y;
@@ -558,6 +563,44 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
 
         BOOL posChanged = !skipPositionUpdate && ((posX != CLOCK_WINDOW_POS_X) || (posY != CLOCK_WINDOW_POS_Y));
         BOOL scaleChanged = hasValidScale && fabsf(newScale - CLOCK_WINDOW_SCALE) > 0.0001f;
+
+        /* Placement metadata can change independently of the legacy absolute
+         * X/Y keys (for example after a taskbar moves to another edge). */
+        if (!skipPositionUpdate && manualPosition) {
+            RECT currentRect = {0};
+            BOOL hasCurrentRect = GetWindowRect(hwnd, &currentRect);
+            int placementWidth = hasCurrentRect
+                ? currentRect.right - currentRect.left
+                : ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_WIDTH,
+                                              CLOCK_WINDOW_SCALE);
+            int placementHeight = hasCurrentRect
+                ? currentRect.bottom - currentRect.top
+                : ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT,
+                                              CLOCK_WINDOW_SCALE);
+            if (scaleChanged) {
+                placementWidth = ScaleWindowDimensionClamped(
+                    CLOCK_BASE_WINDOW_WIDTH, newScale);
+                placementHeight = ScaleWindowDimensionClamped(
+                    CLOCK_BASE_WINDOW_HEIGHT, newScale);
+            }
+            int resolvedX = posX;
+            int resolvedY = posY;
+            ResolveConfiguredWindowPosition(placementWidth, placementHeight,
+                                            &resolvedX, &resolvedY);
+            long long deltaX = llabs((long long)resolvedX -
+                                     CLOCK_WINDOW_POS_X);
+            long long deltaY = llabs((long long)resolvedY -
+                                     CLOCK_WINDOW_POS_Y);
+            if (deltaX > 1 || deltaY > 1) {
+                posX = resolvedX;
+                posY = resolvedY;
+                posChanged = TRUE;
+            } else {
+                posX = CLOCK_WINDOW_POS_X;
+                posY = CLOCK_WINDOW_POS_Y;
+                posChanged = FALSE;
+            }
+        }
 
 
         if (scaleChanged) {
@@ -581,14 +624,15 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
                     posX = currentRect.left;
                     posY = currentRect.top;
                 }
+                ClampWindowPositionToVisibleMonitor(width, height, &posX, &posY);
+            } else {
+                ResolveConfiguredWindowPosition(width, height, &posX, &posY);
             }
 
             SetWindowPos(hwnd, NULL, posX, posY, width, height,
                          SWP_NOZORDER | SWP_NOACTIVATE);
-            if (posChanged) {
-                CLOCK_WINDOW_POS_X = posX;
-                CLOCK_WINDOW_POS_Y = posY;
-            }
+            CLOCK_WINDOW_POS_X = posX;
+            CLOCK_WINDOW_POS_Y = posY;
             changed = TRUE;
         }
 

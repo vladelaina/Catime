@@ -734,6 +734,37 @@ static void StartAnimationPreviewDelayTimer(HWND hwnd) {
     }
 }
 
+LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
+    if (wp != SPI_SETWORKAREA || CLOCK_IS_DRAGGING) {
+        return DefWindowProc(hwnd, WM_SETTINGCHANGE, wp, lp);
+    }
+
+    if (!BeginSystemPositionChangeGuard(hwnd)) {
+        RestoreWindowPositionAfterSystemChange(hwnd);
+    }
+    return DefWindowProc(hwnd, WM_SETTINGCHANGE, wp, lp);
+}
+
+static BOOL g_sessionSettingsPrepared = FALSE;
+
+LRESULT HandleQueryEndSession(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp;
+    (void)lp;
+    CancelScheduledConfigSave(hwnd);
+    g_sessionSettingsPrepared = SaveWindowSettings(hwnd);
+    return TRUE;
+}
+
+LRESULT HandleEndSession(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)lp;
+    if (wp && !g_sessionSettingsPrepared) {
+        CancelScheduledConfigSave(hwnd);
+        SaveWindowSettings(hwnd);
+    }
+    g_sessionSettingsPrepared = FALSE;
+    return 0;
+}
+
 static BOOL IsSelectableCommandMenuItem(HMENU hMenu, UINT menuItem) {
     if (!hMenu) {
         return FALSE;

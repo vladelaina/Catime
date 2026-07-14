@@ -20,6 +20,7 @@
 #define WORKERW_CLASS L"WorkerW"
 #define SHELLDLL_CLASS L"SHELLDLL_DefView"
 #define TASKBAR_CLASS L"Shell_TrayWnd"
+#define SECONDARY_TASKBAR_CLASS L"Shell_SecondaryTrayWnd"
 #define TOPMOST_APPLY_RETRY_INTERVAL_MS 500
 #define TOPMOST_APPLY_MAX_RETRIES 5
 #define TOPMOST_APPLY_RETRY_COOLDOWN_MS 30000
@@ -34,6 +35,56 @@ static void ShowWindowNoActivateIfNeeded(HWND hwnd);
 static BOOL GetWindowTopmostState(HWND hwnd, BOOL* outTopmost);
 static void LogTopmostDiagnostics(HWND hwnd, const char* phase, BOOL requestedTopmost);
 static BOOL ScheduleTopmostApplyRetry(HWND hwnd, BOOL targetTopmost);
+
+static BOOL RectanglesOverlap(const RECT* first, const RECT* second) {
+    if (!first || !second) return FALSE;
+    return first->left < second->right && first->right > second->left &&
+           first->top < second->bottom && first->bottom > second->top;
+}
+
+static BOOL WindowOverlapsTaskbarClass(const RECT* windowRect,
+                                       const wchar_t* className) {
+    HWND taskbar = NULL;
+    while ((taskbar = FindWindowExW(NULL, taskbar, className, NULL)) != NULL) {
+        RECT taskbarRect = {0};
+        if (IsWindowVisible(taskbar) &&
+            GetWindowRect(taskbar, &taskbarRect) &&
+            RectanglesOverlap(windowRect, &taskbarRect)) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static BOOL WindowOverlapsAnyTaskbar(const RECT* windowRect) {
+    return WindowOverlapsTaskbarClass(windowRect, TASKBAR_CLASS) ||
+           WindowOverlapsTaskbarClass(windowRect, SECONDARY_TASKBAR_CLASS);
+}
+
+static BOOL FindTaskbarRectForMonitorClass(HMONITOR monitor,
+                                           const wchar_t* className,
+                                           RECT* outRect) {
+    HWND taskbar = NULL;
+    while ((taskbar = FindWindowExW(NULL, taskbar, className, NULL)) != NULL) {
+        if (MonitorFromWindow(taskbar, MONITOR_DEFAULTTONULL) != monitor) {
+            continue;
+        }
+
+        RECT taskbarRect = {0};
+        if (GetWindowRect(taskbar, &taskbarRect)) {
+            if (outRect) *outRect = taskbarRect;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+BOOL GetTaskbarRectForMonitor(HMONITOR monitor, RECT* outRect) {
+    if (!monitor || !outRect) return FALSE;
+    return FindTaskbarRectForMonitorClass(monitor, TASKBAR_CLASS, outRect) ||
+           FindTaskbarRectForMonitorClass(monitor, SECONDARY_TASKBAR_CLASS,
+                                          outRect);
+}
 
 static int s_topmostApplyRetriesRemaining = 0;
 static BOOL s_topmostApplyRetryActive = FALSE;
@@ -532,8 +583,6 @@ void ReattachToDesktop(HWND hwnd) {
 }
 
 BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
-    static HWND s_taskbarHwnd = NULL;
-
     if (!IsValidWindowHandle(hwnd, "EnforceTopmostOverTaskbar")) return FALSE;
 
     /* Only enforce if topmost mode is enabled */
@@ -548,23 +597,8 @@ BOOL EnforceTopmostOverTaskbar(HWND hwnd) {
     RECT rcWindow;
     if (!GetWindowRect(hwnd, &rcWindow)) return FALSE;
     
-    /* Get taskbar position */
-    if (!IsWindowOfClass(s_taskbarHwnd, TASKBAR_CLASS)) {
-        s_taskbarHwnd = FindWindowW(TASKBAR_CLASS, NULL);
-    }
-    if (!s_taskbarHwnd) return FALSE;
-    
-    RECT rcTaskbar;
-    if (!GetWindowRect(s_taskbarHwnd, &rcTaskbar)) {
-        s_taskbarHwnd = NULL;
-        return FALSE;
-    }
-    
-    /* Check if our window overlaps with taskbar area */
-    BOOL overlaps = !(rcWindow.right < rcTaskbar.left ||
-                      rcWindow.left > rcTaskbar.right ||
-                      rcWindow.bottom < rcTaskbar.top ||
-                      rcWindow.top > rcTaskbar.bottom);
+    /* Check every taskbar, including Shell_SecondaryTrayWnd instances. */
+    BOOL overlaps = WindowOverlapsAnyTaskbar(&rcWindow);
 
     BOOL styleTopmost = FALSE;
     BOOL hasTopmostState = GetWindowTopmostState(hwnd, &styleTopmost);

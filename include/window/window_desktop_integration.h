@@ -138,6 +138,9 @@ void ReattachToDesktop(HWND hwnd);
  */
 BOOL EnforceTopmostOverTaskbar(HWND hwnd);
 
+/** Locate the taskbar owned by a specific monitor, including secondary bars. */
+BOOL GetTaskbarRectForMonitor(HMONITOR monitor, RECT* outRect);
+
 /**
  * @brief Retry the current runtime topmost target after an earlier failure
  * @param hwnd Window handle

@@ -234,6 +234,18 @@ endif()
 # Create executable
 add_executable(catime ${SOURCES} ${HEADERS} ${RESOURCE_FILES})
 
+include(CTest)
+if(BUILD_TESTING)
+    add_executable(window_placement_tests
+        tests/window_placement_tests.c
+        src/window/window_placement.c
+    )
+    target_include_directories(window_placement_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    add_test(NAME window_placement COMMAND window_placement_tests)
+endif()
+
 # Recent MinGW GCC distributions automatically append default-manifest.o,
 # which conflicts with Catime's complete application manifest. Shadow that
 # startup object with an empty linker script; app.manifest carries the retained

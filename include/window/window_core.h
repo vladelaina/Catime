@@ -18,6 +18,7 @@ extern int CLOCK_BASE_WINDOW_HEIGHT;
 extern float CLOCK_WINDOW_SCALE;
 extern int CLOCK_WINDOW_POS_X;
 extern int CLOCK_WINDOW_POS_Y;
+extern BOOL CLOCK_WINDOW_POSITION_MANUAL;
 
 extern BOOL CLOCK_EDIT_MODE;
 extern BOOL CLOCK_IS_DRAGGING;
@@ -65,8 +66,9 @@ HWND FindCurrentProcessMainWindow(void);
 /**
  * @brief Persist current window position and scale to configuration file
  * @param hwnd Window handle
+ * @return TRUE when the current state was persisted or safely preserved
  */
-void SaveWindowSettings(HWND hwnd);
+BOOL SaveWindowSettings(HWND hwnd);
 
 /**
  * @brief Resolve configured or default window position for a given size
@@ -76,6 +78,9 @@ void SaveWindowSettings(HWND hwnd);
  * @param outY Resolved screen Y
  */
 void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY);
+
+/** Keep at least a small, usable portion of a window on an active monitor. */
+void ClampWindowPositionToVisibleMonitor(int width, int height, int* x, int* y);
 
 /**
  * @brief Begin a short guard window after system-driven display changes

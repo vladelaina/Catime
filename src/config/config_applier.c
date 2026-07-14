@@ -193,8 +193,10 @@ void ApplyDisplaySettings(const ConfigSnapshot* snapshot) {
             /* Normal mode: preserve position if significantly different */
             RECT currentRect;
             GetWindowRect(hwnd, &currentRect);
-            int deltaX = abs(currentRect.left - snapshot->windowPosX);
-            int deltaY = abs(currentRect.top - snapshot->windowPosY);
+            long long deltaX = llabs((long long)currentRect.left -
+                                     snapshot->windowPosX);
+            long long deltaY = llabs((long long)currentRect.top -
+                                     snapshot->windowPosY);
             
             if (deltaX > 10 || deltaY > 10) {
                 CLOCK_WINDOW_POS_X = currentRect.left;

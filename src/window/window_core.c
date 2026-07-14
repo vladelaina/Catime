@@ -7,6 +7,7 @@
 #include "window.h"
 #include "window/window_visual_effects.h"
 #include "window/window_desktop_integration.h"
+#include "window/window_placement.h"
 #include "window_procedure/window_procedure.h"
 #include "tray/tray.h"
 #include "tray/tray_animation_core.h"
@@ -27,6 +28,7 @@
 #define DEFAULT_TRAY_ANIMATION_SPEED_MS 150  /* 150ms balances smoothness with CPU usage (6.7 FPS) */
 #define SYSTEM_POSITION_GUARD_MS 3000
 #define DISPLAY_RESTORE_DELAY_MS 750
+#define FULLSCREEN_RESTORE_RETRY_MS 1000
 #define FULLSCREEN_RECT_TOLERANCE_PX 2
 #define WINDOW_VISIBLE_MARGIN 20
 
@@ -40,14 +42,12 @@ int CLOCK_BASE_WINDOW_HEIGHT = 100;
 float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
+BOOL CLOCK_WINDOW_POSITION_MANUAL = FALSE;
 static DWORD g_systemPositionGuardUntil = 0;
 static BOOL g_pendingSystemPositionRestore = FALSE;
 static BOOL g_displayRestoreDeferredForFullscreen = FALSE;
-static BOOL g_hasLastSavedWindowSettings = FALSE;
-static int g_lastSavedWindowPosX = 0;
-static int g_lastSavedWindowPosY = 0;
-static char g_lastSavedWindowScale[64] = {0};
-static char g_lastSavedPluginScale[64] = {0};
+static BOOL g_positionTemporarilyRelocatedForDisplay = FALSE;
+static BOOL g_placementRetryNeeded = FALSE;
 
 BOOL CLOCK_EDIT_MODE = FALSE;
 BOOL CLOCK_IS_DRAGGING = FALSE;
@@ -110,6 +110,16 @@ static BOOL IsSpecialWindowPositionX(int posX) {
     return posX == DEFAULT_WINDOW_POS_X || posX == -1;
 }
 
+static int ClampInt64ToInt(long long value) {
+    if (value < INT_MIN) return INT_MIN;
+    if (value > INT_MAX) return INT_MAX;
+    return (int)value;
+}
+
+static int AddIntsClamped(int first, int second) {
+    return ClampInt64ToInt((long long)first + second);
+}
+
 static BOOL IsShellOrDesktopWindow(HWND hwnd) {
     wchar_t className[64] = {0};
     if (!hwnd || GetClassNameW(hwnd, className, _countof(className)) == 0) {
@@ -119,7 +129,8 @@ static BOOL IsShellOrDesktopWindow(HWND hwnd) {
     return wcscmp(className, L"Progman") == 0 ||
            wcscmp(className, L"WorkerW") == 0 ||
            wcscmp(className, L"SHELLDLL_DefView") == 0 ||
-           wcscmp(className, L"Shell_TrayWnd") == 0;
+           wcscmp(className, L"Shell_TrayWnd") == 0 ||
+           wcscmp(className, L"Shell_SecondaryTrayWnd") == 0;
 }
 
 static BOOL IsFullscreenForegroundWindowActive(HWND hwnd) {
@@ -187,10 +198,230 @@ static void GetPrimaryMonitorInfo(MONITORINFO* mi) {
     }
 }
 
-static void ClampWindowPositionToMonitor(int width, int height, int* x, int* y) {
+typedef struct MonitorVisibilityCheck {
+    RECT windowRect;
+    BOOL visible;
+} MonitorVisibilityCheck;
+
+static BOOL CALLBACK CheckWindowVisibilityOnMonitor(HMONITOR monitor,
+                                                     HDC hdc,
+                                                     LPRECT monitorRect,
+                                                     LPARAM contextValue) {
+    (void)monitor;
+    (void)hdc;
+    MonitorVisibilityCheck* check = (MonitorVisibilityCheck*)contextValue;
+    if (!check || !monitorRect) return FALSE;
+
+    RECT intersection = {0};
+    if (IntersectRect(&intersection, &check->windowRect, monitorRect) &&
+        intersection.right - intersection.left >= WINDOW_VISIBLE_MARGIN &&
+        intersection.bottom - intersection.top >= WINDOW_VISIBLE_MARGIN) {
+        check->visible = TRUE;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL IsWindowRectVisibleOnAnyMonitor(const RECT* rect) {
+    if (!rect || rect->right <= rect->left || rect->bottom <= rect->top) {
+        return FALSE;
+    }
+
+    MonitorVisibilityCheck check = {0};
+    check.windowRect = *rect;
+    EnumDisplayMonitors(NULL, NULL, CheckWindowVisibilityOnMonitor,
+                        (LPARAM)&check);
+    return check.visible;
+}
+
+typedef struct MonitorDeviceSearch {
+    const wchar_t* monitorId;
+    HMONITOR monitor;
+    MONITORINFOEXW info;
+} MonitorDeviceSearch;
+
+static BOOL GetPersistentMonitorIdW(const wchar_t* displayName,
+                                    wchar_t* monitorId,
+                                    size_t monitorIdSize) {
+    if (!displayName || !*displayName || !monitorId || monitorIdSize == 0) {
+        return FALSE;
+    }
+
+    DISPLAY_DEVICEW device = {0};
+    device.cb = sizeof(device);
+    const wchar_t* value = displayName;
+    if (EnumDisplayDevicesW(displayName, 0, &device,
+                            EDD_GET_DEVICE_INTERFACE_NAME) &&
+        device.DeviceID[0] != L'\0') {
+        value = device.DeviceID;
+    }
+
+    if (wcslen(value) >= monitorIdSize) return FALSE;
+    wcscpy_s(monitorId, monitorIdSize, value);
+    return TRUE;
+}
+
+static BOOL CALLBACK FindMonitorByDeviceCallback(HMONITOR monitor,
+                                                  HDC hdc,
+                                                  LPRECT monitorRect,
+                                                  LPARAM contextValue) {
+    (void)hdc;
+    (void)monitorRect;
+    MonitorDeviceSearch* search = (MonitorDeviceSearch*)contextValue;
+    if (!search || !search->monitorId) return FALSE;
+
+    MONITORINFOEXW info = {0};
+    info.cbSize = sizeof(info);
+    wchar_t monitorId[256] = {0};
+    if (GetMonitorInfoW(monitor, (MONITORINFO*)&info) &&
+        GetPersistentMonitorIdW(info.szDevice, monitorId,
+                                sizeof(monitorId) / sizeof(monitorId[0])) &&
+        (_wcsicmp(monitorId, search->monitorId) == 0 ||
+         _wcsicmp(info.szDevice, search->monitorId) == 0)) {
+        search->monitor = monitor;
+        search->info = info;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static BOOL FindMonitorByIdUtf8(const char* monitorId,
+                                HMONITOR* outMonitor,
+                                MONITORINFOEXW* outInfo) {
+    if (!monitorId || !*monitorId || !outMonitor || !outInfo) return FALSE;
+
+    wchar_t monitorIdW[256] = {0};
+    if (MultiByteToWideChar(CP_UTF8, 0, monitorId, -1,
+                            monitorIdW,
+                            sizeof(monitorIdW) / sizeof(monitorIdW[0])) <= 0) {
+        return FALSE;
+    }
+
+    MonitorDeviceSearch search = {0};
+    search.monitorId = monitorIdW;
+    EnumDisplayMonitors(NULL, NULL, FindMonitorByDeviceCallback,
+                        (LPARAM)&search);
+    if (!search.monitor) return FALSE;
+
+    *outMonitor = search.monitor;
+    *outInfo = search.info;
+    return TRUE;
+}
+
+static BOOL GetMonitorPlacementData(const RECT* windowRect,
+                                    char* monitorId,
+                                    size_t monitorIdSize,
+                                    int* monitorOffsetX,
+                                    int* monitorOffsetY,
+                                    BOOL* taskbarAvailable,
+                                    BOOL* taskbarAnchored,
+                                    int* taskbarAxisRatio,
+                                    int* taskbarCrossOffset) {
+    if (!windowRect || !monitorId || monitorIdSize == 0 ||
+        !monitorOffsetX || !monitorOffsetY || !taskbarAvailable ||
+        !taskbarAnchored ||
+        !taskbarAxisRatio || !taskbarCrossOffset) {
+        return FALSE;
+    }
+
+    HMONITOR monitor = MonitorFromRect(windowRect, MONITOR_DEFAULTTONEAREST);
+    MONITORINFOEXW info = {0};
+    wchar_t monitorIdW[256] = {0};
+    info.cbSize = sizeof(info);
+    if (!monitor || !GetMonitorInfoW(monitor, (MONITORINFO*)&info) ||
+        !GetPersistentMonitorIdW(info.szDevice, monitorIdW,
+                                 sizeof(monitorIdW) / sizeof(monitorIdW[0])) ||
+        monitorIdSize > INT_MAX ||
+        WideCharToMultiByte(CP_UTF8, 0, monitorIdW, -1,
+                            monitorId, (int)monitorIdSize,
+                            NULL, NULL) <= 0) {
+        monitorId[0] = '\0';
+        return FALSE;
+    }
+
+    *monitorOffsetX = windowRect->left - info.rcMonitor.left;
+    *monitorOffsetY = windowRect->top - info.rcMonitor.top;
+    *taskbarAvailable = FALSE;
+    *taskbarAnchored = FALSE;
+    *taskbarAxisRatio = 0;
+    *taskbarCrossOffset = 0;
+
+    RECT taskbarRect = {0};
+    RECT intersection = {0};
+    if (!GetTaskbarRectForMonitor(monitor, &taskbarRect)) {
+        return TRUE;
+    }
+    *taskbarAvailable = TRUE;
+    if (!IntersectRect(&intersection, windowRect, &taskbarRect)) return TRUE;
+
+    if (WindowPlacement_CaptureTaskbarAnchor(
+            windowRect, &taskbarRect, &info.rcMonitor,
+            taskbarAxisRatio, taskbarCrossOffset)) {
+        *taskbarAnchored = TRUE;
+    }
+    return TRUE;
+}
+
+static BOOL TryResolvePlacementMetadata(const char* configPath,
+                                        int width,
+                                        int height,
+                                        int* posX,
+                                        int* posY,
+                                        BOOL* placementUnavailable) {
+    if (!configPath || !posX || !posY || !placementUnavailable ||
+        !CLOCK_WINDOW_POSITION_MANUAL) {
+        return FALSE;
+    }
+
+    char monitorId[256] = {0};
+    ReadIniString(INI_SECTION_DISPLAY, WINDOW_MONITOR_ID_KEY, "",
+                  monitorId, sizeof(monitorId), configPath);
+    if (monitorId[0] == '\0') return FALSE;
+
+    HMONITOR monitor = NULL;
+    MONITORINFOEXW info = {0};
+    if (!FindMonitorByIdUtf8(monitorId, &monitor, &info)) {
+        *placementUnavailable = TRUE;
+        return FALSE;
+    }
+
+    int monitorOffsetX = ReadIniInt(INI_SECTION_DISPLAY,
+                                    WINDOW_MONITOR_OFFSET_X_KEY, 0, configPath);
+    int monitorOffsetY = ReadIniInt(INI_SECTION_DISPLAY,
+                                    WINDOW_MONITOR_OFFSET_Y_KEY, 0, configPath);
+    *posX = AddIntsClamped(info.rcMonitor.left, monitorOffsetX);
+    *posY = AddIntsClamped(info.rcMonitor.top, monitorOffsetY);
+
+    if (!ReadIniBool(INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
+                     FALSE, configPath)) {
+        return TRUE;
+    }
+
+    RECT taskbarRect = {0};
+    if (!GetTaskbarRectForMonitor(monitor, &taskbarRect)) {
+        *placementUnavailable = TRUE;
+        g_placementRetryNeeded = TRUE;
+        return TRUE;
+    }
+
+    int ratio = ReadIniInt(INI_SECTION_DISPLAY,
+                           WINDOW_TASKBAR_AXIS_RATIO_KEY, 0, configPath);
+    int crossOffset = ReadIniInt(INI_SECTION_DISPLAY,
+                                 WINDOW_TASKBAR_CROSS_OFFSET_KEY, 0, configPath);
+    if (!WindowPlacement_ResolveTaskbarAnchor(
+            &taskbarRect, &info.rcMonitor, width, height,
+            ratio, crossOffset, posX, posY)) {
+        *placementUnavailable = TRUE;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+void ClampWindowPositionToVisibleMonitor(int width, int height, int* x, int* y) {
     if (!x || !y || width <= 0 || height <= 0) return;
 
-    RECT rc = {*x, *y, *x + width, *y + height};
+    RECT rc = {*x, *y, AddIntsClamped(*x, width),
+               AddIntsClamped(*y, height)};
     HMONITOR hMon = MonitorFromRect(&rc, MONITOR_DEFAULTTONEAREST);
     MONITORINFO mi = {0};
     mi.cbSize = sizeof(mi);
@@ -198,17 +429,19 @@ static void ClampWindowPositionToMonitor(int width, int height, int* x, int* y) 
         GetPrimaryMonitorInfo(&mi);
     }
 
-    if (*x + WINDOW_VISIBLE_MARGIN > mi.rcMonitor.right) {
+    if ((long long)*x + WINDOW_VISIBLE_MARGIN > mi.rcMonitor.right) {
         *x = mi.rcMonitor.right - WINDOW_VISIBLE_MARGIN;
     }
-    if (*x + width - WINDOW_VISIBLE_MARGIN < mi.rcMonitor.left) {
-        *x = mi.rcMonitor.left - width + WINDOW_VISIBLE_MARGIN;
+    if ((long long)*x + width - WINDOW_VISIBLE_MARGIN < mi.rcMonitor.left) {
+        *x = ClampInt64ToInt((long long)mi.rcMonitor.left - width +
+                             WINDOW_VISIBLE_MARGIN);
     }
-    if (*y + WINDOW_VISIBLE_MARGIN > mi.rcMonitor.bottom) {
+    if ((long long)*y + WINDOW_VISIBLE_MARGIN > mi.rcMonitor.bottom) {
         *y = mi.rcMonitor.bottom - WINDOW_VISIBLE_MARGIN;
     }
-    if (*y + height - WINDOW_VISIBLE_MARGIN < mi.rcMonitor.top) {
-        *y = mi.rcMonitor.top - height + WINDOW_VISIBLE_MARGIN;
+    if ((long long)*y + height - WINDOW_VISIBLE_MARGIN < mi.rcMonitor.top) {
+        *y = ClampInt64ToInt((long long)mi.rcMonitor.top - height +
+                             WINDOW_VISIBLE_MARGIN);
     }
 }
 
@@ -276,6 +509,9 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
 
     InitializeTrayAndAnimation(hwnd, hInstance);
     ApplyInitialWindowState(hwnd, nCmdShow);
+    if (g_pendingSystemPositionRestore) {
+        ScheduleDisplayRestoreTimer(hwnd, DISPLAY_RESTORE_DELAY_MS);
+    }
     
     LOG_INFO("Main window created successfully (handle: 0x%p)", hwnd);
     return hwnd;
@@ -293,18 +529,18 @@ HWND FindCurrentProcessMainWindow(void) {
     return NULL;
 }
 
-void SaveWindowSettings(HWND hwnd) {
-    if (!hwnd) return;
+BOOL SaveWindowSettings(HWND hwnd) {
+    if (!hwnd) return FALSE;
 
     if ((IsSystemPositionChangeGuardActive() || g_pendingSystemPositionRestore) &&
         !CLOCK_EDIT_MODE) {
-        return;
+        return FALSE;
     }
 
     RECT rect;
     if (!GetWindowRect(hwnd, &rect)) {
         LOG_WARNING("Failed to get window rect for saving");
-        return;
+        return FALSE;
     }
     
     CLOCK_WINDOW_POS_X = rect.left;
@@ -314,34 +550,87 @@ void SaveWindowSettings(HWND hwnd) {
     GetConfigPath(config_path, MAX_PATH);
 
     char posXStr[16], posYStr[16], scaleStr[64], pluginScaleStr[64];
+    char monitorId[256] = {0};
+    char monitorOffsetXStr[16], monitorOffsetYStr[16];
+    char taskbarAxisRatioStr[16], taskbarCrossOffsetStr[16];
+    int monitorOffsetX = 0;
+    int monitorOffsetY = 0;
+    int taskbarAxisRatio = 0;
+    int taskbarCrossOffset = 0;
+    BOOL taskbarAnchored = FALSE;
+    BOOL taskbarAvailable = FALSE;
     snprintf(posXStr, sizeof(posXStr), "%d", CLOCK_WINDOW_POS_X);
     snprintf(posYStr, sizeof(posYStr), "%d", CLOCK_WINDOW_POS_Y);
     snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
     snprintf(pluginScaleStr, sizeof(pluginScaleStr), "%.2f", PLUGIN_FONT_SCALE_FACTOR);
+    BOOL placementDataAvailable = GetMonitorPlacementData(
+        &rect, monitorId, sizeof(monitorId),
+        &monitorOffsetX, &monitorOffsetY, &taskbarAvailable,
+        &taskbarAnchored, &taskbarAxisRatio, &taskbarCrossOffset);
+    snprintf(monitorOffsetXStr, sizeof(monitorOffsetXStr), "%d", monitorOffsetX);
+    snprintf(monitorOffsetYStr, sizeof(monitorOffsetYStr), "%d", monitorOffsetY);
+    snprintf(taskbarAxisRatioStr, sizeof(taskbarAxisRatioStr), "%d",
+             taskbarAxisRatio);
+    snprintf(taskbarCrossOffsetStr, sizeof(taskbarCrossOffsetStr), "%d",
+             taskbarCrossOffset);
 
-    if (g_hasLastSavedWindowSettings &&
-        CLOCK_WINDOW_POS_X == g_lastSavedWindowPosX &&
-        CLOCK_WINDOW_POS_Y == g_lastSavedWindowPosY &&
-        strcmp(scaleStr, g_lastSavedWindowScale) == 0 &&
-        strcmp(pluginScaleStr, g_lastSavedPluginScale) == 0) {
-        return;
+    if ((!CLOCK_WINDOW_POSITION_MANUAL ||
+         g_positionTemporarilyRelocatedForDisplay) && !CLOCK_EDIT_MODE) {
+        /* Preserve automatic placement sentinels and unavailable-monitor
+         * coordinates. Independent scale changes are still safe to persist. */
+        const IniKeyValue scaleUpdates[] = {
+            {INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr},
+            {INI_SECTION_DISPLAY, "PLUGIN_SCALE", pluginScaleStr}
+        };
+        BOOL saved = WriteIniMultipleAtomic(
+            config_path, scaleUpdates,
+            sizeof(scaleUpdates) / sizeof(scaleUpdates[0]));
+        if (!saved) {
+            LOG_WARNING("Failed to save window scale while preserving unavailable-monitor position");
+        }
+        return saved;
     }
-    
-    IniKeyValue updates[] = {
-        {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posXStr},
-        {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posYStr},
-        {INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr},
-        {INI_SECTION_DISPLAY, "PLUGIN_SCALE", pluginScaleStr}
-    };
-    
-    if (WriteIniMultipleAtomic(config_path, updates, 4)) {
-        g_hasLastSavedWindowSettings = TRUE;
-        g_lastSavedWindowPosX = CLOCK_WINDOW_POS_X;
-        g_lastSavedWindowPosY = CLOCK_WINDOW_POS_Y;
-        strcpy_s(g_lastSavedWindowScale, sizeof(g_lastSavedWindowScale), scaleStr);
-        strcpy_s(g_lastSavedPluginScale, sizeof(g_lastSavedPluginScale), pluginScaleStr);
+
+    IniKeyValue updates[11];
+    size_t updateCount = 0;
+    updates[updateCount++] = (IniKeyValue){
+        INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posXStr};
+    updates[updateCount++] = (IniKeyValue){
+        INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posYStr};
+    updates[updateCount++] = (IniKeyValue){
+        INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY, "TRUE"};
+    if (placementDataAvailable) {
+        updates[updateCount++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_MONITOR_ID_KEY, monitorId};
+        updates[updateCount++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_X_KEY,
+            monitorOffsetXStr};
+        updates[updateCount++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_Y_KEY,
+            monitorOffsetYStr};
+    }
+    if (taskbarAvailable) {
+        updates[updateCount++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
+            taskbarAnchored ? "TRUE" : "FALSE"};
+        updates[updateCount++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_TASKBAR_AXIS_RATIO_KEY,
+            taskbarAxisRatioStr};
+        updates[updateCount++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_TASKBAR_CROSS_OFFSET_KEY,
+            taskbarCrossOffsetStr};
+    }
+    updates[updateCount++] = (IniKeyValue){
+        INI_SECTION_DISPLAY, "WINDOW_SCALE", scaleStr};
+    updates[updateCount++] = (IniKeyValue){
+        INI_SECTION_DISPLAY, "PLUGIN_SCALE", pluginScaleStr};
+
+    if (WriteIniMultipleAtomic(config_path, updates, updateCount)) {
+        CLOCK_WINDOW_POSITION_MANUAL = TRUE;
+        return TRUE;
     } else {
         LOG_WARNING("Failed to save window settings");
+        return FALSE;
     }
 }
 
@@ -357,10 +646,14 @@ void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY
                                 CLOCK_WINDOW_POS_X, configPath);
     int configPosY = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y",
                                 CLOCK_WINDOW_POS_Y, configPath);
+    /* Missing means legacy config: preserve the historical -1/-2 sentinels. */
+    CLOCK_WINDOW_POSITION_MANUAL = ReadIniBool(
+        INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY, FALSE, configPath);
+    g_placementRetryNeeded = FALSE;
 
     MONITORINFO mi = {0};
     GetPrimaryMonitorInfo(&mi);
-    if (IsSpecialWindowPositionX(configPosX)) {
+    if (!CLOCK_WINDOW_POSITION_MANUAL && IsSpecialWindowPositionX(configPosX)) {
         int screenWidth = mi.rcMonitor.right - mi.rcMonitor.left;
         if (configPosX == -1) {
             posX = mi.rcMonitor.left + (screenWidth - width) / 2;
@@ -374,13 +667,27 @@ void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY
         posX = configPosX;
     }
 
-    if (configPosY == DEFAULT_WINDOW_POS_Y) {
+    if (!CLOCK_WINDOW_POSITION_MANUAL && configPosY == DEFAULT_WINDOW_POS_Y) {
         posY = mi.rcMonitor.top;
     } else {
         posY = configPosY;
     }
 
-    ClampWindowPositionToMonitor(width, height, &posX, &posY);
+    BOOL placementUnavailable = FALSE;
+    TryResolvePlacementMetadata(configPath, width, height,
+                                &posX, &posY, &placementUnavailable);
+
+    RECT configuredRect = {posX, posY, AddIntsClamped(posX, width),
+                           AddIntsClamped(posY, height)};
+    BOOL configuredPositionVisible = IsWindowRectVisibleOnAnyMonitor(&configuredRect);
+
+    ClampWindowPositionToVisibleMonitor(width, height, &posX, &posY);
+    g_positionTemporarilyRelocatedForDisplay =
+        CLOCK_WINDOW_POSITION_MANUAL &&
+        (placementUnavailable || !configuredPositionVisible);
+    if (g_placementRetryNeeded) {
+        g_pendingSystemPositionRestore = TRUE;
+    }
 
     *outX = posX;
     *outY = posY;
@@ -401,7 +708,12 @@ BOOL IsSystemPositionChangeGuardActive(void) {
 
 void RestoreWindowPositionAfterSystemChange(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) return;
-    if (CLOCK_EDIT_MODE) return;
+    if (CLOCK_EDIT_MODE) {
+        /* An interactive placement is authoritative. Do not leave a stale
+         * guard behind that would suppress the save when edit mode ends. */
+        ClearPendingSystemPositionRestore();
+        return;
+    }
 
     if (IsFullscreenForegroundWindowActive(hwnd)) {
         g_systemPositionGuardUntil = GetTickCount() + SYSTEM_POSITION_GUARD_MS;
@@ -410,6 +722,10 @@ void RestoreWindowPositionAfterSystemChange(HWND hwnd) {
             LOG_INFO("Deferring window position restore while fullscreen foreground window is active");
             g_displayRestoreDeferredForFullscreen = TRUE;
         }
+        /* The display-restore timer is one-shot and was already removed by the
+         * message handler. Keep polling at a low rate so this state cannot
+         * remain pending forever when the fullscreen window later closes. */
+        ScheduleDisplayRestoreTimer(hwnd, FULLSCREEN_RESTORE_RETRY_MS);
         return;
     }
 
@@ -436,7 +752,10 @@ void RestoreWindowPositionAfterSystemChange(HWND hwnd) {
 
     CLOCK_WINDOW_POS_X = posX;
     CLOCK_WINDOW_POS_Y = posY;
-    g_pendingSystemPositionRestore = FALSE;
+    g_pendingSystemPositionRestore = g_placementRetryNeeded;
+    if (g_pendingSystemPositionRestore) {
+        ScheduleDisplayRestoreTimer(hwnd, DISPLAY_RESTORE_DELAY_MS);
+    }
     InvalidateRect(hwnd, NULL, FALSE);
 }
 
@@ -449,6 +768,8 @@ void ClearPendingSystemPositionRestore(void) {
     g_pendingSystemPositionRestore = FALSE;
     g_displayRestoreDeferredForFullscreen = FALSE;
     g_systemPositionGuardUntil = 0;
+    g_positionTemporarilyRelocatedForDisplay = FALSE;
+    g_placementRetryNeeded = FALSE;
 }
 
 BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath) {

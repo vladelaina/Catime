@@ -305,6 +305,13 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
     const IniKeyValue updates[] = {
         {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posXStr},
         {INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posYStr},
+        {INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY, "FALSE"},
+        {INI_SECTION_DISPLAY, WINDOW_MONITOR_ID_KEY, ""},
+        {INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_X_KEY, "0"},
+        {INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_Y_KEY, "0"},
+        {INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY, "FALSE"},
+        {INI_SECTION_DISPLAY, WINDOW_TASKBAR_AXIS_RATIO_KEY, "0"},
+        {INI_SECTION_DISPLAY, WINDOW_TASKBAR_CROSS_OFFSET_KEY, "0"},
         {INI_SECTION_DISPLAY, "WINDOW_SCALE", DEFAULT_WINDOW_SCALE},
         {INI_SECTION_DISPLAY, "PLUGIN_SCALE", DEFAULT_PLUGIN_SCALE},
     };
@@ -313,6 +320,8 @@ static LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
         return 0;
     }
     
+    CLOCK_WINDOW_POSITION_MANUAL = FALSE;
+
     /* Apply position and size together so reset does not visually happen in two steps. */
     float defaultWindowScale = ParseDefaultScaleOrFallback(DEFAULT_WINDOW_SCALE, CLOCK_WINDOW_SCALE);
     float defaultPluginScale = ParseDefaultScaleOrFallback(DEFAULT_PLUGIN_SCALE, PLUGIN_FONT_SCALE_FACTOR);
