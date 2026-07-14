@@ -3,6 +3,7 @@
  * @brief Windows startup integration with table-driven mode configs
  */
 #include "startup.h"
+#include "startup_policy.h"
 #include "config.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
@@ -24,6 +25,7 @@
 #define STARTUP_LINK_FILENAME L"Catime.lnk"
 #define STARTUP_MARKER_FILENAME L"startup_shortcut_target.txt"
 #define STARTUP_CMD_ARG L"--startup"
+#define AUTO_START_PREFERENCE_KEY "AUTO_START_PREFERENCE"
 #define CONFIG_KEY_STARTUP_MODE "STARTUP_MODE="
 #define STARTUP_MODE_MAX_LEN 20
 #define CONFIG_LINE_BUFFER_SIZE 256
@@ -147,41 +149,6 @@ static BOOL GetStartupShortcutMarkerPath(wchar_t* output, size_t outputSize) {
     return TRUE;
 }
 
-static BOOL ReadStartupShortcutMarker(wchar_t* output, size_t outputSize) {
-    wchar_t markerPath[MAX_PATH] = {0};
-    char markerUtf8[STARTUP_MARKER_BUFFER_SIZE] = {0};
-    FILE* markerFile = NULL;
-    size_t bytesRead = 0;
-
-    if (!output || outputSize == 0 || outputSize > (size_t)INT_MAX) return FALSE;
-    output[0] = L'\0';
-
-    if (!GetStartupShortcutMarkerPath(markerPath, _countof(markerPath))) {
-        return FALSE;
-    }
-
-    markerFile = _wfopen(markerPath, L"rb");
-    if (!markerFile) {
-        return FALSE;
-    }
-
-    bytesRead = fread(markerUtf8, 1, sizeof(markerUtf8) - 1, markerFile);
-    fclose(markerFile);
-    markerUtf8[bytesRead] = '\0';
-
-    while (bytesRead > 0 &&
-           (markerUtf8[bytesRead - 1] == '\n' || markerUtf8[bytesRead - 1] == '\r' ||
-            markerUtf8[bytesRead - 1] == ' ' || markerUtf8[bytesRead - 1] == '\t')) {
-        markerUtf8[--bytesRead] = '\0';
-    }
-
-    if (bytesRead == 0) {
-        return FALSE;
-    }
-
-    return MultiByteToWideChar(CP_UTF8, 0, markerUtf8, -1, output, (int)outputSize) > 0;
-}
-
 static BOOL WriteStartupShortcutMarker(const wchar_t* exePath) {
     wchar_t markerPath[MAX_PATH] = {0};
     char markerUtf8[STARTUP_MARKER_BUFFER_SIZE] = {0};
@@ -218,17 +185,6 @@ static void RemoveStartupShortcutMarker(void) {
     if (GetStartupShortcutMarkerPath(markerPath, _countof(markerPath))) {
         DeleteFileW(markerPath);
     }
-}
-
-static BOOL IsStartupShortcutMarkerCurrent(const wchar_t* exePath) {
-    wchar_t markerExePath[MAX_PATH] = {0};
-
-    if (!exePath || !*exePath) return FALSE;
-    if (!ReadStartupShortcutMarker(markerExePath, _countof(markerExePath))) {
-        return FALSE;
-    }
-
-    return _wcsicmp(markerExePath, exePath) == 0;
 }
 
 static BOOL EnsureComInitializedForShortcut(BOOL* shouldUninitialize) {
@@ -287,6 +243,102 @@ static void CleanupComShellLink(ComShellLink* link) {
         link->shellLink = NULL;
     }
     link->initialized = FALSE;
+}
+
+static BOOL GetExecutableDirectory(const wchar_t* exePath,
+                                   wchar_t* output, size_t outputSize) {
+    if (!exePath || !*exePath || !output || outputSize == 0) return FALSE;
+    if (wcscpy_s(output, outputSize, exePath) != 0) return FALSE;
+    return PathRemoveFileSpecW(output);
+}
+
+static BOOL IsStartupShortcutCurrent(const wchar_t* shortcutPath,
+                                     const wchar_t* exePath) {
+    ComShellLink link;
+    wchar_t actualPath[MAX_PATH] = {0};
+    wchar_t actualArgs[128] = {0};
+    wchar_t actualWorkingDir[MAX_PATH] = {0};
+    wchar_t expectedWorkingDir[MAX_PATH] = {0};
+    WIN32_FIND_DATAW findData = {0};
+    BOOL shouldUninitializeCom = FALSE;
+    BOOL current = FALSE;
+    HRESULT hr;
+
+    if (!shortcutPath || !exePath ||
+        !GetExecutableDirectory(exePath, expectedWorkingDir,
+                                _countof(expectedWorkingDir)) ||
+        !EnsureComInitializedForShortcut(&shouldUninitializeCom)) {
+        return FALSE;
+    }
+
+    if (!InitComShellLink(&link)) {
+        if (shouldUninitializeCom) CoUninitialize();
+        return FALSE;
+    }
+
+    hr = link.persistFile->lpVtbl->Load(link.persistFile, shortcutPath, STGM_READ);
+    if (SUCCEEDED(hr)) {
+        hr = link.shellLink->lpVtbl->GetPath(link.shellLink, actualPath,
+                                             _countof(actualPath), &findData,
+                                             SLGP_RAWPATH);
+    }
+    if (SUCCEEDED(hr)) {
+        hr = link.shellLink->lpVtbl->GetArguments(link.shellLink, actualArgs,
+                                                  _countof(actualArgs));
+    }
+    if (SUCCEEDED(hr)) {
+        hr = link.shellLink->lpVtbl->GetWorkingDirectory(
+            link.shellLink, actualWorkingDir, _countof(actualWorkingDir));
+    }
+
+    if (SUCCEEDED(hr)) {
+        current = _wcsicmp(actualPath, exePath) == 0 &&
+                  wcscmp(actualArgs, STARTUP_CMD_ARG) == 0 &&
+                  _wcsicmp(actualWorkingDir, expectedWorkingDir) == 0;
+        if (!current) {
+            LOG_INFO("Startup shortcut is stale (target='%ls', args='%ls', cwd='%ls')",
+                     actualPath, actualArgs, actualWorkingDir);
+        }
+    } else {
+        LOG_WARNING("Failed to inspect startup shortcut, hr=0x%08X",
+                    (unsigned int)hr);
+    }
+
+    CleanupComShellLink(&link);
+    if (shouldUninitializeCom) CoUninitialize();
+    return current;
+}
+
+static BOOL WriteAutoStartPreference(const char* preference) {
+    char configPath[MAX_PATH] = {0};
+    if (!preference) return FALSE;
+    GetConfigPath(configPath, sizeof(configPath));
+    if (configPath[0] == '\0') return FALSE;
+    if (!WriteIniString(INI_SECTION_GENERAL, AUTO_START_PREFERENCE_KEY,
+                        preference, configPath)) {
+        LOG_WARNING("Failed to persist auto-start preference: %s", preference);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static void ReadAutoStartPreference(char* output, size_t outputSize) {
+    char configPath[MAX_PATH] = {0};
+    if (!output || outputSize == 0) return;
+    output[0] = '\0';
+    GetConfigPath(configPath, sizeof(configPath));
+    if (configPath[0] != '\0') {
+        ReadIniString(INI_SECTION_GENERAL, AUTO_START_PREFERENCE_KEY,
+                      AUTO_START_PREFERENCE_DEFAULT, output,
+                      (DWORD)outputSize, configPath);
+    }
+    if (_stricmp(output, AUTO_START_PREFERENCE_ENABLED) != 0 &&
+        _stricmp(output, AUTO_START_PREFERENCE_DISABLED) != 0 &&
+        _stricmp(output, AUTO_START_PREFERENCE_DEFAULT) != 0) {
+        LOG_WARNING("Invalid auto-start preference '%s'; migrating as DEFAULT",
+                    output);
+        strcpy_s(output, outputSize, AUTO_START_PREFERENCE_DEFAULT);
+    }
 }
 
 /** Centralizes timer reset to avoid repetition - uses high-precision timer */
@@ -401,7 +453,9 @@ BOOL IsAutoStartEnabled(void) {
 BOOL CreateShortcut(void) {
     ComShellLink link;
     wchar_t startupPath[MAX_PATH];
+    wchar_t temporaryPath[MAX_PATH];
     wchar_t exePath[MAX_PATH];
+    wchar_t workingDirectory[MAX_PATH];
     HRESULT hr;
     BOOL success = FALSE;
     BOOL shouldUninitializeCom = FALSE;
@@ -417,6 +471,14 @@ BOOL CreateShortcut(void) {
     }
     
     if (!GetStartupShortcutPath(startupPath, MAX_PATH)) {
+        return FALSE;
+    }
+
+    if (!GetExecutableDirectory(exePath, workingDirectory,
+                                _countof(workingDirectory)) ||
+        FAILED(StringCchPrintfW(temporaryPath, _countof(temporaryPath),
+                                L"%ls.tmp", startupPath))) {
+        LOG_ERROR("Failed to build startup shortcut working or temporary path");
         return FALSE;
     }
 
@@ -450,21 +512,56 @@ BOOL CreateShortcut(void) {
         }
         return FALSE;
     }
-    
-    hr = link.persistFile->lpVtbl->Save(link.persistFile, startupPath, TRUE);
+
+    hr = link.shellLink->lpVtbl->SetWorkingDirectory(link.shellLink,
+                                                     workingDirectory);
+    if (FAILED(hr)) {
+        LOG_ERROR("Failed to set shortcut working directory, hr=0x%08X",
+                  (unsigned int)hr);
+        CleanupComShellLink(&link);
+        if (shouldUninitializeCom) CoUninitialize();
+        return FALSE;
+    }
+
+    hr = link.shellLink->lpVtbl->SetIconLocation(link.shellLink, exePath, 0);
+    if (FAILED(hr)) {
+        LOG_WARNING("Failed to set startup shortcut icon, hr=0x%08X",
+                    (unsigned int)hr);
+    }
+    link.shellLink->lpVtbl->SetShowCmd(link.shellLink, SW_SHOWNORMAL);
+
+    DeleteFileW(temporaryPath);
+    hr = link.persistFile->lpVtbl->Save(link.persistFile, temporaryPath, TRUE);
+    if (FAILED(hr)) {
+        LOG_ERROR("Failed to save shortcut, hr=0x%08X", (unsigned int)hr);
+    }
+
+    CleanupComShellLink(&link);
+    if (shouldUninitializeCom) {
+        CoUninitialize();
+    }
+
     if (SUCCEEDED(hr)) {
+        if (!MoveFileExW(temporaryPath, startupPath,
+                         MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+            LOG_ERROR("Failed to replace startup shortcut, error=%lu", GetLastError());
+            DeleteFileW(temporaryPath);
+            return FALSE;
+        }
+
+        if (!IsStartupShortcutCurrent(startupPath, exePath)) {
+            LOG_ERROR("Startup shortcut verification failed after replacement");
+            return FALSE;
+        }
+
         LOG_INFO("Startup shortcut created successfully: %ls", startupPath);
         if (!WriteStartupShortcutMarker(exePath)) {
             LOG_WARNING("Startup shortcut marker was not updated");
         }
+        if (!WriteAutoStartPreference(AUTO_START_PREFERENCE_ENABLED)) {
+            LOG_WARNING("Startup shortcut is active but its preference was not persisted");
+        }
         success = TRUE;
-    } else {
-        LOG_ERROR("Failed to save shortcut, hr=0x%08X", (unsigned int)hr);
-    }
-    
-    CleanupComShellLink(&link);
-    if (shouldUninitializeCom) {
-        CoUninitialize();
     }
     return success;
 }
@@ -485,12 +582,14 @@ BOOL RemoveShortcut(void) {
     if (DeleteFileW(startupPath)) {
         LOG_INFO("Startup shortcut removed successfully");
         RemoveStartupShortcutMarker();
+        WriteAutoStartPreference(AUTO_START_PREFERENCE_DISABLED);
         return TRUE;
     } else {
         DWORD error = GetLastError();
         if (error == ERROR_FILE_NOT_FOUND) {
             LOG_INFO("Startup shortcut does not exist, nothing to remove");
             RemoveStartupShortcutMarker();
+            WriteAutoStartPreference(AUTO_START_PREFERENCE_DISABLED);
             return TRUE;
         }
         LOG_ERROR("Failed to delete startup shortcut, error=%lu", error);
@@ -498,36 +597,122 @@ BOOL RemoveShortcut(void) {
     }
 }
 
-/** Recreates shortcut to handle app relocations */
-BOOL UpdateStartupShortcut(void) {
-    LOG_INFO("Updating startup shortcut if exists");
+BOOL RepairExistingAutoStartShortcut(void) {
+    char preference[32] = {0};
+    AutoStartPreference preferenceState;
+    BOOL shortcutExists;
+    wchar_t startupPath[MAX_PATH] = {0};
+    wchar_t exePath[MAX_PATH] = {0};
 
+    if (IsRunningPackagedApp()) return TRUE;
+    if (!GetStartupShortcutPath(startupPath, _countof(startupPath))) return FALSE;
+
+    shortcutExists = GetFileAttributesW(startupPath) != INVALID_FILE_ATTRIBUTES;
+    ReadAutoStartPreference(preference, sizeof(preference));
+    preferenceState = StartupPolicy_ParsePreference(preference);
+
+    if (preferenceState == AUTO_START_PREFERENCE_STATE_DISABLED) {
+        return shortcutExists ? RemoveShortcut() : TRUE;
+    }
+
+    if (!shortcutExists) {
+        if (preferenceState == AUTO_START_PREFERENCE_STATE_ENABLED) {
+            LOG_INFO("Restoring explicitly enabled startup shortcut before single-instance routing");
+            return CreateShortcut();
+        }
+
+        /* FIRST_RUN is tied to font extraction and may remain TRUE after an
+         * old installation. Version detection is the reliable migration
+         * signal before ReadConfig rewrites CONFIG_VERSION. */
+        char configPath[MAX_PATH] = {0};
+        GetConfigPath(configPath, sizeof(configPath));
+        if (configPath[0] != '\0' && FileExists(configPath)) {
+            char configVersion[32] = {0};
+            ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "",
+                          configVersion, sizeof(configVersion), configPath);
+            if (strcmp(configVersion, CATIME_VERSION) != 0) {
+                LOG_INFO("Preserving legacy auto-start opt-out during upgrade from %s",
+                         configVersion[0] ? configVersion : "an unversioned config");
+                return WriteAutoStartPreference(AUTO_START_PREFERENCE_DISABLED);
+            }
+        }
+        return TRUE;
+    }
+
+    if (!GetExecutablePath(exePath, _countof(exePath))) return FALSE;
+    if (IsStartupShortcutCurrent(startupPath, exePath)) return TRUE;
+
+    LOG_INFO("Repairing stale startup shortcut before single-instance routing");
+    return CreateShortcut();
+}
+
+BOOL EnsureAutoStart(void) {
+    char preference[32] = {0};
+    AutoStartPreference preferenceState;
+    BOOL shortcutExists;
+    BOOL shouldEnable;
+    BOOL firstRun;
+    wchar_t startupPath[MAX_PATH] = {0};
+    wchar_t exePath[MAX_PATH] = {0};
+
+    LOG_INFO("Ensuring auto-start registration and preference");
     if (IsRunningPackagedApp()) {
         LOG_INFO("Packaged app uses the Windows Startup Apps registration");
         return TRUE;
     }
-    
-    if (IsAutoStartEnabled()) {
-        wchar_t exePath[MAX_PATH] = {0};
 
-        if (GetExecutablePath(exePath, _countof(exePath)) &&
-            IsStartupShortcutMarkerCurrent(exePath)) {
-            LOG_INFO("Startup shortcut already current; skipping update");
-            return TRUE;
-        }
-
-        if (!CreateShortcut()) {
-            LOG_ERROR("Failed to update startup shortcut; existing shortcut was preserved when possible");
-            return FALSE;
-        }
-        
-        LOG_INFO("Startup shortcut updated successfully");
-        return TRUE;
+    if (!GetStartupShortcutPath(startupPath, _countof(startupPath)) ||
+        !GetExecutablePath(exePath, _countof(exePath))) {
+        return FALSE;
     }
-    
-    LOG_INFO("No startup shortcut to update");
-    RemoveStartupShortcutMarker();
+
+    shortcutExists = GetFileAttributesW(startupPath) != INVALID_FILE_ATTRIBUTES;
+    ReadAutoStartPreference(preference, sizeof(preference));
+    preferenceState = StartupPolicy_ParsePreference(preference);
+    firstRun = IsFirstRun();
+    shouldEnable = StartupPolicy_ShouldEnable(preferenceState, firstRun,
+                                              shortcutExists);
+
+    if (preferenceState == AUTO_START_PREFERENCE_STATE_DEFAULT) {
+        /* New installs default on. Legacy installs adopt the shortcut's
+         * existing presence so a prior opt-out is never silently reversed. */
+        LOG_INFO("Migrating auto-start preference: firstRun=%d shortcutExists=%d -> %s",
+                 firstRun, shortcutExists,
+                 shouldEnable ? AUTO_START_PREFERENCE_ENABLED
+                              : AUTO_START_PREFERENCE_DISABLED);
+        if (shouldEnable &&
+            !WriteAutoStartPreference(AUTO_START_PREFERENCE_ENABLED)) {
+            LOG_WARNING("Could not record the default enabled auto-start intent for retry");
+        }
+    }
+
+    if (!shouldEnable) {
+        if (shortcutExists) {
+            return RemoveShortcut();
+        }
+        RemoveStartupShortcutMarker();
+        return WriteAutoStartPreference(AUTO_START_PREFERENCE_DISABLED);
+    }
+
+    if (shortcutExists && IsStartupShortcutCurrent(startupPath, exePath)) {
+        if (!WriteStartupShortcutMarker(exePath)) {
+            LOG_WARNING("Startup shortcut is current but its marker could not be refreshed");
+        }
+        return WriteAutoStartPreference(AUTO_START_PREFERENCE_ENABLED);
+    }
+
+    if (!CreateShortcut()) {
+        LOG_ERROR("Failed to create or repair startup shortcut; existing shortcut was preserved when possible");
+        return FALSE;
+    }
+
+    LOG_INFO("Startup shortcut created or repaired successfully");
     return TRUE;
+}
+
+/** Compatibility wrapper for older callers. */
+BOOL UpdateStartupShortcut(void) {
+    return EnsureAutoStart();
 }
 
 BOOL OpenPackagedStartupSettings(void) {

@@ -58,7 +58,7 @@
           EntryPoint="Windows.FullTrustApplication">
           <desktop:StartupTask
             TaskId="CatimeStartup"
-            Enabled="false"
+            Enabled="true"
             DisplayName="Catime" />
         </desktop:Extension>
       </Extensions>

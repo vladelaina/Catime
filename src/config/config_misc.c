@@ -698,6 +698,7 @@ BOOL WriteConfigKeyValue(const char* key, const char* value) {
         strcmp(key, "LANGUAGE") == 0 ||
         strcmp(key, "SHORTCUT_CHECK_DONE") == 0 ||
         strcmp(key, "FIRST_RUN") == 0 ||
+        strcmp(key, "AUTO_START_PREFERENCE") == 0 ||
         strcmp(key, "FONT_LICENSE_ACCEPTED") == 0 ||
         strcmp(key, "FONT_LICENSE_VERSION_ACCEPTED") == 0) {
         section = INI_SECTION_GENERAL;

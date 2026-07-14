@@ -208,7 +208,9 @@ static BOOL InitializeDefaultSettings(void) {
     ReadConfig();
     CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
     
-    UpdateStartupShortcut();
+    if (!EnsureAutoStart()) {
+        LOG_WARNING("Auto-start registration could not be fully initialized");
+    }
     InitializeDefaultLanguage();
     
     CLOCK_TOTAL_TIME = g_AppConfig.timer.default_start_time;

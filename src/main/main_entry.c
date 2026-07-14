@@ -11,6 +11,7 @@
 #include "window/window_visual_effects.h"
 #include "log.h"
 #include "config.h"
+#include "startup.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "dwmapi.lib")
@@ -33,6 +34,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     if (!InitializeSubsystems()) {
         return 1;
+    }
+
+    if (!IsCiSmokeMode() && !RepairExistingAutoStartShortcut()) {
+        LOG_WARNING("Could not repair the existing startup shortcut before single-instance routing");
     }
 
     HANDLE hMutex = NULL;

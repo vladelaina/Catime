@@ -17,7 +17,7 @@
  * @brief Check if auto-start enabled
  * @return TRUE if shortcut exists
  * 
- * @note Existence only, doesn't verify validity
+ * @note Existence only; EnsureAutoStart performs full shortcut validation
  */
 BOOL IsAutoStartEnabled(void);
 
@@ -41,11 +41,27 @@ BOOL CreateShortcut(void);
 BOOL RemoveShortcut(void);
 
 /**
- * @brief Update shortcut to stable executable path (handles moved apps)
- * @return TRUE on success or if no shortcut
- * 
- * @details Implemented as Remove + Create for simplicity
+ * @brief Repair an existing startup shortcut before single-instance routing
+ * @return TRUE when no repair is needed or the repair succeeded
+ *
+ * @details This lets a newly launched version replace a stale old-version
+ * target even while the old process still owns the single-instance mutex.
+ * A legacy install with no shortcut is recorded as disabled; only an explicit
+ * enabled preference may recreate a previously absent shortcut here.
  */
+BOOL RepairExistingAutoStartShortcut(void);
+
+/**
+ * @brief Apply the default/migrated auto-start preference and repair registration
+ * @return TRUE when the configured state is valid
+ *
+ * @details New installs default to enabled. Existing installs adopt the prior
+ * shortcut state, preserving an explicit opt-out. Enabled shortcuts are
+ * validated against target, arguments, and working directory before reuse.
+ */
+BOOL EnsureAutoStart(void);
+
+/** @brief Compatibility wrapper for EnsureAutoStart */
 BOOL UpdateStartupShortcut(void);
 
 /**

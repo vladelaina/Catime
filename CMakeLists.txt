@@ -244,6 +244,15 @@ if(BUILD_TESTING)
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
     )
     add_test(NAME window_placement COMMAND window_placement_tests)
+
+    add_executable(startup_policy_tests
+        tests/startup_policy_tests.c
+        src/startup_policy.c
+    )
+    target_include_directories(startup_policy_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    add_test(NAME startup_policy COMMAND startup_policy_tests)
 endif()
 
 # Recent MinGW GCC distributions automatically append default-manifest.o,
