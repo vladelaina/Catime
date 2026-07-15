@@ -28,6 +28,7 @@
 #include "tray/tray_menu_pomodoro.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
+#include "tray/tray_menu_theme.h"
 #include "color/color_parser.h"
 
 /* External dependencies needed for menu display logic */
@@ -43,6 +44,7 @@ extern void FormatPomodoroTime(int minutes, wchar_t* buffer, size_t size);
  * @note Delegates to specialized submenu builders for maintainability
  */
 void ShowColorMenu(HWND hwnd) {
+    ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
@@ -102,6 +104,7 @@ void ShowColorMenu(HWND hwnd) {
  * @note Includes timer management, Pomodoro, and quick countdown options
  */
 void ShowContextMenu(HWND hwnd) {
+    ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();

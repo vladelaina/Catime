@@ -14,6 +14,7 @@
 #include "tray/tray_animation_core.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
+#include "tray/tray_menu_theme.h"
 #include "config/config_watcher.h"
 #include "update/update_internal.h"
 #include "dialog/dialog_plugin_security.h"
@@ -627,6 +628,20 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
         return FALSE;
     }
 
+    BOOL darkMenu = IsNativeMenuDarkModeActive();
+    COLORREF itemBackground = darkMenu
+        ? ((lpdis->itemState & ODS_SELECTED)
+               ? RGB(62, 62, 62)
+               : RGB(32, 32, 32))
+        : GetSysColor((lpdis->itemState & ODS_SELECTED)
+                          ? COLOR_HIGHLIGHT
+                          : COLOR_MENU);
+    HBRUSH backgroundBrush = CreateSolidBrush(itemBackground);
+    if (backgroundBrush) {
+        FillRect(lpdis->hDC, &lpdis->rcItem, backgroundBrush);
+        DeleteObject(backgroundBrush);
+    }
+
     GradientInfoSnapshot gradientSnapshot;
     GradientType gradientType = GetGradientInfoSnapshotByName(hexColor, &gradientSnapshot);
 
@@ -665,7 +680,12 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
     RECT numRect = lpdis->rcItem;
     numRect.right = numRect.left + 26;
     int oldBkMode = SetBkMode(lpdis->hDC, TRANSPARENT);
-    COLORREF oldTextColor = SetTextColor(lpdis->hDC, GetSysColor(COLOR_MENUTEXT));
+    COLORREF numberColor = darkMenu
+        ? RGB(255, 255, 255)
+        : GetSysColor((lpdis->itemState & ODS_SELECTED)
+                          ? COLOR_HIGHLIGHTTEXT
+                          : COLOR_MENUTEXT);
+    COLORREF oldTextColor = SetTextColor(lpdis->hDC, numberColor);
     DrawTextW(lpdis->hDC, numStr, -1, &numRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
     if (lpdis->itemState & ODS_SELECTED) {
@@ -735,6 +755,11 @@ static void StartAnimationPreviewDelayTimer(HWND hwnd) {
 }
 
 LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
+    /* Theme-related setting names vary across Windows releases and Insider
+     * builds. Refreshing for every settings notification is inexpensive, and
+     * the popup path still performs a final refresh before showing a menu. */
+    RefreshNativeMenuTheme();
+
     if (wp != SPI_SETWORKAREA || CLOCK_IS_DRAGGING) {
         return DefWindowProc(hwnd, WM_SETTINGCHANGE, wp, lp);
     }
@@ -743,6 +768,11 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
         RestoreWindowPositionAfterSystemChange(hwnd);
     }
     return DefWindowProc(hwnd, WM_SETTINGCHANGE, wp, lp);
+}
+
+LRESULT HandleThemeChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
+    RefreshNativeMenuTheme();
+    return DefWindowProc(hwnd, WM_THEMECHANGED, wp, lp);
 }
 
 static BOOL g_sessionSettingsPrepared = FALSE;

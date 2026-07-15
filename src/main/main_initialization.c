@@ -36,6 +36,7 @@
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_manager.h"
 #include "tray/tray_animation_menu.h"
+#include "tray/tray_menu_theme.h"
 #include "tray/tray_menu_font.h"
 #include "drawing/drawing_image.h"
 #include "drawing/drawing_effect.h"
@@ -603,6 +604,7 @@ BOOL InitializeSubsystems(void) {
         return FALSE;
     }
     LOG_INFO("COM initialization successful");
+    (void)InitializeNativeMenuTheme();
 
     return TRUE;
 }

@@ -29,6 +29,7 @@ LRESULT HandleShowWindow(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleThemeChanged(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleContextMenu(HWND hwnd, WPARAM wp, LPARAM lp);
