@@ -29,6 +29,7 @@
 #include "drawing/drawing_effect.h"
 #include "text_effect.h"
 #include "utils/package_identity.h"
+#include "utils/finite_double.h"
 
 extern void HandleStartupMode(HWND hwnd);
 #include "dialog/dialog_procedure.h"
@@ -39,6 +40,7 @@ extern void HandleStartupMode(HWND hwnd);
 #include "window_procedure/window_menus.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_animation_core.h"
+#include "tray/tray_animation_speed_input.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
 #include "menu_preview.h"
@@ -48,9 +50,12 @@ extern void HandleStartupMode(HWND hwnd);
 #include "color/color_parser.h"
 #include <shlobj.h>
 #include <shellapi.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
+#include <wctype.h>
 
 extern TextEffectType CLOCK_TEXT_EFFECT;
 
@@ -60,7 +65,7 @@ extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
 static float ParseDefaultScaleOrFallback(const char* value, float fallback) {
     char* end = NULL;
     double parsed = value ? strtod(value, &end) : 0.0;
-    if (!value || end == value || !isfinite(parsed) || parsed <= 0.0) {
+    if (!value || end == value || !DoubleIsFiniteStrict(parsed) || parsed <= 0.0) {
         return fallback;
     }
     return (float)parsed;
@@ -201,6 +206,69 @@ static LRESULT CmdAnimationSpeed(HWND hwnd, AnimationSpeedMetric metric) {
         TrayAnimation_RecomputeTimerDelay();
         InvalidateRect(hwnd, NULL, TRUE);
     }
+    return 0;
+}
+
+typedef struct {
+    double lastMultiplier;
+    BOOL hasPreview;
+} FixedAnimationSpeedPreviewState;
+
+static void PreviewFixedAnimationSpeed(const wchar_t* text, void* context) {
+    FixedAnimationSpeedPreviewState* state =
+        (FixedAnimationSpeedPreviewState*)context;
+    double multiplier = 0.0;
+    if (!state || !TryParseFixedAnimationSpeed(text, &multiplier)) return;
+
+    if (state->hasPreview && fabs(state->lastMultiplier - multiplier) < 0.000001) {
+        return;
+    }
+
+    SetAnimationSpeedRuntimeState(ANIMATION_SPEED_FIXED, multiplier);
+    TrayAnimation_RecomputeTimerDelay();
+    state->lastMultiplier = multiplier;
+    state->hasPreview = TRUE;
+}
+
+static LRESULT CmdAnimationFixedSpeed(HWND hwnd) {
+    AnimationSpeedMetric originalMetric = GetAnimationSpeedMetric();
+    double originalFixedMultiplier = GetAnimationFixedSpeedMultiplier();
+    FixedAnimationSpeedPreviewState previewState = {0};
+    wchar_t input[32] = {0};
+    _snwprintf_s(input, _countof(input), _TRUNCATE, L"%.10g",
+                 originalFixedMultiplier);
+
+    while (InputBoxWithPreview(hwnd,
+                               GetLocalizedString(NULL, L"Set Fixed Animation Speed"),
+                               GetLocalizedString(NULL, L"Enter a fixed speed from 0.1 to 30 (example: 2):"),
+                               input, input, _countof(input),
+                               PreviewFixedAnimationSpeed, &previewState)) {
+        double multiplier = 0.0;
+        if (!TryParseFixedAnimationSpeed(input, &multiplier)) {
+            MessageBoxW(hwnd,
+                        GetLocalizedString(NULL, L"Please enter a number from 0.1 to 30 (example: 2)."),
+                        GetLocalizedString(NULL, L"Invalid input format"),
+                        MB_OK | MB_ICONWARNING);
+            continue;
+        }
+
+        if (!WriteConfigAnimationFixedSpeed(multiplier)) {
+            SetAnimationSpeedRuntimeState(originalMetric, originalFixedMultiplier);
+            TrayAnimation_RecomputeTimerDelay();
+            MessageBoxW(hwnd,
+                        GetLocalizedString(NULL, L"Failed to save the fixed animation speed."),
+                        GetLocalizedString(NULL, L"Error"),
+                        MB_OK | MB_ICONERROR);
+            return 0;
+        }
+
+        TrayAnimation_RecomputeTimerDelay();
+        InvalidateRect(hwnd, NULL, TRUE);
+        return 0;
+    }
+
+    SetAnimationSpeedRuntimeState(originalMetric, originalFixedMultiplier);
+    TrayAnimation_RecomputeTimerDelay();
     return 0;
 }
 
@@ -607,6 +675,7 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_MEMORY); return TRUE; }
     if (cmd == CLOCK_IDM_ANIM_SPEED_CPU) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_CPU); return TRUE; }
     if (cmd == CLOCK_IDM_ANIM_SPEED_TIMER) { CmdAnimationSpeed(hwnd, ANIMATION_SPEED_TIMER); return TRUE; }
+    if (cmd == CLOCK_IDM_ANIM_SPEED_FIXED) { CmdAnimationFixedSpeed(hwnd); return TRUE; }
 
     /* Time format commands */
     if (cmd == CLOCK_IDM_TIME_FORMAT_DEFAULT) { CmdTimeFormat(hwnd, TIME_FORMAT_DEFAULT); return TRUE; }

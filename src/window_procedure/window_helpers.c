@@ -20,6 +20,7 @@
 #include "../resource/resource.h"
 #include "log.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 #include <winnls.h>
@@ -70,6 +71,21 @@ BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params) {
  * Input Dialog System
  * ============================================================================ */
 
+static void NotifyInputBoxPreview(HWND hwndDlg, const InputBoxParams* params) {
+    if (!params || !params->previewCallback) return;
+
+    HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT_INPUT);
+    int textLength = hwndEdit ? GetWindowTextLengthW(hwndEdit) : 0;
+    if (textLength < 0 || (size_t)textLength >= params->maxLen) return;
+
+    wchar_t* text = (wchar_t*)calloc((size_t)textLength + 1, sizeof(wchar_t));
+    if (!text) return;
+
+    GetWindowTextW(hwndEdit, text, textLength + 1);
+    params->previewCallback(text, params->previewContext);
+    free(text);
+}
+
 INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     InputBoxParams* params = (InputBoxParams*)GetWindowLongPtr(hwndDlg, GWLP_USERDATA);
 
@@ -83,11 +99,17 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             }
             SetWindowLongPtr(hwndDlg, GWLP_USERDATA, (LONG_PTR)params);
 
+            HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT_INPUT);
+            if (hwndEdit) {
+                SendMessageW(hwndEdit, EM_SETLIMITTEXT, (WPARAM)(params->maxLen - 1), 0);
+            }
             SetWindowTextW(hwndDlg, params->title);
             SetDlgItemTextW(hwndDlg, IDC_STATIC_PROMPT, params->prompt);
             SetDlgItemTextW(hwndDlg, IDC_EDIT_INPUT, params->defaultText);
+            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(NULL, L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(NULL, L"Cancel"));
+            NotifyInputBoxPreview(hwndDlg, params);
 
-            HWND hwndEdit = GetDlgItem(hwndDlg, IDC_EDIT_INPUT);
             Dialog_SelectAllText(hwndEdit);
             SetFocus(hwndEdit);
 
@@ -103,6 +125,10 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             break;
         
         case WM_COMMAND:
+            if (LOWORD(wParam) == IDC_EDIT_INPUT && HIWORD(wParam) == EN_CHANGE) {
+                NotifyInputBoxPreview(hwndDlg, params);
+                return TRUE;
+            }
             switch (LOWORD(wParam)) {
                 case IDOK:
                     if (!params || !params->result || params->maxLen == 0 || params->maxLen > INT_MAX) {
@@ -132,14 +158,23 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
     return FALSE;
 }
 
-BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
+BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
               const wchar_t* defaultText, wchar_t* result, size_t maxLen) {
-    InputBoxParams params;
+    return InputBoxWithPreview(hwndParent, title, prompt, defaultText,
+                               result, maxLen, NULL, NULL);
+}
+
+BOOL InputBoxWithPreview(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
+                         const wchar_t* defaultText, wchar_t* result, size_t maxLen,
+                         InputBoxPreviewCallback previewCallback, void* previewContext) {
+    InputBoxParams params = {0};
     params.title = title;
     params.prompt = prompt;
     params.defaultText = defaultText;
     params.result = result;
     params.maxLen = maxLen;
+    params.previewCallback = previewCallback;
+    params.previewContext = previewContext;
     
     return DialogBoxParamW(GetModuleHandle(NULL), 
                           MAKEINTRESOURCEW(IDD_INPUTBOX), 

@@ -459,6 +459,14 @@ void BuildAnimationSubmenu(HMENU hMenu) {
                             CLOCK_IDM_ANIM_SPEED_CPU, GetLocalizedString(NULL, L"By CPU Usage"));
                 AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_TIMER ? MF_CHECKED : MF_UNCHECKED),
                             CLOCK_IDM_ANIM_SPEED_TIMER, GetLocalizedString(NULL, L"By Countdown Progress"));
+                AppendMenuW(hAnimSpeedMenu, MF_SEPARATOR, 0, NULL);
+                wchar_t fixedSpeedLabel[160] = {0};
+                _snwprintf_s(fixedSpeedLabel, _countof(fixedSpeedLabel), _TRUNCATE,
+                             L"%ls (%.4gx)",
+                             GetLocalizedString(NULL, L"Set Fixed Speed..."),
+                             GetAnimationFixedSpeedMultiplier());
+                AppendMenuW(hAnimSpeedMenu, MF_STRING | (currentMetric == ANIMATION_SPEED_FIXED ? MF_CHECKED : MF_UNCHECKED),
+                            CLOCK_IDM_ANIM_SPEED_FIXED, fixedSpeedLabel);
                 if (!AppendMenuW(hAnimMenu, MF_POPUP, (UINT_PTR)hAnimSpeedMenu,
                                  GetLocalizedString(NULL, L"Animation Speed Metric"))) {
                     DestroyMenu(hAnimSpeedMenu);

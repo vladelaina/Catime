@@ -6,6 +6,7 @@
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_decoder.h"
 #include "tray/tray_animation_loader.h"
+#include "tray/tray_animation_playback.h"
 #include "tray/tray_animation_timer.h"
 #include "tray/tray_animation_percent.h"
 #include "tray/tray_animation_menu.h"
@@ -15,17 +16,18 @@
 #include "timer/timer.h"
 #include "tray/tray.h"
 #include "log.h"
+#include "utils/finite_double.h"
 #include "../resource/resource.h"
 #include <shellapi.h>
+#include <math.h>
 #include <string.h>
 #include <ctype.h>
 
-/* Constants:
- * - 20ms internal tick: Smooth enough for tray animations with fewer wakeups
- * - 50ms tray update: 20 FPS balances smoothness with system tray refresh limitations
- */
-#define INTERNAL_TICK_INTERVAL_MS 20
+/* A single 50ms cadence matches the practical Shell tray refresh ceiling. */
+#define INTERNAL_TICK_INTERVAL_MS 50
 #define TRAY_UPDATE_INTERVAL_MS 50
+#define ANIMATION_TICK_DISCONTINUITY_MS 1000
+#define ANIMATION_STATE_DRAIN_TIMEOUT_MS 2000
 #define PREVIEW_REQUEST_DEBOUNCE_MS 25
 #define PREVIEW_WORKER_SHUTDOWN_WAIT_MS 2000
 #define PREVIEW_WORKER_START_RETRY_COOLDOWN_MS 2000
@@ -77,6 +79,15 @@ static SRWLOCK g_previewWorkerLock = SRWLOCK_INIT;
 /* Resources */
 static MemoryPool* g_memoryPool = NULL;
 static FrameRateController g_frameRateCtrl;
+static AnimationPlaybackState g_playbackState;
+static ULONGLONG g_lastAnimationTickMs = 0;
+static ULONGLONG g_playbackGeneration = 0;
+static ULONGLONG g_framePresentationSerial = 0;
+static ULONGLONG g_lastShellPresentationSerial = 0;
+static int g_lastShellFrameIndex = -1;
+static int g_lastShellFrameCount = 0;
+static BOOL g_lastShellAnimatedFrameValid = FALSE;
+static char g_lastShellAnimationName[MAX_PATH] = {0};
 static HICON g_transparentTrayIcon = NULL;
 static BOOL g_mainAnimationPreloaded = FALSE;
 static int g_preloadedIconCx = 0;
@@ -112,18 +123,24 @@ static void AnimationBackoffSleep(DWORD* spins) {
     Sleep((spins && (*spins)++ < ANIM_WAIT_SPIN_LIMIT) ? 0 : 1);
 }
 
-static void WaitWhileLongEquals(volatile LONG* value, LONG expected) {
+static BOOL WaitForLongToDiffer(volatile LONG* value, LONG expected, DWORD timeoutMs) {
     DWORD spins = 0;
+    ULONGLONG startedAt = GetTickCount64();
     while (InterlockedCompareExchange(value, 0, 0) == expected) {
+        if (GetTickCount64() - startedAt >= timeoutMs) return FALSE;
         AnimationBackoffSleep(&spins);
     }
+    return TRUE;
 }
 
-static void WaitWhileLongNotEquals(volatile LONG* value, LONG expected) {
+static BOOL WaitForLongValue(volatile LONG* value, LONG expected, DWORD timeoutMs) {
     DWORD spins = 0;
+    ULONGLONG startedAt = GetTickCount64();
     while (InterlockedCompareExchange(value, 0, 0) != expected) {
+        if (GetTickCount64() - startedAt >= timeoutMs) return FALSE;
         AnimationBackoffSleep(&spins);
     }
+    return TRUE;
 }
 
 static BOOL IsAnimCriticalSectionReady(void) {
@@ -211,9 +228,18 @@ static void EndTrayAnimationRuntimeUse(void) {
     InterlockedDecrement(&g_runtimeUsers);
 }
 
-static void StopAcceptingRuntimeUse(void) {
+static BOOL QuiesceTrayAnimationRuntime(void) {
     InterlockedExchange(&g_runtimeActive, 0);
-    WaitWhileLongNotEquals(&g_runtimeUsers, 0);
+    BOOL timerStopped = CleanupAnimationTimer();
+    BOOL runtimeDrained = WaitForLongValue(&g_runtimeUsers, 0,
+                                           ANIMATION_STATE_DRAIN_TIMEOUT_MS);
+    if (!timerStopped) {
+        LOG_WARNING("Animation timer callback drain timed out; retaining runtime resources");
+    }
+    if (!runtimeDrained) {
+        LOG_WARNING("Animation runtime drain timed out; retaining runtime resources");
+    }
+    return timerStopped && runtimeDrained;
 }
 
 static HICON GetTransparentTrayIcon(void) {
@@ -364,7 +390,16 @@ static void InvalidateSpeedScaleCache(void) {
 }
 
 static void ResetFramePlaybackState(void) {
-    g_frameRateCtrl.framePosition = 0.0;
+    AnimationPlayback_Reset(&g_playbackState);
+    g_lastAnimationTickMs = 0;
+    g_playbackGeneration++;
+    g_framePresentationSerial = 0;
+    g_lastShellPresentationSerial = 0;
+    g_lastShellFrameIndex = -1;
+    g_lastShellFrameCount = 0;
+    g_lastShellAnimatedFrameValid = FALSE;
+    g_lastShellAnimationName[0] = '\0';
+    g_frameRateCtrl.trayAccumulatorMs = 0.0;
     g_trayFrameDirty = FALSE;
 }
 
@@ -496,7 +531,9 @@ static void EnsureTrayAnimationTimerState(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) {
         if (IsAnimationTimerActive()) {
-            CleanupAnimationTimer();
+            if (!CleanupAnimationTimer()) {
+                LOG_WARNING("Animation timer cleanup timed out; retaining runtime resources");
+            }
         }
         g_trayFrameDirty = FALSE;
         ClearPendingTrayUpdate();
@@ -525,7 +562,9 @@ static void EnsureTrayAnimationTimerState(void) {
     } else {
         g_trayFrameDirty = FALSE;
         if (IsAnimationTimerActive()) {
-            CleanupAnimationTimer();
+            if (!CleanupAnimationTimer()) {
+                LOG_WARNING("Animation timer cleanup timed out; retaining runtime resources");
+            }
         }
     }
 }
@@ -822,17 +861,6 @@ static void RecordSuccessfulUpdate(void) {
     g_lastSuccessfulUpdateTime = GetTickCount();
 }
 
-static void RecordFrameRateLatency(void) {
-    BOOL locked = IsAnimCriticalSectionReady();
-    if (locked) {
-        EnterCriticalSection(&g_animCriticalSection);
-    }
-    FrameRateController_RecordLatency(&g_frameRateCtrl, GetTickCount());
-    if (locked) {
-        LeaveCriticalSection(&g_animCriticalSection);
-    }
-}
-
 /**
  * @brief Record failed update
  * @return TRUE if repeated failures should trigger recovery handling
@@ -874,6 +902,9 @@ static void HandleRepeatedTrayUpdateFailure(void) {
 static double ComputeAnimationSpeedScalePercent(AnimationSpeedMetric metric) {
     if (metric == ANIMATION_SPEED_ORIGINAL) {
         return 100.0;
+    }
+    if (metric == ANIMATION_SPEED_FIXED) {
+        return GetAnimationFixedSpeedMultiplier() * 100.0;
     }
 
     double percent = 0.0;
@@ -923,26 +954,20 @@ static void RefreshSpeedScaleCache(DWORD now, LONG invalidationSerial) {
     g_speedScaleCache.valid = TRUE;
 }
 
-static UINT ComputeScaledDelay(UINT baseDelay) {
-    if (baseDelay == 0) baseDelay = GetBaseFolderIntervalMs();
-
+static void GetPlaybackSpeedSnapshot(double* speedMultiplier,
+                                     UINT* minimumFrameIntervalMs) {
+    if (!speedMultiplier || !minimumFrameIntervalMs) return;
     DWORD now = GetTickCount();
     LONG invalidationSerial = InterlockedCompareExchange(&g_speedScaleCacheInvalidation, 0, 0);
     if (!IsSpeedScaleCacheFresh(now, invalidationSerial)) {
         RefreshSpeedScaleCache(now, invalidationSerial);
     }
 
-    double scale = g_speedScaleCache.scalePercent / 100.0;
-    if (scale < 0.1) scale = 0.1;
-    
-    double scaledDelayValue = (double)baseDelay / scale;
-    UINT scaledDelay = (scaledDelayValue < 1.0) ? 1u : (UINT)scaledDelayValue;
-    UINT minIntervalMs = g_speedScaleCache.minIntervalMs;
-    if (minIntervalMs > 0 && scaledDelay < minIntervalMs) {
-        scaledDelay = minIntervalMs;
+    *speedMultiplier = g_speedScaleCache.scalePercent / 100.0;
+    if (!DoubleIsFiniteStrict(*speedMultiplier) || *speedMultiplier < 0.1) {
+        *speedMultiplier = 0.1;
     }
-    
-    return scaledDelay;
+    *minimumFrameIntervalMs = g_speedScaleCache.minIntervalMs;
 }
 
 static void UpdateTrayIconToCurrentFrameInternal(void) {
@@ -958,8 +983,6 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
     AnimationSourceType sourceType = ANIM_SOURCE_UNKNOWN;
     char targetName[MAX_PATH] = {0};
     HICON hIcon = NULL;
-    BOOL destroyIconAfterUse = TRUE;
-    BOOL releaseLockAfterShell = FALSE;
     BOOL locked = IsAnimCriticalSectionReady();
     BOOL shouldRecordBuiltinIcon = FALSE;
     int builtinIconValue = -1;
@@ -967,6 +990,11 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
     COLORREF builtinBgColor = TRANSPARENT_BG_AUTO;
     int builtinIconCx = 0;
     int builtinIconCy = 0;
+    BOOL isAnimatedFrame = FALSE;
+    int shellFrameIndex = -1;
+    int shellFrameCount = 0;
+    ULONGLONG playbackGeneration = 0;
+    ULONGLONG presentationSerial = 0;
 
     if (locked) {
         EnterCriticalSection(&g_animCriticalSection);
@@ -1051,9 +1079,30 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
 
     if (*currentIndex < 0 || *currentIndex >= currentAnim->count) *currentIndex = 0;
 
-    HICON currentIcon = currentAnim->icons[*currentIndex];
+    int displayIndex = *currentIndex;
+    if (currentAnim->isAnimated && currentAnim->count > 1) {
+        playbackGeneration = g_playbackGeneration;
+        presentationSerial = g_framePresentationSerial;
+        if (g_lastShellAnimatedFrameValid &&
+            g_lastShellFrameCount == currentAnim->count &&
+            g_lastShellPresentationSerial != presentationSerial &&
+            g_lastShellFrameIndex == displayIndex &&
+            _stricmp(g_lastShellAnimationName, targetName) == 0) {
+            displayIndex = (displayIndex + 1) % currentAnim->count;
+        }
+        isAnimatedFrame = TRUE;
+        shellFrameIndex = displayIndex;
+        shellFrameCount = currentAnim->count;
+    }
+
+    HICON currentIcon = currentAnim->icons[displayIndex];
+    if (!currentIcon && displayIndex != *currentIndex) {
+        displayIndex = *currentIndex;
+        shellFrameIndex = displayIndex;
+        currentIcon = currentAnim->icons[displayIndex];
+    }
     if (!currentIcon) {
-        WriteLog(LOG_LEVEL_WARNING, "NULL icon at index %d", *currentIndex);
+        WriteLog(LOG_LEVEL_WARNING, "NULL icon at index %d", displayIndex);
         if (previewActive) {
             g_isPreviewActive = FALSE;
             if (locked) LeaveCriticalSection(&g_animCriticalSection);
@@ -1066,20 +1115,13 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
         return;
     }
 
-    /*
-     * Loaded animation frames are owned by currentAnim. Keep the animation lock
-     * through Shell_NotifyIconW so we can reuse the existing HICON without
-     * creating/destroying a duplicate GDI handle on every frame.
-     */
-    hIcon = currentIcon;
-    destroyIconAfterUse = FALSE;
-    releaseLockAfterShell = locked;
+    /* Shell calls can block behind Explorer. Copy under the animation lock,
+     * then release it before entering the Shell so timer cleanup stays bounded. */
+    hIcon = CopyIcon(currentIcon);
+    if (locked) LeaveCriticalSection(&g_animCriticalSection);
 
 applyIcon:
     if (!hIcon) {
-        if (releaseLockAfterShell && locked) {
-            LeaveCriticalSection(&g_animCriticalSection);
-        }
         if (!previewActive && RecordFailedUpdate()) {
             HandleRepeatedTrayUpdateFailure();
         }
@@ -1094,22 +1136,29 @@ applyIcon:
     nid.hIcon = hIcon;
 
     BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
-    if (releaseLockAfterShell && locked) {
-        LeaveCriticalSection(&g_animCriticalSection);
-    }
-    if (destroyIconAfterUse) {
-        DestroyIcon(hIcon);
-    }
+    DestroyIcon(hIcon);
 
     if (success) {
+        BOOL trackingLockReady = IsAnimCriticalSectionReady();
+        if (trackingLockReady) EnterCriticalSection(&g_animCriticalSection);
+        if (isAnimatedFrame && g_playbackGeneration == playbackGeneration) {
+            g_lastShellAnimatedFrameValid = TRUE;
+            g_lastShellFrameIndex = shellFrameIndex;
+            g_lastShellFrameCount = shellFrameCount;
+            g_lastShellPresentationSerial = presentationSerial;
+            CopyStringExactA(targetName, g_lastShellAnimationName,
+                             sizeof(g_lastShellAnimationName));
+        } else {
+            g_lastShellAnimatedFrameValid = FALSE;
+            g_lastShellAnimationName[0] = '\0';
+        }
+        if (trackingLockReady) LeaveCriticalSection(&g_animCriticalSection);
+
         RecordSuccessfulUpdate();
         if (shouldRecordBuiltinIcon) {
             RecordBuiltinIconUpdateCache(targetName, builtinIconValue,
                                          builtinTextColor, builtinBgColor,
                                          builtinIconCx, builtinIconCy);
-        }
-        if (sourceType != ANIM_SOURCE_PERCENT && sourceType != ANIM_SOURCE_CAPSLOCK) {
-            RecordFrameRateLatency();
         }
     } else {
         WriteLog(LOG_LEVEL_WARNING, "Shell_NotifyIconW failed");
@@ -1174,24 +1223,39 @@ static void TrayAnimationTimerCallback(void* userData) {
     LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
     int* currentIndex = g_isPreviewActive ? &g_previewIndex : &g_mainIndex;
     BOOL shouldRequestUpdate = FALSE;
-    
-    if (currentAnim->count > 0 && currentAnim->isAnimated) {
-        UINT baseDelay = currentAnim->delays[*currentIndex];
-        if (baseDelay == 0) baseDelay = GetBaseFolderIntervalMs();
-        
-        UINT scaledDelay = ComputeScaledDelay(baseDelay);
-        
-        /* Debug logging for animation timing */
-        /* WriteLog(LOG_LEVEL_DEBUG, "TrayAnim: Index=%d/%d BaseDelay=%u Scaled=%u", 
-                 *currentIndex, currentAnim->count, baseDelay, scaledDelay); */
 
-        if (FrameRateController_ShouldAdvanceFrame(&g_frameRateCtrl, INTERNAL_TICK_INTERVAL_MS, scaledDelay)) {
-            *currentIndex = (*currentIndex + 1) % currentAnim->count;
+    BOOL tickDiscontinuity = FALSE;
+    double elapsedMs = AnimationPlayback_ComputeTickElapsedMs(
+        &g_lastAnimationTickMs,
+        GetTickCount64(),
+        INTERNAL_TICK_INTERVAL_MS,
+        ANIMATION_TICK_DISCONTINUITY_MS,
+        &tickDiscontinuity);
+    if (tickDiscontinuity) {
+        AnimationPlayback_Reset(&g_playbackState);
+        FrameRateController_Init(&g_frameRateCtrl, TRAY_UPDATE_INTERVAL_MS);
+    }
+
+    if (currentAnim->count > 0 && currentAnim->isAnimated) {
+        double speedMultiplier = 1.0;
+        UINT minimumFrameIntervalMs = 0;
+        GetPlaybackSpeedSnapshot(&speedMultiplier, &minimumFrameIntervalMs);
+
+        if (AnimationPlayback_Advance(&g_playbackState,
+                                      currentAnim->delays,
+                                      currentAnim->count,
+                                      GetBaseFolderIntervalMs(),
+                                      speedMultiplier,
+                                      minimumFrameIntervalMs,
+                                      elapsedMs,
+                                      currentIndex)) {
+            g_framePresentationSerial++;
             g_trayFrameDirty = TRUE;
         }
     }
-    
-    if (FrameRateController_ShouldUpdateTray(&g_frameRateCtrl) && g_trayFrameDirty) {
+
+    if (FrameRateController_ShouldUpdateTray(&g_frameRateCtrl, elapsedMs) &&
+        g_trayFrameDirty) {
         g_trayFrameDirty = FALSE;
         shouldRequestUpdate = TRUE;
     }
@@ -1213,7 +1277,11 @@ static void TrayAnimationTimerCallback(void* userData) {
  * @brief Start animation system
  */
 void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
-    StopAcceptingRuntimeUse();
+    if (!QuiesceTrayAnimationRuntime()) {
+        LOG_WARNING("Animation start request deferred until the old runtime retires");
+        RefreshTrayBackgroundWorkState();
+        return;
+    }
     CancelStartupAnimationRetry();
 
     if (IsPreviewWorkerRetiringAfterCleanup()) {
@@ -1250,7 +1318,12 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
         InitializeCriticalSection(&g_animCriticalSection);
         InterlockedExchange(&g_criticalSectionInitialized, ANIM_CS_INITIALIZED);
     } else {
-        WaitWhileLongEquals(&g_criticalSectionInitialized, ANIM_CS_INITIALIZING);
+        if (!WaitForLongToDiffer(&g_criticalSectionInitialized,
+                                 ANIM_CS_INITIALIZING,
+                                 ANIMATION_STATE_DRAIN_TIMEOUT_MS)) {
+            LOG_WARNING("Animation critical section initialization timed out");
+            return;
+        }
     }
     
     char configAnimationName[MAX_PATH];
@@ -1284,6 +1357,7 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     InterlockedExchange(&g_previewRequestSerial, 0);
     
     FrameRateController_Init(&g_frameRateCtrl, TRAY_UPDATE_INTERVAL_MS);
+    ResetFramePlaybackState();
 
     strncpy(g_animationName, configAnimationName, sizeof(g_animationName) - 1);
     g_animationName[sizeof(g_animationName) - 1] = '\0';
@@ -1327,7 +1401,11 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
 void StopTrayAnimation(HWND hwnd) {
     (void)hwnd;
 
-    StopAcceptingRuntimeUse();
+    if (!QuiesceTrayAnimationRuntime()) {
+        CancelStartupAnimationRetry();
+        RefreshTrayBackgroundWorkState();
+        return;
+    }
     CancelStartupAnimationRetry();
 
     if (IsAnimCriticalSectionReady()) {
@@ -1353,26 +1431,33 @@ void StopTrayAnimation(HWND hwnd) {
                  "Preview worker is still retiring; animation resources will be retained until process exit");
     }
 
-    CleanupAnimationTimer();
-
-    if (previewWorkerStopped) {
+    BOOL resourcesCanBeFreed = previewWorkerStopped;
+    if (resourcesCanBeFreed) {
         LoadedAnimation_Free(&g_mainAnimation);
         LoadedAnimation_Free(&g_previewAnimation);
         g_mainAnimationPreloaded = FALSE;
         g_preloadedIconCx = 0;
         g_preloadedIconCy = 0;
     }
-    CleanupPercentIconCache();
-    CleanupTransparentTrayIcon();
+    if (resourcesCanBeFreed) {
+        CleanupPercentIconCache();
+        CleanupTransparentTrayIcon();
+    }
 
-    if (previewWorkerStopped && g_memoryPool) {
+    if (resourcesCanBeFreed && g_memoryPool) {
         MemoryPool_Destroy(g_memoryPool);
         g_memoryPool = NULL;
     }
 
-    WaitWhileLongEquals(&g_criticalSectionInitialized, ANIM_CS_INITIALIZING);
+    BOOL criticalSectionReady = WaitForLongToDiffer(
+        &g_criticalSectionInitialized,
+        ANIM_CS_INITIALIZING,
+        ANIMATION_STATE_DRAIN_TIMEOUT_MS);
+    if (!criticalSectionReady) {
+        LOG_WARNING("Animation critical section shutdown wait timed out");
+    }
 
-    if (previewWorkerStopped &&
+    if (resourcesCanBeFreed && criticalSectionReady &&
         InterlockedCompareExchange(&g_criticalSectionInitialized, 0, 0) == ANIM_CS_INITIALIZED) {
         DeleteCriticalSection(&g_animCriticalSection);
         InterlockedExchange(&g_criticalSectionInitialized, ANIM_CS_UNINITIALIZED);
@@ -2152,6 +2237,13 @@ void TrayAnimation_SetMinIntervalMs(UINT ms) {
  */
 void TrayAnimation_RecomputeTimerDelay(void) {
     InvalidateSpeedScaleCache();
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        ResetFramePlaybackState();
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        ResetFramePlaybackState();
+    }
     RefreshTrayBackgroundWorkState();
 }
 

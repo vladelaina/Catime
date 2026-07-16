@@ -267,6 +267,51 @@ if(BUILD_TESTING)
         shlwapi
     )
     add_test(NAME startup_shortcut COMMAND startup_shortcut_tests)
+
+    add_executable(tray_animation_playback_tests
+        tests/tray_animation_playback_tests.c
+        src/tray/tray_animation_playback.c
+    )
+    target_include_directories(tray_animation_playback_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    add_test(NAME tray_animation_playback COMMAND tray_animation_playback_tests)
+
+    add_executable(tray_animation_speed_input_tests
+        tests/tray_animation_speed_input_tests.c
+        src/tray/tray_animation_speed_input.c
+    )
+    target_include_directories(tray_animation_speed_input_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    )
+    add_test(NAME tray_animation_speed_input COMMAND tray_animation_speed_input_tests)
+
+    add_executable(tray_animation_timer_tests
+        tests/tray_animation_timer_tests.c
+        src/tray/tray_animation_timer.c
+    )
+    target_include_directories(tray_animation_timer_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    )
+    target_link_libraries(tray_animation_timer_tests PRIVATE
+        user32
+        winmm
+    )
+    add_test(NAME tray_animation_timer COMMAND tray_animation_timer_tests)
+
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        foreach(animation_test_target IN ITEMS
+                tray_animation_playback_tests
+                tray_animation_speed_input_tests
+                tray_animation_timer_tests)
+            target_compile_options(${animation_test_target} PRIVATE
+                -O2
+                -ffast-math
+            )
+        endforeach()
+    endif()
 endif()
 
 # Recent MinGW GCC distributions automatically append default-manifest.o,

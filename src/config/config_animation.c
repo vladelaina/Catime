@@ -9,9 +9,11 @@
 #include "log.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_percent.h"
+#include "utils/finite_double.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include <errno.h>
 #include <math.h>
 #include <wctype.h>
@@ -35,6 +37,8 @@ typedef struct {
 static AnimSpeedPoint g_animSpeedPoints[ANIM_SPEED_POINT_CAPACITY];
 static int g_animSpeedPointCount = 0;
 static double g_animSpeedDefaultScalePercent = 100.0;
+static double g_animFixedScalePercent =
+    ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER * 100.0;
 static AnimationSpeedMetric g_animSpeedMetric = ANIMATION_SPEED_MEMORY;
 static int g_animFolderIntervalMs = TRAY_ANIMATION_DEFAULT_INTERVAL_MS;
 static int g_animMinIntervalMs = 0;
@@ -57,6 +61,7 @@ static const char* AnimationSpeedMetricToString(AnimationSpeedMetric metric) {
         case ANIMATION_SPEED_ORIGINAL: return "ORIGINAL";
         case ANIMATION_SPEED_CPU: return "CPU";
         case ANIMATION_SPEED_TIMER: return "TIMER";
+        case ANIMATION_SPEED_FIXED: return "FIXED";
         case ANIMATION_SPEED_MEMORY:
         default: return "MEMORY";
     }
@@ -68,15 +73,46 @@ static AnimationSpeedMetric NormalizeAnimationSpeedMetric(AnimationSpeedMetric m
         case ANIMATION_SPEED_MEMORY:
         case ANIMATION_SPEED_CPU:
         case ANIMATION_SPEED_TIMER:
+        case ANIMATION_SPEED_FIXED:
             return metric;
         default:
             return ANIMATION_SPEED_MEMORY;
     }
 }
 
+static double NormalizeAnimationFixedScalePercent(double scalePercent) {
+    const double minPercent = ANIMATION_FIXED_SPEED_MIN_MULTIPLIER * 100.0;
+    const double maxPercent = ANIMATION_FIXED_SPEED_MAX_MULTIPLIER * 100.0;
+    const double fallbackPercent = ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER * 100.0;
+
+    if (!DoubleIsFiniteStrict(scalePercent) ||
+        scalePercent < minPercent || scalePercent > maxPercent) {
+        return fallbackPercent;
+    }
+    return scalePercent;
+}
+
+static double ReadAnimationFixedScalePercent(const char* configPathUtf8) {
+    char value[64] = {0};
+    char defaultValue[32] = {0};
+    snprintf(defaultValue, sizeof(defaultValue), "%g",
+             ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER * 100.0);
+    ReadIniString("Animation", "ANIMATION_FIXED_SPEED_PERCENT", defaultValue,
+                  value, sizeof(value), configPathUtf8);
+
+    errno = 0;
+    char* end = NULL;
+    double parsed = strtod(value, &end);
+    while (end && isspace((unsigned char)*end)) end++;
+    if (end == value || !end || *end != '\0' || errno == ERANGE) {
+        return ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER * 100.0;
+    }
+    return NormalizeAnimationFixedScalePercent(parsed);
+}
+
 static double NormalizeAnimationSpeedScalePercent(double scalePercent,
                                                   double fallbackPercent) {
-    if (!isfinite(scalePercent)) {
+    if (!DoubleIsFiniteStrict(scalePercent)) {
         return fallbackPercent;
     }
     if (scalePercent < ANIM_SPEED_SCALE_MIN_PERCENT) {
@@ -154,7 +190,7 @@ static BOOL ParseAnimationScalePercent(wchar_t* value, double* scalePercent) {
     errno = 0;
     wchar_t* end = NULL;
     double parsed = wcstod(value, &end);
-    if (end == value || errno == ERANGE || !isfinite(parsed) ||
+    if (end == value || errno == ERANGE || !DoubleIsFiniteStrict(parsed) ||
         parsed < ANIM_SPEED_SCALE_MIN_PERCENT ||
         parsed > ANIM_SPEED_SCALE_MAX_PERCENT) {
         return FALSE;
@@ -339,6 +375,65 @@ BOOL WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric) {
     return TRUE;
 }
 
+double GetAnimationFixedSpeedMultiplier(void) {
+    double scalePercent;
+    AcquireSRWLockShared(&g_animSpeedLock);
+    scalePercent = g_animFixedScalePercent;
+    ReleaseSRWLockShared(&g_animSpeedLock);
+    return scalePercent / 100.0;
+}
+
+BOOL WriteConfigAnimationFixedSpeed(double multiplier) {
+    if (DoubleIsNaNStrict(multiplier) ||
+        multiplier < ANIMATION_FIXED_SPEED_MIN_MULTIPLIER) {
+        return FALSE;
+    }
+    if (!DoubleIsFiniteStrict(multiplier) ||
+        multiplier > ANIMATION_FIXED_SPEED_MAX_MULTIPLIER) {
+        multiplier = ANIMATION_FIXED_SPEED_MAX_MULTIPLIER;
+    }
+
+    double scalePercent = multiplier * 100.0;
+    char configPath[MAX_PATH] = {0};
+    GetConfigPath(configPath, sizeof(configPath));
+
+    ConfigWriteItem items[2] = {0};
+    snprintf(items[0].section, sizeof(items[0].section), "%s", "Animation");
+    snprintf(items[0].key, sizeof(items[0].key), "%s", "ANIMATION_FIXED_SPEED_PERCENT");
+    snprintf(items[0].value, sizeof(items[0].value), "%.10g", scalePercent);
+    snprintf(items[1].section, sizeof(items[1].section), "%s", "Animation");
+    snprintf(items[1].key, sizeof(items[1].key), "%s", "ANIMATION_SPEED_METRIC");
+    snprintf(items[1].value, sizeof(items[1].value), "%s", "FIXED");
+
+    if (!WriteConfigItems(configPath, items, 2)) {
+        return FALSE;
+    }
+
+    AcquireSRWLockExclusive(&g_animSpeedLock);
+    g_animFixedScalePercent = scalePercent;
+    g_animSpeedMetric = ANIMATION_SPEED_FIXED;
+    ReleaseSRWLockExclusive(&g_animSpeedLock);
+    return TRUE;
+}
+
+void SetAnimationSpeedRuntimeState(AnimationSpeedMetric metric, double fixedMultiplier) {
+    metric = NormalizeAnimationSpeedMetric(metric);
+
+    if (DoubleIsNaNStrict(fixedMultiplier)) {
+        fixedMultiplier = ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER;
+    } else if (!DoubleIsFiniteStrict(fixedMultiplier) ||
+               fixedMultiplier > ANIMATION_FIXED_SPEED_MAX_MULTIPLIER) {
+        fixedMultiplier = ANIMATION_FIXED_SPEED_MAX_MULTIPLIER;
+    } else if (fixedMultiplier < ANIMATION_FIXED_SPEED_MIN_MULTIPLIER) {
+        fixedMultiplier = ANIMATION_FIXED_SPEED_MIN_MULTIPLIER;
+    }
+
+    AcquireSRWLockExclusive(&g_animSpeedLock);
+    g_animSpeedMetric = metric;
+    g_animFixedScalePercent = fixedMultiplier * 100.0;
+    ReleaseSRWLockExclusive(&g_animSpeedLock);
+}
+
 double GetAnimationSpeedScaleForPercent(double percent) {
     AnimSpeedPoint points[ANIM_SPEED_POINT_CAPACITY] = {0};
     int pointCount = 0;
@@ -373,9 +468,13 @@ void ReloadAnimationSpeedFromConfig(void) {
         newMetric = ANIMATION_SPEED_CPU;
     } else if (_stricmp(metric, "TIMER") == 0 || _stricmp(metric, "COUNTDOWN") == 0) {
         newMetric = ANIMATION_SPEED_TIMER;
+    } else if (_stricmp(metric, "FIXED") == 0) {
+        newMetric = ANIMATION_SPEED_FIXED;
     } else {
         newMetric = ANIMATION_SPEED_MEMORY;
     }
+
+    double newFixedScalePercent = ReadAnimationFixedScalePercent(config_path);
 
     AnimSpeedPoint newPoints[ANIM_SPEED_POINT_CAPACITY] = {0};
     int newPointCount = 0;
@@ -396,6 +495,7 @@ void ReloadAnimationSpeedFromConfig(void) {
         g_animSpeedMetric != newMetric ||
         g_animSpeedPointCount != newPointCount ||
         fabs(g_animSpeedDefaultScalePercent - newDefaultScalePercent) > 0.000001 ||
+        fabs(g_animFixedScalePercent - newFixedScalePercent) > 0.000001 ||
         g_animFolderIntervalMs != folderInterval ||
         g_animMinIntervalMs != minInterval ||
         !AnimationSpeedPointsMatch(g_animSpeedPoints, newPoints, newPointCount);
@@ -404,6 +504,7 @@ void ReloadAnimationSpeedFromConfig(void) {
         g_animSpeedMetric = newMetric;
         g_animSpeedPointCount = newPointCount;
         g_animSpeedDefaultScalePercent = newDefaultScalePercent;
+        g_animFixedScalePercent = newFixedScalePercent;
         if (newPointCount > 0) {
             memcpy(g_animSpeedPoints, newPoints, sizeof(newPoints[0]) * (size_t)newPointCount);
         }
@@ -547,6 +648,7 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
     AnimSpeedPoint points[ANIM_SPEED_POINT_CAPACITY] = {0};
     int pointCount = 0;
     double defaultScalePercent = 100.0;
+    double fixedScalePercent = ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER * 100.0;
     int folderIntervalMs = TRAY_ANIMATION_DEFAULT_INTERVAL_MS;
     int minIntervalMs = 0;
 
@@ -559,6 +661,7 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
         pointCount = ANIM_SPEED_POINT_CAPACITY;
     }
     defaultScalePercent = g_animSpeedDefaultScalePercent;
+    fixedScalePercent = g_animFixedScalePercent;
     folderIntervalMs = g_animFolderIntervalMs;
     minIntervalMs = g_animMinIntervalMs;
     if (pointCount > 0) {
@@ -569,6 +672,13 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
     if (!AppendAnimationConfigItem(items, itemCapacity, count,
                                    "ANIMATION_SPEED_METRIC",
                                    AnimationSpeedMetricToString(metric))) {
+        return FALSE;
+    }
+
+    char fixedScaleValue[32];
+    if (snprintf(fixedScaleValue, sizeof(fixedScaleValue), "%g", fixedScalePercent) < 0 ||
+        !AppendAnimationConfigItem(items, itemCapacity, count,
+                                   "ANIMATION_FIXED_SPEED_PERCENT", fixedScaleValue)) {
         return FALSE;
     }
 
@@ -642,7 +752,7 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
 BOOL WriteAnimationSpeedToConfig(const char* config_path) {
     if (!config_path) return FALSE;
 
-    const int itemCapacity = ANIM_SPEED_POINT_CAPACITY + 7;
+    const int itemCapacity = ANIM_SPEED_POINT_CAPACITY + 8;
     ConfigWriteItem* items = (ConfigWriteItem*)calloc((size_t)itemCapacity,
                                                       sizeof(ConfigWriteItem));
     if (!items) {

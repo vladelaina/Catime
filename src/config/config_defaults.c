@@ -114,6 +114,7 @@ static const ConfigItemMeta CONFIG_METADATA[] = {
     /* Animation settings - not mapped to ConfigSnapshot, handled by tray_animation_core */
     {"Animation", "ANIMATION_PATH", "__logo__", CONFIG_TYPE_STRING, CFG_NO_OFFSET, CFG_NO_SIZE},
     {"Animation", "ANIMATION_SPEED_METRIC", "MEMORY", CONFIG_TYPE_ENUM, CFG_NO_OFFSET, CFG_NO_SIZE},
+    {"Animation", "ANIMATION_FIXED_SPEED_PERCENT", "200", CONFIG_TYPE_FLOAT, CFG_NO_OFFSET, CFG_NO_SIZE},
     {"Animation", "ANIMATION_SPEED_DEFAULT", "100", CONFIG_TYPE_INT, CFG_NO_OFFSET, CFG_NO_SIZE},
     {"Animation", "ANIMATION_SPEED_MAP_10", "140", CONFIG_TYPE_STRING, CFG_NO_OFFSET, CFG_NO_SIZE},
     {"Animation", "ANIMATION_SPEED_MAP_20", "180", CONFIG_TYPE_STRING, CFG_NO_OFFSET, CFG_NO_SIZE},
@@ -318,6 +319,10 @@ BOOL WriteDefaultsToConfig(const char* config_path) {
             fputs(";========================================================\n", f);
             fputs("; Animation options help (hot reload supported)\n", f);
             fputs(";========================================================\n", f);
+            fputs("; ANIMATION_SPEED_METRIC: ORIGINAL, MEMORY, CPU, TIMER, or FIXED.\n", f);
+            fputs("; ANIMATION_FIXED_SPEED_PERCENT: playback speed used by FIXED mode.\n", f);
+            fputs(";   Range: 10-3000 (0.1x-30x); default: 200 (2x).\n", f);
+            fputs(";\n", f);
             fputs("; ANIMATION_SPEED_DEFAULT: base speed scale at 0% (unit: percent).\n", f);
             fputs(";   100 = 1x speed, 200 = 2x, 50 = 0.5x.\n", f);
             fputs(";   Works with ANIMATION_SPEED_MAP_* breakpoints via linear interpolation.\n", f);

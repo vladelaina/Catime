@@ -410,6 +410,7 @@
 #define CLOCK_IDM_ANIM_SPEED_MEMORY 2210     /**< Memory-based animation speed */
 #define CLOCK_IDM_ANIM_SPEED_CPU 2211        /**< CPU-based animation speed */
 #define CLOCK_IDM_ANIM_SPEED_TIMER 2212      /**< Timer-based animation speed */
+#define CLOCK_IDM_ANIM_SPEED_FIXED 2213      /**< User-selected fixed animation speed */
 
 /** @brief Animation menu base identifier */
 #define CLOCK_IDM_ANIMATIONS_BASE 3000       /**< Base ID for dynamic animation menus */

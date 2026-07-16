@@ -434,6 +434,10 @@ static double CalculateSpeedMetricPercent(AnimationSpeedMetric metric, float cpu
         }
         return 0.0;
     }
+
+    if (metric == ANIMATION_SPEED_FIXED) {
+        return 0.0;
+    }
     
     return (double)mem;
 }
@@ -443,6 +447,14 @@ static void AppendSpeedLine(wchar_t* tip, size_t tipSize, AnimationSpeedMetric m
                            float cpu, float mem) {
     /* Original speed mode: don't show speed line (always 100%, no useful info) */
     if (metric == ANIMATION_SPEED_ORIGINAL) {
+        return;
+    }
+
+    if (metric == ANIMATION_SPEED_FIXED) {
+        wchar_t extra[128];
+        _snwprintf_s(extra, _countof(extra), _TRUNCATE,
+                     L"\nIcon Speed · Fixed %.3gx", GetAnimationFixedSpeedMultiplier());
+        wcsncat_s(tip, tipSize, extra, _TRUNCATE);
         return;
     }
     

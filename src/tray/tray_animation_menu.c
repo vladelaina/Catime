@@ -788,7 +788,8 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
     if (id == CLOCK_IDM_ANIM_SPEED_ORIGINAL ||
         id == CLOCK_IDM_ANIM_SPEED_MEMORY ||
         id == CLOCK_IDM_ANIM_SPEED_CPU ||
-        id == CLOCK_IDM_ANIM_SPEED_TIMER) {
+        id == CLOCK_IDM_ANIM_SPEED_TIMER ||
+        id == CLOCK_IDM_ANIM_SPEED_FIXED) {
         return FALSE;
     }
 

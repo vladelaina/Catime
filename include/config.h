@@ -124,8 +124,14 @@ typedef enum {
     ANIMATION_SPEED_ORIGINAL = 0,
     ANIMATION_SPEED_MEMORY = 1,
     ANIMATION_SPEED_CPU = 2,
-    ANIMATION_SPEED_TIMER = 3
+    ANIMATION_SPEED_TIMER = 3,
+    ANIMATION_SPEED_FIXED = 4
 } AnimationSpeedMetric;
+
+/** @brief Supported range for user-selected fixed animation playback speed */
+#define ANIMATION_FIXED_SPEED_MIN_MULTIPLIER     0.1
+#define ANIMATION_FIXED_SPEED_MAX_MULTIPLIER     30.0
+#define ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER 2.0
 
 /**
  * @brief Time display format
@@ -311,6 +317,29 @@ AnimationSpeedMetric GetAnimationSpeedMetric(void);
  * @details Updates [Animation] ANIMATION_SPEED_METRIC in config file
  */
 BOOL WriteConfigAnimationSpeedMetric(AnimationSpeedMetric metric);
+
+/**
+ * @brief Get the configured fixed animation playback speed
+ * @return Multiplier in the range 0.1x-30x (default: 2x)
+ */
+double GetAnimationFixedSpeedMultiplier(void);
+
+/**
+ * @brief Persist a fixed playback speed and select fixed-speed mode atomically
+ * @param multiplier Playback multiplier in the range 0.1x-30x
+ * @return TRUE when both the value and selected mode were persisted
+ */
+BOOL WriteConfigAnimationFixedSpeed(double multiplier);
+
+/**
+ * @brief Update animation speed state in memory without writing configuration
+ * @param metric Runtime speed mode
+ * @param fixedMultiplier Fixed multiplier used when metric is ANIMATION_SPEED_FIXED
+ *
+ * @details Used for reversible UI previews. The caller is responsible for
+ * refreshing the animation timer after applying or restoring the state.
+ */
+void SetAnimationSpeedRuntimeState(AnimationSpeedMetric metric, double fixedMultiplier);
 
 /**
  * @brief Map utilization percent to animation speed scale

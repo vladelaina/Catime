@@ -4,7 +4,9 @@
  */
 
 #include "tray/tray_animation_timer.h"
+#include "utils/finite_double.h"
 #include <mmsystem.h>
+#include <math.h>
 #include "../../resource/resource.h"
 
 #ifdef _MSC_VER
@@ -30,14 +32,21 @@ static BOOL g_timerActive = FALSE;
 static SRWLOCK g_timerLifecycleLock = SRWLOCK_INIT;
 static volatile LONG g_acceptCallbacks = 0;
 static volatile LONG g_activeCallbacks = 0;
+static volatile LONG g_timerGeneration = 0;
 
 #define TIMER_CALLBACK_DRAIN_SPIN_LIMIT 64
+#define TIMER_CALLBACK_DRAIN_TIMEOUT_MS 2000
 
-static void WaitForTimerCallbacksToDrain(void) {
+static BOOL WaitForTimerCallbacksToDrain(void) {
     DWORD spins = 0;
+    ULONGLONG startedAt = GetTickCount64();
     while (InterlockedCompareExchange(&g_activeCallbacks, 0, 0) != 0) {
+        if (GetTickCount64() - startedAt >= TIMER_CALLBACK_DRAIN_TIMEOUT_MS) {
+            return FALSE;
+        }
         Sleep(spins++ < TIMER_CALLBACK_DRAIN_SPIN_LIMIT ? 0 : 1);
     }
+    return TRUE;
 }
 
 static UINT ChooseTimerResolutionMs(UINT intervalMs) {
@@ -77,13 +86,10 @@ static void ResetTimerStateLocked(void) {
     g_timerActive = FALSE;
 }
 
-static void InvokeAnimationTimerCallback(void) {
-    if (InterlockedCompareExchange(&g_acceptCallbacks, 0, 0) == 0) {
-        return;
-    }
-
+static void InvokeAnimationTimerCallback(LONG expectedGeneration) {
     InterlockedIncrement(&g_activeCallbacks);
-    if (InterlockedCompareExchange(&g_acceptCallbacks, 0, 0) == 0) {
+    if (InterlockedCompareExchange(&g_acceptCallbacks, 0, 0) == 0 ||
+        InterlockedCompareExchange(&g_timerGeneration, 0, 0) != expectedGeneration) {
         InterlockedDecrement(&g_activeCallbacks);
         return;
     }
@@ -97,7 +103,7 @@ static void InvokeAnimationTimerCallback(void) {
     InterlockedDecrement(&g_activeCallbacks);
 }
 
-static void CleanupAnimationTimerLocked(void) {
+static BOOL CleanupAnimationTimerLocked(void) {
     InterlockedExchange(&g_acceptCallbacks, 0);
 
     MMRESULT mmTimerId = g_mmTimerId;
@@ -120,14 +126,17 @@ static void CleanupAnimationTimerLocked(void) {
         KillTimer(timerHwnd, fallbackTimerId);
     }
 
-    WaitForTimerCallbacksToDrain();
+    BOOL callbacksDrained = WaitForTimerCallbacksToDrain();
 
     if (timerResolutionMs > 0) {
         timeEndPeriod(timerResolutionMs);
     }
 
-    g_callback = NULL;
-    g_userData = NULL;
+    if (callbacksDrained) {
+        g_callback = NULL;
+        g_userData = NULL;
+    }
+    return callbacksDrained;
 }
 
 /**
@@ -137,91 +146,28 @@ void FrameRateController_Init(FrameRateController* ctrl, UINT targetMs) {
     if (!ctrl) return;
 
     ctrl->targetInterval = targetMs > 0 ? targetMs : TRAY_UPDATE_INTERVAL_MS;
-    ctrl->effectiveInterval = ctrl->targetInterval;
-    ctrl->framePosition = 0.0;
-    ctrl->internalAccumulator = 0;
-    ctrl->lastUpdateTime = 0;
-    ctrl->consecutiveLateUpdates = 0;
-}
-
-/**
- * @brief Check if frame should advance
- */
-BOOL FrameRateController_ShouldAdvanceFrame(FrameRateController* ctrl,
-                                            UINT deltaMs, UINT baseDelay) {
-    if (!ctrl || baseDelay == 0) return FALSE;
-
-    double frameAdvancement = (double)deltaMs / (double)baseDelay;
-    ctrl->framePosition += frameAdvancement;
-
-    if (ctrl->framePosition >= 1.0) {
-        int skippedFrames = 0;
-        while (ctrl->framePosition >= 1.0 && skippedFrames++ < 1024) {
-            ctrl->framePosition -= 1.0;
-        }
-        if (ctrl->framePosition >= 1.0) {
-            ctrl->framePosition = 0.0;
-        }
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-/**
- * @brief Record latency and adapt interval
- */
-void FrameRateController_RecordLatency(FrameRateController* ctrl, UINT actualElapsed) {
-    UNREFERENCED_PARAMETER(actualElapsed);
-    if (!ctrl) return;
-
-    DWORD currentTime = GetTickCount();
-
-    if (ctrl->lastUpdateTime == 0) {
-        ctrl->lastUpdateTime = currentTime;
-        return;
-    }
-
-    DWORD realElapsed = currentTime - ctrl->lastUpdateTime;
-    ctrl->lastUpdateTime = currentTime;
-
-    /* Slow down if consistently late (>150% target for 3+ updates) */
-    if (realElapsed > ctrl->effectiveInterval * 3 / 2) {
-        ctrl->consecutiveLateUpdates++;
-
-        if (ctrl->consecutiveLateUpdates >= 3) {
-            if (ctrl->effectiveInterval < 200) {
-                ctrl->effectiveInterval += 10;
-            }
-            ctrl->consecutiveLateUpdates = 0;
-        }
-    }
-    /* Speed back up if performing well (<80% target) */
-    else if (realElapsed < ctrl->effectiveInterval * 4 / 5) {
-        ctrl->consecutiveLateUpdates = 0;
-
-        if (ctrl->effectiveInterval > ctrl->targetInterval) {
-            ctrl->effectiveInterval -= 2;
-            if (ctrl->effectiveInterval < ctrl->targetInterval) {
-                ctrl->effectiveInterval = ctrl->targetInterval;
-            }
-        }
-    }
-    else {
-        ctrl->consecutiveLateUpdates = 0;
-    }
+    ctrl->trayAccumulatorMs = 0.0;
 }
 
 /**
  * @brief Check if tray should update
  */
-BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl) {
-    if (!ctrl) return FALSE;
+BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl, double elapsedMs) {
+    if (!ctrl || ctrl->targetInterval == 0 ||
+        !DoubleIsFiniteStrict(elapsedMs) || elapsedMs <= 0.0) {
+        return FALSE;
+    }
 
-    ctrl->internalAccumulator += g_internalInterval;
+    ctrl->trayAccumulatorMs += elapsedMs;
+    if (!DoubleIsFiniteStrict(ctrl->trayAccumulatorMs) ||
+        ctrl->trayAccumulatorMs < 0.0) {
+        ctrl->trayAccumulatorMs = 0.0;
+        return FALSE;
+    }
 
-    if (ctrl->internalAccumulator >= ctrl->effectiveInterval) {
-        ctrl->internalAccumulator = 0;
+    if (ctrl->trayAccumulatorMs >= (double)ctrl->targetInterval) {
+        ctrl->trayAccumulatorMs = fmod(ctrl->trayAccumulatorMs,
+                                       (double)ctrl->targetInterval);
         return TRUE;
     }
 
@@ -235,7 +181,7 @@ static void CALLBACK MMTimerCallback(UINT uTimerID, UINT uMsg,
                                      DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
 
-    InvokeAnimationTimerCallback();
+    InvokeAnimationTimerCallback((LONG)dwUser);
 }
 
 /**
@@ -245,6 +191,7 @@ static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
     (void)time;
 
     BOOL isCurrentTimer = FALSE;
+    LONG timerGeneration = 0;
     AcquireSRWLockShared(&g_timerLifecycleLock);
     isCurrentTimer = g_timerActive &&
                      !g_useHighPrecisionTimer &&
@@ -252,13 +199,14 @@ static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD t
                      g_fallbackTimerId == id &&
                      msg == WM_TIMER &&
                      IsWindow(hwnd);
+    timerGeneration = InterlockedCompareExchange(&g_timerGeneration, 0, 0);
     ReleaseSRWLockShared(&g_timerLifecycleLock);
 
     if (!isCurrentTimer) {
         return;
     }
 
-    InvokeAnimationTimerCallback();
+    InvokeAnimationTimerCallback(timerGeneration);
 }
 
 static UINT_PTR NextFallbackTimerId(void) {
@@ -293,7 +241,13 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
     AcquireSRWLockExclusive(&g_timerLifecycleLock);
 
     if (g_timerActive) {
-        CleanupAnimationTimerLocked();
+        if (!CleanupAnimationTimerLocked()) {
+            ReleaseSRWLockExclusive(&g_timerLifecycleLock);
+            return FALSE;
+        }
+    } else if (InterlockedCompareExchange(&g_activeCallbacks, 0, 0) != 0) {
+        ReleaseSRWLockExclusive(&g_timerLifecycleLock);
+        return FALSE;
     }
 
     ResetTimerStateLocked();
@@ -301,6 +255,10 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
     g_callback = callback;
     g_userData = userData;
     g_internalInterval = internalIntervalMs > 0 ? internalIntervalMs : 10;
+    LONG timerGeneration = InterlockedIncrement(&g_timerGeneration);
+    if (timerGeneration == 0) {
+        timerGeneration = InterlockedIncrement(&g_timerGeneration);
+    }
     InterlockedExchange(&g_acceptCallbacks, 1);
 
     UINT requestedResolutionMs = ClampTimerResolutionToDeviceCaps(
@@ -313,7 +271,7 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
         /* Fallback to SetTimer */
         if (!StartFallbackAnimationTimerLocked(hwnd)) {
             InterlockedExchange(&g_acceptCallbacks, 0);
-            WaitForTimerCallbacksToDrain();
+            (void)WaitForTimerCallbacksToDrain();
             ResetTimerStateLocked();
             ReleaseSRWLockExclusive(&g_timerLifecycleLock);
             return FALSE;
@@ -329,8 +287,8 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
         g_internalInterval,
         g_timerResolutionMs,
         MMTimerCallback,
-        0,
-        TIME_PERIODIC | TIME_KILL_SYNCHRONOUS
+        (DWORD_PTR)(ULONG)timerGeneration,
+        TIME_PERIODIC
     );
 
     if (g_mmTimerId == 0) {
@@ -343,7 +301,7 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
         /* Fallback to SetTimer */
         if (!StartFallbackAnimationTimerLocked(hwnd)) {
             InterlockedExchange(&g_acceptCallbacks, 0);
-            WaitForTimerCallbacksToDrain();
+            (void)WaitForTimerCallbacksToDrain();
             ResetTimerStateLocked();
             ReleaseSRWLockExclusive(&g_timerLifecycleLock);
             return FALSE;
@@ -361,10 +319,11 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
 /**
  * @brief Cleanup timer
  */
-void CleanupAnimationTimer(void) {
+BOOL CleanupAnimationTimer(void) {
     AcquireSRWLockExclusive(&g_timerLifecycleLock);
-    CleanupAnimationTimerLocked();
+    BOOL callbacksDrained = CleanupAnimationTimerLocked();
     ReleaseSRWLockExclusive(&g_timerLifecycleLock);
+    return callbacksDrained;
 }
 
 BOOL IsAnimationTimerActive(void) {

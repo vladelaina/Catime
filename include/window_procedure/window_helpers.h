@@ -38,19 +38,30 @@ BOOL SwitchTimerMode(HWND hwnd, TimerMode mode, const TimerModeParams* params);
  * Input Dialog System
  * ============================================================================ */
 
+typedef void (*InputBoxPreviewCallback)(const wchar_t* text, void* context);
+
 typedef struct {
     const wchar_t* title;
     const wchar_t* prompt;
     const wchar_t* defaultText;
     wchar_t* result;
     size_t maxLen;
+    InputBoxPreviewCallback previewCallback;
+    void* previewContext;
 } InputBoxParams;
 
 /**
  * @brief Show modal input dialog with customizable parameters
  */
-BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt, 
+BOOL InputBox(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
               const wchar_t* defaultText, wchar_t* result, size_t maxLen);
+
+/**
+ * @brief Show an input dialog and report edit changes for live preview
+ */
+BOOL InputBoxWithPreview(HWND hwndParent, const wchar_t* title, const wchar_t* prompt,
+                         const wchar_t* defaultText, wchar_t* result, size_t maxLen,
+                         InputBoxPreviewCallback previewCallback, void* previewContext);
 
 /**
  * @brief Dialog procedure for custom input box

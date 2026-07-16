@@ -17,11 +17,7 @@
  */
 typedef struct {
     UINT targetInterval;
-    UINT effectiveInterval;
-    double framePosition;
-    UINT internalAccumulator;
-    DWORD lastUpdateTime;
-    UINT consecutiveLateUpdates;
+    double trayAccumulatorMs;
 } FrameRateController;
 
 /**
@@ -38,28 +34,12 @@ typedef void (*AnimationTimerCallback)(void* userData);
 void FrameRateController_Init(FrameRateController* ctrl, UINT targetMs);
 
 /**
- * @brief Check if frame should advance
- * @param ctrl Controller instance
- * @param deltaMs Time elapsed since last call
- * @param baseDelay Current frame delay
- * @return TRUE if frame should advance
- */
-BOOL FrameRateController_ShouldAdvanceFrame(FrameRateController* ctrl, 
-                                            UINT deltaMs, UINT baseDelay);
-
-/**
- * @brief Record actual update latency for adaptation
- * @param ctrl Controller instance
- * @param actualElapsed Actual elapsed time
- */
-void FrameRateController_RecordLatency(FrameRateController* ctrl, UINT actualElapsed);
-
-/**
  * @brief Check if tray update should occur
  * @param ctrl Controller instance
+ * @param elapsedMs Real elapsed time since the previous animation tick
  * @return TRUE if accumulated enough time
  */
-BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl);
+BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl, double elapsedMs);
 
 /**
  * @brief Initialize high-precision timer
@@ -79,7 +59,7 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
 /**
  * @brief Cleanup timer and restore system settings
  */
-void CleanupAnimationTimer(void);
+BOOL CleanupAnimationTimer(void);
 
 /**
  * @brief Check whether the animation timer is currently running
