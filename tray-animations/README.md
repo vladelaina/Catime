@@ -28,8 +28,7 @@ Production builds can load the registry from tray-hub by setting:
 VITE_TRAY_HUB_URL=https://<worker-domain>/sections.json pnpm build
 ```
 
-When unset, production requests from `cati.me` use
-`https://tray.cati.me/sections.json`; local development continues to use the
-local `sections.json`. A collection may provide a `files` array for arbitrary
-GIF filenames; the legacy
+When unset, both production and local development use
+`https://tray.cati.me/sections.json`. A collection may provide a `files` array
+for arbitrary GIF filenames; the legacy
 `0001_<collection>.gif` convention remains supported when `files` is absent.

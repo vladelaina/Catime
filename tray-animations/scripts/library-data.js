@@ -1,6 +1,4 @@
-const DEFAULT_LIBRARY_SOURCE = 'sections.json';
-const PRODUCTION_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
-const PRODUCTION_HOSTS = new Set(['cati.me', 'www.cati.me']);
+const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
 
 export async function loadLibraryData(source = configuredLibrarySource()) {
     const response = await fetch(source, {
@@ -72,10 +70,5 @@ export function animationUrl(collection, index) {
 }
 
 function configuredLibrarySource() {
-    const configuredSource = import.meta.env?.VITE_TRAY_HUB_URL;
-    if (configuredSource) return configuredSource;
-
-    return typeof window !== 'undefined' && PRODUCTION_HOSTS.has(window.location.hostname)
-        ? PRODUCTION_LIBRARY_SOURCE
-        : DEFAULT_LIBRARY_SOURCE;
+    return import.meta.env?.VITE_TRAY_HUB_URL || DEFAULT_LIBRARY_SOURCE;
 }
