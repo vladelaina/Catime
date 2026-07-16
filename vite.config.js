@@ -5,6 +5,8 @@ const cleanRoutes = new Map([
     ['/guide', '/guide.html'],
     ['/about', '/about.html'],
     ['/support', '/support.html'],
+    ['/tray-animations', '/tray-animations/index.html'],
+    ['/tray-animations/', '/tray-animations/index.html'],
 ]);
 
 function cleanUrlPlugin() {

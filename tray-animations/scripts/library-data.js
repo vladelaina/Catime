@@ -1,5 +1,14 @@
-export async function loadLibraryData(source = 'sections.json') {
-    const response = await fetch(source, { cache: 'no-store' });
+const DEFAULT_LIBRARY_SOURCE = 'sections.json';
+const PRODUCTION_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
+const PRODUCTION_HOSTS = new Set(['cati.me', 'www.cati.me']);
+
+export async function loadLibraryData(source = configuredLibrarySource()) {
+    const response = await fetch(source, {
+        cache: 'no-store',
+        mode: 'cors',
+        credentials: 'omit',
+        referrerPolicy: 'strict-origin-when-cross-origin',
+    });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const payload = await response.json();
@@ -25,7 +34,8 @@ function normalizeCollection(key, data) {
         rating: Number(data.rating) || 0,
         reviewCount: Number(data.reviewCount) || 0,
         description: data.description || '',
-        count: Number(data.count) || 0,
+        files: Array.isArray(data.files) ? data.files.map(String) : [],
+        count: Array.isArray(data.files) ? data.files.length : Number(data.count) || 0,
         cdnBase: data.cdnBase || `./gifs/${key}/`,
         repository: data.repository || '',
     };
@@ -53,9 +63,19 @@ function groupByAuthor(collections) {
 }
 
 export function animationFilename(collection, index) {
-    return `${String(index).padStart(4, '0')}_${collection.key}.gif`;
+    return collection.files[index - 1]
+        || `${String(index).padStart(4, '0')}_${collection.key}.gif`;
 }
 
 export function animationUrl(collection, index) {
     return `${collection.cdnBase}${animationFilename(collection, index)}`;
+}
+
+function configuredLibrarySource() {
+    const configuredSource = import.meta.env?.VITE_TRAY_HUB_URL;
+    if (configuredSource) return configuredSource;
+
+    return typeof window !== 'undefined' && PRODUCTION_HOSTS.has(window.location.hostname)
+        ? PRODUCTION_LIBRARY_SOURCE
+        : DEFAULT_LIBRARY_SOURCE;
 }

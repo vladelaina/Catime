@@ -36,6 +36,12 @@ build/*
 .roo/
 .augment/
 .kiro/
+.reference/
+
+# Local environment variables
+.env
+.env.local
+.env.*.local
 
 # Web development output
 node_modules/

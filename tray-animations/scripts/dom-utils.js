@@ -1,4 +1,4 @@
-const AUTHOR_COLORS = ['#111318', '#ff3b30', '#6d5dfc', '#0f8b8d', '#cf6a27', '#3d6b45'];
+const AUTHOR_COLORS = ['#f77daa', '#7aa2f7', '#bb9af7', '#2ac3de', '#ff9e64', '#9ece6a'];
 
 export function colorForIndex(index) {
     return AUTHOR_COLORS[index % AUTHOR_COLORS.length];

@@ -3,6 +3,7 @@ import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
 
 const INITIAL_VISIBLE_ANIMATIONS = 18;
 const LOAD_MORE_SIZE = 24;
+const FEATURED_ANIMATIONS = 5;
 
 const state = {
     collections: [],
@@ -52,15 +53,16 @@ function renderBoard() {
 }
 
 function createArtistRow(author, index) {
-    const isExpanded = state.expandedAuthor === author.name;
+    const canExpand = author.total > FEATURED_ANIMATIONS;
+    const isExpanded = canExpand && state.expandedAuthor === author.name;
     const row = document.createElement('article');
-    row.className = `artist-showcase${isExpanded ? ' expanded' : ''}`;
+    row.className = `artist-showcase${isExpanded ? ' expanded' : ''}${canExpand ? '' : ' artist-showcase-static'}`;
     row.style.setProperty('--author-color', colorForIndex(index));
 
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'artist-identity';
-    toggle.setAttribute('aria-expanded', String(isExpanded));
+    const toggle = document.createElement(canExpand ? 'button' : 'div');
+    if (canExpand) toggle.type = 'button';
+    toggle.className = `artist-identity${canExpand ? '' : ' artist-identity-static'}`;
+    if (canExpand) toggle.setAttribute('aria-expanded', String(isExpanded));
     toggle.innerHTML = `
         ${createArtistAvatar(author)}
         <span class="artist-heading">
@@ -71,22 +73,38 @@ function createArtistRow(author, index) {
             </span>
             <span class="artist-metrics">${createArtistMetrics(author)}</span>
         </span>
-        <span class="artist-expand-label">${isExpanded ? '收起详情' : '展开详情'} <i class="fas fa-chevron-down"></i></span>
+        ${canExpand ? `<span class="artist-expand-label">${isExpanded ? '收起' : '展开'} <i class="fas fa-chevron-down"></i></span>` : ''}
     `;
 
     toggle.addEventListener('mouseenter', () => previewFirstWork(author));
     toggle.addEventListener('focus', () => previewFirstWork(author));
-    toggle.addEventListener('click', () => {
-        state.expandedAuthor = isExpanded ? null : author.name;
-        renderBoard();
-        if (!isExpanded) {
-            requestAnimationFrame(() => document.querySelector('.artist-showcase.expanded')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-        }
+    if (canExpand) toggle.addEventListener('click', () => {
+        const shouldExpand = !row.classList.contains('expanded');
+        const expandedRow = elements.board.querySelector('.artist-showcase.expanded');
+
+        if (expandedRow && expandedRow !== row) setArtistRowExpanded(expandedRow, false);
+        setArtistRowExpanded(row, shouldExpand, author);
+        state.expandedAuthor = shouldExpand ? author.name : null;
+
+        if (shouldExpand) requestAnimationFrame(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
     });
 
     row.append(toggle, createFeaturedGallery(author));
     if (isExpanded) row.appendChild(createArtistDetails(author));
     return row;
+}
+
+function setArtistRowExpanded(row, expanded, author) {
+    row.classList.toggle('expanded', expanded);
+
+    const toggle = row.querySelector('.artist-identity');
+    const label = row.querySelector('.artist-expand-label');
+    toggle?.setAttribute('aria-expanded', String(expanded));
+    if (label) label.innerHTML = `${expanded ? '收起' : '展开'} <i class="fas fa-chevron-down"></i>`;
+
+    const details = row.querySelector(':scope > .artist-details');
+    if (expanded && !details && author) row.appendChild(createArtistDetails(author));
+    if (!expanded) details?.remove();
 }
 
 function createArtistAvatar(author) {
@@ -110,7 +128,7 @@ function createArtistMetrics(author) {
 function createFeaturedGallery(author) {
     const gallery = document.createElement('div');
     gallery.className = 'artist-featured-gallery';
-    gallery.append(...collectFeaturedWorks(author.items, 3).map(({ collection, index }) => {
+    gallery.append(...collectFeaturedWorks(author.items, FEATURED_ANIMATIONS).map(({ collection, index }) => {
         const item = createAnimationItem(collection, index);
         item.classList.add('featured-animation');
         return item;

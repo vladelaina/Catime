@@ -21,3 +21,15 @@ with the same author are rendered inside the same expandable artist row.
 
 For compatibility with older data, `creator` and `contributor` are accepted as
 aliases of `author`; `bio` and `avatar` are accepted as profile aliases.
+
+Production builds can load the registry from tray-hub by setting:
+
+```bash
+VITE_TRAY_HUB_URL=https://<worker-domain>/sections.json pnpm build
+```
+
+When unset, production requests from `cati.me` use
+`https://tray.cati.me/sections.json`; local development continues to use the
+local `sections.json`. A collection may provide a `files` array for arbitrary
+GIF filenames; the legacy
+`0001_<collection>.gif` convention remains supported when `files` is absent.
