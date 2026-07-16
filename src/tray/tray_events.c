@@ -85,12 +85,26 @@ static BOOL SetTrayHoverCheckInterval(HWND hwnd, UINT intervalMs) {
 static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     (void)time;
 
-    if (msg != WM_TIMER ||
-        id != TRAY_HOVER_CHECK_TIMER_ID ||
-        !g_trayEventHwnd ||
+    if (msg != WM_TIMER || id != TRAY_HOVER_CHECK_TIMER_ID) {
+        return;
+    }
+
+    if (!g_trayEventHwnd ||
         hwnd != g_trayEventHwnd ||
         !IsValidTrayEventWindow(g_trayEventHwnd) ||
         !IsTrayIconActive(g_trayEventHwnd)) {
+        if (hwnd) {
+            KillTimer(hwnd, TRAY_HOVER_CHECK_TIMER_ID);
+        }
+        if (hwnd == g_trayEventHwnd) {
+            g_hoverCheckTimer = 0;
+            g_hoverCheckIntervalMs = 0;
+            g_trayEventHwnd = NULL;
+            if (IsTrayMouseHookInstalled()) {
+                UninstallTrayMouseHook();
+            }
+            SetTrayTooltipActive(FALSE);
+        }
         return;
     }
 
@@ -98,8 +112,12 @@ static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, D
         return;
     }
     
-    POINT pt;
-    GetCursorPos(&pt);
+    POINT pt = {0};
+    if (!GetCursorPos(&pt)) {
+        /* Preserve the last known hover state on a transient input-query
+         * failure. A random/uninitialized point could otherwise flap it. */
+        return;
+    }
     
     BOOL isOverIcon = IsMouseOverTrayIconArea(pt);
     BOOL isNearIcon = isOverIcon ||
@@ -113,7 +131,7 @@ static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, D
     } else if (!isOverIcon && hookInstalled) {
         /* Mouse left tray icon - uninstall hook */
         UninstallTrayMouseHook();
-        hookInstalled = FALSE;
+        hookInstalled = IsTrayMouseHookInstalled();
     }
 
     SetTrayTooltipActive(isOverIcon);
@@ -165,7 +183,7 @@ static void StartTrayHoverDetection(HWND hwnd) {
  * @note Called when tray icon is removed
  */
 void StopTrayHoverDetection(void) {
-    if (g_hoverCheckTimer && IsValidTrayEventWindow(g_trayEventHwnd)) {
+    if (IsValidTrayEventWindow(g_trayEventHwnd)) {
         KillTimer(g_trayEventHwnd, TRAY_HOVER_CHECK_TIMER_ID);
     }
     g_hoverCheckTimer = 0;
@@ -239,22 +257,38 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
         return;
     }
 
-    /* Start hover detection timer on first tray message */
-    StartTrayHoverDetection(hwnd);
+    /* Nested tray messages can arrive while a popup menu owns the message
+     * loop. Do not restart hover polling until that interaction has ended. */
+    BOOL interactionSuspended = IsTrayInteractionSuspended();
+    if (!interactionSuspended) {
+        StartTrayHoverDetection(hwnd);
+    }
 
     switch (uMouseMsg) {
         case WM_MOUSEMOVE:
         case NIN_POPUPOPEN:
+            if (interactionSuspended) break;
             InstallTrayMouseHook();
             SetTrayTooltipActive(TRUE);
             SetTrayHoverCheckInterval(hwnd, TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS);
             break;
 
         case NIN_POPUPCLOSE:
-            SetTrayTooltipActive(FALSE);
+            if (interactionSuspended) break;
+            /* Explorer can close and recreate its native popup even while the
+             * pointer is still over the icon. Let geometry polling decide the
+             * actual leave state instead of briefly resuming icon updates. */
+            if (!SetTrayHoverCheckInterval(hwnd,
+                                           TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS)) {
+                POINT pt = {0};
+                if (GetCursorPos(&pt) && !IsMouseOverTrayIconArea(pt)) {
+                    SetTrayTooltipActive(FALSE);
+                }
+            }
             break;
 
         case WM_RBUTTONUP:
+            if (interactionSuspended) break;
             StopNotificationSound();
             SetCursor(LoadCursorW(NULL, IDC_ARROW));
             TryRestorePendingWindowPosition(hwnd);
@@ -264,6 +298,7 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
             break;
             
         case WM_LBUTTONUP:
+            if (interactionSuspended) break;
             StopNotificationSound();
             SetCursor(LoadCursorW(NULL, IDC_ARROW));
             TryRestorePendingWindowPosition(hwnd);

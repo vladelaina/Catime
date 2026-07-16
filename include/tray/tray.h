@@ -91,6 +91,12 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time);
 void SetTrayTooltipActive(BOOL active);
 
 /**
+ * @brief Check whether the native tray tooltip is currently active
+ * @return TRUE while pointer hover is keeping the tooltip visible
+ */
+BOOL IsTrayTooltipActive(void);
+
+/**
  * @brief Re-evaluate whether tray background refresh work is currently needed
  */
 void RefreshTrayBackgroundWorkState(void);

@@ -174,6 +174,16 @@ BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl, double elap
     return FALSE;
 }
 
+BOOL AnimationUpdateBackoff_ShouldRetry(BOOL backoffActive,
+                                        DWORD lastFailureTick,
+                                        DWORD now,
+                                        UINT backoffMs) {
+    if (!backoffActive || lastFailureTick == 0 || backoffMs == 0) {
+        return TRUE;
+    }
+    return (DWORD)(now - lastFailureTick) >= backoffMs;
+}
+
 /**
  * @brief Multimedia timer callback (worker thread)
  */

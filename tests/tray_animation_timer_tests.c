@@ -40,6 +40,21 @@ int main(void) {
     Expect("zero target rejected",
            FrameRateController_ShouldUpdateTray(&controller, 50.0), FALSE);
 
+    Expect("inactive backoff allows update",
+           AnimationUpdateBackoff_ShouldRetry(FALSE, 1000, 1001, 1000), TRUE);
+    Expect("backoff blocks early retry",
+           AnimationUpdateBackoff_ShouldRetry(TRUE, 1000, 1999, 1000), FALSE);
+    Expect("backoff allows due retry",
+           AnimationUpdateBackoff_ShouldRetry(TRUE, 1000, 2000, 1000), TRUE);
+    Expect("zero last failure allows recovery probe",
+           AnimationUpdateBackoff_ShouldRetry(TRUE, 0, 1000, 1000), TRUE);
+    Expect("tick wrap preserves backoff",
+           AnimationUpdateBackoff_ShouldRetry(TRUE, 0xFFFFFF00u,
+                                              0x00000100u, 1000), FALSE);
+    Expect("tick wrap eventually allows retry",
+           AnimationUpdateBackoff_ShouldRetry(TRUE, 0xFFFFFF00u,
+                                              0x00000400u, 1000), TRUE);
+
     if (g_failures != 0) {
         fprintf(stderr, "%d tray animation timer test(s) failed\n", g_failures);
         return 1;

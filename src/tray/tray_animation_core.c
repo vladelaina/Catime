@@ -10,6 +10,7 @@
 #include "tray/tray_animation_timer.h"
 #include "tray/tray_animation_percent.h"
 #include "tray/tray_animation_menu.h"
+#include "tray/tray_icon_lifetime.h"
 #include "utils/memory_pool.h"
 #include "config.h"
 #include "system_monitor.h"
@@ -22,6 +23,7 @@
 #include <math.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
 
 /* A single 50ms cadence matches the practical Shell tray refresh ceiling. */
 #define INTERNAL_TICK_INTERVAL_MS 50
@@ -293,6 +295,26 @@ static BOOL HasPendingTrayUpdate(void) {
     return pending;
 }
 
+static void MarkTrayFrameDirty(void) {
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_trayFrameDirty = TRUE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_trayFrameDirty = TRUE;
+    }
+}
+
+static void ClearTrayFrameDirty(void) {
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        g_trayFrameDirty = FALSE;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        g_trayFrameDirty = FALSE;
+    }
+}
+
 static void ResetBuiltinIconUpdateCache(void) {
     g_lastBuiltinIconName[0] = '\0';
     g_lastBuiltinIconValue = -1;
@@ -408,8 +430,13 @@ static void ResetFramePlaybackState(void) {
  */
 static UINT g_consecutiveUpdateFailures = 0;
 static DWORD g_lastSuccessfulUpdateTime = 0;
+static BOOL g_updateFailureReported = FALSE;
+static DWORD g_lastPreviewShellFailureLogTick = 0;
+static volatile LONG g_shellUpdateBackoffActive = 0;
+static volatile LONG g_lastFailedUpdateAttemptTick = 0;
 #define MAX_CONSECUTIVE_FAILURES 5
 #define UPDATE_TIMEOUT_MS 5000
+#define UPDATE_FAILURE_BACKOFF_MS 1000
 
 static void TrayAnimationTimerCallback(void* userData);
 static void NormalizeAnimConfigValue(char* s);
@@ -859,6 +886,10 @@ static void NormalizeAnimConfigValue(char* s) {
 static void RecordSuccessfulUpdate(void) {
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = GetTickCount();
+    g_updateFailureReported = FALSE;
+    g_lastPreviewShellFailureLogTick = 0;
+    InterlockedExchange(&g_shellUpdateBackoffActive, 0);
+    InterlockedExchange(&g_lastFailedUpdateAttemptTick, 0);
 }
 
 /**
@@ -866,19 +897,26 @@ static void RecordSuccessfulUpdate(void) {
  * @return TRUE if repeated failures should trigger recovery handling
  */
 static BOOL RecordFailedUpdate(void) {
-    g_consecutiveUpdateFailures++;
+    DWORD currentTime = GetTickCount();
+    InterlockedExchange(&g_lastFailedUpdateAttemptTick, (LONG)currentTime);
+    if (g_consecutiveUpdateFailures < UINT_MAX) {
+        g_consecutiveUpdateFailures++;
+    }
+    if (g_updateFailureReported) {
+        return FALSE;
+    }
     
     if (g_consecutiveUpdateFailures >= MAX_CONSECUTIVE_FAILURES) {
-        WriteLog(LOG_LEVEL_WARNING, "Animation update failed %d times, requesting recovery",
-                 g_consecutiveUpdateFailures);
+        g_updateFailureReported = TRUE;
+        InterlockedExchange(&g_shellUpdateBackoffActive, 1);
         return TRUE;
     }
     
-    DWORD currentTime = GetTickCount();
     if (g_lastSuccessfulUpdateTime > 0) {
         DWORD elapsed = currentTime - g_lastSuccessfulUpdateTime;
         if (elapsed > UPDATE_TIMEOUT_MS) {
-            WriteLog(LOG_LEVEL_WARNING, "No successful tray update for %dms, requesting recovery", elapsed);
+            g_updateFailureReported = TRUE;
+            InterlockedExchange(&g_shellUpdateBackoffActive, 1);
             return TRUE;
         }
     }
@@ -892,8 +930,16 @@ static BOOL RecordFailedUpdate(void) {
 static void HandleRepeatedTrayUpdateFailure(void) {
     WriteLog(LOG_LEVEL_WARNING,
              "Tray icon update is temporarily unavailable; retaining the selected animation and retrying");
-    g_consecutiveUpdateFailures = 0;
-    g_lastSuccessfulUpdateTime = 0;
+}
+
+static void LogPreviewShellFailureThrottled(void) {
+    DWORD now = GetTickCount();
+    if (g_lastPreviewShellFailureLogTick == 0 ||
+        (DWORD)(now - g_lastPreviewShellFailureLogTick) >= UPDATE_TIMEOUT_MS) {
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Tray preview icon update is temporarily unavailable");
+        g_lastPreviewShellFailureLogTick = now ? now : 1u;
+    }
 }
 
 /**
@@ -977,7 +1023,14 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
         return;
     }
 
+    if (IsTrayTooltipActive() || IsTrayInteractionSuspended()) {
+        ClearPendingTrayUpdate();
+        MarkTrayFrameDirty();
+        return;
+    }
+
     ClearPendingTrayUpdate();
+    ClearTrayFrameDirty();
 
     BOOL previewActive = FALSE;
     AnimationSourceType sourceType = ANIM_SOURCE_UNKNOWN;
@@ -1102,7 +1155,6 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
         currentIcon = currentAnim->icons[displayIndex];
     }
     if (!currentIcon) {
-        WriteLog(LOG_LEVEL_WARNING, "NULL icon at index %d", displayIndex);
         if (previewActive) {
             g_isPreviewActive = FALSE;
             if (locked) LeaveCriticalSection(&g_animCriticalSection);
@@ -1122,8 +1174,14 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
 
 applyIcon:
     if (!hIcon) {
-        if (!previewActive && RecordFailedUpdate()) {
-            HandleRepeatedTrayUpdateFailure();
+        if (!previewActive) {
+            if (!isAnimatedFrame) {
+                MarkTrayFrameDirty();
+                RefreshTrayBackgroundWorkState();
+            }
+            if (RecordFailedUpdate()) {
+                HandleRepeatedTrayUpdateFailure();
+            }
         }
         return;
     }
@@ -1136,7 +1194,11 @@ applyIcon:
     nid.hIcon = hIcon;
 
     BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
-    DestroyIcon(hIcon);
+    if (success) {
+        TrayIconLifetime_Retain(hIcon);
+    } else {
+        DestroyIcon(hIcon);
+    }
 
     if (success) {
         BOOL trackingLockReady = IsAnimCriticalSectionReady();
@@ -1161,9 +1223,16 @@ applyIcon:
                                          builtinIconCx, builtinIconCy);
         }
     } else {
-        WriteLog(LOG_LEVEL_WARNING, "Shell_NotifyIconW failed");
-        if (!previewActive && RecordFailedUpdate()) {
-            HandleRepeatedTrayUpdateFailure();
+        if (previewActive) {
+            LogPreviewShellFailureThrottled();
+        } else {
+            if (!isAnimatedFrame) {
+                MarkTrayFrameDirty();
+                RefreshTrayBackgroundWorkState();
+            }
+            if (RecordFailedUpdate()) {
+                HandleRepeatedTrayUpdateFailure();
+            }
         }
     }
 }
@@ -1173,6 +1242,10 @@ static void UpdateTrayIconToCurrentFrame(void) {
 }
 
 static void UpdateTrayIconToCurrentFrameForPreview(void) {
+    if (IsTrayTooltipActive() || IsTrayInteractionSuspended()) {
+        MarkTrayFrameDirty();
+        return;
+    }
     UpdateTrayIconToCurrentFrameInternal();
 }
 
@@ -1254,8 +1327,14 @@ static void TrayAnimationTimerCallback(void* userData) {
         }
     }
 
+    BOOL presentationPaused =
+        IsTrayTooltipActive() || IsTrayInteractionSuspended();
+    BOOL retryDue = AnimationUpdateBackoff_ShouldRetry(
+        InterlockedCompareExchange(&g_shellUpdateBackoffActive, 0, 0) != 0,
+        (DWORD)InterlockedCompareExchange(&g_lastFailedUpdateAttemptTick, 0, 0),
+        GetTickCount(), UPDATE_FAILURE_BACKOFF_MS);
     if (FrameRateController_ShouldUpdateTray(&g_frameRateCtrl, elapsedMs) &&
-        g_trayFrameDirty) {
+        g_trayFrameDirty && !presentationPaused && retryDue) {
         g_trayFrameDirty = FALSE;
         shouldRequestUpdate = TRUE;
     }
@@ -1465,6 +1544,10 @@ void StopTrayAnimation(HWND hwnd) {
 
     g_consecutiveUpdateFailures = 0;
     g_lastSuccessfulUpdateTime = 0;
+    g_updateFailureReported = FALSE;
+    g_lastPreviewShellFailureLogTick = 0;
+    InterlockedExchange(&g_shellUpdateBackoffActive, 0);
+    InterlockedExchange(&g_lastFailedUpdateAttemptTick, 0);
     g_pendingTrayUpdate = FALSE;
     g_trayFrameDirty = FALSE;
     ResetBuiltinIconUpdateCache();
@@ -2274,7 +2357,11 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
 
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) goto done;
-    if (IsTrayInteractionSuspended()) goto done;
+    /* Replacing the icon while Explorer owns a hover tooltip can make the
+     * notification area briefly tear down and recreate that tooltip.  Keep
+     * dynamic built-in icons stable for the whole hover/menu interaction;
+     * the background timer refreshes the latest value after it ends. */
+    if (IsTrayTooltipActive() || IsTrayInteractionSuspended()) goto done;
 
     char animationName[MAX_PATH] = {0};
     BOOL previewActive = FALSE;
@@ -2349,12 +2436,14 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
     nid.uFlags = NIF_ICON;
     nid.hIcon = hIcon;
     if (Shell_NotifyIconW(NIM_MODIFY, &nid)) {
+        TrayIconLifetime_Retain(hIcon);
+        hIcon = NULL;
         RecordBuiltinIconUpdateCache(animationName, value,
                                      textColor, bgColor,
                                      iconCx, iconCy);
     }
     
-    DestroyIcon(hIcon);
+    if (hIcon) DestroyIcon(hIcon);
 
 done:
     EndTrayAnimationRuntimeUse();
@@ -2384,7 +2473,11 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
     
     hasPending = HasPendingTrayUpdate();
     
-    if (hasPending) {
+    if (hasPending &&
+        (IsTrayTooltipActive() || IsTrayInteractionSuspended())) {
+        ClearPendingTrayUpdate();
+        MarkTrayFrameDirty();
+    } else if (hasPending) {
         UpdateTrayIconToCurrentFrameInternal();
     }
 
@@ -2398,4 +2491,20 @@ void TrayAnimation_RefreshCurrentIcon(void) {
     ResetBuiltinIconUpdateCache();
     UpdateTrayIconToCurrentFrame();
     EndTrayAnimationRuntimeUse();
+}
+
+BOOL TrayAnimation_HasDeferredIconUpdate(void) {
+    if (!BeginTrayAnimationRuntimeUse()) return FALSE;
+
+    BOOL deferred = FALSE;
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        deferred = g_trayFrameDirty || g_pendingTrayUpdate;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        deferred = g_trayFrameDirty || g_pendingTrayUpdate;
+    }
+
+    EndTrayAnimationRuntimeUse();
+    return deferred;
 }

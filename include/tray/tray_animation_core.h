@@ -145,6 +145,11 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd);
 void TrayAnimation_RefreshCurrentIcon(void);
 
 /**
+ * @brief Check whether an icon presentation is waiting to be flushed
+ */
+BOOL TrayAnimation_HasDeferredIconUpdate(void);
+
+/**
  * @brief Queue animation preview from file path without persistence
  */
 BOOL PreviewAnimationFromFile(HWND hwnd, const char* filePath);

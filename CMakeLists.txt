@@ -301,11 +301,38 @@ if(BUILD_TESTING)
     )
     add_test(NAME tray_animation_timer COMMAND tray_animation_timer_tests)
 
+    add_executable(tray_icon_lifetime_tests
+        tests/tray_icon_lifetime_tests.c
+        src/tray/tray_icon_lifetime.c
+    )
+    target_include_directories(tray_icon_lifetime_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    target_link_libraries(tray_icon_lifetime_tests PRIVATE
+        gdi32
+        user32
+    )
+    add_test(NAME tray_icon_lifetime COMMAND tray_icon_lifetime_tests)
+
+    add_executable(tray_hover_cache_tests
+        tests/tray_hover_cache_tests.c
+        src/tray/tray_hover_cache.c
+    )
+    target_include_directories(tray_hover_cache_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    target_link_libraries(tray_hover_cache_tests PRIVATE
+        user32
+    )
+    add_test(NAME tray_hover_cache COMMAND tray_hover_cache_tests)
+
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         foreach(animation_test_target IN ITEMS
                 tray_animation_playback_tests
                 tray_animation_speed_input_tests
-                tray_animation_timer_tests)
+                tray_animation_timer_tests
+                tray_icon_lifetime_tests
+                tray_hover_cache_tests)
             target_compile_options(${animation_test_target} PRIVATE
                 -O2
                 -ffast-math

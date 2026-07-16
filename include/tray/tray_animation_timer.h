@@ -42,6 +42,14 @@ void FrameRateController_Init(FrameRateController* ctrl, UINT targetMs);
 BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl, double elapsedMs);
 
 /**
+ * @brief Check whether a Shell update retry is due after failure backoff
+ */
+BOOL AnimationUpdateBackoff_ShouldRetry(BOOL backoffActive,
+                                        DWORD lastFailureTick,
+                                        DWORD now,
+                                        UINT backoffMs);
+
+/**
  * @brief Initialize high-precision timer
  * @param hwnd Window handle for message posting
  * @param internalIntervalMs Internal tick interval (default 10ms)
