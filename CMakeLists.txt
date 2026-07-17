@@ -326,6 +326,30 @@ if(BUILD_TESTING)
     )
     add_test(NAME tray_hover_cache COMMAND tray_hover_cache_tests)
 
+    add_executable(timer_render_cache_tests
+        tests/timer_render_cache_tests.c
+        src/timer/timer_render_cache.c
+    )
+    target_include_directories(timer_render_cache_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    target_link_libraries(timer_render_cache_tests PRIVATE
+        user32
+    )
+    add_test(NAME timer_render_cache COMMAND timer_render_cache_tests)
+
+    add_executable(render_retry_tests
+        tests/render_retry_tests.c
+        src/utils/render_retry.c
+    )
+    target_include_directories(render_retry_tests PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    )
+    target_link_libraries(render_retry_tests PRIVATE
+        user32
+    )
+    add_test(NAME render_retry COMMAND render_retry_tests)
+
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         foreach(animation_test_target IN ITEMS
                 tray_animation_playback_tests

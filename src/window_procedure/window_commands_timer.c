@@ -131,7 +131,11 @@ LRESULT Cmd24HourFormat(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdShowSeconds(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    bool previousValue = CLOCK_SHOW_SECONDS;
     ToggleConfigBool(hwnd, CFG_KEY_SHOW_SECONDS, &CLOCK_SHOW_SECONDS, TRUE);
+    if (previousValue != CLOCK_SHOW_SECONDS) {
+        ResetTimerWithInterval(hwnd);
+    }
     return 0;
 }
 

@@ -78,4 +78,11 @@ void Timer_ArmTimeoutSystemAction(TimeoutActionType action);
  */
 void Timer_ClearTimeoutSystemActionArm(void);
 
+/**
+ * Record the timer text contained in a successfully presented main-window frame.
+ * Failed or skipped paints must not call this function so the next timer tick
+ * retries the same visible value.
+ */
+void Timer_NotifyMainWindowPainted(const wchar_t* timerText);
+
 #endif

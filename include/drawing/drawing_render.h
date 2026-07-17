@@ -26,6 +26,9 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps);
  */
 void StopDrawingRenderAnimationTimer(HWND hwnd);
 
+/** Handle the one-shot main-window presentation retry timer. */
+BOOL HandleDrawingRenderRetryTimer(HWND hwnd);
+
 /**
  * Release cached markdown render data used across paint calls.
  */

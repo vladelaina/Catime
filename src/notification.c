@@ -166,8 +166,50 @@ static void SetNotificationData(HWND hwnd, NotificationData* data) {
     SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)data);
 }
 
+static void ResetNotificationRenderRetry(HWND hwnd, NotificationData* data) {
+    if (hwnd) {
+        KillTimer(hwnd, NOTIFICATION_RENDER_RETRY_TIMER_ID);
+    }
+    if (data) {
+        RenderRetry_Reset(&data->renderRetry);
+    }
+}
+
+static BOOL ArmNotificationRenderRetry(HWND hwnd, NotificationData* data,
+                                       UINT delayMs) {
+    if (!hwnd || !data || !IsNotificationWindow(hwnd)) return FALSE;
+    if (RenderRetry_IsTimerArmed(&data->renderRetry)) return TRUE;
+
+    if (SetTimer(hwnd, NOTIFICATION_RENDER_RETRY_TIMER_ID,
+                 delayMs > 0 ? delayMs : 1u, NULL) == 0) {
+        LOG_WARNING("Failed to schedule notification render retry (delay=%u, error=%lu)",
+                    delayMs, GetLastError());
+        return FALSE;
+    }
+
+    RenderRetry_MarkTimerArmed(&data->renderRetry);
+    return TRUE;
+}
+
+static BOOL RenderNotificationWithRecovery(HWND hwnd, NotificationData* data) {
+    if (!hwnd || !data) return FALSE;
+
+    if (NotificationRenderLayeredWindow(hwnd, data)) {
+        ResetNotificationRenderRetry(hwnd, data);
+        return TRUE;
+    }
+
+    UINT delay = RenderRetry_RecordFailure(&data->renderRetry,
+                                           NOTIFICATION_RENDER_RETRY_BASE_MS,
+                                           NOTIFICATION_RENDER_RETRY_MAX_MS);
+    ArmNotificationRenderRetry(hwnd, data, delay);
+    return FALSE;
+}
+
 static void FreeNotificationData(HWND hwnd, NotificationData* data) {
     if (!data) return;
+
+    ResetNotificationRenderRetry(hwnd, data);
 
     if (hwnd && GetNotificationData(hwnd) == data) {
         SetNotificationData(hwnd, NULL);
@@ -424,7 +466,7 @@ void SetToastNotificationOpacity(HWND hwnd, int opacityPercent) {
         data->maxOpacity = alphaValue;
         data->opacity = alphaValue;
         data->animState = ANIM_VISIBLE;
-        NotificationRenderLayeredWindow(hwnd, data);
+        RenderNotificationWithRecovery(hwnd, data);
     }
 }
 
@@ -435,7 +477,7 @@ void SetToastNotificationCornerRadius(HWND hwnd, int cornerRadius) {
     int clampedRadius = NotificationClampCornerRadius(cornerRadius);
     if (data) {
         data->cornerRadius = clampedRadius;
-        NotificationRenderLayeredWindow(hwnd, data);
+        RenderNotificationWithRecovery(hwnd, data);
     }
 }
 
@@ -445,7 +487,7 @@ void SetToastNotificationFontPercent(HWND hwnd, int fontPercent) {
     NotificationData* data = GetNotificationData(hwnd);
     if (data) {
         data->fontPercent = NotificationClampFontPercent(fontPercent);
-        NotificationRenderLayeredWindow(hwnd, data);
+        RenderNotificationWithRecovery(hwnd, data);
     }
 }
 
@@ -468,7 +510,7 @@ BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message) {
 
     data->messageText = newBuffer;
     wcscpy_s(data->messageText, messageLen, message);
-    NotificationRenderLayeredWindow(hwnd, data);
+    RenderNotificationWithRecovery(hwnd, data);
     return TRUE;
 }
 
@@ -485,7 +527,7 @@ void RefreshToastNotificationColors(void) {
                 data->hasAnimatedGradient = activeColorIsAnimated;
                 StopNotificationGradientTimer(hwnd);
                 StartNotificationGradientTimer(hwnd, data);
-                NotificationRenderLayeredWindow(hwnd, data);
+                RenderNotificationWithRecovery(hwnd, data);
             }
         }
 
@@ -542,7 +584,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             NotificationData* data = GetNotificationData(hwnd);
             if (data) {
-                NotificationRenderLayeredWindow(hwnd, data);
+                RenderNotificationWithRecovery(hwnd, data);
             }
             EndPaint(hwnd, &ps);
             return 0;
@@ -562,8 +604,14 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             else if (wParam == NOTIFICATION_GRADIENT_TIMER_ID) {
                 if (data->hasAnimatedGradient && !data->isInSizeMove) {
-                    NotificationRenderLayeredWindow(hwnd, data);
+                    RenderNotificationWithRecovery(hwnd, data);
                 }
+                return 0;
+            }
+            else if (wParam == NOTIFICATION_RENDER_RETRY_TIMER_ID) {
+                KillTimer(hwnd, NOTIFICATION_RENDER_RETRY_TIMER_ID);
+                RenderRetry_MarkTimerFired(&data->renderRetry);
+                RenderNotificationWithRecovery(hwnd, data);
                 return 0;
             }
             else if (wParam == ANIMATION_TIMER_ID) {
@@ -579,7 +627,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 }
                 
                 data->opacity = newOpacity;
-                NotificationRenderLayeredWindow(hwnd, data);
+                RenderNotificationWithRecovery(hwnd, data);
                 
                 if (data->animState == ANIM_FADE_IN && newOpacity >= data->maxOpacity) {
                     data->animState = ANIM_VISIBLE;
@@ -697,7 +745,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
         case WM_SIZE: {
             NotificationData* data = GetNotificationData(hwnd);
             if (data) {
-                NotificationRenderLayeredWindow(hwnd, data);
+                RenderNotificationWithRecovery(hwnd, data);
             }
             return 0;
         }
@@ -719,7 +767,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
                 }
             }
             if (data) {
-                NotificationRenderLayeredWindow(hwnd, data);
+                RenderNotificationWithRecovery(hwnd, data);
             }
             return 0;
         }
@@ -791,6 +839,7 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             KillTimer(hwnd, ANIMATION_TIMER_ID);
             KillTimer(hwnd, NOTIFICATION_OPACITY_SAVE_TIMER_ID);
             KillTimer(hwnd, NOTIFICATION_GRADIENT_TIMER_ID);
+            KillTimer(hwnd, NOTIFICATION_RENDER_RETRY_TIMER_ID);
 
             if (data) {
                 FreeNotificationData(hwnd, data);

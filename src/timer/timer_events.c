@@ -13,6 +13,7 @@
 #include "timer/timer_events.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
+#include "timer/timer_render_cache.h"
 #include "language.h"
 #include "notification.h"
 #include "pomodoro.h"
@@ -50,6 +51,8 @@ static int pomodoro_initial_times[MAX_POMODORO_TIMES] = {0};
 static DWORD last_timer_tick = 0;
 static int ms_accumulator = 0;
 static wchar_t g_visibleTimerCurrentText[TIME_TEXT_MAX_LEN] = {0};
+static wchar_t g_lastPaintedTimerText[TIME_TEXT_MAX_LEN] = {0};
+static BOOL g_hasLastPaintedTimerText = FALSE;
 static TimeoutActionType g_armedTimeoutSystemAction = TIMEOUT_ACTION_MESSAGE;
 
 static inline void ForceWindowRedraw(HWND hwnd) {
@@ -362,7 +365,6 @@ static BOOL HandleFontValidation(HWND hwnd) {
 }
 
 static BOOL HandleForceRedraw(HWND hwnd) {
-    KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
     EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
     RedrawWindow(hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
@@ -467,25 +469,25 @@ static void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) 
     }
 }
 
-static BOOL HasVisibleTimerTextChanged(wchar_t* lastText, size_t lastTextSize, BOOL* hasLastText) {
-    if (!lastText || lastTextSize == 0 || !hasLastText) return TRUE;
-
+static BOOL HasVisibleTimerTextChanged(void) {
     wchar_t* currentText = g_visibleTimerCurrentText;
     currentText[0] = L'\0';
     GetTimeText(currentText, TIME_TEXT_MAX_LEN);
 
-    if (*hasLastText && wcscmp(lastText, currentText) == 0) {
-        return FALSE;
-    }
-
-    wcsncpy(lastText, currentText, lastTextSize - 1);
-    lastText[lastTextSize - 1] = L'\0';
-    *hasLastText = TRUE;
-    return TRUE;
+    return TimerRenderCache_NeedsRepaint(g_lastPaintedTimerText,
+                                         g_hasLastPaintedTimerText,
+                                         currentText);
 }
 
-static BOOL ShouldRenderMainTimer(wchar_t* lastText, size_t lastTextSize, BOOL* hasLastText) {
-    return HasVisibleTimerTextChanged(lastText, lastTextSize, hasLastText);
+static BOOL ShouldRenderMainTimer(void) {
+    return HasVisibleTimerTextChanged();
+}
+
+void Timer_NotifyMainWindowPainted(const wchar_t* timerText) {
+    TimerRenderCache_CommitPaint(g_lastPaintedTimerText,
+                                 _countof(g_lastPaintedTimerText),
+                                 &g_hasLastPaintedTimerText,
+                                 timerText);
 }
 
 static BOOL ShouldCheckActiveTimerRender(int currentElapsedSecond,
@@ -638,8 +640,6 @@ static void HandleCountdownCompletion(HWND hwnd) {
 static BOOL HandleMainTimer(HWND hwnd) {
     static DWORD s_lastTopmostCheck = 0;
     static UINT s_lastDesiredInterval = 0;
-    static wchar_t s_lastRenderedText[TIME_TEXT_MAX_LEN] = {0};
-    static BOOL s_hasLastRenderedText = FALSE;
     static int s_lastActiveRenderCheckSecond = 0;
     static BOOL s_hasLastActiveRenderCheckSecond = FALSE;
     DWORD now_tick = GetTickCount();
@@ -661,9 +661,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
     if (CLOCK_SHOW_CURRENT_TIME) {
         last_displayed_second = -1;
         s_hasLastActiveRenderCheckSecond = FALSE;
-        if (ShouldRenderMainTimer(s_lastRenderedText,
-                                  sizeof(s_lastRenderedText) / sizeof(s_lastRenderedText[0]),
-                                  &s_hasLastRenderedText)) {
+        if (ShouldRenderMainTimer()) {
             RequestWindowRepaint(hwnd);
         }
         return TRUE;
@@ -671,9 +669,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
 
     if (CLOCK_IS_PAUSED) {
         s_hasLastActiveRenderCheckSecond = FALSE;
-        if (ShouldRenderMainTimer(s_lastRenderedText,
-                                  sizeof(s_lastRenderedText) / sizeof(s_lastRenderedText[0]),
-                                  &s_hasLastRenderedText)) {
+        if (ShouldRenderMainTimer()) {
             RequestWindowRepaint(hwnd);
         }
         return TRUE;
@@ -725,9 +721,7 @@ static BOOL HandleMainTimer(HWND hwnd) {
     if (ShouldCheckActiveTimerRender(current_elapsed_sec,
                                      &s_lastActiveRenderCheckSecond,
                                      &s_hasLastActiveRenderCheckSecond)) {
-        if (ShouldRenderMainTimer(s_lastRenderedText,
-                                  sizeof(s_lastRenderedText) / sizeof(s_lastRenderedText[0]),
-                                  &s_hasLastRenderedText)) {
+        if (ShouldRenderMainTimer()) {
             RequestWindowRepaint(hwnd);
         }
     }
@@ -801,11 +795,7 @@ BOOL HandleTimerEvent(HWND hwnd, WPARAM wp) {
             return HandleTopmostVisibilityChange(hwnd, NULL);
 
         case TIMER_ID_FORCE_REDRAW:
-            if (CLOCK_IS_DRAGGING) {
-                SetTimer(hwnd, TIMER_ID_FORCE_REDRAW, 100, NULL);
-                return TRUE;
-            }
-            return HandleForceRedraw(hwnd);
+            return HandleDrawingRenderRetryTimer(hwnd);
 
         case TIMER_ID_EDIT_MODE_REFRESH:
             if (CLOCK_IS_DRAGGING) {

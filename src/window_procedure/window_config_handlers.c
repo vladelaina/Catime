@@ -708,12 +708,14 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
 
 LRESULT HandleAppTimerChanged(HWND hwnd) {
     bool changed = false;
+    bool intervalChanged = false;
 
     /* Basic timer settings */
     changed |= LoadAndCompareBool(CFG_SECTION_TIMER, CFG_KEY_USE_24HOUR,
                                   &CLOCK_USE_24HOUR, CLOCK_USE_24HOUR);
-    changed |= LoadAndCompareBool(CFG_SECTION_TIMER, CFG_KEY_SHOW_SECONDS,
-                                  &CLOCK_SHOW_SECONDS, CLOCK_SHOW_SECONDS);
+    intervalChanged = LoadAndCompareBool(CFG_SECTION_TIMER, CFG_KEY_SHOW_SECONDS,
+                                         &CLOCK_SHOW_SECONDS, CLOCK_SHOW_SECONDS);
+    changed |= intervalChanged;
 
     /* Time format */
     char formatBuf[32];
@@ -796,6 +798,9 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
     }
 
     if (changed) {
+        if (intervalChanged) {
+            ResetTimerWithInterval(hwnd);
+        }
         InvalidateRect(hwnd, NULL, TRUE);
     }
 

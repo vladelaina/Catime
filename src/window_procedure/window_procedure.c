@@ -292,9 +292,6 @@ void ToggleShowTimeMode(HWND hwnd) {
         /* Turn on: switch to show current time mode */
         TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
-
-        MainTimer_Stop();
-        ResetTimerWithInterval(hwnd);
     } else {
         /* Turn off: switch to idle state (no display, no timer) */
         CLOCK_SHOW_CURRENT_TIME = false;

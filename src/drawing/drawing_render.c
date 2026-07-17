@@ -17,6 +17,7 @@
 #include "color/color.h"
 #include "color/gradient.h"
 #include "timer/timer.h"
+#include "timer/timer_events.h"
 #include "config.h"
 #include "window_procedure/window_procedure.h"
 #include "window/window_core.h"
@@ -36,6 +37,7 @@
 #include "markdown/markdown_interactive.h"
 #include "color/color_parser.h"
 #include "utils/string_convert.h"
+#include "utils/render_retry.h"
 #include "../resource/resource.h"
 
 extern char FONT_INTERNAL_NAME[MAX_PATH];
@@ -53,6 +55,8 @@ extern float PLUGIN_FONT_SCALE_FACTOR;
 #define MARKDOWN_IMAGE_FILE_RECHECK_MS 1000u
 #define RENDER_TIMER_RESOLUTION_MIN_MS 1u
 #define RENDER_TIMER_RESOLUTION_MAX_MS 10u
+#define MAIN_RENDER_RETRY_BASE_MS 100u
+#define MAIN_RENDER_RETRY_MAX_MS 2000u
 
 static const wchar_t CATIME_OPEN_TAG[] = L"<catime>";
 static const wchar_t CATIME_CLOSE_TAG[] = L"</catime>";
@@ -65,9 +69,12 @@ static UINT s_renderAnimationTimerInterval = 0;
 static HWND s_renderAnimationTimerHwnd = NULL;
 static UINT s_renderAnimationTimerResolutionMs = 0;
 static DWORD s_nextMarkdownImageFileCheckTick = 0;
+static RenderRetryController s_mainRenderRetry = {0};
+static HWND s_mainRenderRetryHwnd = NULL;
 
 typedef struct {
     wchar_t timeText[TIME_TEXT_MAX_LEN];
+    wchar_t timerTextSnapshot[TIME_TEXT_MAX_LEN];
     wchar_t pluginText[TIME_TEXT_MAX_LEN];
     wchar_t pluginResult[TIME_TEXT_MAX_LEN];
     wchar_t measureText[TIME_TEXT_MAX_LEN];
@@ -104,6 +111,96 @@ static BOOL IsValidRenderAnimationWindow(HWND hwnd) {
     }
 
     return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
+}
+
+static void ResetMainWindowRenderRetry(HWND hwnd) {
+    HWND trackedHwnd = s_mainRenderRetryHwnd;
+    if (IsValidRenderAnimationWindow(hwnd)) {
+        KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
+    }
+    if (trackedHwnd != hwnd && IsValidRenderAnimationWindow(trackedHwnd)) {
+        KillTimer(trackedHwnd, TIMER_ID_FORCE_REDRAW);
+    }
+    s_mainRenderRetryHwnd = NULL;
+    RenderRetry_Reset(&s_mainRenderRetry);
+}
+
+static BOOL ArmMainWindowRenderRetry(HWND hwnd, UINT delayMs) {
+    if (!IsValidRenderAnimationWindow(hwnd)) return FALSE;
+    if (RenderRetry_IsTimerArmed(&s_mainRenderRetry) &&
+        s_mainRenderRetryHwnd == hwnd) {
+        return TRUE;
+    }
+
+    if (s_mainRenderRetryHwnd && s_mainRenderRetryHwnd != hwnd) {
+        ResetMainWindowRenderRetry(s_mainRenderRetryHwnd);
+    }
+
+    if (SetTimer(hwnd, TIMER_ID_FORCE_REDRAW, delayMs > 0 ? delayMs : 1u, NULL) == 0) {
+        WriteLog(LOG_LEVEL_WARNING,
+                 "Failed to schedule main render retry (delay=%u, error=%lu)",
+                 delayMs, GetLastError());
+        return FALSE;
+    }
+
+    s_mainRenderRetryHwnd = hwnd;
+    RenderRetry_MarkTimerArmed(&s_mainRenderRetry);
+    return TRUE;
+}
+
+static void RecordMainWindowRenderFailure(HWND hwnd) {
+    if (!IsValidRenderAnimationWindow(hwnd)) return;
+    if (s_mainRenderRetryHwnd && s_mainRenderRetryHwnd != hwnd) {
+        ResetMainWindowRenderRetry(s_mainRenderRetryHwnd);
+    }
+
+    UINT delay = RenderRetry_RecordFailure(&s_mainRenderRetry,
+                                           MAIN_RENDER_RETRY_BASE_MS,
+                                           MAIN_RENDER_RETRY_MAX_MS);
+    ArmMainWindowRenderRetry(hwnd, delay);
+}
+
+static BOOL ShouldLogMainWindowRenderFailure(void) {
+    UINT failures = s_mainRenderRetry.consecutiveFailures;
+    return failures == 0 || (failures & (failures - 1u)) == 0;
+}
+
+BOOL HandleDrawingRenderRetryTimer(HWND hwnd) {
+    if (!IsValidRenderAnimationWindow(hwnd)) return FALSE;
+
+    KillTimer(hwnd, TIMER_ID_FORCE_REDRAW);
+    RenderRetry_MarkTimerFired(&s_mainRenderRetry);
+    s_mainRenderRetryHwnd = hwnd;
+
+    if (!RenderRetry_IsActive(&s_mainRenderRetry)) {
+        ResetMainWindowRenderRetry(hwnd);
+        return TRUE;
+    }
+
+    if (!IsWindowVisible(hwnd)) {
+        ResetMainWindowRenderRetry(hwnd);
+        return TRUE;
+    }
+
+    if (CLOCK_IS_DRAGGING) {
+        ArmMainWindowRenderRetry(hwnd, MAIN_RENDER_RETRY_BASE_MS);
+        return TRUE;
+    }
+
+    RedrawWindow(hwnd, NULL, NULL,
+                 RDW_ERASE | RDW_INVALIDATE | RDW_UPDATENOW);
+
+    /* A successful paint resets the controller synchronously. If Windows did
+     * not dispatch WM_PAINT, keep probing at the current bounded delay. */
+    if (RenderRetry_IsActive(&s_mainRenderRetry) &&
+        !RenderRetry_IsTimerArmed(&s_mainRenderRetry)) {
+        ArmMainWindowRenderRetry(
+            hwnd,
+            RenderRetry_GetDelay(&s_mainRenderRetry,
+                                 MAIN_RENDER_RETRY_BASE_MS,
+                                 MAIN_RENDER_RETRY_MAX_MS));
+    }
+    return TRUE;
 }
 
 typedef enum {
@@ -1467,6 +1564,7 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     ClearClickableRegions();
     timeText[0] = L'\0';
     GetTimeText(timeText, TIME_TEXT_MAX_LEN);
+    wcscpy_s(paintBuffers->timerTextSnapshot, TIME_TEXT_MAX_LEN, timeText);
 
     // Check for plugin data
     pluginText[0] = L'\0';
@@ -1700,6 +1798,7 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
             FreePaintMarkdownImages(images, imageCount, imagesHeapAllocated);
         }
         StopDrawingRenderAnimationTimer(hwnd);
+        RecordMainWindowRenderFailure(hwnd);
         return;
     }
 
@@ -1713,6 +1812,7 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
             FreePaintMarkdownImages(images, imageCount, imagesHeapAllocated);
         }
         StopDrawingRenderAnimationTimer(hwnd);
+        RecordMainWindowRenderFailure(hwnd);
         return;
     }
     DWORD* pixels = (DWORD*)pBits;
@@ -1869,6 +1969,7 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     if (!hdcScreen) {
         ReleaseRenderDibCache();
         StopDrawingRenderAnimationTimer(hwnd);
+        RecordMainWindowRenderFailure(hwnd);
         return;
     }
     POINT ptSrc = {0, 0};
@@ -1902,15 +2003,22 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
             // Retry update
             if (!UpdateLayeredWindow(hwnd, hdcScreen, &ptDst, &sizeWnd, memDC, &ptSrc, 0, &blend, ULW_ALPHA)) {
                 err = GetLastError();
-                WriteLog(LOG_LEVEL_ERROR, "UpdateLayeredWindow failed retry! Error code: %lu", err);
+                if (ShouldLogMainWindowRenderFailure()) {
+                    WriteLog(LOG_LEVEL_ERROR,
+                             "UpdateLayeredWindow failed retry! Error code: %lu", err);
+                }
             } else {
                 layeredUpdateSucceeded = TRUE;
             }
         } else {
-            WriteLog(LOG_LEVEL_ERROR, "UpdateLayeredWindow failed! Error code: %lu", err);
+            if (ShouldLogMainWindowRenderFailure()) {
+                WriteLog(LOG_LEVEL_ERROR,
+                         "UpdateLayeredWindow failed! Error code: %lu", err);
+            }
         }
         if (!layeredUpdateSucceeded) {
             StopDrawingRenderAnimationTimer(hwnd);
+            RecordMainWindowRenderFailure(hwnd);
         }
     }
 
@@ -1920,6 +2028,8 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     UNREFERENCED_PARAMETER(oldBitmap);
 
     if (layeredUpdateSucceeded) {
+        ResetMainWindowRenderRetry(hwnd);
+        Timer_NotifyMainWindowPainted(paintBuffers->timerTextSnapshot);
         RefreshClickThroughState(hwnd);
         UpdateDrawingRenderAnimationTimerForFrame(hwnd, hasContent, hasColorTagGradient);
     }

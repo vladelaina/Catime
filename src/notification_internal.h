@@ -8,10 +8,14 @@
 #include <windows.h>
 #include <wchar.h>
 #include "notification.h"
+#include "utils/render_retry.h"
 #include "../resource/resource.h"
 
 #define NOTIFICATION_GRADIENT_TIMER_ID 1004
+#define NOTIFICATION_RENDER_RETRY_TIMER_ID 1005
 #define NOTIFICATION_GRADIENT_INTERVAL_MS 33
+#define NOTIFICATION_RENDER_RETRY_BASE_MS 100u
+#define NOTIFICATION_RENDER_RETRY_MAX_MS 2000u
 #define NOTIFICATION_GRADIENT_CYCLE_MS 512u
 #define NOTIFICATION_MAX_HEIGHT 900
 #define NOTIFICATION_MAX_PAINT_PIXELS (NOTIFICATION_MAX_WIDTH * NOTIFICATION_MAX_HEIGHT)
@@ -46,6 +50,7 @@ typedef struct {
     void* textMaskBits;
     int textMaskWidth;
     int textMaskHeight;
+    RenderRetryController renderRetry;
 } NotificationData;
 
 int NotificationClampCornerRadius(int cornerRadius);
