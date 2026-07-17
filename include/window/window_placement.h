@@ -20,4 +20,12 @@ BOOL WindowPlacement_ResolveTaskbarAnchor(const RECT* taskbarRect,
                                           int* outX,
                                           int* outY);
 
+/**
+ * Keep a user-selected top-left position authoritative across a layout pass.
+ * Returns TRUE only when the layout moved the top-left and it should be restored.
+ */
+BOOL WindowPlacement_GetManualTopLeftRestore(const RECT* manualRect,
+                                             const RECT* layoutRect,
+                                             POINT* outPosition);
+
 #endif /* WINDOW_PLACEMENT_H */

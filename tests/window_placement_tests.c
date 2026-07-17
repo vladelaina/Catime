@@ -37,6 +37,41 @@ static void TestRoundTrip(const char* name,
     ExpectNear(name, y, window->top, 1);
 }
 
+static void TestManualTopLeftRestore(void) {
+    const RECT manualRect = {1339, 1025, 1539, 1125};
+    const RECT taskbarAdjustedRect = {1389, 1050, 1489, 1100};
+    const RECT unchangedRect = {1339, 1025, 1439, 1075};
+    const RECT negativeManualRect = {-1500, -40, -1300, 60};
+    const RECT negativeAdjustedRect = {-1450, -15, -1350, 35};
+    POINT restore = {0};
+
+    if (!WindowPlacement_GetManualTopLeftRestore(
+            &manualRect, &taskbarAdjustedRect, &restore)) {
+        fprintf(stderr, "taskbar-adjusted edit exit was not restored\n");
+        g_failures++;
+    } else {
+        ExpectNear("manual restore x", restore.x, manualRect.left, 0);
+        ExpectNear("manual restore y", restore.y, manualRect.top, 0);
+    }
+
+    if (WindowPlacement_GetManualTopLeftRestore(
+            &manualRect, &unchangedRect, &restore)) {
+        fprintf(stderr, "unchanged edit exit requested an unnecessary restore\n");
+        g_failures++;
+    }
+
+    if (!WindowPlacement_GetManualTopLeftRestore(
+            &negativeManualRect, &negativeAdjustedRect, &restore)) {
+        fprintf(stderr, "negative-coordinate edit exit was not restored\n");
+        g_failures++;
+    } else {
+        ExpectNear("negative manual restore x", restore.x,
+                   negativeManualRect.left, 0);
+        ExpectNear("negative manual restore y", restore.y,
+                   negativeManualRect.top, 0);
+    }
+}
+
 int main(void) {
     const RECT monitor = {0, 0, 1920, 1080};
     const RECT bottom = {0, 1040, 1920, 1080};
@@ -57,6 +92,7 @@ int main(void) {
     TestRoundTrip("right round-trip", &monitor, &right, &rightWindow);
     TestRoundTrip("negative-monitor round-trip", &leftMonitor,
                   &leftMonitorTaskbar, &negativeWindow);
+    TestManualTopLeftRestore();
 
     int ratio = 0;
     int cross = 0;

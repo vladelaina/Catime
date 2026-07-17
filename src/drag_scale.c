@@ -13,6 +13,7 @@
 #include "log.h"
 #include "plugin/plugin_data.h"
 #include "window/window_desktop_integration.h"
+#include "window/window_placement.h"
 #include "window_procedure/ole_drop_target.h"
 #include "drawing/drawing_render.h"
 
@@ -294,6 +295,29 @@ static BOOL IsValidDragScaleWindow(HWND hwnd) {
 
 static inline void RefreshWindow(HWND hwnd, BOOL eraseBackground) {
     InvalidateRect(hwnd, NULL, eraseBackground);
+}
+
+static void RestoreManualTopLeftAfterEditLayout(HWND hwnd,
+                                                const RECT* manualRect) {
+    if (!manualRect || !IsValidDragScaleWindow(hwnd)) {
+        return;
+    }
+
+    RECT layoutRect = {0};
+    POINT restorePosition = {0};
+    if (!GetWindowRect(hwnd, &layoutRect) ||
+        !WindowPlacement_GetManualTopLeftRestore(
+            manualRect, &layoutRect, &restorePosition)) {
+        return;
+    }
+
+    if (SetWindowPos(hwnd, NULL,
+                     restorePosition.x, restorePosition.y,
+                     0, 0,
+                     SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) {
+        CLOCK_WINDOW_POS_X = restorePosition.x;
+        CLOCK_WINDOW_POS_Y = restorePosition.y;
+    }
 }
 
 static void FinishDragWindow(HWND hwnd,
@@ -719,13 +743,20 @@ void StartEditMode(HWND hwnd) {
 void EndEditMode(HWND hwnd) {
     if (!CLOCK_EDIT_MODE) return;
 
-    if (CLOCK_IS_DRAGGING) {
-        FinishDragWindow(hwnd, FALSE, FALSE, TRUE);
+    BOOL hadActiveDrag = CLOCK_IS_DRAGGING;
+    if (hadActiveDrag) {
+        /* A missed left-button-up must not snap to a later right-click point. */
+        FinishDragWindow(hwnd, FALSE, FALSE, IsLeftButtonPhysicallyDown());
+        /* Exiting mid-drag is still an explicit manual placement gesture. */
+        CLOCK_WINDOW_POSITION_MANUAL = TRUE;
     }
     ApplyPendingScaleTarget(hwnd);
     StopScaleApplyTimer(hwnd);
     ClearPendingScaleResizeAnchor(hwnd);
     ClearDragBlockUntilLeftUp();
+
+    RECT manualRect = {0};
+    BOOL hasManualRect = GetWindowRect(hwnd, &manualRect);
 
     CLOCK_EDIT_MODE = FALSE;
 
@@ -733,6 +764,13 @@ void EndEditMode(HWND hwnd) {
     SetClickThrough(hwnd, TRUE);
     CleanupOleDropTarget(hwnd);
     CancelScheduledConfigSave(hwnd);
+
+    /* Finish normal-mode sizing before persisting the authoritative position. */
+    RefreshWindow(hwnd, TRUE);
+    UpdateWindow(hwnd);
+    if (hasManualRect) {
+        RestoreManualTopLeftAfterEditLayout(hwnd, &manualRect);
+    }
     SaveWindowSettings(hwnd);
     
     if (!WriteConfigColor(CLOCK_TEXT_COLOR)) {

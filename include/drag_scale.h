@@ -43,7 +43,7 @@ void StartEditMode(HWND hwnd);
  * @param hwnd Window handle
  * 
  * @details
- * Removes blur, re-enables click-through, restores topmost, schedules save.
+ * Finalizes dragging and normal-mode layout, then persists the final rectangle.
  */
 void EndEditMode(HWND hwnd);
 

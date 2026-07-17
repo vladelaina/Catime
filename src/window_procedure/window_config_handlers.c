@@ -615,12 +615,25 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
         }
 
         if (posChanged || scaleChanged) {
-            int width = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_WIDTH, CLOCK_WINDOW_SCALE);
-            int height = ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT, CLOCK_WINDOW_SCALE);
+            RECT currentRect = {0};
+            BOOL hasCurrentRect = GetWindowRect(hwnd, &currentRect);
+            int width = hasCurrentRect
+                ? currentRect.right - currentRect.left
+                : ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_WIDTH,
+                                              CLOCK_WINDOW_SCALE);
+            int height = hasCurrentRect
+                ? currentRect.bottom - currentRect.top
+                : ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT,
+                                              CLOCK_WINDOW_SCALE);
+            if (scaleChanged) {
+                width = ScaleWindowDimensionClamped(
+                    CLOCK_BASE_WINDOW_WIDTH, CLOCK_WINDOW_SCALE);
+                height = ScaleWindowDimensionClamped(
+                    CLOCK_BASE_WINDOW_HEIGHT, CLOCK_WINDOW_SCALE);
+            }
 
             if (!posChanged) {
-                RECT currentRect;
-                if (GetWindowRect(hwnd, &currentRect)) {
+                if (hasCurrentRect) {
                     posX = currentRect.left;
                     posY = currentRect.top;
                 }

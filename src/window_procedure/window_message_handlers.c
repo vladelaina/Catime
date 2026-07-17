@@ -33,6 +33,7 @@
 #include "text_effect.h"
 #include "window/window_visual_effects.h"
 #include "window/window_desktop_integration.h"
+#include "window/window_placement.h"
 #include "../resource/resource.h"
 #include "window_procedure/window_drop_target.h"
 #include "plugin/plugin_data.h"
@@ -379,9 +380,32 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
         return 0;
     }
 
+    RECT* suggested = (RECT*)lp;
+    if (CLOCK_EDIT_MODE) {
+        if (suggested) {
+            RECT manualRect = {0};
+            POINT position = {suggested->left, suggested->top};
+            if (GetWindowRect(hwnd, &manualRect)) {
+                POINT restorePosition = {0};
+                if (WindowPlacement_GetManualTopLeftRestore(
+                        &manualRect, suggested, &restorePosition)) {
+                    position = restorePosition;
+                }
+            }
+            SetWindowPos(hwnd, NULL,
+                         position.x,
+                         position.y,
+                         suggested->right - suggested->left,
+                         suggested->bottom - suggested->top,
+                         SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+        ClearPendingSystemPositionRestore();
+        InvalidateRect(hwnd, NULL, TRUE);
+        return 0;
+    }
+
     BOOL restoreScheduled = BeginSystemPositionChangeGuard(hwnd);
 
-    RECT* suggested = (RECT*)lp;
     if (suggested) {
         SetWindowPos(hwnd, NULL,
                      suggested->left,
@@ -401,9 +425,13 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     if (g_pendingEditExitRightClick) {
-        ClearPendingEditExitRightClick(hwnd);
+        /* End the left-drag transaction before releasing right-click capture. */
+        g_pendingEditExitRightClick = FALSE;
         if (CLOCK_EDIT_MODE) {
             EndEditMode(hwnd);
+        }
+        if (GetCapture() == hwnd) {
+            ReleaseCapture();
         }
         SuppressContextMenuBriefly();
         StartEditExitRightClickShield(hwnd);
@@ -445,7 +473,7 @@ LRESULT HandleContextMenu(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleCaptureChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
-    if ((HWND)lp != hwnd) {
+    if ((HWND)lp != hwnd && CLOCK_IS_DRAGGING) {
         EndDragWindow(hwnd);
     }
     if ((HWND)lp != hwnd && g_pendingEditExitRightClick) {
@@ -463,7 +491,12 @@ LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleClose(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    SaveWindowSettings(hwnd);
+    CancelScheduledConfigSave(hwnd);
+    if (CLOCK_EDIT_MODE) {
+        EndEditMode(hwnd);
+    } else {
+        SaveWindowSettings(hwnd);
+    }
     HideWindowIntentionally(hwnd);
     DestroyWindow(hwnd);
     return 0;
@@ -781,6 +814,9 @@ LRESULT HandleQueryEndSession(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp;
     (void)lp;
     CancelScheduledConfigSave(hwnd);
+    if (CLOCK_EDIT_MODE) {
+        EndEditMode(hwnd);
+    }
     g_sessionSettingsPrepared = SaveWindowSettings(hwnd);
     return TRUE;
 }
@@ -789,6 +825,9 @@ LRESULT HandleEndSession(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     if (wp && !g_sessionSettingsPrepared) {
         CancelScheduledConfigSave(hwnd);
+        if (CLOCK_EDIT_MODE) {
+            EndEditMode(hwnd);
+        }
         SaveWindowSettings(hwnd);
     }
     g_sessionSettingsPrepared = FALSE;

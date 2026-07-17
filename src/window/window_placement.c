@@ -26,6 +26,19 @@ static BOOL IsValidRect(const RECT* rect) {
     return rect && rect->right > rect->left && rect->bottom > rect->top;
 }
 
+BOOL WindowPlacement_GetManualTopLeftRestore(const RECT* manualRect,
+                                             const RECT* layoutRect,
+                                             POINT* outPosition) {
+    if (!IsValidRect(manualRect) || !IsValidRect(layoutRect) || !outPosition) {
+        return FALSE;
+    }
+
+    outPosition->x = manualRect->left;
+    outPosition->y = manualRect->top;
+    return manualRect->left != layoutRect->left ||
+           manualRect->top != layoutRect->top;
+}
+
 static TaskbarEdge GetTaskbarEdge(const RECT* taskbarRect,
                                   const RECT* monitorRect) {
     int width = taskbarRect->right - taskbarRect->left;
