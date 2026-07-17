@@ -86,6 +86,9 @@ void MarkManualEditWindowPosition(HWND hwnd);
  */
 BOOL HandleDragWindow(HWND hwnd);
 
+/** Handle a mouse-move drag using the button state carried by that message. */
+BOOL HandleDragWindowWithButtonState(HWND hwnd, BOOL leftButtonDown);
+
 /**
  * @brief Recover a drag when a left press was ignored during a short scale guard.
  * @param hwnd Window handle
@@ -132,6 +135,9 @@ BOOL GetPendingScaleResizeAnchorInfo(HWND hwnd, POINT* anchor, double* ratioX, d
  * @return TRUE while continuous wheel scaling is active for this window
  */
 BOOL IsScaleWindowGestureActive(HWND hwnd);
+
+/** Finish any pending scale target before a keyboard/manual position change. */
+void FinalizeScaleWindowGestureForManualMove(HWND hwnd);
 
 /**
  * @brief Get the current wheel-scale gesture serial for this window.

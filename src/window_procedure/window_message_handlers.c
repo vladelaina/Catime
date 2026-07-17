@@ -254,9 +254,10 @@ LRESULT HandleMouseWheel(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleMouseMove(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp; (void)lp;
+    (void)lp;
     TryStartDragWindowFromMouseMove(hwnd);
-    if (HandleDragWindow(hwnd)) return 0;
+    if (HandleDragWindowWithButtonState(
+            hwnd, (wp & MK_LBUTTON) != 0)) return 0;
     return DefWindowProc(hwnd, WM_MOUSEMOVE, wp, lp);
 }
 
@@ -541,27 +542,17 @@ LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
             step = g_AppConfig.display.move_step_large;
         }
 
-        /* Check all arrow keys to support diagonal movement */
-        int dx = 0;
-        int dy = 0;
-
-        if (GetKeyState(VK_UP) & 0x8000) {
-            dy -= step;
-        }
-        if (GetKeyState(VK_DOWN) & 0x8000) {
-            dy += step;
-        }
-        if (GetKeyState(VK_LEFT) & 0x8000) {
-            dx -= step;
-        }
-        if (GetKeyState(VK_RIGHT) & 0x8000) {
-            dx += step;
-        }
+        /* The current WM_KEYDOWN is authoritative; poll the other arrows only
+         * to preserve diagonal movement across remote/input-driver variants. */
+        BOOL upDown = wp == VK_UP || (GetKeyState(VK_UP) & 0x8000);
+        BOOL downDown = wp == VK_DOWN || (GetKeyState(VK_DOWN) & 0x8000);
+        BOOL leftDown = wp == VK_LEFT || (GetKeyState(VK_LEFT) & 0x8000);
+        BOOL rightDown = wp == VK_RIGHT || (GetKeyState(VK_RIGHT) & 0x8000);
+        int dx = (rightDown ? step : 0) - (leftDown ? step : 0);
+        int dy = (downDown ? step : 0) - (upDown ? step : 0);
 
         if (dx != 0 || dy != 0) {
-            if (IsScaleWindowGestureActive(hwnd)) {
-                return 0;
-            }
+            FinalizeScaleWindowGestureForManualMove(hwnd);
             /* Keyboard placement also supersedes a completed scale anchor. */
             ConsumePendingScaleResizeAnchor(hwnd);
 

@@ -22,6 +22,7 @@
 #define CONFIG_PATH_INITIALIZING  1
 #define CONFIG_PATH_INITIALIZED   2
 #define CONFIG_PATH_INIT_SPINS    64
+#define CONFIG_ROOT_OVERRIDE_ENV  L"CATIME_CONFIG_ROOT"
 
 static char g_cachedConfigPath[MAX_PATH] = {0};
 static wchar_t g_cachedConfigBaseDir[MAX_PATH] = {0};
@@ -289,6 +290,15 @@ BOOL ExpandEffectiveLocalAppDataPath(const char* value,
 static BOOL ResolveConfigPathUtf8(char* outPathUtf8, size_t outSize) {
     if (!outPathUtf8 || outSize == 0 || outSize > INT_MAX) return FALSE;
     outPathUtf8[0] = '\0';
+
+    wchar_t overrideRoot[MAX_PATH] = {0};
+    DWORD overrideLength = GetEnvironmentVariableW(
+        CONFIG_ROOT_OVERRIDE_ENV, overrideRoot, MAX_PATH);
+    if (overrideLength > 0 && overrideLength < MAX_PATH &&
+        BuildConfigPathFromLocalAppData(
+            overrideRoot, outPathUtf8, outSize)) {
+        return TRUE;
+    }
 
     wchar_t effectiveLocalAppData[MAX_PATH] = {0};
     if (ResolveEffectiveLocalAppDataW(effectiveLocalAppData, MAX_PATH) &&

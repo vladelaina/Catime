@@ -582,6 +582,16 @@ BOOL IsScaleWindowGestureActive(HWND hwnd) {
            IsValidDragScaleWindow(hwnd);
 }
 
+void FinalizeScaleWindowGestureForManualMove(HWND hwnd) {
+    if (!CLOCK_EDIT_MODE || !IsValidDragScaleWindow(hwnd)) {
+        return;
+    }
+
+    ApplyPendingScaleTarget(hwnd);
+    StopScaleApplyTimer(hwnd);
+    ForceClearPendingScaleResizeAnchor();
+}
+
 DWORD GetScaleWindowGestureSerial(HWND hwnd) {
     if (!IsScaleWindowGestureActive(hwnd)) {
         return 0;
@@ -702,10 +712,6 @@ void StartDragWindow(HWND hwnd) {
         return;
     }
 
-    if (!IsLeftButtonPhysicallyDown()) {
-        return;
-    }
-
     if (IsDragBlockedUntilLeftUp()) {
         return;
     }
@@ -794,7 +800,7 @@ void EndEditMode(HWND hwnd) {
     }
     ApplyPendingScaleTarget(hwnd);
     StopScaleApplyTimer(hwnd);
-    ClearPendingScaleResizeAnchor(hwnd);
+    ConsumePendingScaleResizeAnchor(hwnd);
     ClearDragBlockUntilLeftUp();
 
     RECT manualRect = {0};
@@ -806,13 +812,21 @@ void EndEditMode(HWND hwnd) {
                    g_manualEditPosition.x - manualRect.left,
                    g_manualEditPosition.y - manualRect.top);
     }
-
     CLOCK_EDIT_MODE = FALSE;
 
     SetBlurBehind(hwnd, FALSE);
     SetClickThrough(hwnd, TRUE);
     CleanupOleDropTarget(hwnd);
     CancelScheduledConfigSave(hwnd);
+
+    /* Topmost/desktop ownership changes can trigger another layout pass.
+     * Complete them before the one authoritative layout and save below. */
+    if (g_editModeForcedTopmost &&
+        !g_editModeTopmostOverride &&
+        !PREVIOUS_TOPMOST_STATE) {
+        SetWindowTopmostTransient(hwnd, FALSE);
+        KillTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH);
+    }
 
     /* Finish normal-mode sizing before persisting the authoritative position. */
     RefreshWindow(hwnd, TRUE);
@@ -825,16 +839,6 @@ void EndEditMode(HWND hwnd) {
     
     if (!WriteConfigColor(CLOCK_TEXT_COLOR)) {
         LOG_WARNING("EndEditMode: failed to persist text color");
-    }
-    
-    if (g_editModeForcedTopmost && !g_editModeTopmostOverride && !PREVIOUS_TOPMOST_STATE) {
-        SetWindowTopmostTransient(hwnd, FALSE);
-        
-        InvalidateRect(hwnd, NULL, TRUE);
-        
-        KillTimer(hwnd, TIMER_ID_EDIT_MODE_REFRESH);
-    } else {
-        RefreshWindow(hwnd, TRUE);
     }
 
     g_editModeForcedTopmost = FALSE;
@@ -864,7 +868,7 @@ static void CancelDragForScale(HWND hwnd) {
 }
 
 /* Absolute cursor anchoring keeps movement aligned even when mouse messages coalesce. */
-BOOL HandleDragWindow(HWND hwnd) {
+static BOOL HandleDragWindowInternal(HWND hwnd, BOOL leftButtonDown) {
     if (!CLOCK_EDIT_MODE || !CLOCK_IS_DRAGGING) return FALSE;
 
     if (IsDragBlockedUntilLeftUp()) {
@@ -877,7 +881,7 @@ BOOL HandleDragWindow(HWND hwnd) {
         return FALSE;
     }
 
-    if (!IsLeftButtonPhysicallyDown()) {
+    if (!leftButtonDown) {
         FinishDragWindow(hwnd, TRUE, TRUE, TRUE);
         return FALSE;
     }
@@ -925,6 +929,14 @@ BOOL HandleDragWindow(HWND hwnd) {
     }
 
     return TRUE;
+}
+
+BOOL HandleDragWindowWithButtonState(HWND hwnd, BOOL leftButtonDown) {
+    return HandleDragWindowInternal(hwnd, leftButtonDown);
+}
+
+BOOL HandleDragWindow(HWND hwnd) {
+    return HandleDragWindowInternal(hwnd, IsLeftButtonPhysicallyDown());
 }
 
 /* Mouse wheel scaling: configurable step per notch, anchored at the cursor */

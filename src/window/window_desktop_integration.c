@@ -343,6 +343,8 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
     BOOL hasActualTopmost = FALSE;
     BOOL suppressFailureDiagnostics = !updatePreference && !persistConfig && !updateRuntimeTarget &&
                                       IsTopmostRetryCoolingDown(topmost);
+    RECT positionBefore = {0};
+    BOOL hasPositionBefore = GetWindowRect(hwnd, &positionBefore);
 
     if (suppressFailureDiagnostics) {
         return FALSE;
@@ -403,6 +405,27 @@ static BOOL ApplyWindowTopmostStateInternal(HWND hwnd, BOOL topmost, BOOL persis
         LOG_WARNING("SetWindowPos(SWP_FRAMECHANGED) failed after topmost apply (err=%lu)",
                     GetLastError());
         styleApplied = FALSE;
+    }
+
+    /* Changing a popup owner can move the window even when every SetWindowPos
+     * call uses SWP_NOMOVE. Keep z-order changes position-neutral. */
+    if (hasPositionBefore) {
+        RECT positionAfter = {0};
+        if (GetWindowRect(hwnd, &positionAfter) &&
+            (positionAfter.left != positionBefore.left ||
+             positionAfter.top != positionBefore.top)) {
+            if (SetWindowPos(hwnd, NULL,
+                             positionBefore.left, positionBefore.top,
+                             0, 0,
+                             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) {
+                CLOCK_WINDOW_POS_X = positionBefore.left;
+                CLOCK_WINDOW_POS_Y = positionBefore.top;
+            } else {
+                LOG_WARNING("Failed to restore window position after topmost owner change (err=%lu)",
+                            GetLastError());
+                zOrderApplied = FALSE;
+            }
+        }
     }
 
     hasActualTopmost = GetWindowTopmostState(hwnd, &actualTopmost);

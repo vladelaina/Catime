@@ -577,12 +577,6 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
                 ? currentRect.bottom - currentRect.top
                 : ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT,
                                               CLOCK_WINDOW_SCALE);
-            if (scaleChanged) {
-                placementWidth = ScaleWindowDimensionClamped(
-                    CLOCK_BASE_WINDOW_WIDTH, newScale);
-                placementHeight = ScaleWindowDimensionClamped(
-                    CLOCK_BASE_WINDOW_HEIGHT, newScale);
-            }
             int resolvedX = posX;
             int resolvedY = posY;
             ResolveConfiguredWindowPosition(placementWidth, placementHeight,
@@ -614,7 +608,7 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
             changed = TRUE;
         }
 
-        if (posChanged || scaleChanged) {
+        if (posChanged) {
             RECT currentRect = {0};
             BOOL hasCurrentRect = GetWindowRect(hwnd, &currentRect);
             int width = hasCurrentRect
@@ -625,27 +619,13 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
                 ? currentRect.bottom - currentRect.top
                 : ScaleWindowDimensionClamped(CLOCK_BASE_WINDOW_HEIGHT,
                                               CLOCK_WINDOW_SCALE);
-            if (scaleChanged) {
-                width = ScaleWindowDimensionClamped(
-                    CLOCK_BASE_WINDOW_WIDTH, CLOCK_WINDOW_SCALE);
-                height = ScaleWindowDimensionClamped(
-                    CLOCK_BASE_WINDOW_HEIGHT, CLOCK_WINDOW_SCALE);
-            }
 
-            if (!posChanged) {
-                if (hasCurrentRect) {
-                    posX = currentRect.left;
-                    posY = currentRect.top;
-                }
-                ClampWindowPositionToVisibleMonitor(width, height, &posX, &posY);
-            } else {
-                ResolveConfiguredWindowPosition(width, height, &posX, &posY);
-            }
+            ResolveConfiguredWindowPosition(width, height, &posX, &posY);
 
-            LOG_DEBUG("Hot reload applying window rectangle: pos=(%d, %d), size=%dx%d, positionChanged=%d, scaleChanged=%d",
-                      posX, posY, width, height, posChanged, scaleChanged);
-            SetWindowPos(hwnd, NULL, posX, posY, width, height,
-                         SWP_NOZORDER | SWP_NOACTIVATE);
+            LOG_DEBUG("Hot reload applying window position: pos=(%d, %d), scaleChanged=%d",
+                      posX, posY, scaleChanged);
+            SetWindowPos(hwnd, NULL, posX, posY, 0, 0,
+                         SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
             CLOCK_WINDOW_POS_X = posX;
             CLOCK_WINDOW_POS_Y = posY;
             changed = TRUE;
