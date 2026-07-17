@@ -40,17 +40,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         LOG_WARNING("Could not repair the existing startup shortcut before single-instance routing");
     }
 
-    const BOOL ciSmokeMode = IsCiSmokeMode();
     HANDLE hMutex = NULL;
-    if (!ciSmokeMode) {
-        if (!HandleSingleInstance(GetCommandLineW(), &hMutex)) {
-            ShutdownWindowVisualEffects();
-            CoUninitialize();
-            CleanupLogSystem();
-            return 0;
-        }
-    } else {
-        LOG_INFO("CI smoke mode bypassing production single-instance routing");
+    if (!HandleSingleInstance(GetCommandLineW(), &hMutex)) {
+        ShutdownWindowVisualEffects();
+        CoUninitialize();
+        CleanupLogSystem();
+        return 0;
     }
 
     if (!InitializeApplicationSubsystem(hInstance)) {
@@ -58,7 +53,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    if (!ciSmokeMode) {
+    if (!IsCiSmokeMode()) {
         SetupDesktopShortcut();
     }
     InitializeDialogLanguages();

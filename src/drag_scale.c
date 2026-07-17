@@ -40,6 +40,7 @@ static double g_scaleGestureAnchorRatioX = 0.5;
 static double g_scaleGestureAnchorRatioY = 0.5;
 static DWORD g_scaleGestureSerial = 0;
 static DWORD g_lastScaleWheelTick = 0;
+static DWORD g_lastScaleApplyTick = 0;
 static DWORD g_suppressDragUntilTick = 0;
 static BOOL g_dragBlockedUntilLeftUp = FALSE;
 static BOOL g_dragBlockNeedsReleaseCooldown = FALSE;
@@ -61,6 +62,10 @@ static HWND g_configSaveTimerHwnd = NULL;
 #define SCALE_APPLY_TIMER_ID 42426
 #define SCALE_APPLY_INTERVAL_MS 16u
 #define SCALE_APPLY_IDLE_STOP_MS 80u
+#define SCALE_SMOOTH_RESPONSE_MS 28.0
+#define SCALE_FRAME_DELTA_MAX_MS 48u
+#define SCALE_SETTLE_ABS_EPSILON 0.0005f
+#define SCALE_SETTLE_REL_EPSILON 0.0002f
 #define SCALE_DRAG_SUPPRESS_MS 120u
 #define SCALE_DRAG_RELEASE_SUPPRESS_MS 120u
 #define SCALE_POST_RESIZE_ANCHOR_MS 1200u
@@ -477,6 +482,7 @@ static void StopScaleApplyTimer(HWND hwnd) {
     g_scaleGestureAnchorRatioX = 0.5;
     g_scaleGestureAnchorRatioY = 0.5;
     g_lastScaleWheelTick = 0;
+    g_lastScaleApplyTick = 0;
     if (keepAnchorForPostScaleResize) {
         DWORD until = GetTickCount() + SCALE_POST_RESIZE_ANCHOR_MS;
         g_pendingScaleResizeAnchorPostScale = TRUE;
@@ -501,6 +507,50 @@ static BOOL ApplyPendingScaleTarget(HWND hwnd) {
                               g_scaleTargetAnchor);
 }
 
+static float GetScaleSettleTolerance(float targetScale) {
+    float relative = fabsf(targetScale) * SCALE_SETTLE_REL_EPSILON;
+    return relative > SCALE_SETTLE_ABS_EPSILON
+        ? relative
+        : SCALE_SETTLE_ABS_EPSILON;
+}
+
+static BOOL ApplySmoothedScaleTarget(HWND hwnd, DWORD elapsedMs) {
+    if (!g_scaleTargetValid || !CLOCK_EDIT_MODE ||
+        !IsValidDragScaleWindow(hwnd)) {
+        return FALSE;
+    }
+
+    float currentScale = GetActiveScaleFactor(g_scaleTargetPluginMode);
+    float tolerance = GetScaleSettleTolerance(g_scaleTarget);
+    double remaining = (double)g_scaleTarget - (double)currentScale;
+    if (fabs(remaining) <= (double)tolerance) {
+        ApplyScaleToWindow(hwnd,
+                           g_scaleTargetPluginMode,
+                           g_scaleTarget,
+                           g_scaleTargetAnchor);
+        return TRUE;
+    }
+
+    if (elapsedMs == 0) elapsedMs = 1;
+    if (elapsedMs > SCALE_FRAME_DELTA_MAX_MS) {
+        elapsedMs = SCALE_FRAME_DELTA_MAX_MS;
+    }
+
+    double blend = 1.0 - exp(-(double)elapsedMs / SCALE_SMOOTH_RESPONSE_MS);
+    double nextValue = (double)currentScale + remaining * blend;
+    float nextScale = ClampScaleFactor(nextValue);
+    if (fabs((double)g_scaleTarget - (double)nextScale) <=
+        (double)tolerance) {
+        nextScale = g_scaleTarget;
+    }
+
+    ApplyScaleToWindow(hwnd,
+                       g_scaleTargetPluginMode,
+                       nextScale,
+                       g_scaleTargetAnchor);
+    return nextScale == g_scaleTarget;
+}
+
 static VOID CALLBACK ScaleApplyTimerProc(HWND hwnd, UINT msg, UINT_PTR idEvent, DWORD dwTime) {
     (void)dwTime;
 
@@ -510,12 +560,21 @@ static VOID CALLBACK ScaleApplyTimerProc(HWND hwnd, UINT msg, UINT_PTR idEvent, 
         return;
     }
 
-    ApplyPendingScaleTarget(hwnd);
-
     DWORD now = GetTickCount();
+    DWORD elapsedMs = g_lastScaleApplyTick != 0
+        ? TickElapsedMs(now, g_lastScaleApplyTick)
+        : SCALE_APPLY_INTERVAL_MS;
+    g_lastScaleApplyTick = now;
+    BOOL targetReached = ApplySmoothedScaleTarget(hwnd, elapsedMs);
+    BOOL inputIdle = TickElapsedMs(now, g_lastScaleWheelTick) >=
+                     SCALE_APPLY_IDLE_STOP_MS;
     if (!g_scaleTargetValid ||
         !CLOCK_EDIT_MODE ||
-        (DWORD)(now - g_lastScaleWheelTick) >= SCALE_APPLY_IDLE_STOP_MS) {
+        (inputIdle && targetReached)) {
+        if (g_scaleTargetValid && CLOCK_EDIT_MODE &&
+            inputIdle && targetReached) {
+            ScheduleConfigSave(hwnd);
+        }
         StopScaleApplyTimer(hwnd);
     }
 }
@@ -534,6 +593,7 @@ static BOOL EnsureScaleApplyTimer(HWND hwnd) {
     }
 
     g_scaleApplyTimerHwnd = hwnd;
+    g_lastScaleApplyTick = GetTickCount();
     AdvanceScaleGestureSerial();
     return TRUE;
 }
@@ -1012,6 +1072,7 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
             ClampAnchorRatio((double)(cursorPos.x - windowRect.left) / (double)oldWidth);
         g_scaleGestureAnchorRatioY =
             ClampAnchorRatio((double)(cursorPos.y - windowRect.top) / (double)oldHeight);
+        g_scaleTargetAnchor = cursorPos;
         if (hadActiveTimer) {
             AdvanceScaleGestureSerial();
         }
@@ -1020,12 +1081,11 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     g_scaleTargetValid = TRUE;
     g_scaleTargetPluginMode = isPluginMode;
     g_scaleTarget = newScale;
-    g_scaleTargetAnchor = cursorPos;
     g_lastScaleWheelTick = GetTickCount();
     ScheduleConfigSave(hwnd);
 
     if (!hadActiveTimer) {
-        ApplyPendingScaleTarget(hwnd);
+        ApplySmoothedScaleTarget(hwnd, SCALE_APPLY_INTERVAL_MS);
     }
 
     return TRUE;

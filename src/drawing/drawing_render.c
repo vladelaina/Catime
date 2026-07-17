@@ -1068,6 +1068,14 @@ static BOOL UpdateDrawingRenderAnimationTimerForFrame(HWND hwnd,
         return FALSE;
     }
 
+    /* Scale frames already repaint at the gesture cadence. Running the
+     * independent effect timer at the same time only queues duplicate paints
+     * and makes wheel input feel uneven on slower machines. */
+    if (GetScaleWindowGestureSerial(hwnd) != 0) {
+        StopDrawingRenderAnimationTimer(hwnd);
+        return FALSE;
+    }
+
     if (!IsWindowVisible(hwnd) ||
         !ShouldRunRenderAnimationTimer(hasRenderableContent, hasColorTagGradient)) {
         StopDrawingRenderAnimationTimer(hwnd);
@@ -1479,15 +1487,6 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
                                                            &resizeAnchorRatioY);
     LONG currentClientWidth = rect->right - rect->left;
     LONG currentClientHeight = rect->bottom - rect->top;
-
-    if (CLOCK_EDIT_MODE && scaleGestureSerial == 0) {
-        if (targetSize.cx < currentClientWidth) {
-            targetSize.cx = currentClientWidth;
-        }
-        if (targetSize.cy < currentClientHeight) {
-            targetSize.cy = currentClientHeight;
-        }
-    }
 
     if (targetSize.cx == currentClientWidth &&
         targetSize.cy == currentClientHeight) {
