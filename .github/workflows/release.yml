@@ -184,6 +184,33 @@ jobs:
 
           > [!TIP]
           > My friend, while downloading Catime, why not check out my friend's [Easy-Cat-Timer](https://github.com/xujiangjiang/Easy-Cat-Timer) - a super cute and practical countdown timer!
+
+          ---
+          # 📥 Download
+
+          <a href="https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&mode=full" target="_blank" rel="noopener noreferrer">
+            <img src="https://get.microsoft.com/images/en-us%20light.svg" width="600"/>
+          </a>
+
+          - Chocolatey
+
+            ```
+            choco install catime
+            ```
+
+          - Scoop
+
+            ```
+            scoop bucket add extras
+
+            scoop install catime
+            ```
+
+          - Winget
+
+            ```
+            winget install --id VladElaina.Catime
+            ```
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         
