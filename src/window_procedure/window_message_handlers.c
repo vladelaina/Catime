@@ -559,6 +559,12 @@ LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
 
         if (dx != 0 || dy != 0) {
+            if (IsScaleWindowGestureActive(hwnd)) {
+                return 0;
+            }
+            /* Keyboard placement also supersedes a completed scale anchor. */
+            ConsumePendingScaleResizeAnchor(hwnd);
+
             RECT rect;
             GetWindowRect(hwnd, &rect);
             int newX = rect.left + dx;
@@ -567,6 +573,7 @@ LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
                              SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) {
                 CLOCK_WINDOW_POS_X = newX;
                 CLOCK_WINDOW_POS_Y = newY;
+                MarkManualEditWindowPosition(hwnd);
                 ScheduleConfigSave(hwnd);
             }
             return 0;

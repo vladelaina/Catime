@@ -50,6 +50,9 @@ static UINT_PTR g_dragApplyTimer = 0;
 static HWND g_dragApplyTimerHwnd = NULL;
 static BOOL g_pendingScaleResizeAnchorPostScale = FALSE;
 static DWORD g_pendingScaleResizeAnchorUntilTick = 0;
+static BOOL g_manualEditPositionValid = FALSE;
+static HWND g_manualEditPositionHwnd = NULL;
+static POINT g_manualEditPosition = {0};
 
 static UINT_PTR g_configSaveTimer = 0;
 static HWND g_configSaveTimerHwnd = NULL;
@@ -74,6 +77,31 @@ static BOOL IsValidDragScaleWindow(HWND hwnd);
 
 static DWORD TickElapsedMs(DWORD now, DWORD then) {
     return (DWORD)(now - then);
+}
+
+static void ClearManualEditPosition(void) {
+    g_manualEditPositionValid = FALSE;
+    g_manualEditPositionHwnd = NULL;
+    g_manualEditPosition.x = 0;
+    g_manualEditPosition.y = 0;
+}
+
+static void RecordManualEditPosition(HWND hwnd, int x, int y) {
+    if (!CLOCK_EDIT_MODE || !IsValidDragScaleWindow(hwnd)) {
+        return;
+    }
+
+    g_manualEditPositionValid = TRUE;
+    g_manualEditPositionHwnd = hwnd;
+    g_manualEditPosition.x = x;
+    g_manualEditPosition.y = y;
+}
+
+void MarkManualEditWindowPosition(HWND hwnd) {
+    RECT rect = {0};
+    if (GetWindowRect(hwnd, &rect)) {
+        RecordManualEditPosition(hwnd, rect.left, rect.top);
+    }
 }
 
 static void ResetDragApplyThrottle(void) {
@@ -105,6 +133,7 @@ static BOOL ApplyDragPositionForCursor(HWND hwnd, POINT cursorPos) {
         CLOCK_LAST_MOUSE_POS = cursorPos;
         CLOCK_WINDOW_POS_X = newX;
         CLOCK_WINDOW_POS_Y = newY;
+        RecordManualEditPosition(hwnd, newX, newY);
         return TRUE;
     }
 
@@ -115,6 +144,7 @@ static BOOL ApplyDragPositionForCursor(HWND hwnd, POINT cursorPos) {
         CLOCK_WINDOW_POS_X = newX;
         CLOCK_WINDOW_POS_Y = newY;
         g_lastDragApplyTick = GetTickCount();
+        RecordManualEditPosition(hwnd, newX, newY);
         return TRUE;
     }
 
@@ -311,6 +341,9 @@ static void RestoreManualTopLeftAfterEditLayout(HWND hwnd,
         return;
     }
 
+    LOG_DEBUG("Restoring manual edit position after layout: (%ld, %ld) -> (%ld, %ld)",
+              layoutRect.left, layoutRect.top,
+              manualRect->left, manualRect->top);
     if (SetWindowPos(hwnd, NULL,
                      restorePosition.x, restorePosition.y,
                      0, 0,
@@ -406,6 +439,8 @@ static BOOL ApplyScaleToWindow(HWND hwnd, BOOL pluginMode, float newScale, POINT
     float oldScale = GetActiveScaleFactor(pluginMode);
     if (oldScale <= 0.0f || newScale == oldScale) return FALSE;
 
+    /* Scaling becomes the latest placement gesture and owns the next anchor. */
+    ClearManualEditPosition();
     SetActiveScaleFactor(pluginMode, newScale);
     SetPendingScaleResizeAnchorWithRatio(hwnd,
                                          anchor,
@@ -675,7 +710,7 @@ void StartDragWindow(HWND hwnd) {
         return;
     }
 
-    if (IsDragSuppressedAfterScale()) {
+    if (IsScaleWindowGestureActive(hwnd) || IsDragSuppressedAfterScale()) {
         return;
     }
 
@@ -692,6 +727,12 @@ void StartDragWindow(HWND hwnd) {
         LOG_WARNING("Failed to initialize edit-mode drag anchor");
         return;
     }
+
+    /* A manual drag supersedes any short-lived cursor anchor left by scaling. */
+    if (g_pendingScaleResizeAnchorValid) {
+        LOG_DEBUG("Discarding stale scale resize anchor before manual drag");
+    }
+    ForceClearPendingScaleResizeAnchor();
 
     CLOCK_IS_DRAGGING = TRUE;
     CLOCK_LAST_MOUSE_POS = cursorPos;
@@ -719,6 +760,7 @@ void StartEditMode(HWND hwnd) {
     EnsureWindowVisibleWithTopmostState(hwnd);
     StopScaleApplyTimer(hwnd);
     ClearDragBlockUntilLeftUp();
+    ClearManualEditPosition();
 
     PREVIOUS_TOPMOST_STATE = CLOCK_WINDOW_TOPMOST;
     g_editModeForcedTopmost = FALSE;
@@ -757,6 +799,13 @@ void EndEditMode(HWND hwnd) {
 
     RECT manualRect = {0};
     BOOL hasManualRect = GetWindowRect(hwnd, &manualRect);
+    if (hasManualRect &&
+        g_manualEditPositionValid &&
+        g_manualEditPositionHwnd == hwnd) {
+        OffsetRect(&manualRect,
+                   g_manualEditPosition.x - manualRect.left,
+                   g_manualEditPosition.y - manualRect.top);
+    }
 
     CLOCK_EDIT_MODE = FALSE;
 
@@ -772,6 +821,7 @@ void EndEditMode(HWND hwnd) {
         RestoreManualTopLeftAfterEditLayout(hwnd, &manualRect);
     }
     SaveWindowSettings(hwnd);
+    ClearManualEditPosition();
     
     if (!WriteConfigColor(CLOCK_TEXT_COLOR)) {
         LOG_WARNING("EndEditMode: failed to persist text color");
@@ -871,6 +921,7 @@ BOOL HandleDragWindow(HWND hwnd) {
         CLOCK_WINDOW_POS_X = newX;
         CLOCK_WINDOW_POS_Y = newY;
         g_lastDragApplyTick = now;
+        RecordManualEditPosition(hwnd, newX, newY);
     }
 
     return TRUE;

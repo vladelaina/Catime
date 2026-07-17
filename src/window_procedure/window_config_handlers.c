@@ -642,6 +642,8 @@ LRESULT HandleAppDisplayChanged(HWND hwnd) {
                 ResolveConfiguredWindowPosition(width, height, &posX, &posY);
             }
 
+            LOG_DEBUG("Hot reload applying window rectangle: pos=(%d, %d), size=%dx%d, positionChanged=%d, scaleChanged=%d",
+                      posX, posY, width, height, posChanged, scaleChanged);
             SetWindowPos(hwnd, NULL, posX, posY, width, height,
                          SWP_NOZORDER | SWP_NOACTIVATE);
             CLOCK_WINDOW_POS_X = posX;

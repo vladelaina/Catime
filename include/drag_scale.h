@@ -74,6 +74,9 @@ void StartDragWindow(HWND hwnd);
  */
 void EndDragWindow(HWND hwnd);
 
+/** Record the current rectangle as the latest user-selected edit position. */
+void MarkManualEditWindowPosition(HWND hwnd);
+
 /**
  * @brief Handle drag movement
  * @param hwnd Window handle
