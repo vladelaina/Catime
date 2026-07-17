@@ -1,22 +1,46 @@
+import { bundledLibraryPayload } from './library-snapshot.js';
+
 const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
+const LIBRARY_CACHE_KEY = 'catime:tray-library:v3';
+const MAX_CACHED_MANIFEST_BYTES = 2 * 1024 * 1024;
+
+export function loadImmediateLibraryData(source = configuredLibrarySource()) {
+    const cached = readCachedPayload(source);
+    const bundled = source === DEFAULT_LIBRARY_SOURCE ? bundledLibraryPayload : null;
+    const payload = newerPayload(cached, bundled);
+    if (!payload) return null;
+    try {
+        return normalizeLibrary(payload);
+    } catch {
+        return payload !== bundled && bundled ? normalizeLibrary(bundled) : null;
+    }
+}
 
 export async function loadLibraryData(source = configuredLibrarySource()) {
     const response = await fetch(source, {
-        cache: 'no-store',
+        cache: 'default',
         mode: 'cors',
         credentials: 'omit',
         referrerPolicy: 'strict-origin-when-cross-origin',
+        headers: { Accept: 'application/json' },
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const payload = await response.json();
-    const collections = Object.entries(payload.sections || {})
+    cachePayload(source, payload);
+    return normalizeLibrary(payload);
+}
+
+function normalizeLibrary(payload) {
+    const collections = Object.entries(payload.sections && typeof payload.sections === 'object' ? payload.sections : {})
+        .filter(([, data]) => data && typeof data === 'object')
         .map(([key, data]) => normalizeCollection(key, data))
         .filter(collection => collection.count > 0);
 
     return {
         collections,
         authors: groupByAuthor(collections),
+        revision: String(payload.generated || payload.version || ''),
     };
 }
 
@@ -33,6 +57,7 @@ function normalizeCollection(key, data) {
         reviewCount: Number(data.reviewCount) || 0,
         description: data.description || '',
         files: Array.isArray(data.files) ? data.files.map(String) : [],
+        fileVersions: Array.isArray(data.fileVersions) ? data.fileVersions.map(String) : [],
         count: Array.isArray(data.files) ? data.files.length : Number(data.count) || 0,
         cdnBase: data.cdnBase || `./gifs/${key}/`,
         repository: data.repository || '',
@@ -66,9 +91,44 @@ export function animationFilename(collection, index) {
 }
 
 export function animationUrl(collection, index) {
-    return `${collection.cdnBase}${animationFilename(collection, index)}`;
+    const filename = animationFilename(collection, index)
+        .split('/')
+        .map(encodeURIComponent)
+        .join('/');
+    const url = `${collection.cdnBase}${filename}`;
+    const version = collection.fileVersions[index - 1];
+    return version ? `${url}?v=${encodeURIComponent(version)}` : url;
 }
 
 function configuredLibrarySource() {
     return import.meta.env?.VITE_TRAY_HUB_URL || DEFAULT_LIBRARY_SOURCE;
+}
+
+function readCachedPayload(source) {
+    if (typeof localStorage === 'undefined') return null;
+    try {
+        const cached = JSON.parse(localStorage.getItem(LIBRARY_CACHE_KEY) || 'null');
+        return cached?.source === source && cached.payload?.sections ? cached.payload : null;
+    } catch {
+        return null;
+    }
+}
+
+function cachePayload(source, payload) {
+    if (typeof localStorage === 'undefined' || !payload?.sections) return;
+    try {
+        const value = JSON.stringify({ source, payload });
+        if (value.length <= MAX_CACHED_MANIFEST_BYTES) localStorage.setItem(LIBRARY_CACHE_KEY, value);
+    } catch {
+        // Storage may be unavailable in private mode; the bundled snapshot
+        // still keeps the first render synchronous.
+    }
+}
+
+function newerPayload(first, second) {
+    if (!first) return second;
+    if (!second) return first;
+    const firstTime = Date.parse(first.generated || '') || 0;
+    const secondTime = Date.parse(second.generated || '') || 0;
+    return firstTime >= secondTime ? first : second;
 }

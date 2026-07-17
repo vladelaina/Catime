@@ -1,15 +1,18 @@
-import { animationFilename, animationUrl, loadLibraryData } from './library-data.js';
+import { animationFilename, animationUrl, loadImmediateLibraryData, loadLibraryData } from './library-data.js';
 import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
 
 const INITIAL_VISIBLE_ANIMATIONS = 18;
 const LOAD_MORE_SIZE = 24;
 const FEATURED_ANIMATIONS = 5;
+const preloadedUrls = new Set();
 
 const state = {
     collections: [],
     authors: [],
     expandedAuthor: null,
     visibleByCollection: new Map(),
+    revision: '',
+    userInteracted: false,
 };
 
 const elements = {};
@@ -25,26 +28,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateTrayClock();
     setInterval(updateTrayClock, 30000);
-    loadLibrary();
+    const immediateLibrary = loadImmediateLibraryData();
+    if (immediateLibrary?.collections.length) applyLibrary(immediateLibrary);
+    loadLibrary(Boolean(immediateLibrary?.collections.length));
 });
 
-async function loadLibrary() {
+async function loadLibrary(hasImmediateLibrary) {
     try {
         const library = await loadLibraryData();
-        state.collections = library.collections;
-        state.authors = library.authors;
-        renderBoard();
-
-        if (state.collections[0]) {
-            setTrayPreview(animationUrl(state.collections[0], 1));
-        }
+        // Keep an already-visible board stable. The fresh payload has been
+        // cached for the next navigation. A newer catalog can update this view
+        // only while the user has not started interacting with it.
+        const hasNewRevision = library.revision && library.revision !== state.revision;
+        if (!hasImmediateLibrary || (hasNewRevision && !state.userInteracted)) applyLibrary(library);
     } catch (error) {
         console.error('Unable to load tray animation library.', error);
+        if (state.collections.length) return;
         elements.board.innerHTML = '';
         elements.empty.hidden = false;
         elements.empty.querySelector('h3').textContent = '动画资源加载失败';
         elements.empty.querySelector('p').textContent = '请稍后刷新页面重试。';
     }
+}
+
+function applyLibrary(library) {
+    state.collections = library.collections;
+    state.authors = library.authors;
+    state.revision = library.revision;
+    preloadFirstRow(library.authors[0]);
+    renderBoard();
+
+    if (state.collections[0]) setTrayPreview(animationUrl(state.collections[0], 1));
 }
 
 function renderBoard() {
@@ -64,7 +78,7 @@ function createArtistRow(author, index) {
     toggle.className = `artist-identity${canExpand ? '' : ' artist-identity-static'}`;
     if (canExpand) toggle.setAttribute('aria-expanded', String(isExpanded));
     toggle.innerHTML = `
-        ${createArtistAvatar(author)}
+        ${createArtistAvatar(author, index === 0)}
         <span class="artist-heading">
             <span class="artist-name-line">
                 <strong>${escapeHtml(author.name)}</strong>
@@ -79,6 +93,7 @@ function createArtistRow(author, index) {
     toggle.addEventListener('mouseenter', () => previewFirstWork(author));
     toggle.addEventListener('focus', () => previewFirstWork(author));
     if (canExpand) toggle.addEventListener('click', () => {
+        state.userInteracted = true;
         const shouldExpand = !row.classList.contains('expanded');
         const expandedRow = elements.board.querySelector('.artist-showcase.expanded');
 
@@ -89,7 +104,7 @@ function createArtistRow(author, index) {
         if (shouldExpand) requestAnimationFrame(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
     });
 
-    row.append(toggle, createFeaturedGallery(author));
+    row.append(toggle, createFeaturedGallery(author, index === 0));
     if (isExpanded) row.appendChild(createArtistDetails(author));
     return row;
 }
@@ -107,13 +122,16 @@ function setArtistRowExpanded(row, expanded, author) {
     if (!expanded) details?.remove();
 }
 
-function createArtistAvatar(author) {
+function createArtistAvatar(author, highPriority = false) {
+    const imagePriority = highPriority
+        ? ' loading="eager" decoding="async" fetchpriority="high"'
+        : ' loading="lazy" decoding="async"';
     if (author.avatar) {
-        return `<span class="artist-avatar"><img src="${escapeAttribute(author.avatar)}" alt="${escapeAttribute(author.name)}"></span>`;
+        return `<span class="artist-avatar"><img src="${escapeAttribute(author.avatar)}" alt="${escapeAttribute(author.name)}"${imagePriority}></span>`;
     }
     const preview = author.items[0] ? animationUrl(author.items[0], 1) : '';
     if (preview) {
-        return `<span class="artist-avatar"><img src="${escapeAttribute(preview)}" alt="${escapeAttribute(author.name)}"></span>`;
+        return `<span class="artist-avatar"><img src="${escapeAttribute(preview)}" alt="${escapeAttribute(author.name)}"${imagePriority}></span>`;
     }
     return `<span class="artist-avatar artist-avatar-fallback">${escapeHtml(author.name.slice(0, 2))}</span>`;
 }
@@ -125,11 +143,11 @@ function createArtistMetrics(author) {
     return `<span class="artist-rating"><i class="fas fa-star"></i></span><span>${author.total.toLocaleString('zh-CN')} 个托盘动画</span>`;
 }
 
-function createFeaturedGallery(author) {
+function createFeaturedGallery(author, highPriority = false) {
     const gallery = document.createElement('div');
     gallery.className = 'artist-featured-gallery';
     gallery.append(...collectFeaturedWorks(author.items, FEATURED_ANIMATIONS).map(({ collection, index }) => {
-        const item = createAnimationItem(collection, index);
+        const item = createAnimationItem(collection, index, { highPriority });
         item.classList.add('featured-animation');
         return item;
     }));
@@ -183,8 +201,9 @@ function createCollectionSection(collection) {
         loadMore.textContent = `加载更多（剩余 ${(collection.count - visibleCount).toLocaleString('zh-CN')} 个）`;
         loadMore.addEventListener('click', event => {
             event.stopPropagation();
+            state.userInteracted = true;
             state.visibleByCollection.set(collection.key, Math.min(visibleCount + LOAD_MORE_SIZE, collection.count));
-            renderBoard();
+            section.replaceWith(createCollectionSection(collection));
         });
         section.appendChild(loadMore);
     }
@@ -192,14 +211,16 @@ function createCollectionSection(collection) {
     return section;
 }
 
-function createAnimationItem(collection, index) {
+function createAnimationItem(collection, index, { highPriority = false } = {}) {
     const url = animationUrl(collection, index);
     const filename = animationFilename(collection, index);
     const item = document.createElement('a');
     item.className = 'animation-item';
     item.href = url;
     item.download = filename;
-    item.innerHTML = `<img src="${escapeAttribute(url)}" alt="${escapeAttribute(collection.title)} ${index}" loading="lazy" decoding="async">`;
+    const loading = highPriority ? 'eager' : 'lazy';
+    const priority = highPriority ? ' fetchpriority="high"' : '';
+    item.innerHTML = `<img src="${escapeAttribute(url)}" alt="${escapeAttribute(collection.title)} ${index}" loading="${loading}" decoding="async"${priority}>`;
     item.addEventListener('mouseenter', () => setTrayPreview(url));
     item.addEventListener('focus', () => setTrayPreview(url));
     item.addEventListener('click', event => downloadAnimation(event, url, filename));
@@ -230,7 +251,22 @@ function previewFirstWork(author) {
 }
 
 function setTrayPreview(url) {
-    elements.trayIcon.src = url;
+    if (elements.trayIcon.getAttribute('src') !== url) elements.trayIcon.src = url;
+}
+
+function preloadFirstRow(author) {
+    if (!author) return;
+    collectFeaturedWorks(author.items, FEATURED_ANIMATIONS).forEach(({ collection, index }) => {
+        const url = animationUrl(collection, index);
+        if (preloadedUrls.has(url)) return;
+        preloadedUrls.add(url);
+        const preload = document.createElement('link');
+        preload.rel = 'preload';
+        preload.as = 'image';
+        preload.href = url;
+        preload.fetchPriority = 'high';
+        document.head.appendChild(preload);
+    });
 }
 
 function updateTrayClock() {

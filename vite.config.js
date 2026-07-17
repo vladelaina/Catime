@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { cp } from 'node:fs/promises';
 import { defineConfig } from 'vite';
 
 const cleanRoutes = new Map([
@@ -32,8 +33,26 @@ function cleanUrlPlugin() {
     };
 }
 
+function copyClassicScriptsPlugin() {
+    return {
+        name: 'catime-copy-classic-scripts',
+        apply: 'build',
+        async closeBundle() {
+            await Promise.all([
+                cp(resolve(import.meta.dirname, 'scripts'), resolve(import.meta.dirname, 'dist/scripts'), { recursive: true }),
+                cp(resolve(import.meta.dirname, 'components'), resolve(import.meta.dirname, 'dist/components'), { recursive: true }),
+                cp(resolve(import.meta.dirname, 'assets/catime.webp'), resolve(import.meta.dirname, 'dist/assets/catime.webp')),
+                cp(
+                    resolve(import.meta.dirname, 'tools/font-tool/script.js'),
+                    resolve(import.meta.dirname, 'dist/tools/font-tool/script.js'),
+                ),
+            ]);
+        },
+    };
+}
+
 export default defineConfig({
-    plugins: [cleanUrlPlugin()],
+    plugins: [cleanUrlPlugin(), copyClassicScriptsPlugin()],
     build: {
         rollupOptions: {
             input: {

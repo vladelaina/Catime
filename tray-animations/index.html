@@ -10,16 +10,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://tray.cati.me" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    </noscript>
     <link rel="stylesheet" href="../styles/style.css">
     <link rel="stylesheet" href="styles/tray-animations.css">
     <link rel="icon" type="image/png" href="../assets/catime.webp">
 
-    <script src="../scripts/config.js" defer></script>
-    <script src="../scripts/ui-utils.js" defer></script>
-    <script src="../scripts/components.js" data-auto-load defer></script>
-    <script src="../scripts/navigation.js" defer></script>
+    <script vite-ignore src="../scripts/config.js" defer></script>
+    <script vite-ignore src="../scripts/ui-utils.js" defer></script>
+    <script vite-ignore src="../scripts/components.js" data-auto-load defer></script>
+    <script vite-ignore src="../scripts/navigation.js" defer></script>
     <script src="scripts/tray-animations.js" type="module"></script>
 </head>
 <body class="tray-library-page">
