@@ -32,6 +32,7 @@ static double g_pendingScaleResizeAnchorRatioX = 0.5;
 static double g_pendingScaleResizeAnchorRatioY = 0.5;
 static UINT_PTR g_scaleApplyTimer = 0;
 static HWND g_scaleApplyTimerHwnd = NULL;
+static UINT g_scaleApplyIntervalMs = 0;
 static BOOL g_scaleTargetValid = FALSE;
 static BOOL g_scaleTargetPluginMode = FALSE;
 static float g_scaleTarget = 1.0f;
@@ -60,7 +61,15 @@ static HWND g_configSaveTimerHwnd = NULL;
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define SCALE_APPLY_TIMER_ID 42426
+/* Preserve 60 FPS for normal clocks, but bound full-DIB work for large
+ * Markdown/image windows where UpdateLayeredWindow dominates frame cost. */
 #define SCALE_APPLY_INTERVAL_MS 16u
+#define SCALE_APPLY_INTERVAL_MEDIUM_MS 24u
+#define SCALE_APPLY_INTERVAL_LARGE_MS 33u
+#define SCALE_APPLY_INTERVAL_HUGE_MS 42u
+#define SCALE_MEDIUM_WINDOW_PIXELS 500000ull
+#define SCALE_LARGE_WINDOW_PIXELS 2000000ull
+#define SCALE_HUGE_WINDOW_PIXELS 6000000ull
 #define SCALE_APPLY_IDLE_STOP_MS 80u
 #define SCALE_SMOOTH_RESPONSE_MS 28.0
 #define SCALE_FRAME_DELTA_MAX_MS 48u
@@ -79,9 +88,36 @@ static void ForceClearPendingScaleResizeAnchor(void);
 static BOOL IsPostScaleResizeAnchorActive(HWND hwnd);
 static BOOL IsLeftButtonPhysicallyDown(void);
 static BOOL IsValidDragScaleWindow(HWND hwnd);
+static VOID CALLBACK ScaleApplyTimerProc(HWND hwnd, UINT msg,
+                                         UINT_PTR idEvent, DWORD dwTime);
 
 static DWORD TickElapsedMs(DWORD now, DWORD then) {
     return (DWORD)(now - then);
+}
+
+static UINT GetScaleApplyInterval(HWND hwnd) {
+    RECT rect = {0};
+    if (!IsValidDragScaleWindow(hwnd) || !GetClientRect(hwnd, &rect)) {
+        return SCALE_APPLY_INTERVAL_MS;
+    }
+
+    LONG width = rect.right - rect.left;
+    LONG height = rect.bottom - rect.top;
+    if (width <= 0 || height <= 0) {
+        return SCALE_APPLY_INTERVAL_MS;
+    }
+
+    ULONGLONG pixels = (ULONGLONG)(ULONG)width * (ULONGLONG)(ULONG)height;
+    if (pixels >= SCALE_HUGE_WINDOW_PIXELS) {
+        return SCALE_APPLY_INTERVAL_HUGE_MS;
+    }
+    if (pixels >= SCALE_LARGE_WINDOW_PIXELS) {
+        return SCALE_APPLY_INTERVAL_LARGE_MS;
+    }
+    if (pixels >= SCALE_MEDIUM_WINDOW_PIXELS) {
+        return SCALE_APPLY_INTERVAL_MEDIUM_MS;
+    }
+    return SCALE_APPLY_INTERVAL_MS;
 }
 
 static void ClearManualEditPosition(void) {
@@ -474,6 +510,7 @@ static void StopScaleApplyTimer(HWND hwnd) {
 
     g_scaleApplyTimer = 0;
     g_scaleApplyTimerHwnd = NULL;
+    g_scaleApplyIntervalMs = 0;
     g_scaleTargetValid = FALSE;
     g_scaleTargetPluginMode = FALSE;
     g_scaleTarget = 1.0f;
@@ -551,6 +588,26 @@ static BOOL ApplySmoothedScaleTarget(HWND hwnd, DWORD elapsedMs) {
     return nextScale == g_scaleTarget;
 }
 
+static void RefreshScaleApplyTimerInterval(HWND hwnd) {
+    if (g_scaleApplyTimer == 0 || g_scaleApplyTimerHwnd != hwnd) {
+        return;
+    }
+
+    UINT desiredInterval = GetScaleApplyInterval(hwnd);
+    if (desiredInterval == g_scaleApplyIntervalMs) {
+        return;
+    }
+
+    UINT_PTR updatedTimer = SetTimer(hwnd,
+                                     SCALE_APPLY_TIMER_ID,
+                                     desiredInterval,
+                                     (TIMERPROC)ScaleApplyTimerProc);
+    if (updatedTimer != 0) {
+        g_scaleApplyTimer = updatedTimer;
+        g_scaleApplyIntervalMs = desiredInterval;
+    }
+}
+
 static VOID CALLBACK ScaleApplyTimerProc(HWND hwnd, UINT msg, UINT_PTR idEvent, DWORD dwTime) {
     (void)dwTime;
 
@@ -566,6 +623,9 @@ static VOID CALLBACK ScaleApplyTimerProc(HWND hwnd, UINT msg, UINT_PTR idEvent, 
         : SCALE_APPLY_INTERVAL_MS;
     g_lastScaleApplyTick = now;
     BOOL targetReached = ApplySmoothedScaleTarget(hwnd, elapsedMs);
+    if (!targetReached) {
+        RefreshScaleApplyTimerInterval(hwnd);
+    }
     BOOL inputIdle = TickElapsedMs(now, g_lastScaleWheelTick) >=
                      SCALE_APPLY_IDLE_STOP_MS;
     if (!g_scaleTargetValid ||
@@ -584,15 +644,17 @@ static BOOL EnsureScaleApplyTimer(HWND hwnd) {
     if (g_scaleApplyTimer != 0 && g_scaleApplyTimerHwnd == hwnd) return TRUE;
 
     StopScaleApplyTimer(hwnd);
+    UINT interval = GetScaleApplyInterval(hwnd);
     g_scaleApplyTimer = SetTimer(hwnd,
                                  SCALE_APPLY_TIMER_ID,
-                                 SCALE_APPLY_INTERVAL_MS,
+                                 interval,
                                  (TIMERPROC)ScaleApplyTimerProc);
     if (!g_scaleApplyTimer) {
         return FALSE;
     }
 
     g_scaleApplyTimerHwnd = hwnd;
+    g_scaleApplyIntervalMs = interval;
     g_lastScaleApplyTick = GetTickCount();
     AdvanceScaleGestureSerial();
     return TRUE;
@@ -1085,7 +1147,10 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     ScheduleConfigSave(hwnd);
 
     if (!hadActiveTimer) {
-        ApplySmoothedScaleTarget(hwnd, SCALE_APPLY_INTERVAL_MS);
+        UINT initialInterval = g_scaleApplyIntervalMs != 0
+            ? g_scaleApplyIntervalMs
+            : SCALE_APPLY_INTERVAL_MS;
+        ApplySmoothedScaleTarget(hwnd, initialInterval);
     }
 
     return TRUE;
