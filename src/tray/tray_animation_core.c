@@ -1293,7 +1293,7 @@ static void TrayAnimationTimerCallback(void* userData) {
         return;
     }
 
-    LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
+    const LoadedAnimation* currentAnim = g_isPreviewActive ? &g_previewAnimation : &g_mainAnimation;
     int* currentIndex = g_isPreviewActive ? &g_previewIndex : &g_mainIndex;
     BOOL shouldRequestUpdate = FALSE;
 
@@ -1517,8 +1517,6 @@ void StopTrayAnimation(HWND hwnd) {
         g_mainAnimationPreloaded = FALSE;
         g_preloadedIconCx = 0;
         g_preloadedIconCy = 0;
-    }
-    if (resourcesCanBeFreed) {
         CleanupPercentIconCache();
         CleanupTransparentTrayIcon();
     }

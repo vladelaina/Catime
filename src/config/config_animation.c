@@ -648,7 +648,7 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
     AnimSpeedPoint points[ANIM_SPEED_POINT_CAPACITY] = {0};
     int pointCount = 0;
     double defaultScalePercent = 100.0;
-    double fixedScalePercent = ANIMATION_FIXED_SPEED_DEFAULT_MULTIPLIER * 100.0;
+    double fixedScalePercent;
     int folderIntervalMs = TRAY_ANIMATION_DEFAULT_INTERVAL_MS;
     int minIntervalMs = 0;
 
