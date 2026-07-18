@@ -49,6 +49,7 @@ extern float PLUGIN_FONT_SCALE_FACTOR;
 #define MAX_RENDER_DIB_DIMENSION 4096
 #define MAX_RENDER_DIB_PIXELS (4096u * 4096u)
 #define RENDER_DIB_SHRINK_THRESHOLD_MULTIPLIER 4u
+#define SCALE_SNAPSHOT_MIN_PIXELS 500000u
 #define PLUGIN_IMAGE_STACK_CAPACITY 4
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define FONT_PATH_RESOLVE_FAILURE_RETRY_MS 5000u
@@ -849,6 +850,7 @@ static BOOL MeasureTextMarkdown(const wchar_t* text, const RenderContext* ctx, S
 }
 
 static void ReleaseRenderDibCache(void);
+static void ReleaseScaleFrameSnapshot(void);
 
 static BOOL RenderTextMarkdown(HDC hdc, const RECT* rect, const wchar_t* text, const RenderContext* ctx, BOOL editMode, void* bits,
                               MarkdownLink* links, int linkCount,
@@ -906,6 +908,7 @@ void CleanupDrawingRenderCache(void) {
     ClearPluginPaintCache();
     ClearMarkdownRenderCache();
     ClearTextMeasureCache();
+    ReleaseScaleFrameSnapshot();
     ReleaseRenderDibCache();
     CleanupFontSTB();
 }
@@ -1328,9 +1331,169 @@ typedef struct {
     void* bits;
     int width;
     int height;
+    BOOL frameValid;
+    BOOL frameWasScaleComposite;
+    BOOL frameEditMode;
+    HWND frameHwnd;
+    int frameWidth;
+    int frameHeight;
 } RenderDibCache;
 
 static RenderDibCache g_renderDibCache = {0};
+
+typedef struct {
+    HDC memDC;
+    HBITMAP memBitmap;
+    HBITMAP oldBitmap;
+    void* bits;
+    int width;
+    int height;
+    HWND hwnd;
+    DWORD gestureSerial;
+} ScaleFrameSnapshot;
+
+static ScaleFrameSnapshot g_scaleFrameSnapshot = {0};
+
+static void ReleaseScaleFrameSnapshot(void) {
+    if (g_scaleFrameSnapshot.memDC && g_scaleFrameSnapshot.oldBitmap) {
+        SelectObject(g_scaleFrameSnapshot.memDC,
+                     g_scaleFrameSnapshot.oldBitmap);
+    }
+    if (g_scaleFrameSnapshot.memBitmap) {
+        DeleteObject(g_scaleFrameSnapshot.memBitmap);
+    }
+    if (g_scaleFrameSnapshot.memDC) {
+        DeleteDC(g_scaleFrameSnapshot.memDC);
+    }
+    ZeroMemory(&g_scaleFrameSnapshot, sizeof(g_scaleFrameSnapshot));
+}
+
+static BOOL CreateScaleFrameSnapshotSurface(HDC referenceDC,
+                                            int width,
+                                            int height) {
+    if (!referenceDC || width <= 0 || height <= 0) {
+        return FALSE;
+    }
+
+    size_t pixelCount = 0;
+    if (!CalculatePixelCount(width, height, &pixelCount) ||
+        pixelCount > MAX_RENDER_DIB_PIXELS) {
+        return FALSE;
+    }
+
+    HDC memDC = CreateCompatibleDC(referenceDC);
+    if (!memDC) {
+        return FALSE;
+    }
+
+    BITMAPINFO bmi = {0};
+    bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = -height;
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+
+    void* bits = NULL;
+    HBITMAP bitmap = CreateDIBSection(referenceDC, &bmi, DIB_RGB_COLORS,
+                                      &bits, NULL, 0);
+    if (!bitmap || !bits) {
+        if (bitmap) DeleteObject(bitmap);
+        DeleteDC(memDC);
+        return FALSE;
+    }
+
+    HBITMAP oldBitmap = (HBITMAP)SelectObject(memDC, bitmap);
+    if (!oldBitmap || oldBitmap == (HBITMAP)HGDI_ERROR) {
+        DeleteObject(bitmap);
+        DeleteDC(memDC);
+        return FALSE;
+    }
+
+    g_scaleFrameSnapshot.memDC = memDC;
+    g_scaleFrameSnapshot.memBitmap = bitmap;
+    g_scaleFrameSnapshot.oldBitmap = oldBitmap;
+    g_scaleFrameSnapshot.bits = bits;
+    g_scaleFrameSnapshot.width = width;
+    g_scaleFrameSnapshot.height = height;
+    return TRUE;
+}
+
+static BOOL TryCaptureScaleFrameSnapshot(HWND hwnd,
+                                         HDC referenceDC,
+                                         DWORD gestureSerial,
+                                         const RECT* currentRect) {
+    if (!hwnd || !referenceDC || gestureSerial == 0 || !currentRect) {
+        return FALSE;
+    }
+
+    if (g_scaleFrameSnapshot.hwnd == hwnd &&
+        g_scaleFrameSnapshot.gestureSerial == gestureSerial &&
+        g_scaleFrameSnapshot.memDC && g_scaleFrameSnapshot.bits) {
+        return TRUE;
+    }
+
+    ReleaseScaleFrameSnapshot();
+
+    int width = currentRect->right - currentRect->left;
+    int height = currentRect->bottom - currentRect->top;
+    size_t pixelCount = 0;
+    if (!CalculatePixelCount(width, height, &pixelCount) ||
+        pixelCount < SCALE_SNAPSHOT_MIN_PIXELS ||
+        !g_renderDibCache.frameValid ||
+        g_renderDibCache.frameWasScaleComposite ||
+        !g_renderDibCache.frameEditMode ||
+        g_renderDibCache.frameHwnd != hwnd ||
+        g_renderDibCache.frameWidth != width ||
+        g_renderDibCache.frameHeight != height ||
+        !g_renderDibCache.bits) {
+        return FALSE;
+    }
+
+    if (!CreateScaleFrameSnapshotSurface(referenceDC, width, height)) {
+        return FALSE;
+    }
+
+    memcpy(g_scaleFrameSnapshot.bits,
+           g_renderDibCache.bits,
+           pixelCount * sizeof(DWORD));
+    g_scaleFrameSnapshot.hwnd = hwnd;
+    g_scaleFrameSnapshot.gestureSerial = gestureSerial;
+    return TRUE;
+}
+
+static BOOL CompositeScaleFrameSnapshot(HWND hwnd,
+                                        DWORD gestureSerial,
+                                        HDC destDC,
+                                        void* destBits,
+                                        int destWidth,
+                                        int destHeight) {
+    if (!hwnd || gestureSerial == 0 || !destDC || !destBits ||
+        destWidth <= 0 || destHeight <= 0 ||
+        g_scaleFrameSnapshot.hwnd != hwnd ||
+        g_scaleFrameSnapshot.gestureSerial != gestureSerial ||
+        !g_scaleFrameSnapshot.memDC || !g_scaleFrameSnapshot.bits) {
+        return FALSE;
+    }
+
+    size_t pixelCount = 0;
+    if (!CalculatePixelCount(destWidth, destHeight, &pixelCount)) {
+        return FALSE;
+    }
+    ZeroMemory(destBits, pixelCount * sizeof(DWORD));
+
+    BLENDFUNCTION blend = {0};
+    blend.BlendOp = AC_SRC_OVER;
+    blend.SourceConstantAlpha = 255;
+    blend.AlphaFormat = AC_SRC_ALPHA;
+    return AlphaBlend(destDC,
+                      0, 0, destWidth, destHeight,
+                      g_scaleFrameSnapshot.memDC,
+                      0, 0,
+                      g_scaleFrameSnapshot.width,
+                      g_scaleFrameSnapshot.height,
+                      blend);
+}
 
 static void ReleaseRenderDibCache(void) {
     if (g_renderDibCache.memDC && g_renderDibCache.oldBitmap) {
@@ -1549,6 +1712,7 @@ static void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
 
 void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     if (CLOCK_IS_DRAGGING) {
+        ReleaseScaleFrameSnapshot();
         return;
     }
 
@@ -1559,6 +1723,12 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     HDC hdc = ps->hdc;
     RECT rect;
     GetClientRect(hwnd, &rect);
+    DWORD activeScaleSerial = GetScaleWindowGestureSerial(hwnd);
+    if (activeScaleSerial == 0) {
+        ReleaseScaleFrameSnapshot();
+    } else {
+        TryCaptureScaleFrameSnapshot(hwnd, hdc, activeScaleSerial, &rect);
+    }
 
     ClearClickableRegions();
     timeText[0] = L'\0';
@@ -1815,137 +1985,144 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
         return;
     }
     DWORD* pixels = (DWORD*)pBits;
-    DWORD clearColor = CLOCK_EDIT_MODE ? 0x05000000 : 0x00000000;
+    BOOL usedScaleComposite =
+        CompositeScaleFrameSnapshot(hwnd, activeScaleSerial,
+                                    memDC, pBits,
+                                    rect.right, rect.bottom);
 
-    if (clearColor == 0) {
-        ZeroMemory(pixels, numPixels * sizeof(*pixels));
-    } else {
-        // Edit mode needs a small non-zero alpha so the background can receive mouse input.
-        for (size_t i = 0; i < numPixels; i++) {
-            pixels[i] = clearColor;
-        }
-    }
+    if (!usedScaleComposite) {
+        DWORD clearColor = CLOCK_EDIT_MODE ? 0x05000000 : 0x00000000;
 
-    if (hasContent) {
-        int textHeight = 0;
-
-        // Render text if any
-        if (hasText) {
-            RECT textRect = rect;
-            SIZE textSizeMeasured = measuredTextSize;
-
-            if (!measuredTextSizeValid) {
-                if (isMarkdown) {
-                    MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured,
-                                        headings, headingCount,
-                                        fontTags, fontTagCount);
-                } else {
-                    MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured,
-                                        NULL, 0, NULL, 0);
-                }
-            }
-
-            if (textSizeMeasured.cy > 0) {
-                textHeight = textSizeMeasured.cy;
-            }
-
-            if (isMarkdown) {
-                MarkdownLink* links = g_markdownRenderCache.links;
-                int linkCount = g_markdownRenderCache.linkCount;
-                MarkdownStyle* styles = g_markdownRenderCache.styles;
-                int styleCount = g_markdownRenderCache.styleCount;
-                MarkdownBlockquote* blockquotes = g_markdownRenderCache.blockquotes;
-                int blockquoteCount = g_markdownRenderCache.blockquoteCount;
-
-                RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                  links, linkCount, headings, headingCount, styles, styleCount,
-                                  blockquotes, blockquoteCount, colorTags, colorTagCount,
-                                  fontTags, fontTagCount, &textSizeMeasured);
-            } else {
-                RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
-                                  NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0,
-                                  &textSizeMeasured);
+        if (clearColor == 0) {
+            ZeroMemory(pixels, numPixels * sizeof(*pixels));
+        } else {
+            // Edit mode needs a small non-zero alpha so the background can receive mouse input.
+            for (size_t i = 0; i < numPixels; i++) {
+                pixels[i] = clearColor;
             }
         }
 
-        // Fill clickable regions with minimal alpha for mouse hit-testing (non-edit mode only)
-        if (!CLOCK_EDIT_MODE) {
-            FillClickableRegionsAlpha(pixels, rect.right, rect.bottom);
-        }
+        if (hasContent) {
+            int textHeight = 0;
 
-        // Render images below text (centered horizontally like text)
-        if (images && imageCount > 0) {
-            int imgY = textHeight > 0 ? AddRenderDimensionClamped(textHeight, 5) : 5;
-            int maxW = rect.right - 10;
-            if (maxW <= 0) maxW = rect.right;  // Fallback if window too narrow
-            ImageRenderContext imageRenderCtx = {0};
-            BOOL imageRenderCtxActive = FALSE;
-            BOOL imageRenderCtxAttempted = FALSE;
+            // Render text if any
+            if (hasText) {
+                RECT textRect = rect;
+                SIZE textSizeMeasured = measuredTextSize;
 
-            for (int i = 0; i < imageCount; i++) {
-                int maxH = rect.bottom - imgY - 5;
-                if (maxH <= 0) break;  // No more space for images
-
-                // Check if network image needs async download
-                if (images[i].isNetworkImage && !images[i].isDownloaded &&
-                    !images[i].isDownloading && !IsMarkdownImageRetryPending(&images[i])) {
-                    StartAsyncImageDownload(&images[i], hwnd);
-                }
-
-                // If downloading, show "Loading..." text
-                if (images[i].isDownloading || (images[i].isNetworkImage && !images[i].isDownloaded)) {
-                    // Draw "Loading..." centered with same color as text
-                    const wchar_t loadingText[] = L"Loading...";
-                    SetBkMode(memDC, TRANSPARENT);
-                    SetTextColor(memDC, ctx.textColor);
-                    int loadingTextLen = (int)(_countof(loadingText) - 1);
-                    SIZE loadingTextSize = {
-                        70,
-                        CalculateRenderFontSize(ctx.renderFontSize, ctx.fontScaleFactor)
-                    };
-                    if (loadingTextSize.cy <= 0) {
-                        loadingTextSize.cy = 16;
+                if (!measuredTextSizeValid) {
+                    if (isMarkdown) {
+                        MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured,
+                                            headings, headingCount,
+                                            fontTags, fontTagCount);
+                    } else {
+                        MeasureTextMarkdown(textToRender, &ctx, &textSizeMeasured,
+                                            NULL, 0, NULL, 0);
                     }
-                    GetTextExtentPoint32W(memDC, loadingText, loadingTextLen, &loadingTextSize);
-                    int textX = (rect.right - loadingTextSize.cx) / 2;
-                    TextOutW(memDC, textX, imgY, loadingText, loadingTextLen);
-                    imgY = AddRenderDimensionClamped(imgY,
-                                                     AddRenderDimensionClamped(loadingTextSize.cy, 5));
-                    continue;
                 }
 
-                // Get render size for centering
-                int imgRenderW = 0, imgRenderH = 0;
-                if (!CalculateImageRenderSize(&images[i], maxW, maxH, &imgRenderW, &imgRenderH)) {
-                    continue;  // Skip this image if calculation fails
+                if (textSizeMeasured.cy > 0) {
+                    textHeight = textSizeMeasured.cy;
                 }
 
-                // Center horizontally
-                int imgX = (rect.right - imgRenderW) / 2;
-                if (imgX < 5) imgX = 5;
+                if (isMarkdown) {
+                    MarkdownLink* links = g_markdownRenderCache.links;
+                    int linkCount = g_markdownRenderCache.linkCount;
+                    MarkdownStyle* styles = g_markdownRenderCache.styles;
+                    int styleCount = g_markdownRenderCache.styleCount;
+                    MarkdownBlockquote* blockquotes = g_markdownRenderCache.blockquotes;
+                    int blockquoteCount = g_markdownRenderCache.blockquoteCount;
 
-                int imgHeight = 0;
-                if (!imageRenderCtxAttempted) {
-                    imageRenderCtxActive = BeginImageRenderContext(memDC, &imageRenderCtx);
-                    imageRenderCtxAttempted = TRUE;
+                    RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                      links, linkCount, headings, headingCount, styles, styleCount,
+                                      blockquotes, blockquoteCount, colorTags, colorTagCount,
+                                      fontTags, fontTagCount, &textSizeMeasured);
+                } else {
+                    RenderTextMarkdown(memDC, &textRect, textToRender, &ctx, CLOCK_EDIT_MODE, pBits,
+                                      NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0, NULL, 0,
+                                      &textSizeMeasured);
                 }
+            }
+
+            // Fill clickable regions with minimal alpha for mouse hit-testing (non-edit mode only)
+            if (!CLOCK_EDIT_MODE) {
+                FillClickableRegionsAlpha(pixels, rect.right, rect.bottom);
+            }
+
+            // Render images below text (centered horizontally like text)
+            if (images && imageCount > 0) {
+                int imgY = textHeight > 0 ? AddRenderDimensionClamped(textHeight, 5) : 5;
+                int maxW = rect.right - 10;
+                if (maxW <= 0) maxW = rect.right;  // Fallback if window too narrow
+                ImageRenderContext imageRenderCtx = {0};
+                BOOL imageRenderCtxActive = FALSE;
+                BOOL imageRenderCtxAttempted = FALSE;
+
+                for (int i = 0; i < imageCount; i++) {
+                    int maxH = rect.bottom - imgY - 5;
+                    if (maxH <= 0) break;  // No more space for images
+
+                    // Check if network image needs async download
+                    if (images[i].isNetworkImage && !images[i].isDownloaded &&
+                        !images[i].isDownloading && !IsMarkdownImageRetryPending(&images[i])) {
+                        StartAsyncImageDownload(&images[i], hwnd);
+                    }
+
+                    // If downloading, show "Loading..." text
+                    if (images[i].isDownloading || (images[i].isNetworkImage && !images[i].isDownloaded)) {
+                        // Draw "Loading..." centered with same color as text
+                        const wchar_t loadingText[] = L"Loading...";
+                        SetBkMode(memDC, TRANSPARENT);
+                        SetTextColor(memDC, ctx.textColor);
+                        int loadingTextLen = (int)(_countof(loadingText) - 1);
+                        SIZE loadingTextSize = {
+                            70,
+                            CalculateRenderFontSize(ctx.renderFontSize, ctx.fontScaleFactor)
+                        };
+                        if (loadingTextSize.cy <= 0) {
+                            loadingTextSize.cy = 16;
+                        }
+                        GetTextExtentPoint32W(memDC, loadingText, loadingTextLen, &loadingTextSize);
+                        int textX = (rect.right - loadingTextSize.cx) / 2;
+                        TextOutW(memDC, textX, imgY, loadingText, loadingTextLen);
+                        imgY = AddRenderDimensionClamped(imgY,
+                                                         AddRenderDimensionClamped(loadingTextSize.cy, 5));
+                        continue;
+                    }
+
+                    // Get render size for centering
+                    int imgRenderW = 0, imgRenderH = 0;
+                    if (!CalculateImageRenderSize(&images[i], maxW, maxH, &imgRenderW, &imgRenderH)) {
+                        continue;  // Skip this image if calculation fails
+                    }
+
+                    // Center horizontally
+                    int imgX = (rect.right - imgRenderW) / 2;
+                    if (imgX < 5) imgX = 5;
+
+                    int imgHeight = 0;
+                    if (!imageRenderCtxAttempted) {
+                        imageRenderCtxActive = BeginImageRenderContext(memDC, &imageRenderCtx);
+                        imageRenderCtxAttempted = TRUE;
+                    }
+                    if (imageRenderCtxActive) {
+                        imgHeight = RenderMarkdownImageSizedWithContext(&imageRenderCtx,
+                                                                        &images[i], imgX, imgY,
+                                                                        imgRenderW, imgRenderH);
+                    }
+                    if (imgHeight > 0) {
+                        imgY = AddRenderDimensionClamped(imgY,
+                                                         AddRenderDimensionClamped(imgHeight, 5));
+                    }
+                }
+
                 if (imageRenderCtxActive) {
-                    imgHeight = RenderMarkdownImageSizedWithContext(&imageRenderCtx,
-                                                                    &images[i], imgX, imgY,
-                                                                    imgRenderW, imgRenderH);
-                }
-                if (imgHeight > 0) {
-                    imgY = AddRenderDimensionClamped(imgY,
-                                                     AddRenderDimensionClamped(imgHeight, 5));
+                    EndImageRenderContext(&imageRenderCtx);
                 }
             }
-
-            if (imageRenderCtxActive) {
-                EndImageRenderContext(&imageRenderCtx);
-            }
+        } else if (CLOCK_EDIT_MODE) {
+            FixAlphaChannel(pBits, rect.right, rect.bottom);
         }
-    } else if (CLOCK_EDIT_MODE) {
-        FixAlphaChannel(pBits, rect.right, rect.bottom);
     }
 
     /* Check if any color tag has gradient (multiple colors) before freeing */
@@ -2027,9 +2204,17 @@ void HandleWindowPaint(HWND hwnd, const PAINTSTRUCT* ps) {
     UNREFERENCED_PARAMETER(oldBitmap);
 
     if (layeredUpdateSucceeded) {
+        g_renderDibCache.frameValid = TRUE;
+        g_renderDibCache.frameWasScaleComposite = usedScaleComposite;
+        g_renderDibCache.frameEditMode = CLOCK_EDIT_MODE;
+        g_renderDibCache.frameHwnd = hwnd;
+        g_renderDibCache.frameWidth = rect.right;
+        g_renderDibCache.frameHeight = rect.bottom;
         ResetMainWindowRenderRetry(hwnd);
         Timer_NotifyMainWindowPainted(paintBuffers->timerTextSnapshot);
         RefreshClickThroughState(hwnd);
         UpdateDrawingRenderAnimationTimerForFrame(hwnd, hasContent, hasColorTagGradient);
+    } else {
+        g_renderDibCache.frameValid = FALSE;
     }
 }

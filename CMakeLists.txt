@@ -612,6 +612,7 @@ target_link_libraries(catime PRIVATE
     dwmapi
     user32
     gdi32
+    msimg32
     shlwapi
     advapi32
     powrprof
