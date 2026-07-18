@@ -521,7 +521,7 @@ static BOOL BuildStableDigitMeasureText(const wchar_t* source, wchar_t* dest, si
 static void StabilizeScaleGestureText(HWND hwnd, wchar_t* text, size_t textCount) {
     if (!text || textCount == 0) return;
 
-    DWORD gestureSerial = GetScaleWindowGestureSerial(hwnd);
+    DWORD gestureSerial = GetScaleWindowVisualSerial(hwnd);
     if (gestureSerial == 0) {
         ZeroMemory(&g_scaleGestureTextCache, sizeof(g_scaleGestureTextCache));
         return;

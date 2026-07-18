@@ -71,7 +71,9 @@ static HWND g_configSaveTimerHwnd = NULL;
 #define SCALE_LARGE_WINDOW_PIXELS 2000000ull
 #define SCALE_HUGE_WINDOW_PIXELS 6000000ull
 #define SCALE_APPLY_IDLE_STOP_MS 80u
+#define SCALE_INITIAL_RESPONSE_MS 8u
 #define SCALE_SMOOTH_RESPONSE_MS 28.0
+#define SCALE_MAX_BLEND_PER_FRAME 0.52
 #define SCALE_FRAME_DELTA_MAX_MS 48u
 #define SCALE_SETTLE_ABS_EPSILON 0.0005f
 #define SCALE_SETTLE_REL_EPSILON 0.0002f
@@ -574,6 +576,9 @@ static BOOL ApplySmoothedScaleTarget(HWND hwnd, DWORD elapsedMs) {
     }
 
     double blend = 1.0 - exp(-(double)elapsedMs / SCALE_SMOOTH_RESPONSE_MS);
+    if (blend > SCALE_MAX_BLEND_PER_FRAME) {
+        blend = SCALE_MAX_BLEND_PER_FRAME;
+    }
     double nextValue = (double)currentScale + remaining * blend;
     float nextScale = ClampScaleFactor(nextValue);
     if (fabs((double)g_scaleTarget - (double)nextScale) <=
@@ -720,6 +725,21 @@ DWORD GetScaleWindowGestureSerial(HWND hwnd) {
     }
 
     return g_scaleGestureSerial;
+}
+
+DWORD GetScaleWindowVisualSerial(HWND hwnd) {
+    DWORD activeSerial = GetScaleWindowGestureSerial(hwnd);
+    if (activeSerial != 0) {
+        return activeSerial;
+    }
+
+    if (g_pendingScaleResizeAnchorValid &&
+        g_pendingScaleResizeAnchorHwnd == hwnd &&
+        IsPostScaleResizeAnchorActive(hwnd)) {
+        return g_scaleGestureSerial;
+    }
+
+    return 0;
 }
 
 void ClearPendingScaleResizeAnchor(HWND hwnd) {
@@ -1147,10 +1167,7 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     ScheduleConfigSave(hwnd);
 
     if (!hadActiveTimer) {
-        UINT initialInterval = g_scaleApplyIntervalMs != 0
-            ? g_scaleApplyIntervalMs
-            : SCALE_APPLY_INTERVAL_MS;
-        ApplySmoothedScaleTarget(hwnd, initialInterval);
+        ApplySmoothedScaleTarget(hwnd, SCALE_INITIAL_RESPONSE_MS);
     }
 
     return TRUE;

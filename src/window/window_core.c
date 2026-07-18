@@ -561,8 +561,8 @@ BOOL SaveWindowSettings(HWND hwnd) {
     BOOL taskbarAvailable = FALSE;
     snprintf(posXStr, sizeof(posXStr), "%d", CLOCK_WINDOW_POS_X);
     snprintf(posYStr, sizeof(posYStr), "%d", CLOCK_WINDOW_POS_Y);
-    snprintf(scaleStr, sizeof(scaleStr), "%.2f", CLOCK_WINDOW_SCALE);
-    snprintf(pluginScaleStr, sizeof(pluginScaleStr), "%.2f", PLUGIN_FONT_SCALE_FACTOR);
+    snprintf(scaleStr, sizeof(scaleStr), "%.9g", CLOCK_WINDOW_SCALE);
+    snprintf(pluginScaleStr, sizeof(pluginScaleStr), "%.9g", PLUGIN_FONT_SCALE_FACTOR);
     BOOL placementDataAvailable = GetMonitorPlacementData(
         &rect, monitorId, sizeof(monitorId),
         &monitorOffsetX, &monitorOffsetY, &taskbarAvailable,

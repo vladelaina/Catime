@@ -173,12 +173,12 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity, int* count) 
     
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "WINDOW_SCALE", sizeof(items[idx].key));
-    snprintf(items[idx].value, sizeof(items[idx].value), "%.2f", CLOCK_WINDOW_SCALE);
+    snprintf(items[idx].value, sizeof(items[idx].value), "%.9g", CLOCK_WINDOW_SCALE);
     idx++;
     
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));
     safe_strncpy(items[idx].key, "PLUGIN_SCALE", sizeof(items[idx].key));
-    snprintf(items[idx].value, sizeof(items[idx].value), "%.2f", PLUGIN_FONT_SCALE_FACTOR);
+    snprintf(items[idx].value, sizeof(items[idx].value), "%.9g", PLUGIN_FONT_SCALE_FACTOR);
     idx++;
     
     safe_strncpy(items[idx].section, INI_SECTION_DISPLAY, sizeof(items[idx].section));

@@ -146,6 +146,9 @@ void FinalizeScaleWindowGestureForManualMove(HWND hwnd);
  */
 DWORD GetScaleWindowGestureSerial(HWND hwnd);
 
+/** Keep the current scale frame content stable through its final anchored paint. */
+DWORD GetScaleWindowVisualSerial(HWND hwnd);
+
 /**
  * @brief Clear any pending mouse anchor for a paint-triggered resize.
  * @param hwnd Window handle
