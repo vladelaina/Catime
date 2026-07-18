@@ -1,7 +1,7 @@
 import { bundledLibraryPayload } from './library-snapshot.js';
 
 const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
-const LIBRARY_CACHE_KEY = 'catime:tray-library:v3';
+const LIBRARY_CACHE_KEY = 'catime:tray-library:v4';
 const MAX_CACHED_MANIFEST_BYTES = 2 * 1024 * 1024;
 
 export function loadImmediateLibraryData(source = configuredLibrarySource()) {
@@ -53,6 +53,7 @@ function normalizeCollection(key, data) {
         authorAvatar: data.authorAvatar || data.avatar || '',
         authorUrl: data.authorUrl || data.creatorUrl || '',
         authorTag: data.authorTag || data.tag || '',
+        authorLinks: normalizeAuthorLinks(data.authorLinks),
         rating: Number(data.rating) || 0,
         reviewCount: Number(data.reviewCount) || 0,
         description: data.description || '',
@@ -80,9 +81,35 @@ function groupByAuthor(collections) {
         avatar: items.find(item => item.authorAvatar)?.authorAvatar || '',
         url: items.find(item => item.authorUrl)?.authorUrl || '',
         tag: items.find(item => item.authorTag)?.authorTag || '',
+        links: mergeAuthorLinks(items),
         rating: items.find(item => item.rating)?.rating || 0,
         reviewCount: items.reduce((sum, item) => sum + item.reviewCount, 0),
     }));
+}
+
+function normalizeAuthorLinks(links) {
+    if (!Array.isArray(links)) return [];
+    return links.flatMap(link => {
+        if (!link || typeof link.label !== 'string' || typeof link.url !== 'string') return [];
+        try {
+            const url = new URL(link.url);
+            if (url.protocol !== 'https:' && url.protocol !== 'http:') return [];
+            return [{ label: link.label.trim(), url: url.toString() }];
+        } catch {
+            return [];
+        }
+    }).filter(link => link.label);
+}
+
+function mergeAuthorLinks(items) {
+    const links = items.flatMap(item => item.authorLinks);
+    const seen = new Set();
+    return links.filter(link => {
+        const key = `${link.label.toLowerCase()}\0${link.url}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 }
 
 export function animationFilename(collection, index) {

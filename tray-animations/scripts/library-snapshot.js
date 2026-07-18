@@ -3,23 +3,26 @@
 // background for the next visit.
 export const bundledLibraryPayload = {
     version: '1.0.0',
-    generated: '2026-07-17T06:20:02.622Z',
+    generated: '2026-07-18T01:16:45.759Z',
     sections: {
         eirna: {
             count: 3,
             title: 'eirna',
             author: 'eirna',
             authorBio: '',
-            authorAvatar: '',
+            authorAvatar: 'https://tray.cati.me/avatars/eirna.webp',
             authorUrl: '',
             authorTag: '',
+            authorLinks: [
+                { label: 'Bilibili', url: 'https://space.bilibili.com/1195508399' },
+            ],
             description: '',
             repository: 'https://github.com/catime-labs/eirna',
             repositoryName: 'eirna',
             cdnBase: 'https://tray.cati.me/assets/eirna/',
             files: ['1.gif', '2.gif', '3.gif'],
             fileVersions: ['04962ed22b26', '4ab18f94554f', '9b260efe647b'],
-            updated: '2026-07-17T06:20:02.619Z',
+            updated: '2026-07-18T01:16:45.757Z',
         },
     },
 };

@@ -204,6 +204,23 @@
     transition: color 0.3s ease;
 }
 
+.artist-name-link,
+.artist-profile-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.artist-name-link {
+    display: inline-flex;
+    min-width: 0;
+}
+
+.artist-name-link:focus-visible,
+.artist-profile-link:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 4px;
+}
+
 .artist-showcase:hover .artist-name-line strong {
     color: var(--primary-color);
 }
@@ -253,6 +270,8 @@
     align-items: center;
     gap: 4px;
     transition: all 0.3s ease;
+    text-decoration: none;
+    cursor: pointer;
 }
 
 .artist-gallery-tag:hover {

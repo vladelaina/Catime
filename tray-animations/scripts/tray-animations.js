@@ -39,7 +39,7 @@ async function loadLibrary(hasImmediateLibrary) {
         // Keep an already-visible board stable. The fresh payload has been
         // cached for the next navigation. A newer catalog can update this view
         // only while the user has not started interacting with it.
-        const hasNewRevision = library.revision && library.revision !== state.revision;
+        const hasNewRevision = isNewerRevision(library.revision, state.revision);
         if (!hasImmediateLibrary || (hasNewRevision && !state.userInteracted)) applyLibrary(library);
     } catch (error) {
         console.error('Unable to load tray animation library.', error);
@@ -49,6 +49,14 @@ async function loadLibrary(hasImmediateLibrary) {
         elements.empty.querySelector('h3').textContent = '动画资源加载失败';
         elements.empty.querySelector('p').textContent = '请稍后刷新页面重试。';
     }
+}
+
+function isNewerRevision(next, current) {
+    if (!next || next === current) return false;
+    const nextTime = Date.parse(next);
+    const currentTime = Date.parse(current);
+    if (Number.isFinite(nextTime) && Number.isFinite(currentTime)) return nextTime > currentTime;
+    return true;
 }
 
 function applyLibrary(library) {
@@ -73,17 +81,20 @@ function createArtistRow(author, index) {
     row.className = `artist-showcase${isExpanded ? ' expanded' : ''}${canExpand ? '' : ' artist-showcase-static'}`;
     row.style.setProperty('--author-color', colorForIndex(index));
 
-    const toggle = document.createElement(canExpand ? 'button' : 'div');
-    if (canExpand) toggle.type = 'button';
+    const toggle = document.createElement('div');
     toggle.className = `artist-identity${canExpand ? '' : ' artist-identity-static'}`;
-    if (canExpand) toggle.setAttribute('aria-expanded', String(isExpanded));
+    if (canExpand) {
+        toggle.tabIndex = 0;
+        toggle.setAttribute('role', 'button');
+        toggle.setAttribute('aria-expanded', String(isExpanded));
+    }
     toggle.innerHTML = `
         ${createArtistAvatar(author, index === 0)}
         <span class="artist-heading">
             <span class="artist-name-line">
-                <strong>${escapeHtml(author.name)}</strong>
+                ${createArtistName(author)}
                 <span class="artist-status">${escapeHtml(author.tag || '动画作者')}</span>
-                <span class="artist-gallery-tag">Bilibili</span>
+                ${createAuthorLinks(author)}
             </span>
             <span class="artist-metrics">${createArtistMetrics(author)}</span>
         </span>
@@ -92,7 +103,7 @@ function createArtistRow(author, index) {
 
     toggle.addEventListener('mouseenter', () => previewFirstWork(author));
     toggle.addEventListener('focus', () => previewFirstWork(author));
-    if (canExpand) toggle.addEventListener('click', () => {
+    const toggleExpanded = () => {
         state.userInteracted = true;
         const shouldExpand = !row.classList.contains('expanded');
         const expandedRow = elements.board.querySelector('.artist-showcase.expanded');
@@ -102,11 +113,55 @@ function createArtistRow(author, index) {
         state.expandedAuthor = shouldExpand ? author.name : null;
 
         if (shouldExpand) requestAnimationFrame(() => row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
-    });
+    };
+    if (canExpand) {
+        toggle.addEventListener('click', event => {
+            if (event.target.closest('a')) return;
+            toggleExpanded();
+        });
+        toggle.addEventListener('keydown', event => {
+            if (event.target !== toggle || (event.key !== 'Enter' && event.key !== ' ')) return;
+            event.preventDefault();
+            toggleExpanded();
+        });
+    }
 
     row.append(toggle, createFeaturedGallery(author, index === 0));
     if (isExpanded) row.appendChild(createArtistDetails(author));
     return row;
+}
+
+function createAuthorLinks(author) {
+    const links = author.links.length > 0
+        ? author.links
+        : author.url ? [{ label: author.tag || '作者主页', url: author.url }] : [];
+    return links.map(link => `
+        <a class="artist-gallery-tag" href="${escapeAttribute(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a>
+    `).join('');
+}
+
+function createArtistName(author) {
+    const url = preferredAuthorUrl(author);
+    const name = `<strong>${escapeHtml(author.name)}</strong>`;
+    return url
+        ? `<a class="artist-name-link" href="${escapeAttribute(url)}" target="_blank" rel="noopener noreferrer">${name}</a>`
+        : name;
+}
+
+function preferredAuthorUrl(author) {
+    const links = author.links.length > 0
+        ? author.links
+        : author.url ? [{ label: author.tag || 'Homepage', url: author.url }] : [];
+    const pixiv = links.find(link => {
+        if (link.label.toLowerCase() === 'pixiv') return true;
+        try {
+            const hostname = new URL(link.url).hostname.toLowerCase();
+            return hostname === 'pixiv.net' || hostname.endsWith('.pixiv.net');
+        } catch {
+            return false;
+        }
+    });
+    return pixiv?.url || links[0]?.url || '';
 }
 
 function setArtistRowExpanded(row, expanded, author) {
@@ -126,14 +181,19 @@ function createArtistAvatar(author, highPriority = false) {
     const imagePriority = highPriority
         ? ' loading="eager" decoding="async" fetchpriority="high"'
         : ' loading="lazy" decoding="async"';
+    const profileUrl = preferredAuthorUrl(author);
+    const tag = profileUrl ? 'a' : 'span';
+    const linkAttributes = profileUrl
+        ? ` href="${escapeAttribute(profileUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escapeAttribute(author.name)} profile"`
+        : '';
     if (author.avatar) {
-        return `<span class="artist-avatar"><img src="${escapeAttribute(author.avatar)}" alt="${escapeAttribute(author.name)}"${imagePriority}></span>`;
+        return `<${tag} class="artist-avatar artist-profile-link"${linkAttributes}><img src="${escapeAttribute(author.avatar)}" alt="${escapeAttribute(author.name)}"${imagePriority}></${tag}>`;
     }
     const preview = author.items[0] ? animationUrl(author.items[0], 1) : '';
     if (preview) {
-        return `<span class="artist-avatar"><img src="${escapeAttribute(preview)}" alt="${escapeAttribute(author.name)}"${imagePriority}></span>`;
+        return `<${tag} class="artist-avatar artist-profile-link"${linkAttributes}><img src="${escapeAttribute(preview)}" alt="${escapeAttribute(author.name)}"${imagePriority}></${tag}>`;
     }
-    return `<span class="artist-avatar artist-avatar-fallback">${escapeHtml(author.name.slice(0, 2))}</span>`;
+    return `<${tag} class="artist-avatar artist-avatar-fallback artist-profile-link"${linkAttributes}>${escapeHtml(author.name.slice(0, 2))}</${tag}>`;
 }
 
 function createArtistMetrics(author) {
