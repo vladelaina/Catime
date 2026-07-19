@@ -91,6 +91,8 @@ struct ModernDialogState {
     BOOL attached;
     BOOL finalized;
     BOOL finalizing;
+    BOOL refreshing;
+    BOOL refreshPending;
 };
 
 static LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
@@ -1207,6 +1209,9 @@ static void ModernPaintChoiceControl(ModernControl* control, HDC suppliedDc) {
         RECT glyph = {1, glyphY, 1 + glyphSize, glyphY + glyphSize};
         LRESULT checked = SendMessageW(control->hwnd, BM_GETCHECK, 0, 0);
         BOOL selected = checked == BST_CHECKED || checked == BST_INDETERMINATE;
+        COLORREF selectionMark = state->palette.highContrast
+            ? GetSysColor(COLOR_HIGHLIGHTTEXT)
+            : RGB(0xFF, 0xFF, 0xFF);
         if (control->kind == MODERN_CONTROL_RADIO) {
             HBRUSH brush = CreateSolidBrush(selected ? state->palette.accent :
                                                        state->palette.surface);
@@ -1220,7 +1225,7 @@ static void ModernPaintChoiceControl(ModernControl* control, HDC suppliedDc) {
                 RECT dot = glyph;
                 InflateRect(&dot, -DialogModern_Scale(state->dpi, 5),
                             -DialogModern_Scale(state->dpi, 5));
-                HBRUSH dotBrush = CreateSolidBrush(RGB(0xFF, 0xFF, 0xFF));
+                HBRUSH dotBrush = CreateSolidBrush(selectionMark);
                 HGDIOBJ prior = SelectObject(hdc, dotBrush);
                 Ellipse(hdc, dot.left, dot.top, dot.right, dot.bottom);
                 SelectObject(hdc, prior);
@@ -1238,7 +1243,7 @@ static void ModernPaintChoiceControl(ModernControl* control, HDC suppliedDc) {
                                          selected ? state->palette.accent :
                                                     state->palette.border, 1);
             if (selected) {
-                HPEN checkPen = CreatePen(PS_SOLID, 2, RGB(0xFF, 0xFF, 0xFF));
+                HPEN checkPen = CreatePen(PS_SOLID, 2, selectionMark);
                 HGDIOBJ oldPen = checkPen ? SelectObject(hdc, checkPen) : NULL;
                 int midX = (glyph.left + glyph.right) / 2;
                 int midY = (glyph.top + glyph.bottom) / 2;
@@ -1940,11 +1945,24 @@ BOOL DialogModern_Attach(HWND hwndDlg, int dialogType) {
 void DialogModern_Refresh(HWND hwndDlg) {
     ModernDialogState* state = ModernGetState(hwndDlg);
     if (!state) return;
-    ModernRebuildResources(state);
-    for (size_t i = 0; i < state->controlCount; i++) {
-        ModernSetControlFont(state, &state->controls[i]);
-        ModernApplyFieldRegion(&state->controls[i]);
+    if (state->refreshing) {
+        state->refreshPending = TRUE;
+        return;
     }
-    RedrawWindow(hwndDlg, NULL, NULL,
-                 RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+
+    state->refreshing = TRUE;
+    for (;;) {
+        state->refreshPending = FALSE;
+        ModernRebuildResources(state);
+        for (size_t i = 0; i < state->controlCount; i++) {
+            ModernSetControlFont(state, &state->controls[i]);
+            ModernApplyFieldRegion(&state->controls[i]);
+        }
+        RedrawWindow(hwndDlg, NULL, NULL,
+                     RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+
+        if (ModernGetState(hwndDlg) != state) return;
+        if (!state->refreshPending) break;
+    }
+    state->refreshing = FALSE;
 }

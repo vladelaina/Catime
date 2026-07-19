@@ -648,6 +648,20 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     return FALSE;
 }
 
+static BOOL MoveHotkeyDialogFocus(HWND hwnd, BOOL reverse) {
+    HWND dialog = hwnd ? GetParent(hwnd) : NULL;
+    if (!dialog) return FALSE;
+
+    HWND next = GetNextDlgTabItem(dialog, hwnd, reverse);
+    if (!next || next == hwnd || !IsWindowVisible(next) ||
+        !IsWindowEnabled(next)) {
+        return FALSE;
+    }
+
+    SetFocus(next);
+    return TRUE;
+}
+
 LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
                                           LPARAM lParam, UINT_PTR uIdSubclass,
                                           DWORD_PTR dwRefData) {
@@ -673,11 +687,29 @@ LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
-        case WM_KEYDOWN:
         case WM_SYSKEYDOWN:
         case WM_KEYUP:
         case WM_SYSKEYUP:
             InvalidateRect(hwnd, NULL, FALSE);
+            break;
+
+        case WM_KEYDOWN:
+            InvalidateRect(hwnd, NULL, FALSE);
+            /* DLGC_WANTALLKEYS is required for shortcut capture, but a bare
+             * Tab should still navigate through the form. Ctrl/Alt+Tab remain
+             * available as shortcut combinations. */
+            if (wParam == VK_TAB && GetKeyState(VK_CONTROL) >= 0 &&
+                GetKeyState(VK_MENU) >= 0 &&
+                MoveHotkeyDialogFocus(hwnd, GetKeyState(VK_SHIFT) < 0)) {
+                return 0;
+            }
+            break;
+
+        case WM_CHAR:
+            if (wParam == VK_TAB && GetKeyState(VK_CONTROL) >= 0 &&
+                GetKeyState(VK_MENU) >= 0) {
+                return 0;
+            }
             break;
 
         case HKM_SETHOTKEY:

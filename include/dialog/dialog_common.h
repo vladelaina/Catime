@@ -153,6 +153,13 @@ void Dialog_SelectAllText(HWND hwndEdit);
  */
 void Dialog_InitEditWithValue(HWND hwndEdit, const wchar_t* initialValue);
 
+/**
+ * @brief Check whether the dialog or one of its children owns keyboard focus
+ * @param hwndDlg Dialog handle
+ * @return TRUE when focus is already inside the dialog
+ */
+BOOL Dialog_HasFocusWithin(HWND hwndDlg);
+
 /* ============================================================================
  * Color Message Handling
  * ============================================================================ */

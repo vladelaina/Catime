@@ -283,6 +283,13 @@ void Dialog_InitEditWithValue(HWND hwndEdit, const wchar_t* initialValue) {
     Dialog_SelectAllText(hwndEdit);
 }
 
+BOOL Dialog_HasFocusWithin(HWND hwndDlg) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) return FALSE;
+
+    HWND focused = GetFocus();
+    return focused == hwndDlg || (focused && IsChild(hwndDlg, focused));
+}
+
 /* ============================================================================
  * Color Message Handling
  * ============================================================================ */

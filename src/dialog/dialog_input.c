@@ -536,7 +536,8 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (wParam == INPUT_FOCUS_TIMER_ID) {
                 KillTimer(hwndDlg, INPUT_FOCUS_TIMER_ID);
                 HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
-                if (hwndEdit && IsWindow(hwndEdit)) {
+                if (hwndEdit && IsWindow(hwndEdit) &&
+                    !Dialog_HasFocusWithin(hwndDlg)) {
                     SetForegroundWindow(hwndDlg);
                     SetFocus(hwndEdit);
                     Dialog_SelectAllText(hwndEdit);

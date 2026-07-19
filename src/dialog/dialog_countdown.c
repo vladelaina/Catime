@@ -1876,9 +1876,11 @@ static LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
         case WM_TIMER:
             if (wParam == INPUT_FOCUS_TIMER_ID && state) {
                 KillTimer(hwnd, INPUT_FOCUS_TIMER_ID);
-                SetForegroundWindow(hwnd);
-                SetFocus(state->hwndEdit);
-                SendMessageW(state->hwndEdit, EM_SETSEL, 0, -1);
+                if (!Dialog_HasFocusWithin(hwnd)) {
+                    SetForegroundWindow(hwnd);
+                    SetFocus(state->hwndEdit);
+                    SendMessageW(state->hwndEdit, EM_SETSEL, 0, -1);
+                }
                 return 0;
             }
             break;
