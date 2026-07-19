@@ -15,4 +15,7 @@ void RefreshNativeMenuTheme(void);
 /** Return TRUE when Catime's native menus should currently use dark colors. */
 BOOL IsNativeMenuDarkModeActive(void);
 
+/** Return the effective Catime appearance shared by menus and dialogs. */
+BOOL IsApplicationDarkModeActive(void);
+
 #endif /* TRAY_MENU_THEME_H */

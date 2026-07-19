@@ -10,6 +10,7 @@
 #include <commctrl.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <strsafe.h>
 #include <wchar.h>
 #include <windowsx.h>
 
@@ -17,6 +18,7 @@
 #define MODERN_DIALOG_CLOSE_ID 0x7FEE
 #define MODERN_DIALOG_SUBCLASS_ID 0xD140
 #define MODERN_CONTROL_SUBCLASS_ID 0xD141
+#define MODERN_DATETIME_CHILD_SUBCLASS_ID 0xD143
 #define MODERN_DIALOG_FINALIZE_MESSAGE (WM_APP + 490)
 
 typedef enum {
@@ -28,7 +30,8 @@ typedef enum {
     MODERN_CONTROL_GROUP,
     MODERN_CONTROL_FIELD,
     MODERN_CONTROL_LIST,
-    MODERN_CONTROL_COMBO
+    MODERN_CONTROL_COMBO,
+    MODERN_CONTROL_SLIDER
 } ModernControlKind;
 
 typedef struct ModernDialogState ModernDialogState;
@@ -98,6 +101,9 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                                                   WPARAM wParam, LPARAM lParam,
                                                   UINT_PTR subclassId,
                                                   DWORD_PTR refData);
+static LRESULT CALLBACK ModernDateTimeChildSubclassProc(
+    HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+    UINT_PTR subclassId, DWORD_PTR refData);
 static void ModernLayoutControls(ModernDialogState* state);
 static void ModernSetBodyScrollOffset(ModernDialogState* state, int offset96);
 static void ModernSyncClientSizeFromWindow(ModernDialogState* state);
@@ -154,6 +160,7 @@ static void ModernRebuildResources(ModernDialogState* state) {
     ModernDeleteFonts(state);
     ModernDeleteBrushes(state);
     DialogModern_ResolvePalette(&state->palette);
+    DialogModern_ApplyTheme(state->hwnd, state->palette.darkMode);
     state->backgroundBrush = CreateSolidBrush(state->palette.background);
     state->surfaceBrush = CreateSolidBrush(state->palette.surface);
     state->fieldBrush = CreateSolidBrush(state->palette.field);
@@ -209,7 +216,32 @@ static ModernControlKind ModernClassifyControl(HWND hwnd) {
         _wcsicmp(className, L"SysDateTimePick32") == 0) {
         return MODERN_CONTROL_COMBO;
     }
+    if (_wcsicmp(className, L"msctls_trackbar32") == 0) {
+        return MODERN_CONTROL_SLIDER;
+    }
     return MODERN_CONTROL_OTHER;
+}
+
+static BOOL ModernWindowHasClass(HWND hwnd, const wchar_t* expected) {
+    wchar_t className[64] = {0};
+    return hwnd && expected &&
+           GetClassNameW(hwnd, className, _countof(className)) > 0 &&
+           _wcsicmp(className, expected) == 0;
+}
+
+static BOOL ModernIsDateTimeControl(const ModernControl* control) {
+    return control && control->kind == MODERN_CONTROL_COMBO &&
+           ModernWindowHasClass(control->hwnd, L"SysDateTimePick32");
+}
+
+static BOOL CALLBACK ModernAttachDateTimeChild(HWND child, LPARAM data) {
+    ModernControl* control = (ModernControl*)data;
+    if (ModernWindowHasClass(child, L"msctls_updown32")) {
+        SetWindowSubclass(child, ModernDateTimeChildSubclassProc,
+                          MODERN_DATETIME_CHILD_SUBCLASS_ID,
+                          (DWORD_PTR)control);
+    }
+    return TRUE;
 }
 
 static BOOL ModernIsPrimaryButton(int id) {
@@ -369,6 +401,12 @@ static void ModernSetControlFont(const ModernDialogState* state,
         font = state->buttonFont;
     }
     if (font) SendMessageW(control->hwnd, WM_SETFONT, (WPARAM)font, TRUE);
+    if (control->kind == MODERN_CONTROL_FIELD ||
+        control->kind == MODERN_CONTROL_LIST ||
+        control->kind == MODERN_CONTROL_COMBO ||
+        control->kind == MODERN_CONTROL_SLIDER) {
+        DialogModern_ApplyTheme(control->hwnd, state->palette.darkMode);
+    }
 }
 
 static void ModernApplyFieldRegion(ModernControl* control) {
@@ -413,13 +451,19 @@ static void ModernStyleControl(ModernDialogState* state,
         ModernApplyFieldRegion(control);
     }
 
+    if (ModernIsDateTimeControl(control)) {
+        EnumChildWindows(control->hwnd, ModernAttachDateTimeChild,
+                         (LPARAM)control);
+    }
+
     if (control->kind == MODERN_CONTROL_PUSH ||
         control->kind == MODERN_CONTROL_CHECK ||
         control->kind == MODERN_CONTROL_RADIO ||
         control->kind == MODERN_CONTROL_GROUP ||
         control->kind == MODERN_CONTROL_FIELD ||
         control->kind == MODERN_CONTROL_LIST ||
-        control->kind == MODERN_CONTROL_COMBO) {
+        control->kind == MODERN_CONTROL_COMBO ||
+        control->kind == MODERN_CONTROL_SLIDER) {
         SetWindowSubclass(control->hwnd, ModernControlSubclassProc,
                           MODERN_CONTROL_SUBCLASS_ID, (DWORD_PTR)control);
     }
@@ -1217,6 +1261,188 @@ static void ModernPaintChoiceControl(ModernControl* control, HDC suppliedDc) {
     if (!suppliedDc) EndPaint(control->hwnd, &paint);
 }
 
+static void ModernPaintSlider(ModernControl* control, HDC suppliedDc) {
+    ModernDialogState* state = control ? control->owner : NULL;
+    if (!state || !control->hwnd) return;
+
+    PAINTSTRUCT paint = {0};
+    HDC hdc = suppliedDc ? suppliedDc : BeginPaint(control->hwnd, &paint);
+    if (!hdc) return;
+
+    RECT client = {0};
+    GetClientRect(control->hwnd, &client);
+    FillRect(hdc, &client, state->surfaceBrush);
+
+    LONG_PTR style = GetWindowLongPtrW(control->hwnd, GWL_STYLE);
+    BOOL vertical = (style & TBS_VERT) != 0;
+    BOOL reversed = (style & TBS_REVERSED) != 0;
+    int minimum = (int)SendMessageW(control->hwnd, TBM_GETRANGEMIN, 0, 0);
+    int maximum = (int)SendMessageW(control->hwnd, TBM_GETRANGEMAX, 0, 0);
+    int position = (int)SendMessageW(control->hwnd, TBM_GETPOS, 0, 0);
+    if (maximum <= minimum) maximum = minimum + 1;
+    if (position < minimum) position = minimum;
+    if (position > maximum) position = maximum;
+
+    int thumbRadius = DialogModern_Scale(state->dpi,
+                                         control->pressed ? 7 : 6);
+    int channelThickness = DialogModern_Scale(state->dpi, 4);
+    int edge = thumbRadius + DialogModern_Scale(state->dpi, 2);
+    int usable = vertical ? (client.bottom - client.top - edge * 2) :
+                            (client.right - client.left - edge * 2);
+    if (usable < 1) usable = 1;
+    int offset = MulDiv(position - minimum, usable, maximum - minimum);
+    if (reversed) offset = usable - offset;
+
+    POINT thumb = {0};
+    RECT channel = client;
+    RECT completed = client;
+    if (vertical) {
+        thumb.x = (client.left + client.right) / 2;
+        thumb.y = client.top + edge + offset;
+        channel.left = thumb.x - channelThickness / 2;
+        channel.right = channel.left + channelThickness;
+        channel.top = client.top + edge;
+        channel.bottom = client.bottom - edge;
+        completed = channel;
+        completed.bottom = thumb.y;
+    } else {
+        thumb.x = client.left + edge + offset;
+        thumb.y = (client.top + client.bottom) / 2;
+        channel.top = thumb.y - channelThickness / 2;
+        channel.bottom = channel.top + channelThickness;
+        channel.left = client.left + edge;
+        channel.right = client.right - edge;
+        completed = channel;
+        completed.right = thumb.x;
+    }
+
+    DialogModern_DrawRoundedRect(hdc, &channel, channelThickness,
+                                 state->palette.border,
+                                 state->palette.border, 0);
+    DialogModern_DrawRoundedRect(hdc, &completed, channelThickness,
+                                 state->palette.accent,
+                                 state->palette.accent, 0);
+
+    BOOL enabled = IsWindowEnabled(control->hwnd);
+    COLORREF thumbColor = enabled ? state->palette.accent :
+                                   state->palette.mutedText;
+    COLORREF outline = control->focused || control->hovered ?
+                       state->palette.accentHover : state->palette.surface;
+    HBRUSH thumbBrush = CreateSolidBrush(thumbColor);
+    HPEN thumbPen = CreatePen(PS_SOLID,
+                              control->focused ?
+                                  DialogModern_Scale(state->dpi, 2) : 1,
+                              outline);
+    HGDIOBJ oldBrush = thumbBrush ? SelectObject(hdc, thumbBrush) : NULL;
+    HGDIOBJ oldPen = thumbPen ? SelectObject(hdc, thumbPen) : NULL;
+    Ellipse(hdc, thumb.x - thumbRadius, thumb.y - thumbRadius,
+            thumb.x + thumbRadius + 1, thumb.y + thumbRadius + 1);
+    if (oldPen) SelectObject(hdc, oldPen);
+    if (oldBrush) SelectObject(hdc, oldBrush);
+    if (thumbPen) DeleteObject(thumbPen);
+    if (thumbBrush) DeleteObject(thumbBrush);
+
+    if (!suppliedDc) EndPaint(control->hwnd, &paint);
+}
+
+static HWND ModernFindDateTimeSpinner(HWND hwnd) {
+    HWND child = hwnd ? GetWindow(hwnd, GW_CHILD) : NULL;
+    while (child) {
+        if (ModernWindowHasClass(child, L"msctls_updown32")) return child;
+        child = GetWindow(child, GW_HWNDNEXT);
+    }
+    return NULL;
+}
+
+static void ModernPaintDateTime(ModernControl* control, HDC suppliedDc) {
+    ModernDialogState* state = control ? control->owner : NULL;
+    if (!state || !control->hwnd) return;
+
+    PAINTSTRUCT paint = {0};
+    HDC hdc = suppliedDc ? suppliedDc : BeginPaint(control->hwnd, &paint);
+    if (!hdc) return;
+    RECT client = {0};
+    GetClientRect(control->hwnd, &client);
+    FillRect(hdc, &client, state->fieldBrush);
+
+    SYSTEMTIME systemTime = {0};
+    wchar_t value[64] = {0};
+    if (SendMessageW(control->hwnd, DTM_GETSYSTEMTIME, 0,
+                     (LPARAM)&systemTime) != GDT_VALID) {
+        GetLocalTime(&systemTime);
+    }
+    if (!GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, TIME_FORCE24HOURFORMAT,
+                         &systemTime, NULL, value, (int)_countof(value))) {
+        StringCchPrintfW(value, _countof(value), L"%u:%02u:%02u",
+                         systemTime.wHour, systemTime.wMinute,
+                         systemTime.wSecond);
+    }
+
+    RECT textRect = client;
+    textRect.left += DialogModern_Scale(state->dpi, 10);
+    HWND spinner = ModernFindDateTimeSpinner(control->hwnd);
+    if (spinner) {
+        RECT spinnerRect = {0};
+        if (GetWindowRect(spinner, &spinnerRect)) {
+            MapWindowPoints(NULL, control->hwnd, (POINT*)&spinnerRect, 2);
+            textRect.right = spinnerRect.left -
+                             DialogModern_Scale(state->dpi, 4);
+        }
+    } else {
+        textRect.right -= DialogModern_Scale(state->dpi, 10);
+    }
+    COLORREF textColor = IsWindowEnabled(control->hwnd) ?
+                         state->palette.text : state->palette.mutedText;
+    DialogModern_DrawText(hdc, state->editFont, textColor, &textRect, value,
+                          DT_LEFT | DT_VCENTER | DT_SINGLELINE |
+                          DT_END_ELLIPSIS);
+    if (!suppliedDc) EndPaint(control->hwnd, &paint);
+}
+
+static void ModernPaintDateTimeSpinner(HWND hwnd, ModernControl* control,
+                                       HDC suppliedDc) {
+    ModernDialogState* state = control ? control->owner : NULL;
+    if (!state || !hwnd) return;
+
+    PAINTSTRUCT paint = {0};
+    HDC hdc = suppliedDc ? suppliedDc : BeginPaint(hwnd, &paint);
+    if (!hdc) return;
+    RECT client = {0};
+    GetClientRect(hwnd, &client);
+    FillRect(hdc, &client, state->fieldBrush);
+
+    HPEN borderPen = CreatePen(PS_SOLID, 1, state->palette.border);
+    HGDIOBJ oldPen = borderPen ? SelectObject(hdc, borderPen) : NULL;
+    int middle = (client.top + client.bottom) / 2;
+    MoveToEx(hdc, client.left, client.top, NULL);
+    LineTo(hdc, client.left, client.bottom);
+    MoveToEx(hdc, client.left, middle, NULL);
+    LineTo(hdc, client.right, middle);
+    if (oldPen) SelectObject(hdc, oldPen);
+    if (borderPen) DeleteObject(borderPen);
+
+    COLORREF arrowColor = IsWindowEnabled(hwnd) ? state->palette.text :
+                                                 state->palette.mutedText;
+    HPEN arrowPen = CreatePen(PS_SOLID,
+                              max(1, DialogModern_Scale(state->dpi, 1)),
+                              arrowColor);
+    oldPen = arrowPen ? SelectObject(hdc, arrowPen) : NULL;
+    int centerX = (client.left + client.right) / 2;
+    int arm = max(2, DialogModern_Scale(state->dpi, 3));
+    int upperY = (client.top + middle) / 2;
+    int lowerY = (middle + client.bottom) / 2;
+    MoveToEx(hdc, centerX - arm, upperY + arm / 2, NULL);
+    LineTo(hdc, centerX, upperY - arm / 2);
+    LineTo(hdc, centerX + arm, upperY + arm / 2);
+    MoveToEx(hdc, centerX - arm, lowerY - arm / 2, NULL);
+    LineTo(hdc, centerX, lowerY + arm / 2);
+    LineTo(hdc, centerX + arm, lowerY - arm / 2);
+    if (oldPen) SelectObject(hdc, oldPen);
+    if (arrowPen) DeleteObject(arrowPen);
+
+    if (!suppliedDc) EndPaint(hwnd, &paint);
+}
+
 static void ModernTrackMouse(HWND hwnd) {
     TRACKMOUSEEVENT track = {0};
     track.cbSize = sizeof(track);
@@ -1240,6 +1466,27 @@ static BOOL ModernControlOwnsVerticalScroll(const ModernControl* control) {
     return FALSE;
 }
 
+static LRESULT CALLBACK ModernDateTimeChildSubclassProc(
+    HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+    UINT_PTR subclassId, DWORD_PTR refData) {
+    ModernControl* control = (ModernControl*)refData;
+    switch (msg) {
+        case WM_PAINT:
+            ModernPaintDateTimeSpinner(hwnd, control, NULL);
+            return 0;
+        case WM_PRINTCLIENT:
+            ModernPaintDateTimeSpinner(hwnd, control, (HDC)wParam);
+            return 0;
+        case WM_ERASEBKGND:
+            return 1;
+        case WM_NCDESTROY:
+            RemoveWindowSubclass(hwnd, ModernDateTimeChildSubclassProc,
+                                 subclassId);
+            break;
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
 static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                                                   WPARAM wParam, LPARAM lParam,
                                                   UINT_PTR subclassId,
@@ -1250,16 +1497,16 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
 
     switch (msg) {
         case WM_MOUSEMOVE:
-            if (control) {
+            if (control && !control->hovered) {
                 control->hovered = TRUE;
                 ModernTrackMouse(hwnd);
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
         case WM_MOUSELEAVE:
-            if (control) {
+            if (control && control->hovered) {
                 control->hovered = FALSE;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
         case WM_LBUTTONDOWN:
@@ -1269,20 +1516,20 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
         case WM_CAPTURECHANGED:
             if (control) {
                 control->pressed = FALSE;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
         case WM_SETFOCUS:
             if (control) {
                 ModernEnsureControlVisible(control);
                 control->focused = TRUE;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
         case WM_KILLFOCUS:
             if (control) {
                 control->focused = FALSE;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
         case WM_PAINT:
@@ -1290,6 +1537,16 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                             control->kind == MODERN_CONTROL_RADIO ||
                             control->kind == MODERN_CONTROL_GROUP)) {
                 ModernPaintChoiceControl(control, NULL);
+                return 0;
+            }
+            if (control && state && state->palette.darkMode &&
+                ModernIsDateTimeControl(control)) {
+                ModernPaintDateTime(control, NULL);
+                ModernDrawFieldOutline(control);
+                return 0;
+            }
+            if (control && control->kind == MODERN_CONTROL_SLIDER) {
+                ModernPaintSlider(control, NULL);
                 return 0;
             }
             if (control && (control->kind == MODERN_CONTROL_FIELD ||
@@ -1305,6 +1562,15 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                             control->kind == MODERN_CONTROL_RADIO ||
                             control->kind == MODERN_CONTROL_GROUP)) {
                 ModernPaintChoiceControl(control, (HDC)wParam);
+                return 0;
+            }
+            if (control && state && state->palette.darkMode &&
+                ModernIsDateTimeControl(control)) {
+                ModernPaintDateTime(control, (HDC)wParam);
+                return 0;
+            }
+            if (control && control->kind == MODERN_CONTROL_SLIDER) {
+                ModernPaintSlider(control, (HDC)wParam);
                 return 0;
             }
             break;
@@ -1347,7 +1613,8 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
             }
             break;
         case WM_SETCURSOR:
-            if (control && control->kind == MODERN_CONTROL_CLOSE) {
+            if (control && (control->kind == MODERN_CONTROL_CLOSE ||
+                            control->kind == MODERN_CONTROL_PUSH)) {
                 SetCursor(LoadCursorW(NULL, IDC_HAND));
                 return TRUE;
             }

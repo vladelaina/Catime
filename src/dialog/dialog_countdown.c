@@ -63,6 +63,7 @@ typedef struct {
     BOOL inputValid;
     BOOL showValidationError;
     BOOL selectAllOnNextFocus;
+    BOOL sanitizingInput;
     CountdownHoverPart hoverPart;
     CountdownHoverPart pressedPart;
     RECT editFrame;
@@ -83,8 +84,8 @@ typedef struct {
     wchar_t examples[2048];
     wchar_t startText[64];
     wchar_t cancelText[64];
-    wchar_t invalidText[128];
-    wchar_t previewText[128];
+    wchar_t invalidText[256];
+    wchar_t previewText[512];
     int exampleColumns;
     int exampleColumnWidths[2];
     int exampleTokenWidths[2];
@@ -208,6 +209,11 @@ static void CountdownRefreshPalette(CountdownDialogState* state) {
     state->dangerColor = palette.danger;
     state->dangerBackgroundColor = palette.dangerBackground;
 
+    if (state->hwndEdit) {
+        DialogModern_ApplyTheme(GetParent(state->hwndEdit), state->darkMode);
+        DialogModern_ApplyTheme(state->hwndEdit, state->darkMode);
+    }
+
     if (state->editBrush) {
         DeleteObject(state->editBrush);
     }
@@ -319,6 +325,35 @@ static void CountdownApplyShape(HWND hwnd, const CountdownDialogState* state) {
     DialogModern_ApplyWindowShape(hwnd, state->dpi, 20);
 }
 
+static void CountdownCenterEditText(const CountdownDialogState* state) {
+    if (!state || !state->hwndEdit) return;
+
+    RECT client = {0};
+    if (!GetClientRect(state->hwndEdit, &client)) return;
+    HDC hdc = GetDC(state->hwndEdit);
+    if (!hdc) return;
+
+    HFONT font = (HFONT)SendMessageW(state->hwndEdit, WM_GETFONT, 0, 0);
+    HGDIOBJ oldFont = font ? SelectObject(hdc, font) : NULL;
+    TEXTMETRICW metrics = {0};
+    if (GetTextMetricsW(hdc, &metrics)) {
+        int height = client.bottom - client.top;
+        int paddingY = (height - metrics.tmHeight) / 2;
+        if (paddingY < 0) paddingY = 0;
+        int paddingX = CountdownScaleValue(state, 10);
+        RECT formatRect = {
+            paddingX,
+            paddingY,
+            max(paddingX + 1, client.right - paddingX),
+            max(paddingY + 1, height - paddingY)
+        };
+        SendMessageW(state->hwndEdit, EM_SETRECTNP, 0,
+                     (LPARAM)&formatRect);
+    }
+    if (oldFont) SelectObject(hdc, oldFont);
+    ReleaseDC(state->hwndEdit, hdc);
+}
+
 static void CountdownLayout(HWND hwnd, CountdownDialogState* state) {
     if (!hwnd || !state) {
         return;
@@ -336,8 +371,8 @@ static void CountdownLayout(HWND hwnd, CountdownDialogState* state) {
     int footerBottom96 = state->compactLayout ? 12 : 20;
     int fieldHeight96 = state->ultraCompactLayout ? 50 :
                         (state->compactLayout ? 54 : 58);
-    int fieldGapToFooter96 = state->ultraCompactLayout ? 76 :
-                             (state->compactLayout ? 88 : 95);
+    int fieldGapToFooter96 = state->ultraCompactLayout ? 84 :
+                             (state->compactLayout ? 96 : 104);
     int margin = CountdownScaleValue(state, margin96);
     int closeSize = CountdownScaleValue(state, closeSize96);
     int closeTop = CountdownScaleValue(state, closeTop96);
@@ -378,9 +413,32 @@ static void CountdownLayout(HWND hwnd, CountdownDialogState* state) {
     }
 
     if (state->hwndEdit) {
+        HDC editDc = GetDC(state->hwndEdit);
+        if (editDc) {
+            HFONT editFont = (HFONT)SendMessageW(
+                state->hwndEdit, WM_GETFONT, 0, 0);
+            HGDIOBJ oldFont = editFont ? SelectObject(editDc, editFont) : NULL;
+            TEXTMETRICW metrics = {0};
+            if (GetTextMetricsW(editDc, &metrics)) {
+                int measuredHeight = metrics.tmHeight +
+                                     CountdownScaleValue(state, 8);
+                if (measuredHeight >= CountdownScaleValue(state, 24) &&
+                    measuredHeight < editHeight) {
+                    editHeight = measuredHeight;
+                    editTop = state->editFrame.top +
+                              (fieldHeight - editHeight) / 2;
+                }
+            }
+            if (oldFont) SelectObject(editDc, oldFont);
+            ReleaseDC(state->hwndEdit, editDc);
+        }
+    }
+
+    if (state->hwndEdit) {
         SetWindowPos(state->hwndEdit, NULL, editLeft, editTop,
                      editWidth, editHeight,
                      SWP_NOZORDER | SWP_NOACTIVATE);
+        CountdownCenterEditText(state);
     }
     if (state->hwndClose) {
         SetWindowPos(state->hwndClose, NULL,
@@ -434,6 +492,33 @@ static void CountdownDrawText(HDC hdc, HFONT font, COLORREF color,
                               const RECT* rect, const wchar_t* text,
                               UINT format) {
     DialogModern_DrawText(hdc, font, color, rect, text, format);
+}
+
+static void CountdownDrawWrappedText(HDC hdc, HFONT font, COLORREF color,
+                                     const RECT* rect,
+                                     const wchar_t* text) {
+    if (!hdc || !rect || !text) return;
+    HGDIOBJ oldFont = font ? SelectObject(hdc, font) : NULL;
+    int oldMode = SetBkMode(hdc, TRANSPARENT);
+    COLORREF oldColor = SetTextColor(hdc, color);
+
+    RECT measure = {0, 0, rect->right - rect->left,
+                    rect->bottom - rect->top};
+    DrawTextW(hdc, text, -1, &measure,
+              DT_LEFT | DT_WORDBREAK | DT_CALCRECT | DT_NOPREFIX);
+    int availableHeight = rect->bottom - rect->top;
+    int measuredHeight = measure.bottom - measure.top;
+    RECT drawRect = *rect;
+    if (measuredHeight > 0 && measuredHeight < availableHeight) {
+        drawRect.top += (availableHeight - measuredHeight) / 2;
+        drawRect.bottom = drawRect.top + measuredHeight;
+    }
+    DrawTextW(hdc, text, -1, &drawRect,
+              DT_LEFT | DT_WORDBREAK | DT_NOPREFIX);
+
+    SetTextColor(hdc, oldColor);
+    SetBkMode(hdc, oldMode);
+    if (oldFont) SelectObject(hdc, oldFont);
 }
 
 static int CountdownSplitExampleLines(const wchar_t* text,
@@ -786,6 +871,188 @@ static void CountdownDrawWarningIcon(HDC hdc, int centerX, int centerY,
     DeleteObject(pen);
 }
 
+static BOOL CountdownIsAllowedInputChar(wchar_t value) {
+    return (value >= L'A' && value <= L'Z') ||
+           (value >= L'a' && value <= L'z') ||
+           (value >= L'0' && value <= L'9') ||
+           value == L' ';
+}
+
+static size_t CountdownCopyAllowedInput(wchar_t* destination,
+                                        size_t destinationCount,
+                                        const wchar_t* source) {
+    if (!destination || destinationCount == 0) return 0;
+    destination[0] = L'\0';
+    if (!source) return 0;
+
+    size_t output = 0;
+    while (*source && output + 1 < destinationCount) {
+        if (CountdownIsAllowedInputChar(*source)) {
+            destination[output++] = *source;
+        }
+        source++;
+    }
+    destination[output] = L'\0';
+    return output;
+}
+
+static DWORD CountdownCountAllowedInput(const wchar_t* source, DWORD limit) {
+    if (!source) return 0;
+    DWORD count = 0;
+    for (DWORD i = 0; i < limit && source[i]; i++) {
+        if (CountdownIsAllowedInputChar(source[i])) count++;
+    }
+    return count;
+}
+
+static void CountdownNormalizeInputKey(const wchar_t* begin,
+                                       const wchar_t* end,
+                                       wchar_t* destination,
+                                       size_t destinationCount) {
+    if (!destination || destinationCount == 0) return;
+    destination[0] = L'\0';
+    if (!begin) return;
+
+    size_t output = 0;
+    const wchar_t* cursor = begin;
+    while (*cursor && (!end || cursor < end) &&
+           output + 1 < destinationCount) {
+        wchar_t value = *cursor++;
+        if ((value >= L'A' && value <= L'Z') ||
+            (value >= L'a' && value <= L'z') ||
+            (value >= L'0' && value <= L'9')) {
+            if (value >= L'A' && value <= L'Z') {
+                value = (wchar_t)(value - L'A' + L'a');
+            }
+            destination[output++] = value;
+        }
+    }
+    destination[output] = L'\0';
+}
+
+static void CountdownCopyTrimmedInput(wchar_t* destination,
+                                      size_t destinationCount,
+                                      const wchar_t* source) {
+    if (!destination || destinationCount == 0) return;
+    destination[0] = L'\0';
+    if (!source) return;
+
+    while (*source == L' ') source++;
+    size_t length = wcslen(source);
+    while (length > 0 && source[length - 1] == L' ') length--;
+    if (length >= destinationCount) length = destinationCount - 1;
+    wmemcpy(destination, source, length);
+    destination[length] = L'\0';
+}
+
+static BOOL CountdownBuildExamplePreview(const CountdownDialogState* state,
+                                         const wchar_t* input,
+                                         int totalSeconds,
+                                         wchar_t* destination,
+                                         size_t destinationCount) {
+    if (!state || !input || !destination || destinationCount == 0) {
+        return FALSE;
+    }
+
+    wchar_t inputKey[256] = {0};
+    wchar_t inputDisplay[256] = {0};
+    CountdownNormalizeInputKey(input, NULL, inputKey, _countof(inputKey));
+    CountdownCopyTrimmedInput(inputDisplay, _countof(inputDisplay), input);
+
+    wchar_t lines[12][256] = {{0}};
+    int lineCount = CountdownSplitExampleLines(
+        state->examples, lines, (int)_countof(lines));
+    for (int i = 0; i < lineCount; i++) {
+        wchar_t* equals = wcschr(lines[i], L'=');
+        if (!equals) continue;
+
+        wchar_t lineKey[256] = {0};
+        CountdownNormalizeInputKey(lines[i], equals, lineKey,
+                                   _countof(lineKey));
+        BOOL matches = inputKey[0] && wcscmp(inputKey, lineKey) == 0;
+        if (!matches) {
+            wchar_t exampleToken[256] = {0};
+            size_t tokenLength = (size_t)(equals - lines[i]);
+            while (tokenLength > 0 &&
+                   (lines[i][tokenLength - 1] == L' ' ||
+                    lines[i][tokenLength - 1] == L'\t')) {
+                tokenLength--;
+            }
+            if (tokenLength >= _countof(exampleToken)) {
+                tokenLength = _countof(exampleToken) - 1;
+            }
+            wmemcpy(exampleToken, lines[i], tokenLength);
+            exampleToken[tokenLength] = L'\0';
+            char exampleUtf8[256] = {0};
+            int exampleSeconds = 0;
+            matches = WideToUtf8(exampleToken, exampleUtf8,
+                                 sizeof(exampleUtf8)) &&
+                      ParseInput(exampleUtf8, &exampleSeconds) &&
+                      exampleSeconds == totalSeconds;
+        }
+        if (!matches) continue;
+
+        const wchar_t* explanation = equals + 1;
+        while (*explanation == L' ' || *explanation == L'\t') {
+            explanation++;
+        }
+        return SUCCEEDED(StringCchPrintfW(
+            destination, destinationCount, L"%s = %s",
+            inputDisplay, explanation));
+    }
+    return FALSE;
+}
+
+static void CountdownBuildPreviewText(const CountdownDialogState* state,
+                                      const wchar_t* input,
+                                      int totalSeconds,
+                                      const wchar_t* formatted,
+                                      wchar_t* destination,
+                                      size_t destinationCount) {
+    if (!destination || destinationCount == 0) return;
+    destination[0] = L'\0';
+    if (CountdownBuildExamplePreview(state, input, totalSeconds,
+                                     destination, destinationCount)) {
+        return;
+    }
+
+    wchar_t inputDisplay[256] = {0};
+    CountdownCopyTrimmedInput(inputDisplay, _countof(inputDisplay), input);
+    int hours = totalSeconds / 3600;
+    int minutes = (totalSeconds % 3600) / 60;
+    int seconds = totalSeconds % 60;
+    StringCchPrintfW(destination, destinationCount,
+                     L"%s = %s (%d:%02d:%02d)", inputDisplay,
+                     formatted ? formatted : L"", hours, minutes, seconds);
+}
+
+static void CountdownSanitizeEditText(HWND hwnd,
+                                      CountdownDialogState* state) {
+    if (!hwnd || !state || state->sanitizingInput) return;
+
+    wchar_t source[256] = {0};
+    GetWindowTextW(hwnd, source, (int)_countof(source));
+    wchar_t filtered[256] = {0};
+    CountdownCopyAllowedInput(filtered, _countof(filtered), source);
+    if (wcscmp(source, filtered) == 0) return;
+
+    DWORD selectionStart = 0;
+    DWORD selectionEnd = 0;
+    SendMessageW(hwnd, EM_GETSEL, (WPARAM)&selectionStart,
+                 (LPARAM)&selectionEnd);
+    size_t sourceLength = wcslen(source);
+    if (selectionStart > sourceLength) selectionStart = (DWORD)sourceLength;
+    if (selectionEnd > sourceLength) selectionEnd = (DWORD)sourceLength;
+
+    DWORD mappedStart = CountdownCountAllowedInput(source, selectionStart);
+    DWORD mappedEnd = CountdownCountAllowedInput(source, selectionEnd);
+
+    state->sanitizingInput = TRUE;
+    SetWindowTextW(hwnd, filtered);
+    SendMessageW(hwnd, EM_SETSEL, mappedStart, mappedEnd);
+    state->sanitizingInput = FALSE;
+}
+
 static void CountdownUpdatePreview(HWND hwnd, CountdownDialogState* state) {
     if (!hwnd || !state || !state->hwndEdit) {
         return;
@@ -809,9 +1076,12 @@ static void CountdownUpdatePreview(HWND hwnd, CountdownDialogState* state) {
         ParseInput(inputUtf8, &totalSeconds)) {
         char formatted[64] = {0};
         Dialog_FormatSecondsToString(totalSeconds, formatted, sizeof(formatted));
+        wchar_t formattedWide[64] = {0};
         if (MultiByteToWideChar(CP_UTF8, 0, formatted, -1,
-                                state->previewText,
-                                (int)_countof(state->previewText)) > 0) {
+                                formattedWide, (int)_countof(formattedWide)) > 0) {
+            CountdownBuildPreviewText(state, text, totalSeconds,
+                                      formattedWide, state->previewText,
+                                      _countof(state->previewText));
             state->inputValid = TRUE;
             state->showValidationError = FALSE;
             InvalidateRect(hwnd, NULL, FALSE);
@@ -974,8 +1244,8 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
                            editFocused ? state->accentColor : state->mutedColor);
 
     int previewTop = state->editFrame.bottom + smallGap;
-    int previewHeight96 = state->ultraCompactLayout ? 18 :
-                          (state->compactLayout ? 20 : 24);
+    int previewHeight96 = state->ultraCompactLayout ? 30 :
+                          (state->compactLayout ? 38 : 46);
     RECT previewRect = {state->editFrame.left + CountdownScaleValue(state, 18),
                         previewTop,
                         state->editFrame.right - CountdownScaleValue(state, 8),
@@ -987,9 +1257,8 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
                                      state, previewHeight96 / 2),
                                  CountdownScaleValue(state, 7),
                                  state->dangerColor);
-        CountdownDrawText(target, state->smallFont, state->dangerColor,
-                          &previewRect, state->invalidText,
-                          DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+        CountdownDrawWrappedText(target, state->smallFont, state->dangerColor,
+                                 &previewRect, state->invalidText);
     } else if (state->inputValid) {
         CountdownDrawCheckIcon(target,
                                previewRect.left - CountdownScaleValue(state, 9),
@@ -997,9 +1266,8 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
                                    state, previewHeight96 / 2),
                                CountdownScaleValue(state, 7),
                                state->accentColor);
-        CountdownDrawText(target, state->smallFont, state->accentColor,
-                          &previewRect, state->previewText,
-                          DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+        CountdownDrawWrappedText(target, state->smallFont, state->accentColor,
+                                 &previewRect, state->previewText);
     }
 
 }
@@ -1123,7 +1391,7 @@ static LRESULT CALLBACK CountdownEditSubclassProc(HWND hwnd, UINT msg,
             break;
 
         case WM_MOUSEMOVE:
-            if (state) {
+            if (state && state->hoverPart != COUNTDOWN_HOVER_EDIT) {
                 state->hoverPart = COUNTDOWN_HOVER_EDIT;
                 CountdownTrackMouse(hwnd);
                 InvalidateRect(parent, NULL, FALSE);
@@ -1160,7 +1428,47 @@ static LRESULT CALLBACK CountdownEditSubclassProc(HWND hwnd, UINT msg,
             break;
 
         case WM_CHAR:
-            if (wParam == VK_RETURN) {
+            if (wParam == VK_RETURN || wParam == VK_TAB) {
+                return 0;
+            }
+            if (wParam >= 0x20 &&
+                !CountdownIsAllowedInputChar((wchar_t)wParam)) {
+                return 0;
+            }
+            break;
+
+        case WM_PASTE: {
+            wchar_t filtered[256] = {0};
+            BOOL textAvailable = FALSE;
+            if (OpenClipboard(hwnd)) {
+                HANDLE data = GetClipboardData(CF_UNICODETEXT);
+                if (data) {
+                    const wchar_t* source = (const wchar_t*)GlobalLock(data);
+                    if (source) {
+                        CountdownCopyAllowedInput(filtered,
+                                                  _countof(filtered), source);
+                        textAvailable = TRUE;
+                        GlobalUnlock(data);
+                    }
+                }
+                CloseClipboard();
+            }
+            if (textAvailable) {
+                SendMessageW(hwnd, EM_REPLACESEL, TRUE, (LPARAM)filtered);
+            }
+            return 0;
+        }
+
+        case WM_SETTEXT: {
+            const wchar_t* source = (const wchar_t*)lParam;
+            if (!source) break;
+            wchar_t filtered[256] = {0};
+            CountdownCopyAllowedInput(filtered, _countof(filtered), source);
+            return DefSubclassProc(hwnd, msg, wParam, (LPARAM)filtered);
+        }
+
+        case WM_IME_CHAR:
+            if (!CountdownIsAllowedInputChar((wchar_t)wParam)) {
                 return 0;
             }
             break;
@@ -1185,38 +1493,38 @@ static LRESULT CALLBACK CountdownButtonSubclassProc(HWND hwnd, UINT msg,
 
     switch (msg) {
         case WM_MOUSEMOVE:
-            if (state) {
+            if (state && state->hoverPart != part) {
                 state->hoverPart = part;
                 CountdownTrackMouse(hwnd);
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
 
         case WM_MOUSELEAVE:
             if (state && state->hoverPart == part && GetCapture() != hwnd) {
                 state->hoverPart = COUNTDOWN_HOVER_NONE;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
 
         case WM_LBUTTONDOWN:
             if (state) {
                 state->pressedPart = part;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
 
         case WM_LBUTTONUP:
             if (state) {
                 state->pressedPart = COUNTDOWN_HOVER_NONE;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
 
         case WM_CAPTURECHANGED:
             if (state && state->pressedPart == part) {
                 state->pressedPart = COUNTDOWN_HOVER_NONE;
-                InvalidateRect(hwnd, NULL, TRUE);
+                InvalidateRect(hwnd, NULL, FALSE);
             }
             break;
 
@@ -1246,8 +1554,11 @@ static LRESULT CALLBACK CountdownButtonSubclassProc(HWND hwnd, UINT msg,
             break;
 
         case WM_SETCURSOR:
-            SetCursor(LoadCursorW(NULL, part == COUNTDOWN_HOVER_CLOSE ?
-                                         IDC_HAND : IDC_ARROW));
+            SetCursor(LoadCursorW(NULL,
+                                  (part == COUNTDOWN_HOVER_CLOSE ||
+                                   part == COUNTDOWN_HOVER_START ||
+                                   part == COUNTDOWN_HOVER_CANCEL) ?
+                                      IDC_HAND : IDC_ARROW));
             return TRUE;
 
         case WM_ERASEBKGND:
@@ -1255,7 +1566,7 @@ static LRESULT CALLBACK CountdownButtonSubclassProc(HWND hwnd, UINT msg,
 
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
-            InvalidateRect(hwnd, NULL, TRUE);
+            InvalidateRect(hwnd, NULL, FALSE);
             break;
 
         case WM_NCDESTROY:
@@ -1338,6 +1649,9 @@ static BOOL CountdownCreateControls(HWND hwnd, CountdownDialogState* state) {
         !state->hwndClose) {
         return FALSE;
     }
+
+    DialogModern_ApplyTheme(hwnd, state->darkMode);
+    DialogModern_ApplyTheme(state->hwndEdit, state->darkMode);
 
     SendMessageW(state->hwndEdit, EM_SETLIMITTEXT,
                  (WPARAM)(_countof(inputText) - 1), 0);
@@ -1522,6 +1836,7 @@ static LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             }
             if (controlId == CLOCK_IDC_EDIT) {
                 if (notification == EN_CHANGE) {
+                    CountdownSanitizeEditText(state->hwndEdit, state);
                     state->showValidationError = FALSE;
                     CountdownUpdatePreview(hwnd, state);
                     return 0;
@@ -1608,11 +1923,14 @@ static LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
         case WM_MOUSEMOVE:
             if (state) {
                 POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
-                state->hoverPart = PtInRect(&state->closeFrame, point) ?
-                                    COUNTDOWN_HOVER_CLOSE :
-                                    COUNTDOWN_HOVER_NONE;
-                CountdownTrackMouse(hwnd);
-                InvalidateRect(hwnd, NULL, FALSE);
+                CountdownHoverPart hover =
+                    PtInRect(&state->closeFrame, point) ?
+                        COUNTDOWN_HOVER_CLOSE : COUNTDOWN_HOVER_NONE;
+                if (hover != state->hoverPart) {
+                    state->hoverPart = hover;
+                    CountdownTrackMouse(hwnd);
+                    InvalidateRect(hwnd, NULL, FALSE);
+                }
             }
             break;
 

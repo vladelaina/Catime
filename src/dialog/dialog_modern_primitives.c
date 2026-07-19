@@ -4,6 +4,7 @@
  */
 
 #include "dialog/dialog_modern.h"
+#include "tray/tray_menu_theme.h"
 #include "utils/win32_dynamic_loader.h"
 #include <dwmapi.h>
 #include <strsafe.h>
@@ -11,6 +12,7 @@
 
 #define MODERN_DWM_CORNER_ATTRIBUTE 33
 #define MODERN_DWM_CORNER_ROUND 2
+#define MODERN_THEME_MODE_PROP L"Catime.DialogThemeMode"
 
 /* Keep the product accent identical across light and dark modern dialogs. */
 #define MODERN_ACCENT_COLOR RGB(0x54, 0xAE, 0xFF)
@@ -86,11 +88,6 @@ BOOL DialogModern_MeasureText96(HWND hwnd, HFONT font, const wchar_t* text,
     return TRUE;
 }
 
-static int ModernColorLuma(COLORREF color) {
-    return (GetRValue(color) * 299 + GetGValue(color) * 587 +
-            GetBValue(color) * 114) / 1000;
-}
-
 void DialogModern_ResolvePalette(DialogModernPalette* palette) {
     if (!palette) return;
     ZeroMemory(palette, sizeof(*palette));
@@ -102,7 +99,7 @@ void DialogModern_ResolvePalette(DialogModernPalette* palette) {
                               &highContrast, 0) &&
         (highContrast.dwFlags & HCF_HIGHCONTRASTON);
     palette->darkMode = !palette->highContrast &&
-                        ModernColorLuma(GetSysColor(COLOR_WINDOW)) < 150;
+                        IsApplicationDarkModeActive();
 
     if (palette->highContrast) {
         palette->background = GetSysColor(COLOR_WINDOW);
@@ -189,10 +186,9 @@ void DialogModern_DrawCloseButton(HDC hdc, const RECT* rect, UINT dpi,
         int diameter = width < height ? width : height;
         COLORREF fill = highContrast ? GetSysColor(COLOR_HIGHLIGHT) :
                                         RGB(0xFF, 0xFF, 0xFF);
-        COLORREF outline = highContrast ? GetSysColor(COLOR_WINDOWTEXT) :
-                                          border;
+        COLORREF outline = highContrast ? border : fill;
         DialogModern_DrawRoundedRect(hdc, &circle, diameter,
-                                     fill, outline, 1);
+                                     fill, outline, highContrast ? 1 : 0);
     }
 
     int centerX = (rect->left + rect->right) / 2;
@@ -225,6 +221,76 @@ void DialogModern_DrawText(HDC hdc, HFONT font, COLORREF color,
     SetTextColor(hdc, oldColor);
     SetBkMode(hdc, oldBkMode);
     if (oldFont) SelectObject(hdc, oldFont);
+}
+
+typedef HRESULT (WINAPI *DialogModernSetWindowThemeFn)(
+    HWND hwnd, LPCWSTR subAppName, LPCWSTR subIdList);
+
+static DialogModernSetWindowThemeFn g_setWindowTheme = NULL;
+static BOOL g_setWindowThemeResolved = FALSE;
+
+static void DialogModernResolveWindowThemeFunction(void) {
+    HMODULE uxtheme = GetModuleHandleW(L"uxtheme.dll");
+    if (!uxtheme) uxtheme = LoadLibraryW(L"uxtheme.dll");
+    if (uxtheme) {
+        CATIME_LOAD_PROC_ADDRESS(uxtheme, "SetWindowTheme", g_setWindowTheme);
+    }
+    g_setWindowThemeResolved = TRUE;
+}
+
+typedef struct {
+    BOOL darkMode;
+} DialogModernThemeChildrenContext;
+
+static BOOL CALLBACK DialogModernApplyThemeToChild(HWND child, LPARAM data) {
+    const DialogModernThemeChildrenContext* context =
+        (const DialogModernThemeChildrenContext*)data;
+    if (context) {
+        DialogModern_ApplyTheme(child, context->darkMode);
+    }
+    return TRUE;
+}
+
+void DialogModern_ApplyTheme(HWND hwnd, BOOL darkMode) {
+    INT_PTR desiredMode = darkMode ? 2 : 1;
+    if (!hwnd) return;
+    BOOL rootWindow = GetAncestor(hwnd, GA_ROOT) == hwnd;
+    BOOL modeChanged =
+        (INT_PTR)GetPropW(hwnd, MODERN_THEME_MODE_PROP) != desiredMode;
+    if (modeChanged) {
+        SetPropW(hwnd, MODERN_THEME_MODE_PROP, (HANDLE)desiredMode);
+        ApplyNativeMenuThemeToWindow(hwnd);
+        if (!g_setWindowThemeResolved) {
+            DialogModernResolveWindowThemeFunction();
+        }
+        if (g_setWindowTheme) {
+            const wchar_t* themeName = NULL;
+            if (darkMode) {
+                wchar_t className[64] = {0};
+                GetClassNameW(hwnd, className, (int)_countof(className));
+                themeName = (_wcsicmp(className, L"ComboBox") == 0 ||
+                             _wcsicmp(className, L"msctls_updown32") == 0)
+                    ? L"DarkMode_CFD"
+                    : L"DarkMode_Explorer";
+            }
+            (void)g_setWindowTheme(hwnd, themeName, NULL);
+        }
+    }
+
+    if (rootWindow) {
+        if (modeChanged) {
+            BOOL enabled = darkMode;
+            HRESULT result = DwmSetWindowAttribute(
+                hwnd, 20, &enabled, sizeof(enabled));
+            if (FAILED(result)) {
+                (void)DwmSetWindowAttribute(hwnd, 19, &enabled,
+                                             sizeof(enabled));
+            }
+        }
+        DialogModernThemeChildrenContext context = {darkMode};
+        EnumChildWindows(hwnd, DialogModernApplyThemeToChild,
+                         (LPARAM)&context);
+    }
 }
 
 void DialogModern_ApplyWindowShape(HWND hwnd, UINT dpi, int cornerRadius) {

@@ -323,11 +323,8 @@ static void RemoveHotkeyControlSubclassing(HWND hwndDlg) {
     }
 }
 
-static void PaintHotkeyPlaceholder(HWND hwnd, HDC hdc) {
-    if (!hwnd || !hdc ||
-        SendMessageW(hwnd, HKM_GETHOTKEY, 0, 0) != 0) {
-        return;
-    }
+static void PaintHotkeyCentered(HWND hwnd, HDC hdc) {
+    if (!hwnd || !hdc) return;
 
     RECT client = {0};
     GetClientRect(hwnd, &client);
@@ -342,13 +339,30 @@ static void PaintHotkeyPlaceholder(HWND hwnd, HDC hdc) {
     HFONT font = (HFONT)SendMessageW(hwnd, WM_GETFONT, 0, 0);
     HGDIOBJ oldFont = font ? SelectObject(hdc, font) : NULL;
     int oldMode = SetBkMode(hdc, TRANSPARENT);
-    COLORREF oldColor = SetTextColor(hdc, palette.mutedText);
+    COLORREF oldColor = SetTextColor(hdc, palette.text);
+    WORD hotkey = (WORD)SendMessageW(hwnd, HKM_GETHOTKEY, 0, 0);
+    wchar_t displayText[64] = {0};
+    if (hotkey == 0) {
+        const wchar_t* none = GetLocalizedString(NULL, L"None");
+        StringCchCopyW(displayText, _countof(displayText),
+                       none && none[0] ? none : L"None");
+        SetTextColor(hdc, palette.mutedText);
+    } else {
+        char hotkeyText[64] = {0};
+        HotkeyToString(hotkey, hotkeyText, sizeof(hotkeyText));
+        if (MultiByteToWideChar(CP_UTF8, 0, hotkeyText, -1,
+                                displayText,
+                                (int)_countof(displayText)) <= 0) {
+            displayText[0] = L'\0';
+        }
+    }
     RECT textRect = client;
-    textRect.left += DialogModern_Scale(DialogModern_GetDpi(hwnd), 10);
-    const wchar_t* placeholder = GetLocalizedString(NULL, L"None");
-    if (!placeholder || !placeholder[0]) placeholder = L"None";
-    DrawTextW(hdc, placeholder, -1, &textRect,
-              DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    InflateRect(&textRect,
+                -DialogModern_Scale(DialogModern_GetDpi(hwnd), 8),
+                0);
+    DrawTextW(hdc, displayText, -1, &textRect,
+              DT_CENTER | DT_VCENTER | DT_SINGLELINE |
+              DT_END_ELLIPSIS | DT_NOPREFIX);
     SetTextColor(hdc, oldColor);
     SetBkMode(hdc, oldMode);
     if (oldFont) SelectObject(hdc, oldFont);
@@ -575,10 +589,12 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 
                 if (ValidateAndSanitizeHotkey(&newHotkey)) {
                     SendDlgItemMessage(hwndDlg, ctrlId, HKM_SETHOTKEY, newHotkey, 0);
+                    InvalidateRect(GetDlgItem(hwndDlg, ctrlId), NULL, FALSE);
                     return TRUE;
                 }
 
                 ClearDuplicateHotkeys(hwndDlg, ctrlId, newHotkey);
+                InvalidateRect(GetDlgItem(hwndDlg, ctrlId), NULL, FALSE);
                 return TRUE;
             }
             
@@ -640,20 +656,38 @@ LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
 
     switch (uMsg) {
         case WM_PAINT: {
-            LRESULT result = DefSubclassProc(hwnd, uMsg, wParam, lParam);
-            HDC hdc = GetDC(hwnd);
-            if (hdc) {
-                PaintHotkeyPlaceholder(hwnd, hdc);
-                ReleaseDC(hwnd, hdc);
-            }
-            return result;
+            PAINTSTRUCT paint = {0};
+            HDC hdc = BeginPaint(hwnd, &paint);
+            if (hdc) PaintHotkeyCentered(hwnd, hdc);
+            EndPaint(hwnd, &paint);
+            return 0;
         }
 
         case WM_PRINTCLIENT: {
-            LRESULT result = DefSubclassProc(hwnd, uMsg, wParam, lParam);
-            PaintHotkeyPlaceholder(hwnd, (HDC)wParam);
-            return result;
+            PaintHotkeyCentered(hwnd, (HDC)wParam);
+            return 0;
         }
+
+        case WM_ERASEBKGND:
+            return 1;
+
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+        case WM_KEYDOWN:
+        case WM_SYSKEYDOWN:
+        case WM_KEYUP:
+        case WM_SYSKEYUP:
+            InvalidateRect(hwnd, NULL, FALSE);
+            break;
+
+        case HKM_SETHOTKEY:
+            InvalidateRect(hwnd, NULL, FALSE);
+            break;
+
+        case WM_NCDESTROY:
+            RemoveWindowSubclass(hwnd, HotkeyControlSubclassProc,
+                                 uIdSubclass);
+            break;
 
         case WM_GETDLGCODE:
             return DLGC_WANTALLKEYS | DLGC_WANTCHARS;

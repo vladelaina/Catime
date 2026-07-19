@@ -59,6 +59,8 @@ void DialogModern_DrawCloseButton(HDC hdc, const RECT* rect, UINT dpi,
 void DialogModern_DrawText(HDC hdc, HFONT font, COLORREF color,
                            const RECT* rect, const wchar_t* text,
                            UINT format);
+/** Apply the shared light/dark appearance to a window and native children. */
+void DialogModern_ApplyTheme(HWND hwnd, BOOL darkMode);
 void DialogModern_ApplyWindowShape(HWND hwnd, UINT dpi, int cornerRadius);
 
 #endif /* DIALOG_MODERN_H */

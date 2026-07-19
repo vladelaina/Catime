@@ -275,7 +275,11 @@ BOOL InitializeNativeMenuTheme(void) {
 
 void ApplyNativeMenuThemeToWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) return;
-    RefreshNativeMenuTheme();
+    if (!g_initialized) {
+        (void)InitializeNativeMenuTheme();
+    } else if (GetAncestor(hwnd, GA_ROOT) == hwnd) {
+        RefreshNativeMenuTheme();
+    }
     if (g_supported && g_allowDarkModeForWindow) {
         (void)g_allowDarkModeForWindow(hwnd, !IsHighContrastActive());
     }
@@ -327,4 +331,15 @@ BOOL IsNativeMenuDarkModeActive(void) {
         (void)InitializeNativeMenuTheme();
     }
     return g_supported && g_darkModeActive;
+}
+
+BOOL IsApplicationDarkModeActive(void) {
+    if (!g_initialized) {
+        (void)InitializeNativeMenuTheme();
+    }
+    if (g_supported) {
+        RefreshNativeMenuTheme();
+        return g_darkModeActive;
+    }
+    return !IsHighContrastActive() && QueryEffectiveDarkTheme();
 }

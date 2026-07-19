@@ -213,7 +213,7 @@ static BOOL PreviewFontInMainWindow(const wchar_t* fontName, const char* cachedF
     /* Restore focus to dialog listbox (main window InvalidateRect may steal focus) */
     if (hwndList && hdlg) {
         SetFocus(hwndList);
-        InvalidateRect(hwndList, NULL, TRUE);
+        InvalidateRect(hwndList, NULL, FALSE);
         UpdateWindow(hwndList);
     }
 
@@ -253,6 +253,7 @@ static BOOL g_fontListReady = FALSE;
 static BOOL g_fontEnumRestartAfterCleanup = FALSE;
 static volatile LONG g_fontEnumGeneration = 0;
 static int g_currentFontIndex = -1;
+static int g_previewFontIndex = -1;
 
 typedef struct {
     HWND hdlg;
@@ -393,6 +394,7 @@ static VOID CALLBACK FontEnumDeferredCleanupTimerProc(HWND hwnd, UINT msg,
     KillTimer(hwnd, FONT_ENUM_DEFERRED_CLEANUP_TIMER_ID);
     ResetFontMap();
     g_currentFontIndex = -1;
+    g_previewFontIndex = -1;
     g_fontListReady = FALSE;
     g_fontEnumRestartAfterCleanup = FALSE;
 }
@@ -425,6 +427,7 @@ void CleanupSystemFontDialogResources(void) {
 
     ResetFontMap();
     g_currentFontIndex = -1;
+    g_previewFontIndex = -1;
     g_fontListReady = FALSE;
     g_fontEnumRestartAfterCleanup = FALSE;
 }
@@ -653,13 +656,15 @@ static void SelectCurrentFontInList(HWND hdlg, HWND hwndList) {
                     SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)idx, 0);
                     if (idx >= 0 && idx <= INT_MAX) {
                         g_currentFontIndex = (int)idx;
+                        g_previewFontIndex = (int)idx;
                     } else {
                         g_currentFontIndex = -1;
+                        g_previewFontIndex = -1;
                     }
 
                     SendMessageW(hwndList, LB_SETTOPINDEX, (WPARAM)idx, 0);
                     SetFocus(hwndList);
-                    InvalidateRect(hwndList, NULL, TRUE);
+                    InvalidateRect(hwndList, NULL, FALSE);
                     UpdateWindow(hwndList);
                     found = TRUE;
                 }
@@ -671,13 +676,15 @@ static void SelectCurrentFontInList(HWND hdlg, HWND hwndList) {
             LOG_WARNING("FontPicker: Current system font not in font map (may be filtered)");
             SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)-1, 0);
             g_currentFontIndex = -1;
+            g_previewFontIndex = -1;
         }
     } else {
         SendMessageW(hwndList, LB_SETCURSEL, (WPARAM)-1, 0);
         g_currentFontIndex = -1;
+        g_previewFontIndex = -1;
     }
 
-    InvalidateRect(hwndList, NULL, TRUE);
+    InvalidateRect(hwndList, NULL, FALSE);
 }
 
 static void PopulateFontList(HWND hdlg) {
@@ -714,7 +721,7 @@ static void PopulateFontList(HWND hdlg) {
         addedCount++;
     }
     SendMessageW(hwndList, WM_SETREDRAW, TRUE, 0);
-    InvalidateRect(hwndList, NULL, TRUE);
+    InvalidateRect(hwndList, NULL, FALSE);
 
     EnableWindow(hwndList, TRUE);
     EnableWindow(GetDlgItem(hdlg, IDOK), TRUE);
@@ -955,6 +962,7 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
             
             /* Initialize checkmark index at dialog start */
             g_currentFontIndex = -1;
+            g_previewFontIndex = -1;
             
             SetWindowTextW(hdlg, GetLocalizedString(NULL, L"Select Font"));
             SetDlgItemTextW(hdlg, IDOK, GetLocalizedString(NULL, L"OK"));
@@ -1087,17 +1095,26 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                     int sel = (int)SendMessageW(hwndList, LB_GETCURSEL, 0, 0);
                     if (sel != LB_ERR) {
                         LRESULT itemData = SendMessageW(hwndList, LB_GETITEMDATA, (WPARAM)sel, 0);
+                        if (sel == g_previewFontIndex) {
+                            return TRUE;
+                        }
                         if (itemData >= 0 && itemData < g_fontMapCount) {
                             int fontIndex = (int)itemData;
-                            PreviewFontInMainWindow(g_fontMap[fontIndex].fontName,
-                                                    g_fontMap[fontIndex].fontPath,
-                                                    hdlg, hwndList);
+                            if (PreviewFontInMainWindow(
+                                    g_fontMap[fontIndex].fontName,
+                                    g_fontMap[fontIndex].fontPath,
+                                    hdlg, hwndList)) {
+                                g_previewFontIndex = sel;
+                            }
                         } else {
                             wchar_t fontName[LF_FACESIZE];
                             ZeroMemory(fontName, sizeof(fontName));
                             if (SendMessageW(hwndList, LB_GETTEXT, (WPARAM)sel,
                                              (LPARAM)fontName) != LB_ERR) {
-                                PreviewFontInMainWindow(fontName, NULL, hdlg, hwndList);
+                                if (PreviewFontInMainWindow(fontName, NULL,
+                                                            hdlg, hwndList)) {
+                                    g_previewFontIndex = sel;
+                                }
                             }
                         }
 
@@ -1144,6 +1161,7 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
 
             /* Clear checkmark index */
             g_currentFontIndex = -1;
+            g_previewFontIndex = -1;
             g_fontListReady = FALSE;
             g_fontState.closeHandled = FALSE;
 
