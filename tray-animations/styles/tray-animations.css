@@ -630,6 +630,43 @@
 
 .board-empty p { margin: 0; }
 
+.creator-note {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 18px;
+    margin-bottom: 45px;
+    padding: 0 4px 28px;
+    border-bottom: 1px solid rgba(120, 127, 153, 0.2);
+    color: var(--tray-muted);
+}
+
+.creator-note-icon {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    color: var(--tray-red);
+    font-size: 1rem;
+}
+
+.creator-note-copy h2 {
+    margin: 0 0 8px;
+    color: var(--heading-color);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.creator-note-copy p {
+    max-width: 880px;
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.8;
+}
+
 .tray-simulator {
     position: fixed;
     right: 24px;
