@@ -217,7 +217,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_COLOR, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_COLOR, hwndDlg);
 
             /* Set localized dialog title and button text */
             SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Set Color Value"));

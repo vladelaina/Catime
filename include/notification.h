@@ -4,7 +4,7 @@
  * 
  * Three modes with fallback chain (Toast → Modal → Tray):
  * 1. Toast - Custom animated overlay with transparency
- * 2. Modal - System MessageBox in background thread (non-blocking)
+ * 2. Modal - Modern acknowledgment dialog on a background UI thread
  * 3. Tray - System tray balloon (guaranteed delivery)
  * 
  * Dynamic width calculation prevents text clipping for long messages.

@@ -30,6 +30,7 @@
 #include "window_procedure/window_procedure.h"
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "../resource/resource.h"
 
 #ifndef HOTKEYF_SHIFT
@@ -39,6 +40,7 @@
 #endif
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define HOTKEY_DIALOG_SUBCLASS_ID 0xD142
 
 typedef struct {
     int editCtrlId;
@@ -51,7 +53,6 @@ typedef struct {
     HWND hwndParent;
     HBRUSH hBackgroundBrush;
     HBRUSH hButtonBrush;
-    WNDPROC origDlgProc;
     BOOL hotkeysSuspended;
     BOOL reregisterPosted;
 } HotkeyDialogState;
@@ -200,6 +201,55 @@ static BOOL ValidateAndSanitizeHotkey(WORD* hotkey) {
     return changed;
 }
 
+static void LayoutHotkeyDialogColumns(HWND hwndDlg) {
+    UINT dpi = DialogModern_GetDpi(hwndDlg);
+    HFONT measureFont = DialogModern_CreateFont(dpi, 12, FW_NORMAL);
+    int labelWidth96 = 128;
+
+    for (int i = 0; i < HOTKEY_COUNT; i++) {
+        HWND label = GetDlgItem(hwndDlg, g_hotkeyMetadata[i].labelCtrlId);
+        wchar_t text[256] = {0};
+        SIZE size = {0};
+        if (!label || !GetWindowTextW(label, text, _countof(text))) {
+            continue;
+        }
+        if (DialogModern_MeasureText96(label, measureFont, text, dpi, &size)) {
+            int measured96 = size.cx + 8;
+            if (measured96 > labelWidth96) labelWidth96 = measured96;
+        }
+    }
+    if (labelWidth96 > 280) labelWidth96 = 280;
+
+    if (measureFont) DeleteObject(measureFont);
+
+    for (int i = 0; i < HOTKEY_COUNT; i++) {
+        HWND label = GetDlgItem(hwndDlg, g_hotkeyMetadata[i].labelCtrlId);
+        HWND edit = GetDlgItem(hwndDlg, g_hotkeyMetadata[i].editCtrlId);
+        if (!label || !edit) continue;
+
+        RECT labelRect = {0};
+        RECT editRect = {0};
+        if (!DialogModern_GetChildRect96(
+                hwndDlg, g_hotkeyMetadata[i].labelCtrlId, dpi, &labelRect) ||
+            !DialogModern_GetChildRect96(
+                hwndDlg, g_hotkeyMetadata[i].editCtrlId, dpi, &editRect)) {
+            continue;
+        }
+
+        int gap96 = editRect.left - labelRect.right;
+        if (gap96 < 12) gap96 = 12;
+
+        DialogModern_SetChildRect96(
+            hwndDlg, g_hotkeyMetadata[i].labelCtrlId, dpi,
+            labelRect.left, labelRect.top, labelWidth96,
+            labelRect.bottom - labelRect.top);
+        DialogModern_SetChildRect96(
+            hwndDlg, g_hotkeyMetadata[i].editCtrlId, dpi,
+            labelRect.left + labelWidth96 + gap96, editRect.top,
+            editRect.right - editRect.left, editRect.bottom - editRect.top);
+    }
+}
+
 static void InitializeDialogLabels(HWND hwndDlg) {
     SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Hotkey Settings"));
 
@@ -211,6 +261,7 @@ static void InitializeDialogLabels(HWND hwndDlg) {
 
     SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(NULL, L"OK"));
     SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(NULL, L"Cancel"));
+    LayoutHotkeyDialogColumns(hwndDlg);
 }
 
 static void LoadHotkeyConfiguration(void) {
@@ -272,6 +323,37 @@ static void RemoveHotkeyControlSubclassing(HWND hwndDlg) {
     }
 }
 
+static void PaintHotkeyPlaceholder(HWND hwnd, HDC hdc) {
+    if (!hwnd || !hdc ||
+        SendMessageW(hwnd, HKM_GETHOTKEY, 0, 0) != 0) {
+        return;
+    }
+
+    RECT client = {0};
+    GetClientRect(hwnd, &client);
+    DialogModernPalette palette;
+    DialogModern_CopyPalette(GetParent(hwnd), &palette);
+    HBRUSH brush = CreateSolidBrush(palette.field);
+    if (brush) {
+        FillRect(hdc, &client, brush);
+        DeleteObject(brush);
+    }
+
+    HFONT font = (HFONT)SendMessageW(hwnd, WM_GETFONT, 0, 0);
+    HGDIOBJ oldFont = font ? SelectObject(hdc, font) : NULL;
+    int oldMode = SetBkMode(hdc, TRANSPARENT);
+    COLORREF oldColor = SetTextColor(hdc, palette.mutedText);
+    RECT textRect = client;
+    textRect.left += DialogModern_Scale(DialogModern_GetDpi(hwnd), 10);
+    const wchar_t* placeholder = GetLocalizedString(NULL, L"None");
+    if (!placeholder || !placeholder[0]) placeholder = L"None";
+    DrawTextW(hdc, placeholder, -1, &textRect,
+              DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    SetTextColor(hdc, oldColor);
+    SetBkMode(hdc, oldMode);
+    if (oldFont) SelectObject(hdc, oldFont);
+}
+
 /** Prevents triggering hotkey while configuring it */
 static BOOL IsExistingHotkeyEvent(WORD keyCombination) {
     for (int i = 0; i < HOTKEY_COUNT; i++) {
@@ -309,7 +391,20 @@ static BYTE GetCurrentModifiers(UINT msg) {
 }
 
 /** Intercepts hotkey events to prevent accidental trigger during configuration */
-LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+static LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg,
+                                                 WPARAM wParam, LPARAM lParam,
+                                                 UINT_PTR subclassId,
+                                                 DWORD_PTR refData) {
+    UNREFERENCED_PARAMETER(subclassId);
+    UNREFERENCED_PARAMETER(refData);
+
+    if (msg == WM_NCDESTROY) {
+        LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+        RemoveWindowSubclass(hwnd, HotkeyDialogSubclassProc,
+                             HOTKEY_DIALOG_SUBCLASS_ID);
+        return result;
+    }
+
     if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN || msg == WM_KEYUP || msg == WM_SYSKEYUP) {
         BYTE vk = (BYTE)wParam;
         
@@ -368,12 +463,7 @@ LRESULT CALLBACK HotkeyDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LP
             break;
     }
 
-    HotkeyDialogState* state = GetHotkeyDialogState(hwnd);
-    if (!state || !state->origDlgProc) {
-        return DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-
-    return CallWindowProc(state->origDlgProc, hwnd, msg, wParam, lParam);
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
 void ShowHotkeySettingsDialog(HWND hwndParent) {
@@ -416,7 +506,7 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             }
             SetHotkeyDialogState(hwndDlg, state);
 
-            Dialog_RegisterInstance(DIALOG_INSTANCE_HOTKEY, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_HOTKEY, hwndDlg);
             MoveDialogToPrimaryScreen(hwndDlg);
 
             InitializeDialogLabels(hwndDlg);
@@ -431,13 +521,10 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             }
             SetupHotkeyControlSubclassing(hwndDlg);
 
-            SetLastError(0);
-            WNDPROC origDlgProc = (WNDPROC)SetWindowLongPtr(hwndDlg, GWLP_WNDPROC,
-                                                            (LONG_PTR)HotkeyDialogSubclassProc);
-            if (origDlgProc) {
-                state->origDlgProc = origDlgProc;
-            } else if (GetLastError() != 0) {
-                LOG_WARNING("Failed to subclass hotkey dialog: %lu", GetLastError());
+            if (!SetWindowSubclass(hwndDlg, HotkeyDialogSubclassProc,
+                                  HOTKEY_DIALOG_SUBCLASS_ID, 0)) {
+                LOG_WARNING("Failed to subclass hotkey dialog: %lu",
+                            GetLastError());
             }
 
             SetFocus(GetDlgItem(hwndDlg, IDCANCEL));
@@ -536,11 +623,6 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
         case WM_DESTROY:
             PostHotkeyReregister(hwndDlg);
 
-            if (state && state->origDlgProc) {
-                SetWindowLongPtr(hwndDlg, GWLP_WNDPROC, (LONG_PTR)state->origDlgProc);
-                state->origDlgProc = NULL;
-            }
-
             RemoveHotkeyControlSubclassing(hwndDlg);
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_HOTKEY, hwndDlg);
             DestroyHotkeyDialogState(hwndDlg, state);
@@ -551,12 +633,28 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
 }
 
 LRESULT CALLBACK HotkeyControlSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam,
-                                         LPARAM lParam, UINT_PTR uIdSubclass,
-                                         DWORD_PTR dwRefData) {
+                                          LPARAM lParam, UINT_PTR uIdSubclass,
+                                          DWORD_PTR dwRefData) {
     UNREFERENCED_PARAMETER(uIdSubclass);
     UNREFERENCED_PARAMETER(dwRefData);
 
     switch (uMsg) {
+        case WM_PAINT: {
+            LRESULT result = DefSubclassProc(hwnd, uMsg, wParam, lParam);
+            HDC hdc = GetDC(hwnd);
+            if (hdc) {
+                PaintHotkeyPlaceholder(hwnd, hdc);
+                ReleaseDC(hwnd, hdc);
+            }
+            return result;
+        }
+
+        case WM_PRINTCLIENT: {
+            LRESULT result = DefSubclassProc(hwnd, uMsg, wParam, lParam);
+            PaintHotkeyPlaceholder(hwnd, (HDC)wParam);
+            return result;
+        }
+
         case WM_GETDLGCODE:
             return DLGC_WANTALLKEYS | DLGC_WANTCHARS;
     }

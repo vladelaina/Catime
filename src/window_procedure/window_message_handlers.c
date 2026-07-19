@@ -151,32 +151,6 @@ static void ClearPendingEditExitRightClick(HWND hwnd) {
     }
 }
 
-static int HexDigitValue(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    return -1;
-}
-
-static BOOL TryParseHexColorRef(const char* color, COLORREF* out) {
-    if (!color || !out || color[0] != '#' || strlen(color) != 7) {
-        return FALSE;
-    }
-
-    int channels[3] = {0, 0, 0};
-    for (int i = 0; i < 3; i++) {
-        int hi = HexDigitValue(color[1 + i * 2]);
-        int lo = HexDigitValue(color[2 + i * 2]);
-        if (hi < 0 || lo < 0) {
-            return FALSE;
-        }
-        channels[i] = hi * 16 + lo;
-    }
-
-    *out = RGB(channels[0], channels[1], channels[2]);
-    return TRUE;
-}
-
 /* ============================================================================
  * Message Handler Implementations
  * ============================================================================ */
@@ -684,7 +658,7 @@ LRESULT HandleDrawItem(HWND hwnd, WPARAM wp, LPARAM lp) {
         DrawGradientRect(lpdis->hDC, &colorRect, &gradientSnapshot.info);
     } else {
         COLORREF color = RGB(255, 255, 255);
-        TryParseHexColorRef(hexColor, &color);
+        ColorStringToColorRef(hexColor, &color);
 
         HGDIOBJ hBrush = GetStockObject(DC_BRUSH);
         HGDIOBJ hPen = GetStockObject(DC_PEN);

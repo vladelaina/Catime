@@ -22,15 +22,41 @@
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_common.h"
 #include "drag_scale.h"
+#include "language.h"
 #include "log.h"
 
 extern BOOL CLOCK_WINDOW_TOPMOST;
 
 #define INPUT_BUFFER_SIZE 256
+#define CLI_HELP_TEXT_BUFFER_SIZE 2048
 
 
 
 static HWND g_cliHelpDialog = NULL;
+
+static void LocalizeCliHelpDialog(HWND hwndDlg) {
+    SetWindowTextW(hwndDlg,
+                   GetLocalizedString(NULL, L"CliHelpTitle"));
+    SetDlgItemTextW(hwndDlg, IDOK,
+                    GetLocalizedString(NULL, L"OK"));
+
+    const wchar_t* localized =
+        GetLocalizedString(NULL, L"CliHelpContent");
+    wchar_t normalized[CLI_HELP_TEXT_BUFFER_SIZE] = {0};
+    size_t output = 0;
+    wchar_t previous = L'\0';
+
+    while (localized && *localized && output + 1 < _countof(normalized)) {
+        if (*localized == L'\n' && previous != L'\r') {
+            if (output + 2 >= _countof(normalized)) break;
+            normalized[output++] = L'\r';
+        }
+        normalized[output++] = *localized;
+        previous = *localized++;
+    }
+    normalized[output] = L'\0';
+    SetDlgItemTextW(hwndDlg, IDC_CLI_HELP_EDIT, normalized);
+}
 
 static BOOL ShouldCloseHelpDialog(UINT msg, WPARAM wParam) {
     switch (msg) {
@@ -76,7 +102,8 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
     
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_CLI_HELP, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_CLI_HELP, hwndDlg);
+            LocalizeCliHelpDialog(hwndDlg);
             SendMessage(hwndDlg, DM_SETDEFID, (WPARAM)IDOK, 0);
             HWND hOk = GetDlgItem(hwndDlg, IDOK);
             if (hOk) SetFocus(hOk);

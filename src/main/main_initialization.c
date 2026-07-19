@@ -27,6 +27,7 @@
 #include "update_checker.h"
 #include "audio_player.h"
 #include "dialog/dialog_language.h"
+#include "dialog/dialog_common.h"
 #include "dialog/dialog_font_picker.h"
 #include "dialog/dialog_notification_audio.h"
 #include "shortcut_checker.h"
@@ -778,8 +779,7 @@ int RunMessageLoop(HWND hwnd) {
     
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
-        HWND hCliHelp = GetCliHelpDialog();
-        if (hCliHelp && IsDialogMessage(hCliHelp, &msg)) {
+        if (Dialog_ProcessModelessMessage(&msg)) {
             continue;
         }
         TranslateMessage(&msg);

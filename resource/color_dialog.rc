@@ -18,4 +18,40 @@ BEGIN
     /** Color value input field accepting multiple formats */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 110, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
     PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 140, 50, 14
-END 
+END
+
+/** @brief Modern HSV color picker with saved swatches and eyedropper */
+IDD_MODERN_COLOR_PICKER_DIALOG DIALOGEX 0, 0, 360, 230
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION |
+      WS_SYSMENU
+CAPTION "Set Color Value"
+FONT 9, "Segoe UI"
+BEGIN
+    CONTROL         "", IDC_MODERN_COLOR_SV, "Static",
+                    SS_OWNERDRAW | SS_NOTIFY | WS_TABSTOP,
+                    8, 8, 210, 140
+    CONTROL         "", IDC_MODERN_COLOR_HUE, "Static",
+                    SS_OWNERDRAW | SS_NOTIFY | WS_TABSTOP,
+                    224, 8, 18, 140
+    CONTROL         "", IDC_MODERN_COLOR_PREVIEW, "Static",
+                    SS_OWNERDRAW, 252, 8, 100, 34
+    LTEXT           "HEX", IDC_MODERN_COLOR_HEX_LABEL, 252, 52, 28, 12
+    EDITTEXT        IDC_MODERN_COLOR_HEX_EDIT, 286, 48, 66, 20,
+                    ES_AUTOHSCROLL | WS_TABSTOP
+    LTEXT           "R", IDC_MODERN_COLOR_RED_LABEL, 252, 80, 16, 12
+    EDITTEXT        IDC_MODERN_COLOR_RED_EDIT, 286, 76, 66, 20,
+                    ES_AUTOHSCROLL | ES_NUMBER | WS_TABSTOP
+    LTEXT           "G", IDC_MODERN_COLOR_GREEN_LABEL, 252, 108, 16, 12
+    EDITTEXT        IDC_MODERN_COLOR_GREEN_EDIT, 286, 104, 66, 20,
+                    ES_AUTOHSCROLL | ES_NUMBER | WS_TABSTOP
+    LTEXT           "B", IDC_MODERN_COLOR_BLUE_LABEL, 252, 136, 16, 12
+    EDITTEXT        IDC_MODERN_COLOR_BLUE_EDIT, 286, 132, 66, 20,
+                    ES_AUTOHSCROLL | ES_NUMBER | WS_TABSTOP
+    CONTROL         "", IDC_MODERN_COLOR_SAVED, "Static",
+                    SS_OWNERDRAW | SS_NOTIFY | WS_TABSTOP,
+                    8, 164, 234, 38
+    PUSHBUTTON      "Pick", IDC_MODERN_COLOR_PICK_BUTTON, 252, 164, 48, 20
+    PUSHBUTTON      "Save", IDC_MODERN_COLOR_SAVE_BUTTON, 304, 164, 48, 20
+    PUSHBUTTON      "Cancel", IDCANCEL, 246, 206, 50, 14
+    DEFPUSHBUTTON   "OK", IDOK, 302, 206, 50, 14
+END

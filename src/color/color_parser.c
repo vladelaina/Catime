@@ -217,6 +217,29 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
     safe_strncpy(output, input, output_size);
 }
 
+BOOL ColorStringToColorRef(const char* input, COLORREF* outColor) {
+    if (!input || !outColor) return FALSE;
+
+    char normalized[COLOR_HEX_BUFFER] = {0};
+    normalizeColor(input, normalized, sizeof(normalized));
+    if (normalized[0] != '#' || strlen(normalized) != HEX_COLOR_LENGTH) {
+        return FALSE;
+    }
+
+    unsigned int red = 0;
+    unsigned int green = 0;
+    unsigned int blue = 0;
+    if (sscanf(normalized + 1, "%2x%2x%2x", &red, &green, &blue) != 3) {
+        return FALSE;
+    }
+    for (size_t i = 1; i < HEX_COLOR_LENGTH; i++) {
+        if (!isxdigit((unsigned char)normalized[i])) return FALSE;
+    }
+
+    *outColor = RGB(red, green, blue);
+    return TRUE;
+}
+
 BOOL isValidColor(const char* input) {
     if (!input || !*input) return FALSE;
     

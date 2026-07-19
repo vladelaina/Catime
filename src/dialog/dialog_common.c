@@ -5,6 +5,7 @@
 
 #include "dialog/dialog_common.h"
 #include "dialog/dialog_error.h"
+#include "dialog/dialog_modern.h"
 #include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <stdlib.h>
@@ -29,6 +30,39 @@
 
 /** Dialog instance registry */
 static HWND g_dialogInstances[DIALOG_INSTANCE_COUNT] = {0};
+
+static int Dialog_GetDefaultCommandId(HWND hwndDlg) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) return 0;
+
+    LRESULT result = SendMessageW(hwndDlg, DM_GETDEFID, 0, 0);
+    if (HIWORD(result) == DC_HASDEFID) {
+        int controlId = LOWORD(result);
+        HWND button = GetDlgItem(hwndDlg, controlId);
+        if (button && IsWindowVisible(button) && IsWindowEnabled(button)) {
+            return controlId;
+        }
+    }
+
+    const int fallbackIds[] = {CLOCK_IDC_BUTTON_OK, IDOK, IDYES};
+    for (size_t i = 0; i < _countof(fallbackIds); i++) {
+        HWND button = GetDlgItem(hwndDlg, fallbackIds[i]);
+        if (button && IsWindowVisible(button) && IsWindowEnabled(button)) {
+            return fallbackIds[i];
+        }
+    }
+    return 0;
+}
+
+static BOOL Dialog_InvokeDefaultCommand(HWND hwndControl) {
+    HWND hwndDlg = hwndControl ? GetParent(hwndControl) : NULL;
+    int controlId = Dialog_GetDefaultCommandId(hwndDlg);
+    if (!controlId) return FALSE;
+
+    HWND button = GetDlgItem(hwndDlg, controlId);
+    SendMessageW(hwndDlg, WM_COMMAND,
+                 MAKEWPARAM(controlId, BN_CLICKED), (LPARAM)button);
+    return TRUE;
+}
 
 /* ============================================================================
  * Dialog Context Management
@@ -93,11 +127,11 @@ LRESULT APIENTRY Dialog_EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
             break;
 
         case WM_KEYDOWN:
-            if (wParam == VK_RETURN) {
-                HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
-                SendMessage(GetParent(hwnd), WM_COMMAND, 
-                           MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED), 
-                           (LPARAM)hwndOkButton);
+            if (wParam == VK_RETURN && Dialog_InvokeDefaultCommand(hwnd)) {
+                return 0;
+            }
+            if (wParam == VK_ESCAPE) {
+                SendMessageW(GetParent(hwnd), WM_CLOSE, 0, 0);
                 return 0;
             }
             
@@ -111,7 +145,11 @@ LRESULT APIENTRY Dialog_EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
             if (wParam == 1 || ((wParam == 'a' || wParam == 'A') && GetKeyState(VK_CONTROL) < 0)) {
                 return 0;
             }
-            if (wParam == VK_RETURN) {
+            if (wParam == VK_RETURN &&
+                Dialog_GetDefaultCommandId(GetParent(hwnd)) != 0) {
+                return 0;
+            }
+            if (wParam == VK_ESCAPE) {
                 return 0;
             }
             break;
@@ -193,11 +231,11 @@ LRESULT Dialog_EditSubclassProc_Ex(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             break;
 
         case WM_KEYDOWN:
-            if (wParam == VK_RETURN) {
-                HWND hwndOkButton = GetDlgItem(GetParent(hwnd), CLOCK_IDC_BUTTON_OK);
-                SendMessage(GetParent(hwnd), WM_COMMAND,
-                           MAKEWPARAM(CLOCK_IDC_BUTTON_OK, BN_CLICKED),
-                           (LPARAM)hwndOkButton);
+            if (wParam == VK_RETURN && Dialog_InvokeDefaultCommand(hwnd)) {
+                return 0;
+            }
+            if (wParam == VK_ESCAPE) {
+                SendMessageW(GetParent(hwnd), WM_CLOSE, 0, 0);
                 return 0;
             }
 
@@ -211,7 +249,11 @@ LRESULT Dialog_EditSubclassProc_Ex(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
             if (wParam == 1 || ((wParam == 'a' || wParam == 'A') && GetKeyState(VK_CONTROL) < 0)) {
                 return 0;
             }
-            if (wParam == VK_RETURN) {
+            if (wParam == VK_RETURN &&
+                Dialog_GetDefaultCommandId(GetParent(hwnd)) != 0) {
+                return 0;
+            }
+            if (wParam == VK_ESCAPE) {
                 return 0;
             }
             break;
@@ -383,9 +425,13 @@ BOOL Dialog_IsValidNumberInput(const wchar_t* str) {
 void Dialog_RegisterInstance(DialogInstanceType type, HWND hwnd) {
     if (type < 0 || type >= DIALOG_INSTANCE_COUNT) return;
     g_dialogInstances[type] = hwnd;
-    
-    /* Auto-apply topmost to ensure dialog stays visible across virtual desktops */
+}
+
+void Dialog_InitializeInstance(DialogInstanceType type, HWND hwnd) {
+    Dialog_RegisterInstance(type, hwnd);
+
     if (hwnd && IsWindow(hwnd)) {
+        DialogModern_Attach(hwnd, (int)type);
         Dialog_ApplyTopmost(hwnd);
     }
 }
@@ -414,6 +460,50 @@ HWND Dialog_GetInstance(DialogInstanceType type) {
 
 BOOL Dialog_IsOpen(DialogInstanceType type) {
     return Dialog_GetInstance(type) != NULL;
+}
+
+static BOOL Dialog_IsOpenComboMessage(HWND hwndDlg, HWND hwndMessage) {
+    HWND current = hwndMessage;
+    while (current && current != hwndDlg) {
+        wchar_t className[32] = {0};
+        if (GetClassNameW(current, className, _countof(className)) > 0 &&
+            (lstrcmpiW(className, L"ComboBox") == 0 ||
+             lstrcmpiW(className, L"ComboBoxEx32") == 0) &&
+            SendMessageW(current, CB_GETDROPPEDSTATE, 0, 0)) {
+            return TRUE;
+        }
+        current = GetParent(current);
+    }
+    return FALSE;
+}
+
+static BOOL Dialog_IsNativeDialogWindow(HWND hwnd) {
+    wchar_t className[32] = {0};
+    return hwnd &&
+           GetClassNameW(hwnd, className, _countof(className)) > 0 &&
+           lstrcmpW(className, L"#32770") == 0;
+}
+
+BOOL Dialog_ProcessModelessMessage(MSG* msg) {
+    if (!msg || !msg->hwnd) return FALSE;
+
+    for (int type = 0; type < DIALOG_INSTANCE_COUNT; type++) {
+        HWND hwndDlg = Dialog_GetInstance((DialogInstanceType)type);
+        if (!hwndDlg ||
+             (msg->hwnd != hwndDlg && !IsChild(hwndDlg, msg->hwnd))) {
+            continue;
+        }
+        if (msg->message == WM_KEYDOWN && msg->wParam == VK_ESCAPE &&
+            !Dialog_IsOpenComboMessage(hwndDlg, msg->hwnd)) {
+            SendMessageW(hwndDlg, WM_CLOSE, 0, 0);
+            return TRUE;
+        }
+        if (Dialog_IsNativeDialogWindow(hwndDlg) &&
+            IsDialogMessageW(hwndDlg, msg)) {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 /* ============================================================================

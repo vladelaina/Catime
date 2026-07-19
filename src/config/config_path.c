@@ -16,6 +16,7 @@
 #include <limits.h>
 #include <windows.h>
 #include <shlobj.h>
+#include <shellapi.h>
 #include <objbase.h>
 
 #define CONFIG_PATH_UNINITIALIZED 0
@@ -100,6 +101,66 @@ static BOOL BuildConfigPathFromLocalAppData(const wchar_t* wLocalAppData,
         return FALSE;
     }
     return TRUE;
+}
+
+static BOOL ResolveCiConfigRootW(wchar_t* outPath, size_t outSize) {
+    if (!outPath || outSize == 0 || outSize > INT_MAX) return FALSE;
+    outPath[0] = L'\0';
+
+    const wchar_t* commandLine = GetCommandLineW();
+    if (!commandLine) return FALSE;
+
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(commandLine, &argc);
+    if (!argv) return FALSE;
+
+    BOOL ciSmoke = FALSE;
+    for (int i = 1; i < argc; i++) {
+        if (wcscmp(argv[i], L"--ci-smoke") == 0) {
+            ciSmoke = TRUE;
+            break;
+        }
+    }
+    if (!ciSmoke) {
+        LocalFree(argv);
+        return FALSE;
+    }
+
+    BOOL resolved = FALSE;
+    static const wchar_t prefix[] = L"--ci-config-dir=";
+    for (int i = 1; i < argc; i++) {
+        if (wcsncmp(argv[i], prefix, _countof(prefix) - 1) != 0 ||
+            argv[i][(_countof(prefix) - 1)] == L'\0') {
+            continue;
+        }
+
+        wchar_t fullPath[MAX_PATH] = {0};
+        DWORD length = GetFullPathNameW(
+            argv[i] + (_countof(prefix) - 1),
+            _countof(fullPath), fullPath, NULL);
+        if (length == 0 || length >= _countof(fullPath)) break;
+
+        int createResult = SHCreateDirectoryExW(NULL, fullPath, NULL);
+        if (createResult != ERROR_SUCCESS &&
+            createResult != ERROR_ALREADY_EXISTS &&
+            createResult != ERROR_FILE_EXISTS) {
+            break;
+        }
+
+        DWORD attributes = GetFileAttributesW(fullPath);
+        if (attributes == INVALID_FILE_ATTRIBUTES ||
+            (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
+            wcslen(fullPath) >= outSize) {
+            break;
+        }
+
+        wcscpy_s(outPath, outSize, fullPath);
+        resolved = TRUE;
+        break;
+    }
+
+    LocalFree(argv);
+    return resolved;
 }
 
 static BOOL BuildConfigPathFromUserProfile(char* outPathUtf8, size_t outSize) {
@@ -289,6 +350,12 @@ BOOL ExpandEffectiveLocalAppDataPath(const char* value,
 static BOOL ResolveConfigPathUtf8(char* outPathUtf8, size_t outSize) {
     if (!outPathUtf8 || outSize == 0 || outSize > INT_MAX) return FALSE;
     outPathUtf8[0] = '\0';
+
+    wchar_t ciConfigRoot[MAX_PATH] = {0};
+    if (ResolveCiConfigRootW(ciConfigRoot, _countof(ciConfigRoot)) &&
+        BuildConfigPathFromLocalAppData(ciConfigRoot, outPathUtf8, outSize)) {
+        return TRUE;
+    }
 
     wchar_t effectiveLocalAppData[MAX_PATH] = {0};
     if (ResolveEffectiveLocalAppDataW(effectiveLocalAppData, MAX_PATH) &&

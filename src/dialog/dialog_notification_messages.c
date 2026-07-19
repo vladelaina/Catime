@@ -7,6 +7,7 @@
 #include "dialog/dialog_common.h"
 #include "language.h"
 #include "config.h"
+#include "utils/string_convert.h"
 #include "../resource/resource.h"
 #include <string.h>
 #include <limits.h>
@@ -14,21 +15,6 @@
 /* ============================================================================
  * Notification Messages Dialog
  * ============================================================================ */
-
-static BOOL ConvertNotificationMessageToUtf8(const wchar_t* source, char* dest, size_t destSize) {
-    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
-        return FALSE;
-    }
-
-    dest[0] = '\0';
-    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
-    if (required <= 0 || (size_t)required > destSize) {
-        return FALSE;
-    }
-
-    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
-                               (int)destSize, NULL, NULL) > 0;
-}
 
 void ShowNotificationMessagesDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_NOTIFICATION_MSG)) {
@@ -53,7 +39,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_NOTIFICATION_MSG, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_NOTIFICATION_MSG, hwndDlg);
 
             ctx = Dialog_CreateContext();
             if (!ctx) {
@@ -63,6 +49,8 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             }
             Dialog_SetContext(hwndDlg, ctx);
 
+            SetWindowTextW(hwndDlg,
+                           GetLocalizedString(NULL, L"Notification Content"));
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
             wchar_t wideText[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
@@ -72,10 +60,11 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
 
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_LABEL1,
-                           GetLocalizedString(L"Countdown timeout message:", L"Countdown timeout message:"));
+                           GetLocalizedString(NULL, L"Countdown timeout message:"));
 
-            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(L"OK", L"OK"));
-            SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(L"Cancel", L"Cancel"));
+            SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(NULL, L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL,
+                            GetLocalizedString(NULL, L"Cancel"));
 
             HWND hEdit1 = GetDlgItem(hwndDlg, IDC_NOTIFICATION_EDIT1);
 
@@ -106,7 +95,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
                 char timeout_msg[NOTIFICATION_MESSAGE_BUFFER_SIZE] = {0};
 
-                if (!ConvertNotificationMessageToUtf8(wTimeout, timeout_msg, sizeof(timeout_msg))) {
+                if (!WideToUtf8(wTimeout, timeout_msg, sizeof(timeout_msg))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
                     return TRUE;
                 }

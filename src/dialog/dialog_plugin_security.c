@@ -10,31 +10,15 @@
 #include "../../resource/resource.h"
 #include "dialog/dialog_info.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_markdown.h"
+#include "dialog/dialog_modern.h"
 #include "utils/string_convert.h"
-#include "markdown/markdown_parser.h"
 #include "language.h"
 #include "log.h"
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define PLUGIN_SECURITY_PARENT_PROP L"Catime.PluginSecurity.Parent"
 #define PLUGIN_SECURITY_MESSAGE_BUFFER_CHARS 4096
-
-/* Dialog state */
-static wchar_t* g_displayText = NULL;
-static MarkdownLink* g_links = NULL;
-static int g_linkCount = 0;
-static MarkdownHeading* g_headings = NULL;
-static int g_headingCount = 0;
-static MarkdownStyle* g_styles = NULL;
-static int g_styleCount = 0;
-static MarkdownListItem* g_listItems = NULL;
-static int g_listItemCount = 0;
-static MarkdownBlockquote* g_blockquotes = NULL;
-static int g_blockquoteCount = 0;
-static MarkdownColorTag* g_colorTags = NULL;
-static int g_colorTagCount = 0;
-static MarkdownFontTag* g_fontTags = NULL;
-static int g_fontTagCount = 0;
 
 /* Plugin info passed to dialog - accessible for result handling */
 static char g_pluginPath[MAX_PATH] = {0};
@@ -116,30 +100,16 @@ BOOL IsPluginSecurityDialogOpen(void) {
 /**
  * @brief Cleanup markdown rendering resources
  */
-static void CleanupMarkdownResources(void) {
-    FreeMarkdownLinks(g_links, g_linkCount);
-    g_links = NULL;
-    g_linkCount = 0;
-    
-    if (g_headings) { free(g_headings); g_headings = NULL; }
-    g_headingCount = 0;
-    
-    if (g_styles) { free(g_styles); g_styles = NULL; }
-    g_styleCount = 0;
-    
-    if (g_listItems) { free(g_listItems); g_listItems = NULL; }
-    g_listItemCount = 0;
-    
-    if (g_blockquotes) { free(g_blockquotes); g_blockquotes = NULL; }
-    g_blockquoteCount = 0;
-    
-    if (g_colorTags) { free(g_colorTags); g_colorTags = NULL; }
-    g_colorTagCount = 0;
-    
-    if (g_fontTags) { free(g_fontTags); g_fontTags = NULL; }
-    g_fontTagCount = 0;
-    
-    if (g_displayText) { free(g_displayText); g_displayText = NULL; }
+static DialogMarkdownState* GetPluginMarkdown(HWND hwndDlg) {
+    return hwndDlg ? (DialogMarkdownState*)GetWindowLongPtrW(
+                         hwndDlg, GWLP_USERDATA)
+                   : NULL;
+}
+
+static void CleanupMarkdownResources(HWND hwndDlg) {
+    DialogMarkdownState* markdown = GetPluginMarkdown(hwndDlg);
+    SetWindowLongPtrW(hwndDlg, GWLP_USERDATA, 0);
+    DialogMarkdown_Destroy(markdown);
 }
 
 static BOOL IsValidPluginSecurityParentWindow(HWND hwnd) {
@@ -187,7 +157,13 @@ static BOOL PostPluginSecurityResult(HWND hwndDlg, WPARAM result) {
 static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_PLUGIN_SECURITY, hwndDlg);
+            DialogMarkdownState* markdown = DialogMarkdown_Create();
+            if (!markdown) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            SetWindowLongPtrW(hwndDlg, GWLP_USERDATA, (LONG_PTR)markdown);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_PLUGIN_SECURITY, hwndDlg);
             HWND hwndParent = (HWND)lParam;
             if (IsValidPluginSecurityParentWindow(hwndParent)) {
                 SetPropW(hwndDlg, PLUGIN_SECURITY_PARENT_PROP, (HANDLE)hwndParent);
@@ -311,14 +287,14 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
             }
 
             /* Parse markdown */
-            ParseMarkdownLinks(messageWide, &g_displayText, &g_links, &g_linkCount,
-                             &g_headings, &g_headingCount,
-                             &g_styles, &g_styleCount,
-                             &g_listItems, &g_listItemCount,
-                             &g_blockquotes, &g_blockquoteCount,
-                             &g_colorTags, &g_colorTagCount,
-                             &g_fontTags, &g_fontTagCount);
+            BOOL parsed = DialogMarkdown_Parse(markdown, messageWide, FALSE);
             free(messageWide);
+            if (!parsed) {
+                CleanupMarkdownResources(hwndDlg);
+                ClearPendingPluginInfo();
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
 
             /* Center dialog */
             Dialog_CenterOnPrimaryScreen(hwndDlg);
@@ -329,14 +305,14 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDC_PLUGIN_SECURITY_TRUST_BTN: {
-                    CleanupMarkdownResources();
+                    CleanupMarkdownResources(hwndDlg);
                     PostPluginSecurityResult(hwndDlg, IDYES);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 }
 
                 case IDC_PLUGIN_SECURITY_RUN_ONCE_BTN: {
-                    CleanupMarkdownResources();
+                    CleanupMarkdownResources(hwndDlg);
                     PostPluginSecurityResult(hwndDlg, IDOK);
                     DestroyWindow(hwndDlg);
                     return TRUE;
@@ -344,7 +320,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
 
                 case IDC_PLUGIN_SECURITY_CANCEL_BTN:
                 case IDCANCEL: {
-                    CleanupMarkdownResources();
+                    CleanupMarkdownResources(hwndDlg);
                     PostPluginSecurityResult(hwndDlg, IDCANCEL);
                     DestroyWindow(hwndDlg);
                     return TRUE;
@@ -356,7 +332,8 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                         GetCursorPos(&pt);
                         ScreenToClient(GetDlgItem(hwndDlg, IDC_PLUGIN_SECURITY_TEXT), &pt);
                         
-                        if (HandleMarkdownClick(g_links, g_linkCount, pt)) {
+                        if (DialogMarkdown_HandleClick(
+                                GetPluginMarkdown(hwndDlg), pt)) {
                             return TRUE;
                         }
                     }
@@ -366,7 +343,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
         
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
-                CleanupMarkdownResources();
+                CleanupMarkdownResources(hwndDlg);
                 PostPluginSecurityResult(hwndDlg, IDCANCEL);
                 DestroyWindow(hwndDlg);
                 return TRUE;
@@ -379,12 +356,22 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                 HDC hdc = lpDrawItem->hDC;
                 RECT rect = lpDrawItem->rcItem;
                 
-                HBRUSH hBrush = GetSysColorBrush(COLOR_BTNFACE);
-                if (hBrush) {
-                    FillRect(hdc, &rect, hBrush);
+                DialogModernPalette palette;
+                DialogModern_CopyPalette(hwndDlg, &palette);
+                HBRUSH surfaceBrush = CreateSolidBrush(palette.surface);
+                if (surfaceBrush) {
+                    FillRect(hdc, &rect, surfaceBrush);
+                    DeleteObject(surfaceBrush);
                 }
+                RECT panelRect = rect;
+                InflateRect(&panelRect, -1, -1);
+                DialogModern_DrawRoundedRect(
+                    hdc, &panelRect,
+                    DialogModern_Scale(DialogModern_GetDpi(hwndDlg), 14),
+                    palette.field, palette.border, 1);
                 
-                if (g_displayText) {
+                DialogMarkdownState* markdown = GetPluginMarkdown(hwndDlg);
+                if (markdown) {
                     int oldBkMode = SetBkMode(hdc, TRANSPARENT);
                     
                     HFONT hFont = (HFONT)SendMessage(lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
@@ -393,18 +380,13 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
                     }
                     HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
                     
-                    RECT drawRect = rect;
-                    drawRect.left += 10;
-                    drawRect.top += 10;
-                    drawRect.right -= 10;
-                    drawRect.bottom -= 10;
+                    RECT drawRect = panelRect;
+                    int inset = DialogModern_Scale(
+                        DialogModern_GetDpi(hwndDlg), 10);
+                    InflateRect(&drawRect, -inset, -inset);
                     
-                    RenderMarkdownText(hdc, g_displayText, g_links, g_linkCount,
-                                     g_headings, g_headingCount,
-                                     g_styles, g_styleCount,
-                                     g_listItems, g_listItemCount,
-                                     g_blockquotes, g_blockquoteCount,
-                                     drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
+                    DialogMarkdown_Render(markdown, hdc, drawRect,
+                                          palette.accent, palette.text);
                     
                     if (hOldFont) {
                         SelectObject(hdc, hOldFont);
@@ -420,13 +402,13 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
         }
         
         case WM_DESTROY:
-            CleanupMarkdownResources();
+            CleanupMarkdownResources(hwndDlg);
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_PLUGIN_SECURITY, hwndDlg);
             RemovePropW(hwndDlg, PLUGIN_SECURITY_PARENT_PROP);
             break;
 
         case WM_CLOSE:
-            CleanupMarkdownResources();
+            CleanupMarkdownResources(hwndDlg);
             PostPluginSecurityResult(hwndDlg, IDCANCEL);
             DestroyWindow(hwndDlg);
             return TRUE;

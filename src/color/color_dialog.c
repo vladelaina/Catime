@@ -1,13 +1,13 @@
 /**
  * @file color_dialog.c
- * @brief Windows color picker with live preview and eyedropper
+ * @brief Modern color picker integration and palette persistence
  */
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <windows.h>
-#include <commdlg.h>
 #include "color/color_dialog.h"
+#include "color/color_picker_dialog.h"
 #include "color/color_parser.h"
 #include "color/color_state.h"
 #include "menu_preview.h"
@@ -19,11 +19,7 @@
  * ============================================================================ */
 
 #define MAX_CUSTOM_COLORS 16
-#define DIALOG_BG_COLOR RGB(240, 240, 240)
 #define COLOR_OPTIONS_CONFIG_BUFFER 2048
-#define COLOR_DIALOG_PARENT_PROP L"Catime.ColorDialog.Parent"
-#define COLOR_DIALOG_CHOOSE_PROP L"Catime.ColorDialog.ChooseColor"
-#define COLOR_DIALOG_LOCKED_PROP L"Catime.ColorDialog.Locked"
 
 /* Track the actual number of colors loaded */
 static size_t g_loadedColorCount = 0;
@@ -35,46 +31,6 @@ static size_t g_loadedColorCount = 0;
 static inline void RefreshWindow(HWND hwnd) {
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-}
-
-/**
- * @brief Sample color at cursor position
- * @param hdlg Dialog handle
- * @param outColor Output color
- * @return TRUE if valid color sampled
- * 
- * @details Filters out dialog background to avoid sampling gray
- */
-static BOOL SampleColorAtCursor(HWND hdlg, COLORREF* outColor) {
-    POINT pt;
-    GetCursorPos(&pt);
-    ScreenToClient(hdlg, &pt);
-    
-    HDC hdc = GetDC(hdlg);
-    if (!hdc) return FALSE;
-    COLORREF color = GetPixel(hdc, pt.x, pt.y);
-    ReleaseDC(hdlg, hdc);
-    
-    if (color != CLR_INVALID && color != DIALOG_BG_COLOR) {
-        *outColor = color;
-        return TRUE;
-    }
-    return FALSE;
-}
-
-/**
- * @brief Apply color preview to parent window
- * @param hwndParent Parent window handle
- * @param color Color to preview
- */
-static void ApplyColorPreview(HWND hwndParent, COLORREF color) {
-    char colorStr[COLOR_HEX_BUFFER];
-    ColorRefToHex(color, colorStr, sizeof(colorStr));
-    
-    char finalColor[COLOR_HEX_BUFFER];
-    ReplaceBlackColor(colorStr, finalColor, sizeof(finalColor));
-    
-    StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndParent);
 }
 
 static BOOL AppendColorOption(char* outValue, size_t outSize, const char* color, BOOL* firstColor) {
@@ -171,34 +127,6 @@ static BOOL BuildCustomColorsConfigValue(COLORREF* lpCustColors,
     return TRUE;
 }
 
-static int HexDigitValue(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    return -1;
-}
-
-static BOOL TryParseColorRef(const char* input, COLORREF* outColor) {
-    if (!input || !outColor) return FALSE;
-
-    char normalized[COLOR_HEX_BUFFER];
-    normalizeColor(input, normalized, sizeof(normalized));
-    if (normalized[0] != '#' || strlen(normalized) != 7) {
-        return FALSE;
-    }
-
-    int channels[3] = {0, 0, 0};
-    for (int i = 0; i < 3; i++) {
-        int hi = HexDigitValue(normalized[1 + i * 2]);
-        int lo = HexDigitValue(normalized[2 + i * 2]);
-        if (hi < 0 || lo < 0) return FALSE;
-        channels[i] = hi * 16 + lo;
-    }
-
-    *outColor = RGB(channels[0], channels[1], channels[2]);
-    return TRUE;
-}
-
 /**
  * @brief Populate custom colors from saved palette
  * @param acrCustClr Custom color array
@@ -217,7 +145,7 @@ static void PopulateCustomColors(COLORREF* acrCustClr, size_t maxColors) {
         if (strchr(hexColor, '_') != NULL) continue;
         
         COLORREF parsedColor;
-        if (TryParseColorRef(hexColor, &parsedColor)) {
+        if (ColorStringToColorRef(hexColor, &parsedColor)) {
             acrCustClr[custIdx++] = parsedColor;
         }
     }
@@ -243,108 +171,36 @@ static BOOL SaveCustomColorsToPalette(COLORREF* lpCustColors) {
 }
 
 /* ============================================================================
- * Hook Procedure
- * ============================================================================ */
-
-UINT_PTR CALLBACK ColorDialogHookProc(HWND hdlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    switch (msg) {
-        case WM_INITDIALOG: {
-            CHOOSECOLOR* pcc = (CHOOSECOLOR*)lParam;
-            if (pcc) {
-                SetPropW(hdlg, COLOR_DIALOG_PARENT_PROP, (HANDLE)pcc->hwndOwner);
-                SetPropW(hdlg, COLOR_DIALOG_CHOOSE_PROP, (HANDLE)pcc);
-            }
-            RemovePropW(hdlg, COLOR_DIALOG_LOCKED_PROP);
-            return TRUE;
-        }
-
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN: {
-            HWND hwndParent = (HWND)GetPropW(hdlg, COLOR_DIALOG_PARENT_PROP);
-            CHOOSECOLOR* pcc = (CHOOSECOLOR*)GetPropW(hdlg, COLOR_DIALOG_CHOOSE_PROP);
-            BOOL isColorLocked = GetPropW(hdlg, COLOR_DIALOG_LOCKED_PROP) == NULL;
-            if (isColorLocked) {
-                SetPropW(hdlg, COLOR_DIALOG_LOCKED_PROP, (HANDLE)1);
-            } else {
-                RemovePropW(hdlg, COLOR_DIALOG_LOCKED_PROP);
-            }
-
-            if (!isColorLocked) {
-                COLORREF color;
-                if (SampleColorAtCursor(hdlg, &color)) {
-                    if (pcc) pcc->rgbResult = color;
-                    ApplyColorPreview(hwndParent, color);
-                }
-            }
-            break;
-        }
-
-        case WM_MOUSEMOVE: {
-            HWND hwndParent = (HWND)GetPropW(hdlg, COLOR_DIALOG_PARENT_PROP);
-            CHOOSECOLOR* pcc = (CHOOSECOLOR*)GetPropW(hdlg, COLOR_DIALOG_CHOOSE_PROP);
-            BOOL isColorLocked = GetPropW(hdlg, COLOR_DIALOG_LOCKED_PROP) != NULL;
-            if (!isColorLocked) {
-                COLORREF color;
-                if (SampleColorAtCursor(hdlg, &color)) {
-                    if (pcc) pcc->rgbResult = color;
-                    ApplyColorPreview(hwndParent, color);
-                }
-            }
-            break;
-        }
-
-        case WM_COMMAND: {
-            if (HIWORD(wParam) == BN_CLICKED && LOWORD(wParam) == IDCANCEL) {
-                HWND hwndParent = (HWND)GetPropW(hdlg, COLOR_DIALOG_PARENT_PROP);
-                CancelPreview(hwndParent);
-            }
-            break;
-        }
-
-        case WM_DESTROY:
-            RemovePropW(hdlg, COLOR_DIALOG_PARENT_PROP);
-            RemovePropW(hdlg, COLOR_DIALOG_CHOOSE_PROP);
-            RemovePropW(hdlg, COLOR_DIALOG_LOCKED_PROP);
-            break;
-    }
-    return 0;
-}
-
-/* ============================================================================
  * Public API
  * ============================================================================ */
 
 COLORREF ShowColorDialog(HWND hwnd) {
-    CHOOSECOLOR cc = {0};
     static COLORREF acrCustClr[MAX_CUSTOM_COLORS] = {0};
-    
+
     COLORREF initialColor = RGB(255, 255, 255);
-    TryParseColorRef(CLOCK_TEXT_COLOR, &initialColor);
-    
-    cc.lStructSize = sizeof(CHOOSECOLOR);
-    cc.hwndOwner = hwnd;
-    cc.lpCustColors = (LPDWORD)acrCustClr;
-    cc.rgbResult = initialColor;
-    cc.Flags = CC_FULLOPEN | CC_RGBINIT | CC_ENABLEHOOK;
-    cc.lpfnHook = (LPCCHOOKPROC)ColorDialogHookProc;
-    
+    ColorStringToColorRef(CLOCK_TEXT_COLOR, &initialColor);
+
     PopulateCustomColors(acrCustClr, MAX_CUSTOM_COLORS);
-    
-    if (ChooseColor(&cc)) {
+    size_t customColorCount = g_loadedColorCount;
+    COLORREF selectedColor = initialColor;
+
+    if (ModernColorPicker_Show(hwnd, initialColor, acrCustClr,
+                               MAX_CUSTOM_COLORS, &customColorCount,
+                               &selectedColor)) {
         if (!SaveCustomColorsToPalette(acrCustClr)) {
             LOG_WARNING("ColorDialog: failed to persist custom color palette");
         }
         
         if (IsPreviewActive()) {
             if (ApplyPreview(hwnd)) {
-                return cc.rgbResult;
+                return selectedColor;
             }
             CancelPreview(hwnd);
             return (COLORREF)-1;
         }
 
         char tempColor[COLOR_HEX_BUFFER];
-        ColorRefToHex(cc.rgbResult, tempColor, sizeof(tempColor));
+        ColorRefToHex(selectedColor, tempColor, sizeof(tempColor));
         
         char finalColorStr[COLOR_HEX_BUFFER];
         ReplaceBlackColor(tempColor, finalColorStr, sizeof(finalColorStr));
@@ -355,7 +211,7 @@ COLORREF ShowColorDialog(HWND hwnd) {
         }
 
         RefreshWindow(hwnd);
-        return cc.rgbResult;
+        return selectedColor;
     }
     
     /* User cancelled */

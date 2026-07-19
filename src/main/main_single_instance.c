@@ -9,6 +9,7 @@
 #include <string.h>
 #include <shellapi.h>
 #include "main/main_single_instance.h"
+#include "main/main_initialization.h"
 #include "main/main_cli_routing.h"
 #include "log.h"
 #include "utils/string_convert.h"
@@ -186,14 +187,16 @@ BOOL HandleSingleInstance(LPWSTR lpCmdLine, HANDLE* outMutex) {
     }
     *outMutex = NULL;
 
-    HANDLE hMutex = CreateMutexW(NULL, TRUE, SINGLE_INSTANCE_MUTEX_NAME);
+    BOOL isolatedSmoke = IsCiSmokeMode();
+    HANDLE hMutex = CreateMutexW(
+        NULL, TRUE, isolatedSmoke ? NULL : SINGLE_INSTANCE_MUTEX_NAME);
     DWORD mutexError = GetLastError();
     if (!hMutex) {
         LOG_ERROR("CreateMutexW failed for single-instance mutex (err=%lu)", mutexError);
         return FALSE;
     }
 
-    if (mutexError != ERROR_ALREADY_EXISTS) {
+    if (isolatedSmoke || mutexError != ERROR_ALREADY_EXISTS) {
         g_GlobalMutex = hMutex;  /* Store globally for crash cleanup */
         *outMutex = hMutex;
         return TRUE;

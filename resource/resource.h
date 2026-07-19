@@ -461,6 +461,27 @@
 #define CLOCK_IDC_COLOR_VALUE 1301       /**< Color value control (alias) */
 #define CLOCK_IDC_COLOR_PANEL 1302       /**< Color panel control (alias) */
 
+/** @brief Modern visual color picker */
+#define IDD_MODERN_COLOR_PICKER_DIALOG 2060
+#define IDC_MODERN_COLOR_SV 2061
+#define IDC_MODERN_COLOR_HUE 2062
+#define IDC_MODERN_COLOR_PREVIEW 2063
+#define IDC_MODERN_COLOR_SAVED 2064
+#define IDC_MODERN_COLOR_HEX_EDIT 2065
+#define IDC_MODERN_COLOR_RED_EDIT 2066
+#define IDC_MODERN_COLOR_GREEN_EDIT 2067
+#define IDC_MODERN_COLOR_BLUE_EDIT 2068
+#define IDC_MODERN_COLOR_PICK_BUTTON 2069
+#define IDC_MODERN_COLOR_SAVE_BUTTON 2070
+#define IDC_MODERN_COLOR_HEX_LABEL 2071
+#define IDC_MODERN_COLOR_RED_LABEL 2072
+#define IDC_MODERN_COLOR_GREEN_LABEL 2073
+#define IDC_MODERN_COLOR_BLUE_LABEL 2074
+
+/** @brief Reusable modern message dialog */
+#define IDD_MESSAGE_DIALOG 2080
+#define IDC_MESSAGE_TEXT 2081
+
 /** @brief Startup configuration control */
 #define IDC_STARTUP_TIME 1401            /**< Startup time control */
 

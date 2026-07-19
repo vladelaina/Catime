@@ -62,6 +62,16 @@ function parseLanguageFile(filePath, requireKeyValue) {
   return { entries, errors };
 }
 
+/* Format arguments and explicit line breaks are part of the UI contract. */
+function formatSignature(value) {
+  const pattern = /%%|%(?:\d+\$)?[-+ #0']*(?:\*|\d+)?(?:\.(?:\*|\d+))?(?:hh|h|ll|l|j|z|t|L|I32|I64)?[diuoxXfFeEgGaAcspn]/g;
+  return (value.match(pattern) || []).filter((token) => token !== '%%');
+}
+
+function escapedNewlineCount(value) {
+  return (value.match(/\\n/g) || []).length;
+}
+
 function fail(errors) {
   for (const error of errors) {
     console.error(error);
@@ -90,27 +100,23 @@ if (english.entries.length === 0) {
   errors.push(`${englishPath}: no translation keys found`);
 }
 
-function validateDuplicateValues(filePath, entries) {
-  const firstValueByKey = new Map();
+function validateDuplicateKeys(filePath, entries) {
   const firstLineByKey = new Map();
 
   for (const entry of entries) {
-    if (!firstValueByKey.has(entry.key)) {
-      firstValueByKey.set(entry.key, entry.value);
+    if (!firstLineByKey.has(entry.key)) {
       firstLineByKey.set(entry.key, entry.lineNumber);
       continue;
     }
 
-    if (firstValueByKey.get(entry.key) !== entry.value) {
-      errors.push(
-        `${filePath}:${entry.lineNumber}: duplicate key "${entry.key}" has a different value; ` +
-        `first value is at line ${firstLineByKey.get(entry.key)}`
-      );
-    }
+    errors.push(
+      `${filePath}:${entry.lineNumber}: duplicate key "${entry.key}"; ` +
+      `first occurrence is at line ${firstLineByKey.get(entry.key)}`
+    );
   }
 }
 
-validateDuplicateValues(englishPath, english.entries);
+validateDuplicateKeys(englishPath, english.entries);
 
 for (const file of files) {
   if (file === 'en.ini') {
@@ -120,7 +126,7 @@ for (const file of files) {
   const filePath = path.join(languageDir, file);
   const language = parseLanguageFile(filePath, true);
   errors.push(...language.errors);
-  validateDuplicateValues(filePath, language.entries);
+  validateDuplicateKeys(filePath, language.entries);
 
   if (language.entries.length !== english.entries.length) {
     errors.push(
@@ -136,6 +142,28 @@ for (const file of files) {
       errors.push(
         `${filePath}:${actual.lineNumber}: key mismatch at entry ${i + 1}; ` +
         `expected "${expected.key}", got "${actual.key}"`
+      );
+      continue;
+    }
+
+    const expectedFormats = formatSignature(expected.value);
+    const actualFormats = formatSignature(actual.value);
+    if (JSON.stringify(actualFormats) !== JSON.stringify(expectedFormats)) {
+      errors.push(
+        `${filePath}:${actual.lineNumber}: format placeholders for "${actual.key}" ` +
+        `do not match the English template ` +
+        `(${expectedFormats.join(', ') || 'none'} expected, ` +
+        `${actualFormats.join(', ') || 'none'} found)`
+      );
+    }
+
+    const expectedBreaks = escapedNewlineCount(expected.value);
+    const actualBreaks = escapedNewlineCount(actual.value);
+    if (actualBreaks !== expectedBreaks) {
+      errors.push(
+        `${filePath}:${actual.lineNumber}: explicit line breaks for "${actual.key}" ` +
+        `do not match the English template ` +
+        `(${expectedBreaks} expected, ${actualBreaks} found)`
       );
     }
   }

@@ -5,24 +5,22 @@
 
 #include "dialog/dialog_error.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "language.h"
 #include "../resource/resource.h"
+#include <stdlib.h>
 
 /* Global handle for error dialog */
 static HWND g_hwndErrorDialog = NULL;
 
-/* Parent window and edit control to refocus after dialog closes */
-static HWND g_hwndErrorParent = NULL;
-static int g_errorEditControlId = 0;
+typedef struct {
+    HWND parent;
+    int editControlId;
+} ErrorDialogState;
 
 #define ERROR_BUTTON_ORIG_PROC_PROP L"Catime.ErrorDialog.OrigButtonProc"
 
 static LRESULT CALLBACK ErrorButtonSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-static void ClearErrorDialogRefocusState(void) {
-    g_hwndErrorParent = NULL;
-    g_errorEditControlId = 0;
-}
 
 static WNDPROC GetErrorButtonOrigProc(HWND hwndButton) {
     return (WNDPROC)(LONG_PTR)GetPropW(hwndButton, ERROR_BUTTON_ORIG_PROC_PROP);
@@ -97,21 +95,22 @@ void ShowErrorDialog(HWND hwndParent) {
         g_hwndErrorDialog = NULL;
     }
     
-    g_hwndErrorParent = hwndParent;
-    g_errorEditControlId = 0;
-    
-    /* Create modeless dialog */
-    g_hwndErrorDialog = CreateDialogW(
+    ErrorDialogState* state = (ErrorDialogState*)calloc(1, sizeof(*state));
+    if (!state) return;
+    state->parent = hwndParent;
+
+    g_hwndErrorDialog = CreateDialogParamW(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(IDD_ERROR_DIALOG),
         hwndParent,
-        ErrorDlgProc
+        ErrorDlgProc,
+        (LPARAM)state
     );
     
     if (g_hwndErrorDialog) {
         ShowWindow(g_hwndErrorDialog, SW_SHOW);
     } else {
-        ClearErrorDialogRefocusState();
+        free(state);
     }
 }
 
@@ -122,30 +121,36 @@ void ShowErrorDialogWithRefocus(HWND hwndParent, int editControlId) {
         g_hwndErrorDialog = NULL;
     }
     
-    g_hwndErrorParent = hwndParent;
-    g_errorEditControlId = editControlId;
-    
-    /* Create modeless dialog */
-    g_hwndErrorDialog = CreateDialogW(
+    ErrorDialogState* state = (ErrorDialogState*)calloc(1, sizeof(*state));
+    if (!state) return;
+    state->parent = hwndParent;
+    state->editControlId = editControlId;
+
+    g_hwndErrorDialog = CreateDialogParamW(
         GetModuleHandle(NULL),
         MAKEINTRESOURCE(IDD_ERROR_DIALOG),
         hwndParent,
-        ErrorDlgProc
+        ErrorDlgProc,
+        (LPARAM)state
     );
     
     if (g_hwndErrorDialog) {
         ShowWindow(g_hwndErrorDialog, SW_SHOW);
     } else {
-        ClearErrorDialogRefocusState();
+        free(state);
     }
 }
 
 INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    (void)lParam;
-    
     switch (msg) {
-        case WM_INITDIALOG:
-            Dialog_RegisterInstance(DIALOG_INSTANCE_ERROR, hwndDlg);
+        case WM_INITDIALOG: {
+            ErrorDialogState* state = (ErrorDialogState*)lParam;
+            if (!state) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            SetWindowLongPtrW(hwndDlg, GWLP_USERDATA, (LONG_PTR)state);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_ERROR, hwndDlg);
             SetDlgItemTextW(hwndDlg, IDC_ERROR_TEXT,
                 GetLocalizedString(NULL, 
                                  L"Invalid input format, please try again."));
@@ -154,9 +159,17 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             
             /* Localize OK button */
             SetDlgItemTextW(hwndDlg, IDOK, GetLocalizedString(NULL, L"OK"));
-            
+
+            {
+                UINT dpi = DialogModern_GetDpi(hwndDlg);
+                DialogModern_SetChildRect96(hwndDlg, IDC_ERROR_TEXT, dpi,
+                                            0, 0, 360, 36);
+                DialogModern_SetChildRect96(hwndDlg, IDOK, dpi,
+                                            280, 60, 80, 36);
+            }
+
             Dialog_CenterOnPrimaryScreen(hwndDlg);
-            
+
             /* Subclass OK button to handle Enter/Escape keys */
             {
                 HWND hwndOK = GetDlgItem(hwndDlg, IDOK);
@@ -167,6 +180,7 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
             
             return FALSE;
+        }
 
         case WM_COMMAND:
             if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
@@ -179,7 +193,9 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             DestroyWindow(hwndDlg);
             return TRUE;
             
-        case WM_DESTROY:
+        case WM_DESTROY: {
+            ErrorDialogState* state = (ErrorDialogState*)GetWindowLongPtrW(
+                hwndDlg, GWLP_USERDATA);
             /* Restore original button procedure before destruction */
             UnsubclassErrorButton(GetDlgItem(hwndDlg, IDOK));
             
@@ -187,16 +203,20 @@ INT_PTR CALLBACK ErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             g_hwndErrorDialog = NULL;
             
             /* Refocus to parent edit control if specified */
-            if (g_hwndErrorParent && IsWindow(g_hwndErrorParent) && g_errorEditControlId > 0) {
-                HWND hwndEdit = GetDlgItem(g_hwndErrorParent, g_errorEditControlId);
+            if (state && state->parent && IsWindow(state->parent) &&
+                state->editControlId > 0) {
+                HWND hwndEdit = GetDlgItem(state->parent,
+                                          state->editControlId);
                 if (hwndEdit && IsWindow(hwndEdit)) {
                     SetFocus(hwndEdit);
                     SendMessage(hwndEdit, EM_SETSEL, 0, -1);
                 }
             }
             
-            ClearErrorDialogRefocusState();
+            SetWindowLongPtrW(hwndDlg, GWLP_USERDATA, 0);
+            free(state);
             break;
+        }
     }
     return FALSE;
 }

@@ -91,7 +91,7 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
 
     switch (uMsg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_INPUT_BOX, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_INPUT_BOX, hwndDlg);
             params = (InputBoxParams*)lParam;
             if (!params || !params->result || params->maxLen == 0 || params->maxLen > INT_MAX) {
                 EndDialog(hwndDlg, FALSE);

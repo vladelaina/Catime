@@ -46,6 +46,7 @@ extern void HandleStartupMode(HWND hwnd);
 #include "menu_preview.h"
 #include "preview_display.h"
 #include "dialog/dialog_font_picker.h"
+#include "dialog/dialog_message.h"
 #include "../resource/resource.h"
 #include "color/color_parser.h"
 #include <shlobj.h>
@@ -245,20 +246,25 @@ static LRESULT CmdAnimationFixedSpeed(HWND hwnd) {
                                PreviewFixedAnimationSpeed, &previewState)) {
         double multiplier = 0.0;
         if (!TryParseFixedAnimationSpeed(input, &multiplier)) {
-            MessageBoxW(hwnd,
-                        GetLocalizedString(NULL, L"Please enter a number from 0.1 to 30 (example: 2)."),
-                        GetLocalizedString(NULL, L"Invalid input format"),
-                        MB_OK | MB_ICONWARNING);
+            DialogMessage_Show(
+                hwnd,
+                GetLocalizedString(NULL, L"Invalid input format"),
+                GetLocalizedString(
+                    NULL,
+                    L"Please enter a number from 0.1 to 30 (example: 2)."),
+                DIALOG_MESSAGE_WARNING);
             continue;
         }
 
         if (!WriteConfigAnimationFixedSpeed(multiplier)) {
             SetAnimationSpeedRuntimeState(originalMetric, originalFixedMultiplier);
             TrayAnimation_RecomputeTimerDelay();
-            MessageBoxW(hwnd,
-                        GetLocalizedString(NULL, L"Failed to save the fixed animation speed."),
-                        GetLocalizedString(NULL, L"Error"),
-                        MB_OK | MB_ICONERROR);
+            DialogMessage_Show(
+                hwnd,
+                GetLocalizedString(NULL, L"Error"),
+                GetLocalizedString(
+                    NULL, L"Failed to save the fixed animation speed."),
+                DIALOG_MESSAGE_ERROR);
             return 0;
         }
 

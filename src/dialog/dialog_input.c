@@ -6,17 +6,20 @@
 #include "dialog/dialog_input.h"
 #include "dialog/dialog_common.h"
 #include "dialog/dialog_error.h"
+#include "dialog/dialog_form_layout.h"
+#include "dialog/dialog_input_internal.h"
+#include "dialog/dialog_input_options.h"
 #include "language.h"
 #include "timer/timer.h"
 #include "config.h"
 #include "dialog/dialog_language.h"
 #include "utils/time_parser.h"
+#include "utils/string_convert.h"
 #include "log.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 #include <strsafe.h>
 #include <wchar.h>
 
@@ -33,16 +36,13 @@ HWND g_hwndInputDialog = NULL;
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define INPUT_FOCUS_TIMER_ID 9999
 #define INPUT_FOCUS_TIMER_DELAY_MS 50
-#define QUICK_TIME_OPTIONS_MAX_INPUT_CHARS 2048
-#define QUICK_TIME_OPTIONS_MAX_INPUT_BYTES ((QUICK_TIME_OPTIONS_MAX_INPUT_CHARS * 4) + 1)
-#define QUICK_TIME_OPTIONS_TOKEN_DELIMITERS " \t\r\n"
 
 typedef struct {
     DWORD dialogId;
     int pomodoroTimeIndex;
 } InputDialogState;
 
-static BOOL IsValidInputDialogParentWindow(HWND hwnd) {
+BOOL DialogInput_IsValidParentWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
         return FALSE;
     }
@@ -61,24 +61,9 @@ static BOOL IsValidInputDialogParentWindow(HWND hwnd) {
     return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
 }
 
-static HWND GetInputDialogParent(HWND hwndDlg) {
+HWND DialogInput_GetParent(HWND hwndDlg) {
     HWND hwndParent = hwndDlg ? GetParent(hwndDlg) : NULL;
-    return IsValidInputDialogParentWindow(hwndParent) ? hwndParent : NULL;
-}
-
-static BOOL ConvertDialogInputToUtf8(const wchar_t* source, char* dest, size_t destSize) {
-    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
-        return FALSE;
-    }
-
-    dest[0] = '\0';
-    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
-    if (required <= 0 || (size_t)required > destSize) {
-        return FALSE;
-    }
-
-    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
-                               (int)destSize, NULL, NULL) > 0;
+    return DialogInput_IsValidParentWindow(hwndParent) ? hwndParent : NULL;
 }
 
 static char* ConvertDialogInputToUtf8Alloc(const wchar_t* source, size_t maxBytes) {
@@ -130,92 +115,6 @@ static wchar_t* ReadDialogTextAlloc(HWND hwndDlg, int controlId, size_t maxChars
     return text;
 }
 
-static BOOL AppendTextA(char* dest, size_t destSize, const char* suffix) {
-    if (!dest || destSize == 0 || !suffix) {
-        return FALSE;
-    }
-
-    return SUCCEEDED(StringCbCatA(dest, destSize, suffix));
-}
-
-static BOOL BuildQuickTimeOptionsDisplay(char* dest, size_t destSize) {
-    if (!dest || destSize == 0) {
-        return FALSE;
-    }
-
-    dest[0] = '\0';
-    int timeOptionsCount = time_options_count;
-    if (timeOptionsCount < 0) timeOptionsCount = 0;
-    if (timeOptionsCount > MAX_TIME_OPTIONS) timeOptionsCount = MAX_TIME_OPTIONS;
-
-    int appendedCount = 0;
-    for (int i = 0; i < timeOptionsCount; i++) {
-        if (time_options[i] <= 0 || time_options[i] > MAX_TIME_OPTION_SECONDS) {
-            return FALSE;
-        }
-
-        char timeStr[32] = {0};
-        Dialog_FormatSecondsToString(time_options[i], timeStr, sizeof(timeStr));
-        if (timeStr[0] == '\0') {
-            return FALSE;
-        }
-
-        if (appendedCount > 0 && !AppendTextA(dest, destSize, " ")) {
-            return FALSE;
-        }
-        if (!AppendTextA(dest, destSize, timeStr)) {
-            return FALSE;
-        }
-        appendedCount++;
-    }
-
-    return TRUE;
-}
-
-static BOOL BuildQuickTimeOptionsConfig(char* inputUtf8, char* options,
-                                        size_t optionsSize, int* parsedSeconds,
-                                        int* parsedCount) {
-    if (!inputUtf8 || !options || optionsSize == 0 ||
-        !parsedSeconds || !parsedCount) {
-        return FALSE;
-    }
-
-    options[0] = '\0';
-    *parsedCount = 0;
-
-    const char* token = strtok(inputUtf8, QUICK_TIME_OPTIONS_TOKEN_DELIMITERS);
-    while (token) {
-        if (*parsedCount >= MAX_TIME_OPTIONS) {
-            return FALSE;
-        }
-
-        int seconds = 0;
-        if (!TimeParser_ParseBasic(token, &seconds) ||
-            seconds <= 0 || seconds > MAX_TIME_OPTION_SECONDS) {
-            return FALSE;
-        }
-
-        char secondsStr[32] = {0};
-        int written = snprintf(secondsStr, sizeof(secondsStr), "%d", seconds);
-        if (written < 0 || (size_t)written >= sizeof(secondsStr)) {
-            return FALSE;
-        }
-
-        if (*parsedCount > 0 && !AppendTextA(options, optionsSize, ",")) {
-            return FALSE;
-        }
-        if (!AppendTextA(options, optionsSize, secondsStr)) {
-            return FALSE;
-        }
-
-        parsedSeconds[*parsedCount] = seconds;
-        (*parsedCount)++;
-        token = strtok(NULL, QUICK_TIME_OPTIONS_TOKEN_DELIMITERS);
-    }
-
-    return *parsedCount > 0;
-}
-
 static InputDialogState* CreateInputDialogState(DWORD dialogId, int pomodoroTimeIndex) {
     InputDialogState* state = (InputDialogState*)calloc(1, sizeof(*state));
     if (!state) {
@@ -246,8 +145,9 @@ static void FreeInputDialogState(DialogContext* ctx) {
     free(state);
 }
 
-static HWND CreateInputDialog(HWND hwndParent, int resourceId, DWORD dialogId,
-                              int pomodoroTimeIndex) {
+HWND DialogInput_CreateResourceDialog(HWND hwndParent, int resourceId,
+                                      DWORD dialogId,
+                                      int pomodoroTimeIndex) {
     InputDialogState* state = CreateInputDialogState(dialogId, pomodoroTimeIndex);
     if (!state) {
         return NULL;
@@ -273,29 +173,6 @@ static HWND CreateInputDialog(HWND hwndParent, int resourceId, DWORD dialogId,
  * ============================================================================ */
 
 /**
- * @brief Show countdown input dialog (modeless)
- * @param hwndParent Parent window handle
- */
-void ShowCountdownInputDialog(HWND hwndParent) {
-    if (Dialog_IsOpen(DIALOG_INSTANCE_INPUT)) {
-        HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_INPUT);
-        SetForegroundWindow(existing);
-        return;
-    }
-
-    if (!IsValidInputDialogParentWindow(hwndParent)) {
-        return;
-    }
-
-    HWND hwndDlg = CreateInputDialog(hwndParent, CLOCK_IDD_DIALOG1,
-                                    CLOCK_IDD_DIALOG1, -1);
-
-    if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
-    }
-}
-
-/**
  * @brief Show shortcut time settings dialog (modeless)
  * @param hwndParent Parent window handle
  */
@@ -306,11 +183,11 @@ void ShowShortcutTimeDialog(HWND hwndParent) {
         return;
     }
 
-    if (!IsValidInputDialogParentWindow(hwndParent)) {
+    if (!DialogInput_IsValidParentWindow(hwndParent)) {
         return;
     }
 
-    HWND hwndDlg = CreateInputDialog(hwndParent, CLOCK_IDD_SHORTCUT_DIALOG,
+    HWND hwndDlg = DialogInput_CreateResourceDialog(hwndParent, CLOCK_IDD_SHORTCUT_DIALOG,
                                     CLOCK_IDD_SHORTCUT_DIALOG, -1);
 
     if (hwndDlg) {
@@ -329,11 +206,11 @@ void ShowStartupTimeDialog(HWND hwndParent) {
         return;
     }
 
-    if (!IsValidInputDialogParentWindow(hwndParent)) {
+    if (!DialogInput_IsValidParentWindow(hwndParent)) {
         return;
     }
 
-    HWND hwndDlg = CreateInputDialog(hwndParent, CLOCK_IDD_STARTUP_DIALOG,
+    HWND hwndDlg = DialogInput_CreateResourceDialog(hwndParent, CLOCK_IDD_STARTUP_DIALOG,
                                     CLOCK_IDD_STARTUP_DIALOG, -1);
 
     if (hwndDlg) {
@@ -353,11 +230,11 @@ void ShowPomodoroTimeEditDialog(HWND hwndParent, int timeIndex) {
         return;
     }
 
-    if (!IsValidInputDialogParentWindow(hwndParent)) {
+    if (!DialogInput_IsValidParentWindow(hwndParent)) {
         return;
     }
 
-    HWND hwndDlg = CreateInputDialog(hwndParent, CLOCK_IDD_POMODORO_TIME_DIALOG,
+    HWND hwndDlg = DialogInput_CreateResourceDialog(hwndParent, CLOCK_IDD_POMODORO_TIME_DIALOG,
                                     CLOCK_IDD_POMODORO_TIME_DIALOG, timeIndex);
 
     if (hwndDlg) {
@@ -409,7 +286,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             DWORD dlgId = state->dialogId;
             DialogInstanceType instanceType = GetInstanceTypeFromDialogId(dlgId);
-            Dialog_RegisterInstance(instanceType, hwndDlg);
+            Dialog_InitializeInstance(instanceType, hwndDlg);
 
             if (dlgId == CLOCK_IDD_DIALOG1) {
                 g_hwndInputDialog = hwndDlg;
@@ -431,7 +308,8 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (dlgId == CLOCK_IDD_SHORTCUT_DIALOG) {
                 char currentOptions[TIME_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
                 wchar_t wcurrentOptions[TIME_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
-                if (BuildQuickTimeOptionsDisplay(currentOptions, sizeof(currentOptions)) &&
+                if (DialogInputOptions_BuildDisplay(
+                        currentOptions, sizeof(currentOptions)) &&
                     MultiByteToWideChar(CP_UTF8, 0, currentOptions, -1,
                                         wcurrentOptions,
                                         (int)_countof(wcurrentOptions)) > 0) {
@@ -470,6 +348,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
 
             ApplyDialogLanguage(hwndDlg, (int)dlgId);
+            DialogFormLayout_ApplyInstruction(
+                hwndDlg, CLOCK_IDC_STATIC, CLOCK_IDC_EDIT,
+                CLOCK_IDC_BUTTON_OK);
 
             SetFocus(hwndEdit);
 
@@ -561,10 +442,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     int parsedSeconds[MAX_TIME_OPTIONS] = {0};
                     int count = 0;
 
-                    BOOL parsed = BuildQuickTimeOptionsConfig(inputCopy, options,
-                                                              sizeof(options),
-                                                              parsedSeconds,
-                                                              &count);
+                    BOOL parsed = DialogInputOptions_ParseConfig(
+                        inputCopy, options, sizeof(options), parsedSeconds,
+                        &count);
                     free(inputCopy);
                     if (!parsed) {
                         Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
@@ -579,7 +459,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     time_options_count = count;
                     memcpy(time_options, parsedSeconds, (size_t)count * sizeof(time_options[0]));
 
-                    HWND hwndParent = GetInputDialogParent(hwndDlg);
+                    HWND hwndParent = DialogInput_GetParent(hwndDlg);
                     if (hwndParent) {
                         PostMessage(hwndParent, WM_DIALOG_SHORTCUT, 0, 0);
                     }
@@ -594,7 +474,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                     }
 
                     char inputUtf8[256] = {0};
-                    if (!ConvertDialogInputToUtf8(inputText, inputUtf8, sizeof(inputUtf8))) {
+                    if (!WideToUtf8(inputText, inputUtf8, sizeof(inputUtf8))) {
                         Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                         return TRUE;
                     }
@@ -634,7 +514,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
                             }
                             DestroyWindow(hwndDlg);
                         } else {
-                            HWND hwndParent = GetInputDialogParent(hwndDlg);
+                            HWND hwndParent = DialogInput_GetParent(hwndDlg);
                             if (hwndParent) {
                                 PostMessage(hwndParent, WM_DIALOG_COUNTDOWN, (WPARAM)total_seconds, 0);
                             }

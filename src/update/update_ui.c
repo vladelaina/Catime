@@ -7,6 +7,7 @@
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_language.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "language.h"
 #include "log.h"
 #include "utils/string_convert.h"
@@ -21,6 +22,7 @@
 #include <wchar.h>
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define UPDATE_NOTES_RELAYOUT_MESSAGE (WM_APP + 731)
 
 /* Global dialog handles for modeless dialogs */
 static HWND g_hwndUpdateDialog = NULL;
@@ -153,7 +155,7 @@ INT_PTR CALLBACK ExitMsgDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lP
     UNREFERENCED_PARAMETER(lParam);
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_EXIT_MSG, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_EXIT_MSG, hwndDlg);
             g_hwndExitMsgDialog = hwndDlg;
             
             InitializeDialog(hwndDlg, IDD_EXIT_DIALOG);
@@ -320,11 +322,56 @@ static void CleanupUpdateNotesState(HWND hwndDlg) {
     ReleaseUpdateNotesPaintBuffer();
 }
 
+/* Recompute markdown metrics after the shared modern host changes the notes
+ * panel size. The resource template is only a starting geometry; localized
+ * titles can make the final client width larger. */
+static void UpdateNotesRecalculateMetrics(HWND hwndDlg) {
+    HWND hwndNotes = hwndDlg ? GetDlgItem(hwndDlg, IDC_UPDATE_NOTES) : NULL;
+    if (!hwndNotes || !g_notesDisplayText) return;
+
+    HDC hdc = GetDC(hwndNotes);
+    if (!hdc) return;
+    HFONT hFont = (HFONT)SendMessageW(hwndNotes, WM_GETFONT, 0, 0);
+    if (!hFont) hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+    HGDIOBJ oldFont = hFont ? SelectObject(hdc, hFont) : NULL;
+
+    RECT rect = {0};
+    GetClientRect(hwndNotes, &rect);
+    int inset = DialogModern_Scale(DialogModern_GetDpi(hwndDlg), 10);
+    rect.left += inset;
+    rect.top += inset;
+    rect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + inset;
+    rect.bottom -= inset;
+    if (rect.right <= rect.left || rect.bottom <= rect.top) {
+        if (oldFont) SelectObject(hdc, oldFont);
+        ReleaseDC(hwndNotes, hdc);
+        return;
+    }
+
+    g_textHeight = CalculateMarkdownTextHeight(
+        hdc, g_notesDisplayText, g_notesHeadings, g_notesHeadingCount,
+        g_notesStyles, g_notesStyleCount, g_notesListItems,
+        g_notesListItemCount, g_notesBlockquotes, g_notesBlockquoteCount,
+        rect);
+    int pageHeight = rect.bottom - rect.top;
+    int maxScroll = g_textHeight > pageHeight ? g_textHeight - pageHeight : 0;
+    int scrollPos = (int)(INT_PTR)GetPropW(hwndNotes, L"ScrollPos");
+    if (scrollPos < 0) scrollPos = 0;
+    if (scrollPos > maxScroll) scrollPos = maxScroll;
+    SetPropW(hwndNotes, L"ScrollPos", (HANDLE)(INT_PTR)scrollPos);
+    SetPropW(hwndNotes, L"ScrollMax", (HANDLE)(INT_PTR)g_textHeight);
+    SetPropW(hwndNotes, L"ScrollPage", (HANDLE)(INT_PTR)pageHeight);
+
+    if (oldFont) SelectObject(hdc, oldFont);
+    ReleaseDC(hwndNotes, hdc);
+    InvalidateRect(hwndNotes, NULL, TRUE);
+}
+
 INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
             CleanupUpdateNotesState(NULL);
-            Dialog_RegisterInstance(DIALOG_INSTANCE_UPDATE, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_UPDATE, hwndDlg);
             g_hwndUpdateDialog = hwndDlg;
             
             InitializeDialog(hwndDlg, IDD_UPDATE_DIALOG);
@@ -393,36 +440,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     SetProp(hwndNotes, L"ScrollPos", (HANDLE)0);
                     SetProp(hwndNotes, L"MarkdownLinks", (HANDLE)g_notesLinks);
                     SetProp(hwndNotes, L"LinkCount", (HANDLE)(INT_PTR)g_notesLinkCount);
-
-                    HDC hdc = GetDC(hwndNotes);
-                    if (hdc) {
-                        HFONT hFont = (HFONT)SendMessage(hwndNotes, WM_GETFONT, 0, 0);
-                        if (!hFont) hFont = GetStockObject(DEFAULT_GUI_FONT);
-                        HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
-
-                        RECT rect;
-                        GetClientRect(hwndNotes, &rect);
-                        rect.left += 5;
-                        rect.top += 5;
-                        rect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
-
-                        RECT drawRect = rect;
-                        g_textHeight = CalculateMarkdownTextHeight(hdc, g_notesDisplayText,
-                                                                    g_notesHeadings, g_notesHeadingCount,
-                                                                    g_notesStyles, g_notesStyleCount,
-                                                                    g_notesListItems, g_notesListItemCount,
-                                                                    g_notesBlockquotes, g_notesBlockquoteCount,
-                                                                    drawRect);
-
-                        if (hOldFont) {
-                            SelectObject(hdc, hOldFont);
-                        }
-                        ReleaseDC(hwndNotes, hdc);
-
-                        int clientHeight = rect.bottom - rect.top;
-                        SetProp(hwndNotes, L"ScrollMax", (HANDLE)(INT_PTR)g_textHeight);
-                        SetProp(hwndNotes, L"ScrollPage", (HANDLE)(INT_PTR)clientHeight);
-                    }
+                    UpdateNotesRecalculateMetrics(hwndDlg);
                 }
 
                 SetDlgItemTextW(hwndDlg, IDYES, GetLocalizedString(NULL, L"Update Now"));
@@ -433,6 +451,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                 ShowWindow(GetDlgItem(hwndDlg, IDNO), SW_SHOW);
                 ShowWindow(GetDlgItem(hwndDlg, IDOK), SW_HIDE);
             }
+            PostMessageW(hwndDlg, UPDATE_NOTES_RELAYOUT_MESSAGE, 0, 0);
             return TRUE;
         }
 
@@ -452,6 +471,16 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
             }
             break;
 
+        case WM_SIZE:
+            if (g_notesDisplayText) {
+                PostMessageW(hwndDlg, UPDATE_NOTES_RELAYOUT_MESSAGE, 0, 0);
+            }
+            break;
+
+        case UPDATE_NOTES_RELAYOUT_MESSAGE:
+            UpdateNotesRecalculateMetrics(hwndDlg);
+            return TRUE;
+
         case WM_DRAWITEM: {
             LPDRAWITEMSTRUCT lpDrawItem = (LPDRAWITEMSTRUCT)lParam;
             if (lpDrawItem->CtlID == IDC_UPDATE_NOTES) {
@@ -470,7 +499,19 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     return TRUE;
                 }
 
-                FillRect(hdcMem, &localRect, GetSysColorBrush(COLOR_BTNFACE));
+                DialogModernPalette palette;
+                DialogModern_CopyPalette(hwndDlg, &palette);
+                HBRUSH surface = CreateSolidBrush(palette.surface);
+                if (surface) {
+                    FillRect(hdcMem, &localRect, surface);
+                    DeleteObject(surface);
+                }
+                RECT panelRect = localRect;
+                InflateRect(&panelRect, -1, -1);
+                DialogModern_DrawRoundedRect(
+                    hdcMem, &panelRect,
+                    DialogModern_Scale(DialogModern_GetDpi(hwndDlg), 14),
+                    palette.field, palette.border, 1);
 
                 if (g_notesDisplayText) {
                     int scrollPos = (int)(INT_PTR)GetProp(lpDrawItem->hwndItem, L"ScrollPos");
@@ -488,9 +529,13 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                     HFONT hOldFont = hFont ? (HFONT)SelectObject(hdcMem, hFont) : NULL;
 
                     RECT drawRect = localRect;
-                    drawRect.left += 5;
-                    drawRect.top += 5;
-                    drawRect.right -= MODERN_SCROLLBAR_WIDTH + MODERN_SCROLLBAR_MARGIN + 5;
+                    int inset = DialogModern_Scale(
+                        DialogModern_GetDpi(hwndDlg), 10);
+                    drawRect.left += inset;
+                    drawRect.top += inset;
+                    drawRect.right -= MODERN_SCROLLBAR_WIDTH +
+                                      MODERN_SCROLLBAR_MARGIN + inset;
+                    drawRect.bottom -= inset;
 
                     POINT oldOrg = {0, 0};
                     BOOL viewportChanged = SetViewportOrgEx(hdcMem, 0, -scrollPos, &oldOrg);
@@ -500,7 +545,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                                        g_notesStyles, g_notesStyleCount,
                                        g_notesListItems, g_notesListItemCount,
                                        g_notesBlockquotes, g_notesBlockquoteCount,
-                                       drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
+                                       drawRect, palette.accent, palette.text);
 
                     if (viewportChanged) {
                         SetViewportOrgEx(hdcMem, oldOrg.x, oldOrg.y, NULL);
@@ -515,9 +560,10 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
                         CalculateScrollbarThumbRect(localRect, scrollPos, scrollMax, scrollPage, &thumbRect);
 
                         if (!IsRectEmpty(&thumbRect)) {
-                            COLORREF thumbColor = thumbDragging ? MODERN_SCROLLBAR_THUMB_DRAG_COLOR :
-                                                  (thumbHovered ? MODERN_SCROLLBAR_THUMB_HOVER_COLOR :
-                                                   MODERN_SCROLLBAR_THUMB_COLOR);
+                            COLORREF thumbColor =
+                                thumbDragging ? palette.accentHover :
+                                (thumbHovered ? palette.accent :
+                                                palette.border);
                             DrawRoundedRect(hdcMem, thumbRect, 4, thumbColor);
                         }
                     }
@@ -556,7 +602,7 @@ INT_PTR CALLBACK UpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPa
 INT_PTR CALLBACK UpdateErrorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG:
-            Dialog_RegisterInstance(DIALOG_INSTANCE_UPDATE_ERROR, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_UPDATE_ERROR, hwndDlg);
             InitializeDialog(hwndDlg, IDD_UPDATE_ERROR_DIALOG);
             if (lParam) {
                 SetDlgItemTextW(hwndDlg, IDC_UPDATE_ERROR_TEXT, (const wchar_t*)lParam);
@@ -595,7 +641,7 @@ INT_PTR CALLBACK NoUpdateDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM l
     UNREFERENCED_PARAMETER(lParam);
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_NO_UPDATE, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_NO_UPDATE, hwndDlg);
             g_hwndNoUpdateDialog = hwndDlg;
             
             InitializeDialog(hwndDlg, IDD_NO_UPDATE_DIALOG);

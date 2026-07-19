@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <wchar.h>
 
+#include "dialog/dialog_message.h"
 #include "tray/tray.h"
 
 #define MODAL_NOTIFICATION_START_FAILURE_COOLDOWN_MS 2000
@@ -55,7 +56,10 @@ static DWORD WINAPI ShowModalDialogThread(LPVOID lpParam) {
 
     HWND owner = NotificationGetOwnerWindow(g_modalDialogParams.hwnd);
     if (owner) {
-        MessageBoxW(owner, g_modalDialogParams.message, L"Catime", MB_OK);
+        if (!DialogMessage_ShowNotification(
+                owner, L"Catime", g_modalDialogParams.message)) {
+            NotificationFallbackToTray(owner, g_modalDialogParams.message);
+        }
     }
 
     g_modalDialogParams.hwnd = NULL;

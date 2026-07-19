@@ -6,6 +6,7 @@
 #include "dialog/dialog_font_picker.h"
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "../../resource/resource.h"
 #include "config.h"
 #include "font.h"
@@ -895,50 +896,56 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg, WPARAM wp, LPA
                 return TRUE;
             }
             
-            /* Fill background */
-            COLORREF bgColor = (dis->itemState & ODS_SELECTED) ?
-                               GetSysColor(COLOR_HIGHLIGHT) : GetSysColor(COLOR_WINDOW);
-            COLORREF txtColor = (dis->itemState & ODS_SELECTED) ?
-                                GetSysColor(COLOR_HIGHLIGHTTEXT) : GetSysColor(COLOR_WINDOWTEXT);
+            DialogModernPalette palette;
+            DialogModern_CopyPalette(hdlg, &palette);
+            BOOL selected = (dis->itemState & ODS_SELECTED) != 0;
+            COLORREF bgColor = selected ? palette.accent : palette.field;
+            COLORREF txtColor = selected ?
+                (palette.highContrast ? GetSysColor(COLOR_HIGHLIGHTTEXT) :
+                                        RGB(0xFF, 0xFF, 0xFF)) :
+                palette.text;
             COLORREF oldTextColor = GetTextColor(dis->hDC);
-            COLORREF oldBkColor = GetBkColor(dis->hDC);
-
-            FillRect(dis->hDC, &dis->rcItem,
-                    (dis->itemState & ODS_SELECTED) ?
-                    GetSysColorBrush(COLOR_HIGHLIGHT) : GetSysColorBrush(COLOR_WINDOW));
+            int oldBkMode = SetBkMode(dis->hDC, TRANSPARENT);
+            HBRUSH background = CreateSolidBrush(bgColor);
+            if (background) {
+                FillRect(dis->hDC, &dis->rcItem, background);
+                DeleteObject(background);
+            }
+            if ((dis->itemState & ODS_FOCUS) && !selected) {
+                RECT focusMark = dis->rcItem;
+                focusMark.right = focusMark.left +
+                                  DialogModern_Scale(
+                                      DialogModern_GetDpi(hdlg), 2);
+                HBRUSH accent = CreateSolidBrush(palette.accent);
+                if (accent) {
+                    FillRect(dis->hDC, &focusMark, accent);
+                    DeleteObject(accent);
+                }
+            }
             
             /* Draw checkmark if this is the current font */
             int textLeft = dis->rcItem.left + 4;
             if ((int)dis->itemID == g_currentFontIndex) {
                 SetTextColor(dis->hDC, txtColor);
-                SetBkColor(dis->hDC, bgColor);
                 TextOutW(dis->hDC, dis->rcItem.left + 2, dis->rcItem.top + 2, L"✓", 1);
                 textLeft += 16;  /* Make room for checkmark */
             }
             
             /* Draw text */
             SetTextColor(dis->hDC, txtColor);
-            SetBkColor(dis->hDC, bgColor);
             RECT textRect = dis->rcItem;
             textRect.left = textLeft;
             DrawTextW(dis->hDC, text, -1, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             
-            /* Draw focus rectangle */
-            if (dis->itemState & ODS_FOCUS) {
-                DrawFocusRect(dis->hDC, &dis->rcItem);
-            }
-
             if (oldTextColor != CLR_INVALID) {
                 SetTextColor(dis->hDC, oldTextColor);
             }
-            if (oldBkColor != CLR_INVALID) {
-                SetBkColor(dis->hDC, oldBkColor);
-            }
+            SetBkMode(dis->hDC, oldBkMode);
 
             return TRUE;
         }
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_PICKER, hdlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_FONT_PICKER, hdlg);
             
             /* Start timer to maintain TOPMOST state across virtual desktop switches */
             if (!SetTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID, 500, NULL)) {

@@ -610,7 +610,7 @@ static INT_PTR CALLBACK CustomTextDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM 
             }
 
             SetWindowLongPtrW(hwndDlg, GWLP_USERDATA, (LONG_PTR)state);
-            Dialog_RegisterInstance(DIALOG_INSTANCE_CUSTOM_TEXT_DISPLAY, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_CUSTOM_TEXT_DISPLAY, hwndDlg);
             state->initializing = TRUE;
 
             SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Custom Text Display"));

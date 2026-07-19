@@ -6,6 +6,7 @@
  */
 #include "config.h"
 #include "config/config_writer.h"
+#include "color/color_parser.h"
 #include "log.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_percent.h"
@@ -517,76 +518,8 @@ void ReloadAnimationSpeedFromConfig(void) {
     TrayAnimation_SetMinIntervalMs((UINT)minInterval);
 }
 
-static int HexDigitValue(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    return -1;
-}
-
-static BOOL ParseHexByte(const char* s, int* out) {
-    int hi = HexDigitValue(s[0]);
-    int lo = HexDigitValue(s[1]);
-    if (hi < 0 || lo < 0) return FALSE;
-    *out = hi * 16 + lo;
-    return TRUE;
-}
-
-static BOOL ParseRgbIntComponent(const char** cursor, int* out) {
-    const char* p = *cursor;
-    while (*p && isspace((unsigned char)*p)) p++;
-
-    errno = 0;
-    char* end = NULL;
-    long parsed = strtol(p, &end, 10);
-    if (end == p || errno == ERANGE || parsed < 0 || parsed > 255) {
-        return FALSE;
-    }
-
-    *cursor = end;
-    *out = (int)parsed;
-    return TRUE;
-}
-
-static BOOL ConsumeComma(const char** cursor) {
-    const char* p = *cursor;
-    while (*p && isspace((unsigned char)*p)) p++;
-    if (*p != ',') return FALSE;
-    p++;
-    while (*p && isspace((unsigned char)*p)) p++;
-    *cursor = p;
-    return TRUE;
-}
-
 static BOOL ParseColorString(const char* str, COLORREF* out) {
-    if (!str || !out) return FALSE;
-    if (str[0] == '#') {
-        if (strlen(str) == 7) {
-            int r = 0, g = 0, b = 0;
-            if (!ParseHexByte(str + 1, &r) ||
-                !ParseHexByte(str + 3, &g) ||
-                !ParseHexByte(str + 5, &b)) {
-                return FALSE;
-            }
-            *out = RGB(r, g, b);
-            return TRUE;
-        }
-        return FALSE;
-    }
-
-    int r = 0, g = 0, b = 0;
-    const char* p = str;
-    if (ParseRgbIntComponent(&p, &r) &&
-        ConsumeComma(&p) &&
-        ParseRgbIntComponent(&p, &g) &&
-        ConsumeComma(&p) &&
-        ParseRgbIntComponent(&p, &b)) {
-        while (*p && isspace((unsigned char)*p)) p++;
-        if (*p != '\0') return FALSE;
-        *out = RGB(r, g, b);
-        return TRUE;
-    }
-    return FALSE;
+    return ColorStringToColorRef(str, out);
 }
 
 void ReadPercentIconColorsConfig(void) {

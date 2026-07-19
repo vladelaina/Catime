@@ -78,6 +78,14 @@ BOOL isValidColorOrGradient(const char* input);
 void ColorRefToHex(COLORREF color, char* output, size_t size);
 
 /**
+ * @brief Parse any supported color string into a Windows COLORREF
+ * @param input Color in any format supported by normalizeColor()
+ * @param outColor Parsed COLORREF value
+ * @return TRUE when the input resolves to a valid solid color
+ */
+BOOL ColorStringToColorRef(const char* input, COLORREF* outColor);
+
+/**
  * @brief Replace pure black with near-black to prevent invisible text
  * @param color Input color
  * @param output Output buffer

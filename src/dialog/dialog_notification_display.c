@@ -8,6 +8,7 @@
 #include "language.h"
 #include "config.h"
 #include "config/config_defaults.h"
+#include "utils/string_convert.h"
 #include "../resource/resource.h"
 #include <strsafe.h>
 #include <string.h>
@@ -22,21 +23,6 @@
 /* ============================================================================
  * Notification Display Dialog
  * ============================================================================ */
-
-static BOOL ConvertNotificationInputToUtf8(const wchar_t* source, char* dest, size_t destSize) {
-    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
-        return FALSE;
-    }
-
-    dest[0] = '\0';
-    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
-    if (required <= 0 || (size_t)required > destSize) {
-        return FALSE;
-    }
-
-    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
-                               (int)destSize, NULL, NULL) > 0;
-}
 
 void ShowNotificationDisplayDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_NOTIFICATION_DISP)) {
@@ -118,7 +104,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_NOTIFICATION_DISP, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_NOTIFICATION_DISP, hwndDlg);
 
             ctx = Dialog_CreateContext();
             if (!ctx) {
@@ -128,6 +114,9 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
             }
             Dialog_SetContext(hwndDlg, ctx);
 
+            SetWindowTextW(
+                hwndDlg,
+                GetLocalizedString(NULL, L"Catime Window Settings"));
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
             wchar_t wbuffer[32];
@@ -145,13 +134,25 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 
             SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_TIME_LABEL,
                            GetLocalizedString(NULL, L"Notification display time:"));
+            SetDlgItemTextW(
+                hwndDlg, IDC_NOTIFICATION_OPACITY_LABEL,
+                GetLocalizedString(
+                    NULL, L"Maximum notification opacity (10-100%):"));
+            SetDlgItemTextW(hwndDlg, IDOK,
+                           GetLocalizedString(NULL, L"OK"));
+            SetDlgItemTextW(hwndDlg, IDCANCEL,
+                           GetLocalizedString(NULL, L"Cancel"));
 
             HWND hEditTime = GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
+            HWND hEditOpacity =
+                GetDlgItem(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
             LONG style = GetWindowLong(hEditTime, GWL_STYLE);
             SetWindowLong(hEditTime, GWL_STYLE, style & ~ES_NUMBER);
 
             Dialog_SubclassEdit(hEditTime, ctx);
+            Dialog_SubclassEdit(hEditOpacity, ctx);
             SetFocus(hEditTime);
+            Dialog_SelectAllText(hEditTime);
 
             return FALSE;
         }
@@ -183,11 +184,11 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
                     }
                 }
 
-                if (!ConvertNotificationInputToUtf8(wtimeStr, timeStr, sizeof(timeStr))) {
+                if (!WideToUtf8(wtimeStr, timeStr, sizeof(timeStr))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_TIME_EDIT);
                     return TRUE;
                 }
-                if (!ConvertNotificationInputToUtf8(wopacityStr, opacityStr, sizeof(opacityStr))) {
+                if (!WideToUtf8(wopacityStr, opacityStr, sizeof(opacityStr))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT);
                     return TRUE;
                 }

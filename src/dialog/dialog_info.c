@@ -5,10 +5,12 @@
 
 #include "dialog/dialog_info.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_form_layout.h"
+#include "dialog/dialog_markdown.h"
+#include "dialog/dialog_modern.h"
 #include "language.h"
 #include "dialog/dialog_language.h"
 #include "config.h"
-#include "markdown/markdown_parser.h"
 #include "utils/win32_dynamic_loader.h"
 #include "../resource/resource.h"
 #include <shellapi.h>
@@ -20,6 +22,9 @@
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define FONT_LICENSE_PARENT_PROP L"Catime.FontLicense.Parent"
 #define ABOUT_LINK_ORIG_PROC_PROP L"Catime.AboutLink.OrigProc"
+#define ABOUT_LINK_HOVER_PROP L"Catime.AboutLink.Hover"
+#define ABOUT_MODERN_ICON_SIZE_96 88
+#define ABOUT_CONTENT_WIDTH_96 448
 
 /* ============================================================================
  * Constants
@@ -79,6 +84,11 @@ static BOOL IsAboutLinkControlId(UINT controlId) {
     return FALSE;
 }
 
+static BOOL IsAboutFooterLinkControlId(UINT controlId) {
+    return controlId != IDC_CREDIT_LINK && controlId != IDC_COPYRIGHT &&
+           IsAboutLinkControlId(controlId);
+}
+
 static WNDPROC GetAboutLinkOrigProc(HWND hwndLink) {
     return (WNDPROC)(LONG_PTR)GetPropW(hwndLink, ABOUT_LINK_ORIG_PROC_PROP);
 }
@@ -119,11 +129,43 @@ static LRESULT CALLBACK AboutLinkSubclassProc(HWND hwnd, UINT msg, WPARAM wParam
     }
 
     switch (msg) {
+        case WM_MOUSEMOVE:
+            if (!GetPropW(hwnd, ABOUT_LINK_HOVER_PROP)) {
+                TRACKMOUSEEVENT track = {0};
+                track.cbSize = sizeof(track);
+                track.dwFlags = TME_LEAVE;
+                track.hwndTrack = hwnd;
+                SetPropW(hwnd, ABOUT_LINK_HOVER_PROP, (HANDLE)1);
+                TrackMouseEvent(&track);
+                InvalidateRect(hwnd, NULL, FALSE);
+            }
+            break;
+
+        case WM_MOUSELEAVE:
+            RemovePropW(hwnd, ABOUT_LINK_HOVER_PROP);
+            InvalidateRect(hwnd, NULL, FALSE);
+            return 0;
+
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+            InvalidateRect(hwnd, NULL, FALSE);
+            break;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_RETURN || wParam == VK_SPACE) {
+                SendMessageW(GetParent(hwnd), WM_COMMAND,
+                             MAKEWPARAM(GetDlgCtrlID(hwnd), STN_CLICKED),
+                             (LPARAM)hwnd);
+                return 0;
+            }
+            break;
+
         case WM_SETCURSOR:
             SetCursor(LoadCursorW(NULL, IDC_HAND));
             return TRUE;
 
         case WM_NCDESTROY:
+            RemovePropW(hwnd, ABOUT_LINK_HOVER_PROP);
             UnsubclassAboutLinkControl(hwnd);
             return CallWindowProcW(origProc, hwnd, msg, wParam, lParam);
     }
@@ -136,8 +178,11 @@ static void ConfigureAboutLinkControls(HWND hwndDlg) {
         HWND hwndLink = GetDlgItem(hwndDlg, g_aboutLinkInfos[i].controlId);
         if (!hwndLink) continue;
 
+        LONG_PTR style = GetWindowLongPtrW(hwndLink, GWL_STYLE);
         LONG_PTR exStyle = GetWindowLongPtrW(hwndLink, GWL_EXSTYLE);
-        SetWindowLongPtrW(hwndLink, GWL_EXSTYLE, exStyle | WS_EX_TRANSPARENT);
+        SetWindowLongPtrW(hwndLink, GWL_STYLE, style | WS_TABSTOP);
+        SetWindowLongPtrW(hwndLink, GWL_EXSTYLE,
+                          exStyle & ~WS_EX_TRANSPARENT);
         SetWindowPos(hwndLink, NULL, 0, 0, 0, 0,
                      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
                      SWP_NOACTIVATE | SWP_FRAMECHANGED);
@@ -145,63 +190,14 @@ static void ConfigureAboutLinkControls(HWND hwndDlg) {
     }
 }
 
-static BOOL GetIconPixelSize(HICON hIcon, int* width, int* height) {
-    if (!hIcon || !width || !height) return FALSE;
-
-    ICONINFO iconInfo;
-    if (!GetIconInfo(hIcon, &iconInfo)) {
-        return FALSE;
-    }
-
-    BITMAP bitmap = {0};
-    HBITMAP hBitmap = iconInfo.hbmColor ? iconInfo.hbmColor : iconInfo.hbmMask;
-    BOOL ok = hBitmap && GetObjectW(hBitmap, sizeof(bitmap), &bitmap) > 0;
-
-    if (ok) {
-        *width = bitmap.bmWidth;
-        *height = iconInfo.hbmColor ? bitmap.bmHeight : bitmap.bmHeight / 2;
-    }
-
-    if (iconInfo.hbmColor) DeleteObject(iconInfo.hbmColor);
-    if (iconInfo.hbmMask) DeleteObject(iconInfo.hbmMask);
-    return ok;
-}
-
 static void PaintAboutLinkBackground(HWND hwndDlg, const DRAWITEMSTRUCT* drawItem) {
+    DialogModernPalette palette;
+    DialogModern_CopyPalette(hwndDlg, &palette);
     RECT rect = drawItem->rcItem;
-    FillRect(drawItem->hDC, &rect, GetSysColorBrush(COLOR_3DFACE));
-
-    HWND hwndIcon = GetDlgItem(hwndDlg, IDC_ABOUT_ICON);
-    if (!hwndIcon || !drawItem->hwndItem) {
-        return;
-    }
-
-    HICON hIcon = (HICON)SendMessageW(hwndIcon, STM_GETICON, 0, 0);
-    if (!hIcon) {
-        return;
-    }
-
-    RECT iconWindowRect;
-    RECT itemWindowRect;
-    if (!GetWindowRect(hwndIcon, &iconWindowRect) ||
-        !GetWindowRect(drawItem->hwndItem, &itemWindowRect)) {
-        return;
-    }
-
-    int iconWidth = 0;
-    int iconHeight = 0;
-    if (!GetIconPixelSize(hIcon, &iconWidth, &iconHeight)) {
-        iconWidth = iconWindowRect.right - iconWindowRect.left;
-        iconHeight = iconWindowRect.bottom - iconWindowRect.top;
-    }
-
-    int iconX = iconWindowRect.left - itemWindowRect.left;
-    int iconY = iconWindowRect.top - itemWindowRect.top;
-    RECT iconDrawRect = {iconX, iconY, iconX + iconWidth, iconY + iconHeight};
-    RECT overlap;
-    if (IntersectRect(&overlap, &rect, &iconDrawRect)) {
-        DrawIconEx(drawItem->hDC, iconX, iconY, hIcon, iconWidth, iconHeight,
-                   0, NULL, DI_NORMAL);
+    HBRUSH brush = CreateSolidBrush(palette.surface);
+    if (brush) {
+        FillRect(drawItem->hDC, &rect, brush);
+        DeleteObject(brush);
     }
 }
 
@@ -213,7 +209,6 @@ char g_websiteInput[512] = {0};
 
 typedef HANDLE (WINAPI* GetThreadDpiAwarenessContextFunc)(void);
 typedef HANDLE (WINAPI* SetThreadDpiAwarenessContextFunc)(HANDLE);
-typedef UINT (WINAPI* GetDpiForWindowFunc)(HWND);
 
 static GetThreadDpiAwarenessContextFunc LoadGetThreadDpiAwarenessContext(HMODULE module) {
     GetThreadDpiAwarenessContextFunc func = NULL;
@@ -228,35 +223,92 @@ static SetThreadDpiAwarenessContextFunc LoadSetThreadDpiAwarenessContext(HMODULE
 }
 
 static UINT GetAboutDialogDpi(HWND hwndDlg) {
-    HMODULE hUser32 = GetModuleHandleW(L"user32.dll");
-    if (hUser32) {
-        GetDpiForWindowFunc getDpiForWindowFunc = NULL;
-        CATIME_LOAD_PROC_ADDRESS(hUser32, "GetDpiForWindow", getDpiForWindowFunc);
-        if (getDpiForWindowFunc) {
-            UINT dpi = getDpiForWindowFunc(hwndDlg);
-            if (dpi > 0) {
-                return dpi;
-            }
+    return DialogModern_GetDpi(hwndDlg);
+}
+
+static void SetAboutControlRect96(HWND hwndDlg, UINT controlId, UINT dpi,
+                                  int x, int y, int width, int height) {
+    DialogModern_SetChildRect96(hwndDlg, (int)controlId, dpi,
+                                x, y, width, height);
+}
+
+static int MeasureAboutLinkWidth96(HWND control, UINT dpi) {
+    wchar_t text[256] = {0};
+    GetWindowTextW(control, text, (int)_countof(text));
+    HDC hdc = GetDC(control);
+    if (!hdc) return 44;
+    HFONT font = (HFONT)SendMessageW(control, WM_GETFONT, 0, 0);
+    HGDIOBJ oldFont = font ? SelectObject(hdc, font) : NULL;
+    SIZE size = {0};
+    GetTextExtentPoint32W(hdc, text, (int)wcslen(text), &size);
+    if (oldFont) SelectObject(hdc, oldFont);
+    ReleaseDC(control, hdc);
+    int width = MulDiv(size.cx, 96, (int)(dpi ? dpi : 96u)) + 14;
+    return width < 44 ? 44 : width;
+}
+
+static void LayoutAboutDialogControls(HWND hwndDlg) {
+    static const UINT footerLinks[] = {
+        IDC_CREDITS,
+        IDC_BILIBILI_LINK,
+        IDC_GITHUB_LINK,
+        IDC_COPYRIGHT_LINK,
+        IDC_SUPPORT
+    };
+    UINT dpi = GetAboutDialogDpi(hwndDlg);
+    SetAboutControlRect96(hwndDlg, IDC_ABOUT_ICON, dpi,
+                          0, 4, ABOUT_MODERN_ICON_SIZE_96,
+                          ABOUT_MODERN_ICON_SIZE_96);
+    SetAboutControlRect96(hwndDlg, IDC_VERSION_TEXT, dpi, 112, 0, 336, 22);
+    SetAboutControlRect96(hwndDlg, IDC_BUILD_DATE, dpi, 112, 26, 336, 22);
+    SetAboutControlRect96(hwndDlg, IDC_COPYRIGHT, dpi, 112, 52, 336, 22);
+    SetAboutControlRect96(hwndDlg, IDC_CREDIT_LINK, dpi, 112, 78, 336, 24);
+
+    int widths[_countof(footerLinks)] = {0};
+    int totalWidth = 0;
+    const int gap = 12;
+    for (size_t i = 0; i < _countof(footerLinks); i++) {
+        HWND link = GetDlgItem(hwndDlg, (int)footerLinks[i]);
+        widths[i] = link ? MeasureAboutLinkWidth96(link, dpi) : 44;
+        totalWidth += widths[i];
+    }
+    totalWidth += gap * ((int)_countof(footerLinks) - 1);
+
+    int availableForText = ABOUT_CONTENT_WIDTH_96 -
+                           gap * ((int)_countof(footerLinks) - 1);
+    int textWidth = totalWidth -
+                    gap * ((int)_countof(footerLinks) - 1);
+    if (textWidth > availableForText) {
+        int remainingWidth = availableForText;
+        int remainingIdealWidth = textWidth;
+        for (size_t i = 0; i < _countof(footerLinks); i++) {
+            int remainingItems = (int)_countof(footerLinks) - (int)i;
+            int idealWidth = widths[i];
+            int width = remainingItems == 1 ? remainingWidth :
+                MulDiv(idealWidth, remainingWidth, remainingIdealWidth);
+            int maximum = remainingWidth - (remainingItems - 1) * 36;
+            if (width < 36) width = 36;
+            if (width > maximum) width = maximum;
+            widths[i] = width;
+            remainingWidth -= width;
+            remainingIdealWidth -= idealWidth;
         }
+        totalWidth = ABOUT_CONTENT_WIDTH_96;
     }
 
-    HDC hdc = GetDC(hwndDlg);
-    if (hdc) {
-        int dpi = GetDeviceCaps(hdc, LOGPIXELSX);
-        ReleaseDC(hwndDlg, hdc);
-        if (dpi > 0) {
-            return (UINT)dpi;
-        }
+    int x = (ABOUT_CONTENT_WIDTH_96 - totalWidth) / 2;
+    for (size_t i = 0; i < _countof(footerLinks); i++) {
+        SetAboutControlRect96(hwndDlg, footerLinks[i], dpi,
+                              x, 122, widths[i], 24);
+        x += widths[i] + gap;
     }
-
-    return 96;
 }
 
 static void ReloadAboutDialogIcon(HWND hwndDlg) {
     UINT dpi = GetAboutDialogDpi(hwndDlg);
-    int iconSize = MulDiv(ABOUT_ICON_SIZE, (int)dpi, 96);
+    int iconSize = DialogModern_Scale(dpi, ABOUT_MODERN_ICON_SIZE_96);
     if (iconSize <= 0) {
-        iconSize = ABOUT_ICON_SIZE;
+        iconSize = ABOUT_MODERN_ICON_SIZE_96;
     }
 
     HICON hIcon = (HICON)LoadImageW(GetModuleHandleW(NULL),
@@ -326,7 +378,7 @@ void ShowAboutDialog(HWND hwndParent) {
 INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_ABOUT, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_ABOUT, hwndDlg);
 
             ReloadAboutDialogIcon(hwndDlg);
 
@@ -390,6 +442,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 SetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, linkText);
             }
             ConfigureAboutLinkControls(hwndDlg);
+            LayoutAboutDialogControls(hwndDlg);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
@@ -398,6 +451,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_DPICHANGED:
             ReloadAboutDialogIcon(hwndDlg);
+            LayoutAboutDialogControls(hwndDlg);
             break;
 
         case WM_DESTROY: {
@@ -447,26 +501,48 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     wchar_t text[256];
                     GetDlgItemTextW(hwndDlg, g_aboutLinkInfos[i].controlId, text, sizeof(text)/sizeof(text[0]));
 
-                    HFONT hFont = (HFONT)SendMessage(hwndDlg, WM_GETFONT, 0, 0);
+                    HFONT hFont = (HFONT)SendMessageW(
+                        lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
                     if (!hFont) {
                         hFont = GetStockObject(DEFAULT_GUI_FONT);
                     }
-                    HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
+                    DialogModernPalette palette;
+                    DialogModern_CopyPalette(hwndDlg, &palette);
+                    BOOL active =
+                        GetPropW(lpDrawItem->hwndItem, ABOUT_LINK_HOVER_PROP) ||
+                        GetFocus() == lpDrawItem->hwndItem;
+                    COLORREF color = active ? palette.accentHover :
+                                              palette.accent;
+                    UINT format = DT_VCENTER | DT_SINGLELINE |
+                                  DT_END_ELLIPSIS;
+                    format |= IsAboutFooterLinkControlId(lpDrawItem->CtlID) ?
+                              DT_CENTER : DT_LEFT;
+                    DialogModern_DrawText(hdc, hFont, color, &rect, text,
+                                          format);
 
-                    /* Orange color for links */
-                    COLORREF oldTextColor = SetTextColor(hdc, 0x00D26919);
-                    int oldBkMode = SetBkMode(hdc, TRANSPARENT);
-
-                    DrawTextW(hdc, text, -1, &rect, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-                    if (hOldFont) {
-                        SelectObject(hdc, hOldFont);
-                    }
-                    if (oldTextColor != CLR_INVALID) {
-                        SetTextColor(hdc, oldTextColor);
-                    }
-                    if (oldBkMode != 0) {
-                        SetBkMode(hdc, oldBkMode);
+                    if (active) {
+                        HGDIOBJ oldFont = hFont ? SelectObject(hdc, hFont) : NULL;
+                        SIZE textSize = {0};
+                        GetTextExtentPoint32W(hdc, text, (int)wcslen(text),
+                                              &textSize);
+                        if (oldFont) SelectObject(hdc, oldFont);
+                        int textWidth = textSize.cx;
+                        int controlWidth = rect.right - rect.left;
+                        if (textWidth > controlWidth) textWidth = controlWidth;
+                        int left = IsAboutFooterLinkControlId(lpDrawItem->CtlID) ?
+                            rect.left + (controlWidth - textWidth) / 2 :
+                            rect.left;
+                        RECT underline = {
+                            left,
+                            rect.bottom - DialogModern_Scale(
+                                DialogModern_GetDpi(hwndDlg), 2),
+                            left + textWidth,
+                            rect.bottom
+                        };
+                        DialogModern_DrawRoundedRect(
+                            hdc, &underline,
+                            DialogModern_Scale(DialogModern_GetDpi(hwndDlg), 2),
+                            color, color, 0);
                     }
                     return TRUE;
                 }
@@ -516,7 +592,7 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
 
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_WEBSITE, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_WEBSITE, hwndDlg);
 
             ctx = Dialog_CreateContext();
             if (!ctx) {
@@ -539,6 +615,9 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
             }
 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_WEBSITE_DIALOG);
+            DialogFormLayout_ApplyInstruction(
+                hwndDlg, CLOCK_IDC_STATIC, CLOCK_IDC_EDIT,
+                CLOCK_IDC_BUTTON_OK);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
@@ -626,39 +705,16 @@ INT_PTR CALLBACK WebsiteDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM
  * Font License Dialog Implementation
  * ============================================================================ */
 
-static wchar_t* g_displayText = NULL;
-static MarkdownLink* g_links = NULL;
-static int g_linkCount = 0;
-static MarkdownHeading* g_headings = NULL;
-static int g_headingCount = 0;
-static MarkdownStyle* g_styles = NULL;
-static int g_styleCount = 0;
-static MarkdownListItem* g_listItems = NULL;
-static int g_listItemCount = 0;
-static MarkdownBlockquote* g_blockquotes = NULL;
-static int g_blockquoteCount = 0;
-static MarkdownColorTag* g_colorTags = NULL;
-static int g_colorTagCount = 0;
-static MarkdownFontTag* g_fontTags = NULL;
-static int g_fontTagCount = 0;
+static DialogMarkdownState* GetFontLicenseMarkdown(HWND hwndDlg) {
+    return hwndDlg ? (DialogMarkdownState*)GetWindowLongPtrW(
+                         hwndDlg, GWLP_USERDATA)
+                   : NULL;
+}
 
-static void CleanupFontLicenseResources(void) {
-    FreeMarkdownLinks(g_links, g_linkCount);
-    g_links = NULL;
-    g_linkCount = 0;
-    if (g_headings) { free(g_headings); g_headings = NULL; }
-    g_headingCount = 0;
-    if (g_styles) { free(g_styles); g_styles = NULL; }
-    g_styleCount = 0;
-    if (g_listItems) { free(g_listItems); g_listItems = NULL; }
-    g_listItemCount = 0;
-    if (g_blockquotes) { free(g_blockquotes); g_blockquotes = NULL; }
-    g_blockquoteCount = 0;
-    if (g_colorTags) { free(g_colorTags); g_colorTags = NULL; }
-    g_colorTagCount = 0;
-    if (g_fontTags) { free(g_fontTags); g_fontTags = NULL; }
-    g_fontTagCount = 0;
-    if (g_displayText) { free(g_displayText); g_displayText = NULL; }
+static void CleanupFontLicenseResources(HWND hwndDlg) {
+    DialogMarkdownState* markdown = GetFontLicenseMarkdown(hwndDlg);
+    SetWindowLongPtrW(hwndDlg, GWLP_USERDATA, 0);
+    DialogMarkdown_Destroy(markdown);
 }
 
 static BOOL IsValidFontLicenseParentWindow(HWND hwnd) {
@@ -697,7 +753,13 @@ static BOOL PostFontLicenseResult(HWND hwndDlg, WPARAM result) {
 INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
+            DialogMarkdownState* markdown = DialogMarkdown_Create();
+            if (!markdown) {
+                DestroyWindow(hwndDlg);
+                return TRUE;
+            }
+            SetWindowLongPtrW(hwndDlg, GWLP_USERDATA, (LONG_PTR)markdown);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
             HWND hwndParent = (HWND)lParam;
             if (IsValidFontLicenseParentWindow(hwndParent)) {
                 SetPropW(hwndDlg, FONT_LICENSE_PARENT_PROP, (HANDLE)hwndParent);
@@ -714,30 +776,10 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
                 L"FontLicenseAgreementText"
             );
 
-            /* Wrap license text with <md> tags for markdown parsing */
-            size_t textLen = wcslen(licenseText);
-            size_t bufSize = textLen + 16;
-            wchar_t* wrappedText = (wchar_t*)malloc(bufSize * sizeof(wchar_t));
-            if (wrappedText) {
-                wcscpy_s(wrappedText, bufSize, L"<md>\n");
-                wcscat_s(wrappedText, bufSize, licenseText);
-                wcscat_s(wrappedText, bufSize, L"\n</md>");
-                ParseMarkdownLinks(wrappedText, &g_displayText, &g_links, &g_linkCount,
-                                   &g_headings, &g_headingCount,
-                                   &g_styles, &g_styleCount,
-                                   &g_listItems, &g_listItemCount,
-                                   &g_blockquotes, &g_blockquoteCount,
-                                   &g_colorTags, &g_colorTagCount,
-                                   &g_fontTags, &g_fontTagCount);
-                free(wrappedText);
-            } else {
-                ParseMarkdownLinks(licenseText, &g_displayText, &g_links, &g_linkCount,
-                                   &g_headings, &g_headingCount,
-                                   &g_styles, &g_styleCount,
-                                   &g_listItems, &g_listItemCount,
-                                   &g_blockquotes, &g_blockquoteCount,
-                                   &g_colorTags, &g_colorTagCount,
-                                   &g_fontTags, &g_fontTagCount);
+            if (!DialogMarkdown_Parse(markdown, licenseText, TRUE)) {
+                CleanupFontLicenseResources(hwndDlg);
+                DestroyWindow(hwndDlg);
+                return TRUE;
             }
 
             const wchar_t* agreeText = GetLocalizedString(NULL, L"Agree");
@@ -754,13 +796,13 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
                 case IDC_FONT_LICENSE_AGREE_BTN:
-                    CleanupFontLicenseResources();
+                    CleanupFontLicenseResources(hwndDlg);
                     PostFontLicenseResult(hwndDlg, IDOK);
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 case IDC_FONT_LICENSE_CANCEL_BTN:
                 case IDCANCEL:
-                    CleanupFontLicenseResources();
+                    CleanupFontLicenseResources(hwndDlg);
                     PostFontLicenseResult(hwndDlg, IDCANCEL);
                     DestroyWindow(hwndDlg);
                     return TRUE;
@@ -770,7 +812,8 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
                         GetCursorPos(&pt);
                         ScreenToClient(GetDlgItem(hwndDlg, IDC_FONT_LICENSE_TEXT), &pt);
 
-                        if (HandleMarkdownClick(g_links, g_linkCount, pt)) {
+                        if (DialogMarkdown_HandleClick(
+                                GetFontLicenseMarkdown(hwndDlg), pt)) {
                             return TRUE;
                         }
                     }
@@ -780,7 +823,7 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
 
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
-                CleanupFontLicenseResources();
+                CleanupFontLicenseResources(hwndDlg);
                 PostFontLicenseResult(hwndDlg, IDCANCEL);
                 DestroyWindow(hwndDlg);
                 return TRUE;
@@ -793,12 +836,23 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
                 HDC hdc = lpDrawItem->hDC;
                 RECT rect = lpDrawItem->rcItem;
 
-                HBRUSH hBrush = GetSysColorBrush(COLOR_BTNFACE);
-                if (hBrush) {
-                    FillRect(hdc, &rect, hBrush);
+                DialogModernPalette palette;
+                DialogModern_CopyPalette(hwndDlg, &palette);
+                HBRUSH surfaceBrush = CreateSolidBrush(palette.surface);
+                if (surfaceBrush) {
+                    FillRect(hdc, &rect, surfaceBrush);
+                    DeleteObject(surfaceBrush);
                 }
+                RECT panelRect = rect;
+                InflateRect(&panelRect, -1, -1);
+                DialogModern_DrawRoundedRect(
+                    hdc, &panelRect,
+                    DialogModern_Scale(DialogModern_GetDpi(hwndDlg), 14),
+                    palette.field, palette.border, 1);
 
-                if (g_displayText) {
+                DialogMarkdownState* markdown =
+                    GetFontLicenseMarkdown(hwndDlg);
+                if (markdown) {
                     int oldBkMode = SetBkMode(hdc, TRANSPARENT);
 
                     HFONT hFont = (HFONT)SendMessage(lpDrawItem->hwndItem, WM_GETFONT, 0, 0);
@@ -807,16 +861,13 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
                     }
                     HFONT hOldFont = hFont ? (HFONT)SelectObject(hdc, hFont) : NULL;
 
-                    RECT drawRect = rect;
-                    drawRect.left += 5;
-                    drawRect.top += 5;
+                    RECT drawRect = panelRect;
+                    int inset = DialogModern_Scale(
+                        DialogModern_GetDpi(hwndDlg), 10);
+                    InflateRect(&drawRect, -inset, -inset);
 
-                    RenderMarkdownText(hdc, g_displayText, g_links, g_linkCount,
-                                       g_headings, g_headingCount,
-                                       g_styles, g_styleCount,
-                                       g_listItems, g_listItemCount,
-                                       g_blockquotes, g_blockquoteCount,
-                                       drawRect, MARKDOWN_DEFAULT_LINK_COLOR, MARKDOWN_DEFAULT_TEXT_COLOR);
+                    DialogMarkdown_Render(markdown, hdc, drawRect,
+                                          palette.accent, palette.text);
 
                     if (hOldFont) {
                         SelectObject(hdc, hOldFont);
@@ -832,13 +883,13 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
         }
 
         case WM_DESTROY:
-            CleanupFontLicenseResources();
+            CleanupFontLicenseResources(hwndDlg);
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_FONT_LICENSE, hwndDlg);
             RemovePropW(hwndDlg, FONT_LICENSE_PARENT_PROP);
             break;
 
         case WM_CLOSE:
-            CleanupFontLicenseResources();
+            CleanupFontLicenseResources(hwndDlg);
             PostFontLicenseResult(hwndDlg, IDCANCEL);
             DestroyWindow(hwndDlg);
             return TRUE;

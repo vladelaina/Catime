@@ -263,6 +263,9 @@ BOOL Dialog_IsValidNumberInput(const wchar_t* str);
  */
 typedef enum {
     DIALOG_INSTANCE_ERROR,
+    DIALOG_INSTANCE_MESSAGE_INFO,
+    DIALOG_INSTANCE_MESSAGE_WARNING,
+    DIALOG_INSTANCE_MESSAGE_ERROR,
     DIALOG_INSTANCE_INPUT,            /**< Custom countdown input */
     DIALOG_INSTANCE_ABOUT,
     DIALOG_INSTANCE_POMODORO_LOOP,
@@ -277,6 +280,7 @@ typedef enum {
     DIALOG_INSTANCE_POMODORO_TIME,   /**< Pomodoro time edit */
     DIALOG_INSTANCE_INPUT_BOX,       /**< Generic modal input box */
     DIALOG_INSTANCE_COLOR,           /**< Color picker */
+    DIALOG_INSTANCE_COLOR_PICKER,    /**< Visual HSV color picker */
     DIALOG_INSTANCE_HOTKEY,          /**< Hotkey settings */
     DIALOG_INSTANCE_UPDATE,          /**< Update available dialog */
     DIALOG_INSTANCE_NO_UPDATE,       /**< No update dialog */
@@ -295,10 +299,20 @@ typedef enum {
  * @param type Dialog type
  * @param hwnd Dialog handle
  * 
- * @details Call in WM_INITDIALOG. Automatically applies HWND_TOPMOST
- * to ensure dialog stays visible across virtual desktops.
+ * @details This function only updates the instance registry. Most dialog
+ * initialization paths should call Dialog_InitializeInstance() instead.
  */
 void Dialog_RegisterInstance(DialogInstanceType type, HWND hwnd);
+
+/**
+ * @brief Register and apply the shared dialog presentation policy
+ * @param type Dialog type
+ * @param hwnd Dialog handle
+ *
+ * @details Call from WM_INITDIALOG or WM_CREATE. This performs instance
+ * registration, modern presentation attachment, and HWND_TOPMOST setup.
+ */
+void Dialog_InitializeInstance(DialogInstanceType type, HWND hwnd);
 
 /**
  * @brief Unregister dialog instance unconditionally
@@ -331,6 +345,8 @@ HWND Dialog_GetInstance(DialogInstanceType type);
  * @return TRUE if open
  */
 BOOL Dialog_IsOpen(DialogInstanceType type);
+
+BOOL Dialog_ProcessModelessMessage(MSG* msg);
 
 #endif /* DIALOG_COMMON_H */
 

@@ -4,6 +4,7 @@
  */
 
 #include "color/gradient.h"
+#include "color/color_parser.h"
 #include <string.h>
 #include <stdlib.h>
 #ifdef _MSC_VER
@@ -80,7 +81,6 @@ static const GradientInfo GRADIENT_REGISTRY[] = {
  * ============================================================================ */
 
 #include <stdio.h>
-#include "color/color_parser.h"
 
 static GradientInfo g_CustomGradient = {
     GRADIENT_CUSTOM,
@@ -95,29 +95,8 @@ static char g_CustomNameBuffer[COLOR_HEX_BUFFER];
 static uint32_t g_CustomVersion = 0;
 static SRWLOCK g_CustomGradientLock = SRWLOCK_INIT;
 
-static int HexDigitValue(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    return -1;
-}
-
 static BOOL ParseHexColor(const char* hex, COLORREF* out) {
-    if (!hex || !out) return FALSE;
-
-    const char* start = (hex[0] == '#') ? hex + 1 : hex;
-    if (strlen(start) != 6) return FALSE;
-
-    int channels[3] = {0, 0, 0};
-    for (int i = 0; i < 3; i++) {
-        int hi = HexDigitValue(start[i * 2]);
-        int lo = HexDigitValue(start[i * 2 + 1]);
-        if (hi < 0 || lo < 0) return FALSE;
-        channels[i] = hi * 16 + lo;
-    }
-
-    *out = RGB(channels[0], channels[1], channels[2]);
-    return TRUE;
+    return ColorStringToColorRef(hex, out);
 }
 
 static const GradientInfo* FindGradientInfoByType(GradientType type) {

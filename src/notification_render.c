@@ -166,39 +166,9 @@ static HBRUSH GetNotificationBgBrush(void) {
     return g_notificationBgBrush;
 }
 
-static int HexDigitValue(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    return -1;
-}
-
-static BOOL TryParseHexColorRef(const char* color, COLORREF* out) {
-    if (!color || !out) return FALSE;
-
-    char normalized[COLOR_HEX_BUFFER] = {0};
-    normalizeColor(color, normalized, sizeof(normalized));
-    if (normalized[0] != '#' || strlen(normalized) != 7) {
-        return FALSE;
-    }
-
-    int channels[3] = {0, 0, 0};
-    for (int i = 0; i < 3; i++) {
-        int hi = HexDigitValue(normalized[1 + i * 2]);
-        int lo = HexDigitValue(normalized[2 + i * 2]);
-        if (hi < 0 || lo < 0) {
-            return FALSE;
-        }
-        channels[i] = hi * 16 + lo;
-    }
-
-    *out = RGB(channels[0], channels[1], channels[2]);
-    return TRUE;
-}
-
 static COLORREF GetNotificationSolidTextColor(const char* activeColor) {
     COLORREF color = NOTIFICATION_CONTENT_COLOR;
-    if (TryParseHexColorRef(activeColor, &color)) {
+    if (ColorStringToColorRef(activeColor, &color)) {
         return color;
     }
     return NOTIFICATION_CONTENT_COLOR;

@@ -6,6 +6,38 @@
 #include <commctrl.h>
 #include "resource.h"
 
+/** @brief Notification timeout message editor */
+CLOCK_IDD_NOTIFICATION_MESSAGES_DIALOG DIALOGEX 0, 0, 260, 100
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Notification Content"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1,
+                    10, 10, 240, 12
+    EDITTEXT        IDC_NOTIFICATION_EDIT1, 10, 28, 240, 24,
+                    ES_AUTOHSCROLL | WS_TABSTOP
+    PUSHBUTTON      "Cancel", IDCANCEL, 145, 70, 50, 14
+    DEFPUSHBUTTON   "OK", IDOK, 200, 70, 50, 14
+END
+
+/** @brief Compact notification timing and opacity editor */
+CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG DIALOGEX 0, 0, 260, 112
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Notification Display Settings"
+FONT 9, "Segoe UI"
+BEGIN
+    LTEXT           "Notification display time:", IDC_NOTIFICATION_TIME_LABEL,
+                    10, 12, 130, 14
+    EDITTEXT        IDC_NOTIFICATION_TIME_EDIT, 155, 8, 95, 22,
+                    ES_AUTOHSCROLL | WS_TABSTOP
+    LTEXT           "Maximum opacity (10-100%):", IDC_NOTIFICATION_OPACITY_LABEL,
+                    10, 44, 130, 14
+    EDITTEXT        IDC_NOTIFICATION_OPACITY_EDIT, 155, 40, 95, 22,
+                    ES_AUTOHSCROLL | ES_NUMBER | WS_TABSTOP
+    PUSHBUTTON      "Cancel", IDCANCEL, 145, 82, 50, 14
+    DEFPUSHBUTTON   "OK", IDOK, 200, 82, 50, 14
+END
+
 /** @brief Complex notification configuration dialog with grouped controls */
 CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG DIALOGEX 0, 0, 350, 405
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
@@ -28,15 +60,15 @@ BEGIN
     
     LTEXT           "Corner radius:", IDC_NOTIFICATION_RADIUS_LABEL, 20, 135, 110, 15
     CONTROL         "", IDC_NOTIFICATION_RADIUS_SLIDER, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 133, 180, 15
-    LTEXT           "12px", IDC_NOTIFICATION_RADIUS_TEXT, 315, 135, 35, 15
+    LTEXT           "12px", IDC_NOTIFICATION_RADIUS_TEXT, 310, 135, 28, 15
 
     LTEXT           "Maximum opacity (10-100%):", IDC_NOTIFICATION_OPACITY_LABEL, 20, 160, 110, 15
     CONTROL         "", IDC_NOTIFICATION_OPACITY_EDIT, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 158, 180, 15
-    LTEXT           "100%", IDC_NOTIFICATION_OPACITY_TEXT, 315, 160, 35, 15
+    LTEXT           "100%", IDC_NOTIFICATION_OPACITY_TEXT, 310, 160, 28, 15
 
     LTEXT           "Text height ratio:", IDC_NOTIFICATION_FONT_SIZE_LABEL, 20, 185, 110, 15
     CONTROL         "", IDC_NOTIFICATION_FONT_SIZE_SLIDER, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 130, 183, 180, 15
-    LTEXT           "100%", IDC_NOTIFICATION_FONT_SIZE_TEXT, 315, 185, 35, 15
+    LTEXT           "100%", IDC_NOTIFICATION_FONT_SIZE_TEXT, 310, 185, 28, 15
 
 
     /** Audio feedback configuration */
@@ -45,7 +77,7 @@ BEGIN
     LTEXT           "Sound (supports .mp3/.wav):", IDC_NOTIFICATION_SOUND_LABEL, 20, 240, 150, 15
     COMBOBOX        IDC_NOTIFICATION_SOUND_COMBO, 150, 238, 80, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Test", IDC_TEST_SOUND_BUTTON, 235, 238, 35, 20
-    PUSHBUTTON      "Audio Dir", IDC_OPEN_SOUND_DIR_BUTTON, 275, 238, 65, 20
+    PUSHBUTTON      "Audio Dir", IDC_OPEN_SOUND_DIR_BUTTON, 275, 238, 58, 20
     
     LTEXT           "Volume (0-100%):", IDC_VOLUME_LABEL, 20, 270, 70, 15
     CONTROL         "", IDC_VOLUME_SLIDER, "msctls_trackbar32", TBS_BOTH | TBS_NOTICKS | WS_TABSTOP, 90, 270, 180, 15

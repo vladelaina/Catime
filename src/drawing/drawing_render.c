@@ -255,17 +255,6 @@ static const wchar_t* FindNextPluginTextMarker(const wchar_t* src,
     return NULL;
 }
 
-/**
- * @param colorStr "#RRGGBB" or "R,G,B" format
- * @return COLORREF value, white on parse failure
- */
-static int HexDigitValue(char ch) {
-    if (ch >= '0' && ch <= '9') return ch - '0';
-    if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-    if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-    return -1;
-}
-
 static COLORREF ParseColorString(const char* colorStr, const GradientInfo* gradientInfo) {
     if (!colorStr) {
         return RGB(255, 255, 255);
@@ -281,23 +270,9 @@ static COLORREF ParseColorString(const char* colorStr, const GradientInfo* gradi
         return gradientInfo->startColor;
     }
 
-    char normalized[COLOR_HEX_BUFFER];
-    normalizeColor(colorStr, normalized, sizeof(normalized));
-    if (normalized[0] != '#' || strlen(normalized) != 7) {
-        return RGB(255, 255, 255);
-    }
-
-    int channels[3] = {0, 0, 0};
-    for (int i = 0; i < 3; i++) {
-        int hi = HexDigitValue(normalized[1 + i * 2]);
-        int lo = HexDigitValue(normalized[2 + i * 2]);
-        if (hi < 0 || lo < 0) {
-            return RGB(255, 255, 255);
-        }
-        channels[i] = hi * 16 + lo;
-    }
-
-    return RGB(channels[0], channels[1], channels[2]);
+    COLORREF parsed = RGB(255, 255, 255);
+    return ColorStringToColorRef(colorStr, &parsed) ? parsed :
+           RGB(255, 255, 255);
 }
 
 static int CalculateRenderFontSize(int baseFontSize, float scaleFactor) {

@@ -85,7 +85,7 @@ static SpecialControlEntry g_specialControls[] = {
     {CLOCK_IDD_NOTIFICATION_SETTINGS_DIALOG, IDC_NOTIFICATION_OPACITY_TEXT, L"100%"},
 
     {CLOCK_IDD_POMODORO_TIME_DIALOG, CLOCK_IDC_STATIC,
-     L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n1 30 20=1 hour 30 minutes 20 seconds"},
+     L"25=25 minutes\\n25h=25 hours\\n25s=25 seconds\\n25 30=25 minutes 30 seconds\\n25 30m=25 hours 30 minutes\\n1 30 20=1 hour 30 minutes 20 seconds"},
 
     {CLOCK_IDD_POMODORO_COMBO_DIALOG, CLOCK_IDC_STATIC,
      L"Enter pomodoro time sequence, separated by spaces:\\n\\n25m = 25 minutes\\n30s = 30 seconds\\n1h30m = 1 hour 30 minutes\\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min"},

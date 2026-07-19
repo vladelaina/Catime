@@ -8,6 +8,7 @@
  * refactored dialog modules:
  * - dialog_common.h    : Shared utilities (context, subclassing, positioning)
  * - dialog_error.h     : Error dialogs
+ * - dialog_message.h   : Reusable modal information/warning/error panels
  * - dialog_input.h     : Generic input dialogs (timer, pomodoro, etc.)
  * - dialog_info.h      : About, font license, website, CLI help
  * - dialog_pomodoro.h  : Pomodoro-specific dialogs
@@ -22,6 +23,7 @@
 /* Include all refactored dialog modules */
 #include "dialog_common.h"
 #include "dialog_error.h"
+#include "dialog_message.h"
 #include "dialog_input.h"
 #include "dialog_info.h"
 #include "dialog_pomodoro.h"

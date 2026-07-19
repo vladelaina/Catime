@@ -6,7 +6,9 @@
 #include "dialog/dialog_pomodoro.h"
 #include "dialog/dialog_common.h"
 #include "dialog/dialog_error.h"
+#include "dialog/dialog_form_layout.h"
 #include "dialog/dialog_input.h"
+#include "dialog/dialog_modern.h"
 #include "language.h"
 #include "config.h"
 #include "config/config_defaults.h"
@@ -21,6 +23,14 @@
 #define POMODORO_OPTIONS_MAX_INPUT_CHARS 512
 #define POMODORO_OPTIONS_MAX_INPUT_BYTES ((POMODORO_OPTIONS_MAX_INPUT_CHARS * 4) + 1)
 #define POMODORO_OPTIONS_TOKEN_DELIMITERS " \t\r\n"
+
+static void LayoutPomodoroLoopPrompt(HWND hwndDlg) {
+    UINT dpi = DialogModern_GetDpi(hwndDlg);
+    DialogModern_SetChildRect96(hwndDlg, CLOCK_IDC_STATIC, dpi,
+                                10, 10, 288, 24);
+    DialogModern_SetChildRect96(hwndDlg, CLOCK_IDC_EDIT, dpi,
+                                10, 42, 288, 24);
+}
 
 /* ============================================================================
  * Global State (defined in timer.c)
@@ -176,7 +186,7 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
 
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_POMODORO_LOOP, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_POMODORO_LOOP, hwndDlg);
 
             ctx = Dialog_CreateContext();
             if (!ctx) {
@@ -191,6 +201,7 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
             SetDlgItemTextW(hwndDlg, CLOCK_IDC_STATIC,
                 GetLocalizedString(NULL, 
                                  L"Please enter loop count (1-100):"));
+            LayoutPomodoroLoopPrompt(hwndDlg);
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             Dialog_SubclassEdit(hwndEdit, ctx);
@@ -304,7 +315,7 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 
     switch (msg) {
         case WM_INITDIALOG: {
-            Dialog_RegisterInstance(DIALOG_INSTANCE_POMODORO_COMBO, hwndDlg);
+            Dialog_InitializeInstance(DIALOG_INSTANCE_POMODORO_COMBO, hwndDlg);
 
             ctx = Dialog_CreateContext();
             if (!ctx) {
@@ -327,6 +338,9 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
             }
 
             ApplyDialogLanguage(hwndDlg, CLOCK_IDD_POMODORO_COMBO_DIALOG);
+            DialogFormLayout_ApplyInstruction(
+                hwndDlg, CLOCK_IDC_STATIC, CLOCK_IDC_EDIT,
+                CLOCK_IDC_BUTTON_OK);
 
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
