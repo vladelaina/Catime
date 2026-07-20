@@ -10,6 +10,7 @@
 #include "dialog/dialog_language.h"
 #include "language.h"
 #include "timer/timer.h"
+#include "utils/localized_duration.h"
 #include "utils/string_convert.h"
 #include "log.h"
 #include "../resource/resource.h"
@@ -930,24 +931,8 @@ static void CountdownNormalizeInputKey(const wchar_t* begin,
     destination[output] = L'\0';
 }
 
-static void CountdownCopyTrimmedInput(wchar_t* destination,
-                                      size_t destinationCount,
-                                      const wchar_t* source) {
-    if (!destination || destinationCount == 0) return;
-    destination[0] = L'\0';
-    if (!source) return;
-
-    while (*source == L' ') source++;
-    size_t length = wcslen(source);
-    while (length > 0 && source[length - 1] == L' ') length--;
-    if (length >= destinationCount) length = destinationCount - 1;
-    wmemcpy(destination, source, length);
-    destination[length] = L'\0';
-}
-
 static BOOL CountdownBuildExamplePreview(const CountdownDialogState* state,
                                          const wchar_t* input,
-                                         int totalSeconds,
                                          wchar_t* destination,
                                          size_t destinationCount) {
     if (!state || !input || !destination || destinationCount == 0) {
@@ -955,9 +940,7 @@ static BOOL CountdownBuildExamplePreview(const CountdownDialogState* state,
     }
 
     wchar_t inputKey[256] = {0};
-    wchar_t inputDisplay[256] = {0};
     CountdownNormalizeInputKey(input, NULL, inputKey, _countof(inputKey));
-    CountdownCopyTrimmedInput(inputDisplay, _countof(inputDisplay), input);
 
     wchar_t lines[12][256] = {{0}};
     int lineCount = CountdownSplitExampleLines(
@@ -969,36 +952,14 @@ static BOOL CountdownBuildExamplePreview(const CountdownDialogState* state,
         wchar_t lineKey[256] = {0};
         CountdownNormalizeInputKey(lines[i], equals, lineKey,
                                    _countof(lineKey));
-        BOOL matches = inputKey[0] && wcscmp(inputKey, lineKey) == 0;
-        if (!matches) {
-            wchar_t exampleToken[256] = {0};
-            size_t tokenLength = (size_t)(equals - lines[i]);
-            while (tokenLength > 0 &&
-                   (lines[i][tokenLength - 1] == L' ' ||
-                    lines[i][tokenLength - 1] == L'\t')) {
-                tokenLength--;
-            }
-            if (tokenLength >= _countof(exampleToken)) {
-                tokenLength = _countof(exampleToken) - 1;
-            }
-            wmemcpy(exampleToken, lines[i], tokenLength);
-            exampleToken[tokenLength] = L'\0';
-            char exampleUtf8[256] = {0};
-            int exampleSeconds = 0;
-            matches = WideToUtf8(exampleToken, exampleUtf8,
-                                 sizeof(exampleUtf8)) &&
-                      ParseInput(exampleUtf8, &exampleSeconds) &&
-                      exampleSeconds == totalSeconds;
-        }
-        if (!matches) continue;
+        if (!inputKey[0] || wcscmp(inputKey, lineKey) != 0) continue;
 
         const wchar_t* explanation = equals + 1;
         while (*explanation == L' ' || *explanation == L'\t') {
             explanation++;
         }
-        return SUCCEEDED(StringCchPrintfW(
-            destination, destinationCount, L"%s = %s",
-            inputDisplay, explanation));
+        return SUCCEEDED(StringCchCopyW(destination, destinationCount,
+                                        explanation));
     }
     return FALSE;
 }
@@ -1006,24 +967,15 @@ static BOOL CountdownBuildExamplePreview(const CountdownDialogState* state,
 static void CountdownBuildPreviewText(const CountdownDialogState* state,
                                       const wchar_t* input,
                                       int totalSeconds,
-                                      const wchar_t* formatted,
                                       wchar_t* destination,
                                       size_t destinationCount) {
     if (!destination || destinationCount == 0) return;
     destination[0] = L'\0';
-    if (CountdownBuildExamplePreview(state, input, totalSeconds,
+    if (CountdownBuildExamplePreview(state, input,
                                      destination, destinationCount)) {
         return;
     }
-
-    wchar_t inputDisplay[256] = {0};
-    CountdownCopyTrimmedInput(inputDisplay, _countof(inputDisplay), input);
-    int hours = totalSeconds / 3600;
-    int minutes = (totalSeconds % 3600) / 60;
-    int seconds = totalSeconds % 60;
-    StringCchPrintfW(destination, destinationCount,
-                     L"%s = %s (%d:%02d:%02d)", inputDisplay,
-                     formatted ? formatted : L"", hours, minutes, seconds);
+    LocalizedDuration_Format(totalSeconds, destination, destinationCount);
 }
 
 static void CountdownSanitizeEditText(HWND hwnd,
@@ -1036,10 +988,9 @@ static void CountdownSanitizeEditText(HWND hwnd,
     CountdownCopyAllowedInput(filtered, _countof(filtered), source);
     if (wcscmp(source, filtered) == 0) return;
 
-    DWORD selectionStart = 0;
-    DWORD selectionEnd = 0;
-    SendMessageW(hwnd, EM_GETSEL, (WPARAM)&selectionStart,
-                 (LPARAM)&selectionEnd);
+    DWORD selection = (DWORD)SendMessageW(hwnd, EM_GETSEL, 0, 0);
+    DWORD selectionStart = LOWORD(selection);
+    DWORD selectionEnd = HIWORD(selection);
     size_t sourceLength = wcslen(source);
     if (selectionStart > sourceLength) selectionStart = (DWORD)sourceLength;
     if (selectionEnd > sourceLength) selectionEnd = (DWORD)sourceLength;
@@ -1074,14 +1025,10 @@ static void CountdownUpdatePreview(HWND hwnd, CountdownDialogState* state) {
     int totalSeconds = 0;
     if (WideToUtf8(text, inputUtf8, sizeof(inputUtf8)) &&
         ParseInput(inputUtf8, &totalSeconds)) {
-        char formatted[64] = {0};
-        Dialog_FormatSecondsToString(totalSeconds, formatted, sizeof(formatted));
-        wchar_t formattedWide[64] = {0};
-        if (MultiByteToWideChar(CP_UTF8, 0, formatted, -1,
-                                formattedWide, (int)_countof(formattedWide)) > 0) {
-            CountdownBuildPreviewText(state, text, totalSeconds,
-                                      formattedWide, state->previewText,
-                                      _countof(state->previewText));
+        CountdownBuildPreviewText(state, text, totalSeconds,
+                                  state->previewText,
+                                  _countof(state->previewText));
+        if (state->previewText[0]) {
             state->inputValid = TRUE;
             state->showValidationError = FALSE;
             InvalidateRect(hwnd, NULL, FALSE);
