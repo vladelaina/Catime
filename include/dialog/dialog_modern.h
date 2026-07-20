@@ -51,11 +51,11 @@ HFONT DialogModern_CreateFont(UINT dpi, int pixelSize, LONG weight);
 void DialogModern_DrawRoundedRect(HDC hdc, const RECT* rect, int cornerDiameter,
                                   COLORREF fill, COLORREF border,
                                   int borderWidth);
-/** Draw the shared circular close button and its X icon. */
+/** Draw the shared transparent close button X icon. */
 void DialogModern_DrawCloseButton(HDC hdc, const RECT* rect, UINT dpi,
                                   BOOL hovered, BOOL focused,
                                   BOOL highContrast, COLORREF accent,
-                                  COLORREF mutedText, COLORREF border);
+                                  COLORREF mutedText);
 void DialogModern_DrawText(HDC hdc, HFONT font, COLORREF color,
                            const RECT* rect, const wchar_t* text,
                            UINT format);

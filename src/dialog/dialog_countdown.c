@@ -1293,8 +1293,7 @@ static void CountdownDrawButton(const DRAWITEMSTRUCT* drawItem,
     if (close) {
         DialogModern_DrawCloseButton(drawItem->hDC, &rect, state->dpi,
                                      hovered, focused, state->highContrast,
-                                     state->accentColor, state->mutedColor,
-                                     state->borderColor);
+                                     state->accentColor, state->mutedColor);
         return;
     }
 

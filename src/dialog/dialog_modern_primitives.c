@@ -173,31 +173,16 @@ void DialogModern_DrawRoundedRect(HDC hdc, const RECT* rect,
 void DialogModern_DrawCloseButton(HDC hdc, const RECT* rect, UINT dpi,
                                   BOOL hovered, BOOL focused,
                                   BOOL highContrast, COLORREF accent,
-                                  COLORREF mutedText, COLORREF border) {
+                                  COLORREF mutedText) {
     if (!hdc || !rect) return;
 
     BOOL active = hovered || focused;
-    if (active) {
-        RECT circle = *rect;
-        int inset = DialogModern_Scale(dpi, 1);
-        if (inset > 0) InflateRect(&circle, -inset, -inset);
-        int width = circle.right - circle.left;
-        int height = circle.bottom - circle.top;
-        int diameter = width < height ? width : height;
-        COLORREF fill = highContrast ? GetSysColor(COLOR_HIGHLIGHT) :
-                                        RGB(0xFF, 0xFF, 0xFF);
-        COLORREF outline = highContrast ? border : fill;
-        DialogModern_DrawRoundedRect(hdc, &circle, diameter,
-                                     fill, outline, highContrast ? 1 : 0);
-    }
-
     int centerX = (rect->left + rect->right) / 2;
     int centerY = (rect->top + rect->bottom) / 2;
     int arm = (rect->right - rect->left) / 5;
     int penWidth = DialogModern_Scale(dpi, 2);
     if (penWidth < 1) penWidth = 1;
-    COLORREF iconColor = active ?
-        (highContrast ? GetSysColor(COLOR_HIGHLIGHTTEXT) : accent) :
+    COLORREF iconColor = active ? accent :
         (highContrast ? GetSysColor(COLOR_WINDOWTEXT) : mutedText);
     HPEN pen = CreatePen(PS_SOLID, penWidth, iconColor);
     HGDIOBJ oldPen = pen ? SelectObject(hdc, pen) : NULL;

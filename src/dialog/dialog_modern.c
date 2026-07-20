@@ -1010,8 +1010,7 @@ static void ModernDrawButton(ModernDialogState* state,
                                      control->hovered, focused,
                                      state->palette.highContrast,
                                      state->palette.accent,
-                                     state->palette.mutedText,
-                                     state->palette.border);
+                                     state->palette.mutedText);
         return;
     }
 
