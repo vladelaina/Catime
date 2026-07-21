@@ -760,9 +760,18 @@ static void ModernSetBodyScrollOffset(ModernDialogState* state, int offset96) {
     if (offset96 == state->bodyScrollOffset96) return;
 
     state->bodyScrollOffset96 = offset96;
+
+    /* Moving, clipping and hiding a large group of child windows one by one
+     * exposes intermediate frames on slower machines.  In particular the
+     * notification settings page could leave stale group-box and slider
+     * pixels behind while dragging its scrollbar.  Freeze composition for
+     * the short layout transaction, then repaint the complete dialog once. */
+    SendMessageW(state->hwnd, WM_SETREDRAW, FALSE, 0);
     ModernLayoutControls(state);
+    SendMessageW(state->hwnd, WM_SETREDRAW, TRUE, 0);
     RedrawWindow(state->hwnd, NULL, NULL,
-                 RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+                 RDW_INVALIDATE | RDW_ERASE | RDW_FRAME |
+                 RDW_ALLCHILDREN | RDW_UPDATENOW);
 }
 
 static BOOL ModernGetScrollbarRects(const ModernDialogState* state,
@@ -1358,6 +1367,52 @@ static HWND ModernFindDateTimeSpinner(HWND hwnd) {
     return NULL;
 }
 
+static void ModernPaintCombo(ModernControl* control, HDC suppliedDc) {
+    ModernDialogState* state = control ? control->owner : NULL;
+    if (!state || !control->hwnd || ModernIsDateTimeControl(control)) return;
+
+    PAINTSTRUCT paint = {0};
+    HDC hdc = suppliedDc ? suppliedDc : BeginPaint(control->hwnd, &paint);
+    if (!hdc) return;
+
+    RECT client = {0};
+    GetClientRect(control->hwnd, &client);
+    FillRect(hdc, &client, state->fieldBrush);
+
+    wchar_t text[512] = {0};
+    int selected = (int)SendMessageW(control->hwnd, CB_GETCURSEL, 0, 0);
+    if (selected != CB_ERR) {
+        SendMessageW(control->hwnd, CB_GETLBTEXT, selected, (LPARAM)text);
+    } else {
+        GetWindowTextW(control->hwnd, text, (int)_countof(text));
+    }
+
+    int arrowWidth = DialogModern_Scale(state->dpi, 34);
+    RECT textRect = client;
+    textRect.left += DialogModern_Scale(state->dpi, 10);
+    textRect.right -= arrowWidth;
+    COLORREF textColor = IsWindowEnabled(control->hwnd)
+        ? state->palette.text : state->palette.mutedText;
+    DialogModern_DrawText(hdc, state->editFont, textColor, &textRect, text,
+                          DT_LEFT | DT_VCENTER | DT_SINGLELINE |
+                          DT_END_ELLIPSIS);
+
+    int centerX = client.right - arrowWidth / 2;
+    int centerY = (client.top + client.bottom) / 2;
+    int arm = max(3, DialogModern_Scale(state->dpi, 4));
+    HPEN pen = CreatePen(PS_SOLID,
+                         max(1, DialogModern_Scale(state->dpi, 1)),
+                         control->hovered ? state->palette.accent : textColor);
+    HGDIOBJ oldPen = pen ? SelectObject(hdc, pen) : NULL;
+    MoveToEx(hdc, centerX - arm, centerY - arm / 2, NULL);
+    LineTo(hdc, centerX, centerY + arm / 2);
+    LineTo(hdc, centerX + arm, centerY - arm / 2);
+    if (oldPen) SelectObject(hdc, oldPen);
+    if (pen) DeleteObject(pen);
+
+    if (!suppliedDc) EndPaint(control->hwnd, &paint);
+}
+
 static void ModernPaintDateTime(ModernControl* control, HDC suppliedDc) {
     ModernDialogState* state = control ? control->owner : NULL;
     if (!state || !control->hwnd) return;
@@ -1543,9 +1598,13 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                 ModernPaintChoiceControl(control, NULL);
                 return 0;
             }
-            if (control && state && state->palette.darkMode &&
-                ModernIsDateTimeControl(control)) {
+            if (control && state && ModernIsDateTimeControl(control)) {
                 ModernPaintDateTime(control, NULL);
+                ModernDrawFieldOutline(control);
+                return 0;
+            }
+            if (control && control->kind == MODERN_CONTROL_COMBO) {
+                ModernPaintCombo(control, NULL);
                 ModernDrawFieldOutline(control);
                 return 0;
             }
@@ -1568,9 +1627,12 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                 ModernPaintChoiceControl(control, (HDC)wParam);
                 return 0;
             }
-            if (control && state && state->palette.darkMode &&
-                ModernIsDateTimeControl(control)) {
+            if (control && state && ModernIsDateTimeControl(control)) {
                 ModernPaintDateTime(control, (HDC)wParam);
+                return 0;
+            }
+            if (control && control->kind == MODERN_CONTROL_COMBO) {
+                ModernPaintCombo(control, (HDC)wParam);
                 return 0;
             }
             if (control && control->kind == MODERN_CONTROL_SLIDER) {
