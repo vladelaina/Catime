@@ -495,6 +495,33 @@ static void CountdownDrawText(HDC hdc, HFONT font, COLORREF color,
     DialogModern_DrawText(hdc, font, color, rect, text, format);
 }
 
+static void CountdownDrawWrappedText(HDC hdc, HFONT font, COLORREF color,
+                                     const RECT* rect,
+                                     const wchar_t* text) {
+    if (!hdc || !rect || !text) return;
+    HGDIOBJ oldFont = font ? SelectObject(hdc, font) : NULL;
+    int oldMode = SetBkMode(hdc, TRANSPARENT);
+    COLORREF oldColor = SetTextColor(hdc, color);
+
+    RECT measure = {0, 0, rect->right - rect->left,
+                    rect->bottom - rect->top};
+    DrawTextW(hdc, text, -1, &measure,
+              DT_LEFT | DT_WORDBREAK | DT_CALCRECT | DT_NOPREFIX);
+    int availableHeight = rect->bottom - rect->top;
+    int measuredHeight = measure.bottom - measure.top;
+    RECT drawRect = *rect;
+    if (measuredHeight > 0 && measuredHeight < availableHeight) {
+        drawRect.top += (availableHeight - measuredHeight) / 2;
+        drawRect.bottom = drawRect.top + measuredHeight;
+    }
+    DrawTextW(hdc, text, -1, &drawRect,
+              DT_LEFT | DT_WORDBREAK | DT_NOPREFIX);
+
+    SetTextColor(hdc, oldColor);
+    SetBkMode(hdc, oldMode);
+    if (oldFont) SelectObject(hdc, oldFont);
+}
+
 static int CountdownSplitExampleLines(const wchar_t* text,
                                       wchar_t lines[][256], int maxLines) {
     if (!text || !lines || maxLines <= 0) {
@@ -805,6 +832,41 @@ static void CountdownDrawClockIcon(HDC hdc, int centerX, int centerY,
     LineTo(hdc, centerX, centerY - radius / 2);
     MoveToEx(hdc, centerX, centerY, NULL);
     LineTo(hdc, centerX + radius / 2, centerY + radius / 3);
+    SelectObject(hdc, oldBrush);
+    SelectObject(hdc, oldPen);
+    DeleteObject(pen);
+}
+
+static void CountdownDrawCheckIcon(HDC hdc, int centerX, int centerY,
+                                   int radius, COLORREF color) {
+    HPEN pen = CreatePen(PS_SOLID, radius > 8 ? 2 : 1, color);
+    HGDIOBJ oldPen = SelectObject(hdc, pen);
+    HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
+    Ellipse(hdc, centerX - radius, centerY - radius,
+            centerX + radius, centerY + radius);
+    MoveToEx(hdc, centerX - radius / 2, centerY, NULL);
+    LineTo(hdc, centerX - radius / 8, centerY + radius / 2);
+    LineTo(hdc, centerX + radius * 2 / 3, centerY - radius / 2);
+    SelectObject(hdc, oldBrush);
+    SelectObject(hdc, oldPen);
+    DeleteObject(pen);
+}
+
+static void CountdownDrawWarningIcon(HDC hdc, int centerX, int centerY,
+                                     int radius, COLORREF color) {
+    HPEN pen = CreatePen(PS_SOLID, radius > 8 ? 2 : 1, color);
+    HGDIOBJ oldPen = SelectObject(hdc, pen);
+    HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
+    POINT triangle[3] = {
+        {centerX, centerY - radius},
+        {centerX - radius, centerY + radius},
+        {centerX + radius, centerY + radius}
+    };
+    Polygon(hdc, triangle, 3);
+    MoveToEx(hdc, centerX, centerY - radius / 3, NULL);
+    LineTo(hdc, centerX, centerY + radius / 3);
+    Ellipse(hdc, centerX - 1, centerY + radius / 2 - 1,
+            centerX + 1, centerY + radius / 2 + 1);
     SelectObject(hdc, oldBrush);
     SelectObject(hdc, oldPen);
     DeleteObject(pen);
@@ -1136,13 +1198,23 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
                         state->editFrame.right - CountdownScaleValue(state, 8),
                         previewTop + CountdownScaleValue(state, previewHeight96)};
     if (state->showValidationError) {
-        DialogModern_DrawInlineFeedback(
-            target, state->smallFont, &previewRect, state->invalidText,
-            DIALOG_MODERN_FEEDBACK_ERROR, state->dpi, state->dangerColor);
+        CountdownDrawWarningIcon(target,
+                                 previewRect.left - CountdownScaleValue(state, 9),
+                                 previewTop + CountdownScaleValue(
+                                     state, previewHeight96 / 2),
+                                 CountdownScaleValue(state, 7),
+                                 state->dangerColor);
+        CountdownDrawWrappedText(target, state->smallFont, state->dangerColor,
+                                 &previewRect, state->invalidText);
     } else if (state->inputValid) {
-        DialogModern_DrawInlineFeedback(
-            target, state->smallFont, &previewRect, state->previewText,
-            DIALOG_MODERN_FEEDBACK_SUCCESS, state->dpi, state->accentColor);
+        CountdownDrawCheckIcon(target,
+                               previewRect.left - CountdownScaleValue(state, 9),
+                               previewTop + CountdownScaleValue(
+                                   state, previewHeight96 / 2),
+                               CountdownScaleValue(state, 7),
+                               state->accentColor);
+        CountdownDrawWrappedText(target, state->smallFont, state->accentColor,
+                                 &previewRect, state->previewText);
     }
 
 }

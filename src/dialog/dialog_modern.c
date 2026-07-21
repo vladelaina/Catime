@@ -15,7 +15,6 @@
 #include <windowsx.h>
 
 #define MODERN_DIALOG_STATE_PROP L"Catime.ModernDialog.State"
-#define MODERN_FIELD_INVALID_PROP L"Catime.ModernDialog.FieldInvalid"
 #define MODERN_DIALOG_CLOSE_ID 0x7FEE
 #define MODERN_DIALOG_SUBCLASS_ID 0xD140
 #define MODERN_CONTROL_SUBCLASS_ID 0xD141
@@ -132,17 +131,6 @@ BOOL DialogModern_CopyPalette(HWND hwnd, DialogModernPalette* palette) {
 
 BOOL DialogModern_IsAttached(HWND hwndDlg) {
     return ModernGetState(hwndDlg) != NULL;
-}
-
-void DialogModern_SetFieldInvalid(HWND hwndField, BOOL invalid) {
-    if (!hwndField || !IsWindow(hwndField)) return;
-    if (invalid) {
-        SetPropW(hwndField, MODERN_FIELD_INVALID_PROP, (HANDLE)(INT_PTR)1);
-    } else {
-        RemovePropW(hwndField, MODERN_FIELD_INVALID_PROP);
-    }
-    RedrawWindow(hwndField, NULL, NULL,
-                 RDW_INVALIDATE | RDW_ERASE | RDW_FRAME);
 }
 
 static void ModernDeleteFonts(ModernDialogState* state) {
@@ -1149,13 +1137,10 @@ static void ModernDrawFieldOutline(ModernControl* control) {
     RECT rect = {0};
     GetClientRect(control->hwnd, &rect);
     InflateRect(&rect, -1, -1);
-    BOOL invalid = GetPropW(control->hwnd, MODERN_FIELD_INVALID_PROP) != NULL;
-    COLORREF border = invalid ? state->palette.danger
-                              : (control->focused ? state->palette.accent
-                                                  : state->palette.border);
-    BOOL emphasized = invalid || control->focused;
+    COLORREF border = control->focused ? state->palette.accent
+                                      : state->palette.border;
     HPEN pen = CreatePen(PS_SOLID,
-                         emphasized ? DialogModern_Scale(state->dpi, 2) : 1,
+                         control->focused ? DialogModern_Scale(state->dpi, 2) : 1,
                          border);
     HGDIOBJ oldPen = pen ? SelectObject(hdc, pen) : NULL;
     HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
