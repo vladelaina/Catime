@@ -266,21 +266,42 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
     int y = titleRect->bottom - DialogModern_Scale(dpi, 1);
     int softWidth = DialogModern_Scale(dpi, highContrast ? 2 : 7);
     int mainWidth = DialogModern_Scale(dpi, highContrast ? 2 : 4);
+    COLORREF leading = highContrast ? accent :
+        DialogModernBlendColor(accent, RGB(0xA8, 0xEC, 0xFF),
+                               darkMode ? 38 : 58);
     COLORREF glow = highContrast ? accent :
-        DialogModernBlendColor(surface, accent, darkMode ? 24 : 34);
+        DialogModernBlendColor(surface, leading, darkMode ? 24 : 34);
 
-    /* One continuous two-segment cubic path. The second segment's first
-     * control point is the reflection of the preceding one around the join,
-     * so its tangent remains continuous rather than looking like a second
-     * pen stroke was attached to the first. */
-    POINT stroke[7] = {
+    /* Preserve the original calligraphic turn as one continuous path.  The
+     * first segment flows into a compact clockwise loop before the terminal
+     * upstroke, avoiding the overlapping endpoints that previously made the
+     * turn look like two separate pen strokes. */
+    POINT stroke[10] = {
         {x, y},
         {x + width * 22 / 100, y + DialogModern_Scale(dpi, 4)},
+        {x + width * 58 / 100, y + DialogModern_Scale(dpi, 3)},
+        {x + width * 66 / 100, y},
+        {0, 0},
         {x + width * 52 / 100, y + DialogModern_Scale(dpi, 5)},
-        {x + width * 68 / 100, y + DialogModern_Scale(dpi, 2)},
-        {x + width * 84 / 100, y - DialogModern_Scale(dpi, 1)},
-        {x + width * 91 / 100, y - DialogModern_Scale(dpi, 4)},
-        {x + width, y - DialogModern_Scale(dpi, 7)}
+        {x + width * 60 / 100, y + DialogModern_Scale(dpi, 7)},
+        {0, 0},
+        {x + width * 88 / 100, y + DialogModern_Scale(dpi, 1)},
+        {x + width, y - DialogModern_Scale(dpi, 5)}
+    };
+    stroke[4].x = stroke[3].x * 2 - stroke[2].x;
+    stroke[4].y = stroke[3].y * 2 - stroke[2].y;
+    stroke[7].x = stroke[6].x * 2 - stroke[5].x;
+    stroke[7].y = stroke[6].y * 2 - stroke[5].y;
+
+    POINT airStroke[4] = {
+        {x + DialogModern_Scale(dpi, 3),
+         y - DialogModern_Scale(dpi, 3)},
+        {x + width * 12 / 100,
+         y - DialogModern_Scale(dpi, 2)},
+        {x + width * 20 / 100,
+         y - DialogModern_Scale(dpi, 2)},
+        {x + width * 29 / 100,
+         y - DialogModern_Scale(dpi, 3)}
     };
 
     /* Render this small decorative region at 3x and downsample it.  GDI's
@@ -301,8 +322,10 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
         ? SelectObject(sampleDc, sampleBitmap) : NULL;
     HDC drawDc = sampleBitmap ? sampleDc : hdc;
 
-    POINT scaledStroke[7];
+    POINT scaledStroke[10];
+    POINT scaledAirStroke[4];
     const POINT* drawStroke = stroke;
+    const POINT* drawAirStroke = airStroke;
     int drawScale = 1;
     if (sampleBitmap) {
         RECT sampleRect = {0, 0, outputWidth * sampleScale,
@@ -312,16 +335,31 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
         DeleteObject(surfaceBrush);
         DialogModernScaleSignaturePoints(stroke, scaledStroke, _countof(stroke),
                                          bounds.left, bounds.top, sampleScale);
+        DialogModernScaleSignaturePoints(
+            airStroke, scaledAirStroke, _countof(airStroke),
+            bounds.left, bounds.top, sampleScale);
         drawStroke = scaledStroke;
+        drawAirStroke = scaledAirStroke;
         drawScale = sampleScale;
     }
 
     if (!highContrast) {
+        DialogModernDrawBezierStroke(
+            drawDc, drawAirStroke, _countof(airStroke),
+            DialogModern_Scale(dpi, 2) * drawScale, glow);
         DialogModernDrawBezierStroke(drawDc, drawStroke, _countof(stroke),
                                      softWidth * drawScale, glow);
+        /* The glow establishes one uninterrupted silhouette.  The two
+         * top-color sections share the exact same join and tangent, retaining
+         * the original pale-to-blue motion without overlapping endpoints. */
+        DialogModernDrawBezierStroke(drawDc, drawStroke, 4,
+                                     mainWidth * drawScale, leading);
+        DialogModernDrawBezierStroke(drawDc, drawStroke + 3, 7,
+                                     mainWidth * drawScale, accent);
+    } else {
+        DialogModernDrawBezierStroke(drawDc, drawStroke, _countof(stroke),
+                                     mainWidth * drawScale, accent);
     }
-    DialogModernDrawBezierStroke(drawDc, drawStroke, _countof(stroke),
-                                 mainWidth * drawScale, accent);
 
     if (sampleBitmap) {
         int oldMode = SetStretchBltMode(hdc, HALFTONE);
