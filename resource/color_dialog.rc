@@ -8,7 +8,7 @@
 #pragma code_page(65001)
 
 /** @brief Color selection dialog with format documentation */
-CLOCK_IDD_COLOR_DIALOG DIALOGEX 0, 0, 200, 175
+CLOCK_IDD_COLOR_DIALOG DIALOGEX 0, 0, 200, 217
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Set Color Value"
 FONT 9, "Segoe UI"
@@ -17,7 +17,10 @@ BEGIN
     LTEXT           "Supported formats:", IDC_COLOR_FORMAT_HELP, 10, 10, 180, 95
     /** Color value input field accepting multiple formats */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 110, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
-    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 140, 50, 14
+    /** Live color swatch or inline validation feedback */
+    CONTROL         "", IDC_COLOR_INLINE_FEEDBACK, "Static", SS_OWNERDRAW,
+                    10, 136, 180, 36
+    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 182, 50, 14
 END
 
 /** @brief Modern HSV color picker with saved swatches and eyedropper */

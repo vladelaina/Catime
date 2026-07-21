@@ -562,6 +562,7 @@
 
 /** @brief Color dialog format help text control */
 #define IDC_COLOR_FORMAT_HELP 767               /**< Color format help text label */
+#define IDC_COLOR_INLINE_FEEDBACK 768            /**< Live color swatch or validation feedback */
 
 /** @brief Font resource identifiers - Special fonts */
 #define IDR_FONT_RECMONO 442            /**< RecMono font resource */

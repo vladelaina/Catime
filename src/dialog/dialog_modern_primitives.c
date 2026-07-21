@@ -208,6 +208,71 @@ void DialogModern_DrawText(HDC hdc, HFONT font, COLORREF color,
     if (oldFont) SelectObject(hdc, oldFont);
 }
 
+static void DialogModern_DrawFeedbackIcon(
+    HDC hdc, int centerX, int centerY, int radius,
+    DialogModernFeedbackKind kind, COLORREF color) {
+    int penWidth = radius > 8 ? 2 : 1;
+    HPEN pen = CreatePen(PS_SOLID, penWidth, color);
+    HGDIOBJ oldPen = pen ? SelectObject(hdc, pen) : NULL;
+    HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
+
+    if (kind == DIALOG_MODERN_FEEDBACK_ERROR) {
+        POINT triangle[3] = {
+            {centerX, centerY - radius},
+            {centerX - radius, centerY + radius},
+            {centerX + radius, centerY + radius}
+        };
+        Polygon(hdc, triangle, 3);
+        MoveToEx(hdc, centerX, centerY - radius / 3, NULL);
+        LineTo(hdc, centerX, centerY + radius / 3);
+        Ellipse(hdc, centerX - 1, centerY + radius / 2 - 1,
+                centerX + 1, centerY + radius / 2 + 1);
+    } else {
+        Ellipse(hdc, centerX - radius, centerY - radius,
+                centerX + radius, centerY + radius);
+        MoveToEx(hdc, centerX - radius / 2, centerY, NULL);
+        LineTo(hdc, centerX - radius / 8, centerY + radius / 2);
+        LineTo(hdc, centerX + radius * 2 / 3, centerY - radius / 2);
+    }
+
+    if (oldBrush) SelectObject(hdc, oldBrush);
+    if (oldPen) SelectObject(hdc, oldPen);
+    if (pen) DeleteObject(pen);
+}
+
+void DialogModern_DrawInlineFeedback(HDC hdc, HFONT font,
+                                     const RECT* textRect,
+                                     const wchar_t* text,
+                                     DialogModernFeedbackKind kind,
+                                     UINT dpi, COLORREF color) {
+    if (!hdc || !textRect || !text) return;
+
+    int centerX = textRect->left - DialogModern_Scale(dpi, 9);
+    int centerY = (textRect->top + textRect->bottom) / 2;
+    DialogModern_DrawFeedbackIcon(
+        hdc, centerX, centerY, DialogModern_Scale(dpi, 7), kind, color);
+
+    HGDIOBJ oldFont = font ? SelectObject(hdc, font) : NULL;
+    int oldMode = SetBkMode(hdc, TRANSPARENT);
+    COLORREF oldColor = SetTextColor(hdc, color);
+    RECT measure = {0, 0, textRect->right - textRect->left,
+                    textRect->bottom - textRect->top};
+    DrawTextW(hdc, text, -1, &measure,
+              DT_LEFT | DT_WORDBREAK | DT_CALCRECT | DT_NOPREFIX);
+    int availableHeight = textRect->bottom - textRect->top;
+    int measuredHeight = measure.bottom - measure.top;
+    RECT drawRect = *textRect;
+    if (measuredHeight > 0 && measuredHeight < availableHeight) {
+        drawRect.top += (availableHeight - measuredHeight) / 2;
+        drawRect.bottom = drawRect.top + measuredHeight;
+    }
+    DrawTextW(hdc, text, -1, &drawRect,
+              DT_LEFT | DT_WORDBREAK | DT_NOPREFIX);
+    SetTextColor(hdc, oldColor);
+    SetBkMode(hdc, oldMode);
+    if (oldFont) SelectObject(hdc, oldFont);
+}
+
 typedef HRESULT (WINAPI *DialogModernSetWindowThemeFn)(
     HWND hwnd, LPCWSTR subAppName, LPCWSTR subIdList);
 

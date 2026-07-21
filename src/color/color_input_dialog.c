@@ -2,22 +2,33 @@
  * @file color_input_dialog.c
  * @brief Text-based color input dialog with live preview (modeless version)
  */
-#include <stdio.h>
-#include <ctype.h>
-#include <string.h>
 #include <limits.h>
+#include <stdlib.h>
 #include <wchar.h>
 #include <windows.h>
+#include "color/color_feedback.h"
 #include "color/color_input_dialog.h"
 #include "color/color_parser.h"
 #include "color/color_state.h"
 #include "menu_preview.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "language.h"
 #include "../resource/resource.h"
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 #define COLOR_EDIT_ORIG_PROC_PROP L"Catime.ColorInput.OrigEditProc"
+#define COLOR_EDIT_REFRESH_MESSAGE (WM_APP + 1)
+
+typedef struct {
+    ColorFeedbackResult feedback;
+} ColorInputDialogState;
+
+static ColorInputDialogState* GetColorInputDialogState(HWND hwndDlg) {
+    return hwndDlg
+        ? (ColorInputDialogState*)GetWindowLongPtrW(hwndDlg, DWLP_USER)
+        : NULL;
+}
 
 static BOOL IsValidColorInputParentWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
@@ -104,69 +115,63 @@ static void UnsubclassColorEdit(HWND hwndEdit) {
  * Helper Functions
  * ============================================================================ */
 
-/**
- * @brief Update color preview from edit control content
- * @param hwndEdit Edit control handle
- *
- * @details Validates and normalizes input, updates preview on main window
- * Supports both single colors and gradient colors
- */
-static void UpdateColorPreviewFromEdit(HWND hwndEdit) {
+/** Keep inline feedback, live preview, and submit availability in sync. */
+static void UpdateColorFeedbackFromEdit(HWND hwndDlg) {
+    ColorInputDialogState* state = GetColorInputDialogState(hwndDlg);
+    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+    if (!state || !hwndEdit) return;
+
     char color[COLOR_BUFFER_SIZE] = {0};
-    wchar_t wcolor[COLOR_BUFFER_SIZE];
+    wchar_t wcolor[COLOR_BUFFER_SIZE] = {0};
     GetWindowTextW(hwndEdit, wcolor, sizeof(wcolor) / sizeof(wchar_t));
 
-    HWND hwndDlg = GetParent(hwndEdit);
     HWND hwndMain = GetColorInputParent(hwndDlg);
-    if (!hwndMain) {
-        return;
-    }
     if (!ConvertColorInputToUtf8(wcolor, color, sizeof(color))) {
+        ZeroMemory(&state->feedback, sizeof(state->feedback));
+        state->feedback.kind = COLOR_FEEDBACK_INVALID;
+    } else {
+        ColorFeedback_Evaluate(color, &state->feedback);
+    }
+
+    if (hwndMain && ColorFeedback_IsValid(&state->feedback)) {
+        StartPreview(PREVIEW_TYPE_COLOR, state->feedback.normalized, hwndMain);
+    } else if (hwndMain) {
         CancelPreview(hwndMain);
-        return;
     }
 
-    char finalColor[COLOR_HEX_BUFFER];
-    if (NormalizeColorConfigValue(color, finalColor, sizeof(finalColor))) {
-        StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndMain);
-        return;
-    }
-
-    CancelPreview(hwndMain);
+    DialogModern_SetFieldInvalid(
+        hwndEdit, state->feedback.kind == COLOR_FEEDBACK_INVALID);
+    InvalidateRect(GetDlgItem(hwndDlg, IDC_COLOR_INLINE_FEEDBACK), NULL, FALSE);
 }
 
 /* ============================================================================
  * Edit Control Subclass
  * ============================================================================ */
 
-/**
- * @brief Custom callback for color preview updates
- */
-static LRESULT ColorEditCustomCallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, BOOL* pProcessed) {
+static LRESULT ColorEditCustomCallback(HWND hwnd, UINT msg, WPARAM wParam,
+                                       LPARAM lParam, BOOL* processed) {
     (void)wParam;
     (void)lParam;
 
     switch (msg) {
+        case WM_SETTEXT:
         case WM_CHAR:
         case WM_PASTE:
         case WM_CUT:
-            *pProcessed = FALSE;
-            PostMessage(hwnd, WM_APP + 1, 0, 0);
-            return 0;
+            PostMessageW(hwnd, COLOR_EDIT_REFRESH_MESSAGE, 0, 0);
+            break;
 
-        case WM_APP + 1:
-            UpdateColorPreviewFromEdit(hwnd);
-            *pProcessed = TRUE;
+        case COLOR_EDIT_REFRESH_MESSAGE:
+            UpdateColorFeedbackFromEdit(GetParent(hwnd));
+            *processed = TRUE;
             return 0;
     }
 
-    *pProcessed = FALSE;
+    *processed = FALSE;
     return 0;
 }
 
-/**
- * @brief Subclass procedure for color edit control
- */
+/** @brief Subclass procedure preserving shared edit keyboard behavior. */
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     WNDPROC origProc = GetColorEditOrigProc(hwnd);
     if (!origProc) {
@@ -213,10 +218,15 @@ void ShowColorInputDialog(HWND hwndParent) {
  * ============================================================================ */
 
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
-    (void)lParam;
-
     switch (msg) {
         case WM_INITDIALOG: {
+            ColorInputDialogState* state =
+                (ColorInputDialogState*)calloc(1, sizeof(*state));
+            if (!state) {
+                DestroyWindow(hwndDlg);
+                return FALSE;
+            }
+            SetWindowLongPtrW(hwndDlg, DWLP_USER, (LONG_PTR)state);
             Dialog_InitializeInstance(DIALOG_INSTANCE_COLOR, hwndDlg);
 
             /* Set localized dialog title and button text */
@@ -244,22 +254,24 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 }
             }
 
+            UpdateColorFeedbackFromEdit(hwndDlg);
+
             Dialog_CenterOnPrimaryScreen(hwndDlg);
             return TRUE;
         }
 
         case WM_COMMAND:
+            if (LOWORD(wParam) == CLOCK_IDC_EDIT &&
+                HIWORD(wParam) == EN_CHANGE) {
+                UpdateColorFeedbackFromEdit(hwndDlg);
+                return TRUE;
+            }
             if (LOWORD(wParam) == CLOCK_IDC_BUTTON_OK) {
-                char color[COLOR_BUFFER_SIZE] = {0};
-                wchar_t wcolor[COLOR_BUFFER_SIZE];
-                GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcolor,
-                              sizeof(wcolor) / sizeof(wchar_t));
-                if (!ConvertColorInputToUtf8(wcolor, color, sizeof(color))) {
-                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
-                    return TRUE;
-                }
+                ColorInputDialogState* state =
+                    GetColorInputDialogState(hwndDlg);
+                if (!state) return TRUE;
 
-                if (Dialog_IsEmptyOrWhitespaceA(color)) {
+                if (state->feedback.kind == COLOR_FEEDBACK_EMPTY) {
                     HWND hwndMain = GetColorInputParent(hwndDlg);
                     CancelPreview(hwndMain);
                     if (hwndMain) {
@@ -269,15 +281,15 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     return TRUE;
                 }
 
-                char finalColor[COLOR_HEX_BUFFER];
-                if (NormalizeColorConfigValue(color, finalColor, sizeof(finalColor))) {
+                if (ColorFeedback_IsValid(&state->feedback)) {
                     HWND hwndMain = GetColorInputParent(hwndDlg);
                     if (!hwndMain) {
                         Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                         return TRUE;
                     }
 
-                    StartPreview(PREVIEW_TYPE_COLOR, finalColor, hwndMain);
+                    StartPreview(PREVIEW_TYPE_COLOR,
+                                 state->feedback.normalized, hwndMain);
                     if (!ApplyPreview(hwndMain)) {
                         Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                         return TRUE;
@@ -287,7 +299,13 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                     DestroyWindow(hwndDlg);
                     return TRUE;
                 } else {
-                    Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
+                    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+                    SetFocus(hwndEdit);
+                    Dialog_SelectAllText(hwndEdit);
+                    MessageBeep(MB_ICONWARNING);
+                    InvalidateRect(GetDlgItem(hwndDlg,
+                                             IDC_COLOR_INLINE_FEEDBACK),
+                                   NULL, FALSE);
                     return TRUE;
                 }
             } else if (LOWORD(wParam) == IDCANCEL) {
@@ -300,6 +318,18 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 return TRUE;
             }
             break;
+
+        case WM_DRAWITEM: {
+            const DRAWITEMSTRUCT* item = (const DRAWITEMSTRUCT*)lParam;
+            ColorInputDialogState* state = GetColorInputDialogState(hwndDlg);
+            if (item && state && item->CtlID == IDC_COLOR_INLINE_FEEDBACK) {
+                ColorFeedback_DrawInline(
+                    hwndDlg, item, &state->feedback,
+                    GetLocalizedString(NULL, L"Invalid input format"));
+                return TRUE;
+            }
+            break;
+        }
 
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
@@ -327,6 +357,8 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
         case WM_DESTROY:
             /* Restore original edit control procedure */
             UnsubclassColorEdit(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+            free(GetColorInputDialogState(hwndDlg));
+            SetWindowLongPtrW(hwndDlg, DWLP_USER, 0);
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_COLOR, hwndDlg);
             break;
     }

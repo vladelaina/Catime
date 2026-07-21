@@ -32,7 +32,7 @@ void ShowColorInputDialog(HWND hwndParent);
  * 
  * @details
  * Empty input cancels (supports "changed my mind" workflow).
- * Validation errors show guidance dialog. Immediate config save.
+ * Valid colors and validation errors are shown inline while typing.
  */
 INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam);
 
