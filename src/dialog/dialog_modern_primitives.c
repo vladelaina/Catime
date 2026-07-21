@@ -233,6 +233,16 @@ static void DialogModernDrawBezierStroke(HDC hdc, const POINT points[4],
     if (pen) DeleteObject(pen);
 }
 
+static void DialogModernScaleSignaturePoints(const POINT source[4],
+                                             POINT target[4],
+                                             int originX, int originY,
+                                             int scale) {
+    for (int i = 0; i < 4; i++) {
+        target[i].x = (source[i].x - originX) * scale;
+        target[i].y = (source[i].y - originY) * scale;
+    }
+}
+
 void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
                                      int titleTextWidth, COLORREF accent,
                                      COLORREF surface, BOOL darkMode,
@@ -282,14 +292,76 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
          y - DialogModern_Scale(dpi, 3)}
     };
 
+    /* Render this small decorative region at 3x and downsample it.  GDI's
+     * direct PolyBezier rasterizer is visibly jagged at 96 DPI; supersampling
+     * keeps the implementation dependency-free while producing smooth edges. */
+    const int sampleScale = highContrast ? 1 : 3;
+    int paddingX = DialogModern_Scale(dpi, 5);
+    int topPadding = DialogModern_Scale(dpi, 9);
+    int bottomPadding = DialogModern_Scale(dpi, 16);
+    RECT bounds = {x - paddingX, y - topPadding,
+                   x + width + paddingX, y + bottomPadding};
+    int outputWidth = bounds.right - bounds.left;
+    int outputHeight = bounds.bottom - bounds.top;
+    HDC sampleDc = sampleScale > 1 ? CreateCompatibleDC(hdc) : NULL;
+    HBITMAP sampleBitmap = sampleDc ? CreateCompatibleBitmap(
+        hdc, outputWidth * sampleScale, outputHeight * sampleScale) : NULL;
+    HGDIOBJ oldBitmap = sampleBitmap
+        ? SelectObject(sampleDc, sampleBitmap) : NULL;
+    HDC drawDc = sampleBitmap ? sampleDc : hdc;
+
+    POINT scaledLead[4];
+    POINT scaledFlourish[4];
+    POINT scaledAirStroke[4];
+    const POINT* drawLead = lead;
+    const POINT* drawFlourish = flourish;
+    const POINT* drawAirStroke = airStroke;
+    int drawScale = 1;
+    if (sampleBitmap) {
+        RECT sampleRect = {0, 0, outputWidth * sampleScale,
+                           outputHeight * sampleScale};
+        HBRUSH surfaceBrush = CreateSolidBrush(surface);
+        FillRect(sampleDc, &sampleRect, surfaceBrush);
+        DeleteObject(surfaceBrush);
+        DialogModernScaleSignaturePoints(lead, scaledLead,
+                                         bounds.left, bounds.top, sampleScale);
+        DialogModernScaleSignaturePoints(flourish, scaledFlourish,
+                                         bounds.left, bounds.top, sampleScale);
+        DialogModernScaleSignaturePoints(airStroke, scaledAirStroke,
+                                         bounds.left, bounds.top, sampleScale);
+        drawLead = scaledLead;
+        drawFlourish = scaledFlourish;
+        drawAirStroke = scaledAirStroke;
+        drawScale = sampleScale;
+    }
+
     if (!highContrast) {
         DialogModernDrawBezierStroke(
-            hdc, airStroke, DialogModern_Scale(dpi, 2), glow);
-        DialogModernDrawBezierStroke(hdc, lead, softWidth, glow);
-        DialogModernDrawBezierStroke(hdc, flourish, softWidth, glow);
+            drawDc, drawAirStroke, DialogModern_Scale(dpi, 2) * drawScale,
+            glow);
+        DialogModernDrawBezierStroke(drawDc, drawLead,
+                                     softWidth * drawScale, glow);
+        DialogModernDrawBezierStroke(drawDc, drawFlourish,
+                                     softWidth * drawScale, glow);
     }
-    DialogModernDrawBezierStroke(hdc, lead, mainWidth, leading);
-    DialogModernDrawBezierStroke(hdc, flourish, mainWidth, accent);
+    DialogModernDrawBezierStroke(drawDc, drawLead,
+                                 mainWidth * drawScale, leading);
+    DialogModernDrawBezierStroke(drawDc, drawFlourish,
+                                 mainWidth * drawScale, accent);
+
+    if (sampleBitmap) {
+        int oldMode = SetStretchBltMode(hdc, HALFTONE);
+        POINT oldOrigin = {0};
+        SetBrushOrgEx(hdc, bounds.left, bounds.top, &oldOrigin);
+        StretchBlt(hdc, bounds.left, bounds.top, outputWidth, outputHeight,
+                   sampleDc, 0, 0, outputWidth * sampleScale,
+                   outputHeight * sampleScale, SRCCOPY);
+        SetBrushOrgEx(hdc, oldOrigin.x, oldOrigin.y, NULL);
+        SetStretchBltMode(hdc, oldMode);
+        SelectObject(sampleDc, oldBitmap);
+        DeleteObject(sampleBitmap);
+    }
+    if (sampleDc) DeleteDC(sampleDc);
 }
 
 typedef HRESULT (WINAPI *DialogModernSetWindowThemeFn)(

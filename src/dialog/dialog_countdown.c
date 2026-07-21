@@ -1112,22 +1112,22 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
     RECT titleRect = {margin, CountdownScaleValue(state, titleTop96),
                       width - margin - CountdownScaleValue(state, 64),
                       CountdownScaleValue(state, titleBottom96)};
-    CountdownDrawText(target, state->titleFont, state->textColor, &titleRect,
-                      state->title, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
     SIZE titleSize = {0};
     HGDIOBJ oldTitleFont = state->titleFont
         ? SelectObject(target, state->titleFont) : NULL;
     GetTextExtentPoint32W(target, state->title, (int)wcslen(state->title),
                           &titleSize);
     if (oldTitleFont) SelectObject(target, oldTitleFont);
-    int signatureBottom96 = state->ultraCompactLayout ? 54 :
-                            (state->compactLayout ? 60 : 74);
+    int signatureBottom96 = state->ultraCompactLayout ? 52 :
+                            (state->compactLayout ? 57 : 68);
     RECT signatureRect = titleRect;
     signatureRect.bottom = CountdownScaleValue(state, signatureBottom96);
     DialogModern_DrawTitleSignature(
         target, &signatureRect, state->dpi, titleSize.cx,
         state->accentColor, state->cardColor, state->darkMode,
         state->highContrast);
+    CountdownDrawText(target, state->titleFont, state->textColor, &titleRect,
+                      state->title, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
 
     int panelTop96 = state->ultraCompactLayout ? 68 :
                      (state->compactLayout ? 76 : 92);

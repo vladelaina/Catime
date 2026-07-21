@@ -1177,10 +1177,6 @@ static void ModernDrawDialog(ModernDialogState* state, HDC hdc) {
                       client.right - side - DialogModern_Scale(state->dpi, 52),
                       DialogModern_Scale(state->dpi,
                                          state->headerHeight96 - 18)};
-    DialogModern_DrawText(hdc, state->titleFont, state->palette.text,
-                          &titleRect, title,
-                          DT_LEFT | DT_VCENTER | DT_SINGLELINE |
-                          DT_END_ELLIPSIS);
     SIZE titleSize = {0};
     HGDIOBJ oldTitleFont = state->titleFont
         ? SelectObject(hdc, state->titleFont) : NULL;
@@ -1188,11 +1184,15 @@ static void ModernDrawDialog(ModernDialogState* state, HDC hdc) {
     if (oldTitleFont) SelectObject(hdc, oldTitleFont);
     RECT signatureRect = titleRect;
     signatureRect.bottom = DialogModern_Scale(
-        state->dpi, state->headerHeight96 - 14);
+        state->dpi, state->headerHeight96 - 17);
     DialogModern_DrawTitleSignature(
         hdc, &signatureRect, state->dpi, titleSize.cx, accentColor,
         state->palette.surface, state->palette.darkMode,
         state->palette.highContrast);
+    DialogModern_DrawText(hdc, state->titleFont, state->palette.text,
+                          &titleRect, title,
+                          DT_LEFT | DT_VCENTER | DT_SINGLELINE |
+                          DT_END_ELLIPSIS);
     ModernDrawBodyScrollbar(state, hdc);
 }
 
