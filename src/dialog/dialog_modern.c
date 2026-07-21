@@ -19,6 +19,7 @@
 #define MODERN_DIALOG_SUBCLASS_ID 0xD140
 #define MODERN_CONTROL_SUBCLASS_ID 0xD141
 #define MODERN_DATETIME_CHILD_SUBCLASS_ID 0xD143
+#define MODERN_COMBO_LIST_SUBCLASS_ID 0xD144
 #define MODERN_DIALOG_FINALIZE_MESSAGE (WM_APP + 490)
 
 typedef enum {
@@ -106,10 +107,14 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
 static LRESULT CALLBACK ModernDateTimeChildSubclassProc(
     HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
     UINT_PTR subclassId, DWORD_PTR refData);
+static LRESULT CALLBACK ModernComboListSubclassProc(
+    HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+    UINT_PTR subclassId, DWORD_PTR refData);
 static void ModernLayoutControls(ModernDialogState* state);
 static void ModernSetBodyScrollOffset(ModernDialogState* state, int offset96);
 static void ModernSyncClientSizeFromWindow(ModernDialogState* state);
 static BOOL ModernControlOwnsVerticalScroll(const ModernControl* control);
+static void ModernAttachComboList(ModernControl* control);
 static int ModernTo96(UINT dpi, int value);
 
 static ModernDialogState* ModernGetState(HWND hwnd) {
@@ -450,6 +455,17 @@ static void ModernStyleControl(ModernDialogState* state,
                          MAKELONG(DialogModern_Scale(state->dpi, 10),
                                   DialogModern_Scale(state->dpi, 10)));
         }
+        if (control->kind == MODERN_CONTROL_COMBO &&
+            !ModernIsDateTimeControl(control)) {
+            style = GetWindowLongPtrW(control->hwnd, GWL_STYLE);
+            SetWindowLongPtrW(control->hwnd, GWL_STYLE,
+                              style | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS);
+            SendMessageW(control->hwnd, CB_SETITEMHEIGHT, (WPARAM)-1,
+                         DialogModern_Scale(state->dpi, 30));
+            SendMessageW(control->hwnd, CB_SETITEMHEIGHT, 0,
+                         DialogModern_Scale(state->dpi, 34));
+            ModernAttachComboList(control);
+        }
         ModernApplyFieldRegion(control);
     }
 
@@ -748,6 +764,24 @@ static void ModernLayoutControls(ModernDialogState* state) {
                      DialogModern_Scale(state->dpi, size96),
                      SWP_NOACTIVATE);
     }
+}
+
+static void ModernAttachComboList(ModernControl* control) {
+    if (!control || !control->hwnd) return;
+    COMBOBOXINFO info = {0};
+    info.cbSize = sizeof(info);
+    if (!GetComboBoxInfo(control->hwnd, &info) || !info.hwndList) return;
+
+    LONG_PTR style = GetWindowLongPtrW(info.hwndList, GWL_STYLE);
+    LONG_PTR exStyle = GetWindowLongPtrW(info.hwndList, GWL_EXSTYLE);
+    SetWindowLongPtrW(info.hwndList, GWL_STYLE, style & ~WS_BORDER);
+    SetWindowLongPtrW(info.hwndList, GWL_EXSTYLE,
+                      exStyle & ~(WS_EX_CLIENTEDGE | WS_EX_STATICEDGE));
+    DialogModern_ApplyTheme(info.hwndList,
+                            control->owner->palette.darkMode);
+    SetWindowSubclass(info.hwndList, ModernComboListSubclassProc,
+                      MODERN_COMBO_LIST_SUBCLASS_ID,
+                      (DWORD_PTR)control);
 }
 
 static void ModernSetBodyScrollOffset(ModernDialogState* state, int offset96) {
@@ -1059,6 +1093,43 @@ static void ModernDrawButton(ModernDialogState* state,
     }
     DialogModern_DrawText(item->hDC, state->buttonFont, text, &rect, textBuffer,
                           DT_CENTER | DT_VCENTER | DT_SINGLELINE |
+                          DT_END_ELLIPSIS);
+}
+
+static void ModernDrawComboItem(ModernDialogState* state,
+                                const DRAWITEMSTRUCT* item) {
+    ModernControl* control = ModernFindControl(state, item->hwndItem);
+    if (!control || control->kind != MODERN_CONTROL_COMBO ||
+        ModernIsDateTimeControl(control)) {
+        return;
+    }
+
+    RECT rect = item->rcItem;
+    FillRect(item->hDC, &rect, state->fieldBrush);
+    if (item->itemID == (UINT)-1) return;
+
+    BOOL selected = (item->itemState & ODS_SELECTED) != 0;
+    BOOL disabled = (item->itemState & ODS_DISABLED) != 0;
+    RECT selection = rect;
+    InflateRect(&selection, -DialogModern_Scale(state->dpi, 4),
+                -DialogModern_Scale(state->dpi, 2));
+    if (selected) {
+        DialogModern_DrawRoundedRect(item->hDC, &selection,
+                                     DialogModern_Scale(state->dpi, 7),
+                                     state->palette.accent,
+                                     state->palette.accent, 0);
+    }
+
+    wchar_t text[512] = {0};
+    SendMessageW(control->hwnd, CB_GETLBTEXT, item->itemID, (LPARAM)text);
+    RECT textRect = rect;
+    textRect.left += DialogModern_Scale(state->dpi, 12);
+    textRect.right -= DialogModern_Scale(state->dpi, 10);
+    COLORREF textColor = disabled ? state->palette.mutedText :
+        (selected ? RGB(0xFF, 0xFF, 0xFF) : state->palette.text);
+    DialogModern_DrawText(item->hDC, state->bodyFont, textColor,
+                          &textRect, text,
+                          DT_LEFT | DT_VCENTER | DT_SINGLELINE |
                           DT_END_ELLIPSIS);
 }
 
@@ -1546,6 +1617,84 @@ static LRESULT CALLBACK ModernDateTimeChildSubclassProc(
     return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
 
+static void ModernApplyComboListRegion(HWND hwnd, ModernControl* control) {
+    if (!hwnd || !control || !control->owner) return;
+    RECT client = {0};
+    GetClientRect(hwnd, &client);
+    int radius = DialogModern_Scale(control->owner->dpi, 9);
+    HRGN region = CreateRoundRectRgn(client.left, client.top,
+                                     client.right + 1, client.bottom + 1,
+                                     radius * 2, radius * 2);
+    if (region && !SetWindowRgn(hwnd, region, TRUE)) DeleteObject(region);
+}
+
+static LRESULT CALLBACK ModernComboListSubclassProc(
+    HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
+    UINT_PTR subclassId, DWORD_PTR refData) {
+    ModernControl* control = (ModernControl*)refData;
+    ModernDialogState* state = control ? control->owner : NULL;
+    switch (msg) {
+        case WM_WINDOWPOSCHANGED:
+        case WM_SIZE: {
+            LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+            ModernApplyComboListRegion(hwnd, control);
+            return result;
+        }
+        case WM_ERASEBKGND:
+            if (state) {
+                RECT client = {0};
+                GetClientRect(hwnd, &client);
+                FillRect((HDC)wParam, &client, state->fieldBrush);
+                return 1;
+            }
+            break;
+        case WM_NCPAINT:
+            return 0;
+        case WM_NCDESTROY:
+            RemoveWindowSubclass(hwnd, ModernComboListSubclassProc,
+                                 subclassId);
+            break;
+    }
+    return DefSubclassProc(hwnd, msg, wParam, lParam);
+}
+
+static int ModernSliderPositionFromPoint(ModernControl* control, int x, int y) {
+    ModernDialogState* state = control ? control->owner : NULL;
+    if (!state || !control->hwnd) return 0;
+    RECT client = {0};
+    GetClientRect(control->hwnd, &client);
+    LONG_PTR style = GetWindowLongPtrW(control->hwnd, GWL_STYLE);
+    BOOL vertical = (style & TBS_VERT) != 0;
+    BOOL reversed = (style & TBS_REVERSED) != 0;
+    int minimum = (int)SendMessageW(control->hwnd, TBM_GETRANGEMIN, 0, 0);
+    int maximum = (int)SendMessageW(control->hwnd, TBM_GETRANGEMAX, 0, 0);
+    if (maximum <= minimum) return minimum;
+    int thumbRadius = DialogModern_Scale(state->dpi, 7);
+    int edge = thumbRadius + DialogModern_Scale(state->dpi, 2);
+    int start = vertical ? client.top + edge : client.left + edge;
+    int finish = vertical ? client.bottom - edge : client.right - edge;
+    int coordinate = vertical ? y : x;
+    if (coordinate < start) coordinate = start;
+    if (coordinate > finish) coordinate = finish;
+    int position = minimum + MulDiv(coordinate - start,
+                                    maximum - minimum,
+                                    max(1, finish - start));
+    if (reversed) position = maximum - (position - minimum);
+    return position;
+}
+
+static void ModernSetSliderFromPoint(ModernControl* control, int x, int y,
+                                     UINT notification) {
+    if (!control || !control->hwnd) return;
+    int position = ModernSliderPositionFromPoint(control, x, y);
+    SendMessageW(control->hwnd, TBM_SETPOS, TRUE, position);
+    HWND parent = GetParent(control->hwnd);
+    LONG_PTR style = GetWindowLongPtrW(control->hwnd, GWL_STYLE);
+    UINT message = (style & TBS_VERT) ? WM_VSCROLL : WM_HSCROLL;
+    SendMessageW(parent, message, MAKEWPARAM(notification, position),
+                 (LPARAM)control->hwnd);
+}
+
 static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                                                   WPARAM wParam, LPARAM lParam,
                                                   UINT_PTR subclassId,
@@ -1556,6 +1705,12 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
 
     switch (msg) {
         case WM_MOUSEMOVE:
+            if (control && control->kind == MODERN_CONTROL_SLIDER &&
+                control->pressed && GetCapture() == hwnd) {
+                ModernSetSliderFromPoint(control, GET_X_LPARAM(lParam),
+                                         GET_Y_LPARAM(lParam), TB_THUMBTRACK);
+                return 0;
+            }
             if (control && !control->hovered) {
                 control->hovered = TRUE;
                 ModernTrackMouse(hwnd);
@@ -1569,9 +1724,36 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
             }
             break;
         case WM_LBUTTONDOWN:
-            if (control) control->pressed = TRUE;
+            if (control) {
+                control->pressed = TRUE;
+                if (control->kind == MODERN_CONTROL_SLIDER) {
+                    SetFocus(hwnd);
+                    SetCapture(hwnd);
+                    ModernSetSliderFromPoint(control, GET_X_LPARAM(lParam),
+                                             GET_Y_LPARAM(lParam),
+                                             TB_THUMBTRACK);
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    return 0;
+                }
+            }
             break;
         case WM_LBUTTONUP:
+            if (control && control->kind == MODERN_CONTROL_SLIDER &&
+                control->pressed) {
+                ModernSetSliderFromPoint(control, GET_X_LPARAM(lParam),
+                                         GET_Y_LPARAM(lParam),
+                                         TB_THUMBPOSITION);
+                control->pressed = FALSE;
+                if (GetCapture() == hwnd) ReleaseCapture();
+                LONG_PTR sliderStyle = GetWindowLongPtrW(hwnd, GWL_STYLE);
+                UINT scrollMessage = (sliderStyle & TBS_VERT)
+                    ? WM_VSCROLL : WM_HSCROLL;
+                SendMessageW(GetParent(hwnd), scrollMessage,
+                             MAKEWPARAM(TB_ENDTRACK, 0), (LPARAM)hwnd);
+                InvalidateRect(hwnd, NULL, FALSE);
+                return 0;
+            }
+            /* fall through */
         case WM_CAPTURECHANGED:
             if (control) {
                 control->pressed = FALSE;
@@ -1779,6 +1961,11 @@ static LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                 if (control && (control->kind == MODERN_CONTROL_PUSH ||
                                 control->kind == MODERN_CONTROL_CLOSE)) {
                     ModernDrawButton(state, item);
+                    return TRUE;
+                }
+                if (control && control->kind == MODERN_CONTROL_COMBO &&
+                    !ModernIsDateTimeControl(control)) {
+                    ModernDrawComboItem(state, item);
                     return TRUE;
                 }
             }
