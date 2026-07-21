@@ -218,8 +218,12 @@ static COLORREF DialogModernBlendColor(COLORREF from, COLORREF to,
                (GetBValue(from) * fromPercent + GetBValue(to) * toPercent) / 100);
 }
 
-static void DialogModernDrawBezierStroke(HDC hdc, const POINT points[4],
-                                         int width, COLORREF color) {
+static void DialogModernDrawBezierStroke(HDC hdc, const POINT* points,
+                                         DWORD pointCount, int width,
+                                         COLORREF color) {
+    if (!hdc || !points || pointCount < 4 || ((pointCount - 1) % 3) != 0) {
+        return;
+    }
     LOGBRUSH brush = {0};
     brush.lbStyle = BS_SOLID;
     brush.lbColor = color;
@@ -228,16 +232,16 @@ static void DialogModernDrawBezierStroke(HDC hdc, const POINT points[4],
                             (DWORD)(width > 0 ? width : 1), &brush, 0, NULL);
     if (!pen) pen = CreatePen(PS_SOLID, width > 0 ? width : 1, color);
     HGDIOBJ oldPen = pen ? SelectObject(hdc, pen) : NULL;
-    if (pen) PolyBezier(hdc, points, 4);
+    if (pen) PolyBezier(hdc, points, pointCount);
     if (oldPen) SelectObject(hdc, oldPen);
     if (pen) DeleteObject(pen);
 }
 
-static void DialogModernScaleSignaturePoints(const POINT source[4],
-                                             POINT target[4],
+static void DialogModernScaleSignaturePoints(const POINT* source,
+                                             POINT* target, DWORD pointCount,
                                              int originX, int originY,
                                              int scale) {
-    for (int i = 0; i < 4; i++) {
+    for (DWORD i = 0; i < pointCount; i++) {
         target[i].x = (source[i].x - originX) * scale;
         target[i].y = (source[i].y - originY) * scale;
     }
@@ -262,34 +266,21 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
     int y = titleRect->bottom - DialogModern_Scale(dpi, 1);
     int softWidth = DialogModern_Scale(dpi, highContrast ? 2 : 7);
     int mainWidth = DialogModern_Scale(dpi, highContrast ? 2 : 4);
-    COLORREF leading = highContrast ? accent :
-        DialogModernBlendColor(accent, RGB(0xA8, 0xEC, 0xFF),
-                               darkMode ? 38 : 58);
     COLORREF glow = highContrast ? accent :
-        DialogModernBlendColor(surface, leading, darkMode ? 24 : 34);
+        DialogModernBlendColor(surface, accent, darkMode ? 24 : 34);
 
-    POINT lead[4] = {
+    /* One continuous two-segment cubic path. The second segment's first
+     * control point is the reflection of the preceding one around the join,
+     * so its tangent remains continuous rather than looking like a second
+     * pen stroke was attached to the first. */
+    POINT stroke[7] = {
         {x, y},
         {x + width * 22 / 100, y + DialogModern_Scale(dpi, 4)},
-        {x + width * 48 / 100, y + DialogModern_Scale(dpi, 5)},
-        {x + width * 69 / 100, y - DialogModern_Scale(dpi, 1)}
-    };
-    POINT flourish[4] = {
-        {x + width * 67 / 100, y - DialogModern_Scale(dpi, 1)},
-        {x + width * 50 / 100, y + DialogModern_Scale(dpi, 11)},
-        {x + width * 79 / 100, y + DialogModern_Scale(dpi, 8)},
-        {x + width, y - DialogModern_Scale(dpi, 5)}
-    };
-
-    POINT airStroke[4] = {
-        {x + DialogModern_Scale(dpi, 3),
-         y - DialogModern_Scale(dpi, 3)},
-        {x + width * 12 / 100,
-         y - DialogModern_Scale(dpi, 2)},
-        {x + width * 20 / 100,
-         y - DialogModern_Scale(dpi, 2)},
-        {x + width * 29 / 100,
-         y - DialogModern_Scale(dpi, 3)}
+        {x + width * 52 / 100, y + DialogModern_Scale(dpi, 5)},
+        {x + width * 68 / 100, y + DialogModern_Scale(dpi, 2)},
+        {x + width * 84 / 100, y - DialogModern_Scale(dpi, 1)},
+        {x + width * 91 / 100, y - DialogModern_Scale(dpi, 4)},
+        {x + width, y - DialogModern_Scale(dpi, 7)}
     };
 
     /* Render this small decorative region at 3x and downsample it.  GDI's
@@ -310,12 +301,8 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
         ? SelectObject(sampleDc, sampleBitmap) : NULL;
     HDC drawDc = sampleBitmap ? sampleDc : hdc;
 
-    POINT scaledLead[4];
-    POINT scaledFlourish[4];
-    POINT scaledAirStroke[4];
-    const POINT* drawLead = lead;
-    const POINT* drawFlourish = flourish;
-    const POINT* drawAirStroke = airStroke;
+    POINT scaledStroke[7];
+    const POINT* drawStroke = stroke;
     int drawScale = 1;
     if (sampleBitmap) {
         RECT sampleRect = {0, 0, outputWidth * sampleScale,
@@ -323,30 +310,17 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
         HBRUSH surfaceBrush = CreateSolidBrush(surface);
         FillRect(sampleDc, &sampleRect, surfaceBrush);
         DeleteObject(surfaceBrush);
-        DialogModernScaleSignaturePoints(lead, scaledLead,
+        DialogModernScaleSignaturePoints(stroke, scaledStroke, _countof(stroke),
                                          bounds.left, bounds.top, sampleScale);
-        DialogModernScaleSignaturePoints(flourish, scaledFlourish,
-                                         bounds.left, bounds.top, sampleScale);
-        DialogModernScaleSignaturePoints(airStroke, scaledAirStroke,
-                                         bounds.left, bounds.top, sampleScale);
-        drawLead = scaledLead;
-        drawFlourish = scaledFlourish;
-        drawAirStroke = scaledAirStroke;
+        drawStroke = scaledStroke;
         drawScale = sampleScale;
     }
 
     if (!highContrast) {
-        DialogModernDrawBezierStroke(
-            drawDc, drawAirStroke, DialogModern_Scale(dpi, 2) * drawScale,
-            glow);
-        DialogModernDrawBezierStroke(drawDc, drawLead,
-                                     softWidth * drawScale, glow);
-        DialogModernDrawBezierStroke(drawDc, drawFlourish,
+        DialogModernDrawBezierStroke(drawDc, drawStroke, _countof(stroke),
                                      softWidth * drawScale, glow);
     }
-    DialogModernDrawBezierStroke(drawDc, drawLead,
-                                 mainWidth * drawScale, leading);
-    DialogModernDrawBezierStroke(drawDc, drawFlourish,
+    DialogModernDrawBezierStroke(drawDc, drawStroke, _countof(stroke),
                                  mainWidth * drawScale, accent);
 
     if (sampleBitmap) {

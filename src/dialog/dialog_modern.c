@@ -1073,8 +1073,8 @@ static void ModernDrawButton(ModernDialogState* state,
         fill = control->primary ? state->palette.accentHover
                                 : state->palette.surface;
     }
-    if (pressed) fill = control->primary ? state->palette.accentHover
-                                         : state->palette.border;
+    /* Secondary actions keep their current hover/rest appearance on press. */
+    if (pressed && control->primary) fill = state->palette.accentHover;
     if (disabled) {
         fill = state->palette.field;
         text = state->palette.mutedText;

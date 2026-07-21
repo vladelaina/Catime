@@ -1260,9 +1260,8 @@ static void CountdownDrawButton(const DRAWITEMSTRUCT* drawItem,
     if (hovered) {
         fill = primary ? state->accentHoverColor : state->cardColor;
     }
-    if (pressed) {
-        fill = primary ? state->accentHoverColor : state->borderColor;
-    }
+    /* Keep the secondary Cancel action visually still while pressed. */
+    if (pressed && primary) fill = state->accentHoverColor;
 
     CountdownDrawRounded(drawItem->hDC, &rect,
                          CountdownScaleValue(state, 11), fill, border,
