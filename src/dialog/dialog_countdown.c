@@ -1106,21 +1106,28 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
     CountdownDrawRounded(target, &card, cardRadius, state->cardColor,
                          state->borderColor, state->highContrast ? 1 : 0);
 
-    int accentTop96 = state->compactLayout ? 12 : 18;
-    RECT accent = {card.left + margin,
-                   card.top + CountdownScaleValue(state, accentTop96),
-                   card.left + margin + CountdownScaleValue(state, 44),
-                   card.top + CountdownScaleValue(state, accentTop96 + 3)};
-    CountdownDrawRounded(target, &accent, CountdownScaleValue(state, 2),
-                         state->accentColor, state->accentColor, 0);
-
-    int titleTop96 = state->compactLayout ? 20 : 30;
-    int titleBottom96 = state->compactLayout ? 55 : 66;
+    int titleTop96 = state->compactLayout ? 16 : 22;
+    int titleBottom96 = state->ultraCompactLayout ? 50 :
+                       (state->compactLayout ? 55 : 66);
     RECT titleRect = {margin, CountdownScaleValue(state, titleTop96),
                       width - margin - CountdownScaleValue(state, 64),
                       CountdownScaleValue(state, titleBottom96)};
     CountdownDrawText(target, state->titleFont, state->textColor, &titleRect,
                       state->title, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+    SIZE titleSize = {0};
+    HGDIOBJ oldTitleFont = state->titleFont
+        ? SelectObject(target, state->titleFont) : NULL;
+    GetTextExtentPoint32W(target, state->title, (int)wcslen(state->title),
+                          &titleSize);
+    if (oldTitleFont) SelectObject(target, oldTitleFont);
+    int signatureBottom96 = state->ultraCompactLayout ? 54 :
+                            (state->compactLayout ? 60 : 74);
+    RECT signatureRect = titleRect;
+    signatureRect.bottom = CountdownScaleValue(state, signatureBottom96);
+    DialogModern_DrawTitleSignature(
+        target, &signatureRect, state->dpi, titleSize.cx,
+        state->accentColor, state->cardColor, state->darkMode,
+        state->highContrast);
 
     int panelTop96 = state->ultraCompactLayout ? 68 :
                      (state->compactLayout ? 76 : 92);

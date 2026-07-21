@@ -59,6 +59,11 @@ void DialogModern_DrawCloseButton(HDC hdc, const RECT* rect, UINT dpi,
 void DialogModern_DrawText(HDC hdc, HFONT font, COLORREF color,
                            const RECT* rect, const wchar_t* text,
                            UINT format);
+/** Draw the shared title signature stroke below a measured dialog title. */
+void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
+                                     int titleTextWidth, COLORREF accent,
+                                     COLORREF surface, BOOL darkMode,
+                                     BOOL highContrast);
 /** Apply the shared light/dark appearance to a window and native children. */
 void DialogModern_ApplyTheme(HWND hwnd, BOOL darkMode);
 void DialogModern_ApplyWindowShape(HWND hwnd, UINT dpi, int cornerRadius);

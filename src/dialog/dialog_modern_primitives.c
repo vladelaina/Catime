@@ -208,6 +208,90 @@ void DialogModern_DrawText(HDC hdc, HFONT font, COLORREF color,
     if (oldFont) SelectObject(hdc, oldFont);
 }
 
+static COLORREF DialogModernBlendColor(COLORREF from, COLORREF to,
+                                       int toPercent) {
+    if (toPercent < 0) toPercent = 0;
+    if (toPercent > 100) toPercent = 100;
+    int fromPercent = 100 - toPercent;
+    return RGB((GetRValue(from) * fromPercent + GetRValue(to) * toPercent) / 100,
+               (GetGValue(from) * fromPercent + GetGValue(to) * toPercent) / 100,
+               (GetBValue(from) * fromPercent + GetBValue(to) * toPercent) / 100);
+}
+
+static void DialogModernDrawBezierStroke(HDC hdc, const POINT points[4],
+                                         int width, COLORREF color) {
+    LOGBRUSH brush = {0};
+    brush.lbStyle = BS_SOLID;
+    brush.lbColor = color;
+    HPEN pen = ExtCreatePen(PS_GEOMETRIC | PS_SOLID | PS_ENDCAP_ROUND |
+                                PS_JOIN_ROUND,
+                            (DWORD)(width > 0 ? width : 1), &brush, 0, NULL);
+    if (!pen) pen = CreatePen(PS_SOLID, width > 0 ? width : 1, color);
+    HGDIOBJ oldPen = pen ? SelectObject(hdc, pen) : NULL;
+    if (pen) PolyBezier(hdc, points, 4);
+    if (oldPen) SelectObject(hdc, oldPen);
+    if (pen) DeleteObject(pen);
+}
+
+void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
+                                     int titleTextWidth, COLORREF accent,
+                                     COLORREF surface, BOOL darkMode,
+                                     BOOL highContrast) {
+    if (!hdc || !titleRect) return;
+
+    int minimumWidth = DialogModern_Scale(dpi, 86);
+    int maximumWidth = DialogModern_Scale(dpi, 188);
+    int width = titleTextWidth + DialogModern_Scale(dpi, 16);
+    if (width < minimumWidth) width = minimumWidth;
+    if (width > maximumWidth) width = maximumWidth;
+    int available = titleRect->right - titleRect->left;
+    if (width > available) width = available;
+    if (width < DialogModern_Scale(dpi, 28)) return;
+
+    int x = titleRect->left + DialogModern_Scale(dpi, 2);
+    int y = titleRect->bottom - DialogModern_Scale(dpi, 1);
+    int softWidth = DialogModern_Scale(dpi, highContrast ? 2 : 7);
+    int mainWidth = DialogModern_Scale(dpi, highContrast ? 2 : 4);
+    COLORREF leading = highContrast ? accent :
+        DialogModernBlendColor(accent, RGB(0xA8, 0xEC, 0xFF),
+                               darkMode ? 38 : 58);
+    COLORREF glow = highContrast ? accent :
+        DialogModernBlendColor(surface, leading, darkMode ? 24 : 34);
+
+    POINT lead[4] = {
+        {x, y},
+        {x + width * 22 / 100, y + DialogModern_Scale(dpi, 4)},
+        {x + width * 48 / 100, y + DialogModern_Scale(dpi, 5)},
+        {x + width * 69 / 100, y - DialogModern_Scale(dpi, 1)}
+    };
+    POINT flourish[4] = {
+        {x + width * 67 / 100, y - DialogModern_Scale(dpi, 1)},
+        {x + width * 50 / 100, y + DialogModern_Scale(dpi, 11)},
+        {x + width * 79 / 100, y + DialogModern_Scale(dpi, 8)},
+        {x + width, y - DialogModern_Scale(dpi, 5)}
+    };
+
+    POINT airStroke[4] = {
+        {x + DialogModern_Scale(dpi, 3),
+         y - DialogModern_Scale(dpi, 3)},
+        {x + width * 12 / 100,
+         y - DialogModern_Scale(dpi, 2)},
+        {x + width * 20 / 100,
+         y - DialogModern_Scale(dpi, 2)},
+        {x + width * 29 / 100,
+         y - DialogModern_Scale(dpi, 3)}
+    };
+
+    if (!highContrast) {
+        DialogModernDrawBezierStroke(
+            hdc, airStroke, DialogModern_Scale(dpi, 2), glow);
+        DialogModernDrawBezierStroke(hdc, lead, softWidth, glow);
+        DialogModernDrawBezierStroke(hdc, flourish, softWidth, glow);
+    }
+    DialogModernDrawBezierStroke(hdc, lead, mainWidth, leading);
+    DialogModernDrawBezierStroke(hdc, flourish, mainWidth, accent);
+}
+
 typedef HRESULT (WINAPI *DialogModernSetWindowThemeFn)(
     HWND hwnd, LPCWSTR subAppName, LPCWSTR subIdList);
 

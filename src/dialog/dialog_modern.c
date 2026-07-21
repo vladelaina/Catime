@@ -366,7 +366,7 @@ static void ModernAnalyzeLayout(ModernDialogState* state) {
     state->contentMinY96 = minY;
     state->contentWidth96 = maxX - minX;
     state->bodyHeight96 = bodyMaxY - minY;
-    state->headerHeight96 = state->bodyHeight96 > 620 ? 52 : 64;
+    state->headerHeight96 = state->bodyHeight96 > 620 ? 66 : 72;
     state->sidePadding96 = state->bodyHeight96 > 620 ? 18 : 24;
     state->bottomPadding96 = state->bodyHeight96 > 620 ? 14 : 20;
     state->footerHeight96 = footerCount ? 36 : 0;
@@ -1162,10 +1162,6 @@ static void ModernDrawDialog(ModernDialogState* state, HDC hdc) {
                                  state->palette.highContrast ? 1 : 0);
 
     int side = DialogModern_Scale(state->dpi, state->sidePadding96);
-    RECT accent = {surface.left + side,
-                   surface.top + DialogModern_Scale(state->dpi, 17),
-                   surface.left + side + DialogModern_Scale(state->dpi, 44),
-                   surface.top + DialogModern_Scale(state->dpi, 20)};
     COLORREF accentColor = state->palette.accent;
     if (state->dialogType == DIALOG_INSTANCE_ERROR ||
         state->dialogType == DIALOG_INSTANCE_MESSAGE_ERROR ||
@@ -1174,21 +1170,29 @@ static void ModernDrawDialog(ModernDialogState* state, HDC hdc) {
     } else if (state->dialogType == DIALOG_INSTANCE_MESSAGE_WARNING) {
         accentColor = state->palette.warning;
     }
-    DialogModern_DrawRoundedRect(hdc, &accent,
-                                 DialogModern_Scale(state->dpi, 3),
-                                 accentColor, accentColor, 0);
-
     wchar_t title[256] = {0};
     GetWindowTextW(state->hwnd, title, (int)_countof(title));
     RECT titleRect = {surface.left + side,
-                      surface.top + DialogModern_Scale(state->dpi, 23),
+                      surface.top + DialogModern_Scale(state->dpi, 12),
                       client.right - side - DialogModern_Scale(state->dpi, 52),
                       DialogModern_Scale(state->dpi,
-                                         state->headerHeight96 - 4)};
+                                         state->headerHeight96 - 18)};
     DialogModern_DrawText(hdc, state->titleFont, state->palette.text,
                           &titleRect, title,
                           DT_LEFT | DT_VCENTER | DT_SINGLELINE |
                           DT_END_ELLIPSIS);
+    SIZE titleSize = {0};
+    HGDIOBJ oldTitleFont = state->titleFont
+        ? SelectObject(hdc, state->titleFont) : NULL;
+    GetTextExtentPoint32W(hdc, title, (int)wcslen(title), &titleSize);
+    if (oldTitleFont) SelectObject(hdc, oldTitleFont);
+    RECT signatureRect = titleRect;
+    signatureRect.bottom = DialogModern_Scale(
+        state->dpi, state->headerHeight96 - 14);
+    DialogModern_DrawTitleSignature(
+        hdc, &signatureRect, state->dpi, titleSize.cx, accentColor,
+        state->palette.surface, state->palette.darkMode,
+        state->palette.highContrast);
     ModernDrawBodyScrollbar(state, hdc);
 }
 
