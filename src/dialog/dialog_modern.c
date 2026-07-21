@@ -414,6 +414,10 @@ static void ModernSetControlFont(const ModernDialogState* state,
         control->kind == MODERN_CONTROL_SLIDER) {
         DialogModern_ApplyTheme(control->hwnd, state->palette.darkMode);
     }
+    if (control->kind == MODERN_CONTROL_COMBO &&
+        !ModernIsDateTimeControl(control)) {
+        ModernAttachComboList((ModernControl*)control);
+    }
 }
 
 static void ModernApplyFieldRegion(ModernControl* control) {
