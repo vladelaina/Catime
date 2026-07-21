@@ -469,6 +469,33 @@ BOOL Dialog_IsOpen(DialogInstanceType type) {
     return Dialog_GetInstance(type) != NULL;
 }
 
+void Dialog_RefreshOpenThemes(void) {
+    HWND dialogs[DIALOG_INSTANCE_COUNT] = {0};
+    size_t dialogCount = 0;
+
+    for (int type = 0; type < DIALOG_INSTANCE_COUNT; type++) {
+        HWND hwndDlg = Dialog_GetInstance((DialogInstanceType)type);
+        if (!hwndDlg) continue;
+
+        BOOL alreadyAdded = FALSE;
+        for (size_t i = 0; i < dialogCount; i++) {
+            if (dialogs[i] == hwndDlg) {
+                alreadyAdded = TRUE;
+                break;
+            }
+        }
+        if (!alreadyAdded) {
+            dialogs[dialogCount++] = hwndDlg;
+        }
+    }
+
+    for (size_t i = 0; i < dialogCount; i++) {
+        if (IsWindow(dialogs[i])) {
+            SendMessageW(dialogs[i], WM_THEMECHANGED, 0, 0);
+        }
+    }
+}
+
 static BOOL Dialog_IsOpenComboMessage(HWND hwndDlg, HWND hwndMessage) {
     HWND current = hwndMessage;
     while (current && current != hwndDlg) {

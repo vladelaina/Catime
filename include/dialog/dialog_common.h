@@ -353,6 +353,9 @@ HWND Dialog_GetInstance(DialogInstanceType type);
  */
 BOOL Dialog_IsOpen(DialogInstanceType type);
 
+/** Refresh the appearance of every currently registered dialog window. */
+void Dialog_RefreshOpenThemes(void);
+
 BOOL Dialog_ProcessModelessMessage(MSG* msg);
 
 #endif /* DIALOG_COMMON_H */
