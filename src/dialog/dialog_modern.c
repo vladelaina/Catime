@@ -566,6 +566,18 @@ static void ModernApplyBodyControlRegion(
 
     int viewportHeight = viewportBottom - viewportTop;
     BOOL fullyInside = visibleTop <= 0 && visibleBottom >= height;
+
+    /* Group boxes are decorative sibling windows; their labelled frame must
+     * not be moved or shortened as it scrolls out of the body.  Once the
+     * group title is above the viewport, hide only the frame.  Its sibling
+     * controls remain visible and continue to be clipped independently. */
+    if (!fullyInside && control->kind == MODERN_CONTROL_GROUP &&
+        controlTop < viewportTop) {
+        SetWindowRgn(control->hwnd, NULL, TRUE);
+        ShowWindow(control->hwnd, SW_HIDE);
+        return;
+    }
+
     if (!fullyInside && height > viewportHeight &&
         ModernControlOwnsVerticalScroll(control)) {
         int clippedTop = controlTop < viewportTop ? viewportTop : controlTop;
@@ -575,32 +587,6 @@ static void ModernApplyBodyControlRegion(
             : controlBottom;
         int clippedHeight = clippedBottom - clippedTop;
         if (clippedHeight <= 0) {
-            SetWindowRgn(control->hwnd, NULL, TRUE);
-            ShowWindow(control->hwnd, SW_HIDE);
-            return;
-        }
-
-        RECT windowRect = {0};
-        GetWindowRect(control->hwnd, &windowRect);
-        MapWindowPoints(NULL, state->hwnd, (POINT*)&windowRect, 2);
-        SetWindowRgn(control->hwnd, NULL, TRUE);
-        ShowWindow(control->hwnd, SW_SHOWNA);
-        SetWindowPos(control->hwnd, NULL,
-                     windowRect.left, clippedTop,
-                     windowRect.right - windowRect.left, clippedHeight,
-                     SWP_NOZORDER | SWP_NOACTIVATE);
-        return;
-    }
-
-    if (!fullyInside && control->kind == MODERN_CONTROL_GROUP) {
-        int clippedTop = controlTop < viewportTop ? viewportTop : controlTop;
-        int controlBottom = controlTop + height;
-        int clippedBottom = controlBottom > viewportBottom
-            ? viewportBottom
-            : controlBottom;
-        int clippedHeight = clippedBottom - clippedTop;
-        int minimumHeight = DialogModern_Scale(state->dpi, 22);
-        if (clippedHeight < minimumHeight) {
             SetWindowRgn(control->hwnd, NULL, TRUE);
             ShowWindow(control->hwnd, SW_HIDE);
             return;
@@ -635,7 +621,8 @@ static void ModernApplyBodyControlRegion(
         }
     }
 
-    if (!fullyInside && height <= viewportHeight) {
+    if (!fullyInside && height <= viewportHeight &&
+        control->kind != MODERN_CONTROL_GROUP) {
         SetWindowRgn(control->hwnd, NULL, TRUE);
         ShowWindow(control->hwnd, SW_HIDE);
         return;
