@@ -1358,6 +1358,13 @@ static void CountdownMoveFocus(CountdownDialogState* state, HWND current,
     }
 }
 
+static void CountdownClearChildFocus(HWND hwnd) {
+    HWND focused = GetFocus();
+    if (focused && focused != hwnd && IsChild(hwnd, focused)) {
+        SetFocus(hwnd);
+    }
+}
+
 static LRESULT CALLBACK CountdownEditSubclassProc(HWND hwnd, UINT msg,
                                                   WPARAM wParam, LPARAM lParam,
                                                   UINT_PTR subclassId,
@@ -1903,6 +1910,12 @@ static LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             }
             break;
 
+        case WM_LBUTTONDOWN:
+            if (state) {
+                CountdownClearChildFocus(hwnd);
+            }
+            break;
+
         case WM_NCHITTEST: {
             if (state) {
                 POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
@@ -1916,6 +1929,13 @@ static LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             }
             return HTCLIENT;
         }
+
+        case WM_NCLBUTTONDOWN:
+        case WM_NCLBUTTONDBLCLK:
+            if (state && wParam == HTCAPTION) {
+                CountdownClearChildFocus(hwnd);
+            }
+            break;
 
         case WM_MOUSEMOVE:
             if (state) {

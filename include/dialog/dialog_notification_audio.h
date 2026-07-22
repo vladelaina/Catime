@@ -85,16 +85,17 @@ BOOL HandleSoundTestButton(HWND hwndDlg, HWND hwndCombo, HWND hwndSlider, BOOL* 
  * 
  * @details
  * Opens %LOCALAPPDATA%\Catime\resources\audio in Windows Explorer
- * and refreshes the combo box to reflect any file changes.
+ * and requests a non-blocking cache refresh.
  */
 void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo);
 
 /**
- * @brief Refresh sound list when combo box dropdown opens
+ * @brief Request a background sound-list refresh when the dropdown opens
  * @param hwndCombo Sound combo box handle
  * 
  * @details
- * Re-scans audio folder and updates combo box while preserving selection.
+ * Keeps the current popup contents intact while the audio folder is scanned.
+ * The dialog applies the new cache after the popup closes.
  */
 void HandleSoundComboDropdown(HWND hwndCombo);
 

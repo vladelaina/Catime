@@ -66,6 +66,8 @@ void DialogModern_DrawTitleSignature(HDC hdc, const RECT* titleRect, UINT dpi,
                                      BOOL highContrast);
 /** Apply the shared light/dark appearance to a window and native children. */
 void DialogModern_ApplyTheme(HWND hwnd, BOOL darkMode);
+/** Disable system-drawn shadow chrome for a custom popup surface. */
+void DialogModern_DisablePopupShadow(HWND hwnd);
 void DialogModern_ApplyWindowShape(HWND hwnd, UINT dpi, int cornerRadius);
 
 #endif /* DIALOG_MODERN_H */

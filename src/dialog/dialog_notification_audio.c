@@ -18,7 +18,6 @@
 #define NOTIFICATION_SOUND_SCAN_ENTRY_LIMIT 4096
 #define NOTIFICATION_SOUND_SCAN_STOP_TIMEOUT_MS 2000
 #define NOTIFICATION_SOUND_SCAN_REFRESH_COOLDOWN_MS 2000
-#define NOTIFICATION_SOUND_SCAN_FOREGROUND_WAIT_MS 250
 #define NOTIFICATION_SOUND_SCAN_FAILED (-1)
 
 static wchar_t g_soundFileCache[NOTIFICATION_SOUND_ENTRY_LIMIT][MAX_PATH];
@@ -37,7 +36,7 @@ static volatile LONG g_soundScanGeneration = 0;
 static volatile LONG g_soundFileLastScanTick = 0;
 
 static DWORD WINAPI NotificationSoundScanThread(LPVOID lpParam);
-static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh);
+static void RequestNotificationSoundCacheScanAsync(void);
 
 /* ============================================================================
  * Static Helper Functions
@@ -284,7 +283,7 @@ static BOOL CloseRetiredSoundScanThreadLocked(DWORD waitMs) {
     return FALSE;
 }
 
-static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh) {
+static void RequestNotificationSoundCacheScanAsync(void) {
     AcquireSRWLockExclusive(&g_soundScanThreadLock);
 
     if (!CloseRetiredSoundScanThreadLocked(0)) {
@@ -308,7 +307,7 @@ static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh) {
     }
 
     DWORD now = GetTickCount();
-    if (!forceRefresh && IsSoundFileCacheRecentlyScanned(now)) {
+    if (IsSoundFileCacheRecentlyScanned(now)) {
         ReleaseSRWLockExclusive(&g_soundScanThreadLock);
         return;
     }
@@ -325,12 +324,6 @@ static void RequestNotificationSoundCacheScanAsync(BOOL forceRefresh) {
     ReleaseSRWLockExclusive(&g_soundScanThreadLock);
 }
 
-static void WaitForNotificationSoundCacheForegroundRefresh(void) {
-    AcquireSRWLockExclusive(&g_soundScanThreadLock);
-    CloseCompletedSoundScanThreadLocked(NOTIFICATION_SOUND_SCAN_FOREGROUND_WAIT_MS);
-    ReleaseSRWLockExclusive(&g_soundScanThreadLock);
-}
-
 static void InvalidateNotificationSoundScanCooldown(void) {
     InterlockedExchange(&g_soundFileLastScanTick, 0);
 }
@@ -338,7 +331,7 @@ static void InvalidateNotificationSoundScanCooldown(void) {
 static void OnNotificationSoundFolderChanged(void* context) {
     (void)context;
     InvalidateNotificationSoundScanCooldown();
-    RequestNotificationSoundCacheScanAsync(FALSE);
+    RequestNotificationSoundCacheScanAsync();
 }
 
 static BOOL GetAudioFolderPathW(wchar_t* outPath, size_t outSize) {
@@ -441,7 +434,7 @@ void NotificationSoundCache_Initialize(void) {
 }
 
 void NotificationSoundCache_RequestScanAsync(void) {
-    RequestNotificationSoundCacheScanAsync(FALSE);
+    RequestNotificationSoundCacheScanAsync();
 }
 
 void NotificationSoundCache_SetNotifyWindow(HWND hwnd) {
@@ -509,6 +502,108 @@ static void OnAudioPlaybackComplete(HWND hwnd) {
     }
 }
 
+static int FindNotificationSoundItem(
+    wchar_t items[][MAX_PATH], int count, int firstIndex,
+    const wchar_t* value) {
+    if (!items || !value || firstIndex < 0) return -1;
+    for (int i = firstIndex; i < count; i++) {
+        if (wcscmp(items[i], value) == 0) return i;
+    }
+    return -1;
+}
+
+static int BuildNotificationSoundItems(
+    wchar_t items[][MAX_PATH], int capacity, const char* currentFile,
+    int* currentSelection) {
+    if (!items || capacity < 2) return 0;
+
+    const wchar_t* noneText = GetLocalizedString(NULL, L"None");
+    const wchar_t* systemBeepText = GetLocalizedString(NULL, L"System Beep");
+    wcsncpy_s(items[0], MAX_PATH, noneText ? noneText : L"None", _TRUNCATE);
+    wcsncpy_s(items[1], MAX_PATH,
+              systemBeepText ? systemBeepText : L"System Beep", _TRUNCATE);
+    int count = 2;
+    count += CopyNotificationSoundCache(items + count, capacity - count, NULL);
+
+    int selection = 0;
+    if (currentFile && currentFile[0] != '\0') {
+        if (strcmp(currentFile, "SYSTEM_BEEP") == 0) {
+            selection = 1;
+        } else {
+            wchar_t currentFileName[MAX_PATH] = {0};
+            if (GetCurrentSoundFileName(currentFile, currentFileName,
+                                        MAX_PATH)) {
+                int index = FindNotificationSoundItem(
+                    items, count, 2, currentFileName);
+                if (index < 0 && count < capacity &&
+                    IsSupportedAudioFileName(currentFileName)) {
+                    wcsncpy_s(items[count], MAX_PATH, currentFileName,
+                              _TRUNCATE);
+                    index = count++;
+                }
+                if (index >= 0) selection = index;
+            }
+        }
+    }
+    if (currentSelection) *currentSelection = selection;
+    return count;
+}
+
+static BOOL NotificationSoundComboItemsMatch(
+    HWND hwndCombo, wchar_t items[][MAX_PATH], int count) {
+    if (!hwndCombo || !items || count < 0 ||
+        (int)SendMessageW(hwndCombo, CB_GETCOUNT, 0, 0) != count) {
+        return FALSE;
+    }
+
+    for (int i = 0; i < count; i++) {
+        LRESULT length = SendMessageW(hwndCombo, CB_GETLBTEXTLEN, i, 0);
+        if (length == CB_ERR || length < 0 || length >= MAX_PATH) {
+            return FALSE;
+        }
+        wchar_t existing[MAX_PATH] = {0};
+        if (SendMessageW(hwndCombo, CB_GETLBTEXT, i,
+                         (LPARAM)existing) == CB_ERR ||
+            wcscmp(existing, items[i]) != 0) {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static void ApplyNotificationSoundItems(
+    HWND hwndCombo, wchar_t items[][MAX_PATH], int count,
+    int selection) {
+    if (!hwndCombo || !items || count < 0) return;
+    if (selection < 0 || selection >= count) selection = 0;
+
+    BOOL contentChanged = !NotificationSoundComboItemsMatch(
+        hwndCombo, items, count);
+    int oldSelection = (int)SendMessageW(hwndCombo, CB_GETCURSEL, 0, 0);
+    if (!contentChanged && oldSelection == selection) return;
+
+    SendMessageW(hwndCombo, WM_SETREDRAW, FALSE, 0);
+    if (contentChanged) {
+        SendMessageW(hwndCombo, CB_RESETCONTENT, 0, 0);
+        SendMessageW(
+            hwndCombo, CB_INITSTORAGE, count,
+            (LPARAM)((size_t)count * MAX_PATH * sizeof(wchar_t)));
+        int added = 0;
+        for (; added < count; added++) {
+            if (SendMessageW(hwndCombo, CB_ADDSTRING, 0,
+                             (LPARAM)items[added]) < 0) {
+                break;
+            }
+        }
+        if (selection >= added) selection = 0;
+    }
+    SendMessageW(hwndCombo, CB_SETCURSEL, selection, 0);
+    SendMessageW(hwndCombo, WM_SETREDRAW, TRUE, 0);
+    RedrawWindow(hwndCombo, NULL, NULL,
+                 RDW_INVALIDATE | RDW_NOERASE | RDW_UPDATENOW |
+                 RDW_ALLCHILDREN);
+}
+
 /* ============================================================================
  * Public API Implementation
  * ============================================================================ */
@@ -518,78 +613,46 @@ void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile) 
 
     NotificationSoundCache_RequestScanAsync();
 
-    SendMessage(hwndCombo, CB_RESETCONTENT, 0, 0);
-    SendMessage(hwndCombo, CB_INITSTORAGE, NOTIFICATION_SOUND_ENTRY_LIMIT + 3,
-                (LPARAM)((NOTIFICATION_SOUND_ENTRY_LIMIT + 3) * MAX_PATH * sizeof(wchar_t)));
-
-    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(NULL, L"None"));
-    SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)GetLocalizedString(NULL, L"System Beep"));
-
-    wchar_t currentFileName[MAX_PATH] = {0};
-    if (currentFile && strcmp(currentFile, "SYSTEM_BEEP") != 0) {
-        GetCurrentSoundFileName(currentFile, currentFileName, MAX_PATH);
-    }
-
-    wchar_t (*soundFiles)[MAX_PATH] = (wchar_t (*)[MAX_PATH])malloc(
-        (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*soundFiles));
-    if (soundFiles) {
-        ZeroMemory(soundFiles, (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*soundFiles));
-        int soundCount = CopyNotificationSoundCache(soundFiles, NOTIFICATION_SOUND_ENTRY_LIMIT,
-                                                    NULL);
-
-        for (int i = 0; i < soundCount; i++) {
-            SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)soundFiles[i]);
-        }
-        free(soundFiles);
-    }
-
-    if (currentFile && currentFile[0] != '\0') {
-        if (strcmp(currentFile, "SYSTEM_BEEP") == 0) {
-            SendMessage(hwndCombo, CB_SETCURSEL, 1, 0);
-        } else {
-            LRESULT index = CB_ERR;
-            if (currentFileName[0] != L'\0') {
-                index = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT, (WPARAM)-1, (LPARAM)currentFileName);
-                if (index == CB_ERR && IsSupportedAudioFileName(currentFileName)) {
-                    index = SendMessageW(hwndCombo, CB_ADDSTRING, 0, (LPARAM)currentFileName);
-                }
-            }
-
-            if (index != CB_ERR) {
-                SendMessage(hwndCombo, CB_SETCURSEL, index, 0);
-            } else {
-                SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
-            }
-        }
-    } else {
-        SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
-    }
+    const int capacity = NOTIFICATION_SOUND_ENTRY_LIMIT + 3;
+    wchar_t (*items)[MAX_PATH] = (wchar_t (*)[MAX_PATH])calloc(
+        (size_t)capacity, sizeof(*items));
+    if (!items) return;
+    int selection = 0;
+    int count = BuildNotificationSoundItems(items, capacity, currentFile,
+                                            &selection);
+    ApplyNotificationSoundItems(hwndCombo, items, count, selection);
+    free(items);
 }
 
 void RefreshNotificationSoundComboBox(HWND hwndCombo) {
     if (!hwndCombo) return;
 
-    int selectedIndex = SendMessage(hwndCombo, CB_GETCURSEL, 0, 0);
+    int selectedIndex = (int)SendMessageW(hwndCombo, CB_GETCURSEL, 0, 0);
     wchar_t selectedFile[MAX_PATH] = {0};
-    if (selectedIndex > 0) {
+    if (selectedIndex >= 2) {
         SendMessageW(hwndCombo, CB_GETLBTEXT, selectedIndex, (LPARAM)selectedFile);
     }
 
     const char* currentFile = (selectedIndex > 0)
         ? g_AppConfig.notification.sound.sound_file
         : NULL;
-    PopulateNotificationSoundComboBox(hwndCombo, currentFile);
-
-    if (selectedFile[0] != L'\0') {
-        LRESULT newIndex = SendMessageW(hwndCombo, CB_FINDSTRINGEXACT,
-                                        (WPARAM)-1,
-                                        (LPARAM)selectedFile);
-        if (newIndex != CB_ERR) {
-            SendMessage(hwndCombo, CB_SETCURSEL, newIndex, 0);
-        } else {
-            SendMessage(hwndCombo, CB_SETCURSEL, 0, 0);
-        }
+    const int capacity = NOTIFICATION_SOUND_ENTRY_LIMIT + 3;
+    wchar_t (*items)[MAX_PATH] = (wchar_t (*)[MAX_PATH])calloc(
+        (size_t)capacity, sizeof(*items));
+    if (!items) return;
+    int selection = 0;
+    int count = BuildNotificationSoundItems(items, capacity, currentFile,
+                                            &selection);
+    if (selectedIndex == 1) {
+        selection = 1;
+    } else if (selectedIndex >= 2 && selectedFile[0] != L'\0') {
+        selection = FindNotificationSoundItem(items, count, 2, selectedFile);
+        if (selection < 0) selection = 0;
+    } else if (selectedIndex == 0) {
+        selection = 0;
     }
+    ApplyNotificationSoundItems(hwndCombo, items, count, selection);
+    free(items);
 }
 
 BOOL GetSelectedNotificationSoundFile(HWND hwndCombo, char* outSoundFile, size_t outSize) {
@@ -682,17 +745,13 @@ void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo) {
 
     ShellExecuteW(hwndDlg, L"open", wAudioPath, NULL, NULL, SW_SHOWNORMAL);
 
-    RequestNotificationSoundCacheScanAsync(TRUE);
-    WaitForNotificationSoundCacheForegroundRefresh();
-    RefreshNotificationSoundComboBox(hwndCombo);
+    RequestNotificationSoundCacheScanAsync();
 }
 
 void HandleSoundComboDropdown(HWND hwndCombo) {
     if (!hwndCombo) return;
 
-    RequestNotificationSoundCacheScanAsync(TRUE);
-    WaitForNotificationSoundCacheForegroundRefresh();
-    RefreshNotificationSoundComboBox(hwndCombo);
+    RequestNotificationSoundCacheScanAsync();
 }
 
 void SetupAudioPlaybackCallback(HWND hwndDlg) {

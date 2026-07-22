@@ -34,6 +34,7 @@ static HWND g_hwndPreviewNotification = NULL;
 typedef struct {
     BOOL isPlaying;
     BOOL isInitializing;
+    BOOL soundComboRefreshPending;
     int originalVolume;
 } NotificationSettingsState;
 
@@ -442,7 +443,7 @@ static HWND FindPreviewNotificationWindow(void) {
     return NULL;
 }
 
-static void UpdatePreviewOpacity(int opacity) {
+static HWND ResolvePreviewNotificationWindow(void) {
     if (!g_hwndPreviewNotification ||
         !IsWindow(g_hwndPreviewNotification) ||
         !IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
@@ -452,36 +453,9 @@ static void UpdatePreviewOpacity(int opacity) {
     if (g_hwndPreviewNotification &&
         IsWindow(g_hwndPreviewNotification) &&
         IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
-        SetToastNotificationOpacity(g_hwndPreviewNotification, opacity);
+        return g_hwndPreviewNotification;
     }
-}
-
-static void UpdatePreviewCornerRadius(int cornerRadius) {
-    if (!g_hwndPreviewNotification ||
-        !IsWindow(g_hwndPreviewNotification) ||
-        !IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
-        g_hwndPreviewNotification = FindPreviewNotificationWindow();
-    }
-
-    if (g_hwndPreviewNotification &&
-        IsWindow(g_hwndPreviewNotification) &&
-        IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
-        SetToastNotificationCornerRadius(g_hwndPreviewNotification, cornerRadius);
-    }
-}
-
-static void UpdatePreviewFontPercent(int fontPercent) {
-    if (!g_hwndPreviewNotification ||
-        !IsWindow(g_hwndPreviewNotification) ||
-        !IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
-        g_hwndPreviewNotification = FindPreviewNotificationWindow();
-    }
-
-    if (g_hwndPreviewNotification &&
-        IsWindow(g_hwndPreviewNotification) &&
-        IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
-        SetToastNotificationFontPercent(g_hwndPreviewNotification, fontPercent);
-    }
+    return NULL;
 }
 
 static int GetTrackbarPosition(HWND hwndDlg, int controlId, int fallback) {
@@ -541,13 +515,19 @@ static void EnsurePreviewNotification(HWND hwndDlg, const wchar_t* message) {
 }
 
 static void UpdatePreviewAppearanceFromControls(HWND hwndDlg) {
-    UpdatePreviewOpacity(ClampNotificationOpacityForDialog(
+    HWND hwndPreview = ResolvePreviewNotificationWindow();
+    if (!hwndPreview) return;
+    int opacity = ClampNotificationOpacityForDialog(
         GetTrackbarPosition(hwndDlg, IDC_NOTIFICATION_OPACITY_EDIT,
-                            g_AppConfig.notification.display.max_opacity)));
-    UpdatePreviewCornerRadius(GetTrackbarPosition(hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER,
-                                                  g_AppConfig.notification.display.corner_radius));
-    UpdatePreviewFontPercent(GetTrackbarPosition(hwndDlg, IDC_NOTIFICATION_FONT_SIZE_SLIDER,
-                                                 g_AppConfig.notification.display.font_size));
+                            g_AppConfig.notification.display.max_opacity));
+    int cornerRadius = GetTrackbarPosition(
+        hwndDlg, IDC_NOTIFICATION_RADIUS_SLIDER,
+        g_AppConfig.notification.display.corner_radius);
+    int fontPercent = GetTrackbarPosition(
+        hwndDlg, IDC_NOTIFICATION_FONT_SIZE_SLIDER,
+        g_AppConfig.notification.display.font_size);
+    SetToastNotificationAppearance(hwndPreview, opacity, cornerRadius,
+                                   fontPercent);
 }
 
 static void RefreshPreviewFromControls(HWND hwndDlg) {
@@ -967,6 +947,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
                 HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
                 HandleSoundComboDropdown(hwndCombo);
                 return TRUE;
+            } else if (LOWORD(wParam) == IDC_NOTIFICATION_SOUND_COMBO && HIWORD(wParam) == CBN_CLOSEUP) {
+                if (state && state->soundComboRefreshPending) {
+                    HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
+                    RefreshNotificationSoundComboBox(hwndCombo);
+                    state->soundComboRefreshPending = FALSE;
+                }
+                return TRUE;
             }
             break;
 
@@ -977,8 +964,13 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
         case WM_NOTIFICATION_SOUND_CACHE_UPDATED: {
             HWND hwndCombo = GetDlgItem(hwndDlg, IDC_NOTIFICATION_SOUND_COMBO);
-            if (hwndCombo && !SendMessage(hwndCombo, CB_GETDROPPEDSTATE, 0, 0)) {
-                RefreshNotificationSoundComboBox(hwndCombo);
+            if (hwndCombo) {
+                if (SendMessage(hwndCombo, CB_GETDROPPEDSTATE, 0, 0)) {
+                    if (state) state->soundComboRefreshPending = TRUE;
+                } else {
+                    RefreshNotificationSoundComboBox(hwndCombo);
+                    if (state) state->soundComboRefreshPending = FALSE;
+                }
             }
             return TRUE;
         }

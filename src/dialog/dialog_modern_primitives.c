@@ -12,6 +12,8 @@
 
 #define MODERN_DWM_CORNER_ATTRIBUTE 33
 #define MODERN_DWM_CORNER_ROUND 2
+#define MODERN_DWM_NC_RENDERING_POLICY_ATTRIBUTE 2
+#define MODERN_DWM_NC_RENDERING_DISABLED 1
 #define MODERN_THEME_MODE_PROP L"Catime.DialogThemeMode"
 
 /* Keep the product accent identical across light and dark modern dialogs. */
@@ -444,6 +446,24 @@ void DialogModern_ApplyTheme(HWND hwnd, BOOL darkMode) {
         EnumChildWindows(hwnd, DialogModernApplyThemeToChild,
                          (LPARAM)&context);
     }
+}
+
+void DialogModern_DisablePopupShadow(HWND hwnd) {
+    if (!hwnd) return;
+
+    /* ComboLBox uses the classic class shadow independently of DWM.  Clear
+     * it before the first show; the class is shared by Catime combo popups,
+     * which all use the same custom border and rounded window region. */
+    LONG_PTR classStyle = GetClassLongPtrW(hwnd, GCL_STYLE);
+    if ((classStyle & CS_DROPSHADOW) != 0) {
+        (void)SetClassLongPtrW(hwnd, GCL_STYLE,
+                               classStyle & ~CS_DROPSHADOW);
+    }
+
+    int policy = MODERN_DWM_NC_RENDERING_DISABLED;
+    (void)DwmSetWindowAttribute(
+        hwnd, MODERN_DWM_NC_RENDERING_POLICY_ATTRIBUTE,
+        &policy, sizeof(policy));
 }
 
 void DialogModern_ApplyWindowShape(HWND hwnd, UINT dpi, int cornerRadius) {

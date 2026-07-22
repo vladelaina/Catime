@@ -123,6 +123,16 @@ void SetToastNotificationCornerRadius(HWND hwnd, int cornerRadius);
 void SetToastNotificationFontPercent(HWND hwnd, int fontPercent);
 
 /**
+ * @brief Update all preview appearance values and render them as one frame
+ * @param hwnd Toast window handle
+ * @param opacityPercent Opacity percentage (10-100)
+ * @param cornerRadius Corner radius in pixels
+ * @param fontPercent Text height as a percentage of the window height
+ */
+void SetToastNotificationAppearance(HWND hwnd, int opacityPercent,
+                                    int cornerRadius, int fontPercent);
+
+/**
  * @brief Update a toast window message text
  * @param hwnd Toast window handle
  * @param message Replacement message text

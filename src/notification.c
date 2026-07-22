@@ -459,10 +459,16 @@ void SetToastNotificationOpacity(HWND hwnd, int opacityPercent) {
     if (!IsNotificationWindow(hwnd)) return;
 
     NotificationData* data = GetNotificationData(hwnd);
+    int clampedOpacity = ClampOpacityPercent(opacityPercent);
     BYTE alphaValue = OpacityPercentToAlpha(opacityPercent);
 
     if (data) {
-        data->opacityPercent = ClampOpacityPercent(opacityPercent);
+        if (data->opacityPercent == clampedOpacity &&
+            data->maxOpacity == alphaValue && data->opacity == alphaValue &&
+            data->animState == ANIM_VISIBLE) {
+            return;
+        }
+        data->opacityPercent = clampedOpacity;
         data->maxOpacity = alphaValue;
         data->opacity = alphaValue;
         data->animState = ANIM_VISIBLE;
@@ -476,6 +482,7 @@ void SetToastNotificationCornerRadius(HWND hwnd, int cornerRadius) {
     NotificationData* data = GetNotificationData(hwnd);
     int clampedRadius = NotificationClampCornerRadius(cornerRadius);
     if (data) {
+        if (data->cornerRadius == clampedRadius) return;
         data->cornerRadius = clampedRadius;
         RenderNotificationWithRecovery(hwnd, data);
     }
@@ -486,9 +493,39 @@ void SetToastNotificationFontPercent(HWND hwnd, int fontPercent) {
 
     NotificationData* data = GetNotificationData(hwnd);
     if (data) {
-        data->fontPercent = NotificationClampFontPercent(fontPercent);
+        int clampedFontPercent = NotificationClampFontPercent(fontPercent);
+        if (data->fontPercent == clampedFontPercent) return;
+        data->fontPercent = clampedFontPercent;
         RenderNotificationWithRecovery(hwnd, data);
     }
+}
+
+void SetToastNotificationAppearance(HWND hwnd, int opacityPercent,
+                                    int cornerRadius, int fontPercent) {
+    if (!IsNotificationWindow(hwnd)) return;
+
+    NotificationData* data = GetNotificationData(hwnd);
+    if (!data) return;
+
+    int clampedOpacity = ClampOpacityPercent(opacityPercent);
+    BYTE alphaValue = OpacityPercentToAlpha(clampedOpacity);
+    int clampedRadius = NotificationClampCornerRadius(cornerRadius);
+    int clampedFontPercent = NotificationClampFontPercent(fontPercent);
+    BOOL changed = data->opacityPercent != clampedOpacity ||
+                   data->maxOpacity != alphaValue ||
+                   data->opacity != alphaValue ||
+                   data->animState != ANIM_VISIBLE ||
+                   data->cornerRadius != clampedRadius ||
+                   data->fontPercent != clampedFontPercent;
+    if (!changed) return;
+
+    data->opacityPercent = clampedOpacity;
+    data->maxOpacity = alphaValue;
+    data->opacity = alphaValue;
+    data->animState = ANIM_VISIBLE;
+    data->cornerRadius = clampedRadius;
+    data->fontPercent = clampedFontPercent;
+    RenderNotificationWithRecovery(hwnd, data);
 }
 
 BOOL SetToastNotificationMessage(HWND hwnd, const wchar_t* message) {

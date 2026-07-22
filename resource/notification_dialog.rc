@@ -15,7 +15,7 @@ BEGIN
     LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1,
                     10, 10, 240, 12
     EDITTEXT        IDC_NOTIFICATION_EDIT1, 10, 28, 240, 24,
-                    ES_AUTOHSCROLL | WS_TABSTOP
+                    ES_AUTOHSCROLL | ES_MULTILINE | WS_TABSTOP
     PUSHBUTTON      "Cancel", IDCANCEL, 145, 70, 50, 14
     DEFPUSHBUTTON   "OK", IDOK, 200, 70, 50, 14
 END
@@ -29,11 +29,11 @@ BEGIN
     LTEXT           "Notification display time:", IDC_NOTIFICATION_TIME_LABEL,
                     10, 12, 130, 14
     EDITTEXT        IDC_NOTIFICATION_TIME_EDIT, 155, 8, 95, 22,
-                    ES_AUTOHSCROLL | WS_TABSTOP
+                    ES_AUTOHSCROLL | ES_MULTILINE | WS_TABSTOP
     LTEXT           "Maximum opacity (10-100%):", IDC_NOTIFICATION_OPACITY_LABEL,
                     10, 44, 130, 14
     EDITTEXT        IDC_NOTIFICATION_OPACITY_EDIT, 155, 40, 95, 22,
-                    ES_AUTOHSCROLL | ES_NUMBER | WS_TABSTOP
+                    ES_AUTOHSCROLL | ES_MULTILINE | ES_NUMBER | WS_TABSTOP
     PUSHBUTTON      "Cancel", IDCANCEL, 145, 82, 50, 14
     DEFPUSHBUTTON   "OK", IDOK, 200, 82, 50, 14
 END
@@ -48,7 +48,8 @@ BEGIN
     GROUPBOX        "Notification Content", IDC_NOTIFICATION_CONTENT_GROUP, 10, 10, 330, 70
     
     LTEXT           "Countdown timeout message:", IDC_NOTIFICATION_LABEL1, 20, 30, 110, 15
-    EDITTEXT        IDC_NOTIFICATION_EDIT1, 20, 45, 310, 20, ES_AUTOHSCROLL
+    EDITTEXT        IDC_NOTIFICATION_EDIT1, 20, 45, 310, 20,
+                    ES_AUTOHSCROLL | ES_MULTILINE | WS_TABSTOP
     
 
     /** Catime notification window appearance and timing controls */
@@ -75,7 +76,7 @@ BEGIN
     GROUPBOX        "Audio Settings", IDC_NOTIFICATION_AUDIO_GROUP, 10, 220, 330, 80
     
     LTEXT           "Sound (supports .mp3/.wav):", IDC_NOTIFICATION_SOUND_LABEL, 20, 240, 150, 15
-    COMBOBOX        IDC_NOTIFICATION_SOUND_COMBO, 150, 238, 80, 100, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_NOTIFICATION_SOUND_COMBO, 150, 238, 80, 100, CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Test", IDC_TEST_SOUND_BUTTON, 235, 238, 35, 20
     PUSHBUTTON      "Audio Dir", IDC_OPEN_SOUND_DIR_BUTTON, 275, 238, 58, 20
     
