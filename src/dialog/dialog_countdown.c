@@ -46,6 +46,8 @@ typedef enum {
     COUNTDOWN_HOVER_EDIT
 } CountdownHoverPart;
 
+#define COUNTDOWN_TITLE_HOVER_COLOR RGB(0xF7, 0x7D, 0xAA)
+
 typedef struct {
     CountdownInputState input;
     HWND hwndEdit;
@@ -65,8 +67,10 @@ typedef struct {
     BOOL showValidationError;
     BOOL selectAllOnNextFocus;
     BOOL sanitizingInput;
+    BOOL titleHovered;
     CountdownHoverPart hoverPart;
     CountdownHoverPart pressedPart;
+    RECT titleFrame;
     RECT editFrame;
     RECT closeFrame;
     COLORREF backgroundColor;
@@ -279,6 +283,25 @@ static int CountdownMeasureTextPixels(HDC hdc, HFONT font,
     return measured && size.cx > 0 ? size.cx : 0;
 }
 
+static BOOL CountdownUpdateTitleHover(HWND hwnd,
+                                      CountdownDialogState* state,
+                                      POINT point) {
+    if (!hwnd || !state) return FALSE;
+    BOOL hovered = PtInRect(&state->titleFrame, point);
+    if (hovered == state->titleHovered) return FALSE;
+    state->titleHovered = hovered;
+    InvalidateRect(hwnd, &state->titleFrame, FALSE);
+    return TRUE;
+}
+
+static void CountdownRefreshTitleHoverFromCursor(
+    HWND hwnd, CountdownDialogState* state) {
+    POINT point = {0};
+    if (!hwnd || !state || !GetCursorPos(&point)) return;
+    ScreenToClient(hwnd, &point);
+    CountdownUpdateTitleHover(hwnd, state, point);
+}
+
 static int CountdownMeasureButtonWidth96(HWND hwnd, HFONT font,
                                          const wchar_t* text, int minimum96) {
     if (!hwnd || !text) {
@@ -315,6 +338,14 @@ static void CountdownTrackMouse(HWND hwnd) {
     TRACKMOUSEEVENT track = {0};
     track.cbSize = sizeof(track);
     track.dwFlags = TME_LEAVE;
+    track.hwndTrack = hwnd;
+    TrackMouseEvent(&track);
+}
+
+static void CountdownTrackNonClientMouse(HWND hwnd) {
+    TRACKMOUSEEVENT track = {0};
+    track.cbSize = sizeof(track);
+    track.dwFlags = TME_LEAVE | TME_NONCLIENT;
     track.hwndTrack = hwnd;
     TrackMouseEvent(&track);
 }
@@ -1118,6 +1149,14 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
     GetTextExtentPoint32W(target, state->title, (int)wcslen(state->title),
                           &titleSize);
     if (oldTitleFont) SelectObject(target, oldTitleFont);
+    state->titleFrame.left = titleRect.left;
+    state->titleFrame.top = titleRect.top +
+        ((titleRect.bottom - titleRect.top) - titleSize.cy) / 2;
+    state->titleFrame.right = state->titleFrame.left + titleSize.cx;
+    if (state->titleFrame.right > titleRect.right) {
+        state->titleFrame.right = titleRect.right;
+    }
+    state->titleFrame.bottom = state->titleFrame.top + titleSize.cy;
     int signatureBottom96 = state->ultraCompactLayout ? 52 :
                             (state->compactLayout ? 57 : 68);
     RECT signatureRect = titleRect;
@@ -1126,7 +1165,11 @@ static void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
         target, &signatureRect, state->dpi, titleSize.cx,
         state->accentColor, state->cardColor, state->darkMode,
         state->highContrast);
-    CountdownDrawText(target, state->titleFont, state->textColor, &titleRect,
+    COLORREF titleColor = state->highContrast
+        ? state->textColor
+        : (state->titleHovered ? COUNTDOWN_TITLE_HOVER_COLOR
+                               : state->accentColor);
+    CountdownDrawText(target, state->titleFont, titleColor, &titleRect,
                       state->title, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
 
     int panelTop96 = state->ultraCompactLayout ? 68 :
@@ -1877,10 +1920,12 @@ static LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
         case WM_MOUSEMOVE:
             if (state) {
                 POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                BOOL titleHoverChanged = CountdownUpdateTitleHover(
+                    hwnd, state, point);
                 CountdownHoverPart hover =
                     PtInRect(&state->closeFrame, point) ?
                         COUNTDOWN_HOVER_CLOSE : COUNTDOWN_HOVER_NONE;
-                if (hover != state->hoverPart) {
+                if (hover != state->hoverPart || titleHoverChanged) {
                     state->hoverPart = hover;
                     CountdownTrackMouse(hwnd);
                     InvalidateRect(hwnd, NULL, FALSE);
@@ -1888,10 +1933,28 @@ static LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             }
             break;
 
+        case WM_NCMOUSEMOVE:
+            if (state) {
+                POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                ScreenToClient(hwnd, &point);
+                CountdownUpdateTitleHover(hwnd, state, point);
+                CountdownTrackNonClientMouse(hwnd);
+            }
+            break;
+
         case WM_MOUSELEAVE:
-            if (state && state->hoverPart == COUNTDOWN_HOVER_CLOSE) {
-                state->hoverPart = COUNTDOWN_HOVER_NONE;
-                InvalidateRect(hwnd, NULL, FALSE);
+            if (state) {
+                CountdownRefreshTitleHoverFromCursor(hwnd, state);
+                if (state->hoverPart == COUNTDOWN_HOVER_CLOSE) {
+                    state->hoverPart = COUNTDOWN_HOVER_NONE;
+                    InvalidateRect(hwnd, &state->closeFrame, FALSE);
+                }
+            }
+            break;
+
+        case WM_NCMOUSELEAVE:
+            if (state) {
+                CountdownRefreshTitleHoverFromCursor(hwnd, state);
             }
             break;
 

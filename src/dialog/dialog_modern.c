@@ -21,6 +21,7 @@
 #define MODERN_DATETIME_CHILD_SUBCLASS_ID 0xD143
 #define MODERN_COMBO_LIST_SUBCLASS_ID 0xD144
 #define MODERN_DIALOG_FINALIZE_MESSAGE (WM_APP + 490)
+#define MODERN_TITLE_HOVER_COLOR RGB(0xF7, 0x7D, 0xAA)
 
 typedef enum {
     MODERN_CONTROL_OTHER = 0,
@@ -86,7 +87,9 @@ struct ModernDialogState {
     int bodyScrollMax96;
     int scrollDragStartY;
     int scrollDragStartOffset96;
+    RECT titleFrame;
     BOOL hasFooter;
+    BOOL titleHovered;
     BOOL scrollBarHovered;
     BOOL scrollBarDragging;
     BOOL attached;
@@ -116,6 +119,22 @@ static void ModernSyncClientSizeFromWindow(ModernDialogState* state);
 static BOOL ModernControlOwnsVerticalScroll(const ModernControl* control);
 static void ModernAttachComboList(ModernControl* control);
 static int ModernTo96(UINT dpi, int value);
+
+static BOOL ModernUpdateTitleHover(ModernDialogState* state, POINT point) {
+    if (!state || !state->finalized) return FALSE;
+    BOOL hovered = PtInRect(&state->titleFrame, point);
+    if (hovered == state->titleHovered) return FALSE;
+    state->titleHovered = hovered;
+    InvalidateRect(state->hwnd, &state->titleFrame, FALSE);
+    return TRUE;
+}
+
+static void ModernRefreshTitleHoverFromCursor(ModernDialogState* state) {
+    POINT point = {0};
+    if (!state || !GetCursorPos(&point)) return;
+    ScreenToClient(state->hwnd, &point);
+    ModernUpdateTitleHover(state, point);
+}
 
 static ModernDialogState* ModernGetState(HWND hwnd) {
     return hwnd ? (ModernDialogState*)GetPropW(hwnd, MODERN_DIALOG_STATE_PROP)
@@ -1169,6 +1188,14 @@ static void ModernDrawDialog(ModernDialogState* state, HDC hdc) {
         ? SelectObject(hdc, state->titleFont) : NULL;
     GetTextExtentPoint32W(hdc, title, (int)wcslen(title), &titleSize);
     if (oldTitleFont) SelectObject(hdc, oldTitleFont);
+    state->titleFrame.left = titleRect.left;
+    state->titleFrame.top = titleRect.top +
+        ((titleRect.bottom - titleRect.top) - titleSize.cy) / 2;
+    state->titleFrame.right = state->titleFrame.left + titleSize.cx;
+    if (state->titleFrame.right > titleRect.right) {
+        state->titleFrame.right = titleRect.right;
+    }
+    state->titleFrame.bottom = state->titleFrame.top + titleSize.cy;
     RECT signatureRect = titleRect;
     signatureRect.bottom = DialogModern_Scale(
         state->dpi, state->headerHeight96 - 17);
@@ -1176,7 +1203,11 @@ static void ModernDrawDialog(ModernDialogState* state, HDC hdc) {
         hdc, &signatureRect, state->dpi, titleSize.cx, accentColor,
         state->palette.surface, state->palette.darkMode,
         state->palette.highContrast);
-    DialogModern_DrawText(hdc, state->titleFont, state->palette.text,
+    COLORREF titleColor = state->palette.highContrast
+        ? state->palette.text
+        : (state->titleHovered ? MODERN_TITLE_HOVER_COLOR
+                               : state->palette.accent);
+    DialogModern_DrawText(hdc, state->titleFont, titleColor,
                           &titleRect, title,
                           DT_LEFT | DT_VCENTER | DT_SINGLELINE |
                           DT_END_ELLIPSIS);
@@ -1572,6 +1603,14 @@ static void ModernTrackMouse(HWND hwnd) {
     TRACKMOUSEEVENT track = {0};
     track.cbSize = sizeof(track);
     track.dwFlags = TME_LEAVE;
+    track.hwndTrack = hwnd;
+    TrackMouseEvent(&track);
+}
+
+static void ModernTrackNonClientMouse(HWND hwnd) {
+    TRACKMOUSEEVENT track = {0};
+    track.cbSize = sizeof(track);
+    track.dwFlags = TME_LEAVE | TME_NONCLIENT;
     track.hwndTrack = hwnd;
     TrackMouseEvent(&track);
 }
@@ -2025,8 +2064,12 @@ static LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             }
             break;
         case WM_MOUSEMOVE:
-            if (state && state->finalized && state->bodyScrollMax96 > 0) {
+            if (state && state->finalized) {
                 POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                ModernUpdateTitleHover(state, point);
+                ModernTrackMouse(hwnd);
+
+                if (state->bodyScrollMax96 <= 0) break;
                 RECT track = {0};
                 RECT thumb = {0};
                 if (ModernGetScrollbarRects(state, &track, &thumb)) {
@@ -2046,15 +2089,31 @@ static LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                         state->scrollBarHovered = hovered;
                         InvalidateRect(hwnd, NULL, FALSE);
                     }
-                    ModernTrackMouse(hwnd);
                 }
             }
             break;
+        case WM_NCMOUSEMOVE:
+            if (state && state->finalized) {
+                POINT point = {GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam)};
+                ScreenToClient(hwnd, &point);
+                ModernUpdateTitleHover(state, point);
+                ModernTrackNonClientMouse(hwnd);
+            }
+            break;
         case WM_MOUSELEAVE:
-            if (state && state->scrollBarHovered &&
-                !state->scrollBarDragging) {
-                state->scrollBarHovered = FALSE;
-                InvalidateRect(hwnd, NULL, FALSE);
+            if (state) {
+                BOOL repaint = FALSE;
+                ModernRefreshTitleHoverFromCursor(state);
+                if (state->scrollBarHovered && !state->scrollBarDragging) {
+                    state->scrollBarHovered = FALSE;
+                    repaint = TRUE;
+                }
+                if (repaint) InvalidateRect(hwnd, NULL, FALSE);
+            }
+            break;
+        case WM_NCMOUSELEAVE:
+            if (state) {
+                ModernRefreshTitleHoverFromCursor(state);
             }
             break;
         case WM_CAPTURECHANGED:
