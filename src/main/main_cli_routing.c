@@ -53,20 +53,20 @@ static BOOL SendCliMessageToExisting(HWND hwnd, UINT message, WPARAM wParam, LPA
 /** @return Pointer to trimmed string (within original buffer) */
 static wchar_t* NormalizeWhitespace(wchar_t* str) {
     if (!str) return NULL;
-    
+
     while (*str && iswspace(*str)) str++;
-    
+
     size_t len = wcslen(str);
     while (len > 0 && iswspace(str[len - 1])) {
         str[--len] = L'\0';
     }
-    
+
     return str;
 }
 
 static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
     const wchar_t cmdStr[2] = {cmd, L'\0'};
-    
+
     for (size_t i = 0; i < sizeof(SINGLE_CHAR_COMMANDS) / sizeof(SINGLE_CHAR_COMMANDS[0]); i++) {
         if (wcscmp(cmdStr, SINGLE_CHAR_COMMANDS[i].command) == 0) {
             return SendCliMessageToExisting(hwnd, SINGLE_CHAR_COMMANDS[i].message,
@@ -74,7 +74,7 @@ static BOOL RouteSingleCharCommand(HWND hwnd, wchar_t cmd) {
                                             SINGLE_CHAR_COMMANDS[i].lParam);
         }
     }
-    
+
     return FALSE;
 }
 
@@ -82,7 +82,7 @@ static BOOL RouteTwoCharCommand(HWND hwnd, const wchar_t* cmdStr) {
     if (towlower(cmdStr[0]) == L'p' && towlower(cmdStr[1]) == L'r') {
         return SendCliMessageToExisting(hwnd, WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0);
     }
-    
+
     for (size_t i = 0; i < sizeof(QUICK_COUNTDOWN_COMMANDS) / sizeof(QUICK_COUNTDOWN_COMMANDS[0]); i++) {
         if (_wcsicmp(cmdStr, QUICK_COUNTDOWN_COMMANDS[i].command) == 0) {
             return SendCliMessageToExisting(hwnd, QUICK_COUNTDOWN_COMMANDS[i].message,
@@ -90,7 +90,7 @@ static BOOL RouteTwoCharCommand(HWND hwnd, const wchar_t* cmdStr) {
                                             QUICK_COUNTDOWN_COMMANDS[i].lParam);
         }
     }
-    
+
     return FALSE;
 }
 
@@ -98,10 +98,10 @@ static BOOL RoutePomodoroCommand(HWND hwnd, const wchar_t* cmdStr) {
     if (towlower(cmdStr[0]) != L'p' || !iswdigit(cmdStr[1])) {
         return FALSE;
     }
-    
+
     wchar_t* endp = NULL;
     long idx = wcstol(cmdStr + 1, &endp, 10);
-    
+
     if (idx > 0 && (endp == NULL || *endp == L'\0')) {
         return SendCliMessageToExisting(hwnd, WM_APP_QUICK_COUNTDOWN_INDEX, 0, (LPARAM)idx);
     } else {
@@ -112,12 +112,12 @@ static BOOL RoutePomodoroCommand(HWND hwnd, const wchar_t* cmdStr) {
 static BOOL ForwardTimerInput(HWND hwnd, const wchar_t* cmdStr) {
     char* utf8Str = WideToUtf8Alloc(cmdStr);
     if (!utf8Str) return FALSE;
-    
+
     COPYDATASTRUCT cds;
     cds.dwData = COPYDATA_ID_CLI_TEXT;
     cds.cbData = (DWORD)(strlen(utf8Str) + 1);
     cds.lpData = utf8Str;
-    
+
     BOOL sent = SendCliMessageToExisting(hwnd, WM_COPYDATA, 0, (LPARAM)&cds);
     free(utf8Str);
 
@@ -126,16 +126,16 @@ static BOOL ForwardTimerInput(HWND hwnd, const wchar_t* cmdStr) {
 
 BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) {
     if (!lpCmdLine || lpCmdLine[0] == L'\0') return FALSE;
-    
+
     wchar_t buf[256];
     wcsncpy(buf, lpCmdLine, sizeof(buf)/sizeof(wchar_t) - 1);
     buf[sizeof(buf)/sizeof(wchar_t) - 1] = L'\0';
-    
+
     const wchar_t* cmd = NormalizeWhitespace(buf);
     if (!cmd || *cmd == L'\0') return FALSE;
-    
+
     size_t len = wcslen(cmd);
-    
+
     if (len == 1) {
         if (RouteSingleCharCommand(hwndExisting, towlower(cmd[0]))) {
             return TRUE;
@@ -143,18 +143,18 @@ BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) 
         /* Unknown single char - forward to existing instance for handling */
         return ForwardTimerInput(hwndExisting, cmd);
     }
-    
+
     if (len == 2) {
         if (RouteTwoCharCommand(hwndExisting, cmd)) {
             return TRUE;
         }
         /* Unknown two char - check if it's a pomodoro command or forward */
     }
-    
+
     if (RoutePomodoroCommand(hwndExisting, cmd)) {
         return TRUE;
     }
-    
+
     /* Forward all other commands (including time input and unknown commands)
      * to the existing instance via WM_COPYDATA. This ensures:
      * 1. Time inputs like "25m", "1h30m" are handled
@@ -162,4 +162,3 @@ BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine) 
      * 3. Only one instance is ever running */
     return ForwardTimerInput(hwndExisting, cmd);
 }
-

@@ -1,7 +1,7 @@
 /**
  * @file dialog_common.h
  * @brief Common dialog infrastructure and utilities
- * 
+ *
  * Provides reusable components for all dialog implementations:
  * - Context management (brushes, subclass procs)
  * - Color message handling (WM_CTLCOLOR*)
@@ -22,7 +22,7 @@
 
 /**
  * @brief Dialog visual context (brushes and subclass data)
- * 
+ *
  * @details
  * Manages brushes for consistent dialog styling and stores original
  * window procedures for subclassed controls.
@@ -38,7 +38,7 @@ typedef struct {
 /**
  * @brief Create dialog context with standard brushes
  * @return Allocated context or NULL on failure
- * 
+ *
  * @details Creates RGB(243,243,243) background, white edit, RGB(253,253,253) button
  */
 DialogContext* Dialog_CreateContext(void);
@@ -76,13 +76,13 @@ DialogContext* Dialog_GetContext(HWND hwndDlg);
 /**
  * @brief Standard edit subclass procedure
  * @return Message result
- * 
+ *
  * @details
  * Enhancements:
  * - Ctrl+A: Select all
  * - Enter: Submit parent dialog (CLOCK_IDC_BUTTON_OK)
  * - Auto-select on focus
- * 
+ *
  * @note Use Dialog_SubclassEdit() for automatic setup
  */
 LRESULT APIENTRY Dialog_EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -92,7 +92,7 @@ LRESULT APIENTRY Dialog_EditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPA
  * @param hwndEdit Edit control handle
  * @param ctx Dialog context (stores original proc)
  * @return TRUE on success
- * 
+ *
  * @details Automatically stores original procedure in ctx->wpOrigEditProc
  */
 BOOL Dialog_SubclassEdit(HWND hwndEdit, DialogContext* ctx);
@@ -171,11 +171,11 @@ BOOL Dialog_HasFocusWithin(HWND hwndDlg);
  * @param ctx Dialog context (contains brushes)
  * @param result Output result value
  * @return TRUE if message was handled
- * 
+ *
  * @details
  * Handles: WM_CTLCOLORDLG, WM_CTLCOLORSTATIC, WM_CTLCOLOREDIT, WM_CTLCOLORBTN
  * Sets background colors and returns appropriate brush.
- * 
+ *
  * Usage:
  * @code
  * case WM_CTLCOLORDLG:
@@ -199,7 +199,7 @@ BOOL Dialog_HandleColorMessages(UINT msg, WPARAM wParam, DialogContext* ctx, INT
 /**
  * @brief Center dialog on primary monitor
  * @param hwndDlg Dialog handle
- * 
+ *
  * @details
  * Uses work area (excludes taskbar), handles multi-monitor correctly.
  * Call in WM_INITDIALOG after setting dialog size.
@@ -209,7 +209,7 @@ void Dialog_CenterOnPrimaryScreen(HWND hwndDlg);
 /**
  * @brief Make dialog topmost (for settings dialogs)
  * @param hwndDlg Dialog handle
- * 
+ *
  * @details Call in WM_INITDIALOG to ensure visibility
  */
 void Dialog_ApplyTopmost(HWND hwndDlg);
@@ -236,7 +236,7 @@ BOOL Dialog_IsEmptyOrWhitespaceA(const char* str);
  * @brief Show error dialog and refocus edit control
  * @param hwndDlg Parent dialog
  * @param editControlId Edit control to refocus
- * 
+ *
  * @details Shows localized error, then selects text in edit
  */
 void Dialog_ShowErrorAndRefocus(HWND hwndDlg, int editControlId);
@@ -246,7 +246,7 @@ void Dialog_ShowErrorAndRefocus(HWND hwndDlg, int editControlId);
  * @param totalSeconds Time in seconds
  * @param buffer Output buffer
  * @param bufferSize Buffer size in bytes
- * 
+ *
  * @details
  * Formats: "1h30m15s", "25m", "90s" (omits zero components)
  */
@@ -256,107 +256,11 @@ void Dialog_FormatSecondsToString(int totalSeconds, char* buffer, size_t bufferS
  * @brief Validate number-only input
  * @param str Wide string to validate
  * @return TRUE if contains at least one digit and only digits/whitespace
- * 
+ *
  * @details Allows whitespace, rejects empty or non-numeric
  */
 BOOL Dialog_IsValidNumberInput(const wchar_t* str);
 
-/* ============================================================================
- * Global Dialog Instance Management
- * ============================================================================ */
-
-/**
- * @brief Dialog types for instance tracking
- */
-typedef enum {
-    DIALOG_INSTANCE_ERROR,
-    DIALOG_INSTANCE_MESSAGE_INFO,
-    DIALOG_INSTANCE_MESSAGE_WARNING,
-    DIALOG_INSTANCE_MESSAGE_ERROR,
-    DIALOG_INSTANCE_INPUT,            /**< Custom countdown input */
-    DIALOG_INSTANCE_ABOUT,
-    DIALOG_INSTANCE_POMODORO_LOOP,
-    DIALOG_INSTANCE_POMODORO_COMBO,
-    DIALOG_INSTANCE_WEBSITE,
-    DIALOG_INSTANCE_NOTIFICATION_MSG,
-    DIALOG_INSTANCE_NOTIFICATION_DISP,
-    DIALOG_INSTANCE_NOTIFICATION_FULL,
-    /* New modeless dialog types */
-    DIALOG_INSTANCE_SHORTCUT,        /**< Quick countdown time settings */
-    DIALOG_INSTANCE_STARTUP,         /**< Startup default time settings */
-    DIALOG_INSTANCE_POMODORO_TIME,   /**< Pomodoro time edit */
-    DIALOG_INSTANCE_INPUT_BOX,       /**< Generic modal input box */
-    DIALOG_INSTANCE_COLOR,           /**< Color picker */
-    DIALOG_INSTANCE_COLOR_PICKER,    /**< Visual HSV color picker */
-    DIALOG_INSTANCE_HOTKEY,          /**< Hotkey settings */
-    DIALOG_INSTANCE_UPDATE,          /**< Update available dialog */
-    DIALOG_INSTANCE_NO_UPDATE,       /**< No update dialog */
-    DIALOG_INSTANCE_EXIT_MSG,        /**< Exit message dialog */
-    DIALOG_INSTANCE_PLUGIN_SECURITY, /**< Plugin security confirmation */
-    DIALOG_INSTANCE_FONT_LICENSE,    /**< Font license agreement */
-    DIALOG_INSTANCE_FONT_PICKER,     /**< System font picker */
-    DIALOG_INSTANCE_UPDATE_ERROR,    /**< Update error dialog */
-    DIALOG_INSTANCE_CLI_HELP,        /**< CLI help dialog */
-    DIALOG_INSTANCE_CUSTOM_TEXT_DISPLAY, /**< Custom text display */
-    DIALOG_INSTANCE_COUNT
-} DialogInstanceType;
-
-/**
- * @brief Register dialog instance (prevents duplicates)
- * @param type Dialog type
- * @param hwnd Dialog handle
- * 
- * @details This function only updates the instance registry. Most dialog
- * initialization paths should call Dialog_InitializeInstance() instead.
- */
-void Dialog_RegisterInstance(DialogInstanceType type, HWND hwnd);
-
-/**
- * @brief Register and apply the shared dialog presentation policy
- * @param type Dialog type
- * @param hwnd Dialog handle
- *
- * @details Call from WM_INITDIALOG or WM_CREATE. This performs instance
- * registration, modern presentation attachment, and HWND_TOPMOST setup.
- */
-void Dialog_InitializeInstance(DialogInstanceType type, HWND hwnd);
-
-/**
- * @brief Unregister dialog instance unconditionally
- * @param type Dialog type
- * 
- * @details Prefer Dialog_UnregisterInstanceForWindow() in WM_DESTROY paths.
- */
-void Dialog_UnregisterInstance(DialogInstanceType type);
-
-/**
- * @brief Unregister dialog instance only if it still belongs to hwnd
- * @param type Dialog type
- * @param hwnd Dialog handle being destroyed
- *
- * @details Call in WM_DESTROY so a stale window cannot clear a newer
- * instance of the same type.
- */
-void Dialog_UnregisterInstanceForWindow(DialogInstanceType type, HWND hwnd);
-
-/**
- * @brief Get active dialog instance
- * @param type Dialog type
- * @return Dialog handle or NULL if not open
- */
-HWND Dialog_GetInstance(DialogInstanceType type);
-
-/**
- * @brief Check if dialog is already open
- * @param type Dialog type
- * @return TRUE if open
- */
-BOOL Dialog_IsOpen(DialogInstanceType type);
-
-/** Refresh the appearance of every currently registered dialog window. */
-void Dialog_RefreshOpenThemes(void);
-
-BOOL Dialog_ProcessModelessMessage(MSG* msg);
+#include "dialog/dialog_registry.h"
 
 #endif /* DIALOG_COMMON_H */
-

@@ -55,7 +55,7 @@ Utf8String ToUtf8(const wchar_t* wide) {
 void ShowError(HWND hwnd, ErrorCode errorCode) {
     UNREFERENCED_PARAMETER(hwnd);
     const wchar_t* message;
-    
+
     switch (errorCode) {
         case ERR_FILE_NOT_FOUND:
             message = GetLocalizedString(NULL, L"Selected file does not exist");
@@ -72,13 +72,13 @@ void ShowError(HWND hwnd, ErrorCode errorCode) {
         default:
             message = GetLocalizedString(NULL, L"Unknown error");
     }
-    
+
     /* Log error instead of showing MessageBox for better UX
      * Convert wide string to UTF-8 for logging */
     char errorMsg[512] = {0};
     WideCharToMultiByte(CP_UTF8, 0, message, -1, errorMsg, sizeof(errorMsg), NULL, NULL);
     LOG_ERROR("%s (ErrorCode: %d)", errorMsg, errorCode);
-    
+
     /* Optionally show non-blocking notification instead of blocking MessageBox
      * Uncomment if you want to show toast notification:
      * extern void ShowNotification(HWND hwnd, const wchar_t* message);
@@ -132,7 +132,7 @@ const char* GetCachedConfigPath(void) {
     }
 }
 
-void ReadConfigStr(const char* section, const char* key, 
+void ReadConfigStr(const char* section, const char* key,
                    const char* defaultVal, char* out, size_t size) {
     ReadIniString(section, key, defaultVal, out, (int)size, GetCachedConfigPath());
 }
@@ -186,4 +186,3 @@ void ToggleConfigBool(HWND hwnd, const char* key, bool* currentValue, bool needs
 void WriteConfigAndRedraw(HWND hwnd, const char* key, const char* value) {
     if (WriteConfigKeyValue(key, value) && hwnd) InvalidateRect(hwnd, NULL, TRUE);
 }
-

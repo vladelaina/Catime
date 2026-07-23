@@ -35,7 +35,7 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
               MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_DISPLAY_DIALOG),
               hwndParent,
               NotificationDisplayDlgProc);
-    
+
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
     }
@@ -247,4 +247,3 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 
     return FALSE;
 }
-

@@ -102,4 +102,3 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
 
     return FALSE;
 }
-

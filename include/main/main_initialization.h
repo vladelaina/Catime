@@ -40,6 +40,9 @@ void InitializeDialogLanguages(void);
  */
 BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow);
 
+/** Apply the configured startup timer/display mode. */
+void HandleStartupMode(HWND hwnd);
+
 /**
  * Detect whether the current process was launched in CI smoke mode.
  * @return TRUE when --ci-smoke was provided
@@ -66,4 +69,3 @@ int RunMessageLoop(HWND hwnd);
 void CleanupResources(HANDLE hMutex);
 
 #endif /* MAIN_INITIALIZATION_H */
-

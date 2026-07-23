@@ -16,11 +16,11 @@
  * @brief Set always-on-top behavior
  * @param hwnd Window handle
  * @param topmost TRUE for topmost, FALSE for normal (anchored to desktop shell)
- * 
+ *
  * @details
  * Topmost: Above all non-topmost windows
  * Normal: Anchored to WorkerW/Progman (resists Win+D minimize-all)
- * 
+ *
  * Persists to configuration.
  * @return TRUE when the requested state was fully applied, FALSE if it was
  *         only recorded and scheduled for retry.
@@ -120,7 +120,7 @@ BOOL HandleTopmostSizeEvent(HWND hwnd, WPARAM sizeType);
 /**
  * @brief Attach to desktop wallpaper level
  * @param hwnd Window handle
- * 
+ *
  * @details Sets owner to WorkerW/Progman desktop anchor
  * @note Won't respond to Win+D or taskbar clicks
  */
@@ -130,7 +130,7 @@ void ReattachToDesktop(HWND hwnd);
  * @brief Enforce topmost when window overlaps taskbar
  * @param hwnd Window handle
  * @return TRUE if window overlaps taskbar area, FALSE otherwise
- * 
+ *
  * @details Re-applies topmost only when needed:
  * - Window overlaps taskbar area, or
  * - Window unexpectedly lost WS_EX_TOPMOST.
@@ -155,4 +155,3 @@ BOOL HandleTopmostApplyRetry(HWND hwnd);
 void CleanupWindowDesktopIntegrationState(HWND hwnd);
 
 #endif /* WINDOW_DESKTOP_INTEGRATION_H */
-

@@ -1,7 +1,7 @@
 /**
  * @file memory_pool.h
  * @brief Simple memory pool for reducing malloc overhead
- * 
+ *
  * Single fixed-size buffer that can be reused for temporary allocations.
  * Reduces heap fragmentation and improves performance in frame decoding loops.
  */
@@ -32,7 +32,7 @@ MemoryPool* MemoryPool_Create(SIZE_T size);
  * @param pool Pool instance
  * @param size Requested size
  * @return Memory pointer or NULL on failure
- * 
+ *
  * @details
  * If pool is available and size fits, returns pool buffer.
  * Otherwise, falls back to malloc().
@@ -54,4 +54,3 @@ void MemoryPool_Free(MemoryPool* pool, void* ptr);
 void MemoryPool_Destroy(MemoryPool* pool);
 
 #endif /* UTILS_MEMORY_POOL_H */
-

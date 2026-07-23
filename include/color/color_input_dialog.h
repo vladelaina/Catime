@@ -1,7 +1,7 @@
 /**
  * @file color_input_dialog.h
  * @brief Text-based color input dialog with live preview (modeless version)
- * 
+ *
  * Allows users to type color codes directly (CSS names, hex, RGB).
  * Features real-time validation and preview.
  */
@@ -14,7 +14,7 @@
 /**
  * @brief Show color input dialog (modeless)
  * @param hwndParent Parent window handle
- * 
+ *
  * @details
  * Opens modeless dialog for color input with live preview.
  * Result is sent via WM_DIALOG_COLOR message to parent.
@@ -29,7 +29,7 @@ void ShowColorInputDialog(HWND hwndParent);
  * @param wParam Message parameter
  * @param lParam Message parameter
  * @return Message processing result
- * 
+ *
  * @details
  * Empty input cancels (supports "changed my mind" workflow).
  * Validation errors show guidance dialog. Immediate config save.
@@ -43,7 +43,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
  * @param wParam Message parameter
  * @param lParam Message parameter
  * @return Message processing result
- * 
+ *
  * @details
  * - Live preview on keystroke for immediate feedback
  * - Ctrl+A for select all (standard behavior)
@@ -53,4 +53,3 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 #endif /* COLOR_INPUT_DIALOG_H */
-

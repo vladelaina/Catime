@@ -1,7 +1,7 @@
 /**
  * @file tray_animation_percent.h
  * @brief CPU/Memory percent icon generation
- * 
+ *
  * Dynamically renders numeric percentage text on tray icon.
  * Configurable colors for text and background.
  */
@@ -57,7 +57,7 @@ void GetGeneratedTrayIconSizeSnapshot(int* outCx, int* outCy);
  * @brief Create 16x16 percent icon with rendered text
  * @param percent Value (0-100, clamped)
  * @return HICON or NULL on failure
- * 
+ *
  * @details
  * Renders percentage as text on small icon.
  * Uses the system UI font and auto-scales text to fit icon size.
@@ -68,7 +68,7 @@ HICON CreatePercentIcon16(int percent);
  * @brief Create Caps Lock indicator icon
  * @param capsOn TRUE if Caps Lock is on, FALSE otherwise
  * @return HICON or NULL on failure
- * 
+ *
  * @details
  * Renders "A" when Caps Lock is on, "a" when off.
  * Uses the system UI font and the same color scheme as percent icons.
@@ -87,4 +87,3 @@ void CleanupPercentIconCache(void);
 BOOL IsCapsLockOn(void);
 
 #endif /* TRAY_ANIMATION_PERCENT_H */
-

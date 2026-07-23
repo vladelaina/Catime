@@ -1,11 +1,4 @@
-/**
- * @file dialog_language.c
- * @brief Dialog localization with three-tier lookup
- * 
- * 1. Special controls (custom handling)
- * 2. Standard controls (generic text)
- * 3. Fallback text (missing translations)
- */
+/** @file dialog_language.c @brief Dialog localization with three-tier lookup. */
 
 #include <windows.h>
 #include <wchar.h>
@@ -152,7 +145,7 @@ static BOOL ProcessVersionText(HWND hwndCtl, const wchar_t* localizedText) {
     return TRUE;
 }
 
-static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText, 
+static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText,
                                      int dialogID, int controlID) {
     if (NeedsNewlineConversion(dialogID, controlID)) {
         wchar_t processedText[LARGE_TEXT_MAX];
@@ -160,11 +153,11 @@ static BOOL ProcessSpecialControlText(HWND hwndCtl, const wchar_t* localizedText
         SetWindowTextW(hwndCtl, processedText);
         return TRUE;
     }
-    
+
     if (controlID == IDC_VERSION_TEXT && dialogID == IDD_ABOUT_DIALOG) {
         return ProcessVersionText(hwndCtl, localizedText);
     }
-    
+
     return FALSE;
 }
 
@@ -172,7 +165,7 @@ static BOOL IsLocalizableControlType(const wchar_t* className) {
     static const wchar_t* localizableTypes[] = {
         L"Button", L"Static", L"ComboBox", L"Edit"
     };
-    
+
     for (size_t i = 0; i < ARRAY_SIZE(localizableTypes); i++) {
         if (wcscmp(className, localizableTypes[i]) == 0) {
             return TRUE;
@@ -217,11 +210,11 @@ static const wchar_t* GetDialogTitleText(int dialogID) {
 static BOOL GetControlOriginalText(HWND hwndCtl, wchar_t* buffer, int bufferSize) {
     wchar_t className[CLASS_NAME_MAX];
     GetClassNameW(hwndCtl, className, CLASS_NAME_MAX);
-    
+
     if (IsLocalizableControlType(className)) {
         return GetWindowTextW(hwndCtl, buffer, bufferSize) > 0;
     }
-    
+
     return FALSE;
 }
 
@@ -240,7 +233,7 @@ static BOOL LocalizeControl(HWND hwndCtl, int dialogID, int controlID) {
         SetWindowTextW(hwndCtl, buttonText);
         return TRUE;
     }
-    
+
     wchar_t originalText[CONTROL_TEXT_MAX] = {0};
     if (GetControlOriginalText(hwndCtl, originalText, CONTROL_TEXT_MAX) && originalText[0] != L'\0') {
         const wchar_t* localizedText = GetLocalizedString(NULL, originalText);
@@ -248,18 +241,18 @@ static BOOL LocalizeControl(HWND hwndCtl, int dialogID, int controlID) {
             SetWindowTextW(hwndCtl, localizedText);
         }
     }
-    
+
     return TRUE;
 }
 
 static BOOL CALLBACK EnumChildProc(HWND hwndCtl, LPARAM lParam) {
     const EnumChildWindowsData* data = (const EnumChildWindowsData*)lParam;
     int controlID = GetDlgCtrlID(hwndCtl);
-    
+
     if (controlID == 0) {
         return TRUE;
     }
-    
+
     return LocalizeControl(hwndCtl, data->dialogID, controlID);
 }
 
@@ -269,19 +262,19 @@ BOOL InitDialogLanguageSupport(void) {
 
 BOOL ApplyDialogLanguage(HWND hwndDlg, int dialogID) {
     if (!hwndDlg) return FALSE;
-    
+
     const wchar_t* titleText = GetDialogTitleText(dialogID);
     if (titleText) {
         SetWindowTextW(hwndDlg, titleText);
     }
-    
+
     EnumChildWindowsData data = {
         .hwndDlg = hwndDlg,
         .dialogID = dialogID
     };
-    
+
     EnumChildWindows(hwndDlg, EnumChildProc, (LPARAM)&data);
-    
+
     return TRUE;
 }
 
@@ -289,7 +282,7 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     if (controlID == DIALOG_TITLE_ID) {
         return GetDialogTitleText(dialogID);
     }
-    
+
     const wchar_t* specialText = FindSpecialControlText(dialogID, controlID);
     if (specialText) {
         return specialText;
@@ -299,6 +292,6 @@ const wchar_t* GetDialogLocalizedString(int dialogID, int controlID) {
     if (buttonText) {
         return buttonText;
     }
-    
+
     return NULL;
 }

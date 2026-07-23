@@ -1,7 +1,7 @@
 /**
  * @file string_format.h
  * @brief String formatting utilities for menu display
- * 
+ *
  * Provides common string formatting functions used across menu modules.
  */
 
@@ -17,11 +17,11 @@
  * @param truncated Output buffer
  * @param truncatedSize Output buffer size in wchar_t units
  * @param maxLen Maximum display length
- * 
+ *
  * @details
  * Uses middle truncation for very long names: "start...end.ext"
  * Preserves file extension for readability.
- * 
+ *
  * @note maxLen should be at least 8 characters for meaningful truncation
  */
 void TruncateFileName(const wchar_t* fileName, wchar_t* truncated,
@@ -32,7 +32,7 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated,
  * @param seconds Duration in seconds
  * @param buffer Output buffer
  * @param bufferSize Buffer size in wchar_t units
- * 
+ *
  * @details
  * Format varies by duration:
  * - Hours present: "h:mm:ss" (e.g., "1:30:00")
@@ -42,4 +42,3 @@ void TruncateFileName(const wchar_t* fileName, wchar_t* truncated,
 void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize);
 
 #endif /* UTILS_STRING_FORMAT_H */
-

@@ -1,10 +1,10 @@
 /**
  * @file config_defaults.h
  * @brief Configuration default values and metadata
- * 
+ *
  * Centralized definition of all configuration items with their default values.
  * This eliminates duplication across CreateDefaultConfig, ReadConfig, and WriteConfig.
- * 
+ *
  * IMPORTANT: All default values are defined here as constants.
  *            Use these constants instead of hardcoding values to avoid duplication.
  */
@@ -78,7 +78,7 @@ typedef enum {
 
 /**
  * @brief Metadata for a single configuration item
- * 
+ *
  * @details
  * When offset is SIZE_MAX, the item requires custom handling.
  * Otherwise, offset points to the field in ConfigSnapshot.
@@ -99,7 +99,7 @@ typedef struct {
 /**
  * @brief Create default configuration file with system language detection
  * @param config_path Path to config file (UTF-8)
- * 
+ *
  * @details
  * Detects system language and creates config.ini with appropriate defaults.
  * Calls WriteDefaultsToConfig internally.
@@ -109,7 +109,7 @@ BOOL CreateDefaultConfig(const char* config_path);
 /**
  * @brief Write all default values to existing config file
  * @param config_path Path to config file (UTF-8)
- * 
+ *
  * @details
  * Used by CreateDefaultConfig and for resetting to defaults.
  * Preserves existing values not in the defaults list.
@@ -121,7 +121,7 @@ BOOL WriteDefaultsToConfig(const char* config_path);
  * @param section Section name
  * @param key Key name
  * @return Default value string, or NULL if not found
- * 
+ *
  * @note Returned pointer is to static data, do not free
  */
 const char* GetDefaultValue(const char* section, const char* key);
@@ -130,7 +130,7 @@ const char* GetDefaultValue(const char* section, const char* key);
  * @brief Get configuration metadata array
  * @param count Output parameter for array size
  * @return Pointer to metadata array
- * 
+ *
  * @note For iteration and bulk operations
  */
 const ConfigItemMeta* GetConfigMetadata(int* count);
@@ -159,4 +159,3 @@ const char* GetDetectedSystemLanguageConfigKey(void);
 void MigrateConfig(const char* config_path);
 
 #endif /* CONFIG_DEFAULTS_H */
-

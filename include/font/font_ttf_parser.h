@@ -1,7 +1,7 @@
 /**
  * @file font_ttf_parser.h
  * @brief TrueType/OpenType font binary parsing
- * 
+ *
  * Extracts metadata from TTF/OTF files without full font loading.
  * Uses direct binary parsing of font tables (big-endian format).
  */
@@ -34,7 +34,7 @@
  * @param fontName Output buffer for family name
  * @param fontNameSize Buffer size
  * @return TRUE on success, FALSE if not a valid TTF or parse error
- * 
+ *
  * @details
  * Parses the TTF 'name' table to extract font family name.
  * Prefers Windows Unicode (platform 3, encoding 1) if available.
@@ -43,4 +43,3 @@
 BOOL GetFontNameFromFile(const char* fontFilePath, char* fontName, size_t fontNameSize);
 
 #endif /* FONT_TTF_PARSER_H */
-

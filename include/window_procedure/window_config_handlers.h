@@ -63,4 +63,3 @@ LRESULT HandleAppAnimSpeedChanged(HWND hwnd);
 LRESULT HandleAppAnimPathChanged(HWND hwnd);
 
 #endif /* WINDOW_CONFIG_HANDLERS_H */
-

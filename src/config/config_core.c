@@ -1,13 +1,3 @@
-/**
- * @file config_core.c
- * @brief Configuration coordinator - high-level API for config operations
- * 
- * Simplified coordinator that delegates to specialized modules:
- * - config_defaults: Default values and metadata
- * - config_loader: Reading and parsing INI files
- * - config_applier: Applying config to global variables
- * - config_writer: Collecting and writing config
- */
 #include "config.h"
 #include "config/config_defaults.h"
 #include "config/config_loader.h"
@@ -18,18 +8,10 @@
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
-
-/* ============================================================================
- * Global configuration - single source of truth
- * ============================================================================ */
-
 AppConfig g_AppConfig;
-
 void InitializeAppConfigDefaults(void) {
     memset(&g_AppConfig, 0, sizeof(g_AppConfig));
-
     g_AppConfig.pomodoro.loop_count = 1;
-
     strncpy(g_AppConfig.notification.messages.timeout_message,
             DEFAULT_TIMEOUT_MESSAGE,
             sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
@@ -42,7 +24,6 @@ void InitializeAppConfigDefaults(void) {
     g_AppConfig.notification.display.window_x = -1;
     g_AppConfig.notification.display.window_y = -1;
     g_AppConfig.notification.sound.volume = DEFAULT_NOTIFICATION_VOLUME;
-
     g_AppConfig.display.time_format.format = TIME_FORMAT_DEFAULT;
     g_AppConfig.display.move_step_small = DEFAULT_MOVE_STEP_SMALL;
     g_AppConfig.display.move_step_large = DEFAULT_MOVE_STEP_LARGE;
@@ -50,58 +31,29 @@ void InitializeAppConfigDefaults(void) {
     g_AppConfig.display.opacity_step_fast = 5;
     g_AppConfig.display.scale_step_normal = DEFAULT_SCALE_STEP_NORMAL;
     g_AppConfig.display.scale_step_fast = DEFAULT_SCALE_STEP_FAST;
-
     g_AppConfig.timer.default_start_time = DEFAULT_QUICK_COUNTDOWN_3;
 }
-
-/** @brief Global flag to trigger factory reset after window creation */
 BOOL g_PerformFactoryReset = FALSE;
-
-/* ============================================================================
- * Public API Implementation - delegates to specialized modules
- * ============================================================================ */
-
-/**
- * @brief Read configuration from INI file (Coordinator)
- * 
- * @details
- * Orchestrates configuration loading through modular components:
- * 1. Load from file (config_loader)
- * 2. Validate snapshot (config_loader)
- * 3. Apply to globals (config_applier)
- */
 void ReadConfig() {
     CheckAndCreateResourceFolders();
-
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    
-    /* Create default config if missing */
     if (!FileExists(config_path)) {
         if (!CreateDefaultConfig(config_path)) {
             LOG_WARNING("Failed to create default configuration file; using in-memory defaults");
         }
     }
-
     BOOL needsWriteBack = FALSE;
-
-    /* Version check - migrate if version mismatch */
     char version[32] = {0};
-    
     ReadIniString(INI_SECTION_GENERAL, "CONFIG_VERSION", "",
                  version, sizeof(version), config_path);
-
     int versionMatch = strcmp(version, CATIME_VERSION);
-
     if (versionMatch != 0) {
 #if FORCE_CONFIG_RESET_ON_UPDATE
         {
             LOG_WARNING("DEBUG_TRACE: >> DECISION: FORCE RESET (Switch is ON)");
-            
-            /* Delete the old configuration file */
             wchar_t wConfigPath[MAX_PATH] = {0};
             int conversionResult = MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH);
-            
             if (conversionResult == 0) {
                  LOG_ERROR("DEBUG_TRACE: Failed to convert config path to WideChar. Win32 Error: %lu", GetLastError());
             } else {
@@ -112,27 +64,17 @@ void ReadConfig() {
                     }
                 }
             }
-
-            /* Create a fresh default configuration */
             if (!CreateDefaultConfig(config_path)) {
                 LOG_WARNING("Failed to create default configuration file during forced reset");
             }
-            
-            /* Mark for full factory reset after window creation */
             g_PerformFactoryReset = TRUE;
-            
-            /* DIRECTLY initialize and apply default snapshot */
-            /* This bypasses LoadConfigFromFile to ensure we use pure default values in memory */
             ConfigSnapshot snapshot;
             InitializeDefaultSnapshot(&snapshot);
-            
             const char* detectedLanguage = GetDetectedSystemLanguageConfigKey();
             strncpy(snapshot.language, detectedLanguage,
                     sizeof(snapshot.language) - 1);
             snapshot.language[sizeof(snapshot.language) - 1] = '\0';
-            
             ApplyConfigSnapshot(&snapshot);
-            
             return; /* EXIT FUNCTION HERE - Do not proceed to LoadConfigFromFile */
         }
 #else
@@ -142,81 +84,52 @@ void ReadConfig() {
         }
 #endif
     }
-
-    /* Load configuration into snapshot */
-    /* NOTE: If we performed a FORCE RESET, we have already returned from the function above. */
     ConfigSnapshot snapshot;
     if (!LoadConfigFromFile(config_path, &snapshot)) {
-        /* Fallback to defaults on load failure */
         LOG_WARNING("Failed to load configuration file, using default values");
         InitializeDefaultSnapshot(&snapshot);
     }
-
-    /* Validate and sanitize - returns TRUE if any values were modified */
     if (ValidateConfigSnapshot(&snapshot)) {
         needsWriteBack = TRUE;
     }
-
-    /* Apply to global variables */
     ApplyConfigSnapshot(&snapshot);
-
-    /* Write back if migration occurred or validation modified values */
     if (needsWriteBack) {
         if (!WriteConfig(config_path)) {
             LOG_ERROR("Failed to write migrated or sanitized config: %s", config_path);
         }
     }
 }
-
-/* ============================================================================
- * Utility functions
- * ============================================================================ */
-
-/**
- * @brief Write timeout action configuration
- * 
- * @note One-time actions (SHUTDOWN/RESTART/SLEEP) are not persisted to config.
- * They only affect the current session and will reset on next launch.
- */
 static BOOL IsOneTimeTimeoutAction(TimeoutActionType action) {
     return action == TIMEOUT_ACTION_SHUTDOWN ||
            action == TIMEOUT_ACTION_RESTART ||
            action == TIMEOUT_ACTION_SLEEP;
 }
-
 static BOOL TimerConfigValueEqualsInFile(const char* configPath,
                                          const char* key,
                                          const char* expectedValue,
                                          const char* defaultValue) {
     char currentValue[MAX_PATH];
-
     if (!ReadIniStringExact(INI_SECTION_TIMER, key, defaultValue ? defaultValue : "",
                             currentValue, sizeof(currentValue), configPath)) {
         return FALSE;
     }
-
     return strcmp(currentValue, expectedValue ? expectedValue : "") == 0;
 }
-
 static void CopyTimeoutString(char* dest, size_t destSize, const char* value) {
     if (!dest || destSize == 0) {
         return;
     }
-
     if (!value) {
         value = "";
     }
-
     strncpy(dest, value, destSize - 1);
     dest[destSize - 1] = '\0';
 }
-
 BOOL WriteConfigTimeoutAction(const char* action) {
     TimeoutActionType newAction = TimeoutActionType_FromStr(action ? action : "MESSAGE");
     const char* configAction = TimeoutActionType_ToStr(newAction);
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-
     if (IsOneTimeTimeoutAction(newAction)) {
         BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
                                                           "CLOCK_TIMEOUT_ACTION",
@@ -226,63 +139,48 @@ BOOL WriteConfigTimeoutAction(const char* action) {
             !UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "MESSAGE")) {
             return FALSE;
         }
-
         CLOCK_TIMEOUT_ACTION = newAction;
         Timer_ClearTimeoutSystemActionArm();
         return TRUE;
     }
-
     BOOL runtimeMatches = CLOCK_TIMEOUT_ACTION == newAction;
     BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
                                                       "CLOCK_TIMEOUT_ACTION",
                                                       configAction,
                                                       "MESSAGE");
-
     if (runtimeMatches && configMatches) {
         return TRUE;
     }
-
     if (!configMatches &&
         !UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", configAction)) {
         return FALSE;
     }
-
     CLOCK_TIMEOUT_ACTION = newAction;
     Timer_ClearTimeoutSystemActionArm();
     return TRUE;
 }
-
-/**
- * @brief Write time options configuration
- */
 BOOL WriteConfigTimeOptions(const char* options) {
     if (!options) {
         return FALSE;
     }
-
     return UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", options);
 }
-
 BOOL WriteConfigDefaultCountdownStartup(int seconds) {
     if (seconds <= 0) {
         return FALSE;
     }
-
     char secondsStr[32];
     if (snprintf(secondsStr, sizeof(secondsStr), "%d", seconds) < 0) {
         return FALSE;
     }
-
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-
     char currentSeconds[32] = {0};
     char currentMode[sizeof(CLOCK_STARTUP_MODE)] = {0};
     ReadIniString(INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", "",
                   currentSeconds, sizeof(currentSeconds), config_path);
     ReadIniString(INI_SECTION_TIMER, "STARTUP_MODE", "SHOW_TIME",
                   currentMode, sizeof(currentMode), config_path);
-
     BOOL runtimeMatches = g_AppConfig.timer.default_start_time == seconds &&
                           strcmp(CLOCK_STARTUP_MODE, "DEFAULT") == 0;
     BOOL configMatches = strcmp(currentSeconds, secondsStr) == 0 &&
@@ -290,7 +188,6 @@ BOOL WriteConfigDefaultCountdownStartup(int seconds) {
     if (runtimeMatches && configMatches) {
         return TRUE;
     }
-
     const IniKeyValue updates[] = {
         {INI_SECTION_TIMER, "CLOCK_DEFAULT_START_TIME", secondsStr},
         {INI_SECTION_TIMER, "STARTUP_MODE", "DEFAULT"},
@@ -299,44 +196,30 @@ BOOL WriteConfigDefaultCountdownStartup(int seconds) {
         !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
         return FALSE;
     }
-
     g_AppConfig.timer.default_start_time = seconds;
     strncpy(CLOCK_STARTUP_MODE, "DEFAULT", sizeof(CLOCK_STARTUP_MODE) - 1);
     CLOCK_STARTUP_MODE[sizeof(CLOCK_STARTUP_MODE) - 1] = '\0';
     return TRUE;
 }
-
-/**
- * @brief Write window topmost setting
- */
 BOOL WriteConfigTopmost(const char* topmost) {
     if (!topmost) {
         return FALSE;
     }
-
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-
     char currentValue[16] = {0};
     ReadIniString(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", "",
                   currentValue, sizeof(currentValue), config_path);
     if (strcmp(currentValue, topmost) == 0) {
         return TRUE;
     }
-
     return UpdateConfigKeyValueAtomic(INI_SECTION_DISPLAY, "WINDOW_TOPMOST", topmost);
 }
-
-/**
- * @brief Configure timeout action to open file
- */
 BOOL WriteConfigTimeoutFile(const char* filePath) {
     char normalizedPath[MAX_PATH];
     CopyTimeoutString(normalizedPath, sizeof(normalizedPath), filePath);
-
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-
     BOOL runtimeMatches = CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_FILE &&
                           strcmp(CLOCK_TIMEOUT_FILE_PATH, normalizedPath) == 0;
     BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
@@ -347,36 +230,26 @@ BOOL WriteConfigTimeoutFile(const char* filePath) {
                                                       "CLOCK_TIMEOUT_FILE",
                                                       normalizedPath,
                                                       "");
-
     if (runtimeMatches && configMatches) {
         return TRUE;
     }
-
     const IniKeyValue updates[] = {
         {INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "OPEN_FILE"},
         {INI_SECTION_TIMER, "CLOCK_TIMEOUT_FILE", normalizedPath}
     };
-
     if (!configMatches &&
         !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
         return FALSE;
     }
-
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_FILE;
     CopyTimeoutString(CLOCK_TIMEOUT_FILE_PATH, MAX_PATH, normalizedPath);
     return TRUE;
 }
-
-/**
- * @brief Configure timeout action to open website
- */
 BOOL WriteConfigTimeoutWebsite(const char* url) {
     char normalizedUrl[MAX_PATH];
     CopyTimeoutString(normalizedUrl, sizeof(normalizedUrl), url);
-
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-
     BOOL runtimeMatches = CLOCK_TIMEOUT_ACTION == TIMEOUT_ACTION_OPEN_WEBSITE &&
                           strcmp(CLOCK_TIMEOUT_WEBSITE_URL, normalizedUrl) == 0;
     BOOL configMatches = TimerConfigValueEqualsInFile(config_path,
@@ -387,21 +260,17 @@ BOOL WriteConfigTimeoutWebsite(const char* url) {
                                                       "CLOCK_TIMEOUT_WEBSITE",
                                                       normalizedUrl,
                                                       "");
-
     if (runtimeMatches && configMatches) {
         return TRUE;
     }
-
     const IniKeyValue updates[] = {
         {INI_SECTION_TIMER, "CLOCK_TIMEOUT_ACTION", "OPEN_WEBSITE"},
         {INI_SECTION_TIMER, "CLOCK_TIMEOUT_WEBSITE", normalizedUrl}
     };
-
     if (!configMatches &&
         !WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
         return FALSE;
     }
-
     CLOCK_TIMEOUT_ACTION = TIMEOUT_ACTION_OPEN_WEBSITE;
     CopyTimeoutString(CLOCK_TIMEOUT_WEBSITE_URL, MAX_PATH, normalizedUrl);
     return TRUE;

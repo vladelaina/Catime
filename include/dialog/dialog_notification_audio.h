@@ -20,7 +20,7 @@
  * @brief Populate combo box with available audio files
  * @param hwndCombo Combo box handle
  * @param currentFile Current selected file path (UTF-8, can be NULL or empty)
- * 
+ *
  * @details
  * Uses the cached audio folder scan for .mp3/.wav files and populates combo box.
  * First two items are always "None" and "System Beep".
@@ -70,7 +70,7 @@ BOOL GetSelectedNotificationSoundFile(HWND hwndCombo, char* outSoundFile, size_t
  * @param hwndSlider Volume slider handle
  * @param isPlaying Pointer to playing state (modified by function)
  * @return TRUE if operation succeeded
- * 
+ *
  * @details
  * If not playing: starts audio playback with selected file
  * If playing: stops current playback
@@ -82,7 +82,7 @@ BOOL HandleSoundTestButton(HWND hwndDlg, HWND hwndCombo, HWND hwndSlider, BOOL* 
  * @brief Open sound directory in Explorer and refresh combo box
  * @param hwndDlg Parent dialog handle
  * @param hwndCombo Sound combo box handle
- * 
+ *
  * @details
  * Opens %LOCALAPPDATA%\Catime\resources\audio in Windows Explorer
  * and requests a non-blocking cache refresh.
@@ -92,7 +92,7 @@ void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo);
 /**
  * @brief Request a background sound-list refresh when the dropdown opens
  * @param hwndCombo Sound combo box handle
- * 
+ *
  * @details
  * Keeps the current popup contents intact while the audio folder is scanned.
  * The dialog applies the new cache after the popup closes.
@@ -112,4 +112,3 @@ void SetupAudioPlaybackCallback(HWND hwndDlg);
 void CleanupAudioPlayback(BOOL isPlaying);
 
 #endif /* DIALOG_NOTIFICATION_AUDIO_H */
-

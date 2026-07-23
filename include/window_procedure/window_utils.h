@@ -116,7 +116,7 @@ const char* GetCachedConfigPath(void);
 /**
  * @brief Read config string
  */
-void ReadConfigStr(const char* section, const char* key, 
+void ReadConfigStr(const char* section, const char* key,
                    const char* defaultVal, char* out, size_t size);
 
 /**
@@ -159,4 +159,3 @@ void ToggleConfigBool(HWND hwnd, const char* key, bool* currentValue, bool needs
 void WriteConfigAndRedraw(HWND hwnd, const char* key, const char* value);
 
 #endif /* WINDOW_UTILS_H */
-

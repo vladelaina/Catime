@@ -1,7 +1,7 @@
 /**
  * @file path_utils.h
  * @brief Cross-platform path manipulation utilities
- * 
+ *
  * Provides unified path handling for both UTF-8 and UTF-16 strings.
  * Eliminates duplication across font.c, config_watcher.c, window_procedure.c, etc.
  */
@@ -108,7 +108,7 @@ BOOL PathJoinW(wchar_t* base, size_t baseSize, const wchar_t* component);
  * @param relativeSize Buffer size
  * @return TRUE if target is under root, FALSE otherwise
  */
-BOOL GetRelativePathU8(const char* root, const char* target, 
+BOOL GetRelativePathU8(const char* root, const char* target,
                        char* relative, size_t relativeSize);
 
 /**
@@ -176,4 +176,3 @@ BOOL PathStartsWith(const char* path, const char* prefix);
 BOOL GetShortcutExecutablePathW(wchar_t* path, size_t pathSize);
 
 #endif /* UTILS_PATH_UTILS_H */
-

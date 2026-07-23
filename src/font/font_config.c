@@ -27,7 +27,7 @@ static BOOL IsRawFontConfigValue(const char* fontFileName) {
 
 BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
     if (!fontFileName) return FALSE;
-    
+
     char configFontName[MAX_PATH];
 
     if (IsRawFontConfigValue(fontFileName)) {
@@ -40,7 +40,7 @@ BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
         LOG_WARNING("Font config path too long, skipping write");
         return FALSE;
     }
-    
+
     /* Write to config */
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -64,7 +64,7 @@ BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
             return FALSE;
         }
     }
-    
+
     /* Reload if requested */
     if (shouldReload && (!runtimeMatches || !configMatches)) {
         ReadConfig();
@@ -72,4 +72,3 @@ BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload) {
 
     return TRUE;
 }
-

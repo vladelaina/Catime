@@ -1,7 +1,7 @@
 /**
  * @file string_convert.h
  * @brief Unified UTF-8 ↔ UTF-16 conversion utilities
- * 
+ *
  * Centralizes all character encoding conversions to eliminate duplication
  * across 6+ files. Provides both fixed-buffer and dynamic allocation variants.
  */
@@ -73,4 +73,3 @@ size_t Utf8ToWideSize(const char* utf8);
 size_t WideToUtf8Size(const wchar_t* wide);
 
 #endif /* UTILS_STRING_CONVERT_H */
-

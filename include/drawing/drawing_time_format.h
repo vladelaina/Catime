@@ -64,4 +64,3 @@ void FormatTimeComponentsForDisplay(
 void GetTimeText(wchar_t* buffer, size_t bufferSize);
 
 #endif /* DRAWING_TIME_FORMAT_H */
-

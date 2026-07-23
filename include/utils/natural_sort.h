@@ -1,7 +1,7 @@
 /**
  * @file natural_sort.h
  * @brief Natural/numeric-aware string comparison
- * 
+ *
  * Handles numeric sequences correctly (e.g., "img2" < "img10" < "img100")
  * Supports both UTF-16 (wchar_t) and UTF-8 (char) strings
  */
@@ -17,7 +17,7 @@
  * @param a First string
  * @param b Second string
  * @return -1 if a < b, 0 if equal, 1 if a > b
- * 
+ *
  * @details
  * - Case-insensitive
  * - Numeric sequences compared by value, not lexicographically
@@ -45,4 +45,3 @@ int NaturalPathCompareW(const wchar_t* a, const wchar_t* b);
 int NaturalPathCompareA(const char* a, const char* b);
 
 #endif /* UTILS_NATURAL_SORT_H */
-

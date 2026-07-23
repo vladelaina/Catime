@@ -1,24 +1,17 @@
-/**
- * @file tray_animation_timer.c
- * @brief High-precision timer implementation
- */
+/** @file tray_animation_timer.c @brief High-precision animation timer. */
 
 #include "tray/tray_animation_timer.h"
-#include "utils/finite_double.h"
 #include <mmsystem.h>
-#include <math.h>
 #include "../../resource/resource.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "winmm.lib")
 #endif
 
-/* Timer constants */
 #define TRAY_UPDATE_INTERVAL_MS 50
 #define TIMER_RESOLUTION_MIN_MS 1
 #define TIMER_RESOLUTION_MAX_MS 10
 
-/* Global timer state */
 static MMRESULT g_mmTimerId = 0;
 static BOOL g_useHighPrecisionTimer = FALSE;
 static AnimationTimerCallback g_callback = NULL;
@@ -139,54 +132,6 @@ static BOOL CleanupAnimationTimerLocked(void) {
     return callbacksDrained;
 }
 
-/**
- * @brief Initialize frame rate controller
- */
-void FrameRateController_Init(FrameRateController* ctrl, UINT targetMs) {
-    if (!ctrl) return;
-
-    ctrl->targetInterval = targetMs > 0 ? targetMs : TRAY_UPDATE_INTERVAL_MS;
-    ctrl->trayAccumulatorMs = 0.0;
-}
-
-/**
- * @brief Check if tray should update
- */
-BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl, double elapsedMs) {
-    if (!ctrl || ctrl->targetInterval == 0 ||
-        !DoubleIsFiniteStrict(elapsedMs) || elapsedMs <= 0.0) {
-        return FALSE;
-    }
-
-    ctrl->trayAccumulatorMs += elapsedMs;
-    if (!DoubleIsFiniteStrict(ctrl->trayAccumulatorMs) ||
-        ctrl->trayAccumulatorMs < 0.0) {
-        ctrl->trayAccumulatorMs = 0.0;
-        return FALSE;
-    }
-
-    if (ctrl->trayAccumulatorMs >= (double)ctrl->targetInterval) {
-        ctrl->trayAccumulatorMs = fmod(ctrl->trayAccumulatorMs,
-                                       (double)ctrl->targetInterval);
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-BOOL AnimationUpdateBackoff_ShouldRetry(BOOL backoffActive,
-                                        DWORD lastFailureTick,
-                                        DWORD now,
-                                        UINT backoffMs) {
-    if (!backoffActive || lastFailureTick == 0 || backoffMs == 0) {
-        return TRUE;
-    }
-    return (DWORD)(now - lastFailureTick) >= backoffMs;
-}
-
-/**
- * @brief Multimedia timer callback (worker thread)
- */
 static void CALLBACK MMTimerCallback(UINT uTimerID, UINT uMsg,
                                      DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
     (void)uTimerID; (void)uMsg; (void)dwUser; (void)dw1; (void)dw2;
@@ -194,9 +139,6 @@ static void CALLBACK MMTimerCallback(UINT uTimerID, UINT uMsg,
     InvokeAnimationTimerCallback((LONG)dwUser);
 }
 
-/**
- * @brief SetTimer fallback callback
- */
 static void CALLBACK FallbackTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     (void)time;
 
@@ -241,9 +183,6 @@ static BOOL StartFallbackAnimationTimerLocked(HWND hwnd) {
     return TRUE;
 }
 
-/**
- * @brief Initialize high-precision timer
- */
 BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
                                AnimationTimerCallback callback, void* userData) {
     if (!hwnd || !callback) return FALSE;
@@ -278,7 +217,6 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
     if (mmRes != TIMERR_NOERROR) {
         g_useHighPrecisionTimer = FALSE;
 
-        /* Fallback to SetTimer */
         if (!StartFallbackAnimationTimerLocked(hwnd)) {
             InterlockedExchange(&g_acceptCallbacks, 0);
             (void)WaitForTimerCallbacksToDrain();
@@ -292,7 +230,6 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
 
     g_timerResolutionMs = requestedResolutionMs;
 
-    /* Create multimedia timer */
     g_mmTimerId = timeSetEvent(
         g_internalInterval,
         g_timerResolutionMs,
@@ -308,7 +245,6 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
         }
         g_useHighPrecisionTimer = FALSE;
 
-        /* Fallback to SetTimer */
         if (!StartFallbackAnimationTimerLocked(hwnd)) {
             InterlockedExchange(&g_acceptCallbacks, 0);
             (void)WaitForTimerCallbacksToDrain();
@@ -326,9 +262,6 @@ BOOL InitializeAnimationTimer(HWND hwnd, UINT internalIntervalMs,
     return TRUE;
 }
 
-/**
- * @brief Cleanup timer
- */
 BOOL CleanupAnimationTimer(void) {
     AcquireSRWLockExclusive(&g_timerLifecycleLock);
     BOOL callbacksDrained = CleanupAnimationTimerLocked();
@@ -344,9 +277,6 @@ BOOL IsAnimationTimerActive(void) {
     return active;
 }
 
-/**
- * @brief Check timer type
- */
 BOOL IsUsingHighPrecisionTimer(void) {
     BOOL useHighPrecisionTimer = FALSE;
     AcquireSRWLockShared(&g_timerLifecycleLock);

@@ -57,16 +57,16 @@ static const char* GetOSVersionName(const OSVersionInfo* osVersion) {
     const DWORD minor = osVersion->minor;
     const DWORD build = osVersion->minBuild;
     const size_t tableSize = sizeof(OS_VERSION_TABLE) / sizeof(OS_VERSION_TABLE[0]);
-    
+
     for (size_t i = 0; i < tableSize; i++) {
         const OSVersionInfo* entry = &OS_VERSION_TABLE[i];
-        if (major == entry->major && 
+        if (major == entry->major &&
             minor == entry->minor &&
             build >= entry->minBuild) {
             return entry->name;
         }
     }
-    
+
     return "Unknown Windows version";
 }
 
@@ -85,26 +85,26 @@ static bool GetOSVersionInfo(OSVersionInfo* osVersion) {
     if (unlikely(!osVersion)) {
         return false;
     }
-        
+
     typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
     HMODULE hNtdll = GetModuleHandleW(L"ntdll.dll");
-    
+
     if (unlikely(!hNtdll)) return false;
-    
+
     RtlGetVersionPtr pRtlGetVersion = NULL;
     CATIME_LOAD_PROC_ADDRESS(hNtdll, "RtlGetVersion", pRtlGetVersion);
     if (unlikely(!pRtlGetVersion)) return false;
-    
+
     RTL_OSVERSIONINFOW rovi = {0};
     rovi.dwOSVersionInfoSize = sizeof(rovi);
-    
+
     if (likely(pRtlGetVersion(&rovi) == 0)) {
         osVersion->major = rovi.dwMajorVersion;
         osVersion->minor = rovi.dwMinorVersion;
         osVersion->minBuild = rovi.dwBuildNumber;
         return true;
     }
-    
+
     return false;
 }
 
@@ -112,7 +112,7 @@ void LogOSVersion(void) {
     OSVersionInfo osVersion = {0};
     if (likely(GetOSVersionInfo(&osVersion))) {
         osVersion.name = GetOSVersionName(&osVersion);
-        WriteLog(LOG_LEVEL_INFO, "Operating System: %s (%lu.%lu) Build %lu", 
+        WriteLog(LOG_LEVEL_INFO, "Operating System: %s (%lu.%lu) Build %lu",
                  osVersion.name, osVersion.major, osVersion.minor, osVersion.minBuild);
     } else {
         WriteLog(LOG_LEVEL_WARNING, "Unable to retrieve OS version information");
@@ -122,7 +122,7 @@ void LogOSVersion(void) {
 void LogCPUArchitecture(void) {
     SYSTEM_INFO si;
     GetNativeSystemInfo(&si);
-    
+
     const char* archName = GetCPUArchitectureName(si.wProcessorArchitecture);
     WriteLog(LOG_LEVEL_INFO, "CPU Architecture: %s", archName);
 }
@@ -135,8 +135,8 @@ void LogCPUArchitecture(void) {
  */
 static void FormatBytes(DWORDLONG bytes, char* buffer, size_t bufferSize) {
     if (unlikely(!buffer || bufferSize == 0)) return;
-    
-    
+
+
     if (bytes >= GB) {
         _snprintf_s(buffer, bufferSize, _TRUNCATE, "%.2f GB", bytes / GB);
     } else if (bytes >= MB) {
@@ -151,15 +151,15 @@ static void FormatBytes(DWORDLONG bytes, char* buffer, size_t bufferSize) {
 void LogMemoryInfo(void) {
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(MEMORYSTATUSEX);
-    
+
     if (likely(GlobalMemoryStatusEx(&memInfo))) {
         char totalStr[64] = {0};
         char usedStr[64] = {0};
-        
+
         FormatBytes(memInfo.ullTotalPhys, totalStr, sizeof(totalStr));
         FormatBytes(memInfo.ullTotalPhys - memInfo.ullAvailPhys, usedStr, sizeof(usedStr));
-        
-        WriteLog(LOG_LEVEL_INFO, "Physical Memory: %s / %s (%lu%% used)", 
+
+        WriteLog(LOG_LEVEL_INFO, "Physical Memory: %s / %s (%lu%% used)",
                  usedStr, totalStr, memInfo.dwMemoryLoad);
     } else {
         WriteLog(LOG_LEVEL_WARNING, "Unable to retrieve memory information");
@@ -169,19 +169,19 @@ void LogMemoryInfo(void) {
 void LogUACStatus(void) {
     bool uacEnabled = false;
     HANDLE hToken;
-    
+
     if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
         TOKEN_ELEVATION_TYPE elevationType;
         DWORD dwSize;
-        
-        if (GetTokenInformation(hToken, TokenElevationType, &elevationType, 
+
+        if (GetTokenInformation(hToken, TokenElevationType, &elevationType,
                                 sizeof(elevationType), &dwSize)) {
             uacEnabled = (elevationType != TokenElevationTypeDefault);
         }
-        
+
         CloseHandle(hToken);
     }
-    
+
     WriteLog(LOG_LEVEL_INFO, "UAC Status: %s", uacEnabled ? "Enabled" : "Disabled");
 }
 
@@ -189,14 +189,14 @@ void LogAdminPrivileges(void) {
     BOOL isAdmin = FALSE;
     SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
     PSID AdministratorsGroup;
-    
-    if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID, 
-                                  DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, 
+
+    if (AllocateAndInitializeSid(&NtAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID,
+                                  DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0,
                                   &AdministratorsGroup)) {
         CheckTokenMembership(NULL, AdministratorsGroup, &isAdmin);
         FreeSid(AdministratorsGroup);
     }
-    
+
     WriteLog(LOG_LEVEL_INFO, "Administrator Privileges: %s", isAdmin ? "Yes" : "No");
 }
 
@@ -218,4 +218,3 @@ void LogPackageIdentity(void) {
 
     WriteLog(LOG_LEVEL_INFO, "Package Identity: MSIX");
 }
-

@@ -1,7 +1,7 @@
 /**
  * @file tray_animation_decoder.h
  * @brief Image decoding with WIC (Windows Imaging Component)
- * 
+ *
  * Decodes GIF/WebP/ANI animations and static images, pre-compositing all frames.
  * Uses memory pool for temporary buffers to reduce malloc overhead.
  */
@@ -46,13 +46,13 @@ void DecodedAnimation_Free(DecodedAnimation* anim);
  * @param iconWidth Target icon width (e.g., SM_CXSMICON)
  * @param iconHeight Target icon height (e.g., SM_CYSMICON)
  * @return TRUE on success, FALSE on failure
- * 
+ *
  * @details
  * Pre-composites all frames with disposal handling.
  * Allocates canvas and icon array in anim structure.
  * Caller must call DecodedAnimation_Free() when done.
  */
-BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim, 
+BOOL DecodeAnimatedImage(const char* utf8Path, DecodedAnimation* anim,
                          MemoryPool* pool, int iconWidth, int iconHeight);
 
 /**
@@ -109,7 +109,7 @@ HICON DecodeStaticImageWithFactory(IWICImagingFactory* pFactory, const wchar_t* 
  * @param cx Target icon width
  * @param cy Target icon height
  * @return HICON or NULL on failure
- * 
+ *
  * @details
  * Scales image preserving aspect ratio, centers if needed.
  * Converts to 32bpp PBGRA for alpha transparency.
@@ -143,7 +143,7 @@ HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
  * @param g Green (0-255)
  * @param b Blue (0-255)
  * @param a Alpha (0-255)
- * 
+ *
  * @details Uses "source over" blending for transparent pixels
  */
 void BlendPixel(BYTE* canvas, UINT canvasStride, UINT x, UINT y,
@@ -168,4 +168,3 @@ void ClearCanvasRect(BYTE* canvas, UINT canvasWidth, UINT canvasHeight,
                      BYTE bgR, BYTE bgG, BYTE bgB, BYTE bgA);
 
 #endif /* TRAY_ANIMATION_DECODER_H */
-

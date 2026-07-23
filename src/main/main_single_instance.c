@@ -280,4 +280,3 @@ HANDLE GetGlobalMutexHandle(void) {
 void ClearGlobalMutexHandle(void) {
     g_GlobalMutex = NULL;
 }
-

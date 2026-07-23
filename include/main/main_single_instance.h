@@ -44,4 +44,3 @@ void ClearGlobalMutexHandle(void);
 BOOL VerifySingleInstanceMutex(HANDLE hMutex);
 
 #endif /* MAIN_SINGLE_INSTANCE_H */
-

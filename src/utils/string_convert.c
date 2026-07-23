@@ -32,7 +32,7 @@ BOOL Utf8ToWide(const char* utf8, wchar_t* wide, size_t wideSize) {
     wide[0] = L'\0';
     if (!utf8) return FALSE;
     if (wideSize > (size_t)INT_MAX) return FALSE;
-    
+
     int result = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, wide, (int)wideSize);
     if (result <= 0) {
         wide[0] = L'\0';
@@ -46,7 +46,7 @@ BOOL WideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Size) {
     utf8[0] = '\0';
     if (!wide) return FALSE;
     if (utf8Size > (size_t)INT_MAX) return FALSE;
-    
+
     int result = WideCharToMultiByte(CP_UTF8, 0, wide, -1, utf8, (int)utf8Size, NULL, NULL);
     if (result <= 0) {
         utf8[0] = '\0';
@@ -61,36 +61,35 @@ BOOL WideToUtf8(const wchar_t* wide, char* utf8, size_t utf8Size) {
 
 wchar_t* Utf8ToWideAlloc(const char* utf8) {
     if (!utf8) return NULL;
-    
+
     size_t size = Utf8ToWideSize(utf8);
     if (size == 0) return NULL;
     if (size > (size_t)-1 / sizeof(wchar_t)) return NULL;
-    
+
     wchar_t* wide = (wchar_t*)malloc(size * sizeof(wchar_t));
     if (!wide) return NULL;
-    
+
     if (!Utf8ToWide(utf8, wide, size)) {
         free(wide);
         return NULL;
     }
-    
+
     return wide;
 }
 
 char* WideToUtf8Alloc(const wchar_t* wide) {
     if (!wide) return NULL;
-    
+
     size_t size = WideToUtf8Size(wide);
     if (size == 0) return NULL;
-    
+
     char* utf8 = (char*)malloc(size);
     if (!utf8) return NULL;
-    
+
     if (!WideToUtf8(wide, utf8, size)) {
         free(utf8);
         return NULL;
     }
-    
+
     return utf8;
 }
-

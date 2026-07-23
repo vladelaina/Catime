@@ -11,17 +11,6 @@
 #pragma comment(lib, "comctl32.lib")
 #endif
 
-static int ClampScrollPos(int scrollPos, int scrollMax, int scrollPage) {
-    if (scrollMax <= scrollPage || scrollPage <= 0) {
-        return 0;
-    }
-
-    int maxScroll = scrollMax - scrollPage;
-    if (scrollPos < 0) return 0;
-    if (scrollPos > maxScroll) return maxScroll;
-    return scrollPos;
-}
-
 static int GetMouseWheelScrollAmount(int scrollPage) {
     UINT wheelScrollLines = 3;
     if (!SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &wheelScrollLines, 0)) {
@@ -36,62 +25,6 @@ static int GetMouseWheelScrollAmount(int scrollPage) {
     return (int)wheelScrollLines * 20;
 }
 
-/** @brief Calculate modern scrollbar thumb rectangle */
-void CalculateScrollbarThumbRect(RECT clientRect, int scrollPos, int scrollMax,
-                                         int scrollPage, RECT* outThumbRect) {
-    if (!outThumbRect) return;
-
-    int trackHeight = clientRect.bottom - clientRect.top;
-    int contentHeight = scrollMax;
-
-    if (trackHeight <= 0 || contentHeight <= scrollPage || scrollPage <= 0) {
-        SetRectEmpty(outThumbRect);
-        return;
-    }
-
-    scrollPos = ClampScrollPos(scrollPos, scrollMax, scrollPage);
-
-    int thumbHeight = (int)((float)scrollPage / contentHeight * trackHeight);
-    if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) {
-        thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
-    }
-    if (thumbHeight > trackHeight) {
-        thumbHeight = trackHeight;
-    }
-
-    int maxThumbTop = trackHeight - thumbHeight;
-    int scrollRange = contentHeight - scrollPage;
-    int thumbTop = (maxThumbTop > 0) ? (int)((float)scrollPos / scrollRange * maxThumbTop) : 0;
-
-    outThumbRect->left = clientRect.right - MODERN_SCROLLBAR_WIDTH - MODERN_SCROLLBAR_MARGIN;
-    outThumbRect->top = clientRect.top + thumbTop;
-    outThumbRect->right = clientRect.right - MODERN_SCROLLBAR_MARGIN;
-    outThumbRect->bottom = outThumbRect->top + thumbHeight;
-}
-
-/** @brief Draw rounded rectangle */
-void DrawRoundedRect(HDC hdc, RECT rect, int radius, COLORREF color) {
-    if (!hdc || IsRectEmpty(&rect)) return;
-
-    HGDIOBJ hBrush = GetStockObject(DC_BRUSH);
-    HGDIOBJ hPen = GetStockObject(DC_PEN);
-    if (!hBrush || !hPen) {
-        return;
-    }
-
-    COLORREF oldBrushColor = SetDCBrushColor(hdc, color);
-    COLORREF oldPenColor = SetDCPenColor(hdc, color);
-    HGDIOBJ hOldBrush = SelectObject(hdc, hBrush);
-    HGDIOBJ hOldPen = SelectObject(hdc, hPen);
-
-    RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, radius, radius);
-
-    if (hOldPen) SelectObject(hdc, hOldPen);
-    if (hOldBrush) SelectObject(hdc, hOldBrush);
-    if (oldPenColor != CLR_INVALID) SetDCPenColor(hdc, oldPenColor);
-    if (oldBrushColor != CLR_INVALID) SetDCBrushColor(hdc, oldBrushColor);
-}
-
 /** @brief Subclassed window procedure for scrollable notes control */
 LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
                                          UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
@@ -101,7 +34,8 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             int scrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
             int scrollMax = (int)(INT_PTR)GetProp(hwnd, L"ScrollMax");
             int scrollPage = (int)(INT_PTR)GetProp(hwnd, L"ScrollPage");
-            scrollPos = ClampScrollPos(scrollPos, scrollMax, scrollPage);
+            scrollPos = UpdateClampScrollPosition(
+                scrollPos, scrollMax, scrollPage);
 
             if (scrollMax > scrollPage) {
                 RECT clientRect;
@@ -129,7 +63,8 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
                         scrollPos += scrollPage;
                     }
 
-                    scrollPos = ClampScrollPos(scrollPos, scrollMax, scrollPage);
+                    scrollPos = UpdateClampScrollPosition(
+                        scrollPos, scrollMax, scrollPage);
 
                     if (scrollPos != oldScrollPos) {
                         SetProp(hwnd, L"ScrollPos", (HANDLE)(INT_PTR)scrollPos);
@@ -191,7 +126,8 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 
                 int oldScrollPos = (int)(INT_PTR)GetProp(hwnd, L"ScrollPos");
                 int newScrollPos = dragStartScrollPos + deltaScroll;
-                newScrollPos = ClampScrollPos(newScrollPos, scrollMax, scrollPage);
+                newScrollPos = UpdateClampScrollPosition(
+                    newScrollPos, scrollMax, scrollPage);
 
                 if (newScrollPos != oldScrollPos) {
                     SetProp(hwnd, L"ScrollPos", (HANDLE)(INT_PTR)newScrollPos);
@@ -260,7 +196,8 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             int scrollAmount = GetMouseWheelScrollAmount(scrollPage);
             int oldScrollPos = scrollPos;
             scrollPos -= (delta > 0 ? scrollAmount : -scrollAmount);
-            scrollPos = ClampScrollPos(scrollPos, scrollMax, scrollPage);
+            scrollPos = UpdateClampScrollPosition(
+                scrollPos, scrollMax, scrollPage);
 
             if (scrollPos != oldScrollPos) {
                 SetProp(hwnd, L"ScrollPos", (HANDLE)(INT_PTR)scrollPos);

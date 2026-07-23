@@ -11,19 +11,19 @@
  */
 MemoryPool* MemoryPool_Create(SIZE_T size) {
     if (size == 0) return NULL;
-    
+
     MemoryPool* pool = (MemoryPool*)malloc(sizeof(MemoryPool));
     if (!pool) return NULL;
-    
+
     pool->buffer = (BYTE*)malloc(size);
     if (!pool->buffer) {
         free(pool);
         return NULL;
     }
-    
+
     pool->size = size;
     pool->inUse = FALSE;
-    
+
     return pool;
 }
 
@@ -32,13 +32,13 @@ MemoryPool* MemoryPool_Create(SIZE_T size) {
  */
 void* MemoryPool_Alloc(MemoryPool* pool, SIZE_T size) {
     if (!pool) return malloc(size);
-    
+
     /* Try pool first if available and size fits */
     if (!pool->inUse && size <= pool->size) {
         pool->inUse = TRUE;
         return pool->buffer;
     }
-    
+
     /* Fallback to malloc */
     return malloc(size);
 }
@@ -48,12 +48,12 @@ void* MemoryPool_Alloc(MemoryPool* pool, SIZE_T size) {
  */
 void MemoryPool_Free(MemoryPool* pool, void* ptr) {
     if (!ptr) return;
-    
+
     if (pool && ptr == pool->buffer) {
         pool->inUse = FALSE;
         return;
     }
-    
+
     free(ptr);
 }
 
@@ -62,10 +62,9 @@ void MemoryPool_Free(MemoryPool* pool, void* ptr) {
  */
 void MemoryPool_Destroy(MemoryPool* pool) {
     if (!pool) return;
-    
+
     if (pool->buffer) {
         free(pool->buffer);
     }
     free(pool);
 }
-

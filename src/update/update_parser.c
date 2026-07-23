@@ -3,12 +3,7 @@
  * @brief JSON parsing and version comparison logic
  */
 #include "update/update_internal.h"
-#include "log.h"
-#include "utils/url_safety.h"
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <strsafe.h>
 #include <ctype.h>
 #include <errno.h>
 #include <limits.h>
@@ -80,138 +75,6 @@ static BOOL ParseVersionCore(const char* version, int* major, int* minor, int* p
 }
 
 /**
- * @brief Extract string field from GitHub JSON response
- * @param fieldName Field to extract (e.g., "tag_name", "body")
- * @return TRUE if field found and extracted
- */
-static BOOL ExtractJsonStringFieldInternal(const char* json, const char* fieldName,
-                                           char* output, size_t maxLen,
-                                           BOOL allowTruncate) {
-    if (!output || maxLen == 0) return FALSE;
-    output[0] = '\0';
-    if (!json || !fieldName) return FALSE;
-
-    char pattern[128];
-    int patternLen = snprintf(pattern, sizeof(pattern), "\"%s\":", fieldName);
-    if (patternLen < 0 || (size_t)patternLen >= sizeof(pattern)) {
-        return FALSE;
-    }
-
-    const char* fieldPos = strstr(json, pattern);
-    if (!fieldPos) {
-        LOG_ERROR("JSON field not found: %s", fieldName);
-        return FALSE;
-    }
-
-    const char* valueStart = strchr(fieldPos + patternLen, '\"');
-    if (!valueStart) return FALSE;
-    valueStart++;
-    
-    const char* valueEnd = valueStart;
-    int escapeCount = 0;
-    while (*valueEnd) {
-        if (*valueEnd == '\\') {
-            escapeCount++;
-        } else if (*valueEnd == '\"' && (escapeCount % 2 == 0)) {
-            break;
-        } else {
-            escapeCount = 0;
-        }
-        valueEnd++;
-    }
-
-    if (*valueEnd != '\"') return FALSE;
-
-    size_t valueLen = valueEnd - valueStart;
-    if (valueLen >= maxLen) {
-        if (!allowTruncate) {
-            LOG_ERROR("JSON field too long: %s", fieldName);
-            return FALSE;
-        }
-        valueLen = maxLen - 1;
-    }
-    strncpy(output, valueStart, valueLen);
-    output[valueLen] = '\0';
-
-    return TRUE;
-}
-
-static BOOL ExtractJsonStringFieldExact(const char* json, const char* fieldName,
-                                        char* output, size_t maxLen) {
-    return ExtractJsonStringFieldInternal(json, fieldName, output, maxLen, FALSE);
-}
-
-static BOOL ExtractJsonStringFieldTruncated(const char* json, const char* fieldName,
-                                            char* output, size_t maxLen) {
-    return ExtractJsonStringFieldInternal(json, fieldName, output, maxLen, TRUE);
-}
-
-static BOOL ExtractSafeDownloadUrl(const char* json, char* output, size_t maxLen) {
-    if (!output || maxLen == 0) return FALSE;
-    output[0] = '\0';
-    if (!json) return FALSE;
-
-    const char* fieldName = "browser_download_url";
-    char pattern[128];
-    int patternLen = snprintf(pattern, sizeof(pattern), "\"%s\":", fieldName);
-    if (patternLen < 0 || (size_t)patternLen >= sizeof(pattern)) {
-        return FALSE;
-    }
-
-    const char* cursor = json;
-    while ((cursor = strstr(cursor, pattern)) != NULL) {
-        char candidate[URL_BUFFER_SIZE] = {0};
-        if (ExtractJsonStringFieldInternal(cursor, fieldName, candidate, sizeof(candidate), FALSE) &&
-            IsSafeUpdateDownloadUrlA(candidate)) {
-            HRESULT hr = StringCbCopyA(output, maxLen, candidate);
-            return SUCCEEDED(hr);
-        }
-        cursor += patternLen;
-    }
-
-    LOG_ERROR("No safe update download URL found");
-    return FALSE;
-}
-
-/** @brief Process JSON escape sequences (\n, \r, \", \\) */
-static void ProcessJsonEscapes(const char* input, char* output, size_t maxLen) {
-    if (!output || maxLen == 0) return;
-    output[0] = '\0';
-    if (!input) return;
-
-    size_t writePos = 0;
-
-    for (size_t i = 0; input[i] != '\0' && writePos < maxLen - 1; i++) {
-        if (input[i] == '\\' && input[i + 1] != '\0') {
-            switch (input[i + 1]) {
-                case 'n':
-                    output[writePos++] = '\r';
-                    if (writePos < maxLen - 1) output[writePos++] = '\n';
-                    i++;
-                    break;
-                case 'r':
-                    output[writePos++] = '\r';
-                    i++;
-                    break;
-                case '\"':
-                    output[writePos++] = '\"';
-                    i++;
-                    break;
-                case '\\':
-                    output[writePos++] = '\\';
-                    i++;
-                    break;
-                default:
-                    output[writePos++] = input[i];
-            }
-        } else {
-            output[writePos++] = input[i];
-        }
-    }
-    output[writePos] = '\0';
-}
-
-/**
  * @brief Parse pre-release type and number
  * @param preRelease String like "alpha2", "beta1", "rc3"
  * @param outType Priority: 1=alpha, 2=beta, 3=rc, 0=unknown
@@ -220,9 +83,9 @@ static void ProcessJsonEscapes(const char* input, char* output, size_t maxLen) {
 static void ParsePreReleaseInfo(const char* preRelease, int* outType, int* outNum) {
     *outType = 0;
     *outNum = 0;
-    
+
     if (!preRelease || !preRelease[0]) return;
-    
+
     for (int i = 0; i < PRE_RELEASE_TYPE_COUNT; i++) {
         const PreReleaseType* type = &PRE_RELEASE_TYPES[i];
         if (strncmp(preRelease, type->prefix, type->prefixLen) == 0) {
@@ -273,22 +136,22 @@ static BOOL ExtractPreRelease(const char* version, char* preRelease, size_t maxL
  */
 static int ComparePreRelease(const char* pre1, const char* pre2) {
     if (!pre1[0] && !pre2[0]) return 0;
-    
+
     if (!pre1[0]) return 1;
     if (!pre2[0]) return -1;
-    
+
     int type1, num1, type2, num2;
     ParsePreReleaseInfo(pre1, &type1, &num1);
     ParsePreReleaseInfo(pre2, &type2, &num2);
-    
+
     if (type1 != type2) {
         return (type1 > type2) ? 1 : -1;
     }
-    
+
     if (num1 != num2) {
         return (num1 > num2) ? 1 : -1;
     }
-    
+
     return strcmp(pre1, pre2);
 }
 
@@ -299,61 +162,22 @@ static int ComparePreRelease(const char* pre1, const char* pre2) {
 int CompareVersions(const char* version1, const char* version2) {
     int major1 = 0, minor1 = 0, patch1 = 0;
     int major2 = 0, minor2 = 0, patch2 = 0;
-    
+
     if (!ParseVersionCore(version1, &major1, &minor1, &patch1)) {
         major1 = minor1 = patch1 = 0;
     }
     if (!ParseVersionCore(version2, &major2, &minor2, &patch2)) {
         major2 = minor2 = patch2 = 0;
     }
-    
+
     if (major1 != major2) return (major1 > major2) ? 1 : -1;
     if (minor1 != minor2) return (minor1 > minor2) ? 1 : -1;
     if (patch1 != patch2) return (patch1 > patch2) ? 1 : -1;
-    
+
     char preRelease1[64] = {0};
     char preRelease2[64] = {0};
     ExtractPreRelease(version1, preRelease1, sizeof(preRelease1));
     ExtractPreRelease(version2, preRelease2, sizeof(preRelease2));
-    
+
     return ComparePreRelease(preRelease1, preRelease2);
-}
-
-/**
- * @brief Parse GitHub release JSON
- * @return TRUE if all required fields extracted
- * @note Strips 'v' prefix from tag_name
- */
-BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t versionMaxLen,
-                               char* downloadUrl, size_t urlMaxLen, char* releaseNotes, size_t notesMaxLen) {
-    if (latestVersion && versionMaxLen > 0) latestVersion[0] = '\0';
-    if (downloadUrl && urlMaxLen > 0) downloadUrl[0] = '\0';
-    if (releaseNotes && notesMaxLen > 0) releaseNotes[0] = '\0';
-
-    if (!ExtractJsonStringFieldExact(jsonResponse, "tag_name", latestVersion, versionMaxLen)) {
-        return FALSE;
-    }
-    
-    if (latestVersion[0] == 'v' || latestVersion[0] == 'V') {
-        memmove(latestVersion, latestVersion + 1, strlen(latestVersion));
-    }
-    
-    if (!ExtractSafeDownloadUrl(jsonResponse, downloadUrl, urlMaxLen)) {
-        return FALSE;
-    }
-    
-    char* rawNotes = (char*)malloc(NOTES_BUFFER_SIZE);
-    if (!rawNotes) {
-        return FALSE;
-    }
-
-    if (ExtractJsonStringFieldTruncated(jsonResponse, "body", rawNotes, NOTES_BUFFER_SIZE)) {
-        ProcessJsonEscapes(rawNotes, releaseNotes, notesMaxLen);
-    } else {
-        LOG_WARNING("Release notes not found, using default text");
-        StringCbCopyA(releaseNotes, notesMaxLen, "No release notes available.");
-    }
-
-    free(rawNotes);
-    return TRUE;
 }

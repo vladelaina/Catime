@@ -85,10 +85,10 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
     if (!buffer || bufferSize <= 0) {
         return;
     }
-    
+
     LPWSTR messageBuffer = NULL;
     DWORD size = FormatMessage(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER | 
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
         NULL,
@@ -96,7 +96,7 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
         (LPWSTR)&messageBuffer,
         0, NULL);
-    
+
     if (size > 0) {
         if (size >= 2 && messageBuffer[size-2] == L'\r' && messageBuffer[size-1] == L'\n') {
             messageBuffer[size-2] = L'\0';
@@ -109,4 +109,3 @@ void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize) {
 
     _snprintf_s(buffer, bufferSize, _TRUNCATE, "Unknown error (code: %lu)", errorCode);
 }
-

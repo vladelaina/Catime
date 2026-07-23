@@ -123,4 +123,3 @@ void ClearPendingSystemPositionRestore(void);
 BOOL OpenFileDialog(HWND hwnd, wchar_t* filePath, DWORD maxPath);
 
 #endif /* WINDOW_CORE_H */
-

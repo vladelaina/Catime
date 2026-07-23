@@ -17,4 +17,3 @@
 BOOL TryForwardSimpleCliToExisting(HWND hwndExisting, const wchar_t* lpCmdLine);
 
 #endif /* MAIN_CLI_ROUTING_H */
-

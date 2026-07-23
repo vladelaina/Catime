@@ -21,4 +21,3 @@ HANDLE GetLogFileHandle(void);
 CRITICAL_SECTION* GetLogCriticalSection(void);
 
 #endif /* LOG_CORE_H */
-

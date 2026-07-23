@@ -49,6 +49,14 @@ typedef struct {
     char* buffer;
 } HttpResources;
 
+typedef enum {
+    UPDATE_HTTP_OK = 0,
+    UPDATE_HTTP_CANCELLED,
+    UPDATE_HTTP_INIT_FAILED,
+    UPDATE_HTTP_CONNECT_FAILED,
+    UPDATE_HTTP_READ_FAILED
+} UpdateHttpResult;
+
 /* ============================================================================
  * Internal Function Prototypes
  * ============================================================================ */
@@ -59,6 +67,7 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 void CalculateScrollbarThumbRect(RECT clientRect, int scrollPos, int scrollMax,
                                 int scrollPage, RECT* outThumbRect);
 void DrawRoundedRect(HDC hdc, RECT rect, int radius, COLORREF color);
+int UpdateClampScrollPosition(int position, int maximum, int page);
 
 /* update_parser.c */
 BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t versionMaxLen,
@@ -66,6 +75,11 @@ BOOL ParseGitHubRelease(const char* jsonResponse, char* latestVersion, size_t ve
 
 /* update_core.c */
 void CheckForUpdateInternal(HWND hwnd, BOOL silentCheck);
+UpdateHttpResult UpdateHttp_FetchRelease(char** response);
+BOOL UpdateHttp_IsCancelRequested(void);
+void UpdateHttp_TrackInternet(HINTERNET handle);
+void UpdateHttp_TrackConnect(HINTERNET handle);
+void UpdateHttp_CloseTracked(HINTERNET* handle);
 
 /* update_ui.c */
 int ShowUpdateNotification(HWND hwnd, const char* currentVersion, const char* latestVersion,

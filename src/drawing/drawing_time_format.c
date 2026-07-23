@@ -39,15 +39,15 @@ static int ClampMillisecondsToSecondsCeil(int64_t milliseconds) {
 TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
     SYSTEMTIME st;
     GetLocalTime(&st);
-    
+
     int centiseconds = st.wMilliseconds / 10;
-    
+
     TimeComponents tc;
     tc.hours = st.wHour;
     tc.minutes = st.wMinute;
     tc.seconds = st.wSecond;
     tc.centiseconds = centiseconds;
-    
+
     if (!use24Hour) {
         if (tc.hours == 0) {
             tc.hours = 12;
@@ -55,7 +55,7 @@ TimeComponents GetCurrentTimeComponents(BOOL use24Hour) {
             tc.hours -= 12;
         }
     }
-    
+
     return tc;
 }
 
@@ -69,17 +69,17 @@ static int GetSmoothedCentiseconds(int64_t elapsed_ms, BOOL isCountdown) {
 }
 
 TimeComponents GetCountUpComponents(void) {
-    
+
     /* Single time sample for both seconds and centiseconds */
     int64_t now = CLOCK_IS_PAUSED ? g_pause_start_time : GetAbsoluteTimeMs();
     int64_t elapsed_ms = now - g_start_time;
     if (elapsed_ms < 0) elapsed_ms = 0;
-    
+
     int total_seconds = ClampMillisecondsToSecondsFloor(elapsed_ms);
-    
+
     /* Use real centiseconds sampled from elapsed milliseconds */
     int centis = GetSmoothedCentiseconds(elapsed_ms, FALSE);
-    
+
     TimeComponents tc;
     tc.hours = total_seconds / 3600;
     tc.minutes = (total_seconds % 3600) / 60;
@@ -89,12 +89,12 @@ TimeComponents GetCountUpComponents(void) {
 }
 
 TimeComponents GetCountDownComponents(void) {
-    
+
     /* Single time sample for both seconds and centiseconds */
     int64_t now = CLOCK_IS_PAUSED ? g_pause_start_time : GetAbsoluteTimeMs();
     int64_t remaining_ms = g_target_end_time - now;
     if (remaining_ms < 0) remaining_ms = 0;
-    
+
     /* With centiseconds shown, use real second value to avoid +1s display skew.
      * Without centiseconds, keep round-up behavior for UX (e.g. 10:00 not 9:59). */
     int total_seconds;
@@ -103,10 +103,10 @@ TimeComponents GetCountDownComponents(void) {
     } else {
         total_seconds = ClampMillisecondsToSecondsCeil(remaining_ms);
     }
-    
+
     /* Use real centiseconds sampled from remaining milliseconds */
     int centis = GetSmoothedCentiseconds(remaining_ms, TRUE);
-    
+
     TimeComponents tc;
     tc.hours = total_seconds / 3600;
     tc.minutes = (total_seconds % 3600) / 60;
@@ -124,35 +124,35 @@ void FormatTimeComponentsForDisplay(
     size_t bufferSize
 ) {
     if (!tc || !buffer || bufferSize == 0) return;
-    
+
     if (tc->hours > 0) {
         if (showMilliseconds) {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d",
                             tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d",
                             tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 default:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d",
                             tc->hours, tc->minutes, tc->seconds, tc->centiseconds);
                     break;
             }
         } else {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d",
                             tc->hours, tc->minutes, tc->seconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d",
                             tc->hours, tc->minutes, tc->seconds);
                     break;
                 default:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d",
                             tc->hours, tc->minutes, tc->seconds);
                     break;
             }
@@ -161,30 +161,30 @@ void FormatTimeComponentsForDisplay(
         if (showMilliseconds) {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d.%02d",
                             tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d:%02d.%02d",
                             tc->minutes, tc->seconds, tc->centiseconds);
                     break;
                 default:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d.%02d",
                             tc->minutes, tc->seconds, tc->centiseconds);
                     break;
             }
         } else {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d",
                             tc->minutes, tc->seconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d:%02d",
                             tc->minutes, tc->seconds);
                     break;
                 default:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d",
                             tc->minutes, tc->seconds);
                     break;
             }
@@ -193,15 +193,15 @@ void FormatTimeComponentsForDisplay(
         if (showMilliseconds) {
             switch (format) {
                 case TIME_FORMAT_ZERO_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:%02d.%02d",
                             tc->seconds, tc->centiseconds);
                     break;
                 case TIME_FORMAT_FULL_PADDED:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:00:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"00:00:%02d.%02d",
                             tc->seconds, tc->centiseconds);
                     break;
                 default:
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d.%02d",
                             tc->seconds, tc->centiseconds);
                     break;
             }
@@ -223,7 +223,7 @@ void FormatTimeComponentsForDisplay(
 
 void GetTimeText(wchar_t* buffer, size_t bufferSize) {
     if (!buffer || bufferSize == 0) return;
-    
+
 
     TimeFormatType finalFormat = GetActiveTimeFormat();
     BOOL finalShowMs = GetActiveShowMilliseconds();
@@ -236,18 +236,18 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
             /** Current time always shows hours (even if 0 in 24-hour mode) */
             if (finalShowMs) {
                 if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d",
                             tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
                 } else {
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d",
                             tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
                 }
             } else {
                 if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d",
                             tc.hours, tc.minutes, tc.seconds);
                 } else {
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d",
                             tc.hours, tc.minutes, tc.seconds);
                 }
             }
@@ -255,10 +255,10 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
             /** Milliseconds override seconds hiding */
             if (finalShowMs) {
                 if (finalFormat == TIME_FORMAT_ZERO_PADDED || finalFormat == TIME_FORMAT_FULL_PADDED) {
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%02d:%02d:%02d.%02d",
                             tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
                 } else {
-                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d", 
+                    _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d.%02d",
                             tc.hours, tc.minutes, tc.seconds, tc.centiseconds);
                 }
             } else {
@@ -274,7 +274,7 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
         FormatTimeComponentsForDisplay(&tc, finalFormat, finalShowMs, buffer, bufferSize);
     } else {
         int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
-        
+
         if (remaining <= 0) {
             /** Empty timeout text hides window */
             if (CLOCK_TOTAL_TIME == 0 && countdown_elapsed_time == 0) {
@@ -295,4 +295,3 @@ void GetTimeText(wchar_t* buffer, size_t bufferSize) {
         }
     }
 }
-

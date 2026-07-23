@@ -21,4 +21,3 @@ void ResetTimerMilliseconds(void);
 void PauseTimerMilliseconds(void);
 
 #endif /* DRAWING_TIMER_PRECISION_H */
-

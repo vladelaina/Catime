@@ -1,7 +1,7 @@
 /**
  * @file timer.c
  * @brief Multi-modal timer with high-precision tracking
- * 
+ *
  * QueryPerformanceCounter prevents drift in long-running timers.
  * Adaptive display formatting reduces visual jitter during transitions.
  */
@@ -17,10 +17,6 @@
 #include <string.h>
 #include <time.h>
 
-#define SECONDS_PER_MINUTE 60
-#define SECONDS_PER_HOUR 3600
-#define MINUTES_PER_HOUR 60
-#define MILLISECONDS_PER_SECOND 1000.0
 #define DEFAULT_FALLBACK_TIME 60  /* 1 minute provides reasonable default when configuration is invalid */
 
 bool CLOCK_IS_PAUSED = false;
@@ -115,95 +111,6 @@ void InitializeHighPrecisionTimer(void) {
     if (!QueryPerformanceFrequency(&timer_frequency)) return;
     if (!QueryPerformanceCounter(&timer_last_count)) return;
     high_precision_timer_initialized = true;
-}
-
-/** Leading spaces stabilize width when hours/minutes disappear during countdown */
-static void FormatTimeComponents(int hours, int minutes, int seconds, 
-                                 char* buffer, size_t buffer_size) {
-    if (hours > 0) {
-        snprintf(buffer, buffer_size, "%d:%02d:%02d", hours, minutes, seconds);
-    } else if (minutes > 0) {
-        snprintf(buffer, buffer_size, "    %d:%02d", minutes, seconds);
-    } else {
-        if (seconds < 10) {
-            snprintf(buffer, buffer_size, "          %d", seconds);
-        } else {
-            snprintf(buffer, buffer_size, "        %d", seconds);
-        }
-    }
-}
-
-static int ConvertTo12HourFormat(int hour24) {
-    if (hour24 == 0) return 12;
-    if (hour24 > 12) return hour24 - 12;
-    return hour24;
-}
-
-/** Cache displayed second to filter jitter from misaligned queries and refresh cycles */
-static void FormatSystemClock(char* time_text) {
-    SYSTEMTIME st;
-    GetLocalTime(&st);
-    if (last_displayed_second != -1) {
-        int expected_next = (last_displayed_second + 1) % SECONDS_PER_MINUTE;
-        BOOL is_rollover = (last_displayed_second == (SECONDS_PER_MINUTE - 1) && st.wSecond == 0);
-        
-        if (st.wSecond != expected_next && !is_rollover) {
-            if (st.wSecond != last_displayed_second) {
-                last_displayed_second = st.wSecond;
-            }
-        } else {
-            last_displayed_second = st.wSecond;
-        }
-    } else {
-        last_displayed_second = st.wSecond;
-    }
-    
-    int display_hour = GetActiveUse24Hour() ? st.wHour : ConvertTo12HourFormat(st.wHour);
-    
-    if (GetActiveShowSeconds()) {
-        snprintf(time_text, 64, "%d:%02d:%02d", display_hour, st.wMinute, last_displayed_second);
-    } else {
-        snprintf(time_text, 64, "%d:%02d", display_hour, st.wMinute);
-    }
-}
-
-static void FormatCountUpTime(char* time_text) {
-    // Elapsed time is now updated by HandleMainTimer in timer_events.c
-    
-    int hours = countup_elapsed_time / SECONDS_PER_HOUR;
-    int minutes = (countup_elapsed_time % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE;
-    int seconds = countup_elapsed_time % SECONDS_PER_MINUTE;
-    
-    FormatTimeComponents(hours, minutes, seconds, time_text, 64);
-}
-
-static void FormatCountdownTime(char* time_text) {
-    // Elapsed time is now updated by HandleMainTimer in timer_events.c
-    
-    int remaining = CLOCK_TOTAL_TIME - countdown_elapsed_time;
-    if (remaining <= 0) {
-        snprintf(time_text, 64, "    0:00");
-        return;
-    }
-    
-    int hours = remaining / SECONDS_PER_HOUR;
-    int minutes = (remaining % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE;
-    int seconds = remaining % SECONDS_PER_MINUTE;
-    
-    FormatTimeComponents(hours, minutes, seconds, time_text, 64);
-}
-
-/** Dispatch to formatter based on current mode */
-void FormatTime(int remaining_time, char* time_text) {
-    (void)remaining_time;
-    
-    if (CLOCK_SHOW_CURRENT_TIME) {
-        FormatSystemClock(time_text);
-    } else if (CLOCK_COUNT_UP) {
-        FormatCountUpTime(time_text);
-    } else {
-        FormatCountdownTime(time_text);
-    }
 }
 
 /** Parse "14 30t" → countdown to target time (assumes next day if in past) */
@@ -327,11 +234,11 @@ void ResetTimer(void) {
         }
         g_target_end_time = now + ((int64_t)CLOCK_TOTAL_TIME * 1000);
     }
-    
+
     CLOCK_IS_PAUSED = false;
     countdown_message_shown = false;
     g_pause_start_time = 0;
-    
+
     InitializeHighPrecisionTimer();
     ResetMillisecondAccumulator();
 }
@@ -340,7 +247,7 @@ void ResetTimer(void) {
 void TogglePauseTimer(void) {
     bool was_paused = CLOCK_IS_PAUSED;
     CLOCK_IS_PAUSED = !CLOCK_IS_PAUSED;
-    
+
     int64_t now = GetAbsoluteTimeMs();
 
     if (CLOCK_IS_PAUSED && !was_paused) {

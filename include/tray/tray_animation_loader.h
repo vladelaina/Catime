@@ -1,7 +1,7 @@
 /**
  * @file tray_animation_loader.h
  * @brief Animation resource loading from various sources
- * 
+ *
  * Supports: folders (icon sequences), GIF, WebP, ANI, static images, builtin icons.
  * Natural sorting for folder frames. Memory pool for efficient loading.
  */
@@ -102,7 +102,7 @@ const BuiltinAnimDef* GetBuiltinAnims(int* count);
  * @param iconWidth Target icon width
  * @param iconHeight Target icon height
  * @return TRUE on success, FALSE on failure
- * 
+ *
  * @details
  * Resolves name to full path, detects type, and loads accordingly.
  * Caller must call LoadedAnimation_Free() when done.
@@ -171,10 +171,9 @@ BOOL IsSafeAnimationRelativePath(const char* path);
  * @brief Check if name is a builtin animation (not custom file/folder)
  * @param name Animation identifier
  * @return TRUE for __logo__, __cpu__, __mem__, __battery__, __capslock__, __none__
- * 
+ *
  * @note Add new builtin types here to avoid scattered checks
  */
 BOOL IsBuiltinAnimationName(const char* name);
 
 #endif /* TRAY_ANIMATION_LOADER_H */
-

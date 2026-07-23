@@ -15,7 +15,7 @@
 /**
  * @brief Show Pomodoro loop count configuration dialog
  * @param hwndParent Parent window
- * 
+ *
  * @details
  * Configures: Number of Pomodoro cycles before long break
  * Format: Plain number (1-99)
@@ -35,12 +35,12 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
 /**
  * @brief Show Pomodoro time intervals configuration dialog
  * @param hwndParent Parent window
- * 
+ *
  * @details
  * Configures: [work, short break, long break] times
  * Format: Space-separated durations (e.g., "25m 5m 15m")
  * Persists to: [POMODORO]times
- * 
+ *
  * @note Max 10 intervals
  */
 void ShowPomodoroComboDialog(HWND hwndParent);
@@ -62,4 +62,3 @@ INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, 
 #define MAX_POMODORO_TIMES 10
 
 #endif /* DIALOG_POMODORO_H */
-

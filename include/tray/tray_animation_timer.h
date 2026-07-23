@@ -1,7 +1,7 @@
 /**
  * @file tray_animation_timer.h
  * @brief High-precision animation timer with adaptive frame rate
- * 
+ *
  * Uses multimedia timer (timeSetEvent) with interval-aware precision.
  * Separate internal tick from tray update to prevent Explorer throttling.
  * Adaptive frame rate adjusts to system load.
@@ -56,7 +56,7 @@ BOOL AnimationUpdateBackoff_ShouldRetry(BOOL backoffActive,
  * @param callback Timer callback function
  * @param userData User data for callback
  * @return TRUE on success, FALSE if unavailable (use SetTimer fallback)
- * 
+ *
  * @details
  * Attempts to use multimedia timer with precision matched to the internal tick.
  * Callback executes in worker thread - use thread-safe operations only.
@@ -82,4 +82,3 @@ BOOL IsAnimationTimerActive(void);
 BOOL IsUsingHighPrecisionTimer(void);
 
 #endif /* TRAY_ANIMATION_TIMER_H */
-

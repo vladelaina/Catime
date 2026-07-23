@@ -111,7 +111,7 @@ static void SetDefaultPomodoroTimes(void) {
 void LoadPomodoroConfig(void) {
     char configPath[MAX_PATH];
     GetConfigPath(configPath, MAX_PATH);
-    
+
     /* Read Pomodoro time options */
     char options[POMODORO_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
     BOOL optionsComplete = ReadIniStringExact(INI_SECTION_POMODORO, "POMODORO_TIME_OPTIONS",
@@ -131,7 +131,7 @@ void LoadPomodoroConfig(void) {
     }
 
     /* Read loop count */
-    g_AppConfig.pomodoro.loop_count = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT", 
+    g_AppConfig.pomodoro.loop_count = ReadIniInt(INI_SECTION_POMODORO, "POMODORO_LOOP_COUNT",
                                      DEFAULT_POMODORO_LOOP_COUNT, configPath);
     if (g_AppConfig.pomodoro.loop_count < MIN_POMODORO_LOOP_COUNT) {
         g_AppConfig.pomodoro.loop_count = MIN_POMODORO_LOOP_COUNT;
@@ -150,9 +150,9 @@ void BuildPomodoroMenu(HMENU hMenu) {
 
     HMENU hPomodoroMenu = CreatePopupMenu();
     if (!hPomodoroMenu) return;
-    
+
     wchar_t timeBuffer[64];
-    
+
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_START,
                 GetLocalizedString(NULL, L"Start"));
     AppendMenuW(hPomodoroMenu, MF_SEPARATOR, 0, NULL);
@@ -165,20 +165,20 @@ void BuildPomodoroMenu(HMENU hMenu) {
 
     for (int i = 0; i < timesCount; i++) {
         FormatPomodoroTime(g_AppConfig.pomodoro.times[i], timeBuffer, sizeof(timeBuffer)/sizeof(wchar_t));
-        
+
         UINT menuId;
         if (i == 0) menuId = CLOCK_IDM_POMODORO_WORK;
         else if (i == 1) menuId = CLOCK_IDM_POMODORO_BREAK;
         else if (i == 2) menuId = CLOCK_IDM_POMODORO_LBREAK;
         else menuId = CLOCK_IDM_POMODORO_TIME_BASE + i;
-        
+
         BOOL isCurrentPhase = (current_pomodoro_phase != POMODORO_PHASE_IDLE &&
                               current_pomodoro_time_index == i &&
                               !CLOCK_SHOW_CURRENT_TIME &&
                               !CLOCK_COUNT_UP &&
                               CLOCK_TOTAL_TIME == g_AppConfig.pomodoro.times[i]);
-        
-        AppendMenuW(hPomodoroMenu, MF_STRING | (isCurrentPhase ? MF_CHECKED : MF_UNCHECKED), 
+
+        AppendMenuW(hPomodoroMenu, MF_STRING | (isCurrentPhase ? MF_CHECKED : MF_UNCHECKED),
                     menuId, timeBuffer);
     }
 
@@ -192,10 +192,9 @@ void BuildPomodoroMenu(HMENU hMenu) {
 
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_COMBINATION,
               GetLocalizedString(NULL, L"Combination"));
-    
+
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                      GetLocalizedString(NULL, L"Pomodoro"))) {
         DestroyMenu(hPomodoroMenu);
     }
 }
-

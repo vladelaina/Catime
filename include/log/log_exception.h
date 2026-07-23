@@ -22,4 +22,3 @@ void SetupExceptionHandler(void);
 void GetLastErrorDescription(DWORD errorCode, char* buffer, int bufferSize);
 
 #endif /* LOG_EXCEPTION_H */
-

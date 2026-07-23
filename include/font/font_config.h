@@ -1,7 +1,7 @@
 /**
  * @file font_config.h
  * @brief Font configuration persistence
- * 
+ *
  * Handles reading and writing font settings to config.ini
  */
 
@@ -18,7 +18,7 @@
  * @brief Write font configuration to config file
  * @param fontFileName Font filename (relative or config-style path)
  * @param shouldReload TRUE to reload entire config after write
- * 
+ *
  * @return TRUE on success or if the value is already current
  *
  * @details Writes to [Display] FONT_FILE_NAME in config.ini.
@@ -27,4 +27,3 @@
 BOOL WriteConfigFont(const char* fontFileName, BOOL shouldReload);
 
 #endif /* FONT_CONFIG_H */
-

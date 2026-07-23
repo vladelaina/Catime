@@ -1,7 +1,7 @@
 /**
  * @file config_loader.h
  * @brief Configuration loading and parsing
- * 
+ *
  * Reads configuration from INI files and stores in structured snapshot.
  * Separated from application logic for better testability.
  */
@@ -21,7 +21,7 @@
 
 /**
  * @brief Complete configuration snapshot
- * 
+ *
  * @details
  * Intermediate storage between INI file and global variables.
  * Allows validation before application.
@@ -31,7 +31,7 @@ typedef struct {
     char language[32];
     BOOL fontLicenseAccepted;
     char fontLicenseVersion[16];
-    
+
     /* Display */
     char textColor[COLOR_HEX_BUFFER];
     int baseFontSize;
@@ -58,22 +58,22 @@ typedef struct {
     TimeFormatType timeFormat;
     BOOL showMilliseconds;
     char startupMode[20];
-    
+
     /* Timeout action */
     TimeoutActionType timeoutAction;
     char timeoutText[50];
     char timeoutFilePath[MAX_PATH];
     char timeoutWebsiteUrl[MAX_PATH];
-    
+
     /* Quick countdown presets */
     int timeOptions[MAX_TIME_OPTIONS];
     int timeOptionsCount;
-    
+
     /* Pomodoro */
     int pomodoroTimes[10];
     int pomodoroTimesCount;
     int pomodoroLoopCount;
-    
+
     /* Notifications */
     char timeoutMessage[NOTIFICATION_MESSAGE_BUFFER_SIZE];
     int notificationTimeoutMs;
@@ -88,10 +88,10 @@ typedef struct {
     int notificationWindowY;
     int notificationWindowWidth;
     int notificationWindowHeight;
-    
+
     /* Colors */
     char colorOptions[2048];
-    
+
     /* Hotkeys */
     WORD hotkeyShowTime;
     WORD hotkeyCountUp;
@@ -107,11 +107,11 @@ typedef struct {
     WORD hotkeyCustomCountdown;
     WORD hotkeyToggleMilliseconds;
     WORD hotkeyTopmost;
-    
+
     /* Recent files */
     RecentFile recentFiles[MAX_RECENT_FILES];
     int recentFilesCount;
-    
+
 } ConfigSnapshot;
 
 /* ============================================================================
@@ -123,7 +123,7 @@ typedef struct {
  * @param config_path Path to config.ini (UTF-8)
  * @param snapshot Output snapshot structure
  * @return TRUE on success, FALSE on error
- * 
+ *
  * @details
  * Reads all configuration items from INI file.
  * Does not apply to global variables (use config_applier for that).
@@ -135,11 +135,11 @@ BOOL LoadConfigFromFile(const char* config_path, ConfigSnapshot* snapshot);
  * @brief Validate configuration snapshot
  * @param snapshot Snapshot to validate
  * @return TRUE if valid, FALSE if critical errors found
- * 
+ *
  * @details
  * Performs range checks, sanitization, and security validation.
  * Automatically corrects out-of-range values.
- * 
+ *
  * Security checks:
  * - Filters dangerous timeout actions (SHUTDOWN/RESTART/SLEEP)
  * - Validates window and notification opacity ranges (10-100)
@@ -151,7 +151,7 @@ BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot);
 /**
  * @brief Initialize snapshot with default values
  * @param snapshot Snapshot to initialize
- * 
+ *
  * @details
  * Sets all fields to defaults from config_defaults module.
  * Useful for testing or resetting configuration.
@@ -159,4 +159,3 @@ BOOL ValidateConfigSnapshot(ConfigSnapshot* snapshot);
 void InitializeDefaultSnapshot(ConfigSnapshot* snapshot);
 
 #endif /* CONFIG_LOADER_H */
-

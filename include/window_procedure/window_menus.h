@@ -43,7 +43,7 @@ BOOL FindFontByIdRecursiveW(const wchar_t* folderPathW, int targetId, int* curre
 /**
  * @brief Map animation menu ID to file and start preview
  */
-BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* relPathUtf8, 
+BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* relPathUtf8,
                                 UINT* nextIdPtr, UINT targetId);
 
 /* ============================================================================
@@ -57,4 +57,3 @@ BOOL FindAnimationByIdRecursive(const wchar_t* folderPathW, const char* relPathU
 BOOL DispatchMenuPreview(HWND hwnd, UINT menuId);
 
 #endif /* WINDOW_MENUS_H */
-

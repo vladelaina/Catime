@@ -29,4 +29,3 @@ void UnregisterGlobalHotkeys(HWND hwnd);
 BOOL DispatchHotkey(HWND hwnd, int hotkeyId);
 
 #endif /* WINDOW_HOTKEYS_H */
-

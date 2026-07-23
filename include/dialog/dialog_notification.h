@@ -15,7 +15,7 @@
 /**
  * @brief Show notification messages configuration dialog
  * @param hwndParent Parent window
- * 
+ *
  * @details
  * Configures: Work/short break/long break notification messages
  * Supports: Emoji, multiline text, per-phase customization
@@ -35,7 +35,7 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 /**
  * @brief Show notification display settings dialog
  * @param hwndParent Parent window
- * 
+ *
  * @details
  * Configures: Display duration, opacity, fade effects
  * Controls: Slider for timeout (1-30s), opacity (10-100%)
@@ -55,7 +55,7 @@ INT_PTR CALLBACK NotificationDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM wPara
 /**
  * @brief Show comprehensive notification settings dialog
  * @param hwndParent Parent window
- * 
+ *
  * @details
  * All-in-one dialog combining:
  * - Message customization (multiline edit)
@@ -89,7 +89,7 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 /**
  * @note Notification configuration is loaded once at startup via ReadConfig()
  *       into g_AppConfig. Write functions are in config_notification.c:
- *       
+ *
  *       - WriteConfigNotificationMessages(timeout_msg)
  *       - WriteConfigNotificationTimeout(timeout_ms)
  *       - WriteConfigNotificationOpacity(opacity)
@@ -101,4 +101,3 @@ INT_PTR CALLBACK NotificationSettingsDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
  */
 
 #endif /* DIALOG_NOTIFICATION_H */
-

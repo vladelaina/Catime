@@ -40,4 +40,3 @@ void LogPackageIdentity(void);
 
 
 #endif /* LOG_SYSTEM_INFO_H */
-

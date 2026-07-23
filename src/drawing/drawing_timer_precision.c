@@ -14,19 +14,19 @@ void PauseTimerMilliseconds(void) {}
 
 /** @return Elapsed centiseconds (0-99) synchronized with main timer */
 int GetElapsedCentiseconds(void) {
-    
+
     int64_t calc_time_point;
-    
+
     if (CLOCK_IS_PAUSED) {
         calc_time_point = g_pause_start_time;
     } else {
         calc_time_point = GetAbsoluteTimeMs();
     }
-    
+
     if (CLOCK_SHOW_CURRENT_TIME) {
         return (int)((calc_time_point % 1000) / 10);
     }
-    
+
     if (CLOCK_COUNT_UP) {
         int64_t elapsed_ms = calc_time_point - g_start_time;
         if (elapsed_ms < 0) elapsed_ms = 0;
@@ -43,4 +43,3 @@ int GetSystemCentiseconds(void) {
     GetLocalTime(&st);
     return st.wMilliseconds / 10;
 }
-

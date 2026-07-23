@@ -1,7 +1,7 @@
 /**
  * @file color_parser.c
  * @brief Pure color parsing and conversion algorithms
- * 
+ *
  * No dependencies on global state - all functions are pure and testable.
  */
 #include <stdio.h>
@@ -19,7 +19,6 @@
 
 #define HEX_SHORT_LENGTH 4
 #define HEX_DIGITS_LENGTH 6
-#define NEAR_BLACK_COLOR "#000001"
 #define HEX_DIGITS "0123456789abcdefABCDEF"
 
 /* ============================================================================
@@ -50,27 +49,6 @@ static const CSSColor CSS_COLORS[] = {
  * Color Conversion Functions
  * ============================================================================ */
 
-void ColorRefToHex(COLORREF color, char* output, size_t size) {
-    if (!output || size == 0) return;
-
-    snprintf(output, size, "#%02X%02X%02X",
-             GetRValue(color), GetGValue(color), GetBValue(color));
-}
-
-void ReplaceBlackColor(const char* color, char* output, size_t output_size) {
-    if (!output || output_size == 0) return;
-    if (!color) {
-        output[0] = '\0';
-        return;
-    }
-
-    if (strcasecmp(color, "#000000") == 0) {
-        safe_strncpy(output, NEAR_BLACK_COLOR, output_size);
-    } else {
-        safe_strncpy(output, color, output_size);
-    }
-}
-
 /* ============================================================================
  * Color Parsing Functions
  * ============================================================================ */
@@ -88,19 +66,19 @@ static BOOL ParseCSSColor(const char* name, char* output, size_t size) {
 static BOOL ParseHexColor(const char* hex, char* output, size_t size) {
     const char* ptr = (hex[0] == '#') ? hex + 1 : hex;
     size_t len = strlen(ptr);
-    
+
     /* #RGB -> #RRGGBB */
     if (len == 3 && strspn(ptr, HEX_DIGITS) == 3) {
         snprintf(output, size, "#%c%c%c%c%c%c",
                 ptr[0], ptr[0], ptr[1], ptr[1], ptr[2], ptr[2]);
         return TRUE;
     }
-    
+
     if (len == HEX_DIGITS_LENGTH && strspn(ptr, HEX_DIGITS) == HEX_DIGITS_LENGTH) {
         snprintf(output, size, "#%s", ptr);
         return TRUE;
     }
-    
+
     return FALSE;
 }
 
@@ -166,7 +144,7 @@ static BOOL TryParseRGBWithSeparator(const char* str, const char* sep, int* r, i
 static BOOL ParseRGBColor(const char* rgb_input, char* output, size_t size) {
     int r = -1, g = -1, b = -1;
     const char* rgb_str = rgb_input;
-    
+
     if (strncmp(rgb_str, "rgb", 3) == 0) {
         rgb_str += 3;
         while (*rgb_str &&
@@ -174,7 +152,7 @@ static BOOL ParseRGBColor(const char* rgb_input, char* output, size_t size) {
             rgb_str++;
         }
     }
-    
+
     static const char* separators[] = {",", "，", ";", "；", " ", "|"};
     for (size_t i = 0; i < sizeof(separators) / sizeof(char*); i++) {
         if (TryParseRGBWithSeparator(rgb_str, separators[i], &r, &g, &b)) {
@@ -184,24 +162,29 @@ static BOOL ParseRGBColor(const char* rgb_input, char* output, size_t size) {
             }
         }
     }
-    
+
     return FALSE;
 }
 
 void normalizeColor(const char* input, char* output, size_t output_size) {
     if (!input || !output || output_size == 0) return;
-    
+
     while (isspace((unsigned char)*input)) input++;
-    
+
     char lower[COLOR_BUFFER_SIZE];
     strncpy(lower, input, sizeof(lower) - 1);
     lower[sizeof(lower) - 1] = '\0';
     for (char* p = lower; *p; p++) {
         *p = (char)tolower((unsigned char)*p);
     }
-    
+    size_t lowerLength = strlen(lower);
+    while (lowerLength > 0 &&
+           isspace((unsigned char)lower[lowerLength - 1])) {
+        lower[--lowerLength] = '\0';
+    }
+
     if (ParseCSSColor(lower, output, output_size)) return;
-    
+
     char cleaned[COLOR_BUFFER_SIZE] = {0};
     int j = 0;
     for (int i = 0; lower[i] && j < (int)sizeof(cleaned) - 1; i++) {
@@ -209,113 +192,90 @@ void normalizeColor(const char* input, char* output, size_t output_size) {
             cleaned[j++] = lower[i];
         }
     }
-    
+
     if (ParseHexColor(cleaned, output, output_size)) return;
-    
+
     if (ParseRGBColor(lower, output, output_size)) return;
-    
+
     safe_strncpy(output, input, output_size);
-}
-
-BOOL ColorStringToColorRef(const char* input, COLORREF* outColor) {
-    if (!input || !outColor) return FALSE;
-
-    char normalized[COLOR_HEX_BUFFER] = {0};
-    normalizeColor(input, normalized, sizeof(normalized));
-    if (normalized[0] != '#' || strlen(normalized) != HEX_COLOR_LENGTH) {
-        return FALSE;
-    }
-
-    unsigned int red = 0;
-    unsigned int green = 0;
-    unsigned int blue = 0;
-    if (sscanf(normalized + 1, "%2x%2x%2x", &red, &green, &blue) != 3) {
-        return FALSE;
-    }
-    for (size_t i = 1; i < HEX_COLOR_LENGTH; i++) {
-        if (!isxdigit((unsigned char)normalized[i])) return FALSE;
-    }
-
-    *outColor = RGB(red, green, blue);
-    return TRUE;
 }
 
 BOOL isValidColor(const char* input) {
     if (!input || !*input) return FALSE;
-    
+
     char normalized[COLOR_BUFFER_SIZE];
     normalizeColor(input, normalized, sizeof(normalized));
-    
+
     if (normalized[0] != '#' || strlen(normalized) != HEX_COLOR_LENGTH) {
         return FALSE;
     }
-    
+
     for (int i = 1; i < HEX_COLOR_LENGTH; i++) {
         if (!isxdigit((unsigned char)normalized[i])) {
             return FALSE;
         }
     }
-    
+
     return TRUE;
 }
 
 BOOL isValidColorOrGradient(const char* input) {
     if (!input || !*input) return FALSE;
-    
+
     /* Check if it contains underscore (gradient format) */
     if (strchr(input, '_') != NULL) {
         /* Gradient format: validate each color segment */
         char temp[COLOR_BUFFER_SIZE];
         strncpy(temp, input, sizeof(temp) - 1);
         temp[sizeof(temp) - 1] = '\0';
-        
+
         /* Use thread-safe strtok_s (Windows) */
         char* context = NULL;
         char* token = strtok_s(temp, "_", &context);
         int colorCount = 0;
-        
+
         while (token != NULL) {
             /* Trim whitespace */
             while (*token && isspace((unsigned char)*token)) token++;
-            
+
             /* Check for empty segment */
             if (*token == '\0') {
                 return FALSE;
             }
-            
+
             /* Each segment should be valid hex color */
             if (*token != '#') {
                 /* Must start with # for gradient colors */
                 return FALSE;
             }
-            
+
             const char* hex = token + 1;
             size_t len = strlen(hex);
-            
+
             /* Trim trailing whitespace from hex */
             while (len > 0 && isspace((unsigned char)hex[len - 1])) {
                 len--;
             }
-            
+
             /* Accept #RRGGBB (6 digits) */
             if (len != 6) {
                 return FALSE;
             }
-            
+
             for (size_t i = 0; i < len; i++) {
                 if (!isxdigit((unsigned char)hex[i])) {
                     return FALSE;
                 }
             }
-            
+
             colorCount++;
             token = strtok_s(NULL, "_", &context);
         }
-        
+
         /* Gradient must have at least 2 colors */
         return (colorCount >= 2);
     }
-    
+
     /* Single color: use existing validation */
     return isValidColor(input);
 }

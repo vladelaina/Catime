@@ -5,20 +5,19 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
-#include <limits.h>
 #include <wchar.h>
 #include <windows.h>
 #include "color/color_input_dialog.h"
+#include "color/color_input_edit.h"
 #include "color/color_parser.h"
 #include "color/color_state.h"
 #include "menu_preview.h"
 #include "dialog/dialog_common.h"
 #include "language.h"
+#include "utils/string_convert.h"
 #include "../resource/resource.h"
 
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
-#define COLOR_EDIT_ORIG_PROC_PROP L"Catime.ColorInput.OrigEditProc"
-
 static BOOL IsValidColorInputParentWindow(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) {
         return FALSE;
@@ -43,63 +42,6 @@ static HWND GetColorInputParent(HWND hwndDlg) {
     return IsValidColorInputParentWindow(hwndMain) ? hwndMain : NULL;
 }
 
-static BOOL ConvertColorInputToUtf8(const wchar_t* source, char* dest, size_t destSize) {
-    if (!source || !dest || destSize == 0 || destSize > INT_MAX) {
-        return FALSE;
-    }
-
-    dest[0] = '\0';
-    int required = WideCharToMultiByte(CP_UTF8, 0, source, -1, NULL, 0, NULL, NULL);
-    if (required <= 0 || (size_t)required > destSize) {
-        return FALSE;
-    }
-
-    return WideCharToMultiByte(CP_UTF8, 0, source, -1, dest,
-                               (int)destSize, NULL, NULL) > 0;
-}
-
-static WNDPROC GetColorEditOrigProc(HWND hwndEdit) {
-    return (WNDPROC)(LONG_PTR)GetPropW(hwndEdit, COLOR_EDIT_ORIG_PROC_PROP);
-}
-
-static BOOL SubclassColorEdit(HWND hwndEdit) {
-    if (!hwndEdit) {
-        return FALSE;
-    }
-
-    if (GetColorEditOrigProc(hwndEdit)) {
-        return TRUE;
-    }
-
-    SetLastError(0);
-    WNDPROC origProc = (WNDPROC)SetWindowLongPtr(hwndEdit, GWLP_WNDPROC,
-                                                 (LONG_PTR)ColorEditSubclassProc);
-    if (!origProc && GetLastError() != 0) {
-        return FALSE;
-    }
-
-    if (!SetPropW(hwndEdit, COLOR_EDIT_ORIG_PROC_PROP, (HANDLE)(LONG_PTR)origProc)) {
-        SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)origProc);
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-static void UnsubclassColorEdit(HWND hwndEdit) {
-    if (!hwndEdit) {
-        return;
-    }
-
-    WNDPROC origProc = GetColorEditOrigProc(hwndEdit);
-    if (!origProc) {
-        return;
-    }
-
-    SetWindowLongPtr(hwndEdit, GWLP_WNDPROC, (LONG_PTR)origProc);
-    RemovePropW(hwndEdit, COLOR_EDIT_ORIG_PROC_PROP);
-}
-
 /* ============================================================================
  * Helper Functions
  * ============================================================================ */
@@ -121,7 +63,7 @@ static void UpdateColorPreviewFromEdit(HWND hwndEdit) {
     if (!hwndMain) {
         return;
     }
-    if (!ConvertColorInputToUtf8(wcolor, color, sizeof(color))) {
+    if (!WideToUtf8(wcolor, color, sizeof(color))) {
         CancelPreview(hwndMain);
         return;
     }
@@ -133,48 +75,6 @@ static void UpdateColorPreviewFromEdit(HWND hwndEdit) {
     }
 
     CancelPreview(hwndMain);
-}
-
-/* ============================================================================
- * Edit Control Subclass
- * ============================================================================ */
-
-/**
- * @brief Custom callback for color preview updates
- */
-static LRESULT ColorEditCustomCallback(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, BOOL* pProcessed) {
-    (void)wParam;
-    (void)lParam;
-
-    switch (msg) {
-        case WM_CHAR:
-        case WM_PASTE:
-        case WM_CUT:
-            *pProcessed = FALSE;
-            PostMessage(hwnd, WM_APP + 1, 0, 0);
-            return 0;
-
-        case WM_APP + 1:
-            UpdateColorPreviewFromEdit(hwnd);
-            *pProcessed = TRUE;
-            return 0;
-    }
-
-    *pProcessed = FALSE;
-    return 0;
-}
-
-/**
- * @brief Subclass procedure for color edit control
- */
-LRESULT CALLBACK ColorEditSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    WNDPROC origProc = GetColorEditOrigProc(hwnd);
-    if (!origProc) {
-        return DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-
-    return Dialog_EditSubclassProc_Ex(hwnd, msg, wParam, lParam,
-                                      ColorEditCustomCallback, origProc);
 }
 
 /* ============================================================================
@@ -222,14 +122,14 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             /* Set localized dialog title and button text */
             SetWindowTextW(hwndDlg, GetLocalizedString(NULL, L"Set Color Value"));
             SetDlgItemTextW(hwndDlg, CLOCK_IDC_BUTTON_OK, GetLocalizedString(NULL, L"OK"));
-            
+
             /* Set localized format help text */
-            SetDlgItemTextW(hwndDlg, IDC_COLOR_FORMAT_HELP, 
+            SetDlgItemTextW(hwndDlg, IDC_COLOR_FORMAT_HELP,
                            GetLocalizedString(NULL, L"ColorFormatHelp"));
-            
+
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {
-                SubclassColorEdit(hwndEdit);
+                ColorInputEdit_Attach(hwndEdit);
 
                 if (CLOCK_TEXT_COLOR[0] != '\0') {
                     wchar_t wcolor[COLOR_BUFFER_SIZE] = {0};
@@ -254,7 +154,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
                 wchar_t wcolor[COLOR_BUFFER_SIZE];
                 GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, wcolor,
                               sizeof(wcolor) / sizeof(wchar_t));
-                if (!ConvertColorInputToUtf8(wcolor, color, sizeof(color))) {
+                if (!WideToUtf8(wcolor, color, sizeof(color))) {
                     Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
                     return TRUE;
                 }
@@ -301,6 +201,10 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             }
             break;
 
+        case COLOR_INPUT_EDIT_CHANGED:
+            UpdateColorPreviewFromEdit(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+            return TRUE;
+
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
                 HWND hwndMain = GetColorInputParent(hwndDlg);
@@ -326,7 +230,7 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
         case WM_DESTROY:
             /* Restore original edit control procedure */
-            UnsubclassColorEdit(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
+            ColorInputEdit_Detach(GetDlgItem(hwndDlg, CLOCK_IDC_EDIT));
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_COLOR, hwndDlg);
             break;
     }

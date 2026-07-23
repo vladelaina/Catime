@@ -3,7 +3,7 @@
  * @brief Strict CTAR v1 compressed embedded asset loader
  */
 
-#include "utils/compressed_resource.h"
+#include "compressed_resource_internal.h"
 
 #ifdef CATIME_COMPRESSED_EMBEDDED_RESOURCES
 
@@ -27,126 +27,11 @@
 #define CTAR_OFFSET_FONT_RAW_SIZE 24u
 #define CTAR_OFFSET_FLAGS 28u
 
-#define CTAR_GROUP_HEADER_SIZE 8u
-#define CTAR_GROUP_ENTRY_SIZE 8u
-#define CTAR_GROUP_VERSION 1u
-#define CTAR_GROUP_SUPPORTED_FLAGS 0u
-
-#define CTAR_MAX_CONTAINER_SIZE (128u * 1024u * 1024u)
-#define CTAR_MAX_COMPRESSED_GROUP_SIZE (64u * 1024u * 1024u)
-#define CTAR_MAX_LANGUAGE_GROUP_SIZE (8u * 1024u * 1024u)
-#define CTAR_MAX_FONT_GROUP_SIZE (64u * 1024u * 1024u)
-#define CTAR_MAX_LANGUAGE_MEMBER_SIZE (2u * 1024u * 1024u)
-#define CTAR_MAX_FONT_MEMBER_SIZE (32u * 1024u * 1024u)
-#define CTAR_MAX_GROUP_MEMBERS 1024u
-
-struct CompressedResourceGroup {
-    size_t rawSize;
-    size_t payloadOffset;
-    WORD memberCount;
-    CompressedResourceGroupKind kind;
-    BYTE data[];
-};
-
-static WORD ReadU16LE(const BYTE* data) {
-    return (WORD)((WORD)data[0] | ((WORD)data[1] << 8));
-}
-
-static DWORD ReadU32LE(const BYTE* data) {
-    return (DWORD)data[0] |
-           ((DWORD)data[1] << 8) |
-           ((DWORD)data[2] << 16) |
-           ((DWORD)data[3] << 24);
-}
-
 static BOOL AddSizeChecked(size_t left, size_t right, size_t* outValue) {
     if (!outValue || left > SIZE_MAX - right) {
         return FALSE;
     }
     *outValue = left + right;
-    return TRUE;
-}
-
-static BOOL GetGroupLimits(CompressedResourceGroupKind kind,
-                           const char** outMagic,
-                           size_t* outGroupLimit,
-                           size_t* outMemberLimit) {
-    if (!outMagic || !outGroupLimit || !outMemberLimit) {
-        return FALSE;
-    }
-
-    switch (kind) {
-        case COMPRESSED_RESOURCE_GROUP_LANGUAGES:
-            *outMagic = "CTLG";
-            *outGroupLimit = CTAR_MAX_LANGUAGE_GROUP_SIZE;
-            *outMemberLimit = CTAR_MAX_LANGUAGE_MEMBER_SIZE;
-            return TRUE;
-        case COMPRESSED_RESOURCE_GROUP_FONTS:
-            *outMagic = "CTFT";
-            *outGroupLimit = CTAR_MAX_FONT_GROUP_SIZE;
-            *outMemberLimit = CTAR_MAX_FONT_MEMBER_SIZE;
-            return TRUE;
-        default:
-            return FALSE;
-    }
-}
-
-static BOOL ValidateGroup(CompressedResourceGroup* group) {
-    const char* expectedMagic = NULL;
-    size_t groupLimit = 0;
-    size_t memberLimit = 0;
-    if (!group ||
-        !GetGroupLimits(group->kind, &expectedMagic, &groupLimit, &memberLimit) ||
-        group->rawSize < CTAR_GROUP_HEADER_SIZE ||
-        group->rawSize > groupLimit ||
-        memcmp(group->data, expectedMagic, 4) != 0 ||
-        ReadU16LE(group->data + 4) != CTAR_GROUP_VERSION) {
-        return FALSE;
-    }
-
-    WORD memberCount = ReadU16LE(group->data + 6);
-    if (memberCount == 0 || memberCount > CTAR_MAX_GROUP_MEMBERS) {
-        return FALSE;
-    }
-
-    size_t tableSize = (size_t)memberCount * CTAR_GROUP_ENTRY_SIZE;
-    size_t payloadOffset = 0;
-    if (!AddSizeChecked(CTAR_GROUP_HEADER_SIZE, tableSize, &payloadOffset) ||
-        payloadOffset > group->rawSize) {
-        return FALSE;
-    }
-
-    size_t payloadLength = 0;
-    for (WORD i = 0; i < memberCount; i++) {
-        const BYTE* entry = group->data + CTAR_GROUP_HEADER_SIZE +
-                            (size_t)i * CTAR_GROUP_ENTRY_SIZE;
-        WORD resourceId = ReadU16LE(entry);
-        WORD flags = ReadU16LE(entry + 2);
-        size_t length = (size_t)ReadU32LE(entry + 4);
-
-        if (resourceId == 0 ||
-            flags != CTAR_GROUP_SUPPORTED_FLAGS ||
-            length == 0 ||
-            length > memberLimit ||
-            !AddSizeChecked(payloadLength, length, &payloadLength)) {
-            return FALSE;
-        }
-
-        for (WORD previous = 0; previous < i; previous++) {
-            const BYTE* previousEntry = group->data + CTAR_GROUP_HEADER_SIZE +
-                                        (size_t)previous * CTAR_GROUP_ENTRY_SIZE;
-            if (ReadU16LE(previousEntry) == resourceId) {
-                return FALSE;
-            }
-        }
-    }
-
-    if (payloadLength != group->rawSize - payloadOffset) {
-        return FALSE;
-    }
-
-    group->memberCount = memberCount;
-    group->payloadOffset = payloadOffset;
     return TRUE;
 }
 
@@ -161,7 +46,8 @@ BOOL CompressedResource_LoadGroup(HINSTANCE hInstance,
     const char* expectedMagic = NULL;
     size_t rawLimit = 0;
     size_t memberLimit = 0;
-    if (!GetGroupLimits(kind, &expectedMagic, &rawLimit, &memberLimit)) {
+    if (!CompressedResource_GetGroupLimits(
+            kind, &expectedMagic, &rawLimit, &memberLimit)) {
         return FALSE;
     }
     (void)expectedMagic;
@@ -189,21 +75,29 @@ BOOL CompressedResource_LoadGroup(HINSTANCE hInstance,
     const BYTE* container = (const BYTE*)LockResource(resourceHandle);
     if (!container ||
         memcmp(container, "CTAR", 4) != 0 ||
-        ReadU16LE(container + CTAR_OFFSET_VERSION) != CTAR_VERSION ||
-        ReadU16LE(container + CTAR_OFFSET_HEADER_SIZE) != CTAR_HEADER_SIZE ||
-        ReadU32LE(container + CTAR_OFFSET_CONTAINER_SIZE) != resourceSizeValue ||
-        ReadU32LE(container + CTAR_OFFSET_FLAGS) != CTAR_SUPPORTED_FLAGS) {
+        CompressedResource_ReadU16LE(container + CTAR_OFFSET_VERSION) !=
+            CTAR_VERSION ||
+        CompressedResource_ReadU16LE(container + CTAR_OFFSET_HEADER_SIZE) !=
+            CTAR_HEADER_SIZE ||
+        CompressedResource_ReadU32LE(container + CTAR_OFFSET_CONTAINER_SIZE) !=
+            resourceSizeValue ||
+        CompressedResource_ReadU32LE(container + CTAR_OFFSET_FLAGS) !=
+            CTAR_SUPPORTED_FLAGS) {
         return FALSE;
     }
 
     size_t languageCompressedSize =
-        (size_t)ReadU32LE(container + CTAR_OFFSET_LANGUAGE_COMPRESSED_SIZE);
+        (size_t)CompressedResource_ReadU32LE(
+            container + CTAR_OFFSET_LANGUAGE_COMPRESSED_SIZE);
     size_t languageRawSize =
-        (size_t)ReadU32LE(container + CTAR_OFFSET_LANGUAGE_RAW_SIZE);
+        (size_t)CompressedResource_ReadU32LE(
+            container + CTAR_OFFSET_LANGUAGE_RAW_SIZE);
     size_t fontCompressedSize =
-        (size_t)ReadU32LE(container + CTAR_OFFSET_FONT_COMPRESSED_SIZE);
+        (size_t)CompressedResource_ReadU32LE(
+            container + CTAR_OFFSET_FONT_COMPRESSED_SIZE);
     size_t fontRawSize =
-        (size_t)ReadU32LE(container + CTAR_OFFSET_FONT_RAW_SIZE);
+        (size_t)CompressedResource_ReadU32LE(
+            container + CTAR_OFFSET_FONT_RAW_SIZE);
 
     if (languageCompressedSize == 0 ||
         languageCompressedSize > CTAR_MAX_COMPRESSED_GROUP_SIZE ||
@@ -267,99 +161,13 @@ BOOL CompressedResource_LoadGroup(HINSTANCE hInstance,
     if (status != TINFL_STATUS_DONE ||
         consumed != compressedSize ||
         produced != rawSize ||
-        !ValidateGroup(group)) {
+        !CompressedResource_ValidateGroup(group)) {
         free(group);
         return FALSE;
     }
 
     *outGroup = group;
     return TRUE;
-}
-
-BOOL CompressedResource_GetMember(const CompressedResourceGroup* group,
-                                  UINT resourceId,
-                                  const BYTE** outData,
-                                  size_t* outLength,
-                                  WORD* outFlags) {
-    if (outData) {
-        *outData = NULL;
-    }
-    if (outLength) {
-        *outLength = 0;
-    }
-    if (outFlags) {
-        *outFlags = 0;
-    }
-
-    if (!group || !outData || !outLength || resourceId == 0 || resourceId > 0xFFFFu) {
-        return FALSE;
-    }
-
-    size_t memberOffset = group->payloadOffset;
-    for (WORD i = 0; i < group->memberCount; i++) {
-        const BYTE* entry = group->data + CTAR_GROUP_HEADER_SIZE +
-                            (size_t)i * CTAR_GROUP_ENTRY_SIZE;
-        WORD entryResourceId = ReadU16LE(entry);
-        WORD entryFlags = ReadU16LE(entry + 2);
-        size_t entryLength = (size_t)ReadU32LE(entry + 4);
-
-        if (memberOffset > group->rawSize ||
-            entryLength > group->rawSize - memberOffset) {
-            return FALSE;
-        }
-
-        if (entryResourceId == (WORD)resourceId) {
-            *outData = group->data + memberOffset;
-            *outLength = entryLength;
-            if (outFlags) {
-                *outFlags = entryFlags;
-            }
-            return TRUE;
-        }
-
-        memberOffset += entryLength;
-    }
-
-    return FALSE;
-}
-
-BOOL CompressedResource_CopyTextMember(const CompressedResourceGroup* group,
-                                       UINT resourceId,
-                                       char** outBuffer,
-                                       size_t* outLength) {
-    if (!outBuffer) {
-        return FALSE;
-    }
-    *outBuffer = NULL;
-    if (outLength) {
-        *outLength = 0;
-    }
-
-    const BYTE* memberData = NULL;
-    size_t memberLength = 0;
-    if (!CompressedResource_GetMember(group, resourceId, &memberData,
-                                      &memberLength, NULL) ||
-        memberLength == SIZE_MAX ||
-        memchr(memberData, '\0', memberLength) != NULL) {
-        return FALSE;
-    }
-
-    char* copy = (char*)malloc(memberLength + 1);
-    if (!copy) {
-        return FALSE;
-    }
-
-    memcpy(copy, memberData, memberLength);
-    copy[memberLength] = '\0';
-    *outBuffer = copy;
-    if (outLength) {
-        *outLength = memberLength;
-    }
-    return TRUE;
-}
-
-void CompressedResource_FreeGroup(CompressedResourceGroup* group) {
-    free(group);
 }
 
 #endif /* CATIME_COMPRESSED_EMBEDDED_RESOURCES */

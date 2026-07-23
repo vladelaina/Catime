@@ -27,7 +27,7 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
               MAKEINTRESOURCE(CLOCK_IDD_NOTIFICATION_MESSAGES_DIALOG),
               hwndParent,
               NotificationMessagesDlgProc);
-    
+
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
     }
@@ -138,4 +138,3 @@ INT_PTR CALLBACK NotificationMessagesDlgProc(HWND hwndDlg, UINT msg, WPARAM wPar
 
     return FALSE;
 }
-

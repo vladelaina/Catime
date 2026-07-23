@@ -62,7 +62,7 @@ void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
     int secs = seconds % 60;
     int hours = minutes / 60;
     minutes %= 60;
-    
+
     if (hours > 0) {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d:%02d", hours, minutes, secs);
     } else if (secs == 0) {
@@ -71,4 +71,3 @@ void FormatPomodoroTime(int seconds, wchar_t* buffer, size_t bufferSize) {
         _snwprintf_s(buffer, bufferSize, _TRUNCATE, L"%d:%02d", minutes, secs);
     }
 }
-

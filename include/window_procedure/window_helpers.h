@@ -123,4 +123,3 @@ void RecalculateWindowSize(HWND hwnd);
 void SetTimeoutAction(const char* action);
 
 #endif /* WINDOW_HELPERS_H */
-

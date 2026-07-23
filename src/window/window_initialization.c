@@ -51,32 +51,32 @@ typedef enum {
  */
 static BOOL InitializeDpiAwareness(void) {
     LOG_INFO("Initializing DPI awareness");
-    
+
     HMODULE hUser32 = GetModuleHandleW(USER32_DLL);
     if (!hUser32) {
         LOG_WARNING("Failed to get user32.dll handle");
         return FALSE;
     }
-    
+
     /* Try Windows 10 1703+ per-monitor V2 (best quality) */
     typedef BOOL(WINAPI* SetProcessDpiAwarenessContextFunc)(DPI_AWARENESS_CONTEXT);
     SetProcessDpiAwarenessContextFunc setDpiCtx = NULL;
     CATIME_LOAD_PROC_ADDRESS(hUser32, "SetProcessDpiAwarenessContext", setDpiCtx);
-    
+
     if (setDpiCtx) {
         if (setDpiCtx(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
             LOG_INFO("DPI awareness: Per-Monitor V2 (Windows 10 1703+)");
             return TRUE;
         }
     }
-    
+
     /* Try Windows 8.1+ per-monitor (acceptable) */
     HMODULE hShcore = LoadLibraryW(SHCORE_DLL);
     if (hShcore) {
         typedef HRESULT(WINAPI* SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
         SetProcessDpiAwarenessFunc setDpiAwareness = NULL;
         CATIME_LOAD_PROC_ADDRESS(hShcore, "SetProcessDpiAwareness", setDpiAwareness);
-        
+
         if (setDpiAwareness) {
             if (SUCCEEDED(setDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE))) {
                 LOG_INFO("DPI awareness: Per-Monitor (Windows 8.1+)");
@@ -86,17 +86,17 @@ static BOOL InitializeDpiAwareness(void) {
         }
         FreeLibrary(hShcore);
     }
-    
+
     /* Final fallback: basic system DPI awareness (Windows Vista+) */
     typedef BOOL(WINAPI* SetProcessDPIAwareFunc)(VOID);
     SetProcessDPIAwareFunc setDPIAware = NULL;
     CATIME_LOAD_PROC_ADDRESS(hUser32, "SetProcessDPIAware", setDPIAware);
-    
+
     if (setDPIAware && setDPIAware()) {
         LOG_INFO("DPI awareness: System (legacy)");
         return TRUE;
     }
-    
+
     LOG_WARNING("Failed to set any DPI awareness level");
     return FALSE;
 }
@@ -108,7 +108,7 @@ static BOOL InitializeDpiAwareness(void) {
  */
 static BOOL InitializeFonts(HINSTANCE hInstance) {
     LOG_INFO("Initializing fonts");
-    
+
     if (IsFirstRun()) {
         LOG_INFO("First run detected, extracting embedded fonts");
         if (ExtractEmbeddedFontsToFolder(hInstance)) {
@@ -120,13 +120,13 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
             LOG_WARNING("Failed to extract embedded fonts");
         }
     }
-    
+
     if (NeedsFontLicenseVersionAcceptance()) {
         LOG_INFO("Font license acceptance required (will be handled in UI)");
     }
-    
+
     CheckAndFixFontPath();
-    
+
     /* Strip %LOCALAPPDATA% prefix if present for relative path access */
     char actualFontFileName[MAX_PATH];
     const char* localappdata_prefix = FONTS_PATH_PREFIX;
@@ -137,12 +137,12 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
         strncpy(actualFontFileName, FONT_FILE_NAME, sizeof(actualFontFileName) - 1);
         actualFontFileName[sizeof(actualFontFileName) - 1] = '\0';
     }
-    
+
     /* Try to load configured font */
     if (!LoadFontByNameAndGetRealName(hInstance, actualFontFileName,
                                       FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
         LOG_WARNING("Failed to load font: %s, attempting fallback to default font", actualFontFileName);
-        
+
         /* Fallback 1: Try default font */
         const char* defaultFont = DEFAULT_FONT_NAME;
         if (LoadFontByNameAndGetRealName(hInstance, defaultFont,
@@ -152,7 +152,7 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
                      "%s%s", FONTS_PATH_PREFIX, defaultFont);
             return TRUE;
         }
-        
+
         /* Fallback 2: Re-extract embedded fonts and retry */
         LOG_WARNING("Default font not found, re-extracting embedded fonts");
         if (ExtractEmbeddedFontsToFolder(hInstance)) {
@@ -164,10 +164,10 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
                 return TRUE;
             }
         }
-        
+
         /* Fallback 3: Try any available embedded font */
         LOG_WARNING("Attempting to load any available embedded font");
-        
+
         for (int i = 0; i < FONT_RESOURCES_COUNT; i++) {
             if (LoadFontByNameAndGetRealName(hInstance, fontResources[i].fontName,
                                             FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME))) {
@@ -177,7 +177,7 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
                 return TRUE;
             }
         }
-        
+
         /* Last resort: Use system default font name */
         LOG_ERROR("All font loading attempts failed, using system default font name");
         strncpy(FONT_INTERNAL_NAME, "Arial", sizeof(FONT_INTERNAL_NAME) - 1);
@@ -185,10 +185,10 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
         strncpy(FONT_RUNTIME_FILE_NAME, "%WINDIR%\\Fonts\\arial.ttf",
                 sizeof(FONT_RUNTIME_FILE_NAME) - 1);
         FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
-        
+
         return TRUE;  /* Continue even with system font */
     }
-    
+
     strncpy(FONT_RUNTIME_FILE_NAME, FONT_FILE_NAME,
             sizeof(FONT_RUNTIME_FILE_NAME) - 1);
     FONT_RUNTIME_FILE_NAME[sizeof(FONT_RUNTIME_FILE_NAME) - 1] = '\0';
@@ -202,20 +202,20 @@ static BOOL InitializeFonts(HINSTANCE hInstance) {
  */
 static BOOL InitializeDefaultSettings(void) {
     LOG_INFO("Initializing default settings");
-    
+
     SetConsoleOutputCP(CONSOLE_CODEPAGE_GBK);
     SetConsoleCP(CONSOLE_CODEPAGE_GBK);
-    
+
     ReadConfig();
     CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
-    
+
     if (!IsCiSmokeMode() && !EnsureAutoStart()) {
         LOG_WARNING("Auto-start registration could not be fully initialized");
     }
     InitializeDefaultLanguage();
-    
+
     CLOCK_TOTAL_TIME = g_AppConfig.timer.default_start_time;
-    
+
     LOG_INFO("Default settings initialized");
     return TRUE;
 }
@@ -226,24 +226,23 @@ static BOOL InitializeDefaultSettings(void) {
 
 BOOL InitializeApplication(HINSTANCE hInstance) {
     LOG_INFO("Application initialization started");
-    
+
     /* DPI awareness is optional */
     if (!InitializeDpiAwareness()) {
         LOG_WARNING("DPI awareness initialization failed, continuing anyway");
     }
-    
+
     /* Settings initialization with fallback */
     if (!InitializeDefaultSettings()) {
         LOG_WARNING("Default settings initialization failed, using built-in defaults");
         /* Continue with built-in defaults instead of failing */
     }
-    
+
     /* Font initialization with automatic fallback (always succeeds) */
     if (!InitializeFonts(hInstance)) {
         LOG_WARNING("Font initialization encountered issues, but fallback succeeded");
     }
-    
+
     LOG_INFO("Application initialization completed (with auto-correction if needed)");
     return TRUE;  /* Always succeed to prevent application crash */
 }
-

@@ -1,11 +1,11 @@
 /**
  * @file menu_preview.h
  * @brief Menu option live preview system
- * 
+ *
  * Provides real-time preview when hovering over menu items, allowing users
  * to see changes before applying them. Supports colors, fonts, time formats,
  * animations, and more.
- * 
+ *
  * Usage pattern:
  * 1. StartPreview(type, data, hwnd) - Show preview
  * 2. User sees effect in real-time
@@ -57,7 +57,7 @@ typedef enum {
  * @param type Preview type to activate
  * @param data Type-specific data (cast internally)
  * @param hwnd Window handle for UI updates
- * 
+ *
  * @details
  * - PREVIEW_TYPE_COLOR: data = const char* (hex color)
  * - PREVIEW_TYPE_FONT: data = const char* (font filename)
@@ -67,7 +67,7 @@ typedef enum {
  * - PREVIEW_TYPE_24HOUR: data = BOOL*
  * - PREVIEW_TYPE_ANIMATION: data = const char* (animation path)
  * - PREVIEW_TYPE_EFFECT: data = EffectType*
- * 
+ *
  * @note Cancels any existing preview before starting new one
  */
 void StartPreview(PreviewType type, const void* data, HWND hwnd);
@@ -75,7 +75,7 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd);
 /**
  * @brief Cancel preview and restore original state
  * @param hwnd Window handle for UI refresh
- * 
+ *
  * @note Safe to call when no preview is active
  */
 void CancelPreview(HWND hwnd);
@@ -84,7 +84,7 @@ void CancelPreview(HWND hwnd);
  * @brief Apply preview changes to configuration
  * @param hwnd Window handle for UI refresh
  * @return TRUE if preview was applied, FALSE if no preview active
- * 
+ *
  * @details Automatically saves to config and clears preview state
  */
 BOOL ApplyPreview(HWND hwnd);
@@ -115,7 +115,7 @@ PreviewType GetActivePreviewType(void);
  * @brief Get display color (preview takes precedence)
  * @param outColor Output buffer
  * @param bufferSize Buffer capacity
- * 
+ *
  * @details Drawing code should use this instead of CLOCK_TEXT_COLOR directly
  */
 void GetActiveColor(char* outColor, size_t bufferSize);
@@ -159,4 +159,3 @@ BOOL GetActiveUse24Hour(void);
 EffectType GetActiveEffect(void);
 
 #endif /* MENU_PREVIEW_H */
-

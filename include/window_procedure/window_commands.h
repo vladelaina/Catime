@@ -73,4 +73,3 @@ void HandlePluginExit(HWND hwnd);
 void RefreshCustomTextDisplayDialogFont(void);
 
 #endif /* WINDOW_COMMANDS_H */
-
