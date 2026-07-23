@@ -201,12 +201,9 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
 
     hasPending = HasPendingTrayUpdate();
 
-    if (hasPending &&
-        (IsTrayTooltipActive() || IsTrayInteractionSuspended())) {
-        ClearPendingTrayUpdate();
-        MarkTrayFrameDirty();
-    } else if (hasPending) {
-        UpdateTrayIconToCurrentFrameInternal();
+    if (hasPending) {
+        UpdateTrayIconToCurrentFrameInternal(
+            IsAnimationPreviewActiveSnapshot());
     }
 
 done:

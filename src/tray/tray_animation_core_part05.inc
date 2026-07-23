@@ -8,15 +8,24 @@
 }
 
 static void UpdateTrayIconToCurrentFrame(void) {
-    UpdateTrayIconToCurrentFrameInternal();
+    UpdateTrayIconToCurrentFrameInternal(FALSE);
 }
 
 static void UpdateTrayIconToCurrentFrameForPreview(void) {
-    if (IsTrayTooltipActive() || IsTrayInteractionSuspended()) {
-        MarkTrayFrameDirty();
-        return;
+    UpdateTrayIconToCurrentFrameInternal(TRUE);
+}
+
+static BOOL IsAnimationPreviewActiveSnapshot(void) {
+    BOOL active = FALSE;
+    BOOL locked = IsAnimCriticalSectionReady();
+    if (locked) {
+        EnterCriticalSection(&g_animCriticalSection);
     }
-    UpdateTrayIconToCurrentFrameInternal();
+    active = g_isPreviewActive;
+    if (locked) {
+        LeaveCriticalSection(&g_animCriticalSection);
+    }
+    return active;
 }
 
 /**
@@ -98,7 +107,8 @@ static void TrayAnimationTimerCallback(void* userData) {
     }
 
     BOOL presentationPaused =
-        IsTrayTooltipActive() || IsTrayInteractionSuspended();
+        IsTrayTooltipActive() ||
+        (IsTrayInteractionSuspended() && !g_isPreviewActive);
     BOOL retryDue = AnimationUpdateBackoff_ShouldRetry(
         InterlockedCompareExchange(&g_shellUpdateBackoffActive, 0, 0) != 0,
         (DWORD)InterlockedCompareExchange(&g_lastFailedUpdateAttemptTick, 0, 0),
