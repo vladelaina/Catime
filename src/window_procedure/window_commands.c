@@ -85,6 +85,26 @@ static LRESULT CmdExit(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+static LRESULT CmdCancelTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp; (void)lp;
+    
+    /* Detener cualquier temporizador en curso */
+    MainTimer_Stop();
+    CLOCK_SHOW_CURRENT_TIME = true;
+    CLOCK_COUNT_UP = false;
+    CLOCK_IS_PAUSED = false;
+    CLOCK_TOTAL_TIME = 0;
+    countdown_elapsed_time = 0;
+    countup_elapsed_time = 0;
+    countdown_message_shown = false;
+    ResetMillisecondAccumulator();
+    
+    /* Reiniciar en modo reloj (hora actual) */
+    MainTimer_Start(hwnd, GetTimerInterval());
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
+}
+
 static LRESULT CmdAbout(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     ShowAboutDialog(hwnd);
@@ -508,6 +528,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     /* Timer controls */
     {CLOCK_IDM_TIMER_PAUSE_RESUME, CmdPauseResume},
     {CLOCK_IDM_TIMER_RESTART, CmdRestartTimer},
+    {CLOCK_IDM_TIMER_CANCEL, CmdCancelTimer},
     {CLOCK_IDM_COUNTDOWN_RESET, CmdCountdownReset},
     {CLOCK_IDM_SHOW_CURRENT_TIME, CmdShowCurrentTime},
     {CLOCK_IDM_24HOUR_FORMAT, Cmd24HourFormat},

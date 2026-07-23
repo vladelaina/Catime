@@ -1061,6 +1061,17 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
     strncpy(targetName, currentName, sizeof(targetName) - 1);
     targetName[sizeof(targetName) - 1] = '\0';
 
+        /* --- INICIO DEL CAMBIO: Si no hay cuenta atrás activa en timer_arc, mostrar Caps Lock --- */
+    if (_stricmp(targetName, "timer_arc") == 0) {
+        BOOL timerActive = !CLOCK_SHOW_CURRENT_TIME && !CLOCK_COUNT_UP && CLOCK_TOTAL_TIME > 0 && countdown_elapsed_time < CLOCK_TOTAL_TIME;
+        if (!timerActive) {
+            sourceType = ANIM_SOURCE_CAPSLOCK;
+            strncpy(targetName, "__capslock__", sizeof(targetName) - 1);
+            targetName[sizeof(targetName) - 1] = '\0';
+        }
+    }
+    /* --- FIN DEL CAMBIO --- */
+
     /* Handle transparent/none icon */
     if (_stricmp(targetName, "__none__") == 0) {
         HICON transparentIcon = GetTransparentTrayIcon();
@@ -1147,6 +1158,29 @@ static void UpdateTrayIconToCurrentFrameInternal(void) {
         shellFrameIndex = displayIndex;
         shellFrameCount = currentAnim->count;
     }
+
+        /* --- INICIO DEL CAMBIO: Animación suave (interpolada) para timer_arc --- */
+    if (_stricmp(targetName, "timer_arc") == 0 && CLOCK_TOTAL_TIME > 0 && currentAnim->count > 1) {
+        static double timerArcSmoothP = 1.0; // 1.0 = 100% lleno, 0.0 = vacío
+        
+        // Calculamos el progreso real basado en el tiempo restante (0.0 a 1.0)
+        double targetP = 1.0 - ((double)countdown_elapsed_time / (double)CLOCK_TOTAL_TIME);
+        if (targetP < 0.0) targetP = 0.0;
+        if (targetP > 1.0) targetP = 1.0;
+        
+        // Interpolación suave: avanza un 30% del camino hacia el objetivo en cada tick (50ms)
+        // Esto elimina el efecto "choppy" y da una sensación fluida de más FPS
+        timerArcSmoothP += (targetP - timerArcSmoothP) * 0.3;
+        if (fabs(timerArcSmoothP - targetP) < 0.001) {
+            timerArcSmoothP = targetP;
+        }
+        
+        // Mapear el valor suavizado al índice del fotograma (000 vacío, 599 lleno)
+        displayIndex = (int)(timerArcSmoothP * (double)(currentAnim->count - 1));
+        *currentIndex = displayIndex;
+        shellFrameIndex = displayIndex;
+    }
+    /* --- FIN DEL CAMBIO --- */
 
     HICON currentIcon = currentAnim->icons[displayIndex];
     if (!currentIcon && displayIndex != *currentIndex) {

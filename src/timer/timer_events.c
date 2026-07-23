@@ -631,9 +631,18 @@ static void HandleCountdownCompletion(HWND hwnd) {
     HandleTimeoutActions(hwnd);
     
     if (CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHOW_TIME &&
-                            CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_COUNT_UP) {
+        CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_COUNT_UP &&
+        !IsSystemTimeoutAction(CLOCK_TIMEOUT_ACTION)) {
+        
         ResetTimerState(0);
         ResetMillisecondAccumulator();
+        
+        /* Forzar mostrar la hora actual después de cualquier acción */
+        CLOCK_SHOW_CURRENT_TIME = true;
+        CLOCK_COUNT_UP = false;
+        MainTimer_Stop();
+        StartMainTimerForTimeoutAction(hwnd, "force_show_time");
+        InvalidateRect(hwnd, NULL, TRUE);
     }
 }
 

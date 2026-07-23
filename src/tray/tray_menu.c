@@ -133,6 +133,14 @@ void ShowContextMenu(HWND hwnd) {
                CLOCK_IDM_TIMER_RESTART, 
                GetLocalizedString(NULL, L"Start Over"));
     
+        /* --- INICIO DEL CAMBIO: Añadir botón Cancelar --- */
+    BOOL canCancel = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0));
+    
+    AppendMenuW(hTimerManageMenu, MF_STRING | (canCancel ? MF_ENABLED : MF_GRAYED),
+               CLOCK_IDM_TIMER_CANCEL, 
+               L"Cancel Timer");
+    /* --- FIN DEL CAMBIO --- */
+
     const wchar_t* visibilityText = IsWindowVisible(hwnd) ?
         GetLocalizedString(NULL, L"Hide Window") :
         GetLocalizedString(NULL, L"Show Window");

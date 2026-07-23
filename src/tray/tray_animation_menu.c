@@ -341,15 +341,13 @@ static void ScanAnimationFolderRecursive(const wchar_t* folderPath,
                 continue;
             }
 
-            wchar_t fullPath[MAX_PATH];
-            int len1 = _snwprintf_s(fullPath, MAX_PATH, _TRUNCATE, L"%s\\%s", folderPath, findData.cFileName);
-            if (len1 < 0 || len1 >= MAX_PATH) continue;
-
-            ScanAnimationFolderRecursive(fullPath, newRelativePath, ctx, depth + 1, generation);
-            if (ctx->failed) {
+            /* Añadir la carpeta directamente como una animación seleccionable */
+            if (!AddAnimEntry(ctx, fileNameUtf8, newRelativePath, FALSE)) {
                 stoppedEarly = TRUE;
                 break;
             }
+            
+            /* Ya no escaneamos el interior de la carpeta para no llenar el menú con PNGs sueltos */
         } else {
             if (!AddAnimEntry(ctx, fileNameUtf8, newRelativePath, FALSE)) {
                 stoppedEarly = TRUE;
