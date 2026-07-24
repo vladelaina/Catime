@@ -5,6 +5,51 @@ const INITIAL_VISIBLE_ANIMATIONS = 18;
 const LOAD_MORE_SIZE = 24;
 const FEATURED_ANIMATIONS = 5;
 const preloadedUrls = new Set();
+const language = getCurrentLanguage();
+const copy = {
+    zh: {
+        pageTitle: 'Catime - 托盘动画库',
+        metaDescription: '浏览、预览并下载适用于 Catime 的托盘动画资源。',
+        noticeTitle: '作品与作者',
+        noticeBody: '本页面展示的托盘动画均在与作者沟通确认后收录。Catime 仅负责整理与展示，作品版权及相关权益归原作者所有。<br>需要转载、修改或用于其他用途时，请先联系原作者并遵循作者说明。<br>每一帧、每一处像素，都凝聚着设计师悉心打磨的心血。若您喜爱这些作品，请务必点击作者头像前往其主页，关注并支持他们。',
+        loading: '正在整理动画看板…',
+        emptyTitle: '没有找到对应资源',
+        emptyDescription: '请稍后再来看看。',
+        loadErrorTitle: '动画资源加载失败',
+        loadErrorDescription: '请稍后刷新页面重试。',
+        artistTag: '动画作者',
+        authorHomepage: '作者主页',
+        expand: '展开',
+        collapse: '收起',
+        reviews: count => `${count.toLocaleString('zh-CN')} 条评价`,
+        animations: count => `${count.toLocaleString('zh-CN')} 个托盘动画`,
+        loadMore: count => `加载更多（剩余 ${count.toLocaleString('zh-CN')} 个）`,
+        openProfile: name => `打开 ${name} 的作者主页`,
+        previewLabel: 'Windows 托盘动画效果预览',
+        previewAlt: '托盘图标效果',
+    },
+    en: {
+        pageTitle: 'Catime - Tray Animation Library',
+        metaDescription: 'Browse, preview, and download tray animations for Catime.',
+        noticeTitle: 'Works & Artists',
+        noticeBody: 'The tray animations shown on this page are included after confirmation with their creators. Catime only organizes and showcases them; all copyrights and related rights remain with the original creators.<br>For redistribution, modification, or any other use, please contact the original creator first and follow their terms.<br>Every frame and every pixel reflects the care of its designer. If you enjoy these works, please click the creator\'s avatar to visit their profile, follow them, and show your support.',
+        loading: 'Preparing the animation gallery…',
+        emptyTitle: 'No resources found',
+        emptyDescription: 'Please check back later.',
+        loadErrorTitle: 'Unable to load animations',
+        loadErrorDescription: 'Please refresh the page and try again later.',
+        artistTag: 'Animation Artist',
+        authorHomepage: 'Artist Profile',
+        expand: 'Expand',
+        collapse: 'Collapse',
+        reviews: count => `${count.toLocaleString('en-US')} reviews`,
+        animations: count => `${count.toLocaleString('en-US')} tray animations`,
+        loadMore: count => `Load more (${count.toLocaleString('en-US')} remaining)`,
+        openProfile: name => `Open ${name}'s profile`,
+        previewLabel: 'Windows tray animation preview',
+        previewAlt: 'Tray icon preview',
+    },
+}[language];
 
 const state = {
     collections: [],
@@ -17,6 +62,37 @@ const state = {
 
 const elements = {};
 
+function getCurrentLanguage() {
+    const saved = localStorage.getItem('catime-language');
+    if (saved === 'en' || saved === 'zh') return saved;
+    const browserLanguage = (navigator.languages && navigator.languages[0]) || navigator.language || 'zh-CN';
+    return /^en\b/i.test(browserLanguage) ? 'en' : 'zh';
+}
+
+function localizePage() {
+    document.documentElement.lang = language === 'en' ? 'en' : 'zh-CN';
+    document.title = copy.pageTitle;
+    document.querySelector('meta[name="description"]')?.setAttribute('content', copy.metaDescription);
+
+    const title = document.getElementById('creatorNoteTitleText');
+    const body = document.getElementById('creatorNoteBody');
+    if (title) title.textContent = copy.noticeTitle;
+    if (body) body.innerHTML = copy.noticeBody;
+
+    document.querySelector('.board-loading p').textContent = copy.loading;
+    document.querySelector('#boardEmpty h3').textContent = copy.emptyTitle;
+    document.querySelector('#boardEmpty p').textContent = copy.emptyDescription;
+    document.querySelector('.tray-simulator')?.setAttribute('aria-label', copy.previewLabel);
+    document.getElementById('trayIconImage')?.setAttribute('alt', copy.previewAlt);
+
+    if (window.CatimeUI?.translateNavLinks) {
+        const translations = language === 'en'
+            ? { linkTranslations: { '首页': 'Home', '指南': 'Guide', '关于': 'About', '插件': 'Plugins' }, spanTranslations: { '支持项目': 'Support', '下载': 'Download' } }
+            : { linkTranslations: { Home: '首页', Guide: '指南', About: '关于', Plugins: '插件' }, spanTranslations: { Support: '支持项目', Download: '下载' } };
+        window.CatimeUI.translateNavLinks(translations);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     Object.assign(elements, {
         board: document.getElementById('trayBoard'),
@@ -26,6 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
         trayDate: document.getElementById('trayDate'),
     });
 
+    localizePage();
+    window.initAOSOnce?.();
     updateTrayClock();
     setInterval(updateTrayClock, 30000);
     const immediateLibrary = loadImmediateLibraryData();
@@ -46,8 +124,8 @@ async function loadLibrary(hasImmediateLibrary) {
         if (state.collections.length) return;
         elements.board.innerHTML = '';
         elements.empty.hidden = false;
-        elements.empty.querySelector('h3').textContent = '动画资源加载失败';
-        elements.empty.querySelector('p').textContent = '请稍后刷新页面重试。';
+        elements.empty.querySelector('h3').textContent = copy.loadErrorTitle;
+        elements.empty.querySelector('p').textContent = copy.loadErrorDescription;
     }
 }
 
@@ -93,12 +171,12 @@ function createArtistRow(author, index) {
         <span class="artist-heading">
             <span class="artist-name-line">
                 ${createArtistName(author)}
-                <span class="artist-status">${escapeHtml(author.tag || '动画作者')}</span>
+                <span class="artist-status">${escapeHtml(author.tag || copy.artistTag)}</span>
                 ${createAuthorLinks(author)}
             </span>
             <span class="artist-metrics">${createArtistMetrics(author)}</span>
         </span>
-        ${canExpand ? `<span class="artist-expand-label">${isExpanded ? '收起' : '展开'} <i class="fas fa-chevron-down"></i></span>` : ''}
+        ${canExpand ? `<span class="artist-expand-label">${isExpanded ? copy.collapse : copy.expand} <i class="fas fa-chevron-down"></i></span>` : ''}
     `;
 
     toggle.addEventListener('mouseenter', () => previewFirstWork(author));
@@ -134,7 +212,7 @@ function createArtistRow(author, index) {
 function createAuthorLinks(author) {
     const links = author.links.length > 0
         ? author.links
-        : author.url ? [{ label: author.tag || '作者主页', url: author.url }] : [];
+        : author.url ? [{ label: author.tag || copy.authorHomepage, url: author.url }] : [];
     return links.map(link => `
         <a class="artist-gallery-tag" href="${escapeAttribute(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a>
     `).join('');
@@ -151,7 +229,7 @@ function createArtistName(author) {
 function preferredAuthorUrl(author) {
     const links = author.links.length > 0
         ? author.links
-        : author.url ? [{ label: author.tag || 'Homepage', url: author.url }] : [];
+        : author.url ? [{ label: author.tag || copy.authorHomepage, url: author.url }] : [];
     const pixiv = links.find(link => {
         if (link.label.toLowerCase() === 'pixiv') return true;
         try {
@@ -170,7 +248,7 @@ function setArtistRowExpanded(row, expanded, author) {
     const toggle = row.querySelector('.artist-identity');
     const label = row.querySelector('.artist-expand-label');
     toggle?.setAttribute('aria-expanded', String(expanded));
-    if (label) label.innerHTML = `${expanded ? '收起' : '展开'} <i class="fas fa-chevron-down"></i>`;
+    if (label) label.innerHTML = `${expanded ? copy.collapse : copy.expand} <i class="fas fa-chevron-down"></i>`;
 
     const details = row.querySelector(':scope > .artist-details');
     if (expanded && !details && author) row.appendChild(createArtistDetails(author));
@@ -184,7 +262,7 @@ function createArtistAvatar(author, highPriority = false) {
     const profileUrl = preferredAuthorUrl(author);
     const tag = profileUrl ? 'a' : 'span';
     const linkAttributes = profileUrl
-        ? ` href="${escapeAttribute(profileUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open ${escapeAttribute(author.name)} profile"`
+        ? ` href="${escapeAttribute(profileUrl)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeAttribute(copy.openProfile(author.name))}"`
         : '';
     if (author.avatar) {
         return `<${tag} class="artist-avatar artist-profile-link"${linkAttributes}><img src="${escapeAttribute(author.avatar)}" alt="${escapeAttribute(author.name)}"${imagePriority}></${tag}>`;
@@ -198,9 +276,9 @@ function createArtistAvatar(author, highPriority = false) {
 
 function createArtistMetrics(author) {
     if (author.rating > 0) {
-        return `<span class="artist-rating"><i class="fas fa-star"></i> ${author.rating.toFixed(1)}</span><span>${author.reviewCount.toLocaleString('zh-CN')} 条评价</span>`;
+        return `<span class="artist-rating"><i class="fas fa-star"></i> ${author.rating.toFixed(1)}</span><span>${copy.reviews(author.reviewCount)}</span>`;
     }
-    return `<span class="artist-rating"><i class="fas fa-star"></i></span><span>${author.total.toLocaleString('zh-CN')} 个托盘动画</span>`;
+    return `<span class="artist-rating"><i class="fas fa-star"></i></span><span>${copy.animations(author.total)}</span>`;
 }
 
 function createFeaturedGallery(author, highPriority = false) {
@@ -258,7 +336,7 @@ function createCollectionSection(collection) {
         const loadMore = document.createElement('button');
         loadMore.type = 'button';
         loadMore.className = 'load-more';
-        loadMore.textContent = `加载更多（剩余 ${(collection.count - visibleCount).toLocaleString('zh-CN')} 个）`;
+        loadMore.textContent = copy.loadMore(collection.count - visibleCount);
         loadMore.addEventListener('click', event => {
             event.stopPropagation();
             state.userInteracted = true;

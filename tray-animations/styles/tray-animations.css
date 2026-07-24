@@ -56,9 +56,21 @@
 
 .tray-board-section {
     min-height: 100vh;
-    padding: 110px 0 150px;
+    padding: 45px 0 150px;
     background: transparent;
     position: relative;
+}
+
+.creator-note .section-title i.fa-heart {
+    display: inline-block;
+    color: var(--accent-color);
+    opacity: 0.8;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.creator-note .section-title:hover i.fa-heart {
+    animation: heartbeat 1.5s infinite;
+    opacity: 1;
 }
 
 /* Ambient Bokeh Spheres */
@@ -112,6 +124,12 @@
     background: var(--card-bg);
     border: 1.5px solid rgba(122, 162, 247, 0.35);
     box-shadow: 0 15px 45px rgba(122, 162, 247, 0.12);
+}
+
+/* The expanded details view contains the complete collection. Keep the
+   compact preview row out of the layout so the same assets are not shown twice. */
+.artist-showcase.expanded .artist-featured-gallery {
+    display: none;
 }
 
 .artist-showcase-static {
@@ -630,43 +648,6 @@
 
 .board-empty p { margin: 0; }
 
-.creator-note {
-    position: relative;
-    z-index: 2;
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: 18px;
-    margin-bottom: 45px;
-    padding: 0 4px 28px;
-    border-bottom: 1px solid rgba(120, 127, 153, 0.2);
-    color: var(--tray-muted);
-}
-
-.creator-note-icon {
-    display: flex;
-    width: 36px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    color: var(--tray-red);
-    font-size: 1rem;
-}
-
-.creator-note-copy h2 {
-    margin: 0 0 8px;
-    color: var(--heading-color);
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0;
-}
-
-.creator-note-copy p {
-    max-width: 880px;
-    margin: 0;
-    font-size: 0.88rem;
-    line-height: 1.8;
-}
-
 .tray-simulator {
     position: fixed;
     right: 24px;
@@ -863,7 +844,8 @@
 }
 
 @media (max-width: 768px) {
-    .tray-board-section { padding: 150px 0 85px; }
+    .creator-note.support-project { padding-top: 220px; padding-bottom: 48px; }
+    .tray-board-section { padding: 30px 0 85px; }
     .tray-board { gap: 30px; }
     .artist-showcase { padding: 20px 20px 62px; border-radius: 20px; }
     .artist-showcase-static { padding-bottom: 20px; }
