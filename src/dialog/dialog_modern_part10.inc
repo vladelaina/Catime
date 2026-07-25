@@ -186,7 +186,15 @@
             if (control && control->comboScrollDragging) {
                 control->comboScrollDragging = FALSE;
                 if (GetCapture() == hwnd) ReleaseCapture();
-                InvalidateRect(hwnd, NULL, FALSE);
+                ModernRefreshComboListPointerState(hwnd, control);
+                return 0;
+            }
+            break;
+        case WM_CANCELMODE:
+            if (control && control->comboScrollDragging) {
+                control->comboScrollDragging = FALSE;
+                if (GetCapture() == hwnd) ReleaseCapture();
+                ModernRefreshComboListPointerState(hwnd, control);
                 return 0;
             }
             break;
@@ -194,7 +202,7 @@
             if (control && control->comboScrollDragging &&
                 (HWND)lParam != hwnd) {
                 control->comboScrollDragging = FALSE;
-                InvalidateRect(hwnd, NULL, FALSE);
+                ModernRefreshComboListPointerState(hwnd, control);
             }
             break;
         case WM_SETCURSOR:

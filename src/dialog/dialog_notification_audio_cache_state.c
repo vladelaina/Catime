@@ -120,17 +120,19 @@ BOOL NotificationAudio_StoreCache(
     return TRUE;
 }
 
-void NotificationAudio_MarkCacheScanFailed(void) {
+void NotificationAudio_MarkCacheScanFailed(LONG generation) {
+    BOOL markedFailed = FALSE;
     AcquireSRWLockExclusive(&g_soundFileCacheLock);
-    if (!NotificationAudio_IsScanShuttingDown()) {
+    if (!NotificationAudio_IsScanCanceled(generation)) {
         ZeroMemory(g_soundFileCache, sizeof(g_soundFileCache));
         g_soundFileCacheCount = 0;
         g_soundFileCacheReady = FALSE;
         g_soundFileCacheFailed = TRUE;
         InterlockedExchange(&g_soundFileLastScanTick, (LONG)GetTickCount());
+        markedFailed = TRUE;
     }
     ReleaseSRWLockExclusive(&g_soundFileCacheLock);
-    NotificationAudio_NotifyCacheUpdated();
+    if (markedFailed) NotificationAudio_NotifyCacheUpdated();
 }
 
 int NotificationAudio_CopyCache(

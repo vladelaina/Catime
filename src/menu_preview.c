@@ -18,9 +18,6 @@ extern BOOL IS_PREVIEWING;
 extern char PREVIEW_FONT_NAME[MAX_PATH];
 extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 extern void ResetTimerWithInterval(HWND hwnd);
-extern BOOL WriteConfigColor(const char* color);
-extern BOOL WriteConfigTimeFormat(TimeFormatType format);
-extern BOOL WriteConfigShowMilliseconds(BOOL showMilliseconds);
 PreviewState g_previewState = {PREVIEW_TYPE_NONE};
 static BOOL ShouldCleanupPreviewEffectBuffers(EffectType previousPreviewEffect,
                                               EffectType nextPreviewEffect) {
@@ -66,14 +63,47 @@ static BOOL RestoreConfiguredFontAfterPreview(void) {
     }
     return TRUE;
 }
-void StartPreview(PreviewType type, const void* data, HWND hwnd) {
+BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
+    if (type <= PREVIEW_TYPE_NONE || type > PREVIEW_TYPE_EFFECT || !data) {
+        return FALSE;
+    }
+    if ((type == PREVIEW_TYPE_COLOR || type == PREVIEW_TYPE_FONT ||
+         type == PREVIEW_TYPE_ANIMATION) && !*(const char*)data) return FALSE;
+    if (type == PREVIEW_TYPE_COLOR &&
+        g_previewState.type == PREVIEW_TYPE_COLOR) {
+        const char* colorHex = (const char*)data;
+        if (!colorHex || !colorHex[0] ||
+            _stricmp(g_previewState.data.colorHex, colorHex) == 0) {
+            return colorHex && colorHex[0];
+        }
+        strncpy_s(g_previewState.data.colorHex,
+                  sizeof(g_previewState.data.colorHex), colorHex, _TRUNCATE);
+        if (hwnd) ResetTimerWithInterval(hwnd);
+        RefreshToastNotificationColors();
+        if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
+        return TRUE;
+    }
+    if (type == PREVIEW_TYPE_ANIMATION &&
+        g_previewState.type == PREVIEW_TYPE_ANIMATION) {
+        const char* animPath = (const char*)data;
+        if (!animPath || !animPath[0] ||
+            _stricmp(g_previewState.data.animationPath, animPath) == 0) {
+            return animPath && animPath[0];
+        }
+        if (!StartAnimationPreview(animPath)) {
+            return FALSE;
+        }
+        strncpy_s(g_previewState.data.animationPath, MAX_PATH,
+                  animPath, _TRUNCATE);
+        return TRUE;
+    }
     if (type == PREVIEW_TYPE_EFFECT && g_previewState.type == PREVIEW_TYPE_EFFECT) {
         if (!data) {
-            return;
+            return FALSE;
         }
         EffectType effect = *(const EffectType*)data;
         if (g_previewState.data.effect == effect) {
-            return;
+            return TRUE;
         }
         EffectType previousEffect = g_previewState.data.effect;
         g_previewState.data.effect = effect;
@@ -81,25 +111,25 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             CleanupDrawingEffects();
         }
         if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
-        return;
+        return TRUE;
     }
     if (type == PREVIEW_TYPE_FONT && g_previewState.type == PREVIEW_TYPE_FONT) {
         const char* fontName = (const char*)data;
         if (!fontName || !fontName[0]) {
-            return;
+            return FALSE;
         }
         if (_stricmp(g_previewState.data.font.fontName, fontName) == 0) {
-            return;
+            return TRUE;
         }
         char internalName[MAX_PATH] = {0};
         if (!LoadPreviewFontName(fontName, internalName, sizeof(internalName))) {
-            return;
+            return FALSE;
         }
         strncpy_s(g_previewState.data.font.fontName, MAX_PATH, fontName, _TRUNCATE);
         strncpy_s(g_previewState.data.font.internalName, MAX_PATH, internalName, _TRUNCATE);
         RefreshCustomTextDisplayDialogFont();
         if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
-        return;
+        return TRUE;
     }
     if (IsPreviewActive()) CancelPreview(hwnd);
     g_previewState.type = type;
@@ -117,7 +147,7 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             char internalName[MAX_PATH] = {0};
             if (!LoadPreviewFontName(fontName, internalName, sizeof(internalName))) {
                 g_previewState.type = PREVIEW_TYPE_NONE;
-                return;
+                return FALSE;
             }
             strncpy_s(g_previewState.data.font.fontName, MAX_PATH, fontName, _TRUNCATE);
             strncpy_s(g_previewState.data.font.internalName, MAX_PATH, internalName, _TRUNCATE);
@@ -140,20 +170,29 @@ void StartPreview(PreviewType type, const void* data, HWND hwnd) {
             break;
         case PREVIEW_TYPE_ANIMATION: {
             const char* animPath = (const char*)data;
+            if (!StartAnimationPreview(animPath)) {
+                g_previewState.type = PREVIEW_TYPE_NONE;
+                return FALSE;
+            }
             strncpy_s(g_previewState.data.animationPath, MAX_PATH, animPath, _TRUNCATE);
-            StartAnimationPreview(animPath);
             break;
         }
         case PREVIEW_TYPE_EFFECT:
-            g_previewState.data.effect = *(EffectType*)data;
+            g_previewState.data.effect = *(const EffectType*)data;
+            if (TextEffect_UsesSharedEffectBuffer(CLOCK_TEXT_EFFECT) &&
+                !TextEffect_UsesSharedEffectBuffer(
+                    g_previewState.data.effect)) {
+                CleanupDrawingEffects();
+            }
             break;
         default:
             g_previewState.type = PREVIEW_TYPE_NONE;
-            return;
+            return FALSE;
     }
     if (hwnd && type != PREVIEW_TYPE_ANIMATION) {
         InvalidateRect(hwnd, NULL, TRUE);
     }
+    return TRUE;
 }
 void CancelPreview(HWND hwnd) {
     if (g_isPreviewActive || g_previewState.type == PREVIEW_TYPE_ANIMATION) {
@@ -186,76 +225,4 @@ void CancelPreview(HWND hwnd) {
     }
     if (needsTimerReset && hwnd) ResetTimerWithInterval(hwnd);
     if (needsRedraw && hwnd) InvalidateRect(hwnd, NULL, TRUE);
-}
-BOOL ApplyPreview(HWND hwnd) {
-    if (!IsPreviewActive()) return FALSE;
-    PreviewType appliedType = g_previewState.type;
-    switch (appliedType) {
-        case PREVIEW_TYPE_COLOR:
-            if (!WriteConfigColor(g_previewState.data.colorHex)) {
-                return FALSE;
-            }
-            if (hwnd) ResetTimerWithInterval(hwnd);
-            break;
-        case PREVIEW_TYPE_FONT:
-            if (!WriteConfigFont(g_previewState.data.font.fontName, FALSE) ||
-                !FlushConfigToDisk()) {
-                CancelPreview(hwnd);
-                return FALSE;
-            }
-            strncpy_s(FONT_FILE_NAME, sizeof(FONT_FILE_NAME),
-                     g_previewState.data.font.fontName, _TRUNCATE);
-            strncpy_s(FONT_RUNTIME_FILE_NAME, sizeof(FONT_RUNTIME_FILE_NAME),
-                     g_previewState.data.font.fontName, _TRUNCATE);
-            strncpy_s(FONT_INTERNAL_NAME, sizeof(FONT_INTERNAL_NAME),
-                     g_previewState.data.font.internalName, _TRUNCATE);
-            break;
-        case PREVIEW_TYPE_TIME_FORMAT:
-            if (!WriteConfigTimeFormat(g_previewState.data.timeFormat)) {
-                return FALSE;
-            }
-            break;
-        case PREVIEW_TYPE_MILLISECONDS:
-            if (!WriteConfigShowMilliseconds(g_previewState.data.showMilliseconds)) {
-                return FALSE;
-            }
-            break;
-        case PREVIEW_TYPE_SECONDS:
-            if (!WriteConfigKeyValue("CLOCK_SHOW_SECONDS",
-                                     g_previewState.data.showSeconds ? "TRUE" : "FALSE")) {
-                return FALSE;
-            }
-            CLOCK_SHOW_SECONDS = g_previewState.data.showSeconds;
-            if (hwnd) ResetTimerWithInterval(hwnd);
-            break;
-        case PREVIEW_TYPE_24HOUR:
-            if (!WriteConfigKeyValue("CLOCK_USE_24HOUR",
-                                     g_previewState.data.use24Hour ? "TRUE" : "FALSE")) {
-                return FALSE;
-            }
-            CLOCK_USE_24HOUR = g_previewState.data.use24Hour;
-            break;
-        case PREVIEW_TYPE_ANIMATION:
-            break;
-        case PREVIEW_TYPE_EFFECT:
-            break;
-        default:
-            return FALSE;
-    }
-    g_previewState.type = PREVIEW_TYPE_NONE;
-    if (appliedType == PREVIEW_TYPE_FONT) {
-        RefreshCustomTextDisplayDialogFont();
-    }
-    if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
-    return TRUE;
-}
-void MarkAnimationPreviewApplied(HWND hwnd) {
-    if (g_previewState.type != PREVIEW_TYPE_ANIMATION) {
-        return;
-    }
-    g_previewState.type = PREVIEW_TYPE_NONE;
-    g_previewState.data.animationPath[0] = '\0';
-    if (hwnd) {
-        InvalidateRect(hwnd, NULL, TRUE);
-    }
 }

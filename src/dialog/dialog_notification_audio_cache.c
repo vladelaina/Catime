@@ -67,7 +67,7 @@ void NotificationAudio_RequestCacheScanAsync(void) {
     if (thread) {
         g_hSoundScanThread = thread;
     } else {
-        NotificationAudio_MarkCacheScanFailed();
+        NotificationAudio_MarkCacheScanFailed(generation);
     }
     ReleaseSRWLockExclusive(&g_soundScanThreadLock);
 }

@@ -105,6 +105,7 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_RBUTTONUP, HandleRButtonUp},
     {WM_CONTEXTMENU, HandleContextMenu},
     {WM_CAPTURECHANGED, HandleCaptureChanged},
+    {WM_CANCELMODE, HandleCancelMode},
     {WM_MOUSEWHEEL, HandleMouseWheel},
     {WM_MOUSEMOVE, HandleMouseMove},
     {WM_PAINT, HandlePaint},

@@ -8,24 +8,11 @@
 }
 
 static void UpdateTrayIconToCurrentFrame(void) {
-    UpdateTrayIconToCurrentFrameInternal(FALSE);
+    UpdateTrayIconToCurrentFrameInternal();
 }
 
 static void UpdateTrayIconToCurrentFrameForPreview(void) {
-    UpdateTrayIconToCurrentFrameInternal(TRUE);
-}
-
-static BOOL IsAnimationPreviewActiveSnapshot(void) {
-    BOOL active = FALSE;
-    BOOL locked = IsAnimCriticalSectionReady();
-    if (locked) {
-        EnterCriticalSection(&g_animCriticalSection);
-    }
-    active = g_isPreviewActive;
-    if (locked) {
-        LeaveCriticalSection(&g_animCriticalSection);
-    }
-    return active;
+    UpdateTrayIconToCurrentFrameInternal();
 }
 
 /**
@@ -35,16 +22,13 @@ static void RequestTrayIconUpdate(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) return;
 
-    BOOL alreadyPending = FALSE;
-    alreadyPending = HasPendingTrayUpdate();
-    SetPendingTrayUpdate();
-
-    if (alreadyPending) {
+    if (ClaimPendingTrayUpdate()) {
         return;
     }
 
     if (!PostMessage(trayHwnd, WM_TRAY_UPDATE_ICON, 0, 0)) {
         ClearPendingTrayUpdate();
+        MarkTrayFrameDirty();
     }
 }
 
@@ -106,15 +90,12 @@ static void TrayAnimationTimerCallback(void* userData) {
         }
     }
 
-    BOOL presentationPaused =
-        IsTrayTooltipActive() ||
-        (IsTrayInteractionSuspended() && !g_isPreviewActive);
     BOOL retryDue = AnimationUpdateBackoff_ShouldRetry(
         InterlockedCompareExchange(&g_shellUpdateBackoffActive, 0, 0) != 0,
         (DWORD)InterlockedCompareExchange(&g_lastFailedUpdateAttemptTick, 0, 0),
         GetTickCount(), UPDATE_FAILURE_BACKOFF_MS);
     if (FrameRateController_ShouldUpdateTray(&g_frameRateCtrl, elapsedMs) &&
-        g_trayFrameDirty && !presentationPaused && retryDue) {
+        g_trayFrameDirty && retryDue) {
         g_trayFrameDirty = FALSE;
         shouldRequestUpdate = TRUE;
     }

@@ -153,7 +153,7 @@ void StartQuickCountdownByIndex(HWND hwnd, int index);
  * 
  * @details Prevents overlap and audio issues during transitions
  */
-void CleanupBeforeTimerAction(void);
+void CleanupBeforeTimerAction(HWND hwnd);
 
 /**
  * @brief Start countdown programmatically

@@ -42,6 +42,7 @@ static void ModernUpdateBodyScrollMetrics(ModernDialogState* state) {
         state->bodyScrollOffset96 = state->bodyScrollMax96;
     }
     if (state->bodyScrollMax96 == 0) {
+        state->bodyWheelDelta = 0;
         state->scrollBarHovered = FALSE;
         state->scrollBarDragging = FALSE;
         if (GetCapture() == state->hwnd) ReleaseCapture();

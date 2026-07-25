@@ -138,6 +138,7 @@ struct ModernDialogState {
     int bodyViewportHeight96;
     int bodyScrollOffset96;
     int bodyScrollMax96;
+    int bodyWheelDelta;
     int scrollDragStartY;
     int scrollDragStartOffset96;
     RECT titleFrame;
@@ -178,6 +179,10 @@ static BOOL ModernControlOwnsVerticalScroll(const ModernControl* control);
 static void ModernAttachComboList(ModernControl* control);
 static void ModernApplyComboListRegion(HWND hwnd, ModernControl* control);
 static int ModernTo96(UINT dpi, int value);
+static BOOL ModernHandleBodyWheel(ModernDialogState* state, WPARAM wParam);
+static void ModernEndSliderDrag(ModernControl* control, BOOL commitPosition,
+                                int x, int y);
+static void ModernRefreshBodyScrollbarHover(ModernDialogState* state);
 
 static COLORREF ModernBlendColor(COLORREF from, COLORREF to, int toPercent) {
     if (toPercent < 0) toPercent = 0;

@@ -17,9 +17,7 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     if (!FontManager_CopyStringExact(
             fontName, pendingFontName, sizeof(pendingFontName))) {
         LOG_WARNING("Font preview name too long, ignoring preview: %s", fontName);
-        if (hadPreview) {
-            CancelFontPreview();
-        } else {
+        if (!hadPreview) {
             ClearFontPreviewState();
         }
         return FALSE;
@@ -27,9 +25,7 @@ BOOL PreviewFont(HINSTANCE hInstance, const char* fontName) {
     if (!LoadFontByNameAndGetRealName(
             hInstance, pendingFontName,
             loadedInternalName, sizeof(loadedInternalName))) {
-        if (hadPreview) {
-            CancelFontPreview();
-        } else {
+        if (!hadPreview) {
             ClearFontPreviewState();
         }
         return FALSE;

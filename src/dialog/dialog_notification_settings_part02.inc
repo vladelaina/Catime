@@ -272,9 +272,9 @@ static void UpdatePreviewNotificationText(HWND hwndDlg, const wchar_t* newText) 
 }
 
 static void ClosePreviewNotification(void) {
-    if (g_hwndPreviewNotification &&
-        IsWindow(g_hwndPreviewNotification) &&
-        IsToastNotificationPreviewWindow(g_hwndPreviewNotification)) {
-        DestroyWindow(g_hwndPreviewNotification);
-        g_hwndPreviewNotification = NULL;
+    HWND preview = g_hwndPreviewNotification;
+    g_hwndPreviewNotification = NULL;
+    if (preview && IsWindow(preview) &&
+        IsToastNotificationPreviewWindow(preview)) {
+        DestroyWindow(preview);
     }

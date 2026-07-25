@@ -44,7 +44,7 @@ BOOL NotificationAudio_GetCurrentFileName(
     const char* currentFile, wchar_t* outFileName, size_t outSize);
 BOOL NotificationAudio_StoreCache(
     const wchar_t* files, int fileCount, LONG generation);
-void NotificationAudio_MarkCacheScanFailed(void);
+void NotificationAudio_MarkCacheScanFailed(LONG generation);
 int NotificationAudio_CopyCache(
     wchar_t files[][MAX_PATH], int capacity, BOOL* cacheReady);
 

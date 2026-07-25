@@ -222,22 +222,18 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
             }
             if (control && control->kind == MODERN_CONTROL_SLIDER &&
                 control->pressed) {
-                ModernSetSliderFromPoint(control, GET_X_LPARAM(lParam),
-                                         GET_Y_LPARAM(lParam),
-                                         TB_THUMBPOSITION);
-                control->pressed = FALSE;
-                if (GetCapture() == hwnd) ReleaseCapture();
-                LONG_PTR sliderStyle = GetWindowLongPtrW(hwnd, GWL_STYLE);
-                UINT scrollMessage = (sliderStyle & TBS_VERT)
-                    ? WM_VSCROLL : WM_HSCROLL;
-                SendMessageW(GetParent(hwnd), scrollMessage,
-                             MAKEWPARAM(TB_ENDTRACK, 0), (LPARAM)hwnd);
-                InvalidateRect(hwnd, NULL, FALSE);
+                ModernEndSliderDrag(control, TRUE, GET_X_LPARAM(lParam),
+                                    GET_Y_LPARAM(lParam));
                 return 0;
             }
             /* fall through */
         case WM_CAPTURECHANGED:
             if (control) {
+                if (control->kind == MODERN_CONTROL_SLIDER &&
+                    control->pressed && (HWND)lParam != hwnd) {
+                    ModernEndSliderDrag(control, FALSE, 0, 0);
+                    return 0;
+                }
                 if (ModernIsDateTimeControl(control)) {
                     ModernStopDateTimeRepeat(control);
                     control->dateTimePressedPart = MODERN_DATETIME_HIT_NONE;
@@ -247,6 +243,11 @@ static LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
             }
             break;
         case WM_CANCELMODE:
+            if (control && control->kind == MODERN_CONTROL_SLIDER &&
+                control->pressed) {
+                ModernEndSliderDrag(control, FALSE, 0, 0);
+                return 0;
+            }
             if (control && ModernIsDateTimeControl(control)) {
                 ModernStopDateTimeRepeat(control);
                 control->dateTimePressedPart = MODERN_DATETIME_HIT_NONE;

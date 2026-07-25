@@ -272,16 +272,18 @@ LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp) {
     BOOL animationSelection =
         (command >= CLOCK_IDM_ANIMATIONS_BASE &&
          command < CLOCK_IDM_ANIMATIONS_END) ||
-        command == CLOCK_IDM_ANIMATIONS_USE_LOGO ||
-        command == CLOCK_IDM_ANIMATIONS_USE_CPU ||
-        command == CLOCK_IDM_ANIMATIONS_USE_MEM ||
-        command == CLOCK_IDM_ANIMATIONS_USE_BATTERY ||
-        command == CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK ||
-        command == CLOCK_IDM_ANIMATIONS_USE_NONE;
+        command == CLOCK_IDM_ANIMATIONS_USE_LOGO || command == CLOCK_IDM_ANIMATIONS_USE_CPU ||
+        command == CLOCK_IDM_ANIMATIONS_USE_MEM || command == CLOCK_IDM_ANIMATIONS_USE_BATTERY ||
+        command == CLOCK_IDM_ANIMATIONS_USE_CAPSLOCK || command == CLOCK_IDM_ANIMATIONS_USE_NONE;
     StopMenuPreviewTrackingForCommand(hwnd);
-    if (!animationSelection) {
-        CancelPreview(hwnd);
+    BOOL previewCommand = !animationSelection && DispatchMenuPreview(hwnd, command);
+    if (previewCommand) {
+        if (!ApplyPreview(hwnd)) CancelPreview(hwnd);
         RestoreWindowVisibility(hwnd);
+        return 0;
+    }
+    if (!animationSelection) {
+        CancelPreview(hwnd); RestoreWindowVisibility(hwnd);
     }
     if (DispatchRangeCommand(hwnd, command, wp, lp)) {
         if (animationSelection) MarkAnimationPreviewApplied(hwnd);

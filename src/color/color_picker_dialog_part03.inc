@@ -245,6 +245,12 @@ static LRESULT CALLBACK ColorPickerCanvasSubclassProc(
         case WM_LBUTTONUP:
             if (GetCapture() == hwnd) ReleaseCapture();
             return 0;
+        case WM_CANCELMODE:
+            if (GetCapture() == hwnd) ReleaseCapture();
+            return 0;
+        case WM_CAPTURECHANGED:
+            InvalidateRect(hwnd, NULL, FALSE);
+            break;
         case WM_KEYDOWN:
             if (PickerHandleCanvasKey(state, subclassId, wParam)) return 0;
             break;
@@ -257,6 +263,7 @@ static LRESULT CALLBACK ColorPickerCanvasSubclassProc(
                 subclassId == IDC_MODERN_COLOR_SAVED ? IDC_HAND : IDC_CROSS));
             return TRUE;
         case WM_NCDESTROY:
+            if (GetCapture() == hwnd) ReleaseCapture();
             RemoveWindowSubclass(hwnd, ColorPickerCanvasSubclassProc,
                                  subclassId);
             break;

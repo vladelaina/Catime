@@ -83,14 +83,25 @@ static void ClearPendingTrayUpdate(void) {
     }
 }
 
-static void SetPendingTrayUpdate(void) {
+/*
+ * Atomically mark an icon update as pending and report whether another
+ * message already owns the pending slot.  RequestTrayIconUpdate used to do
+ * this as a separate read followed by a write; the UI thread could consume
+ * and clear the slot between those operations, leaving the animation dirty
+ * with no message left to present it.
+ */
+static BOOL ClaimPendingTrayUpdate(void) {
+    BOOL alreadyPending = FALSE;
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
+        alreadyPending = g_pendingTrayUpdate;
         g_pendingTrayUpdate = TRUE;
         LeaveCriticalSection(&g_animCriticalSection);
     } else {
+        alreadyPending = g_pendingTrayUpdate;
         g_pendingTrayUpdate = TRUE;
     }
+    return alreadyPending;
 }
 
 static BOOL HasPendingTrayUpdate(void) {

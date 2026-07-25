@@ -249,6 +249,29 @@ static void ModernPaintComboList(HWND hwnd, ModernControl* control,
     if (!suppliedDc) EndPaint(hwnd, &paint);
 }
 
+static void ModernRefreshComboListPointerState(
+    HWND hwnd, ModernControl* control) {
+    if (!hwnd || !control) return;
+    POINT point = {0};
+    RECT client = {0};
+    BOOL inside = GetCursorPos(&point) && ScreenToClient(hwnd, &point) &&
+                  GetClientRect(hwnd, &client) && PtInRect(&client, point);
+    RECT track = {0};
+    RECT thumb = {0};
+    BOOL hovered = inside &&
+        ModernGetComboListScrollbarRects(hwnd, control, &track, &thumb) &&
+        ModernPointInComboScrollbar(control, &track, point);
+    int hotItem = -1;
+    if (inside && !hovered) {
+        LRESULT hit = SendMessageW(
+            hwnd, LB_ITEMFROMPOINT, 0, MAKELPARAM(point.x, point.y));
+        if (!HIWORD(hit)) hotItem = LOWORD(hit);
+    }
+    control->comboScrollHovered = hovered;
+    control->comboHotItem = hotItem;
+    InvalidateRect(hwnd, NULL, FALSE);
+}
+
 static LRESULT CALLBACK ModernComboListSubclassProc(
     HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
     UINT_PTR subclassId, DWORD_PTR refData) {

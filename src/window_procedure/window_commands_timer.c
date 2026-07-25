@@ -58,7 +58,7 @@ LRESULT CmdCountUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     
     if (!CLOCK_COUNT_UP) {
         TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
@@ -74,7 +74,7 @@ LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdCountUpReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     ResetTimer();
     InvalidateRect(hwnd, NULL, TRUE);
     return 0;
@@ -82,7 +82,7 @@ LRESULT CmdCountUpReset(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     if (CLOCK_COUNT_UP) CLOCK_COUNT_UP = false;
     ResetTimer();
     MainTimer_Stop();
@@ -204,7 +204,7 @@ LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
 
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;
@@ -264,7 +264,7 @@ BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index) {
     if (timeOptionsCount < 0) timeOptionsCount = 0;
     if (timeOptionsCount > MAX_TIME_OPTIONS) timeOptionsCount = MAX_TIME_OPTIONS;
     if (index >= 0 && index < timeOptionsCount && time_options[index] > 0) {
-        CleanupBeforeTimerAction();
+        CleanupBeforeTimerAction(hwnd);
         StartCountdownWithTime(hwnd, time_options[index]);
         return TRUE;
     }

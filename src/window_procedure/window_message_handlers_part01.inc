@@ -58,6 +58,8 @@ UINT GetPendingAnimationPreviewItem(void);
 static void ClearPendingMenuPreview(HWND hwnd);
 static void DispatchPendingMenuPreview(HWND hwnd);
 static void ResetMenuPreviewTracking(HWND hwnd);
+static void ScheduleMenuPreviewCancellation(HWND hwnd);
+static void CancelTrackedMenuPreview(HWND hwnd);
 static void StartMenuDebounceTimer(HWND hwnd);
 static void StartAnimationPreviewDelayTimer(HWND hwnd);
 
@@ -261,8 +263,7 @@ LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     }
     if (wp == IDT_MENU_DEBOUNCE) {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
-        CancelPreview(hwnd);
-        RestoreWindowVisibility(hwnd);
+        CancelTrackedMenuPreview(hwnd);
         return 0;
     }
     if (wp == IDT_ANIMATION_PREVIEW_DELAY) {

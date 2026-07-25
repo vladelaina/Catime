@@ -57,12 +57,14 @@ BOOL SetCurrentAnimationName(const char* name);
 /**
  * @brief Preview animation without persistence
  * @param name Animation identifier
+ * @return TRUE if the request was queued, FALSE if runtime is unavailable or
+ *         the name is invalid
  * 
  * @details
  * Loads into preview slot, displays immediately.
  * Can be promoted to main via SetCurrentAnimationName or cancelled.
  */
-void StartAnimationPreview(const char* name);
+BOOL StartAnimationPreview(const char* name);
 
 /**
  * @brief Cancel preview and restore original animation
@@ -132,6 +134,13 @@ void TrayAnimation_UpdatePercentIconIfNeeded(void);
  * system-monitor lock twice in one tick.
  */
 void TrayAnimation_UpdatePercentIconWithMetrics(float cpuPercent, float memPercent);
+
+/**
+ * @brief Query refresh needs for the icon currently presented to Explorer
+ * @param needsSystemMonitor Receives TRUE for CPU/memory generated icons
+ * @return TRUE for percent or Caps Lock icons, including menu previews
+ */
+BOOL TrayAnimation_GetBuiltinRefreshNeeds(BOOL* needsSystemMonitor);
 
 /**
  * @brief Handle WM_TRAY_UPDATE_ICON message (must run in main thread)

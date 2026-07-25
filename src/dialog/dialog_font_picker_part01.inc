@@ -191,10 +191,6 @@ static BOOL PreviewFontInMainWindow(const wchar_t* fontName, const char* cachedF
 
     HWND hwnd = FindCurrentProcessMainWindow();
     if (hwnd) {
-        if (GetActivePreviewType() == PREVIEW_TYPE_FONT) {
-            CancelPreview(hwnd);
-        }
-
         ShowWindowForPreview(hwnd);
         StartPreview(PREVIEW_TYPE_FONT, fontPath, hwnd);
         if (GetActivePreviewType() != PREVIEW_TYPE_FONT) {

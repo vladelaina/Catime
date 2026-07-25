@@ -68,9 +68,10 @@ typedef enum {
  * - PREVIEW_TYPE_ANIMATION: data = const char* (animation path)
  * - PREVIEW_TYPE_EFFECT: data = EffectType*
  *
+ * @return TRUE when the preview is active or was started successfully
  * @note Cancels any existing preview before starting new one
  */
-void StartPreview(PreviewType type, const void* data, HWND hwnd);
+BOOL StartPreview(PreviewType type, const void* data, HWND hwnd);
 
 /**
  * @brief Cancel preview and restore original state

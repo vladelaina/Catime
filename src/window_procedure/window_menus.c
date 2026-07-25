@@ -36,68 +36,58 @@ BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
     /* Handle all animations (builtin + custom) via unified lookup */
     char animName[MAX_PATH];
     if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {
-        StartPreview(PREVIEW_TYPE_ANIMATION, animName, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_ANIMATION, animName, hwnd);
     }
 
     if (menuId >= CMD_FONT_SELECTION_BASE &&
         menuId < CMD_FONT_SELECTION_BASE + FONT_MENU_MAX_ENTRIES) {
         char fontPath[MAX_PATH];
         if (GetFontPathFromMenuId(menuId, fontPath, sizeof(fontPath))) {
-            StartPreview(PREVIEW_TYPE_FONT, fontPath, hwnd);
-            return TRUE;
+            return StartPreview(PREVIEW_TYPE_FONT, fontPath, hwnd);
         }
         return FALSE;
     }
 
     char color[COLOR_HEX_BUFFER];
     if (GetColorMenuColorFromId(menuId, color, sizeof(color))) {
-        StartPreview(PREVIEW_TYPE_COLOR, color, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_COLOR, color, hwnd);
     }
 
     if (menuId == CLOCK_IDM_TIME_FORMAT_DEFAULT) {
         TimeFormatType format = TIME_FORMAT_DEFAULT;
-        StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
     }
 
     if (menuId == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED) {
         TimeFormatType format = TIME_FORMAT_ZERO_PADDED;
-        StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
     }
 
     if (menuId == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) {
         TimeFormatType format = TIME_FORMAT_FULL_PADDED;
-        StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_TIME_FORMAT, &format, hwnd);
     }
 
     if (menuId == CLOCK_IDM_TIME_FORMAT_SHOW_MILLISECONDS) {
         BOOL showMilliseconds = !g_AppConfig.display.time_format.show_milliseconds;
-        StartPreview(PREVIEW_TYPE_MILLISECONDS, &showMilliseconds, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_MILLISECONDS, &showMilliseconds, hwnd);
     }
 
     if (menuId == CLOCK_IDM_SHOW_SECONDS) {
         BOOL showSeconds = !CLOCK_SHOW_SECONDS;
-        StartPreview(PREVIEW_TYPE_SECONDS, &showSeconds, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_SECONDS, &showSeconds, hwnd);
     }
 
     if (menuId == CLOCK_IDM_24HOUR_FORMAT) {
         BOOL use24Hour = !CLOCK_USE_24HOUR;
-        StartPreview(PREVIEW_TYPE_24HOUR, &use24Hour, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_24HOUR, &use24Hour, hwnd);
     }
 
     EffectType effect = TextEffect_FromMenuId(menuId);
     if (effect != TEXT_EFFECT_NONE) {
         EffectType previewEffect =
             (effect == CLOCK_TEXT_EFFECT) ? TEXT_EFFECT_NONE : effect;
-        StartPreview(PREVIEW_TYPE_EFFECT, &previewEffect, hwnd);
-        return TRUE;
+        return StartPreview(PREVIEW_TYPE_EFFECT, &previewEffect, hwnd);
     }
 
     return FALSE;

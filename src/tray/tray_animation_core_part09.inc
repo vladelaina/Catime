@@ -86,25 +86,26 @@ static void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) goto done;
     /* Replacing the icon while Explorer owns a hover tooltip can make the
-     * notification area briefly tear down and recreate that tooltip.  Keep
-     * dynamic built-in icons stable for the whole hover/menu interaction;
-     * the background timer refreshes the latest value after it ends. */
-    if (IsTrayTooltipActive() || IsTrayInteractionSuspended()) goto done;
+     * notification area briefly tear down and recreate that tooltip.  A
+     * popup menu does not own that tooltip, so dynamic built-in icons may
+     * continue refreshing while either tray menu is open. */
+    if (IsTrayTooltipActive()) goto done;
 
     char animationName[MAX_PATH] = {0};
     BOOL previewActive = FALSE;
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
-        CopyStringExactA(g_animationName, animationName, sizeof(animationName));
         previewActive = g_isPreviewActive;
+        CopyStringExactA(previewActive ? g_previewAnimationName : g_animationName,
+                         animationName, sizeof(animationName));
         LeaveCriticalSection(&g_animCriticalSection);
     } else {
-        CopyStringExactA(g_animationName, animationName, sizeof(animationName));
         previewActive = g_isPreviewActive;
+        CopyStringExactA(previewActive ? g_previewAnimationName : g_animationName,
+                         animationName, sizeof(animationName));
     }
 
     if (!animationName[0]) goto done;
-    if (previewActive) goto done;
 
     const BuiltinAnimDef* def = GetBuiltinAnimDef(animationName);
     if (!def) goto done;
@@ -185,6 +186,41 @@ void TrayAnimation_UpdatePercentIconWithMetrics(float cpuPercent, float memPerce
     UpdatePercentIconIfNeededInternal(TRUE, cpuPercent, memPercent);
 }
 
+BOOL TrayAnimation_GetBuiltinRefreshNeeds(BOOL* needsSystemMonitor) {
+    if (needsSystemMonitor) *needsSystemMonitor = FALSE;
+    if (!BeginTrayAnimationRuntimeUse()) return FALSE;
+
+    BOOL dynamicBuiltin = FALSE;
+    char animationName[MAX_PATH] = {0};
+    AnimationSourceType sourceType = ANIM_SOURCE_UNKNOWN;
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        BOOL previewActive = g_isPreviewActive;
+        LoadedAnimation* current = previewActive ? &g_previewAnimation : &g_mainAnimation;
+        sourceType = current->sourceType;
+        CopyStringExactA(previewActive ? g_previewAnimationName : g_animationName,
+                         animationName, sizeof(animationName));
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        BOOL previewActive = g_isPreviewActive;
+        LoadedAnimation* current = previewActive ? &g_previewAnimation : &g_mainAnimation;
+        sourceType = current->sourceType;
+        CopyStringExactA(previewActive ? g_previewAnimationName : g_animationName,
+                         animationName, sizeof(animationName));
+    }
+
+    dynamicBuiltin = sourceType == ANIM_SOURCE_PERCENT ||
+                     sourceType == ANIM_SOURCE_CAPSLOCK;
+    if (dynamicBuiltin && needsSystemMonitor) {
+        *needsSystemMonitor =
+            _stricmp(animationName, "__cpu__") == 0 ||
+            _stricmp(animationName, "__mem__") == 0;
+    }
+
+    EndTrayAnimationRuntimeUse();
+    return dynamicBuiltin;
+}
+
 /**
  * @brief Handle WM_TRAY_UPDATE_ICON message
  */
@@ -202,8 +238,7 @@ BOOL TrayAnimation_HandleUpdateMessage(HWND hwnd) {
     hasPending = HasPendingTrayUpdate();
 
     if (hasPending) {
-        UpdateTrayIconToCurrentFrameInternal(
-            IsAnimationPreviewActiveSnapshot());
+        UpdateTrayIconToCurrentFrameInternal();
     }
 
 done:

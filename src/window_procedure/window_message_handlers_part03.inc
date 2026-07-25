@@ -50,6 +50,7 @@ LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)hwnd; (void)wp; (void)lp;
     /* Update tray icon after preview animation is loaded */
     TrayAnimation_HandleUpdateMessage(hwnd);
+    RefreshTrayBackgroundWorkState();
     return 0;
 }
 
@@ -152,6 +153,8 @@ static UINT g_pendingAnimationPreviewItem = 0;
 static UINT g_lastPreviewMenuItem = 0;
 static BOOL g_lastWasColorOrFontPreview = FALSE;
 static BOOL g_lastWasAnimationPreview = FALSE;
+static BOOL g_menuPreviewActive = FALSE;
+static BOOL g_menuPreviewCancellationPending = FALSE;
 
 UINT GetPendingAnimationPreviewItem(void) {
     return g_pendingAnimationPreviewItem;
@@ -165,8 +168,8 @@ static void ClearPendingMenuPreview(HWND hwnd) {
 static void DispatchPendingMenuPreview(HWND hwnd) {
     UINT menuItem = GetPendingAnimationPreviewItem();
     ClearPendingMenuPreview(hwnd);
-    if (menuItem != 0) {
-        DispatchMenuPreview(hwnd, menuItem);
+    if (menuItem != 0 && DispatchMenuPreview(hwnd, menuItem)) {
+        g_menuPreviewActive = TRUE;
     }
 }
 
@@ -177,8 +180,33 @@ static void ResetMenuPreviewTracking(HWND hwnd) {
     g_lastWasAnimationPreview = FALSE;
 }
 
+static void ScheduleMenuPreviewCancellation(HWND hwnd) {
+    ClearPendingMenuPreview(hwnd);
+    if (g_menuPreviewActive) {
+        g_menuPreviewCancellationPending = TRUE;
+    } else {
+        ResetMenuPreviewTracking(hwnd);
+    }
+}
+
+static void CancelActiveMenuPreview(HWND hwnd) {
+    if (!g_menuPreviewActive) return;
+    g_menuPreviewActive = FALSE;
+    CancelPreview(hwnd);
+    RestoreWindowVisibility(hwnd);
+}
+
+static void CancelTrackedMenuPreview(HWND hwnd) {
+    if (!g_menuPreviewCancellationPending) return;
+    g_menuPreviewCancellationPending = FALSE;
+    CancelActiveMenuPreview(hwnd);
+    ResetMenuPreviewTracking(hwnd);
+}
+
 void StopMenuPreviewTrackingForCommand(HWND hwnd) {
     ResetMenuPreviewTracking(hwnd);
+    g_menuPreviewActive = FALSE;
+    g_menuPreviewCancellationPending = FALSE;
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
 }
 
@@ -186,8 +214,7 @@ static void StartMenuDebounceTimer(HWND hwnd) {
     if (!SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL)) {
         LOG_WARNING("MenuPreview: Failed to start debounce timer (error=%lu)",
                     GetLastError());
-        CancelPreview(hwnd);
-        RestoreWindowVisibility(hwnd);
+        CancelTrackedMenuPreview(hwnd);
     }
 }
 
@@ -200,74 +227,7 @@ static void StartAnimationPreviewDelayTimer(HWND hwnd) {
     }
 }
 
-static BOOL IsThemeSettingChange(WPARAM wp, LPARAM lp) {
-    if (wp == SPI_SETHIGHCONTRAST) return TRUE;
-    if (!lp) return FALSE;
-
-    static const wchar_t* settingNames[] = {
-        L"ImmersiveColorSet",
-        L"WindowsThemeElement",
-        L"AppsUseLightTheme",
-        L"SystemUsesLightTheme",
-        L"HighContrast"
-    };
-    const wchar_t* settingName = (const wchar_t*)lp;
-    for (size_t i = 0; i < _countof(settingNames); i++) {
-        if (_wcsicmp(settingName, settingNames[i]) == 0) return TRUE;
-    }
-    return FALSE;
-}
-
-LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
-    /* Theme-related setting names vary across Windows releases and Insider
-     * builds. Refreshing for every settings notification is inexpensive, and
-     * the popup path still performs a final refresh before showing a menu. */
-    RefreshNativeMenuTheme();
-    if (IsThemeSettingChange(wp, lp)) {
-        Dialog_RefreshOpenThemes();
-    }
-
-    if (wp != SPI_SETWORKAREA || CLOCK_IS_DRAGGING) {
-        return DefWindowProc(hwnd, WM_SETTINGCHANGE, wp, lp);
-    }
-
-    if (!BeginSystemPositionChangeGuard(hwnd)) {
-        RestoreWindowPositionAfterSystemChange(hwnd);
-    }
-    return DefWindowProc(hwnd, WM_SETTINGCHANGE, wp, lp);
-}
-
-LRESULT HandleThemeChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
-    RefreshNativeMenuTheme();
-    Dialog_RefreshOpenThemes();
-    return DefWindowProc(hwnd, WM_THEMECHANGED, wp, lp);
-}
-
-static BOOL g_sessionSettingsPrepared = FALSE;
-
-LRESULT HandleQueryEndSession(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)wp;
-    (void)lp;
-    CancelScheduledConfigSave(hwnd);
-    if (CLOCK_EDIT_MODE) {
-        EndEditMode(hwnd);
-    }
-    g_sessionSettingsPrepared = SaveWindowSettings(hwnd);
-    return TRUE;
-}
-
-LRESULT HandleEndSession(HWND hwnd, WPARAM wp, LPARAM lp) {
-    (void)lp;
-    if (wp && !g_sessionSettingsPrepared) {
-        CancelScheduledConfigSave(hwnd);
-        if (CLOCK_EDIT_MODE) {
-            EndEditMode(hwnd);
-        }
-        SaveWindowSettings(hwnd);
-    }
-    g_sessionSettingsPrepared = FALSE;
-    return 0;
-}
+#include "window_message_handlers_theme.inc"
 
 static BOOL IsSelectableCommandMenuItem(HMENU hMenu, UINT menuItem) {
     if (!hMenu) {

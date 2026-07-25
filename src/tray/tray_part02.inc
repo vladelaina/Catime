@@ -23,17 +23,14 @@ static inline BOOL IsPercentIcon(AnimationType type) {
     return type == ANIM_TYPE_CPU || type == ANIM_TYPE_MEMORY || type == ANIM_TYPE_BATTERY;
 }
 
-static inline BOOL IsDynamicBuiltinIcon(AnimationType type) {
-    return IsPercentIcon(type) || type == ANIM_TYPE_CAPSLOCK;
-}
-
 static BOOL CurrentTrayIconNeedsBackgroundRefresh(void) {
-    return IsDynamicBuiltinIcon(GetAnimationType(GetCurrentAnimationName()));
+    return TrayAnimation_GetBuiltinRefreshNeeds(NULL);
 }
 
 static BOOL CurrentTrayIconNeedsSystemMonitor(void) {
-    AnimationType type = GetAnimationType(GetCurrentAnimationName());
-    return type == ANIM_TYPE_CPU || type == ANIM_TYPE_MEMORY;
+    BOOL needsSystemMonitor = FALSE;
+    TrayAnimation_GetBuiltinRefreshNeeds(&needsSystemMonitor);
+    return needsSystemMonitor;
 }
 
 static BOOL CurrentAnimationSpeedNeedsSystemMonitor(void) {
@@ -80,9 +77,8 @@ static void ReleaseIdleTraySystemMonitor(void) {
 
 static BOOL ShouldRunTrayBackgroundTimer(HWND hwnd) {
     return g_trayBackgroundWorkEnabled &&
-           !IsTrayInteractionSuspended() &&
            IsTrayIconActiveForWindow(hwnd) &&
-           (IsTrayTooltipActive() ||
+           ((!IsTrayInteractionSuspended() && IsTrayTooltipActive()) ||
             CurrentTrayIconNeedsBackgroundRefresh() ||
             TrayAnimation_HasDeferredIconUpdate());
 }

@@ -4,6 +4,7 @@
  */
 
 #include "window_commands_plugin_internal.h"
+#include "preview_display.h"
 
 static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     /* Check if this plugin is already running - toggle off */
@@ -100,6 +101,11 @@ static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
 }
 
 void HandlePluginExit(HWND hwnd) {
+    /* An asynchronous <exit> can arrive while a menu preview temporarily owns
+     * the main display. Retire that snapshot before changing timer state so a
+     * later menu close cannot restore the pre-exit contents. */
+    RestoreWindowVisibility(hwnd);
+
     /* Cancel any pending exit countdown */
     PluginExit_Cancel();
 

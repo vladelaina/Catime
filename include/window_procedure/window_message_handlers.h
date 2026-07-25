@@ -34,6 +34,7 @@ LRESULT HandleRButtonUp(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleRButtonDown(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleContextMenu(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleCaptureChanged(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT HandleCancelMode(HWND hwnd, WPARAM wp, LPARAM lp);
 BOOL IsEditExitRightClickShieldActive(void);
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleClose(HWND hwnd, WPARAM wp, LPARAM lp);

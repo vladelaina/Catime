@@ -147,10 +147,13 @@ static void PostPreviewLoadedMessage(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) return;
 
-    SetPendingTrayUpdate();
+    if (ClaimPendingTrayUpdate()) {
+        return;
+    }
 
     if (!PostMessage(trayHwnd, CLOCK_WM_ANIMATION_PREVIEW_LOADED, 0, 0)) {
         ClearPendingTrayUpdate();
+        MarkTrayFrameDirty();
     }
 }
 

@@ -178,9 +178,17 @@ LRESULT HandleCaptureChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     return DefWindowProc(hwnd, WM_CAPTURECHANGED, wp, lp);
 }
 
+LRESULT HandleCancelMode(HWND hwnd, WPARAM wp, LPARAM lp) {
+    if (CLOCK_IS_DRAGGING) {
+        EndDragWindow(hwnd);
+    }
+    ClearPendingEditExitRightClick(hwnd);
+    return DefWindowProc(hwnd, WM_CANCELMODE, wp, lp);
+}
+
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    ResetMenuPreviewTracking(hwnd);
+    ScheduleMenuPreviewCancellation(hwnd);
     StartMenuDebounceTimer(hwnd);
     return 0;
 }

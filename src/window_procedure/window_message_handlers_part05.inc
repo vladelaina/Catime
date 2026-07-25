@@ -5,14 +5,13 @@
 
         if (isAnimationPreview != g_lastWasAnimationPreview) {
             if (g_lastWasAnimationPreview && !isAnimationPreview) {
-                CancelPreview(hwnd);
+                CancelActiveMenuPreview(hwnd);
             }
         }
 
         if (isColorOrFontPreview != g_lastWasColorOrFontPreview) {
             if (g_lastWasColorOrFontPreview && !isColorOrFontPreview) {
-                CancelPreview(hwnd);
-                RestoreWindowVisibility(hwnd);
+                CancelActiveMenuPreview(hwnd);
             }
         }
 
@@ -36,12 +35,11 @@
     } else {
         ClearPendingMenuPreview(hwnd);
         if (g_lastWasColorOrFontPreview) {
-            CancelPreview(hwnd);
-            RestoreWindowVisibility(hwnd);
+            CancelActiveMenuPreview(hwnd);
             g_lastWasColorOrFontPreview = FALSE;
         }
         if (g_lastWasAnimationPreview) {
-            CancelPreview(hwnd);
+            CancelActiveMenuPreview(hwnd);
             g_lastWasAnimationPreview = FALSE;
         }
         g_lastPreviewMenuItem = 0;

@@ -182,6 +182,18 @@ LRESULT CALLBACK NotesControlProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
             break;
         }
 
+        case WM_CANCELMODE: {
+            if ((INT_PTR)GetProp(hwnd, L"ThumbDragging")) {
+                SetProp(hwnd, L"ThumbDragging", (HANDLE)0);
+                if (GetCapture() == hwnd) {
+                    ReleaseCapture();
+                }
+                InvalidateRect(hwnd, NULL, TRUE);
+                return 0;
+            }
+            break;
+        }
+
         case WM_MOUSEWHEEL: {
             int delta = GET_WHEEL_DELTA_WPARAM(wParam);
 

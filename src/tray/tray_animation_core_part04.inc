@@ -46,17 +46,10 @@ static void GetPlaybackSpeedSnapshot(double* speedMultiplier,
     *minimumFrameIntervalMs = g_speedScaleCache.minIntervalMs;
 }
 
-static void UpdateTrayIconToCurrentFrameInternal(BOOL allowMenuPreview) {
+static void UpdateTrayIconToCurrentFrameInternal(void) {
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) {
         ClearPendingTrayUpdate();
-        return;
-    }
-
-    if (IsTrayTooltipActive() ||
-        (IsTrayInteractionSuspended() && !allowMenuPreview)) {
-        ClearPendingTrayUpdate();
-        MarkTrayFrameDirty();
         return;
     }
 

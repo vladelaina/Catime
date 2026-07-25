@@ -245,7 +245,7 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     /* Parse time input and start countdown */
     int totalSeconds = 0;
     if (ParseInput(input, &totalSeconds)) {
-        CleanupBeforeTimerAction();
+        CleanupBeforeTimerAction(hwnd);
         StartCountdownWithTime(hwnd, totalSeconds);
     } else {
         /* Unknown input - show default countdown dialog */

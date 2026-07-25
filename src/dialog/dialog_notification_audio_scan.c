@@ -126,7 +126,7 @@ DWORD WINAPI NotificationAudio_ScanThread(LPVOID parameter) {
         (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*files));
     if (!files) {
         if (!NotificationAudio_IsScanCanceled(generation)) {
-            NotificationAudio_MarkCacheScanFailed();
+            NotificationAudio_MarkCacheScanFailed(generation);
         }
         return 0;
     }
@@ -138,7 +138,7 @@ DWORD WINAPI NotificationAudio_ScanThread(LPVOID parameter) {
     if (fileCount >= 0) {
         NotificationAudio_StoreCache(&files[0][0], fileCount, generation);
     } else if (!NotificationAudio_IsScanCanceled(generation)) {
-        NotificationAudio_MarkCacheScanFailed();
+        NotificationAudio_MarkCacheScanFailed(generation);
     }
     free(files);
     return 0;

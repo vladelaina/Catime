@@ -67,7 +67,7 @@ LRESULT HandleDialogCountdown(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     int seconds = (int)wp;
     if (seconds > 0) {
-        CleanupBeforeTimerAction();
+        CleanupBeforeTimerAction(hwnd);
         StartCountdownWithTime(hwnd, seconds);
     }
     return 0;
@@ -268,11 +268,12 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
     /* Mouse moved outside any menu item - set debounce timer to cancel preview */
     if (menuItem == 0xFFFF) {
-        ResetMenuPreviewTracking(hwnd);
+        ScheduleMenuPreviewCancellation(hwnd);
         StartMenuDebounceTimer(hwnd);
         return 0;
     } else {
         KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+        g_menuPreviewCancellationPending = FALSE;
     }
 
     if (hMenu == NULL) return 0;

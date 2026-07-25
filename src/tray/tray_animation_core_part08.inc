@@ -21,13 +21,6 @@
                                  sizeof(g_previewAnimationName));
                 shouldApply = TRUE;
             } else {
-                SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
-                LoadedAnimation_Init(&g_previewAnimation);
-                g_isPreviewActive = FALSE;
-                g_previewAnimationFromPath = FALSE;
-                g_previewAnimationName[0] = '\0';
-                g_pendingPreviewFromPath = FALSE;
-                g_pendingPreviewName[0] = '\0';
                 shouldApply = TRUE;
                 WriteLog(LOG_LEVEL_WARNING, "PreviewWorkerThread: preview failed to load '%s'", requestedName);
             }
@@ -59,8 +52,8 @@
 /**
  * @brief Start animation preview
  */
-void StartAnimationPreview(const char* name) {
-    (void)QueueAnimationPreviewRequest(name, FALSE);
+BOOL StartAnimationPreview(const char* name) {
+    return QueueAnimationPreviewRequest(name, FALSE);
 }
 
 /**
@@ -69,6 +62,7 @@ void StartAnimationPreview(const char* name) {
 void CancelAnimationPreview(void) {
     LoadedAnimation oldPreview;
     LoadedAnimation_Init(&oldPreview);
+    BOOL restoredMainAnimation = FALSE;
 
     if (!BeginTrayAnimationRuntimeUse()) return;
 
@@ -108,10 +102,14 @@ void CancelAnimationPreview(void) {
 
     EnsureTrayAnimationTimerState();
     UpdateTrayIconToCurrentFrameForPreview();
+    restoredMainAnimation = TRUE;
 
 done:
     LoadedAnimation_Free(&oldPreview);
     EndTrayAnimationRuntimeUse();
+    if (restoredMainAnimation) {
+        RefreshTrayBackgroundWorkState();
+    }
 }
 
 /**

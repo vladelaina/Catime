@@ -49,7 +49,7 @@ LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     MainTimer_Stop();
     UnregisterGlobalHotkeys(hwnd);
     SendMessage(hwnd, WM_SETREDRAW, FALSE, 0);

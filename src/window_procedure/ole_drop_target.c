@@ -86,15 +86,11 @@ static void ClearFontPreviewStateAfterDropApply(void) {
     PREVIEW_FONT_NAME[0] = '\0';
     PREVIEW_INTERNAL_NAME[0] = '\0';
 }
-static void ReleasePreviewResourcesForDrop(OleDropTarget* target) {
+static void ReleaseFontPreviewResourceForDrop(OleDropTarget* target) {
     if (!target) return;
     if (target->isPreviewingFont) {
         UnloadCurrentFontResource();
         target->isPreviewingFont = FALSE;
-    }
-    if (target->isPreviewingAnim) {
-        CancelAnimationPreview();
-        target->isPreviewingAnim = FALSE;
     }
 }
 STDMETHODIMP QueryInterface(IDropTarget* this, REFIID riid, void** ppvObject) {
@@ -175,6 +171,7 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
     (void)grfKeyState; (void)pt;
     OleDropTarget* target = (OleDropTarget*)this;
     BOOL hadFontPreview = target->isPreviewingFont;
+    BOOL hadAnimationPreview = target->isPreviewingAnim;
     FORMATETC fmt = {CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
     STGMEDIUM stg;
     if (!target->isValidDrop) {
@@ -182,7 +179,7 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
         *pdwEffect = DROPEFFECT_NONE;
         return S_OK;
     }
-    ReleasePreviewResourcesForDrop(target);
+    ReleaseFontPreviewResourceForDrop(target);
     target->isValidDrop = FALSE;
     if (pDataObj->lpVtbl->GetData(pDataObj, &fmt, &stg) == S_OK) {
         HDROP hDrop = (HDROP)stg.hGlobal;
@@ -197,6 +194,12 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
                 InvalidateRect(target->hwnd, NULL, TRUE);
             }
         }
+        if (hadAnimationPreview) {
+            if (!result.animationApplied) {
+                CancelAnimationPreview();
+            }
+            target->isPreviewingAnim = FALSE;
+        }
         *pdwEffect = (result.movedCount > 0 || result.fontApplied || result.animationApplied)
             ? DROPEFFECT_COPY
             : DROPEFFECT_NONE;
@@ -205,6 +208,10 @@ STDMETHODIMP Drop(IDropTarget* this, IDataObject* pDataObj, DWORD grfKeyState, P
             CancelFontPreview();
             RefreshCustomTextDisplayDialogFont();
             InvalidateRect(target->hwnd, NULL, TRUE);
+        }
+        if (hadAnimationPreview) {
+            CancelAnimationPreview();
+            target->isPreviewingAnim = FALSE;
         }
         *pdwEffect = DROPEFFECT_NONE;
     }

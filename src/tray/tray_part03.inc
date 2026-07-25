@@ -18,7 +18,7 @@
 
     wchar_t extra[128];
     _snwprintf_s(extra, _countof(extra), _TRUNCATE,
-                 L"\n%s · %s %.0f%%",
+                 L"\n%s · %s: %.0f%%",
                  GetLocalizedString(NULL, L"Tray Tooltip Animation Speed"),
                  metricLabel, scalePercent);
     wcsncat_s(tip, tipSize, extra, _TRUNCATE);
@@ -184,7 +184,9 @@ void HandleTrayOpacityWheel(HWND hwnd, int wheelDirection, BOOL ctrlPressed) {
     g_showingOpacityTip = TRUE;
     wchar_t opacityTip[64];
     _snwprintf_s(opacityTip, _countof(opacityTip), _TRUNCATE,
-                 L"Opacity: %d%%", CLOCK_WINDOW_OPACITY);
+                 L"%s: %d%%",
+                 GetLocalizedString(NULL, L"Tray Tooltip Opacity"),
+                 CLOCK_WINDOW_OPACITY);
     UpdateTrayTooltip(opacityTip);
 
     if (CLOCK_WINDOW_OPACITY != oldOpacity) {
@@ -225,11 +227,19 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
         return;
     }
 
-    if (IsTrayInteractionSuspended()) {
+    BOOL interactionSuspended = IsTrayInteractionSuspended();
+    BOOL dynamicIcon = CurrentTrayIconNeedsBackgroundRefresh();
+
+    if (interactionSuspended) {
+        if (dynamicIcon) {
+            if (CurrentTrayIconNeedsSystemMonitor()) {
+                EnsureTraySystemMonitorActive();
+            }
+            TrayAnimation_UpdatePercentIconIfNeeded();
+        }
+        RefreshTrayBackgroundWorkState();
         return;
     }
-
-    BOOL dynamicIcon = CurrentTrayIconNeedsBackgroundRefresh();
 
     /* Keep percent icons fresh while preserving the temporary opacity tooltip. */
     if (g_showingOpacityTip) {

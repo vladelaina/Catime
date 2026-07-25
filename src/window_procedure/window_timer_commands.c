@@ -27,9 +27,10 @@
 #include "plugin/plugin_data.h"
 #include "markdown/markdown_interactive.h"
 #include "drag_scale.h" // Added this line
+#include "preview_display.h"
 extern UINT WM_TASKBARCREATED;
 void ToggleShowTimeMode(HWND hwnd) {
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
@@ -49,7 +50,7 @@ void ToggleShowTimeMode(HWND hwnd) {
     }
 }
 void StartCountUp(HWND hwnd) {
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
@@ -59,7 +60,7 @@ void StartCountUp(HWND hwnd) {
     ResetTimerWithInterval(hwnd);
 }
 void StartDefaultCountDown(HWND hwnd) {
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
@@ -74,7 +75,7 @@ void StartDefaultCountDown(HWND hwnd) {
     }
 }
 void StartPomodoroTimer(HWND hwnd) {
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     EnsureWindowVisibleWithTopmostState(hwnd);
     InitializePomodoro();
     CLOCK_SHOW_CURRENT_TIME = false;
@@ -95,7 +96,7 @@ void ToggleEditMode(HWND hwnd) {
 void RestartCurrentTimer(HWND hwnd) {
     CloseAllNotifications(); // Centralized cleanup
     StopNotificationSound();
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     if (!CLOCK_SHOW_CURRENT_TIME) {
         message_shown = FALSE;
         countdown_message_shown = false;
@@ -116,7 +117,7 @@ void RestartCurrentTimer(HWND hwnd) {
 }
 void StartQuickCountdownByIndex(HWND hwnd, int index) {
     if (index <= 0) return;
-    CleanupBeforeTimerAction();
+    CleanupBeforeTimerAction(hwnd);
     int zeroBased = index - 1;
     int timeOptionsCount = time_options_count;
     if (timeOptionsCount < 0) timeOptionsCount = 0;
@@ -127,7 +128,8 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
         StartDefaultCountDown(hwnd);
     }
 }
-void CleanupBeforeTimerAction(void) {
+void CleanupBeforeTimerAction(HWND hwnd) {
+    RestoreWindowVisibility(hwnd);
     StopNotificationSound();
     CloseAllNotifications();
     if (!PluginData_HasCatimeTag()) {

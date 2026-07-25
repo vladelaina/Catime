@@ -137,15 +137,7 @@ static LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                 return 0;
             }
             if (state && state->finalized && state->bodyScrollMax96 > 0) {
-                int delta = GET_WHEEL_DELTA_WPARAM(wParam);
-                int step = DialogModern_Scale(state->dpi, 48);
-                int amount = MulDiv(delta, step, WHEEL_DELTA);
-                if (amount == 0 && delta != 0) {
-                    amount = delta > 0 ? step : -step;
-                }
-                ModernSetBodyScrollOffset(
-                    state,
-                    state->bodyScrollOffset96 - amount);
+                ModernHandleBodyWheel(state, wParam);
                 return 0;
             }
             break;
@@ -181,7 +173,7 @@ static LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             if (state && state->scrollBarDragging) {
                 state->scrollBarDragging = FALSE;
                 if (GetCapture() == hwnd) ReleaseCapture();
-                InvalidateRect(hwnd, NULL, FALSE);
+                ModernRefreshBodyScrollbarHover(state);
                 return 0;
             }
             break;
@@ -248,7 +240,15 @@ static LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             if (state && state->scrollBarDragging &&
                 (HWND)lParam != hwnd) {
                 state->scrollBarDragging = FALSE;
-                InvalidateRect(hwnd, NULL, FALSE);
+                ModernRefreshBodyScrollbarHover(state);
+            }
+            break;
+        case WM_CANCELMODE:
+            if (state && state->scrollBarDragging) {
+                state->scrollBarDragging = FALSE;
+                if (GetCapture() == hwnd) ReleaseCapture();
+                ModernRefreshBodyScrollbarHover(state);
+                return 0;
             }
             break;
         case WM_SETCURSOR:
