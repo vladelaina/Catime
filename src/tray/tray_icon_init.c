@@ -35,16 +35,18 @@ static HICON GetInitialPercentIcon(AnimationType type) {
             percent = batteryPercent;
         }
     } else {
-        float cpu = 0.0f;
-        float mem = 0.0f;
+        SystemMonitorSnapshot snapshot = {0};
         EnsureTraySystemMonitorActive();
-        SystemMonitor_ForceRefresh();
-        SystemMonitor_GetUsage(&cpu, &mem);
-        percent = type == ANIM_TYPE_CPU
-            ? (int)(cpu + 0.5f)
-            : (int)(mem + 0.5f);
-        if (type == ANIM_TYPE_CPU && percent == 0) {
+        if (!SystemMonitor_GetSnapshot(
+                SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY, &snapshot)) {
             return NULL;
+        }
+        if (type == ANIM_TYPE_CPU) {
+            if (!snapshot.cpuAvailable) return NULL;
+            percent = (int)(snapshot.cpuPercent + 0.5f);
+        } else {
+            if (!snapshot.memoryAvailable) return NULL;
+            percent = (int)(snapshot.memoryPercent + 0.5f);
         }
     }
 

@@ -41,27 +41,41 @@ static FormattedBytes FormatBytesPerSecond(double bytes) {
     return result;
 }
 
-static void BuildBasicTooltip(wchar_t* tip, size_t tipSize,
-                              float cpu, float mem,
-                              float upBps, float downBps, BOOL hasNet) {
+static void BuildBasicTooltip(
+    wchar_t* tip, size_t tipSize,
+    const SystemMonitorSnapshot* snapshot) {
     const wchar_t* cpuLabel = GetLocalizedString(NULL, L"Tray Tooltip CPU");
     const wchar_t* memoryLabel = GetLocalizedString(NULL, L"Tray Tooltip Memory");
     const wchar_t* uploadLabel = GetLocalizedString(NULL, L"Tray Tooltip Upload");
     const wchar_t* downloadLabel = GetLocalizedString(NULL, L"Tray Tooltip Download");
-    if (hasNet) {
-        FormattedBytes upload = FormatBytesPerSecond((double)upBps);
-        FormattedBytes download = FormatBytesPerSecond((double)downBps);
-        _snwprintf_s(tip, tipSize, _TRUNCATE,
-                     L"%s %.1f%%\n%s %.1f%%\n%s %.1f %s\n%s %.1f %s",
-                     cpuLabel, cpu, memoryLabel, mem,
-                     uploadLabel, upload.value, upload.unit,
-                     downloadLabel, download.value, download.unit);
-    } else {
-        _snwprintf_s(tip, tipSize, _TRUNCATE,
-                     L"%s %.1f%%\n%s %.1f%%\n%s\n%s",
-                     cpuLabel, cpu, memoryLabel, mem,
-                     uploadLabel, downloadLabel);
+
+    wchar_t cpu[32] = L"--";
+    wchar_t memory[32] = L"--";
+    wchar_t upload[48] = L"--";
+    wchar_t download[48] = L"--";
+    if (snapshot && snapshot->cpuAvailable) {
+        _snwprintf_s(cpu, _countof(cpu), _TRUNCATE,
+                     L"%.1f%%", snapshot->cpuPercent);
     }
+    if (snapshot && snapshot->memoryAvailable) {
+        _snwprintf_s(memory, _countof(memory), _TRUNCATE,
+                     L"%.1f%%", snapshot->memoryPercent);
+    }
+    if (snapshot && snapshot->networkAvailable) {
+        FormattedBytes uploadRate = FormatBytesPerSecond(
+            (double)snapshot->uploadBytesPerSecond);
+        FormattedBytes downloadRate = FormatBytesPerSecond(
+            (double)snapshot->downloadBytesPerSecond);
+        _snwprintf_s(upload, _countof(upload), _TRUNCATE,
+                     L"%.1f %s", uploadRate.value, uploadRate.unit);
+        _snwprintf_s(download, _countof(download), _TRUNCATE,
+                     L"%.1f %s", downloadRate.value, downloadRate.unit);
+    }
+
+    _snwprintf_s(tip, tipSize, _TRUNCATE,
+                 L"%s %s\n%s %s\n%s %s\n%s %s",
+                 cpuLabel, cpu, memoryLabel, memory,
+                 uploadLabel, upload, downloadLabel, download);
 }
 
 static BOOL ShouldShowAnimationSpeed(const char* animName) {
@@ -193,37 +207,35 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
 
     BOOL interactionSuspended = IsTrayInteractionSuspended();
     BOOL dynamicIcon = CurrentTrayIconNeedsBackgroundRefresh();
+    BOOL tooltipActive = IsTrayTooltipActive();
+    BOOL iconNeedsSystemMonitor =
+        CurrentTrayIconNeedsSystemMonitor();
+    SystemMonitorSnapshot snapshot = {0};
+    const SystemMonitorSnapshot* sharedSnapshot =
+        TrayMetricSync_GetSnapshot(
+            tooltipActive, iconNeedsSystemMonitor, &snapshot);
     if (interactionSuspended || g_showingOpacityTip) {
-        if (dynamicIcon) {
-            if (CurrentTrayIconNeedsSystemMonitor()) {
-                EnsureTraySystemMonitorActive();
-            }
-            TrayAnimation_UpdatePercentIconIfNeeded();
-        }
+        TrayMetricSync_UpdateIcon(
+            dynamicIcon, iconNeedsSystemMonitor, sharedSnapshot);
         RefreshTrayBackgroundWorkState();
         return;
     }
 
-    if (!IsTrayTooltipActive()) {
+    if (!tooltipActive) {
         BOOL flushedDeferredIcon = TrayAnimation_HasDeferredIconUpdate();
         if (flushedDeferredIcon) {
             TrayAnimation_RefreshCurrentIcon();
         }
         if (dynamicIcon && !flushedDeferredIcon) {
-            if (CurrentTrayIconNeedsSystemMonitor()) {
-                EnsureTraySystemMonitorActive();
-            }
-            TrayAnimation_UpdatePercentIconIfNeeded();
+            TrayMetricSync_UpdateIcon(
+                dynamicIcon, iconNeedsSystemMonitor, sharedSnapshot);
         }
         RefreshTrayBackgroundWorkState();
         return;
     }
 
-    float cpu, mem, upBps, downBps;
-    GetSystemMetricsWithWarmup(&cpu, &mem);
-    BOOL hasNet = SystemMonitor_GetNetSpeed(&upBps, &downBps);
     wchar_t tip[256] = {0};
-    BuildBasicTooltip(tip, _countof(tip), cpu, mem, upBps, downBps, hasNet);
+    BuildBasicTooltip(tip, _countof(tip), sharedSnapshot);
 
     const char* animName = GetCurrentAnimationName();
     AnimationSpeedMetric metric = ANIMATION_SPEED_ORIGINAL;
@@ -234,15 +246,16 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     }
     AppendUptimeLine(tip, _countof(tip));
     if (showAnimationSpeed) {
-        AppendSpeedLine(tip, _countof(tip), metric, cpu, mem);
+        float cpu = sharedSnapshot ? sharedSnapshot->cpuPercent : 0.0f;
+        float memory = sharedSnapshot
+            ? sharedSnapshot->memoryPercent : 0.0f;
+        AppendSpeedLine(tip, _countof(tip), metric, cpu, memory);
     }
 
-    UpdateTrayTooltip(tip);
-    if (dynamicIcon) {
-        if (CurrentTrayIconNeedsSystemMonitor()) {
-            EnsureTraySystemMonitorActive();
-        }
-        TrayAnimation_UpdatePercentIconWithMetrics(cpu, mem);
+    if (!TrayMetricSync_UpdateIconAndTooltip(
+            dynamicIcon, iconNeedsSystemMonitor,
+            sharedSnapshot, tip)) {
+        UpdateTrayTooltip(tip);
     }
     RefreshTrayBackgroundWorkState();
 }

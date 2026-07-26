@@ -12,6 +12,24 @@
 
 #include <windows.h>
 
+typedef enum {
+    SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY = 1u << 0,
+    SYSTEM_MONITOR_SNAPSHOT_NETWORK = 1u << 1
+} SystemMonitorSnapshotFields;
+
+typedef struct {
+    float cpuPercent;
+    float memoryPercent;
+    float uploadBytesPerSecond;
+    float downloadBytesPerSecond;
+    ULONGLONG revision;
+    ULONGLONG basicSampleTick;
+    ULONGLONG networkSampleTick;
+    BOOL cpuAvailable;
+    BOOL memoryAvailable;
+    BOOL networkAvailable;
+} SystemMonitorSnapshot;
+
 /**
  * @brief Initialize monitor (thread-safe, default 1000ms interval)
  * 
@@ -88,6 +106,18 @@ BOOL SystemMonitor_GetMemoryUsage(float* outPercent);
  * @details Single cache refresh check for both metrics
  */
 BOOL SystemMonitor_GetUsage(float* outCpuPercent, float* outMemPercent);
+
+/**
+ * @brief Refresh requested metrics and copy one internally consistent snapshot
+ * @param fields Bitwise combination of SystemMonitorSnapshotFields
+ * @param outSnapshot Receives cached values, timestamps, and revision
+ * @return TRUE when the monitor is initialized and the snapshot was copied
+ *
+ * @details CPU and memory are sampled as one pair. Network collection remains
+ * asynchronous; the snapshot contains the most recent completed network sample.
+ */
+BOOL SystemMonitor_GetSnapshot(DWORD fields,
+                               SystemMonitorSnapshot* outSnapshot);
 
 /**
  * @brief Get network speed (active interfaces, excludes loopback)

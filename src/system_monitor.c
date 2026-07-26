@@ -48,6 +48,9 @@ void SystemMonitor_Init(void) {
         g_monitorState.cpu.timesState.lastUser = user;
         g_monitorState.cpu.timesState.hasBaseline = TRUE;
     }
+    ULONGLONG initializedAt = Monitor_GetTickMs();
+    g_monitorState.cpu.lastUpdateTick = initializedAt;
+    g_monitorState.memory.lastUpdateTick = initializedAt;
     ReleaseSRWLockExclusive(&g_monitorStateLock);
     ReleaseSRWLockExclusive(&g_monitorLifecycleLock);
 }
@@ -152,7 +155,7 @@ BOOL SystemMonitor_GetCpuUsage(float* outPercent) {
     AcquireSRWLockExclusive(&g_monitorStateLock);
     BOOL available = Monitor_IsInitialized() != 0;
     if (available) {
-        Monitor_RefreshCpuCacheIfNeeded(Monitor_GetTickMs());
+        Monitor_RefreshBasicCacheIfNeeded();
         *outPercent = g_monitorState.cpu.cachedPercent;
     }
     ReleaseSRWLockExclusive(&g_monitorStateLock);
@@ -168,8 +171,48 @@ BOOL SystemMonitor_GetMemoryUsage(float* outPercent) {
     AcquireSRWLockExclusive(&g_monitorStateLock);
     BOOL available = Monitor_IsInitialized() != 0;
     if (available) {
-        Monitor_RefreshMemoryCacheIfNeeded(Monitor_GetTickMs());
+        Monitor_RefreshBasicCacheIfNeeded();
         *outPercent = g_monitorState.memory.cachedPercent;
+    }
+    ReleaseSRWLockExclusive(&g_monitorStateLock);
+    EndMonitorUse();
+    return available;
+}
+
+BOOL SystemMonitor_GetSnapshot(DWORD fields,
+                               SystemMonitorSnapshot* outSnapshot) {
+    if (!outSnapshot) return FALSE;
+    ZeroMemory(outSnapshot, sizeof(*outSnapshot));
+    if (!BeginMonitorUse()) return FALSE;
+
+    AcquireSRWLockExclusive(&g_monitorStateLock);
+    BOOL available = Monitor_IsInitialized() != 0;
+    if (available) {
+        if (fields & SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY) {
+            Monitor_RefreshBasicCacheIfNeeded();
+        }
+        if ((fields & SYSTEM_MONITOR_SNAPSHOT_NETWORK) &&
+            Monitor_EnsureNetworkWorkerStarted()) {
+            Monitor_StartNetworkRefreshIfNeeded();
+        }
+
+        outSnapshot->cpuPercent = g_monitorState.cpu.cachedPercent;
+        outSnapshot->memoryPercent = g_monitorState.memory.cachedPercent;
+        outSnapshot->uploadBytesPerSecond =
+            g_monitorState.network.cachedUpBps;
+        outSnapshot->downloadBytesPerSecond =
+            g_monitorState.network.cachedDownBps;
+        outSnapshot->revision = g_monitorState.snapshotRevision;
+        outSnapshot->basicSampleTick =
+            g_monitorState.cpu.lastUpdateTick;
+        outSnapshot->networkSampleTick =
+            g_monitorState.network.lastTick;
+        outSnapshot->cpuAvailable =
+            g_monitorState.cpu.sampleAvailable;
+        outSnapshot->memoryAvailable =
+            g_monitorState.memory.sampleAvailable;
+        outSnapshot->networkAvailable =
+            g_monitorState.network.sampleAvailable;
     }
     ReleaseSRWLockExclusive(&g_monitorStateLock);
     EndMonitorUse();

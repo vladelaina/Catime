@@ -29,3 +29,10 @@ BOOL Monitor_ShouldRefresh(ULONGLONG now, ULONGLONG lastUpdateTick) {
     return lastUpdateTick == 0 ||
            now - lastUpdateTick >= g_monitorState.updateIntervalMs;
 }
+
+void Monitor_AdvanceSnapshotRevision(void) {
+    ++g_monitorState.snapshotRevision;
+    if (g_monitorState.snapshotRevision == 0) {
+        ++g_monitorState.snapshotRevision;
+    }
+}

@@ -7,6 +7,7 @@
 #define CATIME_TASKBAR_MONITOR_H
 
 #include <windows.h>
+#include "system_monitor.h"
 
 typedef enum {
     TASKBAR_MONITOR_OPTION_CPU_MEMORY = 0,
@@ -38,5 +39,9 @@ void TaskbarMonitor_OnTaskbarCreated(void);
 
 /** Re-evaluate taskbar geometry, DPI, and colors. */
 void TaskbarMonitor_Refresh(void);
+
+/** Apply the same sampled metrics used by the tray icon and tooltip. */
+void TaskbarMonitor_UpdateSnapshot(
+    const SystemMonitorSnapshot* snapshot);
 
 #endif /* CATIME_TASKBAR_MONITOR_H */

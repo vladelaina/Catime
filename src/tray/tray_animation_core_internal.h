@@ -180,7 +180,8 @@ void ScheduleStartupAnimationRetry(HWND hwnd, const char* animationName);
 void CALLBACK TrayAnimationStartupRetryTimerProc(HWND hwnd, UINT msg,
                                                  UINT_PTR id, DWORD time);
 BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath);
-void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
-                                       float cpuPercent, float memPercent);
+BOOL UpdatePercentIconIfNeededInternal(
+    const SystemMonitorSnapshot* snapshot,
+    const wchar_t* synchronizedTooltip);
 
 #endif /* TRAY_ANIMATION_CORE_INTERNAL_H */

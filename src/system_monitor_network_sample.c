@@ -56,6 +56,7 @@ void Monitor_MarkNetworkSampleUnavailable(void) {
     g_monitorState.network.sampleAvailable = FALSE;
     g_monitorState.network.cachedDownBps = 0.0f;
     g_monitorState.network.cachedUpBps = 0.0f;
+    Monitor_AdvanceSnapshotRevision();
 }
 
 void Monitor_ApplyNetworkSample(const NetInterfaceCounter* counters,
@@ -64,6 +65,7 @@ void Monitor_ApplyNetworkSample(const NetInterfaceCounter* counters,
         SetNetworkBaseline(counters, count, now);
         g_monitorState.network.cachedDownBps = 0.0f;
         g_monitorState.network.cachedUpBps = 0.0f;
+        Monitor_AdvanceSnapshotRevision();
         return;
     }
 
@@ -110,6 +112,7 @@ void Monitor_ApplyNetworkSample(const NetInterfaceCounter* counters,
         }
     }
     SetNetworkBaseline(counters, count, now);
+    Monitor_AdvanceSnapshotRevision();
 }
 
 DWORD WINAPI Monitor_NetworkRefreshThreadProc(LPVOID param) {

@@ -88,28 +88,27 @@ static BOOL SampleMemoryUsage(float* outPercent) {
     return TRUE;
 }
 
-void Monitor_RefreshCpuCacheIfNeeded(ULONGLONG now) {
-    if (!Monitor_ShouldRefresh(now, g_monitorState.cpu.lastUpdateTick)) return;
-    float percent = 0.0f;
-    CpuSampleResult result = SampleCpuUsage(&percent);
-    if (result == CPU_SAMPLE_OK) g_monitorState.cpu.cachedPercent = percent;
-    g_monitorState.cpu.lastUpdateTick = result == CPU_SAMPLE_BASELINE_ONLY
-        ? 0 : Monitor_GetTickMs();
-}
-
-void Monitor_RefreshMemoryCacheIfNeeded(ULONGLONG now) {
-    if (!Monitor_ShouldRefresh(now, g_monitorState.memory.lastUpdateTick)) {
-        return;
-    }
-    float percent = 0.0f;
-    if (SampleMemoryUsage(&percent)) {
-        g_monitorState.memory.cachedPercent = percent;
-    }
-    g_monitorState.memory.lastUpdateTick = Monitor_GetTickMs();
-}
-
 void Monitor_RefreshBasicCacheIfNeeded(void) {
     ULONGLONG now = Monitor_GetTickMs();
-    Monitor_RefreshCpuCacheIfNeeded(now);
-    Monitor_RefreshMemoryCacheIfNeeded(now);
+    if (!Monitor_ShouldRefresh(now, g_monitorState.cpu.lastUpdateTick)) {
+        return;
+    }
+
+    float cpuPercent = 0.0f;
+    CpuSampleResult cpuResult = SampleCpuUsage(&cpuPercent);
+    if (cpuResult == CPU_SAMPLE_OK) {
+        g_monitorState.cpu.cachedPercent = cpuPercent;
+        g_monitorState.cpu.sampleAvailable = TRUE;
+    }
+
+    float memoryPercent = 0.0f;
+    if (SampleMemoryUsage(&memoryPercent)) {
+        g_monitorState.memory.cachedPercent = memoryPercent;
+        g_monitorState.memory.sampleAvailable = TRUE;
+    }
+
+    ULONGLONG sampleTick = Monitor_GetTickMs();
+    g_monitorState.cpu.lastUpdateTick = sampleTick;
+    g_monitorState.memory.lastUpdateTick = sampleTick;
+    Monitor_AdvanceSnapshotRevision();
 }

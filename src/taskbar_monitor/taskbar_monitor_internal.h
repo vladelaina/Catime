@@ -3,10 +3,10 @@
 
 #include <windows.h>
 
+#include "system_monitor.h"
+
 #define TASKBAR_MONITOR_CLASS L"CatimeTaskbarMonitorWindow"
-#define TASKBAR_MONITOR_METRIC_TIMER_ID 1u
 #define TASKBAR_MONITOR_PRESENT_TIMER_ID 2u
-#define TASKBAR_MONITOR_REFRESH_MS 1000u
 #define TASKBAR_MONITOR_PRESENT_MS 100u
 #define TASKBAR_MONITOR_FALLBACK_NETWORK_WIDTH 72
 #define TASKBAR_MONITOR_FALLBACK_RESOURCE_WIDTH 64
@@ -72,11 +72,7 @@ typedef struct {
     BOOL networkEnabled;
     BOOL taskListReserved;
     TaskbarHostMode mode;
-    float cpuPercent;
-    float memoryPercent;
-    float uploadBytesPerSecond;
-    float downloadBytesPerSecond;
-    BOOL networkAvailable;
+    SystemMonitorSnapshot metrics;
     TaskbarCompositionMode compositionMode;
     wchar_t cpuLabel[TASKBAR_MONITOR_LABEL_LENGTH];
     wchar_t memoryLabel[TASKBAR_MONITOR_LABEL_LENGTH];

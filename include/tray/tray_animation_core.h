@@ -11,6 +11,8 @@
 
 #include <windows.h>
 
+#include "system_monitor.h"
+
 #define TRAY_ANIMATION_DEFAULT_INTERVAL_MS 150u
 #define TRAY_ANIMATION_MIN_INTERVAL_MS 20u
 #define TRAY_ANIMATION_MAX_INTERVAL_MS 60000u
@@ -118,22 +120,14 @@ void TrayAnimation_RecomputeTimerDelay(void);
 void TrayAnimation_ClearCurrentName(void);
 
 /**
- * @brief Update percent icon if in CPU/Memory mode
- * 
- * @details
- * Called from tray tooltip update timer.
- * Only updates if current animation is a generated builtin icon.
+ * @brief Update a dynamic builtin icon from one shared metrics snapshot
+ * @param snapshot Shared snapshot, or NULL for metrics-independent icons
+ * @param synchronizedTooltip Optional tooltip generated from the same snapshot
+ * @return TRUE when the tooltip was committed with an icon update
  */
-void TrayAnimation_UpdatePercentIconIfNeeded(void);
-
-/**
- * @brief Update percent icon using already sampled CPU/memory values
- *
- * @details
- * Called from tray tooltip update timer to avoid taking the same cached
- * system-monitor lock twice in one tick.
- */
-void TrayAnimation_UpdatePercentIconWithMetrics(float cpuPercent, float memPercent);
+BOOL TrayAnimation_UpdatePercentIconWithSnapshot(
+    const SystemMonitorSnapshot* snapshot,
+    const wchar_t* synchronizedTooltip);
 
 /**
  * @brief Query refresh needs for the icon currently presented to Explorer

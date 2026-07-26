@@ -11,24 +11,15 @@
 #include <stdio.h>
 #include <wchar.h>
 
-static void UpdateMetricSnapshot(void) {
-    if (g_taskbarMonitor.cpuMemoryEnabled) {
-        float cpu = g_taskbarMonitor.cpuPercent;
-        float memory = g_taskbarMonitor.memoryPercent;
-        if (SystemMonitor_GetUsage(&cpu, &memory)) {
-            g_taskbarMonitor.cpuPercent = cpu;
-            g_taskbarMonitor.memoryPercent = memory;
+void TaskbarMonitor_UpdateSnapshot(
+    const SystemMonitorSnapshot* snapshot) {
+    if (!snapshot) return;
+    g_taskbarMonitor.metrics = *snapshot;
+    if (IsWindow(g_taskbarMonitor.window)) {
+        if (IsWindow(g_taskbarMonitor.taskbar)) {
+            TaskbarMonitor_RefreshAttachment();
         }
-    }
-    if (g_taskbarMonitor.networkEnabled) {
-        float upload = 0.0f;
-        float download = 0.0f;
-        g_taskbarMonitor.networkAvailable = SystemMonitor_GetNetSpeed(
-            &upload, &download);
-        if (g_taskbarMonitor.networkAvailable) {
-            g_taskbarMonitor.uploadBytesPerSecond = upload;
-            g_taskbarMonitor.downloadBytesPerSecond = download;
-        }
+        InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
     }
 }
 
@@ -66,16 +57,22 @@ static void SetMetricText(
     wcsncpy_s(metric->value, _countof(metric->value), value, _TRUNCATE);
 }
 
+static int RoundPercent(float percent) {
+    if (percent < 0.0f) return 0;
+    if (percent > 100.0f) return 100;
+    return (int)(percent + 0.5f);
+}
+
 static int BuildMetricTexts(TaskbarMetricText* metrics) {
     int metricCount = 0;
     if (g_taskbarMonitor.networkEnabled) {
         wchar_t upload[32] = {0};
         wchar_t download[32] = {0};
-        FormatRate(g_taskbarMonitor.uploadBytesPerSecond,
-                   g_taskbarMonitor.networkAvailable,
+        FormatRate(g_taskbarMonitor.metrics.uploadBytesPerSecond,
+                   g_taskbarMonitor.metrics.networkAvailable,
                    upload, _countof(upload));
-        FormatRate(g_taskbarMonitor.downloadBytesPerSecond,
-                   g_taskbarMonitor.networkAvailable,
+        FormatRate(g_taskbarMonitor.metrics.downloadBytesPerSecond,
+                   g_taskbarMonitor.metrics.networkAvailable,
                    download, _countof(download));
         SetMetricText(&metrics[metricCount], TASKBAR_METRIC_GROUP_NETWORK,
                       0, L"\x2191:", upload);
@@ -87,10 +84,19 @@ static int BuildMetricTexts(TaskbarMetricText* metrics) {
     if (g_taskbarMonitor.cpuMemoryEnabled) {
         wchar_t cpu[TASKBAR_MONITOR_VALUE_LENGTH] = {0};
         wchar_t memory[TASKBAR_MONITOR_VALUE_LENGTH] = {0};
-        _snwprintf_s(cpu, _countof(cpu), _TRUNCATE, L"%.0f%%",
-                     g_taskbarMonitor.cpuPercent);
-        _snwprintf_s(memory, _countof(memory), _TRUNCATE, L"%.0f%%",
-                     g_taskbarMonitor.memoryPercent);
+        if (g_taskbarMonitor.metrics.cpuAvailable) {
+            _snwprintf_s(cpu, _countof(cpu), _TRUNCATE, L"%d%%",
+                         RoundPercent(g_taskbarMonitor.metrics.cpuPercent));
+        } else {
+            wcsncpy_s(cpu, _countof(cpu), L"--", _TRUNCATE);
+        }
+        if (g_taskbarMonitor.metrics.memoryAvailable) {
+            _snwprintf_s(
+                memory, _countof(memory), _TRUNCATE, L"%d%%",
+                RoundPercent(g_taskbarMonitor.metrics.memoryPercent));
+        } else {
+            wcsncpy_s(memory, _countof(memory), L"--", _TRUNCATE);
+        }
         SetMetricText(&metrics[metricCount], TASKBAR_METRIC_GROUP_RESOURCE,
                       0, g_taskbarMonitor.cpuLabel, cpu);
         ++metricCount;
@@ -116,11 +122,21 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
     (void)lParam;
     switch (message) {
         case WM_CREATE:
-            SetTimer(window, TASKBAR_MONITOR_METRIC_TIMER_ID,
-                     TASKBAR_MONITOR_REFRESH_MS, NULL);
             SetTimer(window, TASKBAR_MONITOR_PRESENT_TIMER_ID,
                      TASKBAR_MONITOR_PRESENT_MS, NULL);
-            UpdateMetricSnapshot();
+            {
+                DWORD fields = 0;
+                if (g_taskbarMonitor.cpuMemoryEnabled) {
+                    fields |= SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY;
+                }
+                if (g_taskbarMonitor.networkEnabled) {
+                    fields |= SYSTEM_MONITOR_SNAPSHOT_NETWORK;
+                }
+                SystemMonitorSnapshot snapshot = {0};
+                if (SystemMonitor_GetSnapshot(fields, &snapshot)) {
+                    TaskbarMonitor_UpdateSnapshot(&snapshot);
+                }
+            }
             return 0;
         case WM_TIMER:
             if (wParam == TASKBAR_MONITOR_PRESENT_TIMER_ID) {
@@ -128,12 +144,6 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
                     SetWindowPos(window, HWND_TOP, 0, 0, 0, 0,
                                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
                 }
-                return 0;
-            }
-            if (wParam == TASKBAR_MONITOR_METRIC_TIMER_ID) {
-                TaskbarMonitor_RefreshAttachment();
-                UpdateMetricSnapshot();
-                InvalidateRect(window, NULL, FALSE);
                 return 0;
             }
             break;
@@ -151,7 +161,6 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             }
             return 0;
         case WM_NCDESTROY:
-            KillTimer(window, TASKBAR_MONITOR_METRIC_TIMER_ID);
             KillTimer(window, TASKBAR_MONITOR_PRESENT_TIMER_ID);
             if (g_taskbarMonitor.window == window) {
                 g_taskbarMonitor.window = NULL;

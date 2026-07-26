@@ -62,13 +62,16 @@ typedef struct {
         CpuTimesState timesState;
         float cachedPercent;
         ULONGLONG lastUpdateTick;
+        BOOL sampleAvailable;
     } cpu;
     struct {
         float cachedPercent;
         ULONGLONG lastUpdateTick;
+        BOOL sampleAvailable;
     } memory;
     NetworkState network;
     DWORD updateIntervalMs;
+    ULONGLONG snapshotRevision;
 } SystemMonitorState;
 
 extern volatile LONG g_monitorInitialized;
@@ -86,9 +89,8 @@ extern ULONGLONG g_networkRefreshStartFailureCooldownUntil;
 LONG Monitor_IsInitialized(void);
 ULONGLONG Monitor_GetTickMs(void);
 BOOL Monitor_ShouldRefresh(ULONGLONG now, ULONGLONG lastUpdateTick);
-void Monitor_RefreshCpuCacheIfNeeded(ULONGLONG now);
-void Monitor_RefreshMemoryCacheIfNeeded(ULONGLONG now);
 void Monitor_RefreshBasicCacheIfNeeded(void);
+void Monitor_AdvanceSnapshotRevision(void);
 
 BOOL Monitor_CollectNetworkCounters(NetInterfaceCounter* counters,
                                     DWORD* count, BOOL* is64Bit);

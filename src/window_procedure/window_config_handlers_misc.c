@@ -200,7 +200,7 @@ LRESULT HandleAppColorsChanged(HWND hwnd) {
 
     if (percentIconColorsChanged) {
         ReadPercentIconColorsConfig();
-        TrayAnimation_UpdatePercentIconIfNeeded();
+        TrayTipTimerProc(hwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
     }
 
     RememberHotReloadColorConfig(&colorConfig);

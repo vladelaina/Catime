@@ -4,19 +4,19 @@
  */
 
 #include "tray_animation_core_internal.h"
+#include "tray_internal.h"
 
-void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
-                                              float cpuPercent,
-                                              float memPercent) {
-    if (!BeginTrayAnimationRuntimeUse()) return;
+BOOL UpdatePercentIconIfNeededInternal(
+    const SystemMonitorSnapshot* snapshot,
+    const wchar_t* synchronizedTooltip) {
+    BOOL tooltipApplied = FALSE;
+    if (!BeginTrayAnimationRuntimeUse()) return FALSE;
 
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) goto done;
-    /* Replacing the icon while Explorer owns a hover tooltip can make the
-     * notification area briefly tear down and recreate that tooltip.  A
-     * popup menu does not own that tooltip, so dynamic built-in icons may
-     * continue refreshing while either tray menu is open. */
-    if (IsTrayTooltipActive()) goto done;
+    /* During normal hover, icon and tooltip are committed together from one
+     * snapshot. Other native feedback tips keep the existing icon stable. */
+    if (IsTrayTooltipActive() && !synchronizedTooltip) goto done;
 
     char animationName[MAX_PATH] = {0};
     BOOL previewActive = FALSE;
@@ -49,19 +49,18 @@ void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
     /* Handle percent type (CPU, Memory, Battery) */
     if (def->type == ANIM_SOURCE_PERCENT) {
         int p = 0;
-        if (hasMetricsSnapshot && _stricmp(animationName, "__cpu__") == 0) {
-            p = (int)(cpuPercent + 0.5f);
-        } else if (hasMetricsSnapshot && _stricmp(animationName, "__mem__") == 0) {
-            p = (int)(memPercent + 0.5f);
+        if (snapshot && _stricmp(animationName, "__cpu__") == 0) {
+            if (!snapshot->cpuAvailable) goto done;
+            p = (int)(snapshot->cpuPercent + 0.5f);
+        } else if (snapshot && _stricmp(animationName, "__mem__") == 0) {
+            if (!snapshot->memoryAvailable) goto done;
+            p = (int)(snapshot->memoryPercent + 0.5f);
         } else if (def->getValue) {
             p = def->getValue();
         }
         if (p < 0) p = 0;
         if (p > 100) p = 100;
         value = p;
-        if (ShouldPreserveCachedPercentIconValue(animationName, value)) {
-            goto done;
-        }
         if (IsBuiltinIconUpdateCacheCurrent(animationName, value,
                                             textColor, bgColor,
                                             iconCx, iconCy)) {
@@ -85,30 +84,40 @@ void UpdatePercentIconIfNeededInternal(BOOL hasMetricsSnapshot,
 
     if (!hIcon) goto done;
 
-    NOTIFYICONDATAW nid = {0};
-    nid.cbSize = sizeof(nid);
-    nid.hWnd = trayHwnd;
-    nid.uID = CLOCK_ID_TRAY_APP_ICON;
-    nid.uFlags = NIF_ICON;
-    nid.hIcon = hIcon;
-    if (Shell_NotifyIconW(NIM_MODIFY, &nid)) {
+    NOTIFYICONDATAW updateData = {0};
+    updateData.cbSize = sizeof(updateData);
+    updateData.hWnd = trayHwnd;
+    updateData.uID = CLOCK_ID_TRAY_APP_ICON;
+    updateData.uFlags = NIF_ICON;
+    updateData.hIcon = hIcon;
+    if (synchronizedTooltip) {
+        updateData.uFlags |= NIF_TIP;
+        wcsncpy_s(updateData.szTip, _countof(updateData.szTip),
+                  synchronizedTooltip, _TRUNCATE);
+    }
+    if (Shell_NotifyIconW(NIM_MODIFY, &updateData)) {
         TrayIconLifetime_Retain(hIcon);
         hIcon = NULL;
         RecordBuiltinIconUpdateCache(animationName, value,
                                      textColor, bgColor,
                                      iconCx, iconCy);
+        if (synchronizedTooltip) {
+            wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip),
+                     updateData.szTip);
+            tooltipApplied = TRUE;
+        }
     }
 
     if (hIcon) DestroyIcon(hIcon);
 
 done:
     EndTrayAnimationRuntimeUse();
+    return tooltipApplied;
 }
 
-void TrayAnimation_UpdatePercentIconIfNeeded(void) {
-    UpdatePercentIconIfNeededInternal(FALSE, 0.0f, 0.0f);
-}
-
-void TrayAnimation_UpdatePercentIconWithMetrics(float cpuPercent, float memPercent) {
-    UpdatePercentIconIfNeededInternal(TRUE, cpuPercent, memPercent);
+BOOL TrayAnimation_UpdatePercentIconWithSnapshot(
+    const SystemMonitorSnapshot* snapshot,
+    const wchar_t* synchronizedTooltip) {
+    return UpdatePercentIconIfNeededInternal(
+        snapshot, synchronizedTooltip);
 }

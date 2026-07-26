@@ -96,7 +96,8 @@ void ReleaseIdleTraySystemMonitor(void) {
 BOOL ShouldRunTrayBackgroundTimer(HWND hwnd) {
     return g_trayBackgroundWorkEnabled &&
            IsTrayIconActiveForWindow(hwnd) &&
-           ((!IsTrayInteractionSuspended() && IsTrayTooltipActive()) ||
+           (TaskbarMonitor_IsEnabled() ||
+            (!IsTrayInteractionSuspended() && IsTrayTooltipActive()) ||
             CurrentTrayIconNeedsBackgroundRefresh() ||
             TrayAnimation_HasDeferredIconUpdate());
 }
@@ -156,27 +157,9 @@ BOOL IsTrayTooltipActive(void) {
     return InterlockedCompareExchange(&g_trayTooltipActive, 0, 0) != 0;
 }
 
-void GetSystemMetricsWithWarmup(float* cpu, float* mem) {
+BOOL GetSystemMetricsSnapshot(DWORD fields,
+                              SystemMonitorSnapshot* snapshot) {
+    if (!snapshot) return FALSE;
     EnsureTraySystemMonitorActive();
-    SystemMonitor_GetUsage(cpu, mem);
-
-    static AnimationType lastWarmupType = ANIM_TYPE_CUSTOM;
-    static BOOL warmupAttempted = FALSE;
-    AnimationType type = GetAnimationType(GetCurrentAnimationName());
-    if (type != lastWarmupType) {
-        lastWarmupType = type;
-        warmupAttempted = FALSE;
-    }
-    if (type != ANIM_TYPE_CPU && type != ANIM_TYPE_MEMORY) {
-        return;
-    }
-
-    float chosen = type == ANIM_TYPE_CPU ? *cpu : *mem;
-    if (!warmupAttempted) {
-        warmupAttempted = TRUE;
-        if ((int)(chosen + 0.5f) == 0) {
-            SystemMonitor_ForceRefresh();
-            SystemMonitor_GetUsage(cpu, mem);
-        }
-    }
+    return SystemMonitor_GetSnapshot(fields, snapshot);
 }

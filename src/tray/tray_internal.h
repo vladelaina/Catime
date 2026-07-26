@@ -8,6 +8,7 @@
 
 #include "tray/tray.h"
 #include "tray/tray_hover_cache.h"
+#include "system_monitor.h"
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
 #define ICON_RECT_CACHE_TIMEOUT_MS 250
@@ -71,7 +72,17 @@ BOOL ShouldKeepSystemMonitorActive(void);
 void EnsureTraySystemMonitorActive(void);
 void ReleaseIdleTraySystemMonitor(void);
 BOOL ShouldRunTrayBackgroundTimer(HWND hwnd);
-void GetSystemMetricsWithWarmup(float* cpu, float* mem);
+BOOL GetSystemMetricsSnapshot(DWORD fields,
+                              SystemMonitorSnapshot* snapshot);
+const SystemMonitorSnapshot* TrayMetricSync_GetSnapshot(
+    BOOL tooltipActive, BOOL iconNeedsSystemMonitor,
+    SystemMonitorSnapshot* snapshot);
+void TrayMetricSync_UpdateIcon(
+    BOOL dynamicIcon, BOOL iconNeedsSystemMonitor,
+    const SystemMonitorSnapshot* snapshot);
+BOOL TrayMetricSync_UpdateIconAndTooltip(
+    BOOL dynamicIcon, BOOL iconNeedsSystemMonitor,
+    const SystemMonitorSnapshot* snapshot, const wchar_t* tip);
 
 BOOL IsMouseOverTrayIconCached(POINT pt);
 BOOL TryReleaseTrayMouseHook(void);

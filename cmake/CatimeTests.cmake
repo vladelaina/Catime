@@ -102,6 +102,32 @@ target_include_directories(render_retry_tests PRIVATE
 target_link_libraries(render_retry_tests PRIVATE user32)
 add_test(NAME render_retry COMMAND render_retry_tests)
 
+add_executable(system_monitor_snapshot_tests
+    tests/system_monitor_snapshot_tests.c
+    src/system_monitor.c
+    src/system_monitor_basic.c
+    src/system_monitor_network_api.c
+    src/system_monitor_network_sample.c
+    src/system_monitor_network_worker.c
+    src/system_monitor_state.c
+)
+target_include_directories(system_monitor_snapshot_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(system_monitor_snapshot_tests PRIVATE iphlpapi)
+add_test(NAME system_monitor_snapshot COMMAND system_monitor_snapshot_tests)
+
+add_executable(tray_metric_sync_tests
+    tests/tray_metric_sync_tests.c
+    src/tray/tray_metric_sync.c
+)
+target_include_directories(tray_metric_sync_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/tray"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+add_test(NAME tray_metric_sync COMMAND tray_metric_sync_tests)
+
 set(_catime_test_targets
     window_placement_tests
     startup_policy_tests
@@ -113,6 +139,8 @@ set(_catime_test_targets
     tray_hover_cache_tests
     timer_render_cache_tests
     render_retry_tests
+    system_monitor_snapshot_tests
+    tray_metric_sync_tests
 )
 
 if(MSVC)
