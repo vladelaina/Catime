@@ -9,6 +9,7 @@
 #include "drawing/drawing_effect.h"
 #include "text_effect.h"
 #include "log.h"
+#include "taskbar_monitor.h"
 #include "../resource/resource.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,12 +42,8 @@ static void ApplyDefaultPomodoroTimes(void) {
     g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
 }
 static int ClampPomodoroLoopCountForApply(int loopCount) {
-    if (loopCount < MIN_POMODORO_LOOP_COUNT) {
-        return MIN_POMODORO_LOOP_COUNT;
-    }
-    if (loopCount > MAX_POMODORO_LOOP_COUNT) {
-        return MAX_POMODORO_LOOP_COUNT;
-    }
+    if (loopCount < MIN_POMODORO_LOOP_COUNT) return MIN_POMODORO_LOOP_COUNT;
+    if (loopCount > MAX_POMODORO_LOOP_COUNT) return MAX_POMODORO_LOOP_COUNT;
     return loopCount;
 }
 static void ApplyDefaultQuickCountdownOptions(void) {
@@ -296,5 +293,7 @@ void ApplyConfigSnapshot(const ConfigSnapshot* snapshot) { if (!snapshot) {
     }
     SetLanguage((AppLanguage)languageEnum);
     ReloadAnimationSpeedFromConfig();
+    TaskbarMonitor_ApplyConfig(snapshot->taskbarMonitorEnabled,
+        snapshot->taskbarMonitorCpuMemory, snapshot->taskbarMonitorNetwork);
     g_AppConfig.last_config_time = time(NULL);
 }

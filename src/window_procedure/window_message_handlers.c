@@ -4,6 +4,7 @@
  */
 
 #include "window_procedure/window_message_handlers_internal.h"
+#include "taskbar_monitor.h"
 #include "config/config_watcher.h"
 #include "drag_scale.h"
 #include "drawing.h"
@@ -134,6 +135,7 @@ LRESULT HandleDisplayChange(HWND hwnd, WPARAM wp, LPARAM lp) {
         RestoreWindowPositionAfterSystemChange(hwnd);
     }
     InvalidateRect(hwnd, NULL, FALSE);
+    TaskbarMonitor_Refresh();
     return 0;
 }
 
@@ -164,6 +166,7 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
         ClearPendingSystemPositionRestore();
         InvalidateRect(hwnd, NULL, TRUE);
+        TaskbarMonitor_Refresh();
         return 0;
     }
 
@@ -182,6 +185,7 @@ LRESULT HandleDpiChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
         RestoreWindowPositionAfterSystemChange(hwnd);
     }
     InvalidateRect(hwnd, NULL, TRUE);
+    TaskbarMonitor_Refresh();
     return 0;
 }
 

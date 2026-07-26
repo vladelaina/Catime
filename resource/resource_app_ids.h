@@ -75,11 +75,6 @@
 #define TIMER_REFRESH_INTERVAL_MS 150        /**< Edit mode: ~7 FPS provides responsive feedback without excessive redraws */
 #define CONFIG_SAVE_DELAY_MS 500             /**< Debounce: Batches rapid setting changes to reduce disk writes */
 
-/** @brief Media control virtual key codes */
-#define VK_MEDIA_PLAY_PAUSE 0xB3         /**< Media play/pause key */
-#define VK_MEDIA_STOP 0xB2               /**< Media stop key */
-#define KEYEVENTF_KEYUP 0x0002           /**< Key up event flag */
-
 /** @brief Visual effects constants */
 #define BLUR_OPACITY 192                 /**< 75% opacity (192/255) balances blur effect visibility with transparency */
 #define BLUR_TRANSITION_MS 200           /**< Smooth transition without feeling sluggish */

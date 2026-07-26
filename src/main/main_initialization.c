@@ -16,6 +16,7 @@
 #include "timer/main_timer.h"
 #include "timer/timer.h"
 #include "timer/timer_events.h"
+#include "taskbar_monitor.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_theme.h"
@@ -186,6 +187,9 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
     UNREFERENCED_PARAMETER(hInstance);
     UNREFERENCED_PARAMETER(nCmdShow);
     InitializeAsyncCaches(hwnd);
+    if (!TaskbarMonitor_Initialize(hInstance, hwnd)) {
+        LOG_WARNING("Taskbar monitor initialization failed");
+    }
     BOOL launchedFromStartup = FALSE;
     HandleCommandLine(hwnd, &launchedFromStartup);
 

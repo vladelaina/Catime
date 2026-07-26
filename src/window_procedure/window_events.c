@@ -8,6 +8,7 @@
 #include "config.h"
 #include "drag_scale.h"
 #include "window_procedure/window_events.h"
+#include "taskbar_monitor.h"
 #include "timer/main_timer.h"
 #include "window/window_visual_effects.h"
 #include "window/window_desktop_integration.h"
@@ -81,6 +82,7 @@ void HandleWindowDestroy(HWND hwnd) {
     CleanupWindowDesktopIntegrationState(hwnd);
     CleanupWindowVisualEffects(hwnd);
     
+    TaskbarMonitor_Shutdown();
     StopTrayAnimation(hwnd);
 
     RemoveTrayIcon();

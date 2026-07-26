@@ -6,6 +6,7 @@
 #include "tray_internal.h"
 #include "config.h"
 #include "system_monitor.h"
+#include "taskbar_monitor.h"
 #include "tray/tray_animation_core.h"
 #include "log.h"
 
@@ -68,6 +69,7 @@ BOOL ShouldKeepSystemMonitorActive(void) {
         !IsTrayIconActiveForWindow(hwnd)) {
         return FALSE;
     }
+    if (TaskbarMonitor_IsEnabled()) return TRUE;
     if (IsTrayInteractionSuspended()) {
         return CurrentTrayIconNeedsSystemMonitor() ||
                CurrentAnimationSpeedNeedsSystemMonitor();

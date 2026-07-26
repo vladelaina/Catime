@@ -4,6 +4,8 @@
  */
 
 #include "tray_animation_menu_internal.h"
+#include "taskbar_monitor.h"
+#include "tray/tray.h"
 
 BOOL SetCurrentAnimationName(const char* name);
 
@@ -152,6 +154,18 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
         id == CLOCK_IDM_ANIM_SPEED_CPU ||
         id == CLOCK_IDM_ANIM_SPEED_TIMER ||
         id == CLOCK_IDM_ANIM_SPEED_FIXED) return FALSE;
+    if (id == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY ||
+        id == CLOCK_IDM_TASKBAR_MONITOR_NETWORK) {
+        TaskbarMonitorOption option =
+            id == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY
+                ? TASKBAR_MONITOR_OPTION_CPU_MEMORY
+                : TASKBAR_MONITOR_OPTION_NETWORK;
+        BOOL enabled = !TaskbarMonitor_IsOptionEnabled(option);
+        if (TaskbarMonitor_SetOptionEnabled(option, enabled)) {
+            RefreshTrayBackgroundWorkState();
+        }
+        return TRUE;
+    }
     if (id == CLOCK_IDM_ANIMATIONS_OPEN_DIR) {
         OpenAnimationsFolder();
         return TRUE;

@@ -10,6 +10,8 @@
 #include "config.h"
 #include "config/config_defaults.h"
 #include "log.h"
+#include "taskbar_monitor.h"
+#include "tray/tray.h"
 #include "tray/tray_animation_core.h"
 #include "window_procedure/window_utils.h"
 
@@ -214,6 +216,22 @@ LRESULT HandleAppAnimSpeedChanged(HWND hwnd) {
 
 LRESULT HandleAppAnimPathChanged(HWND hwnd) {
     (void)hwnd;
+    BOOL taskbarMonitorEnabled = ReadConfigBool(
+        "Animation", "TASKBAR_MONITOR_ENABLED", FALSE);
+    BOOL taskbarMonitorCpuMemory = taskbarMonitorEnabled && ReadConfigBool(
+        "Animation", "TASKBAR_MONITOR_CPU_MEMORY", TRUE);
+    BOOL taskbarMonitorNetwork = taskbarMonitorEnabled && ReadConfigBool(
+        "Animation", "TASKBAR_MONITOR_NETWORK", TRUE);
+    if (taskbarMonitorCpuMemory != TaskbarMonitor_IsOptionEnabled(
+            TASKBAR_MONITOR_OPTION_CPU_MEMORY) ||
+        taskbarMonitorNetwork != TaskbarMonitor_IsOptionEnabled(
+            TASKBAR_MONITOR_OPTION_NETWORK)) {
+        TaskbarMonitor_ApplyConfig(
+            taskbarMonitorEnabled,
+            taskbarMonitorCpuMemory,
+            taskbarMonitorNetwork);
+        RefreshTrayBackgroundWorkState();
+    }
     char buffer[MAX_PATH] = {0};
     if (!ReadIniStringExact("Animation", "ANIMATION_PATH", "__logo__",
                             buffer, sizeof(buffer), GetCachedConfigPath())) {

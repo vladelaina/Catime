@@ -7,6 +7,7 @@
 #include "dialog/dialog_common.h"
 #include "drag_scale.h"
 #include "tray/tray_menu_theme.h"
+#include "taskbar_monitor.h"
 #include "window.h"
 
 static BOOL g_sessionSettingsPrepared = FALSE;
@@ -36,6 +37,7 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     RefreshNativeMenuTheme();
     if (IsThemeSettingChange(wp, lp)) {
         Dialog_RefreshOpenThemes();
+        TaskbarMonitor_Refresh();
     }
 
     if (wp != SPI_SETWORKAREA || CLOCK_IS_DRAGGING) {
@@ -51,6 +53,7 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleThemeChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     RefreshNativeMenuTheme();
     Dialog_RefreshOpenThemes();
+    TaskbarMonitor_Refresh();
     return DefWindowProc(hwnd, WM_THEMECHANGED, wp, lp);
 }
 

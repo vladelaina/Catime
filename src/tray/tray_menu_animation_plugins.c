@@ -4,6 +4,7 @@
  */
 
 #include "tray_menu_submenus_internal.h"
+#include "taskbar_monitor.h"
 
 static BOOL IsCustomTextDisplaySourceActive(void) {
     if (!PluginData_IsActive()) {
@@ -61,6 +62,29 @@ void BuildAnimationSubmenu(HMENU hMenu) {
             }
         }
 
+        AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
+        HMENU hTaskbarMonitorMenu = CreatePopupMenu();
+        if (hTaskbarMonitorMenu) {
+            AppendMenuW(
+                hTaskbarMonitorMenu,
+                MF_STRING | (TaskbarMonitor_IsOptionEnabled(
+                    TASKBAR_MONITOR_OPTION_NETWORK)
+                        ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TASKBAR_MONITOR_NETWORK,
+                GetLocalizedString(NULL, L"Network"));
+            AppendMenuW(
+                hTaskbarMonitorMenu,
+                MF_STRING | (TaskbarMonitor_IsOptionEnabled(
+                    TASKBAR_MONITOR_OPTION_CPU_MEMORY)
+                        ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY,
+                GetLocalizedString(NULL, L"CPU and Memory"));
+            if (!AppendMenuW(
+                    hAnimMenu, MF_POPUP, (UINT_PTR)hTaskbarMonitorMenu,
+                    GetLocalizedString(NULL, L"Taskbar Monitor"))) {
+                DestroyMenu(hTaskbarMonitorMenu);
+            }
+        }
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(NULL, L"Open animations folder"));
     }

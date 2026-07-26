@@ -50,6 +50,9 @@ typedef struct {
     int scaleStepNormal;
     int scaleStepFast;
     int textEffect;  /* TextEffectType enum value */
+    BOOL taskbarMonitorEnabled;
+    BOOL taskbarMonitorCpuMemory;
+    BOOL taskbarMonitorNetwork;
 
     /* Timer */
     int defaultStartTime;

@@ -1,5 +1,7 @@
 #include "window_commands_internal.h"
 
+#include "taskbar_monitor.h"
+
 static const struct {
     UINT menuId;
     AppLanguage language;
@@ -17,6 +19,7 @@ BOOL HandleLanguageSelection(HWND hwnd, UINT menuId) {
             if (WriteConfigLanguage(LANGUAGE_MAP[i].language) &&
                 SetLanguage(LANGUAGE_MAP[i].language)) {
                 InvalidateRect(hwnd, NULL, TRUE);
+                TaskbarMonitor_Refresh();
             }
             return TRUE;
         }

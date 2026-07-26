@@ -1,4 +1,5 @@
 #include "window_procedure/window_procedure.h"
+#include "taskbar_monitor.h"
 #include "window_procedure/window_message_handlers.h"
 #include "window_procedure/window_commands.h"
 #include "window_procedure/window_config_handlers.h"
@@ -156,6 +157,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     if (msg == WM_TASKBARCREATED) {
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
+        TaskbarMonitor_OnTaskbarCreated();
         RefreshWindowTopmostState(hwnd);
         if (!BeginSystemPositionChangeGuard(hwnd)) {
             RestoreWindowPositionAfterSystemChange(hwnd);
