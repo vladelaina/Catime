@@ -99,7 +99,7 @@ BOOL IniValueMatches(IniFile* ini, const char* section,
                      const char* key, const char* value) {
     if (!ini || !section || !key) return FALSE;
     IniSection* foundSection = FindSection(ini, section);
-    IniEntry* entry = foundSection ? FindEntry(foundSection, key) : NULL;
+    const IniEntry* entry = foundSection ? FindEntry(foundSection, key) : NULL;
     return entry && entry->value &&
            strcmp(entry->value, value ? value : "") == 0;
 }

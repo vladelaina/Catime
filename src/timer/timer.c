@@ -170,7 +170,7 @@ int ParseInput(const char* input, int* total_seconds) {
     strncpy(input_copy, input, sizeof(input_copy) - 1);
     input_copy[sizeof(input_copy) - 1] = '\0';
 
-    int len = strlen(input_copy);
+    size_t len = strlen(input_copy);
     int result = 0;
 
     if (len > 0 && (input_copy[len - 1] == 't' || input_copy[len - 1] == 'T')) {

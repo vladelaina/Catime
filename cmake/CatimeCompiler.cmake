@@ -5,7 +5,10 @@ if(MSVC)
         $<$<COMPILE_LANGUAGE:C>:strcasecmp=_stricmp>
         $<$<COMPILE_LANGUAGE:C>:strdup=_strdup>
     )
-    target_compile_options(catime PRIVATE $<$<COMPILE_LANGUAGE:C>:/std:c11>)
+    target_compile_options(catime PRIVATE
+        $<$<COMPILE_LANGUAGE:C>:/std:c11>
+        $<$<COMPILE_LANGUAGE:C>:/utf-8>
+    )
 endif()
 
 if(CATIME_ENABLE_WARNINGS)
@@ -49,7 +52,7 @@ if(MSVC)
             $<$<COMPILE_LANGUAGE:C>:/Zi>
             $<$<COMPILE_LANGUAGE:C>:/Od>
         )
-        target_link_options(catime PRIVATE /fsanitize=address /DEBUG /INCREMENTAL:NO)
+        target_link_options(catime PRIVATE /DEBUG /INCREMENTAL:NO)
     elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         target_compile_definitions(catime PRIVATE NDEBUG)
         target_compile_options(catime PRIVATE

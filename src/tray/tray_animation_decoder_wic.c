@@ -101,7 +101,7 @@ static void ReadCanvasSize(AnimationDecodeContext* context) {
     }
 }
 
-static BOOL AllocateAnimationStorage(AnimationDecodeContext* context,
+static BOOL AllocateAnimationStorage(const AnimationDecodeContext* context,
                                      DecodedAnimation* anim,
                                      UINT frameCount) {
     anim->canvasWidth = context->canvasWidth;

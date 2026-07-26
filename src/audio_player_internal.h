@@ -8,7 +8,14 @@
 #define CATIME_AUDIO_RESTORE_MINIAUDIO_IMPLEMENTATION
 #undef MINIAUDIO_IMPLEMENTATION
 #endif
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4245 4456)
+#endif
 #include "../libs/miniaudio/miniaudio.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 #ifdef CATIME_AUDIO_RESTORE_MINIAUDIO_IMPLEMENTATION
 #undef CATIME_AUDIO_RESTORE_MINIAUDIO_IMPLEMENTATION
 #endif

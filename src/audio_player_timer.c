@@ -1,12 +1,12 @@
 #include "audio_player_internal.h"
 
 void CALLBACK AudioTimerCallback(
-    HWND hwnd, UINT message, UINT_PTR eventId, DWORD time) {
+    HWND hwnd, UINT message, UINT_PTR idEvent, DWORD time) {
     (void)time;
     AudioPlaybackCompleteCallback callback = NULL;
     HWND callbackHwnd = NULL;
     AcquireSRWLockExclusive(&g_audioStateLock);
-    if (message != WM_TIMER || eventId != g_audioTimerId ||
+    if (message != WM_TIMER || idEvent != g_audioTimerId ||
         g_audioTimerKind == AUDIO_TIMER_NONE ||
         hwnd != g_audioTimerHwnd || !IsCurrentProcessAudioWindow(hwnd)) {
         ReleaseSRWLockExclusive(&g_audioStateLock);

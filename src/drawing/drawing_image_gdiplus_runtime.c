@@ -47,7 +47,7 @@ static void ResetRuntime(void) {
 }
 
 static BOOL HasRequiredProcedures(void) {
-    DrawingImageRuntime* runtime = &g_drawingImageRuntime;
+    const DrawingImageRuntime* runtime = &g_drawingImageRuntime;
     return runtime->startup && runtime->shutdown && runtime->createFromHdc &&
            runtime->deleteGraphics && runtime->createBitmapFromFile &&
            runtime->disposeImage && runtime->drawImageRect &&

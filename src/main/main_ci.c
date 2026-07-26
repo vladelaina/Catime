@@ -1,6 +1,7 @@
 #include "main/main_initialization.h"
 #include "main_initialization_internal.h"
 #include "log.h"
+#include "timer/timer_events.h"
 #include "window/window_desktop_integration.h"
 #include "../../resource/resource.h"
 
@@ -8,6 +9,8 @@
 #include <wchar.h>
 
 #define STARTUP_WINDOW_RECOVERY_DELAY_MS 2000
+
+static int s_ciSmokeExitCode = 0;
 
 static BOOL ContainsFlag(const wchar_t* commandLine, const wchar_t* flag) {
     if (!commandLine || !flag || !*flag) return FALSE;
@@ -43,6 +46,14 @@ static VOID CALLBACK SmokeExitTimer(HWND hwnd, UINT message,
     UNREFERENCED_PARAMETER(time);
     if (message != WM_TIMER || timerId != TIMER_ID_CI_EXIT) return;
     KillTimer(hwnd, timerId);
+    if (!Timer_HasMainWindowPainted()) {
+        s_ciSmokeExitCode = 2;
+        if (Timer_HasPresentedMainWindowFrame()) {
+            LOG_ERROR("CI smoke presented a frame with empty timer text");
+        } else {
+            LOG_ERROR("CI smoke did not present a timer frame");
+        }
+    }
     LOG_INFO("CI smoke timeout reached, closing application");
     PostMessageW(hwnd, WM_CLOSE, 0, 0);
 }
@@ -52,6 +63,10 @@ void Main_ScheduleCiSmokeExit(HWND hwnd, UINT delayMs) {
         LOG_WARNING("CI smoke exit timer failed (error=%lu)", GetLastError());
         PostMessageW(hwnd, WM_CLOSE, 0, 0);
     }
+}
+
+int Main_GetCiSmokeExitCode(void) {
+    return s_ciSmokeExitCode;
 }
 
 void Main_ScheduleStartupWindowRecovery(HWND hwnd, BOOL topmost) {

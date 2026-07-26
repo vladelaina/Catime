@@ -85,4 +85,10 @@ void Timer_ClearTimeoutSystemActionArm(void);
  */
 void Timer_NotifyMainWindowPainted(const wchar_t* timerText);
 
+/** Return TRUE after a non-empty timer frame has been presented. */
+BOOL Timer_HasMainWindowPainted(void);
+
+/** Return TRUE after any main-window timer frame has been presented. */
+BOOL Timer_HasPresentedMainWindowFrame(void);
+
 #endif

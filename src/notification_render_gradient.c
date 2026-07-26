@@ -76,7 +76,8 @@ static BOOL DrawGradientNotificationText(NotificationData* data, HDC memDC,
         int destY = rect.top + yOffset + y;
         if (destY < 0 || destY >= destHeight) continue;
         for (int x = 0; x < width; x++) {
-            unsigned char* pixel = pixels + ((size_t)y * data->textMaskWidth + x) * 4;
+            const unsigned char* pixel =
+                pixels + ((size_t)y * data->textMaskWidth + x) * 4;
             BYTE alpha = (BYTE)(((int)pixel[0] + pixel[1] + pixel[2]) / 3);
             int destX = rect.left + x;
             if (!alpha || destX < 0 || destX >= destWidth) continue;

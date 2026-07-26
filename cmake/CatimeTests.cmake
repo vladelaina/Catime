@@ -102,6 +102,27 @@ target_include_directories(render_retry_tests PRIVATE
 target_link_libraries(render_retry_tests PRIVATE user32)
 add_test(NAME render_retry COMMAND render_retry_tests)
 
+set(_catime_test_targets
+    window_placement_tests
+    startup_policy_tests
+    startup_shortcut_tests
+    tray_animation_playback_tests
+    tray_animation_speed_input_tests
+    tray_animation_timer_tests
+    tray_icon_lifetime_tests
+    tray_hover_cache_tests
+    timer_render_cache_tests
+    render_retry_tests
+)
+
+if(MSVC)
+    foreach(_catime_test_target IN LISTS _catime_test_targets)
+        target_compile_options(${_catime_test_target} PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:/utf-8>
+        )
+    endforeach()
+endif()
+
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     foreach(animation_test_target IN ITEMS
             tray_animation_playback_tests
@@ -112,3 +133,6 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(${animation_test_target} PRIVATE -O2 -ffast-math)
     endforeach()
 endif()
+
+unset(_catime_test_targets)
+unset(_catime_test_target)

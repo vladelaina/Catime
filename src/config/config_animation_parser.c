@@ -81,7 +81,7 @@ static wchar_t* ReadAnimationSection(const char* configPath,
                                      wchar_t stackBuffer[],
                                      DWORD stackCapacity) {
     enum { HEAP_CAPACITY = 64 * 1024 };
-    wchar_t section[] = L"Animation";
+    const wchar_t section[] = L"Animation";
     wchar_t path[MAX_PATH];
     wchar_t* buffer = stackBuffer;
     DWORD capacity = stackCapacity;

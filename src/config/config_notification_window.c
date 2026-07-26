@@ -4,10 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
-typedef struct {
-    int value;
-    const char* str;
-} EnumStrMap;
 static BOOL NotificationIniValueMatches(const char* path, const char* key,
                                         const char* expected) {
     char current[2048] = {0};

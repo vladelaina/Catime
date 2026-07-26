@@ -99,7 +99,6 @@ static DWORD WINAPI DirectoryWatcherThreadProc(LPVOID lpParam) {
                         GetLastError());
 
             FindCloseChangeNotification(changeHandle);
-            changeHandle = INVALID_HANDLE_VALUE;
             NotifyDirectoryWatcherCallback(watcher);
 
             changeHandle = ReopenDirectoryChangeHandle(watcher);

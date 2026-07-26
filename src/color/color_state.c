@@ -134,15 +134,15 @@ static BOOL AppendNormalizedGradientSegment(const char* begin, const char* end, 
     outValue[*used] = '\0';
     return TRUE;
 }
-BOOL NormalizeGradientConfigValue(const char* color_input, char* outValue, size_t outSize) {
-    if (!color_input || !outValue || outSize == 0) {
+BOOL NormalizeGradientConfigValue(const char* colorInput, char* outValue, size_t outSize) {
+    if (!colorInput || !outValue || outSize == 0) {
         return FALSE;
     }
     outValue[0] = '\0';
     size_t used = 0;
     int colorCount = 0;
-    const char* segmentBegin = color_input;
-    for (const char* p = color_input;; p++) {
+    const char* segmentBegin = colorInput;
+    for (const char* p = colorInput;; p++) {
         if (*p != '_' && *p != '\0') {
             continue;
         }

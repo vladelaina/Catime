@@ -6,6 +6,7 @@
 #include <time.h>
 #include <windows.h>
 #include "main/main_initialization.h"
+#include "main_initialization_internal.h"
 #include "main/main_single_instance.h"
 #include "window.h"
 #include "window/window_visual_effects.h"
@@ -74,6 +75,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     int exitCode = RunMessageLoop(hwnd);
+    if (IsCiSmokeMode() && exitCode == 0) {
+        exitCode = Main_GetCiSmokeExitCode();
+    }
 
     CleanupResources(hMutex);
 

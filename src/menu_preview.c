@@ -72,9 +72,9 @@ BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
     if (type == PREVIEW_TYPE_COLOR &&
         g_previewState.type == PREVIEW_TYPE_COLOR) {
         const char* colorHex = (const char*)data;
-        if (!colorHex || !colorHex[0] ||
+        if (!colorHex[0] ||
             _stricmp(g_previewState.data.colorHex, colorHex) == 0) {
-            return colorHex && colorHex[0];
+            return colorHex[0] != '\0';
         }
         strncpy_s(g_previewState.data.colorHex,
                   sizeof(g_previewState.data.colorHex), colorHex, _TRUNCATE);

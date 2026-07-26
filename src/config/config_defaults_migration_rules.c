@@ -5,12 +5,12 @@
 
 #include "config_defaults_internal.h"
 
-BOOL ConfigDefaults_GetMigrationFileSizeUtf8(const char* config_path, ULONGLONG* outSize) {
-    if (!config_path || !outSize) return FALSE;
+BOOL ConfigDefaults_GetMigrationFileSizeUtf8(const char* configPath, ULONGLONG* outSize) {
+    if (!configPath || !outSize) return FALSE;
     *outSize = 0;
 
     wchar_t wConfigPath[MAX_PATH] = {0};
-    if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) == 0) {
+    if (MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wConfigPath, MAX_PATH) == 0) {
         return FALSE;
     }
 
@@ -112,8 +112,8 @@ BOOL ConfigDefaults_IsConfigItemMigratable(const char* section, const char* key)
 }
 
 /* Helper to detect if a string is valid UTF-8 */
-BOOL ConfigDefaults_IsUtf8String(const char* str) {
-    const unsigned char* bytes = (const unsigned char*)str;
+BOOL ConfigDefaults_IsUtf8String(const char* value) {
+    const unsigned char* bytes = (const unsigned char*)value;
     while (*bytes) {
         if ((*bytes & 0x80) == 0) { /* ASCII */
             bytes++;

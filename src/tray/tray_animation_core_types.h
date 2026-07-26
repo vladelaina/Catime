@@ -1,0 +1,42 @@
+/**
+ * @file tray_animation_core_types.h
+ * @brief Private state types and limits for the animation coordinator.
+ */
+
+#ifndef TRAY_ANIMATION_CORE_TYPES_H
+#define TRAY_ANIMATION_CORE_TYPES_H
+
+#include "tray/tray_animation_core.h"
+
+#define INTERNAL_TICK_INTERVAL_MS 50
+#define TRAY_UPDATE_INTERVAL_MS 50
+#define ANIMATION_TICK_DISCONTINUITY_MS 1000
+#define ANIMATION_STATE_DRAIN_TIMEOUT_MS 2000
+#define PREVIEW_REQUEST_DEBOUNCE_MS 25
+#define PREVIEW_WORKER_SHUTDOWN_WAIT_MS 2000
+#define PREVIEW_WORKER_START_RETRY_COOLDOWN_MS 2000
+#define SPEED_SCALE_CACHE_TTL_MS 200
+#define WM_TRAY_UPDATE_ICON (WM_USER + 100)
+#define MEMORY_POOL_SIZE (256 * 1024)
+#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+#define STARTUP_ANIMATION_RETRY_TIMER_ID 42429u
+#define STARTUP_ANIMATION_RETRY_INTERVAL_MS 1500u
+#define STARTUP_ANIMATION_RETRY_MAX_ATTEMPTS 5
+#define MAX_CONSECUTIVE_FAILURES 5
+#define UPDATE_TIMEOUT_MS 5000
+#define UPDATE_FAILURE_BACKOFF_MS 1000
+
+#define ANIM_CS_UNINITIALIZED 0
+#define ANIM_CS_INITIALIZING 1
+#define ANIM_CS_INITIALIZED 2
+#define ANIM_WAIT_SPIN_LIMIT 64
+
+typedef struct {
+    BOOL valid;
+    DWORD lastRefreshTick;
+    LONG invalidationSerial;
+    double scalePercent;
+    UINT minIntervalMs;
+} SpeedScaleCache;
+
+#endif /* TRAY_ANIMATION_CORE_TYPES_H */

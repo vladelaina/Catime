@@ -55,7 +55,6 @@ BOOL PluginTrust_EncodePath(const char* fullPath, char* storedPath,
                             size_t storedPathSize) {
     wchar_t fullPathWide[MAX_PATH];
     wchar_t localAppDataWide[MAX_PATH];
-    wchar_t compressedWide[MAX_PATH];
     char localAppData[MAX_PATH] = {0};
 
     if (!fullPath || !storedPath || storedPathSize == 0) return FALSE;
@@ -66,6 +65,7 @@ BOOL PluginTrust_EncodePath(const char* fullPath, char* storedPath,
                    _countof(localAppDataWide))) {
         size_t prefixLength = wcslen(localAppDataWide);
         if (IsPathBelow(fullPathWide, localAppDataWide, prefixLength)) {
+            wchar_t compressedWide[MAX_PATH];
             int written = _snwprintf_s(compressedWide,
                                        _countof(compressedWide), _TRUNCATE,
                                        L"%%LOCALAPPDATA%%%ls",

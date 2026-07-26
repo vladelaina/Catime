@@ -35,7 +35,7 @@ static BOOL PomodoroTimesStateMatches(const int* times, int count) {
             return FALSE;
         }
     }
-    if (count > 0 && g_AppConfig.pomodoro.work_time != times[0]) return FALSE;
+    if (g_AppConfig.pomodoro.work_time != times[0]) return FALSE;
     if (count > 1 && g_AppConfig.pomodoro.short_break != times[1]) return FALSE;
     if (count > 2 && g_AppConfig.pomodoro.long_break != times[2]) return FALSE;
     return TRUE;

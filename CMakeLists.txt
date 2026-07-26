@@ -20,6 +20,8 @@ project(Catime VERSION
     "${CATIME_VERSION_MAJOR}.${CATIME_VERSION_MINOR}.${CATIME_VERSION_PATCH}"
     LANGUAGES C RC
 )
+include(cmake/CatimePureC.cmake)
+include(cmake/CatimeSourceLayout.cmake)
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/catime_version_numeric.h.in"

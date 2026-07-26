@@ -12,18 +12,18 @@ static void DiscardRestOfMigrationLine(FILE* f) {
     }
 }
 
-ConfigEntry* ConfigDefaults_ReadAllConfigEntries(const char* config_path) {
+ConfigEntry* ConfigDefaults_ReadAllConfigEntries(const char* configPath) {
     ULONGLONG fileSize = 0;
-    if (ConfigDefaults_GetMigrationFileSizeUtf8(config_path, &fileSize) &&
+    if (ConfigDefaults_GetMigrationFileSizeUtf8(configPath, &fileSize) &&
         fileSize > CONFIG_MIGRATION_MAX_FILE_BYTES) {
         LOG_WARNING("Config migration skipped oversized config file: %s (%llu bytes, limit %llu bytes)",
-                    config_path, fileSize, (ULONGLONG)CONFIG_MIGRATION_MAX_FILE_BYTES);
+                    configPath, fileSize, (ULONGLONG)CONFIG_MIGRATION_MAX_FILE_BYTES);
         return NULL;
     }
 
     /* Open file for reading (UTF-8) */
     wchar_t wConfigPath[MAX_PATH] = {0};
-    if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1, wConfigPath, MAX_PATH) == 0) {
+    if (MultiByteToWideChar(CP_UTF8, 0, configPath, -1, wConfigPath, MAX_PATH) == 0) {
         return NULL;
     }
 

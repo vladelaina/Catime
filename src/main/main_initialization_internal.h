@@ -6,6 +6,7 @@
 
 void Main_DropPrivileges(void);
 void Main_ScheduleCiSmokeExit(HWND hwnd, UINT delayMs);
+int Main_GetCiSmokeExitCode(void);
 void Main_ScheduleStartupWindowRecovery(HWND hwnd, BOOL topmost);
 BOOL Main_ShouldRunStartupUpdateCheck(char* today, size_t todaySize);
 void Main_MarkStartupUpdateCheckAttempt(const char* today);

@@ -1,36 +1,19 @@
 /**
  * @file tray_menu_font.c
- * @brief Font scanning and menu construction logic (async scan cache)
+ * @brief Public font-menu construction and command mapping.
  */
-#include <windows.h>
-#include <stdio.h>
+
+#include "tray_menu_font_internal.h"
+
+#include "config.h"
+#include "language.h"
+#include "log.h"
+#include "tray/tray_menu.h"
+#include "../resource/resource.h"
+
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
-#include <wctype.h>
-#include <limits.h>
-#include "log.h"
-#include "language.h"
-#include "tray/tray_menu.h"
-#include "tray/tray_menu_font.h"
-#include "config.h"
-#include "../resource/resource.h"
-#include "utils/string_convert.h"
-#include "utils/natural_sort.h"
-#include "utils/string_format.h"
-#include "utils/directory_watcher.h"
-#include "font/font_path_manager.h"
-
-/* ============================================================================
- * Constants
- * ============================================================================ */
-
-#define MAX_FONT_ENTRIES FONT_MENU_MAX_ENTRIES
-#define MAX_RECURSION_DEPTH 10
-#define MAX_FONT_NAME_LENGTH 260
-#define MAX_FONT_SCAN_ENTRIES 4096
-#define ASYNC_FONT_SCAN_STOP_TIMEOUT_MS 2000
-#define FONT_MENU_SCAN_REFRESH_COOLDOWN_MS 10000
-#define FONT_MENU_SCAN_FAILED (-1)
 
 #if CMD_FONT_SELECTION_BASE + MAX_FONT_ENTRIES > CLOCK_IDM_ANIMATIONS_MENU
 #error "Font menu command range overlaps animation menu identifiers"
@@ -40,40 +23,8 @@
 #error "System font picker menu ID overlaps dynamic animation menu command range"
 #endif
 
-/* ============================================================================
- * External dependencies
- * ============================================================================ */
-
 extern char FONT_FILE_NAME[MAX_PATH];
-extern void GetConfigPath(char* path, size_t size);
 extern BOOL NeedsFontLicenseVersionAcceptance(void);
-extern BOOL ExtractEmbeddedFontsToFolder(HINSTANCE hInstance);
-
-/* ============================================================================
- * Internal Data Structures
- * ============================================================================ */
-
-/**
- * @brief Single font entry for menu building
- */
-typedef struct {
-    wchar_t fileName[MAX_FONT_NAME_LENGTH];
-    wchar_t relativePath[MAX_PATH];
-    wchar_t displayName[MAX_FONT_NAME_LENGTH];
-} FontEntry;
-
-/**
- * @brief Font scan context
- */
-typedef struct {
-    FontEntry* entries;
-    int count;
-    int capacity;
-    int scannedEntries;
-    BOOL truncated;
-    BOOL full;
-    BOOL failed;
-} FontScanContext;
 
 typedef struct {
     UINT id;
@@ -82,68 +33,6 @@ typedef struct {
 
 static FontMenuIdMapEntry g_fontMenuIdMap[MAX_FONT_ENTRIES];
 static int g_fontMenuIdMapCount = 0;
-static FontEntry g_fontMenuCache[MAX_FONT_ENTRIES];
-static int g_fontMenuCacheCount = 0;
-static BOOL g_fontMenuCacheReady = FALSE;
-static BOOL g_fontMenuCacheFailed = FALSE;
-static SRWLOCK g_fontMenuCacheLock = SRWLOCK_INIT;
-static SRWLOCK g_fontScanThreadLock = SRWLOCK_INIT;
-static HANDLE g_hFontScanThread = NULL;
-static HANDLE g_hRetiredFontScanThread = NULL;
-static DirectoryWatcher g_fontFolderWatcher = {0};
-static volatile LONG g_fontScanShuttingDown = 0;
-static volatile LONG g_fontScanGeneration = 0;
-static volatile LONG g_fontMenuLastScanTick = 0;
-
-static BOOL IsFontMenuScanShuttingDown(void) {
-    return InterlockedCompareExchange(&g_fontScanShuttingDown, 0, 0) != 0;
-}
-
-static BOOL IsFontMenuScanCanceled(LONG generation) {
-    return IsFontMenuScanShuttingDown() ||
-           InterlockedCompareExchange(&g_fontScanGeneration, 0, 0) != generation;
-}
-
-static BOOL IsFontMenuCacheRecentlyScanned(DWORD now) {
-    DWORD lastScanTick = (DWORD)InterlockedCompareExchange(&g_fontMenuLastScanTick, 0, 0);
-    if (lastScanTick == 0 ||
-        (DWORD)(now - lastScanTick) >= FONT_MENU_SCAN_REFRESH_COOLDOWN_MS) {
-        return FALSE;
-    }
-
-    AcquireSRWLockShared(&g_fontMenuCacheLock);
-    BOOL recentlyScanned = g_fontMenuCacheReady || g_fontMenuCacheFailed;
-    ReleaseSRWLockShared(&g_fontMenuCacheLock);
-    return recentlyScanned;
-}
-
-static void MarkFontMenuScanStartFailure(DWORD now) {
-    AcquireSRWLockExclusive(&g_fontMenuCacheLock);
-    ZeroMemory(g_fontMenuCache, sizeof(g_fontMenuCache));
-    g_fontMenuCacheCount = 0;
-    g_fontMenuCacheReady = FALSE;
-    g_fontMenuCacheFailed = TRUE;
-    InterlockedExchange(&g_fontMenuLastScanTick, (LONG)now);
-    ReleaseSRWLockExclusive(&g_fontMenuCacheLock);
-}
-
-static BOOL CleanupRetiredFontScanThreadLocked(DWORD waitMs) {
-    if (!g_hRetiredFontScanThread) {
-        return TRUE;
-    }
-
-    DWORD wait = WaitForSingleObject(g_hRetiredFontScanThread, waitMs);
-    if (wait != WAIT_OBJECT_0) {
-        if (wait == WAIT_FAILED) {
-            LOG_WARNING("Retired font menu scan wait failed: %lu", GetLastError());
-        }
-        return FALSE;
-    }
-
-    CloseHandle(g_hRetiredFontScanThread);
-    g_hRetiredFontScanThread = NULL;
-    return TRUE;
-}
 
 static BOOL CopyStringExactW(const wchar_t* src, wchar_t* out, size_t outSize) {
     if (!out || outSize == 0) return FALSE;
@@ -157,12 +46,12 @@ static BOOL CopyStringExactW(const wchar_t* src, wchar_t* out, size_t outSize) {
     return TRUE;
 }
 
-static void ResetFontMenuIdMap(void) {
+void FontMenuInternal_ResetIdMap(void) {
     ZeroMemory(g_fontMenuIdMap, sizeof(g_fontMenuIdMap));
     g_fontMenuIdMapCount = 0;
 }
 
-static BOOL RememberFontMenuId(UINT id, const wchar_t* relativePath) {
+BOOL FontMenuInternal_RememberId(UINT id, const wchar_t* relativePath) {
     if (!relativePath || g_fontMenuIdMapCount >= MAX_FONT_ENTRIES) return FALSE;
 
     FontMenuIdMapEntry entry = {0};
@@ -177,7 +66,7 @@ static BOOL RememberFontMenuId(UINT id, const wchar_t* relativePath) {
     return TRUE;
 }
 
-static void ForgetLastFontMenuId(UINT id) {
+void FontMenuInternal_ForgetLastId(UINT id) {
     if (g_fontMenuIdMapCount <= 0) return;
     if (g_fontMenuIdMap[g_fontMenuIdMapCount - 1].id != id) return;
 
@@ -185,9 +74,156 @@ static void ForgetLastFontMenuId(UINT id) {
     ZeroMemory(&g_fontMenuIdMap[g_fontMenuIdMapCount], sizeof(g_fontMenuIdMap[0]));
 }
 
-/* ============================================================================
- * Path Helpers
- * ============================================================================ */
-#include "tray_menu_font_part01.inc"
-#include "tray_menu_font_part02.inc"
-#include "tray_menu_font_part03.inc"
+static void GetCurrentFontRelativePath(wchar_t* outPath, size_t size) {
+    if (!outPath || size == 0 || size > INT_MAX) return;
+    outPath[0] = L'\0';
+
+    const char* prefix = FONTS_PATH_PREFIX;
+    size_t prefixLen = strlen(prefix);
+    const char* source = NULL;
+
+    if (_strnicmp(FONT_FILE_NAME, prefix, prefixLen) == 0) {
+        /* Custom font - extract relative path */
+        source = FONT_FILE_NAME + prefixLen;
+    } else if (strchr(FONT_FILE_NAME, ':') == NULL &&
+               (strchr(FONT_FILE_NAME, '\\') != NULL || strchr(FONT_FILE_NAME, '/') != NULL)) {
+        /* Relative path without prefix */
+        source = FONT_FILE_NAME;
+    }
+
+    if (source && MultiByteToWideChar(CP_UTF8, 0, source, -1, outPath, (int)size) <= 0) {
+        outPath[0] = L'\0';
+    }
+    /* System fonts or just filename - leave empty */
+}
+
+static const wchar_t* GetPathBaseNameW(const wchar_t* path) {
+    if (!path) return L"";
+
+    const wchar_t* slash = wcsrchr(path, L'\\');
+    const wchar_t* forwardSlash = wcsrchr(path, L'/');
+    if (!slash || (forwardSlash && forwardSlash > slash)) {
+        slash = forwardSlash;
+    }
+
+    return slash ? slash + 1 : path;
+}
+
+void BuildFontSubmenu(HMENU hMenu) {
+    HMENU hFontSubMenu = CreatePopupMenu();
+    if (!hFontSubMenu) {
+        WriteLog(LOG_LEVEL_ERROR, "Failed to create font submenu");
+        return;
+    }
+    FontMenuInternal_ResetIdMap();
+
+    int g_advancedFontId = CMD_FONT_SELECTION_BASE;
+
+    if (NeedsFontLicenseVersionAcceptance()) {
+        AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_LICENSE_AGREE,
+                   GetLocalizedString(NULL, L"Click to agree to license agreement"));
+    } else {
+        FontMenu_RequestScanAsync();
+
+        /* Get current font relative path */
+        wchar_t currentFontRelPath[MAX_PATH] = L"";
+        GetCurrentFontRelativePath(currentFontRelPath, MAX_PATH);
+
+        BOOL cacheReady = FALSE;
+        int fontCount = 0;
+        BOOL isSystemFont = TRUE;
+        FontEntry* fontSnapshot =
+            (FontEntry*)malloc((size_t)MAX_FONT_ENTRIES * sizeof(*fontSnapshot));
+        if (!fontSnapshot) {
+            LOG_WARNING("Failed to allocate font menu cache snapshot");
+        }
+
+        AcquireSRWLockShared(&g_fontMenuCacheLock);
+        cacheReady = g_fontMenuCacheReady || g_fontMenuCacheFailed;
+        fontCount = g_fontMenuCacheCount;
+        if (fontCount > MAX_FONT_ENTRIES) {
+            fontCount = MAX_FONT_ENTRIES;
+        }
+        if (fontCount > 0 && fontSnapshot) {
+            memcpy(fontSnapshot, g_fontMenuCache, (size_t)fontCount * sizeof(*fontSnapshot));
+        } else if (fontCount > 0) {
+            fontCount = 0;
+            cacheReady = FALSE;
+        }
+        ReleaseSRWLockShared(&g_fontMenuCacheLock);
+
+        if (fontCount == 0) {
+            AppendMenuW(hFontSubMenu, MF_STRING | MF_GRAYED, 0,
+                        cacheReady
+                            ? GetLocalizedString(NULL, L"No font files found")
+                            : GetLocalizedString(NULL, L"Loading..."));
+            AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+        } else {
+            FontMenuInternal_BuildMenuFromEntries(hFontSubMenu, fontSnapshot, fontCount,
+                                     currentFontRelPath, &g_advancedFontId);
+            AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+        }
+
+        /* Determine if current font is a system font */
+        const char* prefix = FONTS_PATH_PREFIX;
+        size_t prefixLen = strlen(prefix);
+
+        if (_strnicmp(FONT_FILE_NAME, prefix, prefixLen) == 0) {
+            isSystemFont = FALSE;
+        } else if (strchr(FONT_FILE_NAME, ':') != NULL) {
+            isSystemFont = (strstr(FONT_FILE_NAME, "Windows\\Fonts") != NULL ||
+                           strstr(FONT_FILE_NAME, "WINDOWS\\Fonts") != NULL);
+        } else if (strchr(FONT_FILE_NAME, '\\') != NULL || strchr(FONT_FILE_NAME, '/') != NULL) {
+            isSystemFont = FALSE;
+        } else {
+            /* Just filename - check if in scanned fonts */
+            wchar_t wFontName[MAX_PATH] = L"";
+            if (MultiByteToWideChar(CP_UTF8, 0, FONT_FILE_NAME, -1, wFontName, MAX_PATH) > 0 &&
+                wFontName[0] != L'\0') {
+                for (int i = 0; i < fontCount; i++) {
+                    if (_wcsicmp(GetPathBaseNameW(fontSnapshot[i].relativePath), wFontName) == 0) {
+                        isSystemFont = FALSE;
+                        break;
+                    }
+                }
+            }
+        }
+        free(fontSnapshot);
+
+        UINT systemFontFlags = MF_STRING;
+        if (isSystemFont) systemFontFlags |= MF_CHECKED;
+
+        AppendMenuW(hFontSubMenu, systemFontFlags, CLOCK_IDM_SYSTEM_FONT_PICKER,
+                   GetLocalizedString(NULL, L"System Fonts..."));
+
+        AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED,
+                   GetLocalizedString(NULL, L"Open fonts folder"));
+    }
+
+    if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu,
+                     GetLocalizedString(NULL, L"Font"))) {
+        DestroyMenu(hFontSubMenu);
+        WriteLog(LOG_LEVEL_ERROR, "Failed to attach font submenu");
+    }
+}
+
+BOOL GetFontPathFromMenuId(UINT id, char* outPath, size_t outPathSize) {
+    if (!outPath || outPathSize == 0) return FALSE;
+    outPath[0] = '\0';
+    if (outPathSize > INT_MAX) return FALSE;
+    if (id < CMD_FONT_SELECTION_BASE) return FALSE;
+
+    for (int i = 0; i < g_fontMenuIdMapCount; i++) {
+        if (g_fontMenuIdMap[i].id == id) {
+            if (WideCharToMultiByte(CP_UTF8, 0, g_fontMenuIdMap[i].relativePath, -1,
+                                    outPath, (int)outPathSize, NULL, NULL) <= 0) {
+                outPath[0] = '\0';
+                return FALSE;
+            }
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}

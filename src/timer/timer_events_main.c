@@ -39,6 +39,14 @@ void Timer_NotifyMainWindowPainted(const wchar_t* timerText) {
                                  timerText);
 }
 
+BOOL Timer_HasMainWindowPainted(void) {
+    return g_hasLastPaintedTimerText && g_lastPaintedTimerText[0] != L'\0';
+}
+
+BOOL Timer_HasPresentedMainWindowFrame(void) {
+    return g_hasLastPaintedTimerText;
+}
+
 void TimerEvents_HandleCountdownCompletion(HWND hwnd) {
     BOOL shouldNotify = CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&

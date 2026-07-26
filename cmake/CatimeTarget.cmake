@@ -12,6 +12,12 @@ if(WIN32 AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND
     target_link_options(catime PRIVATE "-B${CATIME_EMPTY_MANIFEST_DIR}/")
 endif()
 
+# The application manifest is compiled into resource/resource.rc. Prevent
+# MSVC from generating a second RT_MANIFEST resource at link time.
+if(MSVC AND CATIME_ENABLE_WIN32_RESOURCES)
+    target_link_options(catime PRIVATE /MANIFEST:NO)
+endif()
+
 if(CATIME_ENABLE_WIN32_RESOURCES AND CATIME_COMPRESS_EMBEDDED_ASSETS)
     target_sources(catime PRIVATE
         src/utils/compressed_resource.c

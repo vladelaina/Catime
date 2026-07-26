@@ -1,196 +1,99 @@
 /**
  * @file markdown_image.c
- * @brief Markdown image parsing and rendering
+ * @brief Shared state and lifecycle for Markdown image support.
  */
 
-#include "markdown/markdown_image.h"
-#include "drawing/drawing_image.h"
-#include "plugin/plugin_data.h"
-#include "config.h"
+#include "markdown_image_internal.h"
 #include "log.h"
-#include <limits.h>
 #include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <wininet.h>
 
-#ifdef _MSC_VER
-#pragma comment(lib, "wininet.lib")
-#endif
+wchar_t g_imageCacheDir[MAX_PATH] = {0};
+volatile LONG g_imageCacheDirInit = IMAGE_CACHE_DIR_UNINITIALIZED;
+wchar_t g_pluginsDir[MAX_PATH] = {0};
+volatile LONG g_pluginsDirInit = IMAGE_CACHE_DIR_UNINITIALIZED;
 
-#define IMAGE_DOWNLOAD_TIMEOUT_MS 10000
-#define IMAGE_DOWNLOAD_MAX_BYTES (10u * 1024u * 1024u)
-#define IMAGE_CACHE_MAX_BYTES (128ull * 1024ull * 1024ull)
-#define IMAGE_CACHE_MAX_FILES 256
-#define IMAGE_CACHE_PRUNE_SCAN_LIMIT 4096
-#define IMAGE_SHUTDOWN_GRACE_MS 15000
-#define IMAGE_DOWNLOAD_FAILURE_RETRY_MS (5u * 60u * 1000u)
-#define IMAGE_DOWNLOAD_QUEUE_RETRY_MS 1000
-#define IMAGE_DOWNLOAD_INIT_FAILURE_COOLDOWN_MS 2000
-#define IMAGE_DOWNLOAD_READ_BUFFER_SIZE 8192u
-#define IMAGE_CACHE_DIR_UNINITIALIZED 0
-#define IMAGE_CACHE_DIR_INITIALIZING 1
-#define IMAGE_CACHE_DIR_INITIALIZED 2
-#define INIT_WAIT_SPIN_LIMIT 64
-#define MARKDOWN_IMAGE_PATH_MAX_CHARS 2047
-#define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
+unsigned long long g_downloadingHashes[MAX_DOWNLOADING] = {0};
+HINTERNET g_activeDownloadHandles[MAX_ACTIVE_DOWNLOAD_HANDLES] = {0};
+unsigned long long g_failedDownloadHashes[MAX_FAILED_DOWNLOADS] = {0};
+DWORD g_failedDownloadRetryTicks[MAX_FAILED_DOWNLOADS] = {0};
+SRWLOCK g_downloadLifecycleLock = SRWLOCK_INIT;
+int g_downloadingCount = 0;
+int g_failedDownloadCount = 0;
+CRITICAL_SECTION g_downloadCS;
+volatile LONG g_downloadCSInit = 0;
+HANDLE g_downloadIdleEvent = NULL;
+volatile LONG g_activeDownloadCount = 0;
+volatile LONG g_downloadShutdown = 0;
+volatile LONG g_downloadGeneration = 0;
+volatile LONG g_downloadRestartPending = 0;
+volatile LONG g_downloadInitFailureCooldownUntil = 0;
 
-static BOOL IsDownloadShutdownRequested(void);
-static BOOL IsDownloadCanceled(LONG generation);
-static LONG GetDownloadGeneration(void);
-static BOOL TrackDownloadHandle(HINTERNET handle, LONG generation);
-static void CloseTrackedDownloadHandle(HINTERNET* handlePtr, LONG generation);
-static void RequestMarkdownImageDownloadCancel(void);
-
-static BOOL IsValidMarkdownImageNotifyWindow(HWND hwnd) {
-    if (!hwnd || !IsWindow(hwnd)) {
-        return FALSE;
-    }
-
-    DWORD processId = 0;
-    GetWindowThreadProcessId(hwnd, &processId);
-    if (processId != GetCurrentProcessId()) {
-        return FALSE;
-    }
-
-    wchar_t className[64] = {0};
-    if (GetClassNameW(hwnd, className, _countof(className)) == 0) {
-        return FALSE;
-    }
-
-    return wcscmp(className, CATIME_MAIN_WINDOW_CLASS_NAME) == 0;
-}
-
-static wchar_t g_imageCacheDir[MAX_PATH] = {0};
-static volatile LONG g_imageCacheDirInit = IMAGE_CACHE_DIR_UNINITIALIZED;
-static wchar_t g_pluginsDir[MAX_PATH] = {0};
-static volatile LONG g_pluginsDirInit = IMAGE_CACHE_DIR_UNINITIALIZED;
-
-static void WaitWhileLongEquals(volatile LONG* value, LONG expected) {
-    DWORD spins = 0;
-    while (InterlockedCompareExchange(value, 0, 0) == expected) {
-        Sleep(spins++ < INIT_WAIT_SPIN_LIMIT ? 0 : 1);
+void InitializeMarkdownImage(void) {
+    if (InterlockedCompareExchange(&g_activeDownloadCount, 0, 0) == 0) {
+        InterlockedIncrement(&g_downloadGeneration);
+        InterlockedExchange(&g_downloadShutdown, 0);
+    } else {
+        InterlockedExchange(&g_downloadRestartPending, 1);
     }
 }
 
-static BOOL EnsureDirectoryExistsW(const wchar_t* path) {
-    if (!path || !*path) return FALSE;
+void ShutdownMarkdownImage(void) {
+    AcquireSRWLockExclusive(&g_downloadLifecycleLock);
+    InterlockedIncrement(&g_downloadGeneration);
+    RequestMarkdownImageDownloadCancel();
 
-    if (CreateDirectoryW(path, NULL)) {
-        return TRUE;
+    if (g_downloadIdleEvent) {
+        DWORD waitResult = WaitForSingleObject(g_downloadIdleEvent,
+                                               IMAGE_SHUTDOWN_GRACE_MS);
+        if (waitResult != WAIT_OBJECT_0) {
+            LOG_WARNING("Timed out waiting for markdown image downloads after cancellation; leaving shutdown state for late cleanup");
+            ReleaseSRWLockExclusive(&g_downloadLifecycleLock);
+            return;
+        }
     }
 
-    if (GetLastError() != ERROR_ALREADY_EXISTS) {
-        return FALSE;
+    if (IsDownloadCSReady()) {
+        DeleteCriticalSection(&g_downloadCS);
+        InterlockedExchange(&g_downloadCSInit, 0);
+    }
+    if (g_downloadIdleEvent) {
+        CloseHandle(g_downloadIdleEvent);
+        g_downloadIdleEvent = NULL;
     }
 
-    DWORD attrs = GetFileAttributesW(path);
-    return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY);
+    ZeroMemory(g_downloadingHashes, sizeof(g_downloadingHashes));
+    ZeroMemory(g_activeDownloadHandles, sizeof(g_activeDownloadHandles));
+    ZeroMemory(g_failedDownloadHashes, sizeof(g_failedDownloadHashes));
+    ZeroMemory(g_failedDownloadRetryTicks,
+               sizeof(g_failedDownloadRetryTicks));
+    g_downloadingCount = 0;
+    g_failedDownloadCount = 0;
+    ClearDownloadInitFailure();
+    InterlockedExchange(&g_downloadRestartPending, 0);
+    InterlockedExchange(&g_activeDownloadCount, 0);
+    ReleaseSRWLockExclusive(&g_downloadLifecycleLock);
 }
 
-static BOOL GetExistingNonEmptyFileInfoW(const wchar_t* path,
-                                         WIN32_FILE_ATTRIBUTE_DATA* attrsOut,
-                                         ULONGLONG* sizeOut) {
-    if (!path || !*path) return FALSE;
-
-    WIN32_FILE_ATTRIBUTE_DATA attrs;
-    if (!GetFileAttributesExW(path, GetFileExInfoStandard, &attrs)) {
-        return FALSE;
-    }
-    if (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        return FALSE;
-    }
-
-    ULONGLONG fileSize = ((ULONGLONG)attrs.nFileSizeHigh << 32) |
-                         (ULONGLONG)attrs.nFileSizeLow;
-    if (fileSize == 0) {
-        return FALSE;
-    }
-
-    if (attrsOut) *attrsOut = attrs;
-    if (sizeOut) *sizeOut = fileSize;
-    return TRUE;
-}
-
-BOOL IsMarkdownImageFileUsable(const wchar_t* path) {
-    return GetExistingNonEmptyFileInfoW(path, NULL, NULL);
-}
-
-static void ClearMarkdownImageResolvedFileState(MarkdownImage* image) {
-    if (!image) return;
-
-    image->intrinsicWidth = 0;
-    image->intrinsicHeight = 0;
-    ZeroMemory(&image->resolvedLastWriteTime, sizeof(image->resolvedLastWriteTime));
-    image->resolvedFileSize = 0;
-    image->resolvedFileInfoValid = FALSE;
-}
-
-static void StoreMarkdownImageResolvedFileState(MarkdownImage* image,
-                                                const WIN32_FILE_ATTRIBUTE_DATA* attrs,
-                                                ULONGLONG fileSize) {
-    if (!image || !attrs) return;
-
-    image->resolvedLastWriteTime = attrs->ftLastWriteTime;
-    image->resolvedFileSize = fileSize;
-    image->resolvedFileInfoValid = TRUE;
-}
-
-static void FreeMarkdownImageResolvedPath(MarkdownImage* image) {
-    if (!image) return;
-
-    if (image->resolvedPath) {
-        free(image->resolvedPath);
-        image->resolvedPath = NULL;
-    }
-    ClearMarkdownImageResolvedFileState(image);
-}
-
-BOOL RefreshMarkdownImageResolvedFileState(MarkdownImage* image) {
-    if (!image || !image->resolvedPath) return FALSE;
-
-    WIN32_FILE_ATTRIBUTE_DATA attrs;
-    ULONGLONG fileSize = 0;
-    if (!GetExistingNonEmptyFileInfoW(image->resolvedPath, &attrs, &fileSize)) {
-        ClearMarkdownImageResolvedFileState(image);
-        return FALSE;
-    }
-
-    if (image->resolvedFileInfoValid &&
-        (CompareFileTime(&image->resolvedLastWriteTime, &attrs.ftLastWriteTime) != 0 ||
-         image->resolvedFileSize != fileSize)) {
-        image->intrinsicWidth = 0;
-        image->intrinsicHeight = 0;
-    }
-
-    StoreMarkdownImageResolvedFileState(image, &attrs, fileSize);
-    return TRUE;
-}
-
-static BOOL IsUsableCachedImageFileW(const wchar_t* path) {
-    ULONGLONG fileSize = 0;
-    if (!GetExistingNonEmptyFileInfoW(path, NULL, &fileSize)) {
-        return FALSE;
-    }
-    return fileSize <= IMAGE_DOWNLOAD_MAX_BYTES;
-}
-
-static void RemoveInvalidImageCacheEntryW(const wchar_t* path) {
-    if (!path || !*path) return;
-
-    WIN32_FILE_ATTRIBUTE_DATA attrs;
-    if (!GetFileAttributesExW(path, GetFileExInfoStandard, &attrs)) {
+void FreeMarkdownImageEntries(MarkdownImage* images, int imageCount) {
+    if (!images) {
         return;
     }
 
-    if (attrs.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        RemoveDirectoryW(path);
-    } else {
-        DeleteFileW(path);
+    for (int i = 0; i < imageCount; i++) {
+        if (images[i].imagePath) {
+            free(images[i].imagePath);
+            images[i].imagePath = NULL;
+        }
+        if (images[i].resolvedPath) {
+            FreeMarkdownImageResolvedPath(&images[i]);
+        }
     }
-#include "markdown_image_part01.inc"
-#include "markdown_image_part02.inc"
-#include "markdown_image_part03.inc"
-#include "markdown_image_part04.inc"
-#include "markdown_image_part05.inc"
-#include "markdown_image_part06.inc"
+}
+
+void FreeMarkdownImages(MarkdownImage* images, int imageCount) {
+    if (!images) {
+        return;
+    }
+    FreeMarkdownImageEntries(images, imageCount);
+    free(images);
+}

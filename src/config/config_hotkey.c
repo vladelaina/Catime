@@ -214,7 +214,7 @@ WORD StringToHotkey(const char* str) {
     char* token = strtok(input, "+");
     const char* lastToken = NULL;
     while (token) {
-        char* part = TrimHotkeyToken(token);
+        const char* part = TrimHotkeyToken(token);
         if (!part || part[0] == '\0') {
             token = strtok(NULL, "+");
             continue;

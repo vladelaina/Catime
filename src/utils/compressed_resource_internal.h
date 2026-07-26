@@ -17,6 +17,10 @@
 #define CTAR_MAX_FONT_MEMBER_SIZE (32u * 1024u * 1024u)
 #define CTAR_MAX_GROUP_MEMBERS 1024u
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4200)
+#endif
 struct CompressedResourceGroup {
     size_t rawSize;
     size_t payloadOffset;
@@ -24,6 +28,9 @@ struct CompressedResourceGroup {
     CompressedResourceGroupKind kind;
     BYTE data[];
 };
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 WORD CompressedResource_ReadU16LE(const BYTE* data);
 DWORD CompressedResource_ReadU32LE(const BYTE* data);

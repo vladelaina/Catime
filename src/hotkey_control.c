@@ -37,8 +37,10 @@ static void PaintCentered(HWND hwnd, HDC hdc) {
     hotkey = (WORD)SendMessageW(hwnd, HKM_GETHOTKEY, 0, 0);
     if (hotkey == 0) {
         const wchar_t* none = GetLocalizedString(NULL, L"None");
-        StringCchCopyW(displayText, _countof(displayText),
-                       none && none[0] ? none : L"None");
+        if (FAILED(StringCchCopyW(displayText, _countof(displayText),
+                                  none && none[0] ? none : L"None"))) {
+            displayText[_countof(displayText) - 1] = L'\0';
+        }
         SetTextColor(hdc, palette.mutedText);
     } else {
         char text[64] = {0};
@@ -75,11 +77,11 @@ static BOOL MoveDialogFocus(HWND control, BOOL reverse) {
 }
 
 LRESULT CALLBACK HotkeyControlSubclassProc(
-    HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam,
-    UINT_PTR subclassId, DWORD_PTR refData) {
-    UNREFERENCED_PARAMETER(refData);
+    HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam,
+    UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+    UNREFERENCED_PARAMETER(dwRefData);
 
-    switch (message) {
+    switch (uMsg) {
         case WM_PAINT: {
             PAINTSTRUCT paint = {0};
             HDC hdc = BeginPaint(hwnd, &paint);
@@ -118,10 +120,10 @@ LRESULT CALLBACK HotkeyControlSubclassProc(
             break;
         case WM_NCDESTROY:
             RemoveWindowSubclass(hwnd, HotkeyControlSubclassProc,
-                                 subclassId);
+                                 uIdSubclass);
             break;
         case WM_GETDLGCODE:
             return DLGC_WANTALLKEYS | DLGC_WANTCHARS;
     }
-    return DefSubclassProc(hwnd, message, wParam, lParam);
+    return DefSubclassProc(hwnd, uMsg, wParam, lParam);
 }

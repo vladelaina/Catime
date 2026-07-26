@@ -13,15 +13,15 @@ void ColorRefToHex(COLORREF color, char* output, size_t size) {
              GetRValue(color), GetGValue(color), GetBValue(color));
 }
 
-void ReplaceBlackColor(const char* color, char* output, size_t outputSize) {
-    if (!output || outputSize == 0) return;
+void ReplaceBlackColor(const char* color, char* output, size_t output_size) {
+    if (!output || output_size == 0) return;
     if (!color) {
         output[0] = '\0';
         return;
     }
     safe_strncpy(output,
                  strcasecmp(color, "#000000") == 0 ? NEAR_BLACK_COLOR : color,
-                 outputSize);
+                 output_size);
 }
 
 BOOL ColorStringToColorRef(const char* input, COLORREF* outColor) {

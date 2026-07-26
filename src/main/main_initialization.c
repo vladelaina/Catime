@@ -110,11 +110,11 @@ BOOL InitializeSubsystems(void) {
     return TRUE;
 }
 
-BOOL InitializeApplicationSubsystem(HINSTANCE instance) {
+BOOL InitializeApplicationSubsystem(HINSTANCE hInstance) {
     InitializeAppConfigDefaults();
     InitMarkdownInteractive();
     PluginManager_Init();
-    if (!InitializeApplication(instance)) {
+    if (!InitializeApplication(hInstance)) {
         LOG_ERROR("Application initialization failed");
         return FALSE;
     }
@@ -182,9 +182,9 @@ static void StartAutomaticUpdateCheck(HWND hwnd) {
     }
 }
 
-BOOL SetupMainWindow(HINSTANCE instance, HWND hwnd, int showCommand) {
-    UNREFERENCED_PARAMETER(instance);
-    UNREFERENCED_PARAMETER(showCommand);
+BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
+    UNREFERENCED_PARAMETER(hInstance);
+    UNREFERENCED_PARAMETER(nCmdShow);
     InitializeAsyncCaches(hwnd);
     BOOL launchedFromStartup = FALSE;
     HandleCommandLine(hwnd, &launchedFromStartup);
@@ -198,11 +198,12 @@ BOOL SetupMainWindow(HINSTANCE instance, HWND hwnd, int showCommand) {
         LOG_WARNING("Font validation timer creation failed");
     }
 
+    if (!IsCiSmokeMode()) {
+        StartAutomaticUpdateCheck(hwnd);
+    }
+    HandleStartupMode(hwnd);
     if (IsCiSmokeMode()) {
         Main_ScheduleCiSmokeExit(hwnd, GetCiExitTimeoutMs());
-    } else {
-        StartAutomaticUpdateCheck(hwnd);
-        HandleStartupMode(hwnd);
     }
     if (launchedFromStartup) {
         Main_ScheduleStartupWindowRecovery(hwnd, CLOCK_WINDOW_TOPMOST);
