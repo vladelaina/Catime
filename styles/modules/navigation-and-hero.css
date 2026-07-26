@@ -1,0 +1,588 @@
+/* 导航样式 */
+.nav-links {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 2rem; /* 增加导航项间距 */
+}
+
+.nav-links a {
+    color: var(--text-color);
+    font-weight: 500; /* 增加字重 */
+    text-decoration: none;
+    position: relative;
+    padding-bottom: 0.3rem;
+    transition: color 0.3s ease;
+    display: inline-block;
+    font-size: 1.05rem; /* 增加导航文字大小 */
+}
+
+.nav-links a:hover {
+    color: var(--primary-color); /* 导航链接悬停时为蓝色 */
+    animation: jelly 0.6s ease;
+}
+
+.nav-links a::after { /* 下划线动画 */
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 50%;
+    background-color: var(--accent-color); /* 粉色下划线 */
+    transition: all 0.3s ease-out;
+    transform: translateX(-50%);
+    border-radius: 1px;
+}
+
+.nav-links a:hover::after,
+.nav-links a.active::after {
+    width: 60%; /* 较小的下划线，更可爱的感觉 */
+}
+
+/* 操作按钮容器 */
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-left: 1rem;
+}
+
+.nav-button {
+    background-color: var(--primary-color);
+    color: white !important;
+    padding: 0.6rem 1.5rem; /* 增加内边距 */
+    border-radius: var(--border-radius-pill);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: var(--button-shadow);
+    font-weight: 600;
+    font-size: 1rem; /* 增加字体大小 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-button i {
+    margin-right: 0.7rem; /* 增加图标和文字的间距 */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
+    display: inline-block;
+    font-size: 1.1em; /* 增加图标大小，相对于按钮文字 */
+}
+
+.nav-button:hover {
+    background-color: var(--primary-hover);
+    color: white !important;
+    text-decoration: none;
+    box-shadow: var(--button-hover-shadow);
+    animation: jelly 0.6s ease;
+    transform: translateY(-3px);
+}
+
+.nav-button::after {
+    display: none;
+}
+
+/* 下载按钮样式 */
+.download-btn {
+    background: linear-gradient(45deg, var(--primary-color), #96b6ff) !important;
+}
+
+.download-btn:hover {
+    background: linear-gradient(45deg, #96b6ff, var(--primary-color)) !important;
+}
+
+/* 支持项目按钮样式 */
+.support-btn {
+    background: linear-gradient(45deg, var(--accent-color), #f799b8) !important;
+    box-shadow: 0 4px 15px rgba(247, 125, 170, 0.3) !important;
+}
+
+.support-btn:hover {
+    background: linear-gradient(45deg, #f799b8, var(--accent-color)) !important;
+    box-shadow: 0 6px 20px rgba(247, 125, 170, 0.4) !important;
+}
+
+.support-btn i {
+    display: inline-block; /* Needed for transform */
+    transition: transform 0.3s ease, opacity 0.3s ease; /* Added transition for smoother hover effect */
+    opacity: 0.8; /* Slightly faded when not animating */
+    transform-origin: bottom center;
+}
+
+/* Add hover state animation */
+.support-btn:hover i {
+    animation: coffeeSteam 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes coffeeSteam {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+    50% { transform: translateY(-3px) rotate(-5deg); opacity: 1; }
+    100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+}
+
+/* 响应式导航 */
+@media (max-width: 768px) {
+    .nav-links {
+        gap: 1rem;
+    }
+    
+    .action-buttons {
+        margin-left: 0;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .nav-button {
+        padding: 0.5rem 1.2rem;
+        font-size: 0.9rem;
+    }
+}
+@media (max-width: 600px) {
+    .main-header .container {
+        flex-direction: column;
+        padding: 1rem 0;
+    }
+    
+    .logo {
+        margin-bottom: 1rem;
+    }
+    
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .action-buttons {
+        margin-top: 0.5rem;
+        flex-direction: row;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .nav-button {
+        padding: 0.5rem 1rem;
+    }
+}
+
+/* 添加可爱的装饰元素 */
+.hero-subtitle::before,
+.hero-subtitle::after {
+    content: '♡';
+    position: absolute;
+    opacity: 0;
+    transition: all 0.5s ease;
+    font-size: 1.2rem;
+    color: var(--accent-color);
+}
+
+.hero-subtitle::before {
+    left: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.hero-subtitle::after {
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.hero-subtitle:hover::before,
+.hero-subtitle:hover::after {
+    opacity: 1;
+    animation: heartbeat 1s ease-in-out infinite alternate;
+}
+
+@keyframes heartbeat {
+    from { transform: translateY(-50%) scale(1); }
+    to { transform: translateY(-50%) scale(1.3); }
+}
+
+/* 改进描述文字基本样式 */
+.hero-description {
+    font-size: 1.15rem;
+    color: var(--text-color);
+    margin-bottom: 2.8rem;
+    max-width: 520px;
+    line-height: 1.8;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    padding: 12px 0;
+    position: relative;
+    text-align: left; /* 改为左对齐而非两端对齐 */
+    letter-spacing: 0.01em; /* 微调字间距 */
+}
+
+/* 添加鼠标悬停特效底部边框 */
+.hero-description::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transition: width 0.6s ease;
+}
+
+.hero-description:hover::after {
+    width: 100%;
+    box-shadow: 0 0 10px rgba(122, 162, 247, 0.5);
+}
+
+/* 描述文字的单词效果 - 增强版 */
+.desc-word {
+    display: inline-block;
+    margin-right: 5px;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0.85;
+    transform-origin: center bottom;
+    position: relative;
+    padding: 0 2px;
+}
+
+.hero-description:hover .desc-word {
+    opacity: 1;
+}
+
+/* 描述文字悬停效果 - 改进波浪动画 */
+@keyframes wordFloat {
+    0% { 
+        transform: translateY(0) rotate(0deg); 
+    }
+    50% { 
+        transform: translateY(-10px) rotate(2deg); 
+    }
+    100% { 
+        transform: translateY(0) rotate(0deg); 
+    }
+}
+
+/* 猫咪相关词汇特殊动画 - 加入更多猫咪元素 */
+@keyframes catMove {
+    0% { 
+        transform: translateY(0) rotate(0deg) scale(1); 
+        color: var(--text-color);
+    }
+    30% { 
+        transform: translateY(-10px) rotate(-5deg) scale(1.15); 
+        color: #ffac59; /* 橙色 - 猫咪色 */
+    }
+    60% { 
+        transform: translateY(-5px) rotate(3deg) scale(1.08); 
+        color: #ffac59; 
+    }
+    100% { 
+        transform: translateY(0) rotate(0deg) scale(1); 
+        color: var(--text-color);
+    }
+}
+
+.hero-description:hover .cat-word {
+    animation: catMove 1.5s ease-in-out infinite;
+    text-shadow: 0 0 8px rgba(255, 172, 89, 0.5);
+    font-weight: 500;
+}
+
+/* 添加一个小猫爪图标在猫咪词之前 */
+.hero-description:hover .cat-word:first-child::before {
+    content: '🐾 ';
+    font-size: 0.9em;
+    opacity: 0;
+    animation: fadeIn 0.5s forwards 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+/* 突出词汇特殊动画 - 更强调重点 */
+@keyframes empPulse {
+    0% { 
+        transform: scale(1); 
+        color: var(--text-color);
+    }
+    50% { 
+        transform: scale(1.25); 
+        color: var(--accent-color);
+        text-shadow: 0 0 15px rgba(247, 125, 170, 0.7);
+    }
+    100% { 
+        transform: scale(1); 
+        color: var(--text-color);
+    }
+}
+
+.hero-description:hover .emp-word {
+    animation: empPulse 1s ease-in-out infinite;
+    font-weight: 600;
+    position: relative;
+}
+
+/* 添加闪光效果到重点词 */
+.hero-description:hover .emp-word::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+    opacity: 0;
+    animation: sparkle 2s linear infinite;
+    pointer-events: none;
+}
+
+@keyframes sparkle {
+    0% { opacity: 0; transform: scale(0.5); }
+    5% { opacity: 0.7; }
+    10% { opacity: 0; transform: scale(1.2); }
+    100% { opacity: 0; }
+}
+
+.hero-visual {
+    flex: 1 1 35%; /* 从40%减少到35%，减少图片区域占比 */
+    position: relative;
+    text-align: center;
+    margin-right: -5rem; /* 从-3rem增加到-5rem，使图片向右移动更多 */
+}
+
+.hero-screenshot {
+    border-radius: var(--border-radius-large); /* 更圆润的边角 */
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2); /* 更柔和、更大的阴影 */
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    border: 6px solid rgba(255, 255, 255, 0.85); /* 半透明白色边框 */
+    transform: scale(1.5) perspective(1000px); /* 默认1.5倍大小，添加透视效果 */
+    transform-origin: center center;
+    z-index: 2;
+    cursor: pointer; /* 添加指针样式表示可点击 */
+    user-select: none; /* 防止拖拽选中 */
+    /* 为video元素添加尺寸约束 */
+    width: 100%;
+    max-width: 400px;
+    height: auto;
+    object-fit: cover; /* 保持视频宽高比同时填充容器 */
+    display: block; /* 确保视频以块级元素显示 */
+}
+
+/* 视频专用样式 */
+video.hero-screenshot {
+    aspect-ratio: 16/9; /* 设置固定的宽高比 */
+    background-color: rgba(122, 162, 247, 0.1); /* 加载时的背景色 */
+}
+
+/* 添加呼吸动画效果 */
+@keyframes breathe {
+    0% { transform: scale(1.4) perspective(1000px) rotateY(-10deg) rotateX(3deg); }
+    50% { transform: scale(1.45) perspective(1000px) rotateY(-10deg) rotateX(3deg); }
+    100% { transform: scale(1.4) perspective(1000px) rotateY(-10deg) rotateX(3deg); }
+}
+
+.hero-screenshot:hover {
+    transform: scale(1.45) perspective(1000px); /* 悬停时略微放大 */
+    box-shadow: 20px 15px 30px rgba(122, 162, 247, 0.25);
+    border-color: rgba(255, 255, 255, 1);
+    animation: none;
+}
+
+/* 响应式调整悬停效果 */
+@media (max-width: 992px) {
+    @keyframes breathe {
+        0% { transform: scale(1.2) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+        50% { transform: scale(1.25) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+        100% { transform: scale(1.2) perspective(1000px) rotateY(-8deg) rotateX(2deg); }
+    }
+    
+    .hero-screenshot:hover {
+        transform: scale(1.25) perspective(1000px);
+    }
+
+    .hero-screenshot {
+        transform: scale(1.2) perspective(1000px); /* 减小平板上的默认缩放 */
+    }
+
+    .hero-visual {
+        margin-right: -2.5rem; /* 从-1.5rem增加到-2.5rem */
+    }
+}
+
+@media (max-width: 768px) {
+    @keyframes breathe {
+        0% { transform: scale(1.0) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        50% { transform: scale(1.05) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+        100% { transform: scale(1.0) perspective(1000px) rotateY(-5deg) rotateX(2deg); }
+    }
+    
+    .hero-screenshot:hover {
+        transform: scale(1.1) perspective(1000px);
+        box-shadow: 10px 10px 20px rgba(122, 162, 247, 0.2);
+    }
+
+    .hero-screenshot {
+        transform: scale(1.0) perspective(1000px); /* 手机上不缩放 */
+        max-width: 90%; /* 限制最大宽度 */
+        margin: 0 auto; /* 居中显示 */
+        animation: breathe 3s infinite ease-in-out; /* 应用动画效果 */
+    }
+
+    .hero-visual {
+        margin-right: 0; /* 在手机屏幕上取消负边距 */
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-screenshot {
+        transform: scale(0.85) perspective(1000px); /* 在更小的屏幕上缩小 */
+        border-width: 4px; /* 减小边框宽度 */
+        animation: breathe 3s infinite ease-in-out; /* 应用动画效果 */
+    }
+    
+    .hero-screenshot:hover {
+        transform: scale(0.9) perspective(1000px); /* 悬停时缩小放大比例 */
+        max-width: 95%; /* 限制最大宽度，防止溢出 */
+    }
+    
+    @keyframes breathe {
+        0% { transform: scale(0.85) perspective(1000px) rotateY(-3deg) rotateX(1deg); }
+        50% { transform: scale(0.87) perspective(1000px) rotateY(-3deg) rotateX(1deg); }
+        100% { transform: scale(0.85) perspective(1000px) rotateY(-3deg) rotateX(1deg); }
+    }
+}
+
+/* 号召性按钮 */
+.cta-button {
+    display: inline-block;
+    padding: 0.9rem 2rem; /* 增加内边距 */
+    border-radius: var(--border-radius-pill);
+    font-size: 1.05rem; /* 增加字体大小 */
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    margin: 0.5rem 0.5rem 0.5rem 0;
+    box-shadow: var(--button-shadow);
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.02em; /* 增加字间距 */
+}
+
+.cta-button i {
+    margin-right: 0.7rem; /* 增加图标和文字的间距 */
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.3s ease;
+    display: inline-block;
+    font-size: 1.1em; /* 增加图标大小，相对于按钮文字 */
+}
+
+.cta-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.5s ease-out, height 0.5s ease-out;
+    z-index: 1;
+    opacity: 0;
+}
+
+.cta-button:hover::before {
+    width: 300%;
+    height: 300%;
+    opacity: 1;
+}
+
+.cta-button > * {
+    position: relative;
+    z-index: 2;
+}
+
+.cta-button.primary {
+    background-color: var(--accent-color); /* 粉色主要按钮 */
+    color: white;
+    transition: all 0.4s ease, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.cta-button.primary:hover {
+    background-color: #ff5d95; /* 更亮更饱和的粉色 */
+    color: white;
+    box-shadow: 0 6px 20px rgba(247, 125, 170, 0.5), 0 0 15px rgba(255, 93, 149, 0.6); /* 增强的粉色阴影和发光效果 */
+    transform: translateY(-3px);
+    animation: jelly 0.6s ease;
+}
+
+.cta-button.primary:hover i {
+    transform: scale(1.2) rotate(10deg);
+    color: #fff6f9; /* 更亮的颜色强调图标 */
+}
+
+.cta-button.secondary {
+    background-color: var(--surface-color); /* 白色 */
+    color: var(--primary-color); /* 蓝色文本 */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s ease, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.cta-button.secondary:hover {
+    background-color: #eef4ff; /* 更明显的淡蓝色 */
+    color: #4f7df9; /* 更亮的蓝色 */
+    border-color: #b8c9ff;
+    box-shadow: 0 6px 15px rgba(122, 162, 247, 0.3), 0 0 10px rgba(79, 125, 249, 0.4); /* 增强的蓝色阴影和发光效果 */
+    transform: translateY(-3px);
+    animation: jelly 0.6s ease;
+}
+
+.cta-button.secondary:hover i {
+    transform: scale(1.2) rotate(10deg);
+    color: #3a69f8; /* 更亮的蓝色强调图标 */
+}
+
+.cta-button.large {
+    padding: 1.1rem 2.7rem; /* 增加大型按钮的内边距 */
+    font-size: 1.2rem; /* 增加大型按钮字体大小 */
+    letter-spacing: 0.03em; /* 更大的字间距 */
+}
+
+/* 可选的背景形状 */
+.background-shapes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.1; /* 非常微妙 */
+    background-color: var(--accent-color); /* 粉色形状 */
+    animation: float 15s infinite ease-in-out alternate;
+}
+
+.shape1 {
+    width: 150px; height: 150px; top: 10%; left: 5%; animation-duration: 18s;
+    background-color: rgba(255, 255, 255, 0.5); /* 白色形状 */
+}
+
+.shape2 {
+    width: 80px; height: 80px; bottom: 15%; right: 10%; animation-duration: 12s; animation-delay: 2s;
+}
+
+.shape3 {
+    width: 120px; height: 120px; top: 40%; right: 15%; animation-duration: 20s; animation-delay: 1s;
+     background-color: rgba(167, 199, 231, 0.3); /* 浅蓝色形状 */
+}
+
+@keyframes float {
+    0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
+    100% { transform: translateY(-20px) translateX(15px) rotate(20deg); }
+}
+

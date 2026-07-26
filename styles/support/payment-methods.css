@@ -1,0 +1,383 @@
+.support-project {
+    padding: 6rem 0;
+    background-color: var(--background-color);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.support-project::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
+    z-index: -1;
+}
+
+.support-project::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(122, 162, 247, 0.3), transparent);
+    z-index: -1;
+}
+
+@keyframes supportBgPulse {
+    0% { transform: scale(1); opacity: 0.1; }
+    50% { transform: scale(1.1); opacity: 0.15; }
+    100% { transform: scale(1); opacity: 0.1; }
+}
+
+.support-methods {
+    display: flex;
+    justify-content: center;
+    gap: 5rem;
+    margin-top: 3.5rem;
+    perspective: 1000px;
+}
+
+.support-method {
+    padding: 2.5rem;
+    border-radius: 25px;
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.92);
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform-style: preserve-3d;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.support-method::before {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -15px;
+    bottom: -15px;
+    background: radial-gradient(circle at center, rgba(122, 162, 247, 0.15), transparent 60%);
+    border-radius: 35px;
+    opacity: 0;
+    transform: translateZ(-10px);
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: -1;
+}
+
+.support-method:hover::before {
+    opacity: 1;
+    transform: translateZ(-5px);
+}
+
+.support-method:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 20px 40px rgba(122, 162, 247, 0.25), 0 8px 20px rgba(122, 162, 247, 0.1);
+    border-color: rgba(122, 162, 247, 0.2);
+}
+
+.support-qr {
+    width: 240px;
+    height: 240px;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    border-radius: 18px;
+    padding: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    margin: 0 auto;
+    transform: translateZ(20px);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    object-fit: contain;
+    position: relative;
+    z-index: 1;
+}
+
+.support-qr::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 22px;
+    background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.6), transparent 60%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: -1;
+}
+
+.support-qr:hover {
+    transform: translateZ(50px) scale(1.06);
+    box-shadow: 0 20px 35px rgba(0, 0, 0, 0.12);
+    padding: 14px;
+}
+
+.support-qr:hover::before {
+    opacity: 0.7;
+}
+
+.support-method:hover .support-qr {
+    transform: translateZ(30px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+}
+
+.alipay-qr,
+.wechat-qr {
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.support-method:hover .alipay-qr {
+    border-color: #1677ff;
+    transform: translateZ(30px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(22, 119, 255, 0.15);
+}
+
+.support-method:hover .wechat-qr {
+    border-color: #07c160;
+    transform: translateZ(30px) scale(1.03);
+    box-shadow: 0 12px 25px rgba(7, 193, 96, 0.15);
+}
+
+.alipay-qr:hover {
+    border-color: #1677ff;
+    transform: translateZ(50px) scale(1.06);
+    box-shadow: 0 20px 35px rgba(22, 119, 255, 0.25);
+}
+
+.wechat-qr:hover {
+    border-color: #07c160;
+    transform: translateZ(50px) scale(1.06);
+    box-shadow: 0 20px 35px rgba(7, 193, 96, 0.25);
+}
+
+.support-label {
+    font-size: 1.4rem;
+    margin: 1rem auto 0 auto;
+    text-align: center;
+    font-weight: 500;
+    color: var(--text-color);
+    transform: translateZ(10px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+}
+
+.support-method:hover .support-label {
+    transform: translateZ(25px) translateY(-5px);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.support-label::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: currentColor;
+    transform: translateX(-50%);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    opacity: 0;
+}
+
+.support-method:hover .support-label::after {
+    width: 60%;
+    opacity: 0.7;
+}
+
+.support-label i {
+    margin-right: 0.5rem;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.support-method:hover .support-label i {
+    transform: scale(1.1);
+}
+
+.support-label.alipay i {
+    color: #1677ff;
+}
+
+.support-method:hover .support-label.alipay {
+    color: #1677ff;
+}
+
+.support-label.wechat i {
+    color: #07c160;
+}
+
+.support-method:hover .support-label.wechat {
+    color: #07c160;
+}
+
+.kofi-button-wrapper {
+    margin-top: 3rem;
+    text-align: center;
+}
+
+.kofi-official-button {
+    height: 80px;
+    width: auto;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.kofi-official-button:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.kofi-button-wrapper a {
+    display: inline-block;
+    text-decoration: none;
+}
+
+a.support-method {
+    text-decoration: none;
+    display: block;
+}
+
+.support-project .section-title i.fa-mug-hot {
+    color: #ffac33;
+    font-size: 1.2em;
+    margin-left: 10px;
+    animation: coffeeSteam 3s infinite;
+}
+
+@keyframes coffeeSteam {
+    0%, 100% { transform: translateY(0) rotate(0); opacity: 0.8; }
+    50% { transform: translateY(-10px) rotate(5deg); opacity: 1; }
+}
+
+.support-project .section-subtitle {
+    font-size: 1.25rem;
+    color: var(--text-secondary);
+    max-width: 80%;
+    margin: 1rem auto 2rem;
+    transition: all 0.3s ease;
+}
+
+.support-project .section-subtitle:hover {
+    color: var(--primary-color);
+    transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+    .support-methods {
+        flex-direction: column;
+        gap: 3rem;
+    }
+    
+    .support-method {
+        padding: 2rem;
+        width: 90%;
+        margin: 0 auto;
+    }
+    
+    .support-qr {
+        width: 220px;
+        height: 220px;
+    }
+    
+    .support-label {
+        font-size: 1.3rem;
+    }
+
+    .kofi-button-wrapper {
+        margin-top: 2.5rem;
+    }
+
+    .kofi-official-button {
+        height: 70px;
+    }
+}
+
+@media (max-width: 480px) {
+    .support-project {
+        padding: 4rem 0;
+    }
+    
+    .support-method {
+        padding: 1.8rem;
+        width: 95%;
+        min-width: auto;
+        margin: 0 auto;
+    }
+    
+    .support-qr {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .support-label {
+        font-size: 1.2rem;
+    }
+
+    .kofi-button-wrapper {
+        margin-top: 2rem;
+    }
+
+    .kofi-official-button {
+        height: 60px;
+    }
+}
+
+.support-project .coffee-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.coffee-particle {
+    position: absolute;
+    top: -50px;
+    font-size: 18px;
+    opacity: 0.6;
+    animation: coffeeFloat 15s linear infinite;
+    z-index: -1;
+}
+
+.coffee-particle i {
+    animation: rotateCoffee 8s linear infinite;
+    display: block;
+}
+
+@keyframes rotateCoffee {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes coffeeFloat {
+    0% { 
+        transform: translateY(-30px) rotate(0deg); 
+        opacity: 0; 
+    }
+    10% { 
+        opacity: 0.6; 
+    }
+    90% { 
+        opacity: 0.6; 
+    }
+    100% { 
+        transform: translateY(calc(100vh + 50px)) rotate(360deg); 
+        opacity: 0; 
+    }
+}
+
+/* 其他支持方式样式 */

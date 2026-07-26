@@ -1,0 +1,202 @@
+.tool-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem 0;
+}
+
+.tool-header h1 {
+    font-size: 2.8rem;
+    color: var(--heading-color);
+    margin-bottom: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+}
+
+.tool-header p {
+    font-size: 1.2rem;
+    color: var(--secondary-color);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.warning-section {
+    margin-bottom: 2rem;
+}
+
+.warning-card {
+    background: linear-gradient(135deg, var(--surface-color) 0%, rgba(122, 162, 247, 0.05) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-large);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.warning-card:hover {
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(-2px);
+}
+
+.warning-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    color: var(--heading-color);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.warning-header i {
+    color: var(--primary-color);
+    font-size: 1.3rem;
+}
+
+.warning-content p {
+    margin: 0.75rem 0;
+    font-size: 0.95rem;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.warning-content p:last-child {
+    margin-bottom: 0;
+}
+
+.warning-content strong {
+    color: var(--heading-color);
+    font-weight: 600;
+}
+
+.main-content {
+    display: grid;
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+section {
+    background: var(--surface-color);
+    border-radius: var(--border-radius-large);
+    padding: 2rem;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+
+
+section:hover {
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(-3px);
+}
+
+section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--heading-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+
+
+section h2 i {
+    color: var(--primary-color);
+    font-size: 1.3rem;
+}
+
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--border-radius-base);
+    padding: 3rem 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, var(--surface-color) 0%, rgba(122, 162, 247, 0.02) 100%);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-area::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(122, 162, 247, 0.1) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--surface-color) 0%, rgba(122, 162, 247, 0.05) 100%);
+    transform: translateY(-2px);
+    box-shadow: var(--button-hover-shadow);
+}
+
+.upload-area:hover::before {
+    opacity: 1;
+}
+
+.upload-area.drag-over {
+    border-color: var(--accent-color);
+    background: linear-gradient(135deg, rgba(247, 125, 170, 0.1) 0%, rgba(122, 162, 247, 0.1) 100%);
+    transform: scale(1.02);
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.25);
+}
+
+.upload-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.upload-icon {
+    font-size: 3rem;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.upload-subtitle {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.folder-hint {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    border-radius: 6px;
+    color: #2e7d32;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.folder-hint i {
+    color: #4caf50;
+    font-size: 0.9rem;
+}
+

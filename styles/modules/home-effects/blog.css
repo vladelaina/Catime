@@ -1,0 +1,313 @@
+/* --- 博客页面样式 --- */
+.page-header {
+    padding: 5rem 0 3rem;
+    background-image: linear-gradient(145deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
+    text-align: center;
+    color: var(--heading-color);
+}
+
+.page-header h1 {
+    font-size: 2.8rem;
+    margin-bottom: 1rem;
+}
+
+.page-header p {
+    font-size: 1.2rem;
+    color: var(--secondary-color);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* 博客文章列表 */
+.blog-section {
+    padding: 5rem 0;
+    background-color: var(--surface-color);
+}
+
+.blog-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem;
+    margin-bottom: 3rem;
+}
+
+.blog-card {
+    background-color: #f8faff;
+    border-radius: var(--border-radius-large);
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.blog-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--card-hover-shadow);
+    border-color: rgba(122, 162, 247, 0.2);
+}
+
+.blog-image {
+    height: 220px;
+    overflow: hidden;
+}
+
+.blog-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.blog-card:hover .blog-image img {
+    transform: scale(1.05);
+}
+
+.blog-content {
+    padding: 1.8rem 2rem 2rem;
+}
+
+.blog-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+}
+
+.blog-meta i {
+    margin-right: 0.3rem;
+    color: var(--accent-color);
+}
+
+.blog-content h2 {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.blog-content h2 a {
+    color: var(--heading-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.blog-content h2 a:hover {
+    color: var(--primary-color);
+}
+
+.blog-content p {
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    line-height: 1.65;
+}
+
+.read-more {
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.read-more i {
+    margin-left: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+.read-more:hover {
+    color: var(--accent-color);
+}
+
+.read-more:hover i {
+    transform: translateX(3px);
+}
+
+/* 分页 */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination a, .pagination span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.8rem;
+    border-radius: var(--border-radius-base);
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.current-page {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.page-number {
+    background-color: #f0f3ff;
+    color: var(--text-color);
+}
+
+.page-number:hover {
+    background-color: rgba(122, 162, 247, 0.2);
+    color: var(--primary-color);
+}
+
+.next-page {
+    background-color: #f0f3ff;
+    color: var(--text-color);
+    padding: 0 1.2rem;
+    margin-left: 0.5rem;
+}
+
+.next-page i {
+    margin-left: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+.next-page:hover {
+    background-color: rgba(122, 162, 247, 0.2);
+    color: var(--primary-color);
+}
+
+.next-page:hover i {
+    transform: translateX(3px);
+}
+
+/* 订阅区域 */
+.subscribe-section {
+    padding: 4rem 0 5rem;
+    background-color: #f4f6ff;
+}
+
+.subscribe-box {
+    background: white;
+    max-width: 650px;
+    margin: 0 auto;
+    padding: 3rem;
+    border-radius: var(--border-radius-large);
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.12);
+    border: 1px solid var(--border-color);
+}
+
+.subscribe-box h2 {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    color: var(--heading-color);
+}
+
+.subscribe-box p {
+    color: var(--secondary-color);
+    margin-bottom: 2rem;
+}
+
+.subscribe-form {
+    display: flex;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.subscribe-form input {
+    flex: 1;
+    padding: 0.8rem 1.2rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-pill);
+    font-size: 1rem;
+    font-family: var(--font-family);
+}
+
+.subscribe-form input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(122, 162, 247, 0.2);
+}
+
+.subscribe-button {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-pill);
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: var(--font-family);
+    display: inline-flex;
+    align-items: center;
+}
+
+.subscribe-button i {
+    margin-left: 0.5rem;
+}
+
+.subscribe-button:hover {
+    background-color: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(247, 125, 170, 0.3);
+}
+
+.privacy-note {
+    font-size: 0.85rem;
+    color: var(--secondary-color);
+    opacity: 0.8;
+}
+
+/* 响应式调整 - 博客页面 */
+@media (max-width: 992px) {
+    .blog-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .page-header {
+        padding: 4rem 0 2.5rem;
+    }
+    
+    .page-header h1 {
+        font-size: 2.4rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .blog-image {
+        height: 180px;
+    }
+    
+    .blog-content {
+        padding: 1.5rem;
+    }
+    
+    .blog-content h2 {
+        font-size: 1.3rem;
+    }
+    
+    .subscribe-box {
+        padding: 2rem 1.5rem;
+    }
+    
+    .subscribe-form {
+        flex-direction: column;
+    }
+    
+    .subscribe-button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+    }
+    
+    .page-header p {
+        font-size: 1.05rem;
+    }
+}
+

@@ -1,0 +1,762 @@
+/* 图标动画效果 */
+.icon-animate-rotate {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.text-accent:hover .icon-animate-rotate {
+    animation: iconRotate 1s ease infinite;
+}
+
+@keyframes iconRotate {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(15deg); }
+    50% { transform: rotate(0); }
+    75% { transform: rotate(-15deg); }
+    100% { transform: rotate(0); }
+}
+
+.icon-animate-bounce {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.text-primary:hover .icon-animate-bounce {
+    animation: iconBounce 0.8s ease infinite;
+}
+
+@keyframes iconBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.icon-animate-jump {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.text-success:hover .icon-animate-jump {
+    animation: iconJump 0.8s ease infinite;
+}
+
+@keyframes iconJump {
+    0%, 100% { transform: scale(1) translateY(0); }
+    10% { transform: scale(1.1) translateY(0); }
+    30% { transform: scale(0.9) translateY(0); }
+    50% { transform: scale(1.05) translateY(-5px); }
+    57% { transform: scale(1) translateY(-3px); }
+    64% { transform: scale(1) translateY(0); }
+    100% { transform: scale(1) translateY(0); }
+}
+
+.icon-animate-pulse {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+.text-warning:hover .icon-animate-pulse {
+    animation: iconPulse 1.5s ease infinite;
+}
+@keyframes iconPulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.info-card {
+    background-color: rgba(247, 125, 170, 0.05);
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px dashed rgba(247, 125, 170, 0.3);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.info-card:hover {
+    background-color: rgba(247, 125, 170, 0.1);
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(247, 125, 170, 0.1);
+}
+
+.info-card h3 {
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+}
+
+.info-card h3 i {
+    margin-right: 10px;
+    font-size: 1.1em;
+}
+
+.info-card p {
+    margin-bottom: 0.7rem;
+}
+
+.anime-icons {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.anime-icon {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--border-radius-pill);
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.anime-icon:last-child {
+    background-color: var(--accent-color);
+}
+
+.anime-icon:hover {
+    transform: translateY(-3px) rotate(3deg);
+    box-shadow: 0 5px 15px rgba(122, 162, 247, 0.3);
+}
+
+.anime-icon:last-child:hover {
+    box-shadow: 0 5px 15px rgba(247, 125, 170, 0.3);
+}
+
+.guide-divider {
+    text-align: center;
+    margin: 2rem 0;
+    position: relative;
+}
+
+.guide-divider::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color) 20%, var(--border-color) 80%, transparent);
+}
+
+.divider-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: white;
+    border-radius: 50%;
+    position: relative;
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.divider-icon:hover {
+    transform: rotate(180deg);
+    color: var(--accent-color);
+}
+
+.divider-icon i {
+    font-size: 1.2rem;
+}
+
+.guide-intro {
+    font-size: 1.2rem;
+    color: var(--accent-color);
+    font-weight: 500;
+    text-align: center;
+    max-width: 90%;
+    margin: 0 auto;
+    position: relative;
+    padding-bottom: 0.5rem;
+    transition: color 0.4s ease, transform 0.4s ease;
+    text-shadow: 0 0 0 transparent;
+}
+
+.guide-intro:hover {
+    color: var(--accent-color);
+    transform: translateY(-3px) scale(1.02);
+    text-shadow: 0 2px 8px rgba(247, 125, 170, 0.2);
+}
+
+.guide-intro::after {
+    content: "";
+    position: absolute;
+    right: -15px;
+    bottom: -5px;
+    font-size: 1.3rem;
+    opacity: 0;
+    transform: scale(0.5) rotate(-15deg);
+    transition: opacity 0.4s ease 0.1s, transform 0.4s ease 0.1s;
+    pointer-events: none;
+    filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5));
+}
+
+.guide-intro:hover::after {
+    opacity: 1;
+    transform: scale(1);
+    animation: starTwinkle 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+}
+@keyframes starTwinkle {
+    0%, 100% { transform: scale(1) rotate(5deg); filter: brightness(1); }
+    30% { transform: scale(1.1) rotate(8deg); filter: brightness(1.2); }
+    50% { transform: scale(1.15) rotate(10deg); filter: brightness(1.3); }
+    70% { transform: scale(1.1) rotate(8deg); filter: brightness(1.2); }
+}
+
+.feature-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: rgba(122, 162, 247, 0.05);
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(122, 162, 247, 0.1);
+    transition: all 0.3s ease;
+}
+
+.feature-box:hover {
+    background-color: rgba(122, 162, 247, 0.1);
+    transform: translateY(-3px);
+}
+
+.feature-content {
+    flex: 1;
+}
+
+.feature-content p {
+    margin: 0;
+}
+
+.feature-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.feature-tag {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--border-radius-pill);
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.feature-tag:nth-child(2) {
+    background-color: var(--accent-color);
+}
+
+.feature-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(122, 162, 247, 0.3);
+}
+
+.feature-tag:nth-child(2):hover {
+    box-shadow: 0 3px 10px rgba(247, 125, 170, 0.3);
+}
+
+.guide-image {
+    margin-bottom: 2rem;
+    border-radius: var(--border-radius-base);
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.guide-image:hover {
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(-5px);
+}
+
+.animated-image img {
+    display: block;
+    width: 100%;
+    transition: all 0.5s ease;
+    transform-origin: center;
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--border-radius-base);
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.15);
+}
+
+.animated-image img.hover-effect {
+    transform: scale(1.03);
+}
+
+.small-image {
+    max-width: 90%;
+    margin-top: 1rem;
+}
+
+.tip-box {
+    display: flex;
+    align-items: flex-start;
+    background-color: rgba(247, 212, 125, 0.1);
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-left: 3px solid #f7d47d;
+    transition: all 0.3s ease;
+}
+
+.tip-box:hover {
+    background-color: rgba(247, 212, 125, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(247, 212, 125, 0.2);
+}
+
+.tip-icon {
+    margin-right: 1rem;
+    color: #f7d47d;
+    font-size: 1.5rem;
+}
+
+.tip-content {
+    flex: 1;
+}
+
+.tip-content h4 {
+    color: #d4a63a;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.tip-content p {
+    margin: 0;
+}
+
+.section-intro {
+    font-size: 1.1rem;
+    color: var(--secondary-color);
+    margin-bottom: 1.5rem;
+}
+
+.operation-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.operation-card {
+    background-color: white;
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+}
+
+.operation-card:hover {
+    box-shadow: var(--card-hover-shadow);
+    transform: translateY(-5px);
+}
+
+.operation-icon {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(122, 162, 247, 0.1);
+    color: var(--primary-color);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.operation-card:nth-child(2) .operation-icon {
+    background-color: rgba(247, 125, 170, 0.1);
+    color: var(--accent-color);
+}
+
+.operation-card:hover .operation-icon {
+    transform: scale(1.1) rotate(10deg);
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.operation-card:nth-child(2):hover .operation-icon {
+    background-color: var(--accent-color);
+}
+
+.operation-details h3 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+    color: var(--heading-color);
+    transition: all 0.3s ease;
+}
+
+.operation-card:hover .operation-details h3 {
+    color: var(--primary-color);
+}
+
+.operation-card:nth-child(2):hover .operation-details h3 {
+    color: var(--accent-color);
+}
+
+.feature-highlight {
+    background-color: rgba(122, 162, 247, 0.05);
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(122, 162, 247, 0.1);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.feature-highlight::before {
+    content: "";
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background-color: white;
+    padding: 0 10px;
+    font-size: 1.2rem;
+}
+
+.feature-highlight:hover {
+    background-color: rgba(122, 162, 247, 0.1);
+    transform: translateX(5px);
+}
+
+.feature-highlight p {
+    margin: 0;
+}
+
+.conclusion-box {
+    display: flex;
+    align-items: center;
+    background-color: rgba(122, 210, 122, 0.1);
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    margin-top: 2rem;
+    border: 1px solid rgba(122, 210, 122, 0.3);
+    transition: all 0.3s ease;
+}
+
+.conclusion-box:hover {
+    background-color: rgba(122, 210, 122, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(122, 210, 122, 0.2);
+}
+
+.conclusion-icon {
+    margin-right: 1.5rem;
+    color: #52c41a;
+    font-size: 2rem;
+}
+
+.conclusion-content {
+    flex: 1;
+}
+
+.conclusion-content h3 {
+    color: #52c41a;
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+}
+
+.conclusion-content p {
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .guide-hero-title {
+        font-size: 2.3rem;
+    }
+    
+    .guide-content {
+        padding: 1.5rem;
+    }
+    
+    .author-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .author-avatar {
+        margin-right: 0;
+        margin-bottom: 1.5rem;
+}
+
+.author-avatar img {
+        width: 70px;
+        height: 70px;
+    }
+    
+    .operation-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .feature-box {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .feature-actions {
+        margin-top: 1rem;
+    }
+    
+    .animated-title {
+        font-size: 1.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .guide-hero-title {
+        font-size: 1.8rem;
+    }
+    
+    .guide-content {
+        padding: 1rem;
+    }
+    
+    .animated-title {
+        font-size: 1.5rem;
+    }
+    
+    .info-card,
+    .tip-box,
+    .conclusion-box,
+    .feature-highlight,
+    .feature-box {
+        padding: 1rem;
+    }
+}
+
+.animated-image img {
+    display: block;
+    width: 100%;
+    transition: all 0.5s ease;
+    transform-origin: center;
+    cursor: pointer;
+    user-select: none;
+    border-radius: var(--border-radius-base);
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.15);
+}
+
+.small-image {
+    max-width: 90%;
+    margin-top: 1rem;
+}
+
+.tip-box {
+    position: relative;
+    overflow: visible !important;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tip-box:hover {
+    transform: translateY(-5px);
+}
+
+.tip-box::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    width: 20px;
+    height: 20px;
+    background-color: rgba(122, 162, 247, 0.1);
+    border: 1px solid rgba(122, 162, 247, 0.3);
+    transform: rotate(45deg);
+    border-bottom: none;
+    border-right: none;
+    z-index: 0;
+    transition: all 0.3s ease;
+    display: none; /* 隐藏这个蓝色正方形 */
+}
+
+.tip-box:hover::before {
+    background-color: rgba(122, 162, 247, 0.2);
+    transform: rotate(45deg) scale(1.2);
+    display: none; /* 悬停时也隐藏 */
+}
+
+.tip-icon {
+    position: relative;
+    z-index: 2;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.tip-box:hover .tip-icon {
+    transform: scale(1.2) rotate(15deg);
+}
+
+.click-ripple {
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.anime-particle {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));
+}
+
+.guide-divider {
+    position: relative;
+    overflow: visible;
+}
+
+.divider-icon {
+    position: relative;
+    z-index: 2;
+    transition: all 0.5s ease;
+    animation: pulse 3s infinite ease-in-out;
+}
+
+.divider-icon:hover {
+    transform: rotate(180deg) scale(1.2);
+    animation: none;
+}
+
+.divider-icon i {
+    transition: all 0.3s ease;
+}
+
+.guide-divider::before,
+.guide-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    height: 1px;
+    width: 40%;
+    background: linear-gradient(90deg, 
+        rgba(122, 162, 247, 0.1), 
+        rgba(122, 162, 247, 0.5)
+    );
+    z-index: 1;
+    transition: all 0.5s ease;
+}
+
+.guide-divider::before {
+    left: 0;
+}
+
+.guide-divider::after {
+    right: 0;
+    background: linear-gradient(90deg, 
+        rgba(122, 162, 247, 0.5), 
+        rgba(122, 162, 247, 0.1)
+    );
+}
+
+.guide-divider:hover::before,
+.guide-divider:hover::after {
+    width: 45%;
+    background: linear-gradient(90deg, 
+        rgba(247, 125, 170, 0.1), 
+        rgba(247, 125, 170, 0.7)
+    );
+}
+
+.guide-divider:hover::after {
+    background: linear-gradient(90deg, 
+        rgba(247, 125, 170, 0.7), 
+        rgba(247, 125, 170, 0.1)
+    );
+}
+
+.conclusion-icon i {
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.conclusion-box:hover .conclusion-icon i {
+    transform: scale(1.3) rotate(360deg);
+}
+
+.conclusion-content h3 {
+    position: relative;
+    display: inline-block;
+}
+
+.conclusion-content h3::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #52c41a, rgba(82, 196, 26, 0.2));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+}
+
+.conclusion-box:hover .conclusion-content h3::after {
+    transform: scaleX(1);
+}
+
+@keyframes sparkle {
+    0%, 100% { 
+        opacity: 0.2;
+        filter: blur(1px);
+    }
+    50% { 
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+.conclusion-box:hover {
+    background-image: 
+        radial-gradient(
+            circle at 20% 70%, 
+            rgba(122, 210, 122, 0.3) 0%, 
+            rgba(122, 210, 122, 0.1) 20%, 
+            transparent 50%
+        ),
+        radial-gradient(
+            circle at 80% 30%, 
+            rgba(122, 210, 122, 0.3) 0%, 
+            rgba(122, 210, 122, 0.1) 20%, 
+            transparent 50%
+        );
+}
+
+.bilibili-link {
+    color: #00a1d6;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+}
+
+.bilibili-link:hover {
+    color: #fb7299;
+    transform: translateY(-2px);
+}
+
+.bilibili-link i {
+    font-size: 1.2em;
+    pointer-events: none;
+}
+
+.bilibili-link span {
+    pointer-events: none;
+}
+
+.bilibili-link:hover i {
+    animation: bilibiliBounce 0.5s ease;
+}
+
+@keyframes bilibiliBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+}
+

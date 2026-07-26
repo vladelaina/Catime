@@ -1,0 +1,616 @@
+/* --- 使用场景区域 --- */
+.usage-scenarios {
+    padding: 6rem 0;
+    background-color: var(--background-color);
+    position: relative;
+}
+
+.scenarios-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4rem;
+    margin-top: 1rem;
+}
+
+.scenario-card {
+    display: flex;
+    align-items: center;
+    gap: 4rem; /* 增加左右内容的间距 */
+    background-color: var(--surface-color);
+    border-radius: var(--border-radius-large);
+    padding: 2.5rem; /* 增加内边距 */
+    box-shadow: var(--card-shadow);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 1rem; /* 卡片底部间距 */
+}
+
+.scenario-card:hover {
+    transform: translateY(-10px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.scenario-card.reverse {
+    flex-direction: row-reverse;
+}
+
+.scenario-visual {
+    flex: 1;
+    min-width: 40%;
+    border-radius: var(--border-radius-base);
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(122, 162, 247, 0.15);
+    transition: all 0.3s ease;
+    position: relative;
+    cursor: pointer;
+}
+
+.scenario-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--border-radius-large);
+    box-shadow: 0 15px 35px rgba(122, 162, 247, 0.2);
+    transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    border: 6px solid rgba(255, 255, 255, 0.85);
+    transform: perspective(1000px);
+    transform-origin: center center;
+    z-index: 2;
+    user-select: none;
+}
+
+.scenario-img::before,
+.scenario-img::after {
+    content: '';
+    position: absolute;
+    background: white;
+    z-index: 1;
+    opacity: 0.4;
+    transition: all 0.5s ease;
+}
+
+/* 水平丝带 */
+.scenario-img::before {
+    height: 6px;
+    width: 120%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
+}
+
+/* 垂直丝带 */
+.scenario-img::after {
+    width: 6px;
+    height: 120%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.2);
+}
+
+.scenario-card:hover .scenario-img {
+    transform: perspective(1000px);
+    box-shadow: 30px 20px 40px rgba(122, 162, 247, 0.25);
+    border-color: rgba(255, 255, 255, 1);
+}
+
+.scenario-card:hover .scenario-img::before,
+.scenario-card:hover .scenario-img::after {
+    opacity: 0.8;
+    box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.4);
+}
+
+/* 添加脚本控制悬停和点击效果 */
+.scenario-content {
+    flex: 1;
+    padding: 1rem;
+}
+
+.scenario-icon {
+    width: 70px;
+    height: 70px;
+    background-color: rgba(122, 162, 247, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    transition: all 0.3s ease;
+    transform-origin: center center;
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0.1);
+}
+
+/* 卡片悬停时图标背景变色 */
+.scenario-card:hover .scenario-icon {
+    background-color: var(--primary-color);
+    color: white;
+    /* 不应用动画 */
+}
+
+/* 使用场景图标动画效果 */
+@keyframes dragonFloat {
+    0%, 100% { 
+        transform: scale(1.1) translateY(0) rotate(0deg); 
+        filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
+    }
+    25% { 
+        transform: scale(1.4) translateY(-10px) rotate(15deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.7)) brightness(1.5); 
+    }
+    50% { 
+        transform: scale(1.5) translateY(-5px) rotate(-10deg); 
+        filter: drop-shadow(0 0 20px rgba(255, 0, 0, 0.8)) brightness(1.6); 
+    }
+    75% { 
+        transform: scale(1.4) translateY(-10px) rotate(10deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 50, 50, 0.7)) brightness(1.5); 
+    }
+}
+/* 添加新的喷火效果动画 */
+@keyframes dragonFireBreath {
+    0%, 100% {
+        transform: scale(0) translateX(0);
+        opacity: 0;
+    }
+    15% {
+        transform: scale(0.3) translateX(15px) translateY(-5px);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1.2) translateX(30px) translateY(-10px);
+        opacity: 0.9;
+    }
+    70% {
+        transform: scale(0.8) translateX(40px) translateY(-5px);
+        opacity: 0.6;
+    }
+    90% {
+        transform: scale(0.3) translateX(50px) translateY(0);
+        opacity: 0.2;
+    }
+}
+
+/* 稍微不同的第二个火焰动画 */
+@keyframes dragonFireBreath2 {
+    0%, 100% {
+        transform: scale(0) translateX(0) translateY(0);
+        opacity: 0;
+    }
+    10% {
+        transform: scale(0.4) translateX(10px) translateY(-8px);
+        opacity: 0.6;
+    }
+    35% {
+        transform: scale(1.4) translateX(25px) translateY(-15px);
+        opacity: 0.95;
+    }
+    65% {
+        transform: scale(1.0) translateX(35px) translateY(-10px);
+        opacity: 0.7;
+    }
+    85% {
+        transform: scale(0.5) translateX(45px) translateY(-5px);
+        opacity: 0.3;
+    }
+}
+
+/* 第三个火焰动画变体 */
+@keyframes dragonFireBreath3 {
+    0%, 100% {
+        transform: scale(0) translateX(0) translateY(0) rotate(0deg);
+        opacity: 0;
+    }
+    20% {
+        transform: scale(0.6) translateX(15px) translateY(-3px) rotate(5deg);
+        opacity: 0.7;
+    }
+    45% {
+        transform: scale(1.3) translateX(28px) translateY(-8px) rotate(-5deg);
+        opacity: 0.9;
+    }
+    75% {
+        transform: scale(0.9) translateX(38px) translateY(-2px) rotate(10deg);
+        opacity: 0.5;
+    }
+    95% {
+        transform: scale(0.4) translateX(48px) translateY(5px) rotate(0deg);
+        opacity: 0.1;
+    }
+}
+
+@keyframes firePulse {
+    0%, 100% {
+        box-shadow: 0 0 10px 2px rgba(255, 50, 0, 0.7), 
+                   0 0 20px 5px rgba(255, 120, 0, 0.5),
+                   0 0 30px 7px rgba(255, 180, 0, 0.3);
+        background: radial-gradient(circle, rgba(255, 50, 0, 0.9) 10%, rgba(255, 120, 0, 0.8) 50%, rgba(255, 180, 0, 0.4) 90%);
+    }
+    50% {
+        box-shadow: 0 0 15px 4px rgba(255, 50, 0, 0.9), 
+                   0 0 30px 8px rgba(255, 120, 0, 0.7),
+                   0 0 40px 10px rgba(255, 180, 0, 0.5);
+        background: radial-gradient(circle, rgba(255, 50, 0, 1) 20%, rgba(255, 120, 0, 0.9) 60%, rgba(255, 180, 0, 0.6) 90%);
+    }
+}
+
+/* 添加第二种火焰颜色 - 蓝色核心的龙火 */
+@keyframes dragonFirePulse {
+    0%, 100% {
+        box-shadow: 0 0 10px 2px rgba(0, 150, 255, 0.7), 
+                   0 0 20px 5px rgba(100, 200, 255, 0.5),
+                   0 0 30px 7px rgba(180, 220, 255, 0.3);
+        background: radial-gradient(circle, rgba(0, 200, 255, 0.9) 10%, rgba(100, 150, 255, 0.8) 50%, rgba(150, 100, 255, 0.4) 90%);
+    }
+    50% {
+        box-shadow: 0 0 15px 4px rgba(0, 150, 255, 0.9), 
+                   0 0 30px 8px rgba(80, 180, 255, 0.7),
+                   0 0 40px 10px rgba(160, 200, 255, 0.5);
+        background: radial-gradient(circle, rgba(50, 220, 255, 1) 20%, rgba(80, 180, 255, 0.9) 60%, rgba(130, 120, 255, 0.6) 90%);
+    }
+}
+
+@keyframes boltFlash {
+    0%, 100% { 
+        transform: scale(1.1); 
+        filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5)); 
+    }
+    10% { 
+        transform: scale(1.5) rotate(10deg); 
+        filter: drop-shadow(0 0 25px rgba(255, 255, 0, 0.9)) brightness(1.8); 
+    }
+    20% { 
+        transform: scale(1.3) rotate(-5deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    30% { 
+        transform: scale(1.5) rotate(8deg); 
+        filter: drop-shadow(0 0 25px rgba(255, 255, 0, 0.9)) brightness(1.8); 
+    }
+    40% { 
+        transform: scale(1.25) rotate(-5deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    50% { 
+        transform: scale(1.6) rotate(12deg); 
+        filter: drop-shadow(0 0 30px rgba(255, 255, 0, 1)) brightness(2); 
+    }
+    60% { 
+        transform: scale(1.25) rotate(-7deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    70% { 
+        transform: scale(1.5) rotate(8deg); 
+        filter: drop-shadow(0 0 25px rgba(255, 255, 0, 0.9)) brightness(1.8); 
+    }
+    80% { 
+        transform: scale(1.25) rotate(-5deg); 
+        filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.7)) brightness(1.5); 
+    }
+    90% { 
+        transform: scale(1.35) rotate(6deg); 
+        filter: drop-shadow(0 0 20px rgba(255, 255, 0, 0.8)) brightness(1.6); 
+    }
+}
+
+@keyframes presentationPulse {
+    0%, 100% { 
+        transform: scale(1.1) rotate(0deg); 
+        filter: drop-shadow(0 0 5px rgba(122, 162, 247, 0.3)); 
+    }
+    20% { 
+        transform: scale(1.4) translateY(-8px) rotate(10deg); 
+        filter: drop-shadow(0 0 18px rgba(0, 150, 255, 0.7)) brightness(1.5); 
+    }
+    40% { 
+        transform: scale(1.3) translateY(5px) rotate(-8deg); 
+        filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.6)) brightness(1.4); 
+    }
+    60% { 
+        transform: scale(1.5) translateY(-10px) rotate(12deg); 
+        filter: drop-shadow(0 0 20px rgba(0, 100, 255, 0.8)) brightness(1.6); 
+    }
+    80% { 
+        transform: scale(1.3) translateY(5px) rotate(-8deg); 
+        filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.6)) brightness(1.4); 
+    }
+}
+
+/* 修改为只在图标悬停时应用动画 */
+/* 移除卡片悬停时的图标动画 */
+.scenario-card:nth-child(1):hover .scenario-icon {
+    background-color: rgba(255, 100, 100, 0.2);
+    color: #ff3838;
+}
+
+.scenario-card:nth-child(2):hover .scenario-icon {
+    background-color: rgba(255, 215, 0, 0.2);
+    color: #ffb700;
+}
+
+.scenario-card:nth-child(3):hover .scenario-icon {
+    background-color: rgba(0, 150, 255, 0.2);
+    color: #0096ff;
+}
+
+/* 添加只在图标悬停时的动画效果 */
+.scenario-card:nth-child(1) .scenario-icon:hover {
+    animation: dragonFloat 2s infinite;
+    position: relative;
+}
+
+.scenario-card:nth-child(2) .scenario-icon:hover {
+    animation: boltFlash 1s infinite;
+    background-color: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.5), inset 0 0 15px rgba(255, 255, 255, 0.8);
+    position: relative;
+    overflow: visible;
+}
+
+.scenario-card:nth-child(2) .scenario-icon:hover i {
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9)) brightness(1.5);
+    animation: iconPulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes iconPulse {
+    0% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.9)) brightness(1.5);
+    }
+    100% {
+        transform: scale(1.2);
+        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1)) brightness(2);
+    }
+}
+
+.scenario-card:nth-child(3) .scenario-icon:hover {
+    animation: presentationPulse 1.8s infinite;
+}
+
+.scenario-content h3 {
+    font-size: 1.6rem; /* 增加标题大小 */
+    font-weight: 600;
+    margin-bottom: 1.2rem; /* 增加与正文的距离 */
+    color: var(--heading-color);
+    transition: color 0.3s ease, transform 0.3s ease, text-shadow 0.3s ease;
+    cursor: pointer;
+}
+
+.scenario-content h3:hover {
+    color: var(--primary-color);
+    transform: scale(1.03);
+    text-shadow: 0 0 10px rgba(122, 162, 247, 0.3);
+    animation: jelly 0.6s ease;
+}
+
+.scenario-content p {
+    color: var(--text-color);
+    line-height: 1.8; /* 增加行高 */
+    font-size: 1.05rem; /* 稍微增加字体大小 */
+    transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+    position: relative;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    border-radius: 8px;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.scenario-content p::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent, rgba(122, 162, 247, 0.03), transparent);
+    z-index: -1;
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+}
+
+.scenario-content p:hover {
+    color: var(--heading-color);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(122, 162, 247, 0.1);
+    letter-spacing: 0.3px;
+}
+
+.scenario-content p:hover::before {
+    transform: translateX(100%);
+}
+
+/* 为每个场景卡片添加不同颜色的文字效果 */
+.scenario-card:nth-child(1) .scenario-content p:hover {
+    text-shadow: 0 0 10px rgba(255, 100, 100, 0.3);
+    color: #d03838;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 100, 100, 0.08));
+    border-left: 3px solid rgba(255, 100, 100, 0.5);
+}
+
+.scenario-card:nth-child(2) .scenario-content p:hover {
+    text-shadow: 0 0 10px rgba(255, 183, 0, 0.3);
+    color: #f29500;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 183, 0, 0.08));
+    border-left: 3px solid rgba(255, 183, 0, 0.5);
+}
+
+.scenario-card:nth-child(3) .scenario-content p:hover {
+    text-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
+    color: #0078d0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(0, 150, 255, 0.08));
+    border-left: 3px solid rgba(0, 150, 255, 0.5);
+}
+
+/* 流光效果 */
+@keyframes textFlowLight {
+    0% {
+        background-position: -100% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes textPulse {
+    0%, 100% {
+        opacity: 0.8;
+        transform: scaleX(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scaleX(1.05);
+    }
+}
+
+.scenario-content p::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    opacity: 0;
+    transform: scaleX(0.8) translateY(10px);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-radius: 2px;
+}
+
+.scenario-card:nth-child(1) .scenario-content p::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 100, 100, 0.7), transparent);
+    box-shadow: 0 0 10px rgba(255, 100, 100, 0.4);
+}
+
+.scenario-card:nth-child(2) .scenario-content p::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 183, 0, 0.7), transparent);
+    box-shadow: 0 0 10px rgba(255, 183, 0, 0.4);
+}
+
+.scenario-card:nth-child(3) .scenario-content p::after {
+    background: linear-gradient(90deg, transparent, rgba(0, 150, 255, 0.7), transparent);
+    box-shadow: 0 0 10px rgba(0, 150, 255, 0.4);
+}
+
+.scenario-content p:hover::after {
+    opacity: 1;
+    transform: scaleX(1) translateY(0);
+    animation: textPulse 2s ease-in-out infinite;
+}
+
+/* 添加文字悬浮时的微妙立体感 */
+.scenario-card:nth-child(1) .scenario-content p:hover {
+    text-shadow: 
+        0 0 5px rgba(255, 100, 100, 0.3),
+        1px 1px 2px rgba(255, 100, 100, 0.1),
+        -1px -1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.scenario-card:nth-child(2) .scenario-content p:hover {
+    text-shadow: 
+        0 0 5px rgba(255, 183, 0, 0.3),
+        1px 1px 2px rgba(255, 183, 0, 0.1),
+        -1px -1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.scenario-card:nth-child(3) .scenario-content p:hover {
+    text-shadow: 
+        0 0 5px rgba(0, 150, 255, 0.3),
+        1px 1px 2px rgba(0, 150, 255, 0.1),
+        -1px -1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* 添加逐字动画效果 */
+@keyframes letterWave {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+.scenario-content p:hover span {
+    display: inline-block;
+    animation: none;
+}
+
+.scenario-content p span:nth-child(2n) {
+    animation-delay: 0;
+}
+
+.scenario-content p span:nth-child(3n) {
+    animation-delay: 0;
+}
+
+.scenario-content p span:nth-child(4n) {
+    animation-delay: 0;
+}
+
+/* 响应式调整 - 使用场景 */
+@media (max-width: 992px) {
+    .scenario-card,
+    .scenario-card.reverse {
+        flex-direction: column;
+        padding: 1.5rem;
+    }
+    
+    .scenario-visual {
+        width: 100%;
+        margin-bottom: 1.5rem;
+        min-height: 250px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .scenario-img {
+        max-width: 80%;
+        transform: perspective(1000px);
+    }
+    
+    .scenario-content {
+        padding: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .usage-scenarios {
+        padding: 4rem 0;
+    }
+    
+    .scenarios-container {
+        gap: 2.5rem;
+    }
+    
+    .scenario-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.6rem;
+    }
+    
+    .scenario-content h3 {
+        font-size: 1.3rem;
+    }
+    
+    .scenario-visual {
+        min-height: 180px;
+    }
+    
+    .scenario-img {
+        max-width: 90%;
+    }
+}
+
+@media (max-width: 480px) {
+    .scenario-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 1.4rem;
+    }
+}
+
+

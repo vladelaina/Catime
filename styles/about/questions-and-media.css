@@ -1,0 +1,454 @@
+.intro-text {
+    font-size: 1.1rem;
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    opacity: 0.9;
+}
+
+.questions-box {
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(247, 125, 170, 0.05));
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(122, 162, 247, 0.08);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.question-item {
+    display: flex;
+    align-items: center;
+    margin: 1.5rem 0;
+    padding: 1.2rem 1.5rem;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(122, 162, 247, 0.1);
+}
+
+.question-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(to bottom, #7aa2f7, #f77daa);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.question-item:hover {
+    transform: translateX(8px);
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 12px rgba(122, 162, 247, 0.12);
+    border-color: rgba(122, 162, 247, 0.2);
+}
+
+.question-item:hover::before {
+    opacity: 1;
+}
+
+.question-icon-wrap {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(122, 162, 247, 0.1);
+    border-radius: 10px;
+    margin-right: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.question-icon {
+    font-size: 1.5rem;
+    color: #7aa2f7;
+    transition: all 0.3s ease;
+}
+
+.question-icon-img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.question-item:hover .question-icon-wrap {
+    background: rgba(247, 125, 170, 0.1);
+    transform: rotate(-5deg);
+}
+
+.question-item:hover .question-icon {
+    color: #f77daa;
+    transform: scale(1.1);
+}
+
+.question-text {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.question-item:hover .question-text {
+    color: var(--primary-color);
+}
+
+@keyframes floatQuestion {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+    100% { transform: translateY(0); }
+}
+
+.question-item:nth-child(1) { 
+    animation: floatQuestion 3s ease-in-out infinite;
+}
+
+.question-item:nth-child(2) { 
+    animation: floatQuestion 3s ease-in-out infinite 0.5s;
+}
+
+.question-item:nth-child(3) { 
+    animation: floatQuestion 3s ease-in-out infinite 1s;
+}
+
+.questions-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+}
+
+.questions-particles .particle {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.questions-box:hover .particle {
+    opacity: 0.3;
+    animation: particleFloat 3s ease-in-out infinite;
+}
+
+.questions-particles .particle:nth-child(1) { top: 20%; left: 10%; }
+.questions-particles .particle:nth-child(2) { top: 60%; right: 15%; animation-delay: 0.5s; }
+.questions-particles .particle:nth-child(3) { bottom: 20%; left: 20%; animation-delay: 1s; }
+.questions-particles .particle:nth-child(4) { top: 40%; right: 25%; animation-delay: 1.5s; }
+.questions-particles .particle:nth-child(5) { bottom: 30%; right: 10%; animation-delay: 2s; }
+
+@keyframes particleFloat {
+    0% { transform: translateY(0) translateX(0); opacity: 0.3; }
+    50% { transform: translateY(-8px) translateX(4px); opacity: 0.1; }
+    100% { transform: translateY(0) translateX(0); opacity: 0.3; }
+}
+
+@keyframes pageFlipping {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.05) rotate(5deg); }
+    50% { transform: scale(1.1); }
+    75% { transform: scale(1.05) rotate(-5deg); }
+    100% { transform: scale(1); }
+}
+
+@keyframes bookGlow {
+    0% { text-shadow: 0 0 8px rgba(122, 162, 247, 0.4); }
+    50% { text-shadow: 0 0 15px rgba(122, 162, 247, 0.7); }
+    100% { text-shadow: 0 0 8px rgba(122, 162, 247, 0.4); }
+}
+
+#story .animated-title .book-cover,
+#story .animated-title .book-pages {
+    display: inline-block;
+    transition: all 0.5s ease;
+    position: relative;
+}
+
+#story .animated-title .book-cover {
+    color: #7aa2f7;
+    transform-origin: left center;
+    z-index: 2;
+}
+
+#story .animated-title .book-pages {
+    color: #f77daa;
+    margin-left: -14px;     opacity: 0;
+    transform: rotateY(-90deg);
+    transform-origin: left center;
+    z-index: 1;
+}
+
+#story .animated-title:hover .book-cover {
+    transform: rotateY(-120deg);
+    opacity: 0;
+    color: #7aa2f7;
+    text-shadow: 0 0 8px rgba(122, 162, 247, 0.4);
+}
+
+#story .animated-title:hover .book-pages {
+    transform: rotateY(0);
+    opacity: 1;
+    animation: 
+        pageFlipping 3s ease-in-out infinite,
+        bookGlow 2s ease-in-out infinite;
+}
+
+#story .animated-title:hover {
+    color: #7aa2f7;
+}
+
+@media (max-width: 768px) {
+    .questions-box {
+        padding: 1.5rem 1rem;
+    }
+    
+    .question-item {
+        flex-direction: row;
+        padding: 1rem;
+    }
+    
+    .question-icon-wrap {
+        width: 40px;
+        height: 40px;
+        margin-right: 1rem;
+    }
+    
+    .question-text {
+        font-size: 1.1rem;
+    }
+}
+
+.story-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr;
+    gap: 15px;
+    margin: 20px 0;
+    max-width: 100%;
+}
+
+.story-grid .grid-item {
+    margin: 0;
+    height: 100%;
+}
+
+.story-grid .grid-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+    .story-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(2, auto);
+    }
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    padding-top: 56.25%;     box-shadow: 0 4px 16px rgba(122, 162, 247, 0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.video-container:hover {
+    box-shadow: 0 8px 24px rgba(122, 162, 247, 0.2);
+}
+
+.video-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: opacity 0.4s ease;
+    z-index: 2;
+}
+
+.video-preview-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 1;
+    transition: all 0.5s ease;
+}
+
+.video-cover:hover .video-preview-img {
+    transform: scale(1.02);
+    opacity: 1;
+}
+
+.play-button {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 2;
+    backdrop-filter: blur(2px);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.play-button i {
+    font-size: 25px;
+    color: white;
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.video-cover:hover .play-button {
+    transform: scale(1.1);
+    background: rgba(247, 125, 170, 0.4);
+    box-shadow: 0 0 20px rgba(247, 125, 170, 0.4);
+}
+
+.video-frame-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.02);     transition: opacity 0.3s ease;
+    z-index: 1;
+}
+
+.video-frame-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    background: transparent;
+}
+
+iframe {
+    background-color: transparent !important;
+    border: none !important;
+}
+
+@media (max-width: 768px) {
+    .play-button {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .play-button i {
+        font-size: 18px;
+    }
+}
+
+.story-note {
+    font-style: italic;
+    color: var(--text-color);
+    padding: 1rem 1.5rem;
+    margin: 1.5rem 0;
+    border-left: 3px solid var(--primary-color);
+    background: linear-gradient(90deg, rgba(122, 162, 247, 0.08), rgba(247, 125, 170, 0.05));
+    border-radius: 0 8px 8px 0;
+    font-size: 1.05rem;
+    line-height: 1.6;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(122, 162, 247, 0.06);
+    transition: all 0.3s ease;
+}
+
+.story-note::before {
+    content: '"';
+    font-size: 3rem;
+    color: rgba(122, 162, 247, 0.1);
+    position: absolute;
+    top: -0.5rem;
+    left: 0.5rem;
+    font-family: serif;
+}
+
+.story-note::after {
+    content: '"';
+    font-size: 2rem;
+    color: rgba(247, 125, 170, 0.1);
+    position: absolute;
+    bottom: -2rem;
+    right: 0.5rem;
+    font-family: serif;
+}
+
+.story-note:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(122, 162, 247, 0.1);
+    background: linear-gradient(90deg, rgba(122, 162, 247, 0.1), rgba(247, 125, 170, 0.07));
+}
+
+.story-note a {
+    position: relative;
+    color: var(--primary-color);
+    text-decoration: none;
+    padding-bottom: 2px;
+    transition: all 0.3s ease;
+}
+
+.story-note a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+    transform: scaleX(0);
+    transform-origin: bottom right;
+    transition: transform 0.3s ease;
+}
+
+.story-note a:hover {
+    color: var(--accent-color);
+}
+
+.story-note a:hover::after {
+    transform: scaleX(1);
+    transform-origin: bottom left;
+}
+
+@media (max-width: 768px) {
+    .story-note {
+        padding: 0.8rem 1rem;
+        font-size: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .story-note::before,
+    .story-note::after {
+        font-size: 2rem;
+    }
+}
+

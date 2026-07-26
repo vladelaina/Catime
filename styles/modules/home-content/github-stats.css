@@ -1,0 +1,375 @@
+/* --- GitHub 星星增长曲线 --- */
+.github-stats {
+    padding: 6rem 0;
+    background: linear-gradient(to bottom, var(--surface-color), var(--background-color));
+    position: relative;
+}
+
+.github-chart-container {
+    max-width: 900px;
+    margin: 2rem auto;
+    background-color: white;
+    border-radius: var(--border-radius-large);
+    padding: 1rem;
+    box-shadow: var(--card-shadow);
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+
+/* 星星粒子效果 */
+.github-chart-container .star-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+}
+
+.github-chart-container .star-particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background-color: #ffcc33;
+    border-radius: 50%;
+    opacity: 0;
+    box-shadow: 0 0 4px 1px rgba(255, 204, 51, 0.4);
+    animation-duration: 3s;
+    animation-timing-function: ease-out;
+    animation-iteration-count: infinite;
+}
+
+/* 创建多种不同颜色的星星 */
+.github-chart-container .star-particle:nth-child(3n) {
+    background-color: #7aa2f7;
+    box-shadow: 0 0 4px 1px rgba(122, 162, 247, 0.4);
+}
+
+.github-chart-container .star-particle:nth-child(3n+1) {
+    background-color: #f7a97a;
+    box-shadow: 0 0 4px 1px rgba(247, 169, 122, 0.4);
+}
+
+.github-chart-container:hover .star-particles {
+    opacity: 1;
+}
+
+.github-chart-container:hover .star-particle {
+    animation-name: floatingStar, twinkleStar;
+}
+/* 为不同类型的星星设置不同的动画 */
+.github-chart-container:hover .star-particle:nth-child(4n) {
+    animation-name: floatingStarAlt, twinkleStar;
+}
+
+.github-chart-container:hover .star-particle:nth-child(5n) {
+    animation-name: floatingStarSlow, twinkleStar;
+}
+
+@keyframes floatingStar {
+    0% {
+        transform: translateY(0) translateX(0) scale(0);
+        opacity: 0;
+    }
+    10% {
+        transform: translateY(-15px) translateX(5px) scale(1);
+        opacity: 0.9;
+    }
+    50% {
+        opacity: 0.6;
+        transform: translateY(-50px) translateX(-5px) scale(0.8);
+    }
+    100% {
+        transform: translateY(-100px) translateX(10px) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes floatingStarAlt {
+    0%, 100% {
+        transform: scale(0) rotate(-25deg);
+        opacity: 0;
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(60, 180, 255, 0.85));
+        filter: blur(5px);
+    }
+    10% {
+        transform: scale(0.7) rotate(-5deg);
+        opacity: 0.7;
+        filter: brightness(1.5) blur(2px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(0, 200, 255, 0.85));
+    }
+    15%, 85% {
+        transform: scale(1.4) rotate(-10deg) translateX(-3px);
+        opacity: 0.95;
+        box-shadow: 0 0 15px rgba(0, 170, 255, 0.9), 0 0 25px rgba(255, 255, 255, 0.8), 0 0 40px rgba(0, 170, 255, 0.5);
+        filter: brightness(1.8) contrast(1.1) blur(0px);
+        background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(0, 170, 255, 0.9));
+    }
+}
+
+@keyframes floatingStarSlow {
+    0% {
+        transform: translateY(0) translateX(0) scale(0);
+        opacity: 0;
+    }
+    15% {
+        transform: translateY(-5px) translateX(3px) scale(1);
+        opacity: 0.8;
+    }
+    70% {
+        opacity: 0.5;
+        transform: translateY(-40px) translateX(-3px) scale(0.9);
+    }
+    100% {
+        transform: translateY(-80px) translateX(5px) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes twinkleStar {
+    0%, 100% {
+        opacity: 0;
+    }
+    10%, 30%, 50%, 70%, 90% {
+        opacity: 0.9;
+    }
+    20%, 40%, 60%, 80% {
+        opacity: 0.5;
+    }
+}
+
+/* 发光边框效果 */
+.github-chart-container .glow-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: var(--border-radius-large);
+    border: 2px solid transparent;
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0);
+    transition: all 1s ease;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.github-chart-container:hover .glow-border {
+    border-color: rgba(122, 162, 247, 0.3);
+    box-shadow: 0 0 15px rgba(122, 162, 247, 0.5);
+    animation: borderGlow 3s infinite alternate;
+}
+
+@keyframes borderGlow {
+    0% {
+        box-shadow: 0 0 15px rgba(122, 162, 247, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(122, 162, 247, 0.7);
+    }
+    100% {
+        box-shadow: 0 0 15px rgba(122, 162, 247, 0.5);
+    }
+}
+
+/* 星系背景效果 */
+.github-chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at center, rgba(122, 162, 247, 0.03) 0%, rgba(122, 162, 247, 0.03) 40%, rgba(225, 190, 231, 0.03) 100%);
+    opacity: 0;
+    z-index: 0;
+    transition: opacity 0.8s ease;
+    border-radius: var(--border-radius-large);
+    background-size: 200% 200%;
+}
+
+.github-chart-container::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0) 50%, rgba(122, 162, 247, 0.03) 80%, rgba(122, 162, 247, 0.08) 100%);
+    opacity: 0;
+    transform: scale(0.5);
+    z-index: 0;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    pointer-events: none;
+}
+
+.github-chart-container:hover::before {
+    opacity: 1;
+    animation: galaxyBackground 15s infinite alternate;
+}
+
+.github-chart-container:hover::after {
+    opacity: 0.8;
+    transform: scale(1) rotate(0deg);
+    animation: galaxyGlow 20s infinite linear;
+}
+
+@keyframes galaxyBackground {
+    0% {
+        background-position: 0% 0%;
+        background-size: 150% 150%;
+    }
+    50% {
+        background-position: 100% 100%;
+        background-size: 200% 200%;
+    }
+    100% {
+        background-position: 0% 0%;
+        background-size: 150% 150%;
+    }
+}
+
+@keyframes galaxyGlow {
+    0% {
+        transform: scale(0.8) rotate(0deg);
+        opacity: 0.5;
+    }
+    50% {
+        transform: scale(1.2) rotate(180deg);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(0.8) rotate(360deg);
+        opacity: 0.5;
+    }
+}
+
+.github-chart-container:hover {
+    box-shadow: var(--card-hover-shadow), 0 0 30px rgba(122, 162, 247, 0.3);
+    transform: translateY(-10px) scale(1.02);
+    animation: chartPulse 3s infinite alternate;
+}
+
+.github-chart-container:hover::before {
+    opacity: 1;
+    animation: chartBackground 8s infinite alternate;
+}
+
+.github-chart-container:hover::after {
+    opacity: 0.5;
+    transform: scale(1);
+    animation: chartGlow 5s infinite alternate;
+}
+
+@keyframes chartPulse {
+    0% {
+        transform: translateY(-10px) scale(1.02);
+    }
+    50% {
+        transform: translateY(-8px) scale(1.03);
+    }
+    100% {
+        transform: translateY(-10px) scale(1.02);
+    }
+}
+
+@keyframes chartBackground {
+    0% {
+        background-position: 0% 0%;
+        background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(225, 190, 231, 0.05));
+    }
+    50% {
+        background-position: 100% 100%;
+        background: linear-gradient(135deg, rgba(225, 190, 231, 0.08), rgba(122, 162, 247, 0.08));
+    }
+    100% {
+        background-position: 0% 0%;
+        background: linear-gradient(135deg, rgba(122, 162, 247, 0.05), rgba(225, 190, 231, 0.05));
+    }
+}
+
+@keyframes chartGlow {
+    0% {
+        opacity: 0.3;
+        transform: scale(0.8) rotate(0deg);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1) rotate(180deg);
+    }
+    100% {
+        opacity: 0.3;
+        transform: scale(0.8) rotate(360deg);
+    }
+}
+
+.github-chart {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: var(--border-radius-base);
+    transition: all 0.5s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.github-chart-container:hover .github-chart {
+    transform: scale(1.01);
+    filter: drop-shadow(0 0 8px rgba(122, 162, 247, 0.3));
+}
+
+.github-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.github-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.8rem 1.8rem;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: var(--border-radius-pill);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: var(--button-shadow);
+}
+
+.github-button i {
+    margin-right: 0.8rem;
+    font-size: 1.2rem;
+}
+
+.github-button:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-3px);
+    box-shadow: var(--button-hover-shadow);
+    color: white;
+}
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .github-chart-container {
+        margin: 1.5rem auto;
+        padding: 0.5rem;
+    }
+    
+    .github-buttons {
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .github-button {
+        width: 80%;
+        justify-content: center;
+    }
+}
+
+

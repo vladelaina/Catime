@@ -1,0 +1,208 @@
+.heart-animation {
+    margin: 3rem auto;
+    font-size: 5rem;
+    color: var(--accent-color);
+    position: relative;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.heart-animation i {
+    animation: heartbeat 1.5s infinite;
+}
+
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    14% { transform: scale(1.3); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.3); }
+    70% { transform: scale(1); }
+}
+
+.heart-animation::before {
+    content: '';
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(247, 125, 170, 0.3) 0%, rgba(247, 125, 170, 0) 70%);
+    animation: pulse 2s infinite;
+}
+
+.supporters-list {
+    max-width: 900px;
+    margin: 3rem auto 0;
+    padding: 1rem;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.15);
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    border: 1px solid rgba(122, 162, 247, 0.2);
+    transition: all 0.3s ease;
+}
+
+.supporters-list:hover {
+    box-shadow: 0 15px 40px rgba(122, 162, 247, 0.25);
+    transform: translateY(-5px);
+}
+
+.supporters-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.supporters-table th {
+    background-color: rgba(122, 162, 247, 0.1);
+    color: var(--primary-color);
+    font-weight: 600;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    position: relative;
+}
+
+.supporters-table th:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+}
+
+.supporters-table td {
+    padding: 0.85rem 1.5rem;
+    border-bottom: 1px solid rgba(122, 162, 247, 0.1);
+    color: var(--text-color);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.supporters-table td:last-child {
+    white-space: normal;
+    max-width: 250px;
+    word-wrap: break-word;
+}
+
+.supporters-table tr:last-child td {
+    border-bottom: none;
+}
+
+.supporters-table tr:hover td {
+    background-color: rgba(122, 162, 247, 0.05);
+    color: var(--primary-color);
+}
+
+.supporters-table tr {
+    transition: all 0.3s ease;
+}
+
+.supporters-table tr:hover {
+    transform: translateX(5px);
+}
+
+@media (max-width: 768px) {
+    .supporters-list {
+        max-width: 95%;
+        padding: 0.5rem;
+        overflow-x: auto;
+    }
+    
+    .supporters-table th,
+    .supporters-table td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 580px) {
+    .supporters-list {
+        overflow-x: auto;
+    }
+    
+    .supporters-table {
+        min-width: 550px;
+        table-layout: fixed;
+    }
+    
+    .supporters-table th:first-child,
+    .supporters-table td:first-child {
+        width: 140px;
+    }
+    
+    .supporters-table th:nth-child(2),
+    .supporters-table td:nth-child(2) {
+        width: 80px;
+    }
+    
+    .supporters-table th:nth-child(3),
+    .supporters-table td:nth-child(3) {
+        width: 60px;
+    }
+    
+    .supporters-table th:last-child,
+    .supporters-table td:last-child {
+        width: 250px;
+    }
+    
+    .supporters-table th,
+    .supporters-table td {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .support-cards {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+    }
+    
+    .support-card {
+        width: 90%;
+        max-width: 350px;
+        height: 350px;
+    }
+    
+    .heart-animation {
+        font-size: 4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .support-details {
+        padding: 4rem 0;
+    }
+    
+    .support-card {
+        width: 95%;
+        padding: 2rem;
+        height: 350px;
+    }
+    
+    .support-card .support-btn {
+        bottom: 2rem;
+    }
+    
+    .support-icon {
+        width: 70px;
+        height: 70px;
+        font-size: 2rem;
+    }
+    
+    .heart-animation {
+        font-size: 3.5rem;
+        margin: 2rem auto;
+    }
+}
+

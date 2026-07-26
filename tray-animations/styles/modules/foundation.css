@@ -1,0 +1,128 @@
+:root {
+    --tray-red: #f77daa;
+    --tray-blue: #7aa2f7;
+    --tray-purple: #bb9af7;
+    --tray-ink: #2e3a59;
+    --tray-muted: #787f99;
+    --tray-line: rgba(224, 224, 255, 0.6);
+    --tray-paper: #f8faff;
+    --tray-glow: rgba(122, 162, 247, 0.15);
+    --tray-glow-hover: rgba(122, 162, 247, 0.3);
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --primary-color: #7aa2f7;
+    --primary-hover: #9abdfa;
+    --border-color: #e0e0ff;
+    --heading-color: #2e3a59;
+    --button-hover-shadow: 0 8px 20px rgba(122, 162, 247, 0.25);
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(242, 244, 255, 0.5);
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--tray-blue) 0%, var(--tray-purple) 100%);
+    border-radius: 10px;
+    border: 2.5px solid rgba(242, 244, 255, 0.5);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--tray-red) 0%, var(--tray-purple) 100%);
+}
+
+.tray-library-page {
+    margin: 0;
+    background: radial-gradient(circle at 10% 20%, rgba(242, 244, 255, 1) 0%, rgba(250, 251, 255, 1) 44%, rgba(244, 246, 255, 1) 90%);
+    color: var(--tray-ink);
+    font-family: 'Poppins', 'Noto Sans SC', sans-serif;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.tray-library-page main { overflow: hidden; }
+
+.section-index {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--tray-muted);
+    font: .75rem ui-monospace, SFMono-Regular, Menlo, monospace;
+    letter-spacing: .14em;
+}
+
+.tray-board-section {
+    min-height: 100vh;
+    padding: 45px 0 150px;
+    background: transparent;
+    position: relative;
+}
+
+.creator-note .section-title i.fa-heart {
+    display: inline-block;
+    color: var(--accent-color);
+    opacity: 0.8;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.creator-note .section-title:hover i.fa-heart {
+    animation: heartbeat 1.5s infinite;
+    opacity: 1;
+}
+
+/* Ambient Bokeh Spheres */
+.tray-board-section::before {
+    content: '';
+    position: absolute;
+    top: 5%;
+    left: -10%;
+    width: 50vw;
+    height: 50vw;
+    background: radial-gradient(circle, rgba(122, 162, 247, 0.12) 0%, rgba(122, 162, 247, 0) 70%);
+    z-index: 1;
+    pointer-events: none;
+    filter: blur(80px);
+}
+
+.tray-board-section::after {
+    content: '';
+    position: absolute;
+    bottom: 5%;
+    right: -10%;
+    width: 60vw;
+    height: 60vw;
+    background: radial-gradient(circle, rgba(247, 125, 170, 0.08) 0%, rgba(247, 125, 170, 0) 70%);
+    z-index: 1;
+    pointer-events: none;
+    filter: blur(100px);
+}
+
+.tray-board {
+    display: grid;
+    gap: 45px;
+    position: relative;
+    z-index: 2;
+}
+
+.artist-showcase {
+    min-width: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 30px 30px 76px;
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+.artist-showcase.expanded {
+    background: var(--card-bg);
+    border: 1.5px solid rgba(122, 162, 247, 0.35);
+    box-shadow: 0 15px 45px rgba(122, 162, 247, 0.12);
+}
+

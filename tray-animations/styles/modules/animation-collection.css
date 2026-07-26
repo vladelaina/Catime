@@ -1,0 +1,204 @@
+.artist-details {
+    margin-top: 35px;
+    padding: 32px 0 12px;
+    border-top: 0;
+    animation: detailsOpen .4s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.artist-collections { min-width: 0; display: grid; gap: 36px; }
+
+.animation-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+
+.animation-item {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid transparent;
+    border-radius: 20px;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
+    cursor: pointer;
+}
+
+.animation-item img {
+    width: 64%;
+    height: 64%;
+    object-fit: contain;
+    transition: all 0.35s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.animation-item:hover {
+    border-color: transparent;
+    transform: translateY(-5px);
+    box-shadow: 0 12px 28px rgba(46, 58, 89, 0.1);
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+.animation-item:hover img {
+    transform: none;
+}
+
+/* Staggered Entrance Ripple Reveal for items when expanded */
+.artist-showcase.expanded .animation-item {
+    animation: itemReveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.artist-showcase.expanded .animation-item:nth-child(1) { animation-delay: 0.02s; }
+.artist-showcase.expanded .animation-item:nth-child(2) { animation-delay: 0.04s; }
+.artist-showcase.expanded .animation-item:nth-child(3) { animation-delay: 0.06s; }
+.artist-showcase.expanded .animation-item:nth-child(4) { animation-delay: 0.08s; }
+.artist-showcase.expanded .animation-item:nth-child(5) { animation-delay: 0.10s; }
+.artist-showcase.expanded .animation-item:nth-child(6) { animation-delay: 0.12s; }
+.artist-showcase.expanded .animation-item:nth-child(7) { animation-delay: 0.14s; }
+.artist-showcase.expanded .animation-item:nth-child(8) { animation-delay: 0.16s; }
+.artist-showcase.expanded .animation-item:nth-child(9) { animation-delay: 0.18s; }
+.artist-showcase.expanded .animation-item:nth-child(10) { animation-delay: 0.20s; }
+.artist-showcase.expanded .animation-item:nth-child(11) { animation-delay: 0.22s; }
+.artist-showcase.expanded .animation-item:nth-child(12) { animation-delay: 0.24s; }
+.artist-showcase.expanded .animation-item:nth-child(13) { animation-delay: 0.26s; }
+.artist-showcase.expanded .animation-item:nth-child(14) { animation-delay: 0.28s; }
+.artist-showcase.expanded .animation-item:nth-child(15) { animation-delay: 0.30s; }
+.artist-showcase.expanded .animation-item:nth-child(16) { animation-delay: 0.32s; }
+.artist-showcase.expanded .animation-item:nth-child(17) { animation-delay: 0.34s; }
+.artist-showcase.expanded .animation-item:nth-child(18) { animation-delay: 0.36s; }
+
+/* Dark Vignette Overlay on Hover */
+.animation-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(46, 58, 89, 0) 40%, rgba(46, 58, 89, 0.08) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 2;
+}
+
+.animation-item:hover::before {
+    opacity: 0;
+}
+
+/* Elegant Center-Scale Download Badge */
+.animation-item::after {
+    content: none;
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    bottom: -36px;
+    right: 12px;
+    background: linear-gradient(135deg, var(--tray-blue) 0%, var(--tray-purple) 100%);
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 6px 15px rgba(122, 162, 247, 0.35);
+    z-index: 5;
+}
+
+.animation-item:hover::after {
+    bottom: 12px;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.load-more {
+    display: block;
+    margin: 24px auto 0;
+    padding: 12px 28px;
+    border: 1.5px solid var(--primary-color);
+    border-radius: 50px;
+    background: rgba(122, 162, 247, 0.04);
+    color: var(--primary-color);
+    font-size: 0.88rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    box-shadow: 0 4px 12px rgba(122, 162, 247, 0.03);
+}
+
+.load-more:hover {
+    background: var(--primary-color);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: var(--button-hover-shadow);
+}
+
+.board-loading {
+    min-height: 350px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    color: var(--tray-muted);
+}
+
+.board-loading span {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin: 0 4px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--tray-red) 0%, var(--tray-purple) 100%);
+    animation: trayBounce 1.2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.board-loading span:nth-child(2) {
+    background: linear-gradient(135deg, var(--tray-blue) 0%, #a0c0ff 100%);
+    animation-delay: 0.15s;
+}
+
+.board-loading span:nth-child(3) {
+    background: linear-gradient(135deg, var(--tray-purple) 0%, #dfc8ff 100%);
+    animation-delay: 0.3s;
+}
+
+.board-loading p {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+}
+
+.board-empty {
+    padding: 100px 20px;
+    text-align: center;
+    color: var(--tray-muted);
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 24px;
+    border: 1px dashed var(--border-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.board-empty i {
+    font-size: 3.5rem;
+    color: var(--tray-red);
+    margin-bottom: 16px;
+    opacity: 0.8;
+    animation: catWiggle 2.5s ease-in-out infinite;
+    display: inline-block;
+}
+
+.board-empty h3 {
+    margin-bottom: 8px;
+    color: var(--heading-color);
+    font-size: 1.3rem;
+}
+
+.board-empty p { margin: 0; }
+

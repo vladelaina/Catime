@@ -1,0 +1,695 @@
+/* 贡献者区域 */
+.contributors {
+    padding: 80px 0;
+    background-color: var(--bg-secondary); /* 使用次要背景色 */
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 添加背景动效 */
+.contributors::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 50% 120%, rgba(122, 162, 247, 0.08), transparent 70%);
+    opacity: 0.6;
+    z-index: 0;
+    transition: opacity 0.5s ease;
+}
+
+.contributors:hover::before {
+    opacity: 1;
+    animation: softGlow 5s infinite alternate;
+}
+
+@keyframes softGlow {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.2); opacity: 1; }
+}
+
+.contributors .section-title,
+.contributors .section-subtitle {
+    margin-bottom: 40px; /* 调整标题和副标题的间距 */
+    position: relative;
+    z-index: 1;
+}
+
+.contributors-grid table {
+    width: 100%;
+    border-collapse: separate; /* 使用 separate 以便应用 border-radius */
+    border-spacing: 15px; /* 控制单元格之间的间距 */
+    margin-top: 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.contributors-grid td {
+    background-color: var(--bg-color); /* 卡片背景色 */
+    padding: 20px 10px;
+    border-radius: 12px; /* 圆角 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    vertical-align: top; /* 确保内容顶部对齐 */
+    position: relative;
+    overflow: hidden;
+}
+
+.contributors-grid td::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(122, 162, 247, 0.1), rgba(247, 125, 170, 0.1));
+    opacity: 0;
+    z-index: -1;
+    transition: opacity 0.3s ease, transform 0.5s ease;
+    transform: scale(0.9);
+    border-radius: 12px;
+}
+
+.contributors-grid td:hover {
+    transform: translateY(-8px) scale(1.03); /* 悬停时轻微上移放大 */
+    box-shadow: 0 8px 25px rgba(122, 162, 247, 0.2); /* 添加蓝色辉光效果 */
+}
+
+.contributors-grid td:hover::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.contributor-avatar-container {
+    position: relative;
+    width: 86px;
+    height: 86px;
+    margin: 0 auto 10px;
+    perspective: 800px;
+}
+
+.contributor-avatar-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    background: none; /* 移除背景渐变 */
+    filter: blur(8px);
+    opacity: 0;
+    transform: scale(1.1);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    animation: none; /* 移除旋转动画 */
+}
+
+@keyframes rotateGlow {
+    0% { transform: scale(1.1) rotate(0deg); }
+    100% { transform: scale(1.1) rotate(360deg); }
+}
+
+.contributors-grid td:hover .contributor-avatar-glow {
+    opacity: 0; /* 设置为透明，不显示粉色圈 */
+    transform: scale(1.15);
+}
+
+.contributors-grid img {
+    width: 80px; /* 调整头像大小 */
+    height: 80px;
+    border-radius: 50%; /* 圆形头像 */
+    object-fit: cover; /* 确保图片不变形 */
+    border: 3px solid transparent;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: block; /* 确保图片居中 */
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+    transform-style: preserve-3d;
+}
+
+.contributors-grid td:hover img {
+    border-color: var(--primary-color); /* 悬停时显示边框 */
+    transform: scale(1.1) rotateY(10deg) rotateX(-10deg); /* 添加3D旋转效果 */
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.contributors-grid a {
+    text-decoration: none;
+    color: inherit; /* 继承父元素颜色 */
+    display: block; /* 使整个单元格可点击 */
+    position: relative;
+}
+
+.contributors-grid sub {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    display: block; /* 换行显示 */
+    margin-top: 8px;
+    transition: transform 0.3s ease;
+}
+
+.contributors-grid sub b {
+    color: var(--text-color);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-block;
+    position: relative;
+}
+
+.contributors-grid sub b::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--primary-color), var(--accent-color));
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.contributors-grid td:hover sub {
+    transform: translateY(3px);
+}
+
+.contributors-grid td:hover sub b {
+    color: var(--primary-color); /* 悬停时名字变色 */
+}
+
+.contributors-grid td:hover sub b::after {
+    width: 100%;
+}
+
+/* 贡献者区域的移动端适配 */
+@media (max-width: 992px) {
+    .contributors-grid table {
+        border-spacing: 10px; /* 减小单元格间距 */
+    }
+    
+    .contributors-grid td {
+        padding: 15px 8px; /* 减小内边距 */
+    }
+    
+    .contributors-grid img {
+        width: 70px; /* 缩小头像尺寸 */
+        height: 70px;
+    }
+    
+    .contributor-avatar-container {
+        width: 76px;
+        height: 76px;
+    }
+}
+
+@media (max-width: 768px) {
+    .contributors {
+        padding: 60px 0; /* 减小顶部和底部内边距 */
+    }
+    
+    .contributors-grid table {
+        border-spacing: 8px; /* 进一步减小单元格间距 */
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .contributors-grid tbody {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .contributors-grid tr {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+    
+    .contributors-grid td {
+        padding: 12px 5px; /* 减小内边距 */
+        display: inline-block;
+        width: calc(33.33% - 16px); /* 一行显示3个 */
+        margin: 8px;
+        float: none;
+    }
+    
+    .contributors-grid img {
+        width: 60px; /* 进一步缩小头像尺寸 */
+        height: 60px;
+        border-width: 2px; /* 减小边框宽度 */
+    }
+    
+    .contributor-avatar-container {
+        width: 66px;
+        height: 66px;
+        margin-bottom: 6px; /* 减小下边距 */
+    }
+    
+    .contributors-grid sub {
+        font-size: 0.75em; /* 缩小字体大小 */
+        margin-top: 5px; /* 减小上边距 */
+    }
+}
+
+@media (max-width: 480px) {
+    .contributors-grid table {
+        border-spacing: 5px; /* 最小化单元格间距 */
+    }
+    
+    .contributors-grid td {
+        padding: 10px 3px; /* 最小化内边距 */
+        width: calc(50% - 10px); /* 一行显示2个 */
+        margin: 5px;
+    }
+    
+    .contributors-grid img {
+        width: 50px; /* 进一步缩小头像尺寸 */
+        height: 50px;
+    }
+    
+    .contributor-avatar-container {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .contributors-grid sub {
+        font-size: 0.7em; /* 进一步缩小字体大小 */
+    }
+    
+    .contributors .section-title {
+        font-size: 1.8rem; /* 缩小标题尺寸 */
+    }
+    
+    .contributors .section-subtitle {
+        font-size: 0.9rem; /* 缩小副标题尺寸 */
+    }
+}
+
+/* 支持项目区域 */
+.support-project {
+    padding: 6rem 0;
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(240, 245, 255, 0.8) 100%);
+    position: relative;
+    border-top: 1px solid rgba(122, 162, 247, 0.15);
+    overflow: hidden;
+}
+
+.support-project::before {
+    content: '';
+    position: absolute;
+    top: -10%;
+    right: -10%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(122, 162, 247, 0.1) 0%, rgba(122, 162, 247, 0) 70%);
+    border-radius: 50%;
+    z-index: 1;
+    animation: supportBgPulse 8s infinite alternate ease-in-out;
+}
+
+.support-project::after {
+    content: '';
+    position: absolute;
+    bottom: -5%;
+    left: -5%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(247, 125, 170, 0.1) 0%, rgba(247, 125, 170, 0) 70%);
+    border-radius: 50%;
+    z-index: 1;
+    animation: supportBgPulse 8s infinite alternate-reverse ease-in-out;
+}
+
+@keyframes supportBgPulse {
+    0% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 0.4; }
+}
+
+.support-methods {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 4rem;
+    margin-top: 3rem;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 2;
+}
+
+.support-method {
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(122, 162, 247, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    position: relative;
+    overflow: hidden;
+    transform: translateY(0);
+}
+
+.support-method::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(122, 162, 247, 0.2) 0%, rgba(122, 162, 247, 0) 70%);
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.4s ease;
+    z-index: 1;
+}
+
+.support-method:hover::before {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.support-method:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 20px 40px rgba(122, 162, 247, 0.25), 0 0 20px rgba(122, 162, 247, 0.1);
+    border-color: rgba(122, 162, 247, 0.3);
+}
+
+.support-qr {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    margin-bottom: 1.5rem;
+    border-radius: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    background-color: #fff;
+    padding: 10px;
+    transition: all 0.4s ease;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.support-method:hover .support-qr {
+    transform: scale(1.05) rotate(1deg);
+    border-color: var(--accent-color);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.support-method:hover .alipay-qr {
+    border-color: #1677ff;
+}
+
+.support-method:hover .wechat-qr {
+    border-color: #07c160;
+}
+
+.support-label {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-light-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 2;
+}
+
+.support-method:hover .support-label {
+    color: var(--primary-color);
+    transform: translateY(-2px) scale(1.05);
+    text-shadow: 0 2px 10px rgba(122, 162, 247, 0.3);
+}
+
+.support-label i {
+    font-size: 1.4rem;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.support-method:hover .support-label i {
+    transform: scale(1.3) rotate(-10deg);
+    animation: iconWiggle 1s infinite alternate ease-in-out;
+}
+
+@keyframes iconWiggle {
+    0% { transform: scale(1.3) rotate(-10deg); }
+    100% { transform: scale(1.3) rotate(5deg); }
+}
+
+.support-label.alipay i {
+    color: #1677ff;
+}
+
+.support-method:hover .support-label.alipay {
+    color: #1677ff;
+}
+
+.support-label.wechat i {
+    color: #07c160;
+}
+
+.support-method:hover .support-label.wechat {
+    color: #07c160;
+}
+
+/* Coffee Icon Animation */
+.support-project .section-title i.fa-mug-hot {
+    display: inline-block; /* Needed for transform */
+    transition: transform 0.3s ease, opacity 0.3s ease; /* Added transition for smoother hover effect */
+    opacity: 0.8; /* Slightly faded when not animating */
+    transform-origin: bottom center;
+}
+
+/* Add hover state animation */
+.support-project .section-title:hover i.fa-mug-hot {
+    animation: coffeeSteam 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes coffeeSteam {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+    50% { transform: translateY(-3px) rotate(-5deg); opacity: 1; }
+    100% { transform: translateY(0) rotate(0deg); opacity: 0.6; }
+}
+
+.support-project .section-subtitle {
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.support-project .section-subtitle:hover {
+    transform: translateY(-3px);
+    color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .support-methods {
+        gap: 3rem;
+        flex-direction: column;
+        align-items: center;
+    }
+    .support-method {
+        width: 85%;
+        max-width: 300px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .support-qr {
+        width: 160px;
+        height: 160px;
+        margin: 0 auto 1rem auto;
+    }
+    .support-label {
+        font-size: 1.1rem;
+        margin: 0 auto;
+    }
+}
+@media (max-width: 480px) {
+    .support-project {
+        padding: 4rem 0;
+    }
+    .support-method {
+        width: 90%;
+        max-width: 280px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .support-qr {
+        width: 140px;
+        height: 140px;
+        margin: 0 auto 1rem auto;
+    }
+    .support-label {
+        font-size: 1rem;
+        margin: 0 auto;
+    }
+}
+
+/* 添加咖啡图标飘动粒子效果 */
+.support-project .coffee-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.coffee-particle {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1;
+    animation: coffeeFloat 8s linear infinite;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.coffee-particle i {
+    transform: translateZ(0);
+    filter: drop-shadow(0 0 5px rgba(255, 172, 51, 0.3));
+    animation: rotateCoffee 4s linear infinite;
+}
+
+@keyframes rotateCoffee {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.2); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes coffeeFloat {
+    0% {
+        transform: translateY(100%) rotate(0deg);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.8;
+    }
+    90% {
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(-100vh) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* === 下拉菜单样式 === */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.dropdown-toggle i.fa-chevron-down {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+}
+
+.dropdown:hover .dropdown-toggle i.fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-base);
+    box-shadow: var(--card-shadow);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 0.5rem 0;
+    min-width: 200px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-50%) translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    list-style: none;
+    margin-top: 0.5rem;
+}
+
+.dropdown:hover .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.dropdown-menu li {
+    margin: 0;
+}
+
+.dropdown-menu a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+    font-weight: 500;
+    border-bottom: none;
+}
+
+.dropdown-menu a::after {
+    display: none; /* 隐藏下拉菜单项的下划线 */
+}
+
+.dropdown-menu a:hover {
+    background-color: rgba(122, 162, 247, 0.1);
+    color: var(--primary-color);
+    animation: jelly 0.6s ease;
+}
+
+.dropdown-menu a i {
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    width: 1rem;
+    text-align: center;
+}
+
+/* 下拉菜单箭头指示器 */
+.dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid var(--surface-color);
+    filter: drop-shadow(0 -2px 2px rgba(0, 0, 0, 0.1));
+}
+

@@ -1,0 +1,222 @@
+/* Layer 0: The Ghost (Depth) */
+.layer-deep {
+    z-index: 1;
+}
+
+.ghost-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 80vw;
+    line-height: 0.8;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(0,0,0,0.03); /* Ghostly outline */
+    white-space: nowrap;
+    opacity: 0.5;
+}
+
+/* Layer 1: The Monolith */
+.layer-mid {
+    z-index: 5;
+}
+
+.core-2k {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 53vw; /* Restoring Tension */
+    line-height: 0.7; /* Tight fit */
+    letter-spacing: -0.09em;
+    color: #000;
+    z-index: 1;
+    white-space: nowrap;
+    /* Animation handled by Galaxy.js for physics-based blending */
+}
+
+/* Layer 2: The Inverted Script */
+.layer-front {
+    z-index: 10;
+    mix-blend-mode: exclusion;
+}
+
+.narrative-content {
+    width: 100%; height: 100%;
+    position: relative;
+}
+
+.script-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-5deg);
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 600;
+    font-size: 22vw;
+    line-height: 1;
+    white-space: nowrap;
+    color: #fff;
+    z-index: 2;
+}
+
+/* Micro Typography Details */
+.badge-top {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    color: #fff; /* Inverted */
+    opacity: 0.8;
+}
+
+.phonetic {
+    position: absolute;
+    bottom: 35%;
+    left: 60%; /* Offset */
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    will-change: transform; /* Force GPU Layer */
+}
+
+.red-dot {
+    width: 8px;
+    height: 8px;
+    background: #ff3b30; /* The Red Accent */
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 10px rgba(255, 59, 48, 0.8);
+    animation: pulseRed 2s infinite;
+}
+
+@keyframes pulseRed {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.script-intro, .script-desc { display: none; }
+
+.narrative-cta {
+    position: absolute;
+    bottom: 18%; 
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    text-decoration: none;
+    color: #fff; 
+    background: transparent; 
+    font-size: 0.9rem;
+    padding: 12px 40px;
+    border-radius: 50px; 
+    border: 1px solid #fff; 
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    z-index: 30;
+    mix-blend-mode: difference; 
+}
+
+.narrative-cta:hover {
+    background: #fff;
+    color: #000; 
+    transform: translateX(-50%) scale(1.1);
+    box-shadow: 0 0 20px rgba(255,255,255,0.5);
+}
+
+/* Layer 3: The Data (Adaptive Visibility) */
+.layer-detail {
+    z-index: 15;
+    pointer-events: none;
+}
+
+.stats-row {
+    position: absolute;
+    bottom: 5%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 0; 
+    align-items: center;
+    padding-bottom: 20px;
+    mix-blend-mode: difference;
+}
+
+.stats-row::after {
+    content: "";
+    display: block;
+    width: 1px;
+    height: 40px;
+    background: #fff; 
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.stat-pill {
+    position: relative;
+    background: transparent; 
+    padding: 0 40px;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.pill-label {
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #fff; 
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.pill-val {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+}
+
+/* Decorative ID on left - also adaptive */
+.layer-detail .deco-id {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.7rem;
+    color: #fff; 
+    transform: rotate(-90deg);
+    transform-origin: left bottom;
+    mix-blend-mode: difference;
+}
+
+/* Red Line Decoration */
+.red-line-deco {
+    position: absolute;
+    bottom: 85px; /* Just above stats */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 2px;
+    background: #ff3b30;
+    z-index: 20;
+}

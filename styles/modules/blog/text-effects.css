@@ -1,0 +1,542 @@
+/* --- 果冻效果动画 --- */
+@keyframes jelly {
+    0% { transform: scale(1); }
+    15% { transform: scale(1.05, 0.95); }
+    30% { transform: scale(0.92, 1.08); }
+    45% { transform: scale(1.06, 0.94); }
+    60% { transform: scale(0.95, 1.03); }
+    75% { transform: scale(1.02, 0.98); }
+    100% { transform: scale(1); }
+}
+
+/* 全局段落悬停效果 */
+p {
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+p:hover {
+    color: var(--heading-color);
+    transform: translateY(-1px);
+}
+
+/* 按钮内文本的悬停效果 */
+.cta-button span {
+    transition: color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+}
+
+.cta-button:hover span {
+    transform: scale(1.05);
+    animation: jelly 0.4s ease;
+}
+
+/* 按钮文字打字机效果 */
+@keyframes typing {
+    0%, 100% { border-right-color: transparent; }
+    50% { border-right-color: currentColor; }
+}
+
+.cta-button:hover span {
+    position: relative;
+    display: inline-block;
+    transform: none;
+    animation: typing 1s step-end infinite;
+    border-right: 2px solid;
+    padding-right: 3px;
+}
+
+/* 闪烁光标效果 */
+.cta-button.primary:hover span {
+    border-right-color: white;
+}
+
+.cta-button.secondary:hover span {
+    border-right-color: var(--primary-color);
+}
+
+/* 修改特性卡片标题光扫过效果的速度 */
+.feature-card h3::after {
+    transition: left 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* 添加文字悬停时的立体效果 */
+.hero-subtitle:hover {
+    text-shadow: 
+        1px 1px 0 rgba(255, 255, 255, 0.8),
+        2px 2px 0 rgba(247, 125, 170, 0.6),
+        3px 3px 0 rgba(247, 125, 170, 0.4),
+        4px 4px 8px rgba(122, 162, 247, 0.3);
+    transform: translate(-2px, -2px);
+    color: var(--accent-color);
+}
+
+/* 可爱的表情符号样式 */
+.cute-emoji {
+    display: inline-block;
+    font-size: 1.1em;
+    vertical-align: middle;
+    opacity: 0.85;
+    transition: all 0.4s ease;
+    transform-origin: center;
+}
+
+.hero-subtitle:hover .cute-emoji {
+    animation: bounce 1s ease infinite;
+    opacity: 1;
+    color: var(--accent-color);
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-8px) scale(1.2) rotate(-5deg); }
+    50% { transform: translateY(0) scale(1.1); }
+    70% { transform: translateY(-4px) scale(1.15) rotate(5deg); }
+}
+
+/* 改进的hero-subtitle动效，让整体更协调 */
+.hero-subtitle:hover {
+    animation: cuteWiggle 3s ease-in-out infinite;
+    text-shadow: 
+        0 0 8px rgba(255, 150, 200, 0.7),
+        0 0 15px rgba(161, 143, 255, 0.5);
+    letter-spacing: 1px;
+    transform: none;
+}
+
+/* 调整为更二次元风格的动效 */
+@keyframes animeWiggle {
+    0%, 100% { 
+        transform: translateY(0) scale(1); 
+        color: #ff85b1; /* 粉色 */
+    }
+    25% { 
+        transform: translateY(-5px) rotate(-2deg) scale(1.03); 
+        color: #ffac59; /* 橙色 */
+    }
+    50% { 
+        transform: translateY(0) scale(1.05); 
+        color: #a18fff; /* 紫色 */
+    }
+    75% { 
+        transform: translateY(-3px) rotate(2deg) scale(1.03); 
+        color: #5ccefa; /* 蓝色 - 二次元经典色 */
+    }
+}
+
+/* 调整二次元风格副标题 */
+.hero-subtitle {
+    font-size: 1.8rem;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.5s ease;
+    position: relative;
+    letter-spacing: -0.5px; /* 略微紧凑的字间距，更符合二次元风格 */
+}
+
+.hero-subtitle:hover {
+    animation: animeWiggle 3s ease-in-out infinite;
+    text-shadow: 
+        0 0 10px rgba(255, 133, 177, 0.7), /* 粉色辉光 */
+        0 0 20px rgba(92, 206, 250, 0.5); /* 蓝色辉光 */
+    letter-spacing: 0;
+    transform: none;
+}
+
+/* 改进二次元表情符号样式 */
+.cute-emoji {
+    display: inline-block;
+    font-size: 1.3em;
+    vertical-align: middle;
+    opacity: 0.9;
+    transition: all 0.4s ease;
+    transform-origin: center;
+    margin-left: 5px;
+}
+
+.hero-subtitle:hover .cute-emoji {
+    animation: animeBounce 1.2s ease infinite;
+    opacity: 1;
+    color: #ff85b1; /* 粉色 */
+}
+
+@keyframes animeBounce {
+    0%, 100% { transform: translateY(0) scale(1); }
+    30% { transform: translateY(-10px) scale(1.3) rotate(-8deg); }
+    40% { transform: translateY(0) scale(1.2); }
+    60% { transform: translateY(-5px) scale(1.25) rotate(8deg); }
+    70% { transform: translateY(0) scale(1.2); }
+    80% { transform: translateY(-3px) scale(1.15); }
+}
+
+/* 添加更多二次元风格的装饰元素 */
+.hero-subtitle::before,
+.hero-subtitle::after {
+    content: '★';
+    position: absolute;
+    opacity: 0;
+    transition: all 0.5s ease;
+    font-size: 1.3rem;
+    color: #ffac59; /* 橙色星星 */
+}
+
+.hero-subtitle::before {
+    left: -25px;
+    top: 40%;
+    transform: translateY(-50%);
+}
+
+.hero-subtitle::after {
+    right: -25px;
+    top: 40%;
+    transform: translateY(-50%);
+}
+
+.hero-subtitle:hover::before,
+.hero-subtitle:hover::after {
+    opacity: 1;
+    animation: starTwinkle 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes starTwinkle {
+    from { 
+        transform: translateY(-50%) scale(1) rotate(0deg); 
+        color: #ffac59;
+    }
+    to { 
+        transform: translateY(-50%) scale(1.5) rotate(72deg); 
+        color: #ffdd59;
+    }
+}
+
+/* 描述文字的单词效果 */
+.desc-word {
+    display: inline-block;
+    margin-right: 5px;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    opacity: 0.8;
+    transform-origin: center bottom;
+}
+
+.hero-description:hover .desc-word {
+    opacity: 1;
+}
+
+/* 描述文字悬停效果 - 波浪动画 */
+@keyframes wordFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px); 
+    }
+}
+
+/* 使描述文字在悬停时产生波浪式的动画，每个词有延迟 */
+.hero-description:hover .desc-word:nth-child(1) { animation: wordFloat 1s ease-in-out 0.0s infinite; }
+.hero-description:hover .desc-word:nth-child(2) { animation: wordFloat 1s ease-in-out 0.1s infinite; }
+.hero-description:hover .desc-word:nth-child(3) { animation: wordFloat 1s ease-in-out 0.2s infinite; }
+.hero-description:hover .desc-word:nth-child(4) { animation: wordFloat 1s ease-in-out 0.3s infinite; }
+.hero-description:hover .desc-word:nth-child(5) { animation: wordFloat 1s ease-in-out 0.4s infinite; }
+.hero-description:hover .desc-word:nth-child(6) { animation: wordFloat 1s ease-in-out 0.5s infinite; }
+.hero-description:hover .desc-word:nth-child(7) { animation: wordFloat 1s ease-in-out 0.6s infinite; }
+.hero-description:hover .desc-word:nth-child(8) { animation: wordFloat 1s ease-in-out 0.7s infinite; }
+.hero-description:hover .desc-word:nth-child(9) { animation: wordFloat 1s ease-in-out 0.8s infinite; }
+
+/* 猫咪相关词汇特殊动画 */
+@keyframes catMove {
+    0%, 100% { 
+        transform: translateY(0) rotate(0deg); 
+        color: var(--text-color);
+    }
+    25% { 
+        transform: translateY(-12px) rotate(-5deg); 
+        color: #ffac59; /* 橙色 - 猫咪色 */
+    }
+    75% { 
+        transform: translateY(-6px) rotate(5deg); 
+        color: #ffac59; 
+    }
+}
+
+.hero-description:hover .cat-word {
+    animation: catMove 1.5s ease-in-out infinite !important;
+    text-shadow: 0 0 8px rgba(255, 172, 89, 0.5);
+}
+
+/* 突出词汇特殊动画 */
+@keyframes empPulse {
+    0%, 100% { 
+        transform: scale(1); 
+        color: var(--text-color);
+    }
+    50% { 
+        transform: scale(1.2); 
+        color: var(--accent-color);
+        text-shadow: 0 0 10px rgba(247, 125, 170, 0.6);
+    }
+}
+
+.hero-description:hover .emp-word {
+    animation: empPulse 1s ease-in-out infinite !important;
+}
+
+/* 修改hero-description的hover样式 */
+.hero-description:hover {
+    color: var(--text-color);
+    transform: none;
+    cursor: default;
+}
+
+/* 优化的响应式设计 */
+@media (max-width: 1200px) {
+    .container {
+        max-width: 960px;
+    }
+}
+@media (max-width: 992px) {
+    .container {
+        max-width: 90%;
+    }
+    
+    html {
+        font-size: 15px;
+    }
+    
+    .hero-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 2rem;
+    }
+    
+    .hero-text {
+        margin-bottom: 0;
+        order: 2;
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+    
+    .hero-visual {
+        order: 1;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .hero-title {
+        font-size: 3.2rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.6rem;
+    }
+    
+    .hero-description {
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 600px;
+        text-align: center;
+    }
+    
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 2.5rem;
+    }
+    
+    .scenario-card,
+    .scenario-card.reverse {
+        flex-direction: column;
+        padding: 2rem;
+        gap: 2rem;
+    }
+    
+    .scenario-visual {
+    width: 100%;
+        margin-bottom: 1rem;
+        min-height: 250px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .scenario-img {
+        max-width: 85%;
+    }
+    
+    .scenario-content {
+        padding: 0 1rem;
+        text-align: center;
+    }
+    
+    .section-title {
+        font-size: 2.4rem;
+    }
+    
+    .section-subtitle {
+        font-size: 1.1rem;
+        margin-bottom: 3.5rem;
+    }
+    
+    .cta-section h2 {
+        font-size: 2.2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+    
+    .main-header .container {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 0.8rem 1rem;
+    }
+    
+    .nav-links {
+        gap: 1rem 1.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 0.5rem 0;
+    }
+    
+    .hero {
+        padding: 4rem 0;
+    }
+    
+    .hero-title {
+        font-size: 2.8rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.4rem;
+    }
+    
+    .hero-description {
+        font-size: 1.05rem;
+        padding: 0.5rem 0;
+    }
+    
+    .desc-word {
+        margin-right: 3px;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+    
+    .feature-card {
+        padding: 2rem 1.5rem;
+    }
+    
+    .cta-section {
+        padding: 4rem 0;
+    }
+    
+    .cta-section h2 {
+        font-size: 2rem;
+    }
+    
+    .cta-section p {
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+    }
+    
+    .cta-button.large {
+        padding: 0.9rem 2rem;
+        font-size: 1.1rem;
+        width: 80%; /* 在移动设备上扩大按钮宽度 */
+        max-width: 300px;
+    }
+    
+    .section-title {
+        font-size: 2.2rem;
+    }
+    
+    .section-subtitle {
+        font-size: 1.05rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .usage-scenarios {
+        padding: 4rem 0;
+    }
+    
+    .scenarios-container {
+        gap: 2.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    html {
+        font-size: 13px;
+    }
+    
+    .hero-title {
+        font-size: 2.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.3rem;
+    }
+    
+    .cta-button {
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
+        display: block;
+        margin: 1rem auto;
+        width: 90%;
+        max-width: 280px;
+    }
+    
+    .feature-icon {
+        font-size: 2.5rem;
+    }
+    
+    .section-title {
+        font-size: 2rem;
+    }
+    
+    .cta-section h2 {
+        font-size: 1.8rem;
+    }
+    
+    .main-footer {
+        padding: 2.5rem 0 2rem;
+    }
+    
+    .hero {
+        padding: 2.5rem 0 3.5rem; /* 在更小屏幕上进一步减少内边距 */
+    }
+    
+    .hero-title {
+        font-size: 2.5rem;
+    }
+}
+
+.scenario-content h3 {
+    font-size: 1.6rem; /* 增加标题大小 */
+    font-weight: 600;
+    margin-bottom: 1.2rem; /* 增加与正文的距离 */
+    color: var(--heading-color);
+    transition: all 0.4s cubic-bezier(0.215, 0.61, 0.355, 1);
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+}
+
+.scenario-content h3::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    transition: width 0.4s ease-in-out;
+    z-index: -1;
+}
+

@@ -1,0 +1,322 @@
+/* 指南页面增强样式 */
+.guide-hero {
+    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    padding: 4rem 0 2rem;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid rgba(122, 162, 247, 0.3);
+}
+
+.guide-hero-title {
+    font-size: 3rem;
+    color: var(--heading-color);
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    text-shadow: 0 2px 10px rgba(122, 162, 247, 0.3);
+    position: relative;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.guide-hero-title:hover {
+    transform: translateY(-5px);
+    text-shadow: 0 8px 20px rgba(122, 162, 247, 0.5);
+}
+
+.guide-accent {
+    color: var(--accent-color);
+    margin-left: 10px;
+    position: relative;
+}
+
+.guide-accent::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s ease;
+}
+
+.guide-hero-title:hover .guide-accent::after {
+    transform: scaleX(1);
+}
+
+.guide-hero-decoration {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.5;
+}
+
+.floating-icon {
+    position: absolute;
+    font-size: 2.5rem;
+    opacity: 0;
+    color: var(--primary-color);
+    filter: drop-shadow(0 2px 5px rgba(122, 162, 247, 0.5));
+    animation: floatIcon 6s ease-in-out infinite;
+}
+
+.icon1 {
+    top: 20%;
+    left: 15%;
+    animation-duration: 8s;
+}
+
+.icon2 {
+    top: 30%;
+    right: 20%;
+    animation-delay: 1s;
+    animation-duration: 9s;
+    color: var(--accent-color);
+}
+
+.icon3 {
+    bottom: 25%;
+    right: 15%;
+    animation-delay: 2s;
+    color: var(--accent-color);
+}
+
+.icon4 {
+    bottom: 15%;
+    left: 25%;
+    animation-delay: 3s;
+    animation-duration: 7s;
+}
+
+@keyframes floatIcon {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+    }
+    25% {
+        transform: translateY(-15px) rotate(5deg);
+    }
+    50% {
+        transform: translateY(5px) rotate(-5deg);
+    }
+    75% {
+        transform: translateY(-10px) rotate(3deg);
+    }
+}
+
+.guide-section {
+    padding: 2rem 0 4rem;
+}
+
+.guide-content {
+    max-width: 850px;
+    margin: 0 auto;
+    padding: 2rem;
+    background-color: var(--surface-color);
+    border-radius: var(--border-radius-large);
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
+}
+
+.guide-content:hover {
+    box-shadow: var(--card-hover-shadow);
+}
+
+.guide-section-content {
+    margin-bottom: 3.5rem;
+    position: relative;
+}
+
+.guide-section-content:last-child {
+    margin-bottom: 0;
+}
+
+.animated-title {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.animated-title:hover {
+    transform: translateX(10px);
+    color: var(--accent-color);
+}
+
+.animated-title::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    transform: scaleX(0.3);
+    transform-origin: left;
+    transition: all 0.4s ease;
+}
+
+.animated-title:hover::after {
+    transform: scaleX(1);
+}
+
+.animated-title i {
+    margin-right: 10px;
+    transition: all 0.3s ease;
+}
+
+.animated-title:hover i {
+    transform: scale(1.2) rotate(10deg);
+    color: var(--accent-color);
+}
+
+.author-card {
+    display: flex;
+    align-items: center;
+    background-color: rgba(122, 162, 247, 0.05);
+    border-radius: var(--border-radius-base);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(122, 162, 247, 0.1);
+    transition: all 0.3s ease;
+}
+
+.author-card:hover {
+    background-color: rgba(122, 162, 247, 0.1);
+    transform: translateY(-5px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.author-avatar {
+    position: relative; /* Ensure this is the positioning context */
+    width: 80px; /* Explicitly define size if needed */
+    height: 80px;
+    display: inline-block; /* Or adjust as needed for layout */
+}
+
+.author-avatar img {
+    width: 100%; /* Make image fill the container */
+    height: 100%;
+    border-radius: 50%;
+    border: 3px solid var(--primary-color);
+    transition: all 0.5s ease;
+    object-fit: cover;
+    display: block; /* Remove potential space below image */
+}
+
+/* Optional: Style the link directly if needed */
+.author-avatar a {
+    display: block;
+    border-radius: 50%;
+    /* z-index: 1; might not be needed if pointer-events: none is used on glow */
+}
+
+
+.author-card:hover .author-avatar img {
+    transform: rotate(10deg);
+    border-color: var(--accent-color);
+}
+
+.avatar-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: none; /* 移除背景渐变 */
+    filter: blur(8px);
+    opacity: 0;
+    transform: scale(1.1);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    animation: none; /* 移除旋转动画 */
+    pointer-events: none; /* Add this to allow clicks to pass through */
+}
+
+@keyframes rotateGlow {
+    0% { transform: scale(1.1) rotate(0deg); }
+    100% { transform: scale(1.1) rotate(360deg); }
+}
+
+.contributors-grid td:hover .contributor-avatar-glow {
+    opacity: 0; /* 设置为透明，不显示粉色圈 */
+    transform: scale(1.15);
+}
+
+.author-info {
+    flex: 1;
+}
+
+.author-info p {
+    margin-bottom: 0.5rem;
+}
+
+.author-info p:last-child {
+    margin-bottom: 0;
+}
+
+.highlight {
+    color: var(--primary-color);
+    font-weight: 600;
+    display: inline-block;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.highlight:hover {
+    color: var(--accent-color);
+    transform: scale(1.05);
+}
+
+/* 文本强调样式 */
+.text-primary {
+    color: var(--primary-color);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-primary:hover {
+    color: var(--primary-color);
+    text-shadow: 0 0 5px rgba(122, 162, 247, 0.5);
+}
+
+.text-accent {
+    color: var(--accent-color);
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-accent:hover {
+    color: var(--accent-color);
+    text-shadow: 0 0 5px rgba(247, 125, 170, 0.5);
+}
+
+.text-success {
+    color: #52c41a;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-success:hover {
+    color: #52c41a;
+    text-shadow: 0 0 5px rgba(82, 196, 26, 0.5);
+}
+
+.text-warning {
+    color: #e9a23b;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.text-warning:hover {
+    color: #e9a23b;
+    text-shadow: 0 0 5px rgba(233, 162, 59, 0.5);
+}
+

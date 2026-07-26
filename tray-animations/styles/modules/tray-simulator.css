@@ -1,0 +1,236 @@
+.tray-simulator {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 950;
+    width: max-content;
+    max-width: calc(100vw - 48px);
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.tray-simulator::before {
+    content: none;
+    position: absolute;
+    top: -34px;
+    right: 8px;
+    background: rgba(46, 58, 89, 0.88);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 500;
+    padding: 5px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.tray-simulator:hover::before {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tray-library-page .scroll-progress-container {
+    right: 28px;
+    bottom: 88px;
+}
+
+.windows-taskbar {
+    height: 48px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #1f2937;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+}
+
+.windows-taskbar span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 6px;
+    transition: background 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+
+.windows-taskbar span:hover {
+    background: transparent;
+}
+
+.windows-taskbar span:active {
+    transform: scale(0.95);
+}
+
+.taskbar-caret {
+    font-size: 0.75rem;
+    color: #4b5563;
+}
+
+.taskbar-animation {
+    width: 32px;
+    height: 32px;
+    padding: 2px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+}
+
+/* Win11 System Tray Active Indicator Bar */
+.taskbar-animation::after {
+    content: none;
+    position: absolute;
+    bottom: 1.5px;
+    left: 30%;
+    width: 40%;
+    height: 2.5px;
+    background: var(--primary-color);
+    border-radius: 10px;
+    transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.windows-taskbar span.taskbar-animation:hover::after {
+    width: 60%;
+    left: 20%;
+    background: var(--tray-red);
+}
+
+.windows-taskbar span.taskbar-animation:hover {
+    background: transparent;
+    border-color: transparent;
+    transform: scale(1.08);
+}
+
+.taskbar-animation img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    animation: gentlePulse 2s infinite ease-in-out;
+}
+
+.windows-taskbar .taskbar-clock {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.25;
+    padding: 0 8px;
+    min-width: auto;
+}
+
+.windows-taskbar .taskbar-clock strong {
+    font-weight: 500;
+    color: #111827;
+}
+
+.windows-taskbar .taskbar-clock small {
+    font-size: 0.62rem;
+    color: #4b5563;
+}
+
+@keyframes trayBounce {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.5;
+    }
+    50% {
+        transform: translateY(-12px) scale(1.15);
+        opacity: 1;
+    }
+}
+
+@keyframes catWiggle {
+    0%, 100% { transform: rotate(0deg); }
+    15% { transform: rotate(-10deg); }
+    30% { transform: rotate(8deg); }
+    45% { transform: rotate(-5deg); }
+    60% { transform: rotate(3deg); }
+    75% { transform: rotate(0deg); }
+}
+
+@keyframes detailsOpen {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gentlePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes itemReveal {
+    from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.93);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@media (max-width: 1050px) {
+    .artist-identity { grid-template-columns: 88px minmax(0, 1fr); gap: 20px; }
+    .artist-avatar { width: 88px; height: 88px; }
+    .animation-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 768px) {
+    .creator-note.support-project { padding-top: 220px; padding-bottom: 48px; }
+    .tray-board-section { padding: 30px 0 85px; }
+    .tray-board { gap: 30px; }
+    .artist-showcase { padding: 20px 20px 62px; border-radius: 20px; }
+    .artist-showcase-static { padding-bottom: 20px; }
+    .artist-identity { grid-template-columns: 68px minmax(0, 1fr); gap: 15px; margin-bottom: 22px; }
+    .artist-avatar { width: 68px; height: 68px; padding: 2px; }
+    .artist-name-line { gap: 8px; }
+    .artist-name-line strong { font-size: 1.4rem; }
+    .artist-status, .artist-gallery-tag { padding: 3px 8px; font-size: .72rem; }
+    .artist-metrics { gap: 8px; font-size: .82rem; }
+    .artist-rating { font-size: 0.95rem; }
+    .artist-expand-label { right: 20px; bottom: 18px; font-size: 0; padding: 8px 12px; }
+    .artist-expand-label i { font-size: .85rem; }
+    .artist-details { padding: 20px 0 10px; }
+    .animation-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .tray-simulator { right: 15px; bottom: 15px; max-width: calc(100vw - 30px); }
+    .tray-library-page .scroll-progress-container { right: 18px; bottom: 76px; }
+}
+
+@media (max-width: 440px) {
+    .artist-featured-gallery { gap: 9px; }
+    .featured-animation { border-radius: 16px !important; }
+    .animation-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .windows-taskbar { height: 44px; padding: 0 10px; }
+    .windows-taskbar span { height: 32px; min-width: 32px; }
+    .windows-taskbar .taskbar-clock { padding: 0 4px; }
+    .tray-library-page .scroll-progress-container { right: 14px; bottom: 70px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tray-library-page *,
+    .tray-library-page *::before,
+    .tray-library-page *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}

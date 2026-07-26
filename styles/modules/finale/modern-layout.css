@@ -1,0 +1,316 @@
+/* =========================================
+   THE COMMUNITY (Luminaries - Bright & Human) 
+   ========================================= */
+
+.luminaries-section {
+    position: relative;
+    width: 100%;
+    min-height: 100vh;
+    background: #fff; /* Return to Purity */
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Soft blend from top */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 10%);
+}
+
+.luminaries-container {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+    perspective: 1000px; /* For 3D parallax */
+}
+
+.luminary-orb {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.4));
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    box-shadow: 
+        0 10px 30px rgba(0,0,0,0.05),
+        inset 0 0 20px rgba(255,255,255,0.8);
+    transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity: 0; /* Fade in via JS */
+    animation: orbFloat 6s ease-in-out infinite;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    color: rgba(0,0,0,0.1);
+}
+
+/* Orb Variants */
+.orb-blue { box-shadow: 0 20px 50px rgba(0, 122, 255, 0.15), inset 0 0 20px rgba(255,255,255,0.8); }
+.orb-red { box-shadow: 0 20px 50px rgba(255, 59, 48, 0.15), inset 0 0 20px rgba(255,255,255,0.8); }
+.orb-purple { box-shadow: 0 20px 50px rgba(175, 82, 222, 0.15), inset 0 0 20px rgba(255,255,255,0.8); }
+
+/* Modern Minimalist Layout */
+.horizon-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    position: relative;
+    z-index: 10;
+}
+
+.horizon-divider { display: none; } /* Remove the hard line */
+
+.horizon-col {
+    text-align: center;
+}
+
+.horizon-col.left { display: none; } /* Remove the Origin date, keep it simple */
+
+.horizon-big-text {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; /* Apple System Font */
+    font-size: 15vw; /* Responsive Massive */
+    font-weight: 800; /* Bold Modernism */
+    letter-spacing: -0.05em; /* Tight tracking */
+    line-height: 1;
+    color: #111;
+    display: block;
+    text-decoration: none;
+    position: relative;
+    z-index: 20;
+    transition: transform 0.3s ease;
+    /* Clean, no shadow, pure ink */
+}
+
+.horizon-big-text:hover {
+    transform: scale(1.02);
+}
+
+.horizon-star {
+    font-size: 4vw;
+    color: #ff3b30;
+    vertical-align: top;
+    margin-left: 0.5rem;
+    animation: starPulse 4s infinite;
+}
+
+.horizon-meta {
+    position: relative;
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.meta-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.3em;
+    font-weight: 600;
+    color: #ff3b30;
+    text-transform: uppercase;
+    background: rgba(255, 59, 48, 0.08);
+    padding: 6px 16px;
+    border-radius: 100px;
+}
+
+.meta-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    color: #666;
+    font-weight: 400;
+}
+
+/* Hide the wall */
+.community-wall { display: none; }
+
+/* Dynamic Subtitle Animation */
+.meta-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    color: #666;
+    font-weight: 400;
+    height: 1.5rem; /* Fixed height for ticker */
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    text-align: center;
+}
+
+.meta-desc span {
+    display: block;
+    animation: tickerSlide 9s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes tickerSlide {
+    0%, 30% { transform: translateY(0); opacity: 1; }
+    33%, 63% { transform: translateY(-100%); opacity: 1; }
+    66%, 96% { transform: translateY(-200%); opacity: 1; }
+    100% { transform: translateY(-300%); opacity: 0; }
+}
+
+/* 
+ * =========================================
+ * THE EDITORIAL MASTERPIECE (Complex Minimalism)
+ * =========================================
+ */
+
+.luminaries-section {
+    position: relative;
+    background: #ffffff;
+    padding: 15rem 0 20rem; /* Deep luxury padding */
+    overflow: hidden;
+    /* Create a soft top edge */
+    mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 100%);
+    margin-top: -10vh; /* Pull it up to overlap */
+    z-index: 2; /* Sit on top of previous footer area */
+}
+
+/* The Fog Layer (Transition) */
+.luminaries-section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 400px; /* Deep fade */
+    background: linear-gradient(to bottom, #fff 0%, rgba(255,255,255,0) 100%);
+    z-index: 5; /* Above grid, below content */
+    pointer-events: none;
+}
+
+/* Texture: Architectural Grid */
+.luminaries-section::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    /* Subtle Grid */
+    background-image: 
+        linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 100px 100px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* --- TEMPORAL ARTIFACTS --- */
+/* Scanline removed by design decision */
+
+.hud-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 20;
+    mix-blend-mode: difference; /* Adaptive color */
+    color: #fff;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+}
+
+.hud-ruler-left {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 60vh;
+    background: repeating-linear-gradient(
+        to bottom,
+        #fff 0,
+        #fff 1px,
+        transparent 1px,
+        transparent 10px
+    );
+}
+
+.hud-ruler-left::before {
+    content: "";
+    position: absolute;
+    top: -10px; left: -4px; width: 10px; height: 1px; background: #fff;
+}
+.hud-ruler-left::after {
+    content: "";
+    position: absolute;
+    bottom: -10px; left: -4px; width: 10px; height: 1px; background: #fff;
+}
+
+.hud-coords {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+}
+
+.hud-status {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    background: #0f0; /* Green = Online */
+    border-radius: 50%;
+    box-shadow: 0 0 5px #0f0;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.hud-scroll {
+    position: absolute;
+    bottom: 30px;
+    right: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    opacity: 0.7;
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+    40% {transform: translateY(-5px);}
+    60% {transform: translateY(-3px);}
+}
+
+.hud-version {
+    position: absolute;
+    bottom: 30px;
+    left: 40px;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    opacity: 0.5;
+    transform: rotate(-90deg);
+    transform-origin: left bottom;
+}
+
+
+.narrative-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    max-width: 1600px;
+    margin: 0 auto;
+    border-left: 1px solid rgba(0,0,0,0.05); 
+    border-right: 1px solid rgba(0,0,0,0.05);
+}
+
+.narrative-layer {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+}
+
