@@ -1,4 +1,60 @@
 initAOSOnce();
+localizeHomePage();
+
+function localizeHomePage() {
+    if (!window.CatimeLocale?.isChinese()) return;
+
+    document.title = 'Catime - 计时器与番茄钟';
+    document.querySelector('meta[name="description"]')?.setAttribute(
+        'content',
+        'Catime 是一款面向 Windows 的极简透明计时器与番茄钟，轻巧、现代且高效。',
+    );
+
+    const translations = [
+        ['.meta-group.left .meta-label', '始于 2025.01.28'],
+        ['.meta-group.right .meta-label', '当前状态'],
+        ['#hero-download-btn .btn-content', '<i class="fas fa-heart"></i> 立即下载'],
+        ['.hero-actions .secondary .btn-content', '<i class="fab fa-github"></i> 查看源码'],
+        ['.narrative-cta', '在 GitHub 点亮 Star ★'],
+        ['#scenarios-title', '使用场景 🌟'],
+        ['#scenarios-title + .section-subtitle', 'Catime，陪伴你的每一种专注场景'],
+        ['#gaming-title', '游戏计时'],
+        ['#scenario-gaming .scenario-content p span', '游戏时随时掌握休息时间。透明悬浮层不会遮挡画面或影响操作，帮你合理控制游戏时长。'],
+        ['#autoopen-title', '自动启动应用'],
+        ['#scenario-autoopen .scenario-content p span', '计时结束后自动打开指定程序，无需反复确认。查看邮件、进入会议或启动常用应用，都可以自动完成。'],
+        ['#presentation-title', '演讲与展示'],
+        ['#scenario-presentation .scenario-content p span', '透明悬浮在演示文稿上，既不遮挡观众视线，也能帮助你精准掌握演讲时间。'],
+        ['.cta-section > .container > p', '立即下载，开启轻松又高效的专注旅程！'],
+        ['#cta-download-btn span', '免费获取 Catime'],
+        ['#thanks-title', '特别感谢 🙏'],
+        ['#thanks-title + .section-subtitle', '特别感谢以下朋友对本项目的推荐<br>（按时间排序）'],
+        ['#contributors-title', '致谢贡献者 🙏'],
+        ['#contributors-title + .section-subtitle', '感谢所有为 Catime 做出贡献的朋友！<br>（按时间排序）'],
+    ];
+
+    translations.forEach(([selector, value]) => {
+        const element = document.querySelector(selector);
+        if (!element) return;
+        if (value.includes('<')) element.innerHTML = value;
+        else element.textContent = value;
+    });
+
+    const highlight = document.querySelector('.highlight-text');
+    if (highlight) highlight.dataset.text = highlight.textContent;
+
+    const techSpec = document.querySelector('.tech-spec-line');
+    if (techSpec) {
+        techSpec.innerHTML = '纯 C 架构 <span class="divider">//</span> 零依赖 <span class="divider">//</span> 原生 Win32';
+    }
+
+    const narrative = document.querySelector('.narrative-line');
+    if (narrative) {
+        narrative.innerHTML = '全新托盘动画引擎 <span class="dot">·</span> 支持 <b>GIF/WebP</b> <span class="dot">·</span> 实时 <b>CPU/内存</b> 监控';
+    }
+
+    const ctaTitle = document.getElementById('cta-title');
+    if (ctaTitle) ctaTitle.textContent = '准备好和 Catime 一起管理时间了吗？';
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     initScenarioImageInteractions();

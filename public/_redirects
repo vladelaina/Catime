@@ -1,2 +1,4 @@
-/tray-animations  /tray-animations/index.html  200
-/tray-animations/ /tray-animations/index.html  200
+/tray             /tray/index.html  200
+/tray/            /tray/index.html  200
+/tray-animations  /tray             301
+/tray-animations/ /tray             301

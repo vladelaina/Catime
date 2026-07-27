@@ -15,7 +15,7 @@ const pages = [
     { path: '/about', selector: 'main', minimum: 1 },
     { path: '/support', selector: '.support-project', minimum: 1 },
     { path: '/guide', selector: 'main', minimum: 1 },
-    { path: '/tray-animations/', selector: '.artist-showcase', minimum: 1 },
+    { path: '/tray', selector: '.artist-showcase', minimum: 1 },
     {
         path: '/tools/font-tool/',
         selector: '#uploadArea',

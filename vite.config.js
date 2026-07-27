@@ -6,8 +6,13 @@ const cleanRoutes = new Map([
     ['/guide', '/guide.html'],
     ['/about', '/about.html'],
     ['/support', '/support.html'],
-    ['/tray-animations', '/tray-animations/index.html'],
-    ['/tray-animations/', '/tray-animations/index.html'],
+    ['/tray', '/tray/index.html'],
+    ['/tray/', '/tray/index.html'],
+]);
+
+const legacyRoutes = new Map([
+    ['/tray-animations', '/tray'],
+    ['/tray-animations/', '/tray'],
 ]);
 
 const globalStyleModules = [
@@ -39,6 +44,7 @@ const globalStyleModules = [
     'finale/editorial.css',
     'finale/modern-layout.css',
     'finale/narrative.css',
+    'site-chrome.css',
 ];
 
 function globalStylesPlugin() {
@@ -59,8 +65,17 @@ function globalStylesPlugin() {
 }
 
 function cleanUrlPlugin() {
-    const rewriteCleanUrl = (request, _response, next) => {
+    const rewriteCleanUrl = (request, response, next) => {
         const url = new URL(request.url, 'http://localhost');
+        const redirect = legacyRoutes.get(url.pathname);
+
+        if (redirect) {
+            response.statusCode = 308;
+            response.setHeader('Location', `${redirect}${url.search}`);
+            response.end();
+            return;
+        }
+
         const target = cleanRoutes.get(url.pathname);
 
         if (target) {
@@ -109,7 +124,7 @@ export default defineConfig({
                 guide: resolve(import.meta.dirname, 'guide.html'),
                 about: resolve(import.meta.dirname, 'about.html'),
                 support: resolve(import.meta.dirname, 'support.html'),
-                trayAnimations: resolve(import.meta.dirname, 'tray-animations/index.html'),
+                tray: resolve(import.meta.dirname, 'tray/index.html'),
                 fontTool: resolve(import.meta.dirname, 'tools/font-tool/index.html'),
             },
         },

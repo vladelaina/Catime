@@ -1,11 +1,38 @@
 <footer class="main-footer" id="footer">
-    <div class="container">
-        <p>&copy; 2025-2026 Catime Project by <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a></p>
-        <p>Open sourced under <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a> License</p>
-        <p>Icon Artist: <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a></p>
-        <div class="footer-links">
-            <a href="https://message.bilibili.com/#/whisper/mid1862395225" target="_blank" rel="noopener noreferrer">Feedback</a>
-            <a href="https://github.com/vladelaina/Catime/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+    <div class="container footer-container">
+        <div class="footer-copy">
+            <p>
+                <span data-footer-copy="project-prefix">&copy; 2025-2026 Catime Project by</span>
+                <a href="https://vladelaina.com/" target="_blank" rel="noopener noreferrer">vladelaina</a><span data-footer-copy="project-suffix"></span>
+            </p>
+            <p>
+                <span data-footer-copy="license-prefix">Open sourced under</span>
+                <a href="https://github.com/vladelaina/Catime/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">Apache 2.0</a>
+                <span data-footer-copy="license-suffix">License</span>
+            </p>
+            <p>
+                <span data-footer-copy="artist-prefix">Icon Artist:</span>
+                <a href="https://space.bilibili.com/26087398" target="_blank" rel="noopener noreferrer">猫屋敷梨梨Official</a>
+            </p>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-links">
+                <a href="https://message.bilibili.com/#/whisper/mid1862395225" target="_blank" rel="noopener noreferrer" data-footer-copy="feedback">Feedback</a>
+                <a href="https://github.com/vladelaina/Catime/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer" data-footer-copy="privacy">Privacy Policy</a>
+            </div>
+
+            <div class="site-lang-switcher" data-language-switcher>
+                <i class="fas fa-language site-lang-icon" aria-hidden="true"></i>
+                <button class="site-lang-current" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="site-language-menu">
+                    <span class="site-lang-current-text">English</span>
+                    <i class="fas fa-chevron-down site-lang-chevron" aria-hidden="true"></i>
+                </button>
+                <div class="site-lang-menu" id="site-language-menu" role="menu" hidden>
+                    <button class="site-lang-option" type="button" role="menuitemradio" data-lang-code="zh" aria-checked="false">简体中文</button>
+                    <button class="site-lang-option" type="button" role="menuitemradio" data-lang-code="en" aria-checked="true">English</button>
+                </div>
+            </div>
         </div>
     </div>
 </footer>
