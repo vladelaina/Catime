@@ -18,8 +18,9 @@ The Vite development server provides clean routes such as `/guide`, `/about`,
 
 ## Source organization
 
-- `styles/style.css` is the stable global entry. Vite assembles its ordered
-  modules from `styles/modules/` so the original cascade remains unchanged.
+- `styles/style.css` is the stable global entry. It imports the ordered modules
+  from `styles/modules/`, so both direct static hosting and Vite builds preserve
+  the original cascade.
 - Page-specific CSS is grouped under `styles/about/`, `styles/support/`,
   `tools/font-tool/styles/`, and `tray/styles/modules/`.
 - Larger classic scripts are split by feature under `scripts/support/` and

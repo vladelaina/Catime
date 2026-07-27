@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { cp, readFile } from 'node:fs/promises';
+import { cp } from 'node:fs/promises';
 import { defineConfig } from 'vite';
 
 const cleanRoutes = new Map([
@@ -14,55 +14,6 @@ const legacyRoutes = new Map([
     ['/tray-animations', '/tray'],
     ['/tray-animations/', '/tray'],
 ]);
-
-const globalStyleModules = [
-    'base.css',
-    'home-intro/hero-core.css',
-    'home-intro/hero-atmosphere.css',
-    'home-intro/features.css',
-    'home-intro/github-stats.css',
-    'home-intro/use-cases.css',
-    'home-intro/cta-footer.css',
-    'blog/layout.css',
-    'blog/text-effects.css',
-    'blog/scenario-titles.css',
-    'navigation-and-hero.css',
-    'home-content/features.css',
-    'home-content/github-stats.css',
-    'home-content/use-cases.css',
-    'home-content/closing.css',
-    'home-effects/blog.css',
-    'home-effects/text.css',
-    'home-effects/scenes.css',
-    'home-effects/media.css',
-    'guide/wiki.css',
-    'guide/progress.css',
-    'guide/content.css',
-    'guide/effects.css',
-    'guide/accents.css',
-    'community.css',
-    'finale/editorial.css',
-    'finale/modern-layout.css',
-    'finale/narrative.css',
-    'site-chrome.css',
-];
-
-function globalStylesPlugin() {
-    const entry = resolve(import.meta.dirname, 'styles/style.css');
-    const modulesDirectory = resolve(import.meta.dirname, 'styles/modules');
-
-    return {
-        name: 'catime-global-styles',
-        enforce: 'pre',
-        async load(id) {
-            if (id.split('?')[0] !== entry) return null;
-            const modules = await Promise.all(
-                globalStyleModules.map((file) => readFile(resolve(modulesDirectory, file), 'utf8')),
-            );
-            return modules.join('');
-        },
-    };
-}
 
 function cleanUrlPlugin() {
     const rewriteCleanUrl = (request, response, next) => {
@@ -116,7 +67,7 @@ function copyClassicScriptsPlugin() {
 }
 
 export default defineConfig({
-    plugins: [globalStylesPlugin(), cleanUrlPlugin(), copyClassicScriptsPlugin()],
+    plugins: [cleanUrlPlugin(), copyClassicScriptsPlugin()],
     build: {
         rollupOptions: {
             input: {
