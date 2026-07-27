@@ -29,6 +29,12 @@
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg);
 
 /**
+ * @brief Run the tray left/right-click action for another tray surface
+ * @return TRUE when the mouse message was recognized and handled
+ */
+BOOL HandleTrayMenuClick(HWND hwnd, UINT mouseMessage);
+
+/**
  * @brief Stop tray hover detection timer
  * @note Called when tray icon is removed for cleanup
  */

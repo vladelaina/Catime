@@ -6,7 +6,7 @@
 #include "taskbar_monitor_internal.h"
 
 #include "system_monitor.h"
-#include "tray/tray_menu.h"
+#include "tray/tray_events.h"
 
 #include <stdio.h>
 #include <wchar.h>
@@ -164,12 +164,21 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             return 0;
         case WM_ERASEBKGND:
             return 1;
+        case WM_NCHITTEST:
+            return HTCLIENT;
         case WM_MOUSEACTIVATE:
             return MA_NOACTIVATE;
+        case WM_LBUTTONUP:
+            if (IsWindow(g_taskbarMonitor.owner)) {
+                (void)HandleTrayMenuClick(
+                    g_taskbarMonitor.owner, WM_LBUTTONUP);
+            }
+            return 0;
         case WM_RBUTTONUP:
         case WM_CONTEXTMENU:
             if (IsWindow(g_taskbarMonitor.owner)) {
-                ShowColorMenu(g_taskbarMonitor.owner);
+                (void)HandleTrayMenuClick(
+                    g_taskbarMonitor.owner, WM_RBUTTONUP);
             }
             return 0;
         case WM_NCDESTROY:

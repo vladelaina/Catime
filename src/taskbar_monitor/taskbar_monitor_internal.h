@@ -115,6 +115,8 @@ BOOL TaskbarMonitor_Present(
     int metricCount);
 void TaskbarMonitor_ColorizeTextMask(
     DWORD* pixels, size_t count, COLORREF textColor);
+void TaskbarMonitor_EnsureInteractiveAlpha(
+    DWORD* pixels, size_t count, COLORREF textColor);
 void TaskbarMonitor_DrawMetricGrid(
     HDC dc, int width, int height,
     const TaskbarMetricText* metrics, int metricCount);

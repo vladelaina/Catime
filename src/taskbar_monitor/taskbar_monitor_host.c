@@ -160,7 +160,8 @@ static BOOL PositionBesideNotificationArea(void) {
 }
 
 static BOOL AttachModernMonitor(HWND taskbar) {
-    if (!SetMonitorParent(taskbar, FALSE)) return FALSE;
+    if (!SetMonitorParent(
+            taskbar, g_taskbarMonitor.modernTaskbar)) return FALSE;
     g_taskbarMonitor.host = taskbar;
     g_taskbarMonitor.taskList = NULL;
     g_taskbarMonitor.mode = TASKBAR_HOST_MODERN;

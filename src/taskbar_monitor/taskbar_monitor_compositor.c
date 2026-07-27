@@ -56,6 +56,19 @@ void TaskbarMonitor_ColorizeTextMask(
     }
 }
 
+void TaskbarMonitor_EnsureInteractiveAlpha(
+    DWORD* pixels, size_t count, COLORREF textColor) {
+    if (!pixels) return;
+    COLORREF background = GetMonitorMatteColor(textColor);
+    DWORD hitPixel = 0x01000000u;
+    if (GetRValue(background) >= 128) hitPixel |= 0x00010000u;
+    if (GetGValue(background) >= 128) hitPixel |= 0x00000100u;
+    if (GetBValue(background) >= 128) hitPixel |= 0x00000001u;
+    for (size_t i = 0; i < count; ++i) {
+        if ((pixels[i] >> 24) == 0) pixels[i] = hitPixel;
+    }
+}
+
 static BOOL PresentPerPixel(HWND window, HDC screenDc, HDC sourceDc,
                             int width, int height) {
     POINT source = {0, 0};
@@ -157,6 +170,8 @@ BOOL TaskbarMonitor_Present(
         BOOL frameReady = GdiFlush();
         if (frameReady) {
             TaskbarMonitor_ColorizeTextMask(
+                pixels, pixelCount, textColor);
+            TaskbarMonitor_EnsureInteractiveAlpha(
                 pixels, pixelCount, textColor);
             presented = PresentPerPixel(
                 window, screenDc, sourceDc, width, height);

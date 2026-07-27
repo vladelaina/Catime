@@ -173,6 +173,25 @@ static inline BOOL RestartTimerWithInterval(HWND hwnd, UINT timerId, UINT interv
 static inline BOOL IsTimerActive(void) {
     return !CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0);
 }
+BOOL HandleTrayMenuClick(HWND hwnd, UINT mouseMessage) {
+    if ((mouseMessage != WM_LBUTTONUP &&
+         mouseMessage != WM_RBUTTONUP) ||
+        !IsValidTrayEventWindow(hwnd) ||
+        IsTrayInteractionSuspended()) {
+        return FALSE;
+    }
+    StopNotificationSound();
+    SetCursor(LoadCursorW(NULL, IDC_ARROW));
+    TryRestorePendingWindowPosition(hwnd);
+    SetTrayInteractionSuspended(TRUE);
+    if (mouseMessage == WM_RBUTTONUP) {
+        ShowColorMenu(hwnd);
+    } else {
+        ShowContextMenu(hwnd);
+    }
+    SetTrayInteractionSuspended(FALSE);
+    return TRUE;
+}
 void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
     if (uID != CLOCK_ID_TRAY_APP_ICON ||
         !IsValidTrayEventWindow(hwnd) ||
@@ -202,22 +221,8 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
             }
             break;
         case WM_RBUTTONUP:
-            if (interactionSuspended) break;
-            StopNotificationSound();
-            SetCursor(LoadCursorW(NULL, IDC_ARROW));
-            TryRestorePendingWindowPosition(hwnd);
-            SetTrayInteractionSuspended(TRUE);
-            ShowColorMenu(hwnd);
-            SetTrayInteractionSuspended(FALSE);
-            break;
         case WM_LBUTTONUP:
-            if (interactionSuspended) break;
-            StopNotificationSound();
-            SetCursor(LoadCursorW(NULL, IDC_ARROW));
-            TryRestorePendingWindowPosition(hwnd);
-            SetTrayInteractionSuspended(TRUE);
-            ShowContextMenu(hwnd);
-            SetTrayInteractionSuspended(FALSE);
+            (void)HandleTrayMenuClick(hwnd, uMouseMsg);
             break;
         default:
             break;
