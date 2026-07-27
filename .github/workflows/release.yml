@@ -192,13 +192,13 @@ jobs:
             <img src="https://get.microsoft.com/images/en-us%20light.svg" width="600"/>
           </a>
 
-          - Chocolatey
+          ### Chocolatey
 
             ```
             choco install catime
             ```
 
-          - Scoop
+          ### Scoop
 
             ```
             scoop bucket add extras
@@ -206,7 +206,7 @@ jobs:
             scoop install catime
             ```
 
-          - Winget
+          ### Winget
 
             ```
             winget install --id VladElaina.Catime
