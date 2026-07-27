@@ -140,6 +140,18 @@ target_link_libraries(taskbar_monitor_compositor_tests PRIVATE gdi32 user32)
 add_test(NAME taskbar_monitor_compositor
     COMMAND taskbar_monitor_compositor_tests)
 
+add_executable(tray_percent_font_tests
+    tests/tray_percent_font_tests.c
+    src/drawing/system_ui_font.c
+    src/tray/tray_animation_percent_font.c
+)
+target_include_directories(tray_percent_font_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(tray_percent_font_tests PRIVATE gdi32 user32)
+add_test(NAME tray_percent_font COMMAND tray_percent_font_tests)
+
 set(_catime_test_targets
     window_placement_tests
     startup_policy_tests
@@ -154,6 +166,7 @@ set(_catime_test_targets
     system_monitor_snapshot_tests
     tray_metric_sync_tests
     taskbar_monitor_compositor_tests
+    tray_percent_font_tests
 )
 
 if(MSVC)

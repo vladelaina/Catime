@@ -1,7 +1,5 @@
 #include "tray_animation_percent_internal.h"
 
-#include "drawing/system_ui_font.h"
-
 void FillTransparentIconBackground(
     void* bits, int cx, int cy, DWORD marker) {
     DWORD* pixels = bits;
@@ -99,45 +97,6 @@ BOOL DrawAlphaTextOnTransparentIcon(
     DeleteDC(maskDc);
     DeleteObject(maskBitmap);
     return TRUE;
-}
-
-HFONT CreateFittedIconTextFont(
-    HDC hdc, const wchar_t* text, int textLen,
-    int maxWidth, int maxHeight, LONG weight,
-    int minPixelHeight, int maxPixelHeight, SIZE* outSize) {
-    if (!hdc || !text || textLen <= 0) return NULL;
-    if (maxWidth < 1) maxWidth = 1;
-    if (maxHeight < 1) maxHeight = 1;
-    if (minPixelHeight < 1) minPixelHeight = 1;
-    if (maxPixelHeight < minPixelHeight) maxPixelHeight = minPixelHeight;
-
-    HFONT fallbackFont = NULL;
-    SIZE fallbackSize = {0};
-    for (int height = maxPixelHeight; height >= minPixelHeight; --height) {
-        LOGFONTW logFont;
-        InitializeSystemUiTextLogFont(&logFont, height, weight);
-        HFONT font = CreateFontIndirectW(&logFont);
-        if (!font) continue;
-        HGDIOBJ oldFont = SelectObject(hdc, font);
-        SIZE measured = {0};
-        BOOL measuredOk = GetTextExtentPoint32W(
-            hdc, text, textLen, &measured);
-        if (oldFont) SelectObject(hdc, oldFont);
-        if (!measuredOk) {
-            DeleteObject(font);
-            continue;
-        }
-        if (measured.cx <= maxWidth && measured.cy <= maxHeight) {
-            if (outSize) *outSize = measured;
-            if (fallbackFont) DeleteObject(fallbackFont);
-            return font;
-        }
-        if (fallbackFont) DeleteObject(fallbackFont);
-        fallbackFont = font;
-        fallbackSize = measured;
-    }
-    if (outSize) *outSize = fallbackSize;
-    return fallbackFont;
 }
 
 HBITMAP CreateInitializedMaskBitmap(int cx, int cy, BYTE value) {

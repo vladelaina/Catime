@@ -60,12 +60,8 @@ void TaskbarMonitor_RecreateFont(void) {
     LOGFONTW font = {0};
     UINT dpi = g_taskbarMonitor.dpi ? g_taskbarMonitor.dpi : 96;
     TaskbarMonitor_DeleteFont();
-    InitializeSystemUiTextLogFont(
-        &font,
-        MulDiv(TASKBAR_MONITOR_TEXT_POINT_SIZE,
-               (int)dpi, 72),
-        FW_NORMAL);
-    font.lfQuality = CLEARTYPE_QUALITY;
+    InitializeSystemUiMetricTextLogFont(
+        &font, dpi, CLEARTYPE_QUALITY);
     g_taskbarMonitor.font = CreateFontIndirectW(&font);
 }
 

@@ -62,6 +62,9 @@ HFONT CreateFittedIconTextFont(
     HDC hdc, const wchar_t* text, int textLen,
     int maxWidth, int maxHeight, LONG weight,
     int minPixelHeight, int maxPixelHeight, SIZE* outSize);
+HFONT CreateFittedMetricIconTextFont(
+    HDC hdc, const wchar_t* text, int textLen,
+    int maxWidth, int maxHeight, UINT dpi, SIZE* outSize);
 HBITMAP CreateInitializedMaskBitmap(int cx, int cy, BYTE value);
 void ClearGeneratedIconCacheLocked(void);
 BOOL SnapshotIconColorsLocked(COLORREF* textColor, COLORREF* bgColor);

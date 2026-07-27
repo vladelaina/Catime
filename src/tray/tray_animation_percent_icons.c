@@ -51,9 +51,9 @@ static HICON CreatePercentIcon16Uncached(
     _snwprintf_s(text, _countof(text), _TRUNCATE, L"%d", percent);
     int textLength = (int)wcsnlen(text, _countof(text));
     SIZE textSize = {0};
-    HFONT font = CreateFittedIconTextFont(
-        memoryDc, text, textLength, cx - 2, cy,
-        FW_NORMAL, 6, cy - 1, &textSize);
+    UINT dpi = (UINT)GetDeviceCaps(memoryDc, LOGPIXELSY);
+    HFONT font = CreateFittedMetricIconTextFont(
+        memoryDc, text, textLength, cx - 1, cy, dpi, &textSize);
     HFONT oldFont = font ? (HFONT)SelectObject(memoryDc, font) : NULL;
     if (!font) GetTextExtentPoint32W(
         memoryDc, text, textLength, &textSize);

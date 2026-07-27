@@ -7,6 +7,8 @@
 
 #include <wchar.h>
 
+#define SYSTEM_UI_METRIC_TEXT_POINT_SIZE 9
+
 void InitializeSystemUiTextLogFont(
     LOGFONTW* logFont, int pixelHeight, LONG weight) {
     if (!logFont) return;
@@ -41,4 +43,13 @@ void InitializeSystemUiTextLogFont(
     logFont->lfOutPrecision = OUT_DEFAULT_PRECIS;
     logFont->lfClipPrecision = CLIP_DEFAULT_PRECIS;
     logFont->lfQuality = ANTIALIASED_QUALITY;
+}
+
+void InitializeSystemUiMetricTextLogFont(
+    LOGFONTW* logFont, UINT dpi, BYTE quality) {
+    if (dpi == 0) dpi = 96;
+    int pixelHeight = MulDiv(
+        SYSTEM_UI_METRIC_TEXT_POINT_SIZE, (int)dpi, 72);
+    InitializeSystemUiTextLogFont(logFont, pixelHeight, FW_NORMAL);
+    if (logFont) logFont->lfQuality = quality;
 }

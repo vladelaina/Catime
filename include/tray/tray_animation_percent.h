@@ -60,7 +60,8 @@ void GetGeneratedTrayIconSizeSnapshot(int* outCx, int* outCy);
  *
  * @details
  * Renders percentage as text on small icon.
- * Uses the system UI font and auto-scales text to fit icon size.
+ * Uses the same 9pt system metric font as the taskbar monitor and preserves
+ * its height while fitting wider values to the icon.
  */
 HICON CreatePercentIcon16(int percent);
 
