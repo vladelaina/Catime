@@ -8,9 +8,7 @@
 #define TASKBAR_MONITOR_CLASS L"CatimeTaskbarMonitorWindow"
 #define TASKBAR_MONITOR_PRESENT_TIMER_ID 2u
 #define TASKBAR_MONITOR_PRESENT_MS 100u
-#define TASKBAR_MONITOR_THEME_TIMER_ID 3u
-#define TASKBAR_MONITOR_THEME_SETTLE_MS 300u
-#define TASKBAR_MONITOR_THEME_NO_ANIMATION_SETTLE_MS 50u
+#define TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID 3u
 #define TASKBAR_MONITOR_FALLBACK_NETWORK_WIDTH 72
 #define TASKBAR_MONITOR_FALLBACK_RESOURCE_WIDTH 64
 #define TASKBAR_MONITOR_HORIZONTAL_HEIGHT 32
@@ -70,13 +68,14 @@ typedef struct {
     BOOL horizontal;
     BOOL initialized;
     BOOL classRegistered;
-    BOOL darkMode;
+    COLORREF textColor;
     BOOL cpuMemoryEnabled;
     BOOL networkEnabled;
     BOOL taskListReserved;
     TaskbarHostMode mode;
     SystemMonitorSnapshot metrics;
     TaskbarCompositionMode compositionMode;
+    DWORD themeRecheckDueTick;
     wchar_t cpuLabel[TASKBAR_MONITOR_LABEL_LENGTH];
     wchar_t memoryLabel[TASKBAR_MONITOR_LABEL_LENGTH];
 } TaskbarMonitorState;
@@ -97,6 +96,11 @@ BOOL TaskbarMonitor_Present(
     HWND window, HDC fallbackTarget,
     const TaskbarMetricText* metrics,
     int metricCount);
+void TaskbarMonitor_ColorizeTextMask(
+    DWORD* pixels, size_t count, COLORREF textColor);
+void TaskbarMonitor_DrawMetricGrid(
+    HDC dc, int width, int height,
+    const TaskbarMetricText* metrics, int metricCount);
 
 void TaskbarMonitor_RestoreClassicTaskList(void);
 BOOL TaskbarMonitor_AttachToTaskbar(void);

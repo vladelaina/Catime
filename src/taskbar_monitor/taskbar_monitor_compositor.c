@@ -5,17 +5,11 @@
 
 #include "taskbar_monitor_internal.h"
 
+#include "drawing/system_ui_font.h"
 #include "log.h"
 
 static COLORREF GetMonitorTextColor(void) {
-    HIGHCONTRASTW contrast = {0};
-    contrast.cbSize = sizeof(contrast);
-    BOOL highContrast = SystemParametersInfoW(
-        SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
-        (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0;
-    if (highContrast) return GetSysColor(COLOR_WINDOWTEXT);
-    return g_taskbarMonitor.darkMode ? RGB(255, 255, 255)
-                                     : RGB(0, 0, 0);
+    return g_taskbarMonitor.textColor;
 }
 
 static COLORREF GetMonitorMatteColor(COLORREF textColor) {
@@ -24,96 +18,6 @@ static COLORREF GetMonitorMatteColor(COLORREF textColor) {
                              114u * GetBValue(textColor);
     return luminance < 128000u ? RGB(210, 210, 211)
                                : RGB(32, 32, 32);
-}
-
-static void DrawAlignedText(HDC dc, const RECT* textRect,
-                            const wchar_t* text, UINT alignment) {
-    RECT drawRect = *textRect;
-    DrawTextW(dc, text, -1, &drawRect,
-              alignment | DT_VCENTER | DT_SINGLELINE |
-              DT_NOPREFIX | DT_END_ELLIPSIS);
-}
-
-static int GetMetricLabelWidth(TaskbarMetricGroup group) {
-    return group == TASKBAR_METRIC_GROUP_NETWORK
-        ? g_taskbarMonitor.networkLabelWidth
-        : g_taskbarMonitor.resourceLabelWidth;
-}
-
-static void DrawMetricRow(HDC dc, const RECT* cell,
-                          const TaskbarMetricText* metric) {
-    RECT content = *cell;
-    int padding = TaskbarMonitor_ScaleForDpi(
-        TASKBAR_MONITOR_CELL_PADDING, g_taskbarMonitor.dpi);
-    int columnGap = TaskbarMonitor_ScaleForDpi(
-        TASKBAR_MONITOR_COLUMN_GAP, g_taskbarMonitor.dpi);
-    content.left += padding;
-    content.right -= padding;
-    if (content.right <= content.left) return;
-
-    int available = content.right - content.left;
-    int labelWidth = GetMetricLabelWidth(metric->group);
-    if (labelWidth > available - columnGap - 1) {
-        labelWidth = available - columnGap - 1;
-    }
-    if (labelWidth < 1) labelWidth = 1;
-    RECT labelRect = content;
-    labelRect.right = labelRect.left + labelWidth;
-    RECT valueRect = content;
-    valueRect.left = labelRect.right + columnGap;
-    DrawAlignedText(dc, &labelRect, metric->label, DT_LEFT);
-    if (valueRect.right > valueRect.left) {
-        UINT valueAlignment =
-            metric->group == TASKBAR_METRIC_GROUP_NETWORK
-                ? DT_RIGHT : DT_LEFT;
-        DrawAlignedText(dc, &valueRect, metric->value, valueAlignment);
-    }
-}
-
-static void GetHorizontalGroupBounds(TaskbarMetricGroup group, int width,
-                                     int* left, int* right) {
-    *left = 0;
-    *right = width;
-    if (!g_taskbarMonitor.networkEnabled ||
-        !g_taskbarMonitor.cpuMemoryEnabled) return;
-    int split = g_taskbarMonitor.networkGroupWidth;
-    int groupGap = TaskbarMonitor_ScaleForDpi(
-        TASKBAR_MONITOR_GROUP_GAP, g_taskbarMonitor.dpi);
-    if (split <= 0 || split + groupGap >= width) split = width / 2;
-    if (group == TASKBAR_METRIC_GROUP_NETWORK) {
-        *right = split;
-    } else {
-        *left = split + groupGap;
-    }
-}
-
-static void DrawMetricGrid(
-    HDC dc, int width, int height,
-    const TaskbarMetricText* metrics,
-    int metricCount) {
-    if (metricCount <= 0) return;
-    if (g_taskbarMonitor.horizontal) {
-        for (int i = 0; i < metricCount; ++i) {
-            int left;
-            int right;
-            GetHorizontalGroupBounds(
-                metrics[i].group, width, &left, &right);
-            int row = metrics[i].row;
-            RECT cell = {
-                left,
-                height * row / 2,
-                right,
-                height * (row + 1) / 2
-            };
-            DrawMetricRow(dc, &cell, &metrics[i]);
-        }
-        return;
-    }
-    for (int i = 0; i < metricCount; ++i) {
-        RECT cell = {0, height * i / metricCount,
-                     width, height * (i + 1) / metricCount};
-        DrawMetricRow(dc, &cell, &metrics[i]);
-    }
 }
 
 static DWORD DibPixelFromColor(COLORREF color) {
@@ -130,13 +34,13 @@ static BYTE PixelCoverage(DWORD pixel) {
     unsigned int blue = pixel & 0xffu;
     unsigned int green = (pixel >> 8) & 0xffu;
     unsigned int red = (pixel >> 16) & 0xffu;
-    unsigned int luminance = (77u * red + 150u * green +
-                              29u * blue + 128u) >> 8;
-    return (BYTE)(255u - luminance);
+    unsigned int average = (red + green + blue + 1u) / 3u;
+    return (BYTE)(255u - average);
 }
 
-static void ApplyPerPixelAlpha(DWORD* pixels, size_t count,
-                               COLORREF textColor) {
+void TaskbarMonitor_ColorizeTextMask(
+    DWORD* pixels, size_t count, COLORREF textColor) {
+    if (!pixels) return;
     BYTE red = GetRValue(textColor);
     BYTE green = GetGValue(textColor);
     BYTE blue = GetBValue(textColor);
@@ -245,35 +149,64 @@ BOOL TaskbarMonitor_Present(
 
     COLORREF textColor = GetMonitorTextColor();
     BOOL presented = FALSE;
-    if (g_taskbarMonitor.compositionMode != TASKBAR_COMPOSITION_PER_PIXEL &&
-        fallbackTarget) {
-        COLORREF matteColor = GetMonitorMatteColor(textColor);
-        FillPixels(pixels, pixelCount, DibPixelFromColor(matteColor));
-        SetTextColor(sourceDc, textColor);
-        DrawMetricGrid(sourceDc, width, height, metrics, metricCount);
-        GdiFlush();
-        presented = PresentColorKey(
-            window, fallbackTarget, sourceDc,
-            width, height, matteColor);
+    if (g_taskbarMonitor.compositionMode != TASKBAR_COMPOSITION_COLOR_KEY) {
+        FillPixels(pixels, pixelCount, 0x00ffffffu);
+        SetTextColor(sourceDc, RGB(0, 0, 0));
+        TaskbarMonitor_DrawMetricGrid(
+            sourceDc, width, height, metrics, metricCount);
+        BOOL frameReady = GdiFlush();
+        if (frameReady) {
+            TaskbarMonitor_ColorizeTextMask(
+                pixels, pixelCount, textColor);
+            presented = PresentPerPixel(
+                window, screenDc, sourceDc, width, height);
+        }
         if (presented) {
             g_taskbarMonitor.compositionMode =
-                TASKBAR_COMPOSITION_COLOR_KEY;
-        } else {
-            LOG_WARNING("Taskbar color-key composition unavailable; using per-pixel alpha (error=%lu)",
+                TASKBAR_COMPOSITION_PER_PIXEL;
+        } else if (fallbackTarget) {
+            LOG_WARNING("Taskbar per-pixel composition unavailable; using color-key fallback (error=%lu)",
                         GetLastError());
             ResetLayeredComposition(window);
             g_taskbarMonitor.compositionMode =
-                TASKBAR_COMPOSITION_PER_PIXEL;
+                TASKBAR_COMPOSITION_COLOR_KEY;
         }
     }
-    if (!presented &&
-        g_taskbarMonitor.compositionMode == TASKBAR_COMPOSITION_PER_PIXEL) {
-        FillPixels(pixels, pixelCount, 0x00ffffffu);
-        SetTextColor(sourceDc, RGB(0, 0, 0));
-        DrawMetricGrid(sourceDc, width, height, metrics, metricCount);
-        GdiFlush();
-        ApplyPerPixelAlpha(pixels, pixelCount, textColor);
-        presented = PresentPerPixel(window, screenDc, sourceDc, width, height);
+    if (!presented && fallbackTarget) {
+        HFONT fallbackFont = CreateNonAntialiasedFontCopy(font);
+        HGDIOBJ previousFont = fallbackFont
+            ? SelectObject(sourceDc, fallbackFont) : NULL;
+        BOOL fallbackReady = previousFont && previousFont != HGDI_ERROR;
+        if (fallbackReady) {
+            COLORREF matteColor = GetMonitorMatteColor(textColor);
+            FillPixels(pixels, pixelCount, DibPixelFromColor(matteColor));
+            SetTextColor(sourceDc, textColor);
+            TaskbarMonitor_DrawMetricGrid(
+                sourceDc, width, height, metrics, metricCount);
+            BOOL frameReady = GdiFlush();
+            if (frameReady) {
+                presented = PresentColorKey(
+                    window, fallbackTarget, sourceDc,
+                    width, height, matteColor);
+            }
+            if (presented) {
+                g_taskbarMonitor.compositionMode =
+                    TASKBAR_COMPOSITION_COLOR_KEY;
+            } else {
+                LOG_WARNING("Taskbar color-key fallback unavailable (error=%lu)",
+                            GetLastError());
+                ResetLayeredComposition(window);
+                g_taskbarMonitor.compositionMode =
+                    TASKBAR_COMPOSITION_UNKNOWN;
+            }
+        } else {
+            LOG_WARNING("Taskbar color-key fallback font unavailable");
+            ResetLayeredComposition(window);
+            g_taskbarMonitor.compositionMode =
+                TASKBAR_COMPOSITION_UNKNOWN;
+        }
+        if (fallbackReady) SelectObject(sourceDc, previousFont);
+        if (fallbackFont) DeleteObject(fallbackFont);
     }
 
     SelectObject(sourceDc, oldFont);

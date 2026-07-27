@@ -66,7 +66,7 @@ void TaskbarMonitor_RecreateFont(void) {
 }
 
 void TaskbarMonitor_UpdateThemeState(void) {
-    g_taskbarMonitor.darkMode = IsSystemDarkModeActive();
+    g_taskbarMonitor.textColor = GetSystemMetricTextColor();
 }
 
 static int MeasureTextWidth(HDC dc, const wchar_t* text) {

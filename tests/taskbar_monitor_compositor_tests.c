@@ -25,28 +25,116 @@ int TaskbarMonitor_ScaleForDpi(int value, UINT dpi) {
     return MulDiv(value, (int)dpi, 96);
 }
 
-static BOOL IsHighContrastActive(void) {
-    HIGHCONTRASTW contrast = {0};
-    contrast.cbSize = sizeof(contrast);
-    return SystemParametersInfoW(
-               SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
-           (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0;
-}
-
-static void ExpectColorKey(HWND window, COLORREF expectedColor) {
+static void ExpectNoColorKey(HWND window) {
     COLORREF color = 0;
     BYTE alpha = 0;
     DWORD flags = 0;
-    Expect(GetLayeredWindowAttributes(window, &color, &alpha, &flags),
-           "layered-window attributes were unavailable");
-    Expect((flags & LWA_COLORKEY) != 0,
-           "color-key composition was not active");
-    Expect(color == expectedColor,
-           "the active taskbar color key did not match the theme");
-    if ((flags & LWA_ALPHA) != 0) {
-        Expect(alpha == 255,
-               "the taskbar monitor remained hidden after a color-key swap");
+    if (GetLayeredWindowAttributes(window, &color, &alpha, &flags)) {
+        Expect((flags & LWA_COLORKEY) == 0,
+               "per-pixel composition retained a color key");
     }
+}
+
+static void CheckSyntheticMaskPixels(void) {
+    DWORD lightPixels[] = {0x00ffffffu, 0x00000000u, 0x00ff0000u};
+    TaskbarMonitor_ColorizeTextMask(
+        lightPixels, _countof(lightPixels), RGB(255, 255, 255));
+    Expect(lightPixels[0] == 0,
+           "a white mask background was not transparent");
+    Expect(lightPixels[1] == 0xffffffffu,
+           "a solid glyph pixel did not remain opaque white");
+    Expect(lightPixels[2] == 0xaaaaaaaau,
+           "a colored ClearType edge was not neutralized");
+
+    DWORD darkPixel = 0x00ff0000u;
+    TaskbarMonitor_ColorizeTextMask(&darkPixel, 1, RGB(0, 0, 0));
+    Expect(darkPixel == 0xaa000000u,
+           "a dark glyph edge was not premultiplied correctly");
+}
+
+static void CheckRenderedMaskPixels(void) {
+    const int width = 180;
+    const int height = 20;
+    const wchar_t text[] =
+        L"\x2191:78% \x5185\x5b58:68%";
+    BITMAPINFO info = {0};
+    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    info.bmiHeader.biWidth = width;
+    info.bmiHeader.biHeight = -height;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+
+    DWORD* pixels = NULL;
+    HDC dc = CreateCompatibleDC(NULL);
+    HBITMAP bitmap = CreateDIBSection(
+        NULL, &info, DIB_RGB_COLORS, (void**)&pixels, NULL, 0);
+    HFONT font = CreateFontW(
+        -12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+        CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, L"Segoe UI");
+    Expect(dc && bitmap && pixels && font,
+           "failed to create the rendered mask test surface");
+    if (!dc || !bitmap || !pixels || !font) goto cleanup;
+
+    HGDIOBJ oldBitmap = SelectObject(dc, bitmap);
+    HGDIOBJ oldFont = SelectObject(dc, font);
+    for (int i = 0; i < width * height; ++i) {
+        pixels[i] = 0x00ffffffu;
+    }
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, RGB(0, 0, 0));
+    TextOutW(dc, 1, 1, text, (int)wcslen(text));
+    GdiFlush();
+    TaskbarMonitor_ColorizeTextMask(
+        pixels, (size_t)width * height, RGB(255, 255, 255));
+
+    BOOL neutral = TRUE;
+    int coveredPixels = 0;
+    for (int i = 0; i < width * height; ++i) {
+        BYTE alpha = (BYTE)(pixels[i] >> 24);
+        BYTE red = (BYTE)(pixels[i] >> 16);
+        BYTE green = (BYTE)(pixels[i] >> 8);
+        BYTE blue = (BYTE)pixels[i];
+        if (alpha == 0) {
+            if (pixels[i] != 0) neutral = FALSE;
+            continue;
+        }
+        ++coveredPixels;
+        if (red != alpha || green != alpha || blue != alpha) {
+            neutral = FALSE;
+        }
+    }
+    Expect(coveredPixels > 0, "the rendered glyph mask was empty");
+    Expect(neutral, "the rendered glyph mask retained colored fringes");
+
+    for (int i = 0; i < width * height; ++i) {
+        pixels[i] = 0x00ffffffu;
+    }
+    TextOutW(dc, 1, 1, text, (int)wcslen(text));
+    GdiFlush();
+    TaskbarMonitor_ColorizeTextMask(
+        pixels, (size_t)width * height, RGB(0, 0, 0));
+    neutral = TRUE;
+    coveredPixels = 0;
+    for (int i = 0; i < width * height; ++i) {
+        BYTE alpha = (BYTE)(pixels[i] >> 24);
+        if (alpha == 0) {
+            if (pixels[i] != 0) neutral = FALSE;
+            continue;
+        }
+        ++coveredPixels;
+        if ((pixels[i] & 0x00ffffffu) != 0) neutral = FALSE;
+    }
+    Expect(coveredPixels > 0, "the dark rendered glyph mask was empty");
+    Expect(neutral, "the dark rendered glyph mask was not premultiplied");
+    SelectObject(dc, oldFont);
+    SelectObject(dc, oldBitmap);
+
+cleanup:
+    if (font) DeleteObject(font);
+    if (bitmap) DeleteObject(bitmap);
+    if (dc) DeleteDC(dc);
 }
 
 static void SetMetric(TaskbarMetricText* metric, int row,
@@ -59,22 +147,21 @@ static void SetMetric(TaskbarMetricText* metric, int row,
 
 static BOOL PresentTheme(HWND window, HDC target,
                          const TaskbarMetricText* metrics,
-                         BOOL darkMode, COLORREF expectedColor) {
-    g_taskbarMonitor.darkMode = darkMode;
+                         BOOL darkMode) {
+    g_taskbarMonitor.textColor = darkMode
+        ? RGB(255, 255, 255) : RGB(0, 0, 0);
     BOOL presented = TaskbarMonitor_Present(window, target, metrics, 2);
     Expect(presented, "taskbar monitor frame presentation failed");
     Expect(g_taskbarMonitor.compositionMode ==
-               TASKBAR_COMPOSITION_COLOR_KEY,
-           "taskbar monitor unexpectedly abandoned color-key composition");
-    if (presented) ExpectColorKey(window, expectedColor);
+               TASKBAR_COMPOSITION_PER_PIXEL,
+           "taskbar monitor did not use per-pixel alpha composition");
+    if (presented) ExpectNoColorKey(window);
     return presented;
 }
 
 int main(void) {
-    if (IsHighContrastActive()) {
-        puts("taskbar compositor theme transition skipped in high contrast");
-        return 0;
-    }
+    CheckSyntheticMaskPixels();
+    CheckRenderedMaskPixels();
 
     const wchar_t className[] = L"CatimeTaskbarCompositorTest";
     HINSTANCE instance = GetModuleHandleW(NULL);
@@ -110,18 +197,16 @@ int main(void) {
     g_taskbarMonitor.cpuMemoryEnabled = TRUE;
     g_taskbarMonitor.resourceLabelWidth = 48;
     g_taskbarMonitor.resourceGroupWidth = 180;
+    g_taskbarMonitor.compositionMode = TASKBAR_COMPOSITION_UNKNOWN;
 
     TaskbarMetricText metrics[2] = {0};
     SetMetric(&metrics[0], 0, L"CPU:", L"42%");
     SetMetric(&metrics[1], 1, L"MEM:", L"68%");
 
     if (target && font) {
-        (void)PresentTheme(window, target, metrics, FALSE,
-                           RGB(210, 210, 211));
-        (void)PresentTheme(window, target, metrics, TRUE,
-                           RGB(32, 32, 32));
-        (void)PresentTheme(window, target, metrics, FALSE,
-                           RGB(210, 210, 211));
+        for (int i = 0; i < 8; ++i) {
+            (void)PresentTheme(window, target, metrics, (i & 1) != 0);
+        }
     }
 
     if (target) ReleaseDC(window, target);

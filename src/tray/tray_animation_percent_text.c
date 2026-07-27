@@ -1,5 +1,7 @@
 #include "tray_animation_percent_internal.h"
 
+#include "drawing/system_ui_font.h"
+
 void FillTransparentIconBackground(
     void* bits, int cx, int cy, DWORD marker) {
     DWORD* pixels = bits;
@@ -44,6 +46,32 @@ static BYTE GetMaskPixelAlpha(DWORD pixel) {
     return (BYTE)(((unsigned int)red + green + blue) / 3u);
 }
 
+BOOL DrawFallbackTextOnTransparentIcon(
+    HDC dc, void* bits, int cx, int cy, DWORD marker,
+    HFONT font, const wchar_t* text, int textLen,
+    int x, int y, COLORREF textColor) {
+    if (!dc || !bits || !text || textLen <= 0 || cx <= 0 || cy <= 0) {
+        return FALSE;
+    }
+    HFONT sourceFont = font ? font :
+        (HFONT)GetCurrentObject(dc, OBJ_FONT);
+    HFONT fallbackFont = CreateNonAntialiasedFontCopy(sourceFont);
+    if (!fallbackFont) return FALSE;
+    HGDIOBJ oldFont = SelectObject(dc, fallbackFont);
+    if (!oldFont || oldFont == HGDI_ERROR) {
+        DeleteObject(fallbackFont);
+        return FALSE;
+    }
+    FillTransparentIconBackground(bits, cx, cy, marker);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, textColor);
+    BOOL drawn = TextOutW(dc, x, y, text, textLen) && GdiFlush();
+    if (drawn) RepairTransparentIconAlpha(bits, cx, cy, marker);
+    SelectObject(dc, oldFont);
+    DeleteObject(fallbackFont);
+    return drawn;
+}
+
 BOOL DrawAlphaTextOnTransparentIcon(
     HDC screenDc, void* targetBits, int cx, int cy,
     HFONT font, const wchar_t* text, int textLen,
@@ -83,20 +111,23 @@ BOOL DrawAlphaTextOnTransparentIcon(
     SetBkMode(maskDc, TRANSPARENT);
     SetTextColor(maskDc, RGB(255, 255, 255));
     HGDIOBJ oldFont = SelectObject(maskDc, font);
-    TextOutW(maskDc, x, y, text, textLen);
-    if (oldFont) SelectObject(maskDc, oldFont);
+    BOOL drawn = oldFont && oldFont != HGDI_ERROR &&
+                 TextOutW(maskDc, x, y, text, textLen) && GdiFlush();
+    if (oldFont && oldFont != HGDI_ERROR) SelectObject(maskDc, oldFont);
 
     DWORD* source = maskBits;
     DWORD* target = targetBits;
     size_t count = (size_t)cx * (size_t)cy;
-    for (size_t i = 0; i < count; ++i) {
-        BYTE alpha = GetMaskPixelAlpha(source[i]);
-        if (alpha != 0) target[i] = ComposeAlphaTextPixel(textColor, alpha);
+    if (drawn) {
+        for (size_t i = 0; i < count; ++i) {
+            BYTE alpha = GetMaskPixelAlpha(source[i]);
+            target[i] = ComposeAlphaTextPixel(textColor, alpha);
+        }
     }
     SelectObject(maskDc, oldBitmap);
     DeleteDC(maskDc);
     DeleteObject(maskBitmap);
-    return TRUE;
+    return drawn;
 }
 
 HBITMAP CreateInitializedMaskBitmap(int cx, int cy, BYTE value) {

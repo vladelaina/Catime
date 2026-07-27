@@ -9,6 +9,7 @@
 #include "config.h"
 #include "log.h"
 #include "system_monitor.h"
+#include "tray/tray_theme_state.h"
 
 static BOOL RegisterMonitorClass(void) {
     if (g_taskbarMonitor.classRegistered) return TRUE;
@@ -60,6 +61,7 @@ static void DestroyMonitorWindow(void) {
     g_taskbarMonitor.taskList = NULL;
     g_taskbarMonitor.mode = TASKBAR_HOST_NONE;
     g_taskbarMonitor.compositionMode = TASKBAR_COMPOSITION_UNKNOWN;
+    g_taskbarMonitor.themeRecheckDueTick = 0;
     TaskbarMonitor_DeleteFont();
 }
 
@@ -168,19 +170,11 @@ void TaskbarMonitor_Refresh(void) {
         CreateMonitorWindow();
         return;
     }
-    KillTimer(g_taskbarMonitor.window, TASKBAR_MONITOR_THEME_TIMER_ID);
+    KillTimer(g_taskbarMonitor.window,
+              TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID);
+    g_taskbarMonitor.themeRecheckDueTick = 0;
     TaskbarMonitor_AttachToTaskbar();
     InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
-}
-
-static UINT GetThemeSettleDelay(void) {
-    BOOL animationsEnabled = TRUE;
-    if (SystemParametersInfoW(
-            SPI_GETCLIENTAREAANIMATION, 0, &animationsEnabled, 0) &&
-        !animationsEnabled) {
-        return TASKBAR_MONITOR_THEME_NO_ANIMATION_SETTLE_MS;
-    }
-    return TASKBAR_MONITOR_THEME_SETTLE_MS;
 }
 
 void TaskbarMonitor_RefreshAppearance(void) {
@@ -190,9 +184,14 @@ void TaskbarMonitor_RefreshAppearance(void) {
         CreateMonitorWindow();
         return;
     }
+    TaskbarMonitor_UpdateThemeState();
+    InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
+    UINT delay = GetSystemThemeRecheckDelay();
+    g_taskbarMonitor.themeRecheckDueTick = GetTickCount() + delay;
     if (!SetTimer(g_taskbarMonitor.window,
-                  TASKBAR_MONITOR_THEME_TIMER_ID,
-                  GetThemeSettleDelay(), NULL)) {
+                  TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID,
+                  delay, NULL)) {
+        g_taskbarMonitor.themeRecheckDueTick = 0;
         TaskbarMonitor_UpdateThemeState();
         InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
     }

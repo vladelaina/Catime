@@ -7,10 +7,46 @@
 #include "dialog/dialog_common.h"
 #include "drag_scale.h"
 #include "tray/tray_menu_theme.h"
+#include "tray/tray_animation_core.h"
+#include "tray/tray_animation_percent.h"
+#include "tray/tray_theme_state.h"
 #include "taskbar_monitor.h"
 #include "window.h"
 
+#define THEME_ICON_RECHECK_TIMER_ID 42432u
+
 static BOOL g_sessionSettingsPrepared = FALSE;
+static DWORD g_themeIconRecheckDueTick = 0;
+
+static void RefreshThemeAwareTrayIcon(void) {
+    BOOL currentIconUsesTheme =
+        TrayAnimation_GetBuiltinRefreshNeeds(NULL);
+    if (InvalidatePercentIconThemeCache() && currentIconUsesTheme) {
+        TrayAnimation_RefreshCurrentIcon();
+    }
+}
+
+static void CALLBACK ThemeIconRecheckTimerProc(
+    HWND hwnd, UINT message, UINT_PTR timerId, DWORD tick) {
+    (void)message;
+    (void)tick;
+    if ((LONG)(GetTickCount() - g_themeIconRecheckDueTick) < 0) return;
+    KillTimer(hwnd, timerId);
+    g_themeIconRecheckDueTick = 0;
+    RefreshThemeAwareTrayIcon();
+}
+
+static void RefreshThemeDependentContent(HWND hwnd) {
+    Dialog_RefreshOpenThemes();
+    RefreshThemeAwareTrayIcon();
+    TaskbarMonitor_RefreshAppearance();
+    UINT delay = GetSystemThemeRecheckDelay();
+    g_themeIconRecheckDueTick = GetTickCount() + delay;
+    if (!SetTimer(hwnd, THEME_ICON_RECHECK_TIMER_ID, delay,
+                  ThemeIconRecheckTimerProc)) {
+        g_themeIconRecheckDueTick = 0;
+    }
+}
 
 static BOOL IsThemeSettingChange(WPARAM wp, LPARAM lp) {
     if (wp == SPI_SETHIGHCONTRAST) return TRUE;
@@ -36,8 +72,7 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
      * the popup path still performs a final refresh before showing a menu. */
     RefreshNativeMenuTheme();
     if (IsThemeSettingChange(wp, lp)) {
-        Dialog_RefreshOpenThemes();
-        TaskbarMonitor_RefreshAppearance();
+        RefreshThemeDependentContent(hwnd);
     }
 
     if (wp != SPI_SETWORKAREA || CLOCK_IS_DRAGGING) {
@@ -52,8 +87,7 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleThemeChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     RefreshNativeMenuTheme();
-    Dialog_RefreshOpenThemes();
-    TaskbarMonitor_RefreshAppearance();
+    RefreshThemeDependentContent(hwnd);
     return DefWindowProc(hwnd, WM_THEMECHANGED, wp, lp);
 }
 

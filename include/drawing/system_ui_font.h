@@ -10,4 +10,7 @@ void InitializeSystemUiTextLogFont(
 void InitializeSystemUiMetricTextLogFont(
     LOGFONTW* logFont, UINT dpi, BYTE quality);
 
+/** Clone a font without antialiasing for exact color-key fallbacks. */
+HFONT CreateNonAntialiasedFontCopy(HFONT sourceFont);
+
 #endif /* CATIME_SYSTEM_UI_FONT_H */

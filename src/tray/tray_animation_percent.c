@@ -85,8 +85,7 @@ void CleanupPercentIconCache(void) {
 }
 
 static COLORREF QueryThemeTextColor(void) {
-    return TrayThemeState_IsSystemDark()
-        ? RGB(255, 255, 255) : RGB(0, 0, 0);
+    return GetSystemMetricTextColor();
 }
 
 static BOOL TryGetCachedThemeTextColorLocked(COLORREF* textColor) {
@@ -143,6 +142,18 @@ BOOL GetIconColorSnapshot(COLORREF* textColor, COLORREF* bgColor) {
 BOOL GetPercentIconColorSnapshot(
     COLORREF* textColor, COLORREF* bgColor) {
     return GetIconColorSnapshot(textColor, bgColor);
+}
+
+BOOL InvalidatePercentIconThemeCache(void) {
+    if (!BeginPercentIconCacheAccess()) return FALSE;
+    BOOL themeAware = g_percentBgColor == TRANSPARENT_BG_AUTO;
+    if (themeAware) {
+        ClearGeneratedIconCacheLocked();
+        g_cachedThemeTextColor = CLR_INVALID;
+        g_lastThemeCheckTick = 0;
+    }
+    EndPercentIconCacheAccess();
+    return themeAware;
 }
 
 void SetPercentIconColors(COLORREF textColor, COLORREF bgColor) {

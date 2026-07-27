@@ -130,7 +130,9 @@ add_test(NAME tray_metric_sync COMMAND tray_metric_sync_tests)
 
 add_executable(taskbar_monitor_compositor_tests
     tests/taskbar_monitor_compositor_tests.c
+    src/drawing/system_ui_font.c
     src/taskbar_monitor/taskbar_monitor_compositor.c
+    src/taskbar_monitor/taskbar_monitor_layout.c
 )
 target_include_directories(taskbar_monitor_compositor_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
@@ -143,7 +145,10 @@ add_test(NAME taskbar_monitor_compositor
 add_executable(tray_percent_font_tests
     tests/tray_percent_font_tests.c
     src/drawing/system_ui_font.c
+    src/tray/tray_animation_percent.c
     src/tray/tray_animation_percent_font.c
+    src/tray/tray_animation_percent_icons.c
+    src/tray/tray_animation_percent_text.c
 )
 target_include_directories(tray_percent_font_tests PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/include"

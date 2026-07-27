@@ -62,20 +62,30 @@ static HICON CreatePercentIcon16Uncached(
     if (x < 0) x = 0;
     if (y < 0) y = 0;
 
+    BOOL textDrawn = TRUE;
     if (transparent) {
-        if (!DrawAlphaTextOnTransparentIcon(
-                screenDc, bits, cx, cy, font,
-                text, textLength, x, y, textColor)) {
-            FillTransparentIconBackground(bits, cx, cy, marker);
-            TextOutW(memoryDc, x, y, text, textLength);
-            RepairTransparentIconAlpha(bits, cx, cy, marker);
+        textDrawn = DrawAlphaTextOnTransparentIcon(
+            screenDc, bits, cx, cy, font,
+            text, textLength, x, y, textColor);
+        if (!textDrawn) {
+            textDrawn = DrawFallbackTextOnTransparentIcon(
+                memoryDc, bits, cx, cy, marker, font,
+                text, textLength, x, y, textColor);
         }
     } else {
-        TextOutW(memoryDc, x, y, text, textLength);
-        MakeIconFullyOpaque(bits, cx, cy);
+        textDrawn = TextOutW(memoryDc, x, y, text, textLength) &&
+                    GdiFlush();
+        if (textDrawn) MakeIconFullyOpaque(bits, cx, cy);
     }
     if (oldFont) SelectObject(memoryDc, oldFont);
     SelectObject(memoryDc, oldBitmap);
+    if (!textDrawn) {
+        if (font) DeleteObject(font);
+        ReleaseDC(NULL, screenDc);
+        DeleteDC(memoryDc);
+        DeleteObject(colorBitmap);
+        return NULL;
+    }
 
     HBITMAP maskBitmap = CreateInitializedMaskBitmap(
         cx, cy, transparent ? 0xFF : 0x00);
@@ -109,7 +119,8 @@ static HICON CreatePercentIcon16Uncached(
         SetBkMode(maskDc, TRANSPARENT);
         SetTextColor(maskDc, RGB(0, 0, 0));
         HFONT oldMaskFont = font ? (HFONT)SelectObject(maskDc, font) : NULL;
-        TextOutW(maskDc, x, y, text, textLength);
+        (void)TextOutW(maskDc, x, y, text, textLength);
+        (void)GdiFlush();
         if (oldMaskFont) SelectObject(maskDc, oldMaskFont);
     }
     SelectObject(maskDc, oldMask);

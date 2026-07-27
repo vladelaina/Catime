@@ -7,6 +7,8 @@
 
 #define PERSONALIZE_KEY \
     L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"
+#define THEME_RECHECK_MS 300u
+#define THEME_NO_ANIMATION_RECHECK_MS 50u
 
 static BOOL IsRegistryThemeDark(const wchar_t* valueName) {
     HKEY key = NULL;
@@ -43,4 +45,22 @@ BOOL TrayThemeState_IsSystemDark(void) {
 BOOL IsSystemDarkModeActive(void) {
     return !TrayThemeState_IsHighContrastActive() &&
            TrayThemeState_IsSystemDark();
+}
+
+COLORREF GetSystemMetricTextColor(void) {
+    if (TrayThemeState_IsHighContrastActive()) {
+        return GetSysColor(COLOR_WINDOWTEXT);
+    }
+    return TrayThemeState_IsSystemDark()
+        ? RGB(255, 255, 255) : RGB(0, 0, 0);
+}
+
+UINT GetSystemThemeRecheckDelay(void) {
+    BOOL animationsEnabled = TRUE;
+    if (SystemParametersInfoW(
+            SPI_GETCLIENTAREAANIMATION, 0, &animationsEnabled, 0) &&
+        !animationsEnabled) {
+        return THEME_NO_ANIMATION_RECHECK_MS;
+    }
+    return THEME_RECHECK_MS;
 }

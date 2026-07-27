@@ -54,6 +54,10 @@ void FillSolidIconBackground(
 void RepairTransparentIconAlpha(
     void* bits, int cx, int cy, DWORD marker);
 void MakeIconFullyOpaque(void* bits, int cx, int cy);
+BOOL DrawFallbackTextOnTransparentIcon(
+    HDC dc, void* bits, int cx, int cy, DWORD marker,
+    HFONT font, const wchar_t* text, int textLen,
+    int x, int y, COLORREF textColor);
 BOOL DrawAlphaTextOnTransparentIcon(
     HDC screenDc, void* targetBits, int cx, int cy,
     HFONT font, const wchar_t* text, int textLen,

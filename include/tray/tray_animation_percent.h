@@ -46,6 +46,9 @@ COLORREF GetPercentIconBgColor(void);
  */
 BOOL GetPercentIconColorSnapshot(COLORREF* textColor, COLORREF* bgColor);
 
+/** Invalidate generated icons that depend on the Windows taskbar theme. */
+BOOL InvalidatePercentIconThemeCache(void);
+
 /**
  * @brief Get normalized generated tray icon size
  * @param outCx Receives icon width in pixels

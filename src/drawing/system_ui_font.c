@@ -53,3 +53,14 @@ void InitializeSystemUiMetricTextLogFont(
     InitializeSystemUiTextLogFont(logFont, pixelHeight, FW_NORMAL);
     if (logFont) logFont->lfQuality = quality;
 }
+
+HFONT CreateNonAntialiasedFontCopy(HFONT sourceFont) {
+    LOGFONTW logFont = {0};
+    if (!sourceFont ||
+        GetObjectW(sourceFont, sizeof(logFont), &logFont) !=
+            sizeof(logFont)) {
+        return NULL;
+    }
+    logFont.lfQuality = NONANTIALIASED_QUALITY;
+    return CreateFontIndirectW(&logFont);
+}

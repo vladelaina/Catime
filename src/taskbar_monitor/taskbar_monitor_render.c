@@ -139,8 +139,14 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             }
             return 0;
         case WM_TIMER:
-            if (wParam == TASKBAR_MONITOR_THEME_TIMER_ID) {
-                KillTimer(window, TASKBAR_MONITOR_THEME_TIMER_ID);
+            if (wParam == TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID) {
+                if ((LONG)(GetTickCount() -
+                           g_taskbarMonitor.themeRecheckDueTick) < 0) {
+                    return 0;
+                }
+                KillTimer(window,
+                          TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID);
+                g_taskbarMonitor.themeRecheckDueTick = 0;
                 TaskbarMonitor_UpdateThemeState();
                 InvalidateRect(window, NULL, FALSE);
                 return 0;
@@ -168,7 +174,9 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             return 0;
         case WM_NCDESTROY:
             KillTimer(window, TASKBAR_MONITOR_PRESENT_TIMER_ID);
-            KillTimer(window, TASKBAR_MONITOR_THEME_TIMER_ID);
+            KillTimer(window,
+                      TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID);
+            g_taskbarMonitor.themeRecheckDueTick = 0;
             if (g_taskbarMonitor.window == window) {
                 g_taskbarMonitor.window = NULL;
             }
