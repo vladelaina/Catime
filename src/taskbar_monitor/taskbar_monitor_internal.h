@@ -72,6 +72,7 @@ typedef struct {
     BOOL cpuMemoryEnabled;
     BOOL networkEnabled;
     BOOL taskListReserved;
+    BOOL modernTaskbar;
     TaskbarHostMode mode;
     SystemMonitorSnapshot metrics;
     TaskbarCompositionMode compositionMode;
@@ -92,6 +93,22 @@ void TaskbarMonitor_RecreateFont(void);
 void TaskbarMonitor_UpdateThemeState(void);
 void TaskbarMonitor_RefreshTextLayout(void);
 void TaskbarMonitor_UpdateDimensions(const RECT* taskbarRect);
+BOOL TaskbarMonitor_ShouldUseClassicPlacement(
+    BOOL modernTaskbar, BOOL classicHostAvailable,
+    BOOL taskListAvailable);
+BOOL TaskbarMonitor_IsWindows11OrLaterVersion(
+    DWORD majorVersion, DWORD buildNumber);
+BOOL TaskbarMonitor_IsModernTaskbar(HWND taskbar);
+BOOL TaskbarMonitor_CalculateClassicPlacement(
+    const RECT* taskListRect, BOOL horizontal,
+    int monitorWidth, int monitorHeight, int gap,
+    int minimumTaskList, RECT* reservedTaskList,
+    RECT* monitorRect);
+BOOL TaskbarMonitor_CalculateModernPlacement(
+    const RECT* taskbarBounds, const RECT* notificationArea,
+    BOOL hasNotificationArea, BOOL horizontal,
+    int monitorWidth, int monitorHeight, int gap,
+    int fallbackInset, RECT* monitorRect);
 BOOL TaskbarMonitor_Present(
     HWND window, HDC fallbackTarget,
     const TaskbarMetricText* metrics,

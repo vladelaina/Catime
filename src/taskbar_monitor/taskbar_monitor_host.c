@@ -81,9 +81,7 @@ static BOOL SetMonitorParent(HWND parent, BOOL childStyle) {
 static BOOL ReserveClassicSlot(RECT* monitorRect) {
     RECT taskRect = {0};
     RECT baseRect;
-    RECT reserved;
-    int monitorWidth = g_taskbarMonitor.width;
-    int monitorHeight = g_taskbarMonitor.height;
+    RECT reserved = {0};
     int gap = TaskbarMonitor_ScaleForDpi(
         TASKBAR_MONITOR_GAP, g_taskbarMonitor.dpi);
     int minimum = TaskbarMonitor_ScaleForDpi(
@@ -104,41 +102,18 @@ static BOOL ReserveClassicSlot(RECT* monitorRect) {
         g_taskbarMonitor.taskListReserved = FALSE;
     }
     reserved = baseRect;
-    int x;
-    int y;
-    if (g_taskbarMonitor.horizontal) {
-        int availableHeight = baseRect.bottom - baseRect.top;
-        if (monitorHeight > availableHeight) monitorHeight = availableHeight;
-        if (monitorHeight <= 0) return FALSE;
-        if (baseRect.right - baseRect.left -
-            monitorWidth - gap < minimum) return FALSE;
-        reserved.right -= monitorWidth + gap;
-        x = reserved.right + gap;
-        y = baseRect.top + ((baseRect.bottom - baseRect.top) -
-                            monitorHeight) / 2;
-    } else {
-        int availableWidth = baseRect.right - baseRect.left;
-        if (monitorWidth > availableWidth) monitorWidth = availableWidth;
-        if (monitorWidth <= 0) return FALSE;
-        if (baseRect.bottom - baseRect.top -
-            monitorHeight - gap < minimum) return FALSE;
-        reserved.bottom -= monitorHeight + gap;
-        x = baseRect.left + ((baseRect.right - baseRect.left) -
-                            monitorWidth) / 2;
-        y = reserved.bottom + gap;
-    }
+    RECT placement = {0};
+    if (!TaskbarMonitor_CalculateClassicPlacement(
+            &baseRect, g_taskbarMonitor.horizontal,
+            g_taskbarMonitor.width, g_taskbarMonitor.height,
+            gap, minimum, &reserved, &placement)) return FALSE;
     if (!MoveWindow(g_taskbarMonitor.taskList,
                     reserved.left, reserved.top,
                     reserved.right - reserved.left,
                     reserved.bottom - reserved.top, TRUE)) return FALSE;
     g_taskbarMonitor.reservedTaskList = reserved;
     g_taskbarMonitor.taskListReserved = TRUE;
-    if (monitorRect) {
-        monitorRect->left = x;
-        monitorRect->top = y;
-        monitorRect->right = x + monitorWidth;
-        monitorRect->bottom = y + monitorHeight;
-    }
+    if (monitorRect) *monitorRect = placement;
     return TRUE;
 }
 
@@ -152,13 +127,13 @@ static BOOL PositionClassicMonitor(const RECT* monitorRect) {
         SWP_NOACTIVATE | SWP_SHOWWINDOW);
 }
 
-static void PositionBesideNotificationArea(void) {
+static BOOL PositionBesideNotificationArea(void) {
     RECT bounds = {0};
     RECT notifyRect = {0};
     int gap = TaskbarMonitor_ScaleForDpi(
         TASKBAR_MONITOR_GAP, g_taskbarMonitor.dpi);
     if (!GetClientRect(g_taskbarMonitor.taskbar, &bounds)) {
-        return;
+        return FALSE;
     }
     HWND notify = FindDescendantByClass(
         g_taskbarMonitor.taskbar, L"TrayNotifyWnd");
@@ -167,26 +142,29 @@ static void PositionBesideNotificationArea(void) {
         MapWindowPoints(HWND_DESKTOP, g_taskbarMonitor.taskbar,
                         (POINT*)&notifyRect, 2);
     }
-    int x;
-    int y;
-    if (g_taskbarMonitor.horizontal) {
-        int rightEdge = hasNotify ? notifyRect.left : bounds.right -
-            TaskbarMonitor_ScaleForDpi(100, g_taskbarMonitor.dpi);
-        x = rightEdge - g_taskbarMonitor.width - gap;
-        y = bounds.top + ((bounds.bottom - bounds.top) -
-                           g_taskbarMonitor.height) / 2;
-        if (x < bounds.left + gap) x = bounds.left + gap;
-    } else {
-        int bottomEdge = hasNotify ? notifyRect.top : bounds.bottom -
-            TaskbarMonitor_ScaleForDpi(56, g_taskbarMonitor.dpi);
-        x = bounds.left + ((bounds.right - bounds.left) -
-                            g_taskbarMonitor.width) / 2;
-        y = bottomEdge - g_taskbarMonitor.height - gap;
-        if (y < bounds.top + gap) y = bounds.top + gap;
-    }
-    SetWindowPos(g_taskbarMonitor.window, HWND_TOP,
-                 x, y, g_taskbarMonitor.width, g_taskbarMonitor.height,
-                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    int fallbackInset = TaskbarMonitor_ScaleForDpi(
+        g_taskbarMonitor.horizontal ? 100 : 56,
+        g_taskbarMonitor.dpi);
+    RECT placement = {0};
+    if (!TaskbarMonitor_CalculateModernPlacement(
+            &bounds, &notifyRect, hasNotify,
+            g_taskbarMonitor.horizontal,
+            g_taskbarMonitor.width, g_taskbarMonitor.height,
+            gap, fallbackInset, &placement)) return FALSE;
+    return SetWindowPos(
+        g_taskbarMonitor.window, HWND_TOP,
+        placement.left, placement.top,
+        placement.right - placement.left,
+        placement.bottom - placement.top,
+        SWP_NOACTIVATE | SWP_SHOWWINDOW);
+}
+
+static BOOL AttachModernMonitor(HWND taskbar) {
+    if (!SetMonitorParent(taskbar, FALSE)) return FALSE;
+    g_taskbarMonitor.host = taskbar;
+    g_taskbarMonitor.taskList = NULL;
+    g_taskbarMonitor.mode = TASKBAR_HOST_MODERN;
+    return PositionBesideNotificationArea();
 }
 
 static void ConfigureHiddenRetry(void) {
@@ -205,6 +183,7 @@ static void ConfigureHiddenRetry(void) {
     g_taskbarMonitor.taskbar = NULL;
     g_taskbarMonitor.host = NULL;
     g_taskbarMonitor.taskList = NULL;
+    g_taskbarMonitor.modernTaskbar = FALSE;
     g_taskbarMonitor.mode = TASKBAR_HOST_NONE;
 }
 
@@ -219,6 +198,8 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
     TaskbarMonitor_RecreateFont();
     TaskbarMonitor_RefreshTextLayout();
     TaskbarMonitor_UpdateDimensions(&taskbarRect);
+    BOOL modernTaskbar = TaskbarMonitor_IsModernTaskbar(taskbar);
+    g_taskbarMonitor.modernTaskbar = modernTaskbar;
     HWND host = FindDescendantByClass(taskbar, L"ReBarWindow32");
     if (!host) host = FindDescendantByClass(taskbar, L"WorkerW");
     HWND taskList = host
@@ -226,7 +207,8 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
     if (!taskList && host) {
         taskList = FindDescendantByClass(host, L"MSTaskListWClass");
     }
-    if (host && taskList) {
+    if (TaskbarMonitor_ShouldUseClassicPlacement(
+            modernTaskbar, host != NULL, taskList != NULL)) {
         RECT monitorRect = {0};
         g_taskbarMonitor.host = host;
         g_taskbarMonitor.taskList = taskList;
@@ -236,13 +218,7 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
             PositionClassicMonitor(&monitorRect)) return TRUE;
         TaskbarMonitor_RestoreClassicTaskList();
     }
-    if (SetMonitorParent(taskbar, FALSE)) {
-        g_taskbarMonitor.host = taskbar;
-        g_taskbarMonitor.taskList = NULL;
-        g_taskbarMonitor.mode = TASKBAR_HOST_MODERN;
-        PositionBesideNotificationArea();
-        return TRUE;
-    }
+    if (AttachModernMonitor(taskbar)) return TRUE;
     ConfigureHiddenRetry();
     return FALSE;
 }
@@ -256,6 +232,8 @@ void TaskbarMonitor_RefreshAttachment(void) {
     }
     if (taskbar != g_taskbarMonitor.taskbar ||
         !IsWindow(g_taskbarMonitor.taskbar) ||
+        TaskbarMonitor_IsModernTaskbar(taskbar) !=
+            g_taskbarMonitor.modernTaskbar ||
         (g_taskbarMonitor.mode == TASKBAR_HOST_CLASSIC &&
          (!IsWindow(g_taskbarMonitor.host) ||
           !IsWindow(g_taskbarMonitor.taskList)))) {
@@ -279,7 +257,7 @@ void TaskbarMonitor_RefreshAttachment(void) {
             !PositionClassicMonitor(&monitorRect)) {
             TaskbarMonitor_AttachToTaskbar();
         }
-    } else {
-        PositionBesideNotificationArea();
+    } else if (!PositionBesideNotificationArea()) {
+        TaskbarMonitor_AttachToTaskbar();
     }
 }

@@ -142,6 +142,17 @@ target_link_libraries(taskbar_monitor_compositor_tests PRIVATE gdi32 user32)
 add_test(NAME taskbar_monitor_compositor
     COMMAND taskbar_monitor_compositor_tests)
 
+add_executable(taskbar_monitor_placement_tests
+    tests/taskbar_monitor_placement_tests.c
+    src/taskbar_monitor/taskbar_monitor_placement.c
+)
+target_include_directories(taskbar_monitor_placement_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+add_test(NAME taskbar_monitor_placement
+    COMMAND taskbar_monitor_placement_tests)
+
 add_executable(tray_percent_font_tests
     tests/tray_percent_font_tests.c
     src/drawing/system_ui_font.c
@@ -171,6 +182,7 @@ set(_catime_test_targets
     system_monitor_snapshot_tests
     tray_metric_sync_tests
     taskbar_monitor_compositor_tests
+    taskbar_monitor_placement_tests
     tray_percent_font_tests
 )
 
