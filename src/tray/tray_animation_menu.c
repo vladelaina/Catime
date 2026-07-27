@@ -20,6 +20,23 @@ static int CompareAnimEntries(const void* first, const void* second) {
         left->entry->relativePath, right->entry->relativePath);
 }
 
+static void AppendTaskbarMonitorOptions(HMENU menu) {
+    AppendMenuW(
+        menu,
+        MF_STRING | (TaskbarMonitor_IsOptionEnabled(
+            TASKBAR_MONITOR_OPTION_NETWORK)
+                ? MF_CHECKED : MF_UNCHECKED),
+        CLOCK_IDM_TASKBAR_MONITOR_NETWORK,
+        GetLocalizedString(NULL, L"Taskbar Network Speed"));
+    AppendMenuW(
+        menu,
+        MF_STRING | (TaskbarMonitor_IsOptionEnabled(
+            TASKBAR_MONITOR_OPTION_CPU_MEMORY)
+                ? MF_CHECKED : MF_UNCHECKED),
+        CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY,
+        GetLocalizedString(NULL, L"Taskbar CPU and Memory"));
+}
+
 static HMENU EnsureSubMenu(HMENU parent, const wchar_t* name) {
     if (!parent || !name) return NULL;
     int count = GetMenuItemCount(parent);
@@ -109,6 +126,8 @@ BOOL BuildAnimationMenu(HMENU menu, const char* currentAnimationName) {
             menu, flags, builtins[i].menuId,
             GetLocalizedString(NULL, builtins[i].menuLabel));
     }
+    AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
+    AppendTaskbarMonitorOptions(menu);
     AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
 
     BOOL cacheReady = FALSE;
