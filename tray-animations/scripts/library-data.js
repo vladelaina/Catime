@@ -117,6 +117,17 @@ export function animationFilename(collection, index) {
         || `${String(index).padStart(4, '0')}_${collection.key}.gif`;
 }
 
+export function animationDownloadFilename(collection, index) {
+    const sourceFilename = animationFilename(collection, index).split('/').pop() || '';
+    const extension = sourceFilename.match(/\.[a-z0-9]+$/i)?.[0] || '.gif';
+    const author = String(collection.author || collection.title || collection.key || 'animation')
+        .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-')
+        .replace(/[. ]+$/g, '')
+        .trim() || 'animation';
+
+    return `${author}-${index}${extension}`;
+}
+
 export function animationUrl(collection, index) {
     const filename = animationFilename(collection, index)
         .split('/')

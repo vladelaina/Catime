@@ -3,6 +3,7 @@ class CatimeNavigation {
         this.currentPage = this.getCurrentPage();
         this.lastScrollY = 0;
         this.ticking = false;
+        this.headerMorphAnimations = [];
         this.init();
     }
 
@@ -37,6 +38,7 @@ class CatimeNavigation {
         
         return `
         <header class="main-header" id="main-header">
+            <span class="main-header-surface" aria-hidden="true"></span>
             <nav class="container">
                 <a href="${prefix || './'}" class="logo">
                     <img src="${prefix}assets/catime.webp" class="logo-img" alt="Catime Logo"> Catime
@@ -44,7 +46,7 @@ class CatimeNavigation {
                 <ul class="nav-links">
                     <li><a href="${prefix || './'}"${this.currentPage === 'index' ? ' class="active"' : ''}>Home</a></li>
                     <li><a href="${prefix}guide"${this.currentPage === 'guide' ? ' class="active"' : ''}>Guide</a></li>
-                    <li><a href="${prefix}tray-animations/"${this.currentPage === 'tray-animations' ? ' class="active"' : ''}>Tray Animations</a></li>
+                    <li><a href="${prefix}tray-animations/"${this.currentPage === 'tray-animations' ? ' class="active"' : ''}>Tray&nbsp;Animations</a></li>
                     <li><a href="${prefix}about"${this.currentPage === 'about' ? ' class="active"' : ''}>About</a></li>
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle">Tools <i class="fas fa-chevron-down"></i></a>
@@ -130,7 +132,7 @@ class CatimeNavigation {
 
         const currentScrollY = window.scrollY;
 
-        header.classList.toggle('scrolled', currentScrollY > 50);
+        this.updateScrolledState(header, currentScrollY > 50, isMobile);
 
         if (!isMobile || currentScrollY <= 100) {
             header.classList.remove('nav-hidden');
@@ -141,6 +143,70 @@ class CatimeNavigation {
         }
 
         this.lastScrollY = currentScrollY;
+    }
+
+    updateScrolledState(header, shouldBeScrolled, isMobile) {
+        if (header.classList.contains('scrolled') === shouldBeScrolled) return;
+
+        if (isMobile || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            this.headerMorphAnimations.forEach(animation => animation.cancel());
+            this.headerMorphAnimations = [];
+            header.classList.toggle('scrolled', shouldBeScrolled);
+            return;
+        }
+
+        const items = Array.from(header.querySelector('.container').children);
+        const startHeaderRect = header.getBoundingClientRect();
+        const startItemRects = items.map(item => item.getBoundingClientRect());
+
+        this.headerMorphAnimations.forEach(animation => animation.cancel());
+        this.headerMorphAnimations = [];
+        header.classList.toggle('scrolled', shouldBeScrolled);
+
+        const targetHeaderRect = header.getBoundingClientRect();
+        const targetItemRects = items.map(item => item.getBoundingClientRect());
+        const duration = 650;
+        const easing = 'cubic-bezier(0.16, 1, 0.3, 1)';
+        const startCenterX = startHeaderRect.left + startHeaderRect.width / 2;
+        const startCenterY = startHeaderRect.top + startHeaderRect.height / 2;
+        const targetCenterX = targetHeaderRect.left + targetHeaderRect.width / 2;
+        const targetCenterY = targetHeaderRect.top + targetHeaderRect.height / 2;
+
+        const surface = header.querySelector('.main-header-surface');
+        this.headerMorphAnimations.push(surface.animate(
+            [
+                {
+                    transform: `translate(${startCenterX - targetCenterX}px, ${startCenterY - targetCenterY}px) scale(${startHeaderRect.width / targetHeaderRect.width}, ${startHeaderRect.height / targetHeaderRect.height})`,
+                },
+                { transform: 'translate(0, 0) scale(1, 1)' },
+            ],
+            { duration, easing },
+        ));
+
+        items.forEach((item, index) => {
+            const startRect = startItemRects[index];
+            const targetRect = targetItemRects[index];
+            const deltaX = startRect.left - targetRect.left;
+            const deltaY = startRect.top - targetRect.top;
+
+            this.headerMorphAnimations.push(item.animate(
+                [
+                    { transform: `translate(${deltaX}px, ${deltaY}px)` },
+                    { transform: 'translate(0, 0)' },
+                ],
+                { duration, easing },
+            ));
+        });
+
+        const animationBatch = [...this.headerMorphAnimations];
+        Promise.allSettled(animationBatch.map(animation => animation.finished))
+            .then(() => {
+                const isCurrentBatch = this.headerMorphAnimations.length === animationBatch.length
+                    && this.headerMorphAnimations.every((animation, index) => animation === animationBatch[index]);
+                if (isCurrentBatch) {
+                    this.headerMorphAnimations = [];
+                }
+            });
     }
 }
 

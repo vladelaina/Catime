@@ -1,4 +1,4 @@
-import { animationFilename, animationUrl, loadImmediateLibraryData, loadLibraryData } from './library-data.js';
+import { animationDownloadFilename, animationUrl, loadImmediateLibraryData, loadLibraryData } from './library-data.js';
 import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
 
 const INITIAL_VISIBLE_ANIMATIONS = 18;
@@ -351,7 +351,7 @@ function createCollectionSection(collection) {
 
 function createAnimationItem(collection, index, { highPriority = false } = {}) {
     const url = animationUrl(collection, index);
-    const filename = animationFilename(collection, index);
+    const filename = animationDownloadFilename(collection, index);
     const item = document.createElement('a');
     item.className = 'animation-item';
     item.href = url;

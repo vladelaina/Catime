@@ -1,6 +1,10 @@
 window.CatimeUI = window.CatimeUI || {};
 
 (function(CatimeUI) {
+    document.addEventListener('dragstart', event => {
+        if (event.target instanceof HTMLImageElement) event.preventDefault();
+    }, { capture: true });
+
     function escapeRegExp(value) {
         return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
