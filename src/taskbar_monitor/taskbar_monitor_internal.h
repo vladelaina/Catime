@@ -8,6 +8,9 @@
 #define TASKBAR_MONITOR_CLASS L"CatimeTaskbarMonitorWindow"
 #define TASKBAR_MONITOR_PRESENT_TIMER_ID 2u
 #define TASKBAR_MONITOR_PRESENT_MS 100u
+#define TASKBAR_MONITOR_THEME_TIMER_ID 3u
+#define TASKBAR_MONITOR_THEME_SETTLE_MS 300u
+#define TASKBAR_MONITOR_THEME_NO_ANIMATION_SETTLE_MS 50u
 #define TASKBAR_MONITOR_FALLBACK_NETWORK_WIDTH 72
 #define TASKBAR_MONITOR_FALLBACK_RESOURCE_WIDTH 64
 #define TASKBAR_MONITOR_HORIZONTAL_HEIGHT 32
@@ -68,6 +71,7 @@ typedef struct {
     BOOL horizontal;
     BOOL initialized;
     BOOL classRegistered;
+    BOOL darkMode;
     BOOL cpuMemoryEnabled;
     BOOL networkEnabled;
     BOOL taskListReserved;
@@ -87,6 +91,7 @@ BOOL TaskbarMonitor_GetWindowRectInParent(
 BOOL TaskbarMonitor_RectsNearEqual(const RECT* first, const RECT* second);
 void TaskbarMonitor_DeleteFont(void);
 void TaskbarMonitor_RecreateFont(void);
+void TaskbarMonitor_UpdateThemeState(void);
 void TaskbarMonitor_RefreshTextLayout(void);
 void TaskbarMonitor_UpdateDimensions(const RECT* taskbarRect);
 BOOL TaskbarMonitor_Present(

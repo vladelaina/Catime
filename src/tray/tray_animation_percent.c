@@ -4,6 +4,7 @@
  */
 
 #include "tray_animation_percent_internal.h"
+#include "tray_theme_state_internal.h"
 
 COLORREF g_percentTextColor = RGB(0, 0, 0);
 COLORREF g_percentBgColor = TRANSPARENT_BG_AUTO;
@@ -83,27 +84,9 @@ void CleanupPercentIconCache(void) {
     EndPercentIconCacheAccess();
 }
 
-static BOOL IsSystemDarkTheme(void) {
-    DWORD value = 0;
-    DWORD size = sizeof(value);
-    HKEY key = NULL;
-    if (RegOpenKeyExA(
-            HKEY_CURRENT_USER,
-            "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-            0, KEY_READ, &key) == ERROR_SUCCESS) {
-        if (RegQueryValueExA(
-                key, "SystemUsesLightTheme", NULL, NULL,
-                (LPBYTE)&value, &size) == ERROR_SUCCESS) {
-            RegCloseKey(key);
-            return value == 0;
-        }
-        RegCloseKey(key);
-    }
-    return FALSE;
-}
-
 static COLORREF QueryThemeTextColor(void) {
-    return IsSystemDarkTheme() ? RGB(255, 255, 255) : RGB(0, 0, 0);
+    return TrayThemeState_IsSystemDark()
+        ? RGB(255, 255, 255) : RGB(0, 0, 0);
 }
 
 static BOOL TryGetCachedThemeTextColorLocked(COLORREF* textColor) {

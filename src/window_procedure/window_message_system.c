@@ -37,7 +37,7 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
     RefreshNativeMenuTheme();
     if (IsThemeSettingChange(wp, lp)) {
         Dialog_RefreshOpenThemes();
-        TaskbarMonitor_Refresh();
+        TaskbarMonitor_RefreshAppearance();
     }
 
     if (wp != SPI_SETWORKAREA || CLOCK_IS_DRAGGING) {
@@ -53,7 +53,7 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleThemeChanged(HWND hwnd, WPARAM wp, LPARAM lp) {
     RefreshNativeMenuTheme();
     Dialog_RefreshOpenThemes();
-    TaskbarMonitor_Refresh();
+    TaskbarMonitor_RefreshAppearance();
     return DefWindowProc(hwnd, WM_THEMECHANGED, wp, lp);
 }
 

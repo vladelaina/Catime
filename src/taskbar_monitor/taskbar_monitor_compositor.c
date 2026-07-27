@@ -6,7 +6,6 @@
 #include "taskbar_monitor_internal.h"
 
 #include "log.h"
-#include "tray/tray_menu_theme.h"
 
 static COLORREF GetMonitorTextColor(void) {
     HIGHCONTRASTW contrast = {0};
@@ -15,8 +14,8 @@ static COLORREF GetMonitorTextColor(void) {
         SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
         (contrast.dwFlags & HCF_HIGHCONTRASTON) != 0;
     if (highContrast) return GetSysColor(COLOR_WINDOWTEXT);
-    return IsApplicationDarkModeActive() ? RGB(255, 255, 255)
-                                         : RGB(0, 0, 0);
+    return g_taskbarMonitor.darkMode ? RGB(255, 255, 255)
+                                     : RGB(0, 0, 0);
 }
 
 static COLORREF GetMonitorMatteColor(COLORREF textColor) {
@@ -162,6 +161,52 @@ static BOOL PresentPerPixel(HWND window, HDC screenDc, HDC sourceDc,
                                sourceDc, &source, 0, &blend, ULW_ALPHA);
 }
 
+static BOOL PresentColorKey(HWND window, HDC target, HDC source,
+                            int width, int height, COLORREF matteColor) {
+    COLORREF activeColor = 0;
+    BYTE activeAlpha = 255;
+    DWORD activeFlags = 0;
+    BOOL hasActiveColor =
+        g_taskbarMonitor.compositionMode == TASKBAR_COMPOSITION_COLOR_KEY &&
+        GetLayeredWindowAttributes(
+            window, &activeColor, &activeAlpha, &activeFlags) &&
+        (activeFlags & LWA_COLORKEY) != 0;
+
+    if (!hasActiveColor) {
+        if (!SetLayeredWindowAttributes(
+                window, matteColor, 255, LWA_COLORKEY)) return FALSE;
+        return BitBlt(target, 0, 0, width, height,
+                      source, 0, 0, SRCCOPY);
+    }
+    if (activeColor == matteColor) {
+        return BitBlt(target, 0, 0, width, height,
+                      source, 0, 0, SRCCOPY);
+    }
+
+    if (!SetLayeredWindowAttributes(
+            window, activeColor, 0, LWA_COLORKEY | LWA_ALPHA)) {
+        return FALSE;
+    }
+    if (!BitBlt(target, 0, 0, width, height,
+                source, 0, 0, SRCCOPY)) {
+        DWORD error = GetLastError();
+        (void)SetLayeredWindowAttributes(
+            window, activeColor, 255, LWA_COLORKEY | LWA_ALPHA);
+        SetLastError(error);
+        return FALSE;
+    }
+    return SetLayeredWindowAttributes(
+        window, matteColor, 255, LWA_COLORKEY | LWA_ALPHA);
+}
+
+static void ResetLayeredComposition(HWND window) {
+    LONG_PTR extendedStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
+    SetWindowLongPtrW(window, GWL_EXSTYLE,
+                      extendedStyle & ~WS_EX_LAYERED);
+    SetWindowLongPtrW(window, GWL_EXSTYLE,
+                      extendedStyle | WS_EX_LAYERED);
+}
+
 BOOL TaskbarMonitor_Present(
     HWND window, HDC fallbackTarget,
     const TaskbarMetricText* metrics,
@@ -207,17 +252,16 @@ BOOL TaskbarMonitor_Present(
         SetTextColor(sourceDc, textColor);
         DrawMetricGrid(sourceDc, width, height, metrics, metricCount);
         GdiFlush();
-        if (SetLayeredWindowAttributes(
-                window, matteColor, 255, LWA_COLORKEY)) {
-            presented = BitBlt(fallbackTarget, 0, 0, width, height,
-                               sourceDc, 0, 0, SRCCOPY);
-            if (presented) {
-                g_taskbarMonitor.compositionMode =
-                    TASKBAR_COMPOSITION_COLOR_KEY;
-            }
+        presented = PresentColorKey(
+            window, fallbackTarget, sourceDc,
+            width, height, matteColor);
+        if (presented) {
+            g_taskbarMonitor.compositionMode =
+                TASKBAR_COMPOSITION_COLOR_KEY;
         } else {
             LOG_WARNING("Taskbar color-key composition unavailable; using per-pixel alpha (error=%lu)",
                         GetLastError());
+            ResetLayeredComposition(window);
             g_taskbarMonitor.compositionMode =
                 TASKBAR_COMPOSITION_PER_PIXEL;
         }

@@ -40,6 +40,9 @@ void TaskbarMonitor_OnTaskbarCreated(void);
 /** Re-evaluate taskbar geometry, DPI, and colors. */
 void TaskbarMonitor_Refresh(void);
 
+/** Repaint colors after the Windows taskbar theme transition settles. */
+void TaskbarMonitor_RefreshAppearance(void);
+
 /** Apply the same sampled metrics used by the tray icon and tooltip. */
 void TaskbarMonitor_UpdateSnapshot(
     const SystemMonitorSnapshot* snapshot);

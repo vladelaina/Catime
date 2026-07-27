@@ -215,6 +215,7 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
     TaskbarMonitor_RestoreClassicTaskList();
     g_taskbarMonitor.taskbar = taskbar;
     g_taskbarMonitor.dpi = TaskbarMonitor_GetWindowDpi(taskbar);
+    TaskbarMonitor_UpdateThemeState();
     TaskbarMonitor_RecreateFont();
     TaskbarMonitor_RefreshTextLayout();
     TaskbarMonitor_UpdateDimensions(&taskbarRect);

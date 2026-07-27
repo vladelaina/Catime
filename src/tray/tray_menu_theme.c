@@ -1,4 +1,5 @@
 #include "tray/tray_menu_theme.h"
+#include "tray_theme_state_internal.h"
 #include "log.h"
 #include <roapi.h>
 #include <string.h>
@@ -69,51 +70,11 @@ static BOOL IsSupportedWindowsBuild(void) {
     return versionInfo.dwMajorVersion == 10 &&
            versionInfo.dwBuildNumber >= WINDOWS_10_1809_BUILD;
 }
-static BOOL IsHighContrastActive(void) {
-    HIGHCONTRASTW highContrast = {0};
-    highContrast.cbSize = sizeof(highContrast);
-    return SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(highContrast),
-                                 &highContrast, 0) &&
-           (highContrast.dwFlags & HCF_HIGHCONTRASTON) != 0;
-}
-static BOOL IsAppsDarkThemeRegistryFallback(void) {
-    HKEY key = NULL;
-    DWORD value = 1;
-    DWORD valueSize = sizeof(value);
-    DWORD type = 0;
-    LSTATUS status = RegOpenKeyExW(
-        HKEY_CURRENT_USER,
-        L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-        0, KEY_QUERY_VALUE, &key);
-    if (status != ERROR_SUCCESS) return FALSE;
-    status = RegQueryValueExW(key, L"AppsUseLightTheme", NULL, &type,
-                              (BYTE*)&value, &valueSize);
-    RegCloseKey(key);
-    return status == ERROR_SUCCESS && type == REG_DWORD && value == 0;
-}
 static BOOL IsAppsDarkTheme(void) {
     if (g_shouldAppsUseDarkMode) {
         return g_shouldAppsUseDarkMode();
     }
-    return IsAppsDarkThemeRegistryFallback();
-}
-static BOOL IsSystemDarkThemeRegistryFallback(void) {
-    HKEY key = NULL;
-    DWORD value = 1;
-    DWORD valueSize = sizeof(value);
-    DWORD type = 0;
-    LSTATUS status = RegOpenKeyExW(
-        HKEY_CURRENT_USER,
-        L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
-        0, KEY_QUERY_VALUE, &key);
-    if (status != ERROR_SUCCESS) return FALSE;
-    status = RegQueryValueExW(key, L"SystemUsesLightTheme", NULL, &type,
-                              (BYTE*)&value, &valueSize);
-    RegCloseKey(key);
-    return status == ERROR_SUCCESS && type == REG_DWORD && value == 0;
-}
-static BOOL IsSystemDarkTheme(void) {
-    return IsSystemDarkThemeRegistryFallback();
+    return TrayThemeState_IsAppsDark();
 }
 static void LoadNamedFunction(HMODULE module, const char* name,
                               void* target, size_t targetSize) {
@@ -195,7 +156,7 @@ static BOOL QueryEffectiveDarkTheme(void) {
     if (QueryUiSettingsDarkTheme(&darkTheme)) {
         return darkTheme;
     }
-    return IsAppsDarkTheme() || IsSystemDarkTheme();
+    return IsAppsDarkTheme() || TrayThemeState_IsSystemDark();
 }
 static void LoadOrdinalFunction(HMODULE module, WORD ordinal,
                                 void* target, size_t targetSize) {
@@ -246,7 +207,8 @@ void ApplyNativeMenuThemeToWindow(HWND hwnd) {
         RefreshNativeMenuTheme();
     }
     if (g_supported && g_allowDarkModeForWindow) {
-        (void)g_allowDarkModeForWindow(hwnd, !IsHighContrastActive());
+        (void)g_allowDarkModeForWindow(
+            hwnd, !TrayThemeState_IsHighContrastActive());
     }
 }
 void RefreshNativeMenuTheme(void) {
@@ -261,7 +223,7 @@ void RefreshNativeMenuTheme(void) {
     if (g_refreshImmersiveColorPolicyState) {
         g_refreshImmersiveColorPolicyState();
     }
-    highContrastActive = IsHighContrastActive();
+    highContrastActive = TrayThemeState_IsHighContrastActive();
     darkModeActive = !highContrastActive && QueryEffectiveDarkTheme();
     if (highContrastActive) {
         desiredMode = PREFERRED_APP_MODE_DEFAULT;
@@ -290,11 +252,14 @@ BOOL IsNativeMenuDarkModeActive(void) {
     }
     return g_supported && g_darkModeActive;
 }
-BOOL IsApplicationDarkModeActive(void) { if (!g_initialized) {
+BOOL IsApplicationDarkModeActive(void) {
+    if (!g_initialized) {
         (void)InitializeNativeMenuTheme();
     }
     if (g_supported) {
         RefreshNativeMenuTheme();
         return g_darkModeActive;
     }
-    return !IsHighContrastActive() && QueryEffectiveDarkTheme(); }
+    return !TrayThemeState_IsHighContrastActive() &&
+           QueryEffectiveDarkTheme();
+}

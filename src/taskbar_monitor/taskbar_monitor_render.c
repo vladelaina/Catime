@@ -139,6 +139,12 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             }
             return 0;
         case WM_TIMER:
+            if (wParam == TASKBAR_MONITOR_THEME_TIMER_ID) {
+                KillTimer(window, TASKBAR_MONITOR_THEME_TIMER_ID);
+                TaskbarMonitor_UpdateThemeState();
+                InvalidateRect(window, NULL, FALSE);
+                return 0;
+            }
             if (wParam == TASKBAR_MONITOR_PRESENT_TIMER_ID) {
                 if (g_taskbarMonitor.mode == TASKBAR_HOST_MODERN) {
                     SetWindowPos(window, HWND_TOP, 0, 0, 0, 0,
@@ -162,6 +168,7 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             return 0;
         case WM_NCDESTROY:
             KillTimer(window, TASKBAR_MONITOR_PRESENT_TIMER_ID);
+            KillTimer(window, TASKBAR_MONITOR_THEME_TIMER_ID);
             if (g_taskbarMonitor.window == window) {
                 g_taskbarMonitor.window = NULL;
             }

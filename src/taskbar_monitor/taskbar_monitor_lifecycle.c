@@ -168,6 +168,32 @@ void TaskbarMonitor_Refresh(void) {
         CreateMonitorWindow();
         return;
     }
+    KillTimer(g_taskbarMonitor.window, TASKBAR_MONITOR_THEME_TIMER_ID);
     TaskbarMonitor_AttachToTaskbar();
     InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
+}
+
+static UINT GetThemeSettleDelay(void) {
+    BOOL animationsEnabled = TRUE;
+    if (SystemParametersInfoW(
+            SPI_GETCLIENTAREAANIMATION, 0, &animationsEnabled, 0) &&
+        !animationsEnabled) {
+        return TASKBAR_MONITOR_THEME_NO_ANIMATION_SETTLE_MS;
+    }
+    return TASKBAR_MONITOR_THEME_SETTLE_MS;
+}
+
+void TaskbarMonitor_RefreshAppearance(void) {
+    if (!g_taskbarMonitor.initialized ||
+        !TaskbarMonitor_IsEnabled()) return;
+    if (!IsWindow(g_taskbarMonitor.window)) {
+        CreateMonitorWindow();
+        return;
+    }
+    if (!SetTimer(g_taskbarMonitor.window,
+                  TASKBAR_MONITOR_THEME_TIMER_ID,
+                  GetThemeSettleDelay(), NULL)) {
+        TaskbarMonitor_UpdateThemeState();
+        InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
+    }
 }

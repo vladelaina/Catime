@@ -128,6 +128,18 @@ target_include_directories(tray_metric_sync_tests PRIVATE
 )
 add_test(NAME tray_metric_sync COMMAND tray_metric_sync_tests)
 
+add_executable(taskbar_monitor_compositor_tests
+    tests/taskbar_monitor_compositor_tests.c
+    src/taskbar_monitor/taskbar_monitor_compositor.c
+)
+target_include_directories(taskbar_monitor_compositor_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(taskbar_monitor_compositor_tests PRIVATE gdi32 user32)
+add_test(NAME taskbar_monitor_compositor
+    COMMAND taskbar_monitor_compositor_tests)
+
 set(_catime_test_targets
     window_placement_tests
     startup_policy_tests
@@ -141,6 +153,7 @@ set(_catime_test_targets
     render_retry_tests
     system_monitor_snapshot_tests
     tray_metric_sync_tests
+    taskbar_monitor_compositor_tests
 )
 
 if(MSVC)

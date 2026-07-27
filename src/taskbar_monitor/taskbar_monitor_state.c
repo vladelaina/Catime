@@ -7,6 +7,7 @@
 
 #include "drawing/system_ui_font.h"
 #include "language.h"
+#include "tray/tray_theme_state.h"
 
 #include <stdlib.h>
 #include <wchar.h>
@@ -66,6 +67,10 @@ void TaskbarMonitor_RecreateFont(void) {
         FW_NORMAL);
     font.lfQuality = CLEARTYPE_QUALITY;
     g_taskbarMonitor.font = CreateFontIndirectW(&font);
+}
+
+void TaskbarMonitor_UpdateThemeState(void) {
+    g_taskbarMonitor.darkMode = IsSystemDarkModeActive();
 }
 
 static int MeasureTextWidth(HDC dc, const wchar_t* text) {
