@@ -3,6 +3,7 @@
 
 #include "menu_preview.h"
 #include "color/color.h"
+#include "taskbar_monitor.h"
 
 typedef struct {
     PreviewType type;
@@ -15,6 +16,11 @@ typedef struct {
         BOOL use24Hour;
         char animationPath[MAX_PATH];
         EffectType effect;
+        struct {
+            TaskbarMonitorOption option;
+            BOOL originalCpuMemoryEnabled;
+            BOOL originalNetworkEnabled;
+        } taskbarMonitor;
     } data;
 } PreviewState;
 

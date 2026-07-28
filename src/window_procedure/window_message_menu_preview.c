@@ -21,6 +21,7 @@ static UINT g_pendingAnimationPreviewItem = 0;
 static UINT g_lastPreviewMenuItem = 0;
 static BOOL g_lastWasColorOrFontPreview = FALSE;
 static BOOL g_lastWasAnimationPreview = FALSE;
+static BOOL g_lastWasTaskbarMonitorPreview = FALSE;
 static BOOL g_menuPreviewActive = FALSE;
 static BOOL g_menuPreviewCancellationPending = FALSE;
 
@@ -46,6 +47,7 @@ static void ResetMenuPreviewTracking(HWND hwnd) {
     g_lastPreviewMenuItem = 0;
     g_lastWasColorOrFontPreview = FALSE;
     g_lastWasAnimationPreview = FALSE;
+    g_lastWasTaskbarMonitorPreview = FALSE;
 }
 
 static void ScheduleMenuPreviewCancellation(HWND hwnd) {
@@ -60,8 +62,10 @@ static void ScheduleMenuPreviewCancellation(HWND hwnd) {
 static void CancelActiveMenuPreview(HWND hwnd) {
     if (!g_menuPreviewActive) return;
     g_menuPreviewActive = FALSE;
+    BOOL restoreWindowVisibility =
+        GetActivePreviewType() != PREVIEW_TYPE_TASKBAR_MONITOR;
     CancelPreview(hwnd);
-    RestoreWindowVisibility(hwnd);
+    if (restoreWindowVisibility) RestoreWindowVisibility(hwnd);
 }
 
 void WindowMessageInternal_CancelTrackedMenuPreview(HWND hwnd) {
@@ -117,9 +121,11 @@ static BOOL IsSelectableCommandMenuItem(HMENU hMenu, UINT menuItem) {
 }
 
 static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
-                              BOOL* isAnimationPreview) {
+                              BOOL* isAnimationPreview,
+                              BOOL* isTaskbarMonitorPreview) {
     BOOL colorOrFont = FALSE;
     BOOL animation = FALSE;
+    BOOL taskbarMonitor = FALSE;
 
     if (GetColorMenuColorFromId(menuItem, NULL, 0)) {
         colorOrFont = TRUE;
@@ -150,13 +156,21 @@ static BOOL IsPreviewMenuItem(UINT menuItem, BOOL* isColorOrFontPreview,
         animation = TRUE;
     }
 
+    if (menuItem == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY ||
+        menuItem == CLOCK_IDM_TASKBAR_MONITOR_NETWORK) {
+        taskbarMonitor = TRUE;
+    }
+
     if (isColorOrFontPreview) {
         *isColorOrFontPreview = colorOrFont;
     }
     if (isAnimationPreview) {
         *isAnimationPreview = animation;
     }
-    return colorOrFont || animation;
+    if (isTaskbarMonitorPreview) {
+        *isTaskbarMonitorPreview = taskbarMonitor;
+    }
+    return colorOrFont || animation || taskbarMonitor;
 }
 
 LRESULT HandleExitMenuLoop(HWND hwnd, WPARAM wp, LPARAM lp) {
@@ -197,11 +211,20 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (!(flags & MF_POPUP) && IsSelectableCommandMenuItem(hMenu, menuItem)) {
         BOOL isColorOrFontPreview = FALSE;
         BOOL isAnimationPreview = FALSE;
+        BOOL isTaskbarMonitorPreview = FALSE;
         BOOL isPreviewItem = IsPreviewMenuItem(menuItem, &isColorOrFontPreview,
-                                               &isAnimationPreview);
+                                               &isAnimationPreview,
+                                               &isTaskbarMonitorPreview);
 
         if (isAnimationPreview != g_lastWasAnimationPreview) {
             if (g_lastWasAnimationPreview && !isAnimationPreview) {
+                CancelActiveMenuPreview(hwnd);
+            }
+        }
+
+        if (isTaskbarMonitorPreview != g_lastWasTaskbarMonitorPreview) {
+            if (g_lastWasTaskbarMonitorPreview &&
+                !isTaskbarMonitorPreview) {
                 CancelActiveMenuPreview(hwnd);
             }
         }
@@ -218,6 +241,7 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
 
         g_lastWasColorOrFontPreview = isColorOrFontPreview;
         g_lastWasAnimationPreview = isAnimationPreview;
+        g_lastWasTaskbarMonitorPreview = isTaskbarMonitorPreview;
 
         if (isPreviewItem && menuItem != g_lastPreviewMenuItem) {
             g_lastPreviewMenuItem = menuItem;
@@ -238,6 +262,10 @@ LRESULT HandleMenuSelect(HWND hwnd, WPARAM wp, LPARAM lp) {
         if (g_lastWasAnimationPreview) {
             CancelActiveMenuPreview(hwnd);
             g_lastWasAnimationPreview = FALSE;
+        }
+        if (g_lastWasTaskbarMonitorPreview) {
+            CancelActiveMenuPreview(hwnd);
+            g_lastWasTaskbarMonitorPreview = FALSE;
         }
         g_lastPreviewMenuItem = 0;
     }

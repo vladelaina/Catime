@@ -13,6 +13,7 @@
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
+#include "taskbar_monitor.h"
 #include "utils/natural_sort.h"
 #include "color/color_state.h"
 #include "config.h"
@@ -33,6 +34,15 @@ extern TextEffectType CLOCK_TEXT_EFFECT;
  * ============================================================================ */
 
 BOOL DispatchMenuPreview(HWND hwnd, UINT menuId) {
+    if (menuId == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY ||
+        menuId == CLOCK_IDM_TASKBAR_MONITOR_NETWORK) {
+        TaskbarMonitorOption option =
+            menuId == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY
+                ? TASKBAR_MONITOR_OPTION_CPU_MEMORY
+                : TASKBAR_MONITOR_OPTION_NETWORK;
+        return StartPreview(PREVIEW_TYPE_TASKBAR_MONITOR, &option, hwnd);
+    }
+
     /* Handle all animations (builtin + custom) via unified lookup */
     char animName[MAX_PATH];
     if (GetAnimationNameFromMenuId(menuId, animName, sizeof(animName))) {

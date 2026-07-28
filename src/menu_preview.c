@@ -63,9 +63,51 @@ static BOOL RestoreConfiguredFontAfterPreview(void) {
     }
     return TRUE;
 }
+
+static BOOL IsValidTaskbarMonitorOption(TaskbarMonitorOption option) {
+    return option == TASKBAR_MONITOR_OPTION_CPU_MEMORY ||
+           option == TASKBAR_MONITOR_OPTION_NETWORK;
+}
+
+static void ApplyTaskbarMonitorPreview(void) {
+    BOOL cpuMemoryEnabled =
+        g_previewState.data.taskbarMonitor.originalCpuMemoryEnabled;
+    BOOL networkEnabled =
+        g_previewState.data.taskbarMonitor.originalNetworkEnabled;
+    if (g_previewState.data.taskbarMonitor.option ==
+        TASKBAR_MONITOR_OPTION_CPU_MEMORY) {
+        cpuMemoryEnabled = !cpuMemoryEnabled;
+    } else if (g_previewState.data.taskbarMonitor.option ==
+               TASKBAR_MONITOR_OPTION_NETWORK) {
+        networkEnabled = !networkEnabled;
+    }
+    TaskbarMonitor_ApplyConfig(TRUE, cpuMemoryEnabled, networkEnabled);
+    RefreshTrayBackgroundWorkState();
+}
+
 BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
-    if (type <= PREVIEW_TYPE_NONE || type > PREVIEW_TYPE_EFFECT || !data) {
+    if (type <= PREVIEW_TYPE_NONE || type > PREVIEW_TYPE_TASKBAR_MONITOR ||
+        !data) {
         return FALSE;
+    }
+    if (type == PREVIEW_TYPE_TASKBAR_MONITOR) {
+        TaskbarMonitorOption option = *(const TaskbarMonitorOption*)data;
+        if (!IsValidTaskbarMonitorOption(option)) return FALSE;
+        if (g_previewState.type == PREVIEW_TYPE_TASKBAR_MONITOR) {
+            g_previewState.data.taskbarMonitor.option = option;
+            ApplyTaskbarMonitorPreview();
+            return TRUE;
+        }
+        if (IsPreviewActive()) CancelPreview(hwnd);
+        g_previewState.type = PREVIEW_TYPE_TASKBAR_MONITOR;
+        g_previewState.data.taskbarMonitor.option = option;
+        g_previewState.data.taskbarMonitor.originalCpuMemoryEnabled =
+            TaskbarMonitor_IsOptionEnabled(
+                TASKBAR_MONITOR_OPTION_CPU_MEMORY);
+        g_previewState.data.taskbarMonitor.originalNetworkEnabled =
+            TaskbarMonitor_IsOptionEnabled(TASKBAR_MONITOR_OPTION_NETWORK);
+        ApplyTaskbarMonitorPreview();
+        return TRUE;
     }
     if ((type == PREVIEW_TYPE_COLOR || type == PREVIEW_TYPE_FONT ||
          type == PREVIEW_TYPE_ANIMATION) && !*(const char*)data) return FALSE;
@@ -199,17 +241,28 @@ void CancelPreview(HWND hwnd) {
         CancelAnimationPreview();
     }
     if (!IsPreviewActive()) return;
-    BOOL needsRedraw = (g_previewState.type != PREVIEW_TYPE_ANIMATION &&
-                        g_previewState.type != PREVIEW_TYPE_NONE);
-    BOOL needsTimerReset = (g_previewState.type == PREVIEW_TYPE_MILLISECONDS ||
-                            g_previewState.type == PREVIEW_TYPE_SECONDS ||
-                            g_previewState.type == PREVIEW_TYPE_COLOR);
-    BOOL needsColorRefresh = (g_previewState.type == PREVIEW_TYPE_COLOR);
-    BOOL needsFontReload = (g_previewState.type == PREVIEW_TYPE_FONT);
-    BOOL needsEffectCleanup = (g_previewState.type == PREVIEW_TYPE_EFFECT &&
+    PreviewType canceledType = g_previewState.type;
+    BOOL needsTaskbarMonitorRestore =
+        canceledType == PREVIEW_TYPE_TASKBAR_MONITOR;
+    BOOL needsRedraw = (canceledType != PREVIEW_TYPE_ANIMATION &&
+                        canceledType != PREVIEW_TYPE_NONE &&
+                        !needsTaskbarMonitorRestore);
+    BOOL needsTimerReset = (canceledType == PREVIEW_TYPE_MILLISECONDS ||
+                            canceledType == PREVIEW_TYPE_SECONDS ||
+                            canceledType == PREVIEW_TYPE_COLOR);
+    BOOL needsColorRefresh = (canceledType == PREVIEW_TYPE_COLOR);
+    BOOL needsFontReload = (canceledType == PREVIEW_TYPE_FONT);
+    BOOL needsEffectCleanup = (canceledType == PREVIEW_TYPE_EFFECT &&
                                ShouldCleanupPreviewEffectBuffers(
                                    g_previewState.data.effect,
                                    (EffectType)CLOCK_TEXT_EFFECT));
+    if (needsTaskbarMonitorRestore) {
+        TaskbarMonitor_ApplyConfig(
+            TRUE,
+            g_previewState.data.taskbarMonitor.originalCpuMemoryEnabled,
+            g_previewState.data.taskbarMonitor.originalNetworkEnabled);
+        RefreshTrayBackgroundWorkState();
+    }
     if (needsFontReload) {
         RestoreConfiguredFontAfterPreview();
     }

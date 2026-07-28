@@ -5,6 +5,7 @@
 #include "drawing/drawing_effect.h"
 #include "font.h"
 #include "text_effect.h"
+#include "tray/tray.h"
 #include "window_procedure/window_commands.h"
 
 extern char FONT_FILE_NAME[MAX_PATH];
@@ -29,6 +30,30 @@ static BOOL ApplyTextEffectPreview(void) {
         !TextEffect_UsesSharedEffectBuffer(effect)) {
         CleanupDrawingEffects();
     }
+    return TRUE;
+}
+
+static BOOL ApplyTaskbarMonitorPreview(void) {
+    BOOL cpuMemoryEnabled =
+        g_previewState.data.taskbarMonitor.originalCpuMemoryEnabled;
+    BOOL networkEnabled =
+        g_previewState.data.taskbarMonitor.originalNetworkEnabled;
+    TaskbarMonitorOption option = g_previewState.data.taskbarMonitor.option;
+    BOOL enabled;
+    if (option == TASKBAR_MONITOR_OPTION_CPU_MEMORY) {
+        cpuMemoryEnabled = !cpuMemoryEnabled;
+        enabled = cpuMemoryEnabled;
+    } else if (g_previewState.data.taskbarMonitor.option ==
+               TASKBAR_MONITOR_OPTION_NETWORK) {
+        networkEnabled = !networkEnabled;
+        enabled = networkEnabled;
+    } else {
+        return FALSE;
+    }
+    if (!TaskbarMonitor_SetOptionEnabled(option, enabled)) {
+        return FALSE;
+    }
+    RefreshTrayBackgroundWorkState();
     return TRUE;
 }
 
@@ -83,6 +108,9 @@ BOOL ApplyPreview(HWND hwnd) {
             if (!ApplyTextEffectPreview()) return FALSE;
             break;
         case PREVIEW_TYPE_ANIMATION:
+            break;
+        case PREVIEW_TYPE_TASKBAR_MONITOR:
+            if (!ApplyTaskbarMonitorPreview()) return FALSE;
             break;
         default:
             return FALSE;

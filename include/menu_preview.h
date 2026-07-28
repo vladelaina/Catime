@@ -46,6 +46,7 @@ typedef enum {
     PREVIEW_TYPE_24HOUR,
     PREVIEW_TYPE_ANIMATION,
     PREVIEW_TYPE_EFFECT,
+    PREVIEW_TYPE_TASKBAR_MONITOR,
 } PreviewType;
 
 /* ============================================================================
@@ -67,6 +68,7 @@ typedef enum {
  * - PREVIEW_TYPE_24HOUR: data = BOOL*
  * - PREVIEW_TYPE_ANIMATION: data = const char* (animation path)
  * - PREVIEW_TYPE_EFFECT: data = EffectType*
+ * - PREVIEW_TYPE_TASKBAR_MONITOR: data = TaskbarMonitorOption*
  *
  * @return TRUE when the preview is active or was started successfully
  * @note Cancels any existing preview before starting new one

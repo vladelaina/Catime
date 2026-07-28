@@ -121,20 +121,8 @@ BOOL TaskbarMonitor_IsOptionEnabled(TaskbarMonitorOption option) {
     return FALSE;
 }
 
-BOOL TaskbarMonitor_SetOptionEnabled(TaskbarMonitorOption option,
-                                     BOOL enabled) {
-    BOOL normalized = enabled ? TRUE : FALSE;
-    BOOL cpuMemoryEnabled = g_taskbarMonitor.cpuMemoryEnabled;
-    BOOL networkEnabled = g_taskbarMonitor.networkEnabled;
-    if (option == TASKBAR_MONITOR_OPTION_CPU_MEMORY) {
-        if (normalized == cpuMemoryEnabled) return TRUE;
-        cpuMemoryEnabled = normalized;
-    } else if (option == TASKBAR_MONITOR_OPTION_NETWORK) {
-        if (normalized == networkEnabled) return TRUE;
-        networkEnabled = normalized;
-    } else {
-        return FALSE;
-    }
+static BOOL PersistTaskbarMonitorOptions(BOOL cpuMemoryEnabled,
+                                         BOOL networkEnabled) {
     const IniKeyValue updates[] = {
         {"Animation", "TASKBAR_MONITOR_ENABLED",
          cpuMemoryEnabled || networkEnabled ? "TRUE" : "FALSE"},
@@ -152,6 +140,21 @@ BOOL TaskbarMonitor_SetOptionEnabled(TaskbarMonitorOption option,
     }
     TaskbarMonitor_ApplyConfig(TRUE, cpuMemoryEnabled, networkEnabled);
     return TRUE;
+}
+
+BOOL TaskbarMonitor_SetOptionEnabled(TaskbarMonitorOption option,
+                                     BOOL enabled) {
+    BOOL normalized = enabled ? TRUE : FALSE;
+    BOOL cpuMemoryEnabled = g_taskbarMonitor.cpuMemoryEnabled;
+    BOOL networkEnabled = g_taskbarMonitor.networkEnabled;
+    if (option == TASKBAR_MONITOR_OPTION_CPU_MEMORY) {
+        cpuMemoryEnabled = normalized;
+    } else if (option == TASKBAR_MONITOR_OPTION_NETWORK) {
+        networkEnabled = normalized;
+    } else {
+        return FALSE;
+    }
+    return PersistTaskbarMonitorOptions(cpuMemoryEnabled, networkEnabled);
 }
 
 void TaskbarMonitor_OnTaskbarCreated(void) {
