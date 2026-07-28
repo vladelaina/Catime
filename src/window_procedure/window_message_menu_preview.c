@@ -82,6 +82,19 @@ void StopMenuPreviewTrackingForCommand(HWND hwnd) {
     KillTimer(hwnd, IDT_MENU_DEBOUNCE);
 }
 
+void FinishMenuPreviewTracking(HWND hwnd) {
+    KillTimer(hwnd, IDT_MENU_DEBOUNCE);
+    g_menuPreviewCancellationPending = FALSE;
+    if (g_menuPreviewActive) {
+        CancelActiveMenuPreview(hwnd);
+    } else if (GetActivePreviewType() == PREVIEW_TYPE_TASKBAR_MONITOR) {
+        /* A command clears menu tracking before it is dispatched. If that
+         * command did not consume the taskbar preview, restore it here. */
+        CancelPreview(hwnd);
+    }
+    ResetMenuPreviewTracking(hwnd);
+}
+
 static void StartMenuDebounceTimer(HWND hwnd) {
     if (!SetTimer(hwnd, IDT_MENU_DEBOUNCE, MENU_DEBOUNCE_DELAY_MS, NULL)) {
         LOG_WARNING("MenuPreview: Failed to start debounce timer (error=%lu)",

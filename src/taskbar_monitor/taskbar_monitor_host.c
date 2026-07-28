@@ -79,6 +79,11 @@ static BOOL SetMonitorParent(HWND parent, BOOL childStyle) {
     extendedStyle = (extendedStyle & ~WS_EX_TOPMOST) |
                     WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE |
                     WS_EX_LAYERED;
+    if (g_taskbarMonitor.menuPreviewSessionActive) {
+        extendedStyle |= WS_EX_TRANSPARENT;
+    } else {
+        extendedStyle &= ~WS_EX_TRANSPARENT;
+    }
     SetWindowLongPtrW(
         g_taskbarMonitor.window, GWL_EXSTYLE, extendedStyle);
     SetWindowPos(g_taskbarMonitor.window, HWND_TOP, 0, 0, 0, 0,
@@ -194,9 +199,13 @@ static void ConfigureHiddenRetry(void) {
     SetParent(g_taskbarMonitor.window, NULL);
     SetWindowLongPtrW(g_taskbarMonitor.window, GWL_STYLE,
                       (style & ~WS_CHILD) | WS_POPUP);
+    exStyle = (exStyle & ~(WS_EX_TOPMOST | WS_EX_TRANSPARENT)) |
+              WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED;
+    if (g_taskbarMonitor.menuPreviewSessionActive) {
+        exStyle |= WS_EX_TRANSPARENT;
+    }
     SetWindowLongPtrW(g_taskbarMonitor.window, GWL_EXSTYLE,
-                      (exStyle & ~WS_EX_TOPMOST) |
-                      WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED);
+                      exStyle);
     SetWindowPos(g_taskbarMonitor.window, HWND_NOTOPMOST, 0, 0, 0, 0,
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE |
                  SWP_FRAMECHANGED | SWP_HIDEWINDOW);
@@ -220,6 +229,9 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
     TaskbarMonitor_UpdateDimensions(&taskbarRect);
     BOOL modernTaskbar = TaskbarMonitor_IsModernTaskbar(taskbar);
     g_taskbarMonitor.modernTaskbar = modernTaskbar;
+    if (g_taskbarMonitor.menuPreviewSessionActive) {
+        return AttachModernMonitor(taskbar);
+    }
     HWND host = FindDescendantByClass(taskbar, L"ReBarWindow32");
     if (!host) host = FindDescendantByClass(taskbar, L"WorkerW");
     HWND taskList = host

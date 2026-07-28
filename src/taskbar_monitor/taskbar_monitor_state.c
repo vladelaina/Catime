@@ -157,22 +157,27 @@ void TaskbarMonitor_RefreshTextLayout(void) {
 void TaskbarMonitor_UpdateDimensions(const RECT* taskbarRect) {
     int taskbarWidth = taskbarRect->right - taskbarRect->left;
     int taskbarHeight = taskbarRect->bottom - taskbarRect->top;
-    int groupCount = (g_taskbarMonitor.cpuMemoryEnabled ? 1 : 0) +
-                     (g_taskbarMonitor.networkEnabled ? 1 : 0);
+    BOOL cpuMemoryLayoutEnabled =
+        g_taskbarMonitor.cpuMemoryEnabled ||
+        g_taskbarMonitor.menuPreviewSessionActive;
+    BOOL networkLayoutEnabled =
+        g_taskbarMonitor.networkEnabled ||
+        g_taskbarMonitor.menuPreviewSessionActive;
+    int groupCount = (cpuMemoryLayoutEnabled ? 1 : 0) +
+                     (networkLayoutEnabled ? 1 : 0);
     if (groupCount <= 0) groupCount = 1;
     g_taskbarMonitor.taskbarWidth = taskbarWidth;
     g_taskbarMonitor.taskbarHeight = taskbarHeight;
     g_taskbarMonitor.horizontal = taskbarWidth >= taskbarHeight;
     if (g_taskbarMonitor.horizontal) {
         g_taskbarMonitor.width = 0;
-        if (g_taskbarMonitor.networkEnabled) {
+        if (networkLayoutEnabled) {
             g_taskbarMonitor.width += g_taskbarMonitor.networkGroupWidth;
         }
-        if (g_taskbarMonitor.cpuMemoryEnabled) {
+        if (cpuMemoryLayoutEnabled) {
             g_taskbarMonitor.width += g_taskbarMonitor.resourceGroupWidth;
         }
-        if (g_taskbarMonitor.networkEnabled &&
-            g_taskbarMonitor.cpuMemoryEnabled) {
+        if (networkLayoutEnabled && cpuMemoryLayoutEnabled) {
             g_taskbarMonitor.width += TaskbarMonitor_ScaleForDpi(
                 TASKBAR_MONITOR_GROUP_GAP, g_taskbarMonitor.dpi);
         }

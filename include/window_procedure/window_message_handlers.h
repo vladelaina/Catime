@@ -52,6 +52,7 @@ LRESULT HandleTrayUpdateIcon(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleAppReregisterHotkeys(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT HandleAnimationPreviewLoaded(HWND hwnd, WPARAM wp, LPARAM lp);
 void StopMenuPreviewTrackingForCommand(HWND hwnd);
+void FinishMenuPreviewTracking(HWND hwnd);
 
 // Owner-drawn menu handlers
 LRESULT HandleMeasureItem(HWND hwnd, WPARAM wp, LPARAM lp);

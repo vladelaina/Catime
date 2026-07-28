@@ -34,7 +34,7 @@ static BOOL RegisterMonitorClass(void) {
 static BOOL CreateMonitorWindow(void) {
     if (IsWindow(g_taskbarMonitor.window)) return TRUE;
     if (!RegisterMonitorClass()) return FALSE;
-    SystemMonitor_Init();
+    if (TaskbarMonitor_IsEnabled()) SystemMonitor_Init();
     g_taskbarMonitor.window = CreateWindowExW(
         WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
         TASKBAR_MONITOR_CLASS, L"Catime Taskbar Monitor", WS_POPUP,
@@ -67,6 +67,55 @@ static void DestroyMonitorWindow(void) {
     TaskbarMonitor_DeleteFont();
 }
 
+static void SetMenuPreviewWindowInteraction(BOOL previewActive) {
+    if (!IsWindow(g_taskbarMonitor.window)) return;
+    LONG_PTR extendedStyle = GetWindowLongPtrW(
+        g_taskbarMonitor.window, GWL_EXSTYLE);
+    extendedStyle |= WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE;
+    if (previewActive) {
+        extendedStyle |= WS_EX_TRANSPARENT;
+    } else {
+        extendedStyle &= ~WS_EX_TRANSPARENT;
+    }
+    SetWindowLongPtrW(
+        g_taskbarMonitor.window, GWL_EXSTYLE, extendedStyle);
+    SetWindowPos(g_taskbarMonitor.window, NULL, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                 SWP_NOACTIVATE | SWP_FRAMECHANGED);
+}
+
+BOOL TaskbarMonitor_BeginMenuPreviewSession(void) {
+    if (!g_taskbarMonitor.initialized) return FALSE;
+    if (g_taskbarMonitor.menuPreviewSessionActive) {
+        return IsWindow(g_taskbarMonitor.window);
+    }
+
+    g_taskbarMonitor.menuPreviewSessionActive = TRUE;
+    if (!IsWindow(g_taskbarMonitor.window)) {
+        g_taskbarMonitor.window = NULL;
+        (void)CreateMonitorWindow();
+    } else {
+        (void)TaskbarMonitor_AttachToTaskbar();
+    }
+    SetMenuPreviewWindowInteraction(TRUE);
+    if (IsWindow(g_taskbarMonitor.window)) {
+        InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+void TaskbarMonitor_EndMenuPreviewSession(void) {
+    if (!g_taskbarMonitor.menuPreviewSessionActive) return;
+    g_taskbarMonitor.menuPreviewSessionActive = FALSE;
+    SetMenuPreviewWindowInteraction(FALSE);
+
+    BOOL cpuMemoryEnabled = g_taskbarMonitor.cpuMemoryEnabled;
+    BOOL networkEnabled = g_taskbarMonitor.networkEnabled;
+    TaskbarMonitor_ApplyConfig(
+        TRUE, cpuMemoryEnabled, networkEnabled);
+}
+
 void TaskbarMonitor_ApplyConfig(BOOL enabled, BOOL cpuMemoryEnabled,
                                 BOOL networkEnabled) {
     BOOL wasEnabled = TaskbarMonitor_IsEnabled();
@@ -75,6 +124,15 @@ void TaskbarMonitor_ApplyConfig(BOOL enabled, BOOL cpuMemoryEnabled,
     g_taskbarMonitor.networkEnabled =
         enabled && networkEnabled ? TRUE : FALSE;
     if (!g_taskbarMonitor.initialized) return;
+    if (g_taskbarMonitor.menuPreviewSessionActive) {
+        /* Keep the prepared host attached and fixed-size while TrackPopupMenu
+         * owns the UI thread. Explorer layout changes here dismiss the menu. */
+        if (TaskbarMonitor_IsEnabled()) SystemMonitor_Init();
+        if (IsWindow(g_taskbarMonitor.window)) {
+            InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
+        }
+        return;
+    }
     if (TaskbarMonitor_IsEnabled()) {
         if (!wasEnabled || !IsWindow(g_taskbarMonitor.window)) {
             CreateMonitorWindow();
@@ -102,6 +160,7 @@ void TaskbarMonitor_Shutdown(void) {
     }
     g_taskbarMonitor.classRegistered = FALSE;
     g_taskbarMonitor.initialized = FALSE;
+    g_taskbarMonitor.menuPreviewSessionActive = FALSE;
     g_taskbarMonitor.owner = NULL;
     g_taskbarMonitor.instance = NULL;
 }

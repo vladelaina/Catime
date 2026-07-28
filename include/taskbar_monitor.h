@@ -18,6 +18,16 @@ typedef enum {
 void TaskbarMonitor_ApplyConfig(BOOL enabled, BOOL cpuMemoryEnabled,
                                 BOOL networkEnabled);
 
+/**
+ * Prepare a stable, non-interactive taskbar host before opening the tray menu.
+ * Hover previews can then update their contents without changing Explorer's
+ * layout while its popup-menu loop is active.
+ */
+BOOL TaskbarMonitor_BeginMenuPreviewSession(void);
+
+/** Restore normal taskbar sizing and interaction after the tray menu closes. */
+void TaskbarMonitor_EndMenuPreviewSession(void);
+
 /** Initialize the taskbar monitor after the main window is available. */
 BOOL TaskbarMonitor_Initialize(HINSTANCE instance, HWND owner);
 

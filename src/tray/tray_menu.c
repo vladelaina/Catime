@@ -21,6 +21,7 @@
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_loader.h"
 #include "tray/tray_animation_menu.h"
+#include "tray/tray.h"
 #include "startup.h"
 #include "utils/string_convert.h"
 #include "utils/natural_sort.h"
@@ -30,6 +31,8 @@
 #include "tray/tray_menu_submenus.h"
 #include "tray/tray_menu_theme.h"
 #include "color/color_parser.h"
+#include "taskbar_monitor.h"
+#include "window_procedure/window_message_handlers.h"
 
 /* External dependencies needed for menu display logic */
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
@@ -90,9 +93,14 @@ void ShowColorMenu(HWND hwnd) {
     
     /* Display menu */
     POINT pt;
+    (void)TaskbarMonitor_BeginMenuPreviewSession();
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
-    TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON, pt.x, pt.y, 0, hwnd, NULL);
+    TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON,
+                   pt.x, pt.y, 0, hwnd, NULL);
+    FinishMenuPreviewTracking(hwnd);
+    TaskbarMonitor_EndMenuPreviewSession();
+    RefreshTrayBackgroundWorkState();
     PostMessage(hwnd, WM_NULL, 0, 0);
     DestroyMenu(hMenu);
 }

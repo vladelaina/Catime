@@ -173,7 +173,8 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
         case WM_ERASEBKGND:
             return 1;
         case WM_NCHITTEST:
-            return HTCLIENT;
+            return g_taskbarMonitor.menuPreviewSessionActive
+                ? HTTRANSPARENT : HTCLIENT;
         case WM_MOUSEACTIVATE:
             return MA_NOACTIVATE;
         case WM_LBUTTONUP:

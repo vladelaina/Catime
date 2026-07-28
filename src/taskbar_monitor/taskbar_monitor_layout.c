@@ -66,10 +66,54 @@ static void GetHorizontalGroupBounds(TaskbarMetricGroup group, int width,
     }
 }
 
+static void GetPreviewContentBounds(int width, int height, RECT* bounds) {
+    SetRect(bounds, 0, 0, width, height);
+    if (!g_taskbarMonitor.menuPreviewSessionActive) return;
+
+    if (g_taskbarMonitor.horizontal) {
+        int contentWidth = 0;
+        if (g_taskbarMonitor.networkEnabled) {
+            contentWidth += g_taskbarMonitor.networkGroupWidth;
+        }
+        if (g_taskbarMonitor.cpuMemoryEnabled) {
+            contentWidth += g_taskbarMonitor.resourceGroupWidth;
+        }
+        if (g_taskbarMonitor.networkEnabled &&
+            g_taskbarMonitor.cpuMemoryEnabled) {
+            contentWidth += TaskbarMonitor_ScaleForDpi(
+                TASKBAR_MONITOR_GROUP_GAP, g_taskbarMonitor.dpi);
+        }
+        if (contentWidth > 0 && contentWidth < width) {
+            bounds->left = width - contentWidth;
+        }
+        return;
+    }
+
+    int groupCount = (g_taskbarMonitor.networkEnabled ? 1 : 0) +
+                     (g_taskbarMonitor.cpuMemoryEnabled ? 1 : 0);
+    int contentHeight = TaskbarMonitor_ScaleForDpi(
+        TASKBAR_MONITOR_GROUP_HEIGHT * groupCount,
+        g_taskbarMonitor.dpi);
+    if (contentHeight > 0 && contentHeight < height) {
+        bounds->top = height - contentHeight;
+    }
+}
+
 void TaskbarMonitor_DrawMetricGrid(
     HDC dc, int width, int height,
     const TaskbarMetricText* metrics, int metricCount) {
     if (!dc || !metrics || metricCount <= 0) return;
+    RECT content = {0};
+    GetPreviewContentBounds(width, height, &content);
+    int savedDc = 0;
+    if (content.left != 0 || content.top != 0) {
+        savedDc = SaveDC(dc);
+    }
+    if (savedDc != 0) {
+        SetViewportOrgEx(dc, content.left, content.top, NULL);
+        width = content.right - content.left;
+        height = content.bottom - content.top;
+    }
     if (g_taskbarMonitor.horizontal) {
         for (int i = 0; i < metricCount; ++i) {
             int left;
@@ -85,11 +129,12 @@ void TaskbarMonitor_DrawMetricGrid(
             };
             DrawMetricRow(dc, &cell, &metrics[i]);
         }
-        return;
+    } else {
+        for (int i = 0; i < metricCount; ++i) {
+            RECT cell = {0, height * i / metricCount,
+                         width, height * (i + 1) / metricCount};
+            DrawMetricRow(dc, &cell, &metrics[i]);
+        }
     }
-    for (int i = 0; i < metricCount; ++i) {
-        RECT cell = {0, height * i / metricCount,
-                     width, height * (i + 1) / metricCount};
-        DrawMetricRow(dc, &cell, &metrics[i]);
-    }
+    if (savedDc != 0) RestoreDC(dc, savedDc);
 }
