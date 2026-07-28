@@ -1,7 +1,7 @@
 import { bundledLibraryPayload } from './library-snapshot.js';
 
 const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
-const LIBRARY_CACHE_KEY = 'catime:tray-library:v4';
+const LIBRARY_CACHE_KEY = 'catime:tray-library:v5';
 const MAX_CACHED_MANIFEST_BYTES = 2 * 1024 * 1024;
 
 export function loadImmediateLibraryData(source = configuredLibrarySource()) {
