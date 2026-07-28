@@ -177,6 +177,7 @@
 #define CLOCK_IDM_ANIM_SPEED_FIXED 2213      /**< User-selected fixed animation speed */
 #define CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY 2214 /**< Toggle taskbar CPU/memory */
 #define CLOCK_IDM_TASKBAR_MONITOR_NETWORK 2215 /**< Toggle taskbar network speed */
+#define CLOCK_IDM_ANIMATIONS_GET_MORE 2216     /**< Open online tray animation library */
 
 /** @brief Animation menu base identifier */
 #define CLOCK_IDM_ANIMATIONS_BASE 3000       /**< Base ID for dynamic animation menus */

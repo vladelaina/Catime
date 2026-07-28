@@ -62,6 +62,8 @@ void BuildAnimationSubmenu(HMENU hMenu) {
         }
 
         AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
+        AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_GET_MORE,
+                    GetLocalizedString(NULL, L"Get More"));
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(NULL, L"Open animations folder"));
     }
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(NULL, L"Tray Icon"))) {

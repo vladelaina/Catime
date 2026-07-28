@@ -167,7 +167,6 @@ BOOL BuildAnimationMenu(HMENU menu, const char* currentAnimationName) {
 }
 
 BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
-    (void)hwnd;
     if (id == CLOCK_IDM_ANIM_SPEED_ORIGINAL ||
         id == CLOCK_IDM_ANIM_SPEED_MEMORY ||
         id == CLOCK_IDM_ANIM_SPEED_CPU ||
@@ -182,6 +181,17 @@ BOOL HandleAnimationMenuCommand(HWND hwnd, UINT id) {
         BOOL enabled = !TaskbarMonitor_IsOptionEnabled(option);
         if (TaskbarMonitor_SetOptionEnabled(option, enabled)) {
             RefreshTrayBackgroundWorkState();
+        }
+        return TRUE;
+    }
+    if (id == CLOCK_IDM_ANIMATIONS_GET_MORE) {
+        HINSTANCE result = ShellExecuteW(
+            hwnd, L"open", URL_TRAY_ANIMATIONS,
+            NULL, NULL, SW_SHOWNORMAL);
+        if ((INT_PTR)result <= 32) {
+            LOG_WARNING("Failed to open the tray animation library");
+        } else {
+            LOG_INFO("Opened the tray animation library");
         }
         return TRUE;
     }
