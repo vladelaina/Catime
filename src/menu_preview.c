@@ -94,6 +94,9 @@ BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
         TaskbarMonitorOption option = *(const TaskbarMonitorOption*)data;
         if (!IsValidTaskbarMonitorOption(option)) return FALSE;
         if (g_previewState.type == PREVIEW_TYPE_TASKBAR_MONITOR) {
+            if (g_previewState.data.taskbarMonitor.option == option) {
+                return TRUE;
+            }
             g_previewState.data.taskbarMonitor.option = option;
             ApplyTaskbarMonitorPreview();
             return TRUE;

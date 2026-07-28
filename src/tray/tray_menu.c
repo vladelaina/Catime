@@ -21,7 +21,6 @@
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_loader.h"
 #include "tray/tray_animation_menu.h"
-#include "tray/tray.h"
 #include "startup.h"
 #include "utils/string_convert.h"
 #include "utils/natural_sort.h"
@@ -96,11 +95,26 @@ void ShowColorMenu(HWND hwnd) {
     (void)TaskbarMonitor_BeginMenuPreviewSession();
     GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
-    TrackPopupMenu(hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON,
-                   pt.x, pt.y, 0, hwnd, NULL);
+    UINT selectedCommand = TrackPopupMenu(
+        hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
+        pt.x, pt.y, 0, hwnd, NULL);
+    BOOL isTaskbarMonitorCommand =
+        selectedCommand == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY ||
+        selectedCommand == CLOCK_IDM_TASKBAR_MONITOR_NETWORK;
+    /* Commit taskbar previews before ending the session so the prepared
+     * monitor window can be reused. Other commands run after cleanup to avoid
+     * keeping preview state active while they open dialogs. */
+    if (isTaskbarMonitorCommand && IsWindow(hwnd)) {
+        SendMessageW(hwnd, WM_COMMAND,
+                     MAKEWPARAM(selectedCommand, 0), 0);
+    }
     FinishMenuPreviewTracking(hwnd);
     TaskbarMonitor_EndMenuPreviewSession();
-    RefreshTrayBackgroundWorkState();
+    if (selectedCommand != 0 && !isTaskbarMonitorCommand &&
+        IsWindow(hwnd)) {
+        SendMessageW(hwnd, WM_COMMAND,
+                     MAKEWPARAM(selectedCommand, 0), 0);
+    }
     PostMessage(hwnd, WM_NULL, 0, 0);
     DestroyMenu(hMenu);
 }

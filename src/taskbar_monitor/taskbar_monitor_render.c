@@ -15,6 +15,10 @@
 void TaskbarMonitor_UpdateSnapshot(
     const SystemMonitorSnapshot* snapshot) {
     if (!snapshot) return;
+    if (snapshot->revision != 0 &&
+        snapshot->revision == g_taskbarMonitor.metrics.revision) {
+        return;
+    }
     g_taskbarMonitor.metrics = *snapshot;
     if (IsWindow(g_taskbarMonitor.window)) {
         if (!g_taskbarMonitor.presentTimerActive &&

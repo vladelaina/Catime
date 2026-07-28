@@ -75,6 +75,9 @@ typedef struct {
     BOOL modernTaskbar;
     BOOL presentTimerActive;
     BOOL menuPreviewSessionActive;
+    BOOL menuPreviewWindowCreated;
+    BOOL menuPreviewOriginalCpuMemoryEnabled;
+    BOOL menuPreviewOriginalNetworkEnabled;
     TaskbarHostMode mode;
     SystemMonitorSnapshot metrics;
     TaskbarCompositionMode compositionMode;
