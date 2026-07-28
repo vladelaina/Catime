@@ -12,8 +12,7 @@ SRWLOCK g_monitorStateLock = SRWLOCK_INIT;
 SRWLOCK g_networkApiLock = SRWLOCK_INIT;
 HANDLE g_networkRefreshThread = NULL;
 HANDLE g_networkRefreshEvent = NULL;
-HANDLE g_retiredNetworkRefreshThread = NULL;
-HANDLE g_retiredNetworkRefreshEvent = NULL;
+NetworkRefreshRetiredWorker* g_retiredNetworkRefreshWorkers = NULL;
 volatile LONG g_networkRefreshGeneration = 0;
 ULONGLONG g_networkRefreshStartFailureCooldownUntil = 0;
 

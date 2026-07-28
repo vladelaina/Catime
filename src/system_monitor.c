@@ -58,7 +58,7 @@ void SystemMonitor_Init(void) {
 void SystemMonitor_Shutdown(void) {
     HANDLE refreshThread = NULL;
     HANDLE refreshEvent = NULL;
-    BOOL refreshThreadExited = TRUE;
+    BOOL workerHandlesSafe = TRUE;
 
     AcquireSRWLockExclusive(&g_monitorLifecycleLock);
     Monitor_CleanupRetiredWorkerLocked(0);
@@ -77,19 +77,16 @@ void SystemMonitor_Shutdown(void) {
     if (refreshThread) {
         DWORD waitResult = WaitForSingleObject(
             refreshThread, MONITOR_NETWORK_SHUTDOWN_WAIT_MS);
-        refreshThreadExited = waitResult == WAIT_OBJECT_0;
-        if (!refreshThreadExited) {
+        if (waitResult != WAIT_OBJECT_0) {
             if (waitResult == WAIT_TIMEOUT) {
                 OutputDebugStringW(
                     L"SystemMonitor: network refresh worker did not exit before shutdown timeout\n");
-            }
-            if (Monitor_CleanupRetiredWorkerLocked(0)) {
-                g_retiredNetworkRefreshThread = refreshThread;
-                g_retiredNetworkRefreshEvent = refreshEvent;
             } else {
-                CloseHandle(refreshThread);
-                if (refreshEvent) CloseHandle(refreshEvent);
+                OutputDebugStringW(
+                    L"SystemMonitor: network refresh worker wait failed\n");
             }
+            workerHandlesSafe = Monitor_RetireNetworkWorkerLocked(
+                refreshThread, refreshEvent);
             refreshThread = NULL;
             refreshEvent = NULL;
         }
@@ -97,7 +94,7 @@ void SystemMonitor_Shutdown(void) {
     if (refreshThread) CloseHandle(refreshThread);
     if (refreshEvent) CloseHandle(refreshEvent);
 
-    if (refreshThreadExited && !g_retiredNetworkRefreshThread) {
+    if (workerHandlesSafe && !g_retiredNetworkRefreshWorkers) {
         Monitor_ReleaseNetworkApiResources();
     }
     ReleaseSRWLockExclusive(&g_monitorLifecycleLock);

@@ -45,6 +45,12 @@ typedef struct {
     LONG generation;
 } NetworkRefreshWorkerContext;
 
+typedef struct NetworkRefreshRetiredWorker {
+    HANDLE thread;
+    HANDLE event;
+    struct NetworkRefreshRetiredWorker* next;
+} NetworkRefreshRetiredWorker;
+
 typedef struct {
     BOOL hasBaseline;
     ULONGLONG lastTick;
@@ -81,8 +87,7 @@ extern SRWLOCK g_monitorStateLock;
 extern SRWLOCK g_networkApiLock;
 extern HANDLE g_networkRefreshThread;
 extern HANDLE g_networkRefreshEvent;
-extern HANDLE g_retiredNetworkRefreshThread;
-extern HANDLE g_retiredNetworkRefreshEvent;
+extern NetworkRefreshRetiredWorker* g_retiredNetworkRefreshWorkers;
 extern volatile LONG g_networkRefreshGeneration;
 extern ULONGLONG g_networkRefreshStartFailureCooldownUntil;
 
@@ -102,6 +107,7 @@ DWORD WINAPI Monitor_NetworkRefreshThreadProc(LPVOID param);
 
 void Monitor_CleanupCompletedWorkerLocked(void);
 BOOL Monitor_CleanupRetiredWorkerLocked(DWORD waitMs);
+BOOL Monitor_RetireNetworkWorkerLocked(HANDLE thread, HANDLE event);
 BOOL Monitor_EnsureNetworkWorkerStarted(void);
 void Monitor_StartNetworkRefreshIfNeeded(void);
 

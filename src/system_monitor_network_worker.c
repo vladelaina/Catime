@@ -20,25 +20,74 @@ void Monitor_CleanupCompletedWorkerLocked(void) {
 }
 
 BOOL Monitor_CleanupRetiredWorkerLocked(DWORD waitMs) {
-    if (!g_retiredNetworkRefreshThread) {
-        if (g_retiredNetworkRefreshEvent) {
-            CloseHandle(g_retiredNetworkRefreshEvent);
-            g_retiredNetworkRefreshEvent = NULL;
+    BOOL hadRetiredWorkers = g_retiredNetworkRefreshWorkers != NULL;
+    BOOL allCompleted = TRUE;
+    ULONGLONG deadline = 0;
+    if (waitMs != INFINITE) deadline = Monitor_GetTickMs() + waitMs;
+
+    NetworkRefreshRetiredWorker** cursor =
+        &g_retiredNetworkRefreshWorkers;
+    while (*cursor) {
+        NetworkRefreshRetiredWorker* worker = *cursor;
+        DWORD remaining = waitMs;
+        if (waitMs != INFINITE) {
+            ULONGLONG now = Monitor_GetTickMs();
+            if (now >= deadline) {
+                remaining = 0;
+            } else {
+                ULONGLONG delta = deadline - now;
+                remaining = delta > MAXDWORD ? MAXDWORD : (DWORD)delta;
+            }
         }
+
+        DWORD result = WaitForSingleObject(worker->thread, remaining);
+        if (result == WAIT_OBJECT_0) {
+            *cursor = worker->next;
+            CloseHandle(worker->thread);
+            if (worker->event) CloseHandle(worker->event);
+            free(worker);
+            continue;
+        }
+
+        if (result == WAIT_FAILED) {
+            OutputDebugStringW(
+                L"SystemMonitor: retired network worker wait failed\n");
+        }
+        allCompleted = FALSE;
+        cursor = &worker->next;
+    }
+
+    if (hadRetiredWorkers && allCompleted && !g_networkRefreshThread) {
+        Monitor_ReleaseNetworkApiResources();
+    }
+    return allCompleted;
+}
+
+BOOL Monitor_RetireNetworkWorkerLocked(HANDLE thread, HANDLE event) {
+    if (!thread) {
+        if (event) CloseHandle(event);
         return TRUE;
     }
 
-    if (WaitForSingleObject(g_retiredNetworkRefreshThread, waitMs) !=
-        WAIT_OBJECT_0) {
-        return FALSE;
+    NetworkRefreshRetiredWorker* worker =
+        (NetworkRefreshRetiredWorker*)calloc(1, sizeof(*worker));
+    if (!worker) {
+        /* Keep the handles valid until the worker has definitely exited. */
+        OutputDebugStringW(
+            L"SystemMonitor: unable to retain network worker handles; waiting for exit\n");
+        if (WaitForSingleObject(thread, INFINITE) != WAIT_OBJECT_0) {
+            OutputDebugStringW(
+                L"SystemMonitor: network worker exit wait failed; preserving handles\n");
+            return FALSE;
+        }
+        CloseHandle(thread);
+        if (event) CloseHandle(event);
+        return TRUE;
     }
-    CloseHandle(g_retiredNetworkRefreshThread);
-    g_retiredNetworkRefreshThread = NULL;
-    if (g_retiredNetworkRefreshEvent) {
-        CloseHandle(g_retiredNetworkRefreshEvent);
-        g_retiredNetworkRefreshEvent = NULL;
-    }
-    if (!g_networkRefreshThread) Monitor_ReleaseNetworkApiResources();
+    worker->thread = thread;
+    worker->event = event;
+    worker->next = g_retiredNetworkRefreshWorkers;
+    g_retiredNetworkRefreshWorkers = worker;
     return TRUE;
 }
 
