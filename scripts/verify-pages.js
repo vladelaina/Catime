@@ -189,7 +189,12 @@ try {
     }
 } finally {
     await Promise.all([stopChild(preview), stopChild(chromium)]);
-    await rm(profileDirectory, { recursive: true, force: true });
+    await rm(profileDirectory, {
+        recursive: true,
+        force: true,
+        maxRetries: 5,
+        retryDelay: 100,
+    });
 }
 
 // Chromium's DevTools HTTP connection may keep Node's fetch pool alive.

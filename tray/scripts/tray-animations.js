@@ -1,10 +1,12 @@
 import { animationDownloadFilename, animationUrl, loadImmediateLibraryData, loadLibraryData } from './library-data.js';
 import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
+import { createSecureRandomOrder } from './secure-random-order.js';
 
 const INITIAL_VISIBLE_ANIMATIONS = 18;
 const LOAD_MORE_SIZE = 24;
 const FEATURED_ANIMATIONS = 5;
 const preloadedUrls = new Set();
+const orderAuthors = createSecureRandomOrder(author => author.name);
 const language = getCurrentLanguage();
 const copy = {
     zh: {
@@ -139,12 +141,13 @@ function isNewerRevision(next, current) {
 
 function applyLibrary(library) {
     state.collections = library.collections;
-    state.authors = library.authors;
+    state.authors = orderAuthors(library.authors);
     state.revision = library.revision;
-    preloadFirstRow(library.authors[0]);
+    preloadFirstRow(state.authors[0]);
     renderBoard();
 
-    if (state.collections[0]) setTrayPreview(animationUrl(state.collections[0], 1));
+    const firstCollection = state.authors[0]?.items[0] || state.collections[0];
+    if (firstCollection) setTrayPreview(animationUrl(firstCollection, 1));
 }
 
 function renderBoard() {
