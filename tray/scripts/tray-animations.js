@@ -1,12 +1,29 @@
-import { animationDownloadFilename, animationUrl, loadImmediateLibraryData, loadLibraryData } from './library-data.js';
+import {
+    animationDownloadFilename,
+    animationPosterUrl,
+    animationPreviewUrl,
+    animationUrl,
+    loadImmediateLibraryData,
+    loadLibraryData,
+} from './library-data.js';
+import { createPreviewLoader, resolveMotionPolicy } from './adaptive-image-loading.js';
 import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
 import { createSecureRandomOrder } from './secure-random-order.js';
 
 const INITIAL_VISIBLE_ANIMATIONS = 18;
 const LOAD_MORE_SIZE = 24;
 const FEATURED_ANIMATIONS = 5;
-const preloadedUrls = new Set();
 const orderAuthors = createSecureRandomOrder(author => author.name);
+const networkConnection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+const motionPolicy = resolveMotionPolicy({
+    reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
+    saveData: networkConnection?.saveData,
+    effectiveType: networkConnection?.effectiveType,
+});
+const previewLoader = createPreviewLoader({
+    concurrency: motionPolicy.concurrency,
+    loadPreview: loadPreviewImage,
+});
 const language = getCurrentLanguage();
 const copy = {
     zh: {
@@ -57,6 +74,10 @@ const state = {
 };
 
 const elements = {};
+let automaticMotionStarted = false;
+let previewObserver = null;
+let renderGeneration = 0;
+let trayPreviewSelection = null;
 
 function getCurrentLanguage() {
     const saved = localStorage.getItem('catime-language');
@@ -124,16 +145,21 @@ async function loadLibrary() {
 function applyLibrary(library) {
     state.collections = library.collections;
     state.authors = orderAuthors(library.authors);
-    preloadFirstRow(state.authors[0]);
-    renderBoard();
+    const generation = renderBoard();
 
     const firstCollection = state.authors[0]?.items[0] || state.collections[0];
-    if (firstCollection) setTrayPreview(animationUrl(firstCollection, 1));
+    if (firstCollection) setTrayPreview(firstCollection, 1);
+    scheduleProgressivePreviews(generation);
 }
 
 function renderBoard() {
+    previewObserver?.disconnect();
+    previewObserver = null;
+    automaticMotionStarted = false;
+    renderGeneration += 1;
     elements.board.replaceChildren(...state.authors.map((author, index) => createArtistRow(author, index)));
     elements.empty.hidden = state.authors.length > 0;
+    return renderGeneration;
 }
 
 function createArtistRow(author, index) {
@@ -228,7 +254,11 @@ function setArtistRowExpanded(row, expanded, author) {
     if (label) label.innerHTML = `${expanded ? copy.collapse : copy.expand} <i class="fas fa-chevron-down"></i>`;
 
     const details = row.querySelector(':scope > .artist-details');
-    if (expanded && !details && author) row.appendChild(createArtistDetails(author));
+    if (expanded && !details && author) {
+        const newDetails = createArtistDetails(author);
+        row.appendChild(newDetails);
+        observeAnimationImages(newDetails);
+    }
     if (!expanded) details?.remove();
 }
 
@@ -244,7 +274,7 @@ function createArtistAvatar(author, highPriority = false) {
     if (author.avatar) {
         return `<${tag} class="artist-avatar artist-profile-link"${linkAttributes}><img src="${escapeAttribute(author.avatar)}" alt="${escapeAttribute(author.name)}"${imagePriority}></${tag}>`;
     }
-    const preview = author.items[0] ? animationUrl(author.items[0], 1) : '';
+    const preview = author.items[0] ? animationPosterUrl(author.items[0], 1) : '';
     if (preview) {
         return `<${tag} class="artist-avatar artist-profile-link"${linkAttributes}><img src="${escapeAttribute(preview)}" alt="${escapeAttribute(author.name)}"${imagePriority}></${tag}>`;
     }
@@ -258,8 +288,10 @@ function createArtistMetrics(author) {
 function createFeaturedGallery(author, highPriority = false) {
     const gallery = document.createElement('div');
     gallery.className = 'artist-featured-gallery';
-    gallery.append(...collectFeaturedWorks(author.items, FEATURED_ANIMATIONS).map(({ collection, index }) => {
-        const item = createAnimationItem(collection, index, { highPriority });
+    gallery.append(...collectFeaturedWorks(author.items, FEATURED_ANIMATIONS).map(({ collection, index }, featuredIndex) => {
+        const item = createAnimationItem(collection, index, {
+            highPriority: highPriority && featuredIndex === 0,
+        });
         item.classList.add('featured-animation');
         return item;
     }));
@@ -314,7 +346,9 @@ function createCollectionSection(collection) {
         loadMore.addEventListener('click', event => {
             event.stopPropagation();
             state.visibleByCollection.set(collection.key, Math.min(visibleCount + LOAD_MORE_SIZE, collection.count));
-            section.replaceWith(createCollectionSection(collection));
+            const replacement = createCollectionSection(collection);
+            section.replaceWith(replacement);
+            observeAnimationImages(replacement);
         });
         section.appendChild(loadMore);
     }
@@ -323,18 +357,42 @@ function createCollectionSection(collection) {
 }
 
 function createAnimationItem(collection, index, { highPriority = false } = {}) {
-    const url = animationUrl(collection, index);
+    const originalUrl = animationUrl(collection, index);
+    const posterUrl = animationPosterUrl(collection, index);
+    const previewUrl = animationPreviewUrl(collection, index);
     const filename = animationDownloadFilename(collection, index);
     const item = document.createElement('a');
     item.className = 'animation-item';
-    item.href = url;
+    item.href = originalUrl;
     item.download = filename;
-    const loading = highPriority ? 'eager' : 'lazy';
-    const priority = highPriority ? ' fetchpriority="high"' : '';
-    item.innerHTML = `<img src="${escapeAttribute(url)}" alt="${escapeAttribute(collection.title)} ${index}" loading="${loading}" decoding="async"${priority}>`;
-    item.addEventListener('mouseenter', () => setTrayPreview(url));
-    item.addEventListener('focus', () => setTrayPreview(url));
-    item.addEventListener('click', event => downloadAnimation(event, url, filename));
+
+    const image = document.createElement('img');
+    image.alt = `${collection.title} ${index}`;
+    image.loading = highPriority ? 'eager' : 'lazy';
+    image.decoding = 'async';
+    image.fetchPriority = highPriority ? 'high' : 'low';
+    image.dataset.posterUrl = posterUrl;
+    image.dataset.previewUrl = previewUrl;
+    if (highPriority) image.dataset.criticalPoster = 'true';
+    image.addEventListener('load', () => image.classList.add('is-loaded'));
+    image.src = posterUrl;
+    if (image.complete) image.classList.add('is-loaded');
+    item.appendChild(image);
+
+    const activateMotion = () => {
+        image.dataset.manualMotion = 'true';
+        requestAnimationMotion(image, { manual: true, priority: true });
+        setTrayPreview(collection, index, { manual: true });
+    };
+    const deactivateMotion = () => {
+        image.dataset.manualMotion = 'false';
+        if (!motionPolicy.automatic || image.dataset.inViewport !== 'true') restorePoster(image);
+    };
+    item.addEventListener('mouseenter', activateMotion);
+    item.addEventListener('mouseleave', deactivateMotion);
+    item.addEventListener('focus', activateMotion);
+    item.addEventListener('blur', deactivateMotion);
+    item.addEventListener('click', event => downloadAnimation(event, originalUrl, filename));
     return item;
 }
 
@@ -358,25 +416,126 @@ async function downloadAnimation(event, url, filename) {
 
 function previewFirstWork(author) {
     const collection = author.items[0];
-    if (collection) setTrayPreview(animationUrl(collection, 1));
+    if (collection) setTrayPreview(collection, 1, { manual: true });
 }
 
-function setTrayPreview(url) {
-    if (elements.trayIcon.getAttribute('src') !== url) elements.trayIcon.src = url;
+function setTrayPreview(collection, index, { manual = false } = {}) {
+    const selection = {
+        token: Symbol('tray-preview'),
+        posterUrl: animationPosterUrl(collection, index),
+        previewUrl: animationPreviewUrl(collection, index),
+    };
+    trayPreviewSelection = selection;
+    if (elements.trayIcon.getAttribute('src') !== selection.posterUrl) {
+        elements.trayIcon.src = selection.posterUrl;
+    }
+    if (manual || automaticMotionStarted) loadTrayMotion(selection, { manual });
 }
 
-function preloadFirstRow(author) {
-    if (!author) return;
-    collectFeaturedWorks(author.items, FEATURED_ANIMATIONS).forEach(({ collection, index }) => {
-        const url = animationUrl(collection, index);
-        if (preloadedUrls.has(url)) return;
-        preloadedUrls.add(url);
-        const preload = document.createElement('link');
-        preload.rel = 'preload';
-        preload.as = 'image';
-        preload.href = url;
-        preload.fetchPriority = 'high';
-        document.head.appendChild(preload);
+function loadTrayMotion(selection, { manual }) {
+    if (manual ? !motionPolicy.manual : !motionPolicy.automatic) return;
+    previewLoader.request(selection.previewUrl, { priority: true }).then(loaded => {
+        if (!loaded || trayPreviewSelection?.token !== selection.token) return;
+        if (elements.trayIcon.getAttribute('src') !== selection.previewUrl) {
+            elements.trayIcon.src = selection.previewUrl;
+        }
+    });
+}
+
+function scheduleProgressivePreviews(generation) {
+    if (!motionPolicy.automatic || !state.authors.length) return;
+    const criticalPoster = elements.board.querySelector('img[data-critical-poster="true"]');
+    const begin = () => scheduleAfterCriticalRender(() => startProgressivePreviews(generation));
+
+    if (!criticalPoster || criticalPoster.complete) {
+        begin();
+        return;
+    }
+    criticalPoster.addEventListener('load', begin, { once: true });
+    criticalPoster.addEventListener('error', begin, { once: true });
+}
+
+function scheduleAfterCriticalRender(callback) {
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(callback, { timeout: 700 });
+    } else {
+        setTimeout(callback, 0);
+    }
+}
+
+function startProgressivePreviews(generation) {
+    if (generation !== renderGeneration || automaticMotionStarted) return;
+    automaticMotionStarted = true;
+    if (trayPreviewSelection) loadTrayMotion(trayPreviewSelection, { manual: false });
+    if (!('IntersectionObserver' in window)) {
+        const firstImage = elements.board.querySelector('img[data-preview-url]');
+        if (firstImage) {
+            firstImage.dataset.inViewport = 'true';
+            requestAnimationMotion(firstImage);
+        }
+        return;
+    }
+
+    previewObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            const image = entry.target;
+            image.dataset.inViewport = String(entry.isIntersecting);
+            if (entry.isIntersecting) {
+                requestAnimationMotion(image);
+            } else if (image.dataset.manualMotion !== 'true') {
+                restorePoster(image);
+            }
+        });
+    }, {
+        rootMargin: '180px 0px',
+        threshold: 0.01,
+    });
+    observeAnimationImages(elements.board);
+}
+
+function observeAnimationImages(root) {
+    if (!previewObserver || !root) return;
+    if (root.matches?.('img[data-preview-url]')) previewObserver.observe(root);
+    root.querySelectorAll?.('img[data-preview-url]').forEach(image => previewObserver.observe(image));
+}
+
+function requestAnimationMotion(image, { manual = false, priority = false } = {}) {
+    if (manual ? !motionPolicy.manual : !motionPolicy.automatic) return;
+    const previewUrl = image.dataset.previewUrl;
+    if (!previewUrl) return;
+
+    previewLoader.request(previewUrl, { priority }).then(loaded => {
+        if (!loaded || !image.isConnected || image.dataset.previewUrl !== previewUrl) return;
+        const shouldAnimate = image.dataset.inViewport === 'true' || image.dataset.manualMotion === 'true';
+        if (shouldAnimate && image.getAttribute('src') !== previewUrl) image.src = previewUrl;
+    });
+}
+
+function restorePoster(image) {
+    const posterUrl = image.dataset.posterUrl;
+    if (posterUrl && image.getAttribute('src') !== posterUrl) image.src = posterUrl;
+}
+
+function loadPreviewImage(url) {
+    return new Promise(resolve => {
+        const image = new Image();
+        let settled = false;
+        const finish = loaded => {
+            if (settled) return;
+            settled = true;
+            resolve(loaded);
+        };
+        image.decoding = 'async';
+        image.referrerPolicy = 'strict-origin-when-cross-origin';
+        image.addEventListener('load', () => {
+            if (typeof image.decode !== 'function') {
+                finish(true);
+                return;
+            }
+            image.decode().catch(() => {}).finally(() => finish(true));
+        }, { once: true });
+        image.addEventListener('error', () => finish(false), { once: true });
+        image.src = url;
     });
 }
 

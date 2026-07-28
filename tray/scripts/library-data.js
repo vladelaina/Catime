@@ -1,5 +1,5 @@
 const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
-const LIBRARY_CACHE_KEY = 'catime:tray-library:v6';
+const LIBRARY_CACHE_KEY = 'catime:tray-library:v7';
 const MAX_CACHED_MANIFEST_BYTES = 2 * 1024 * 1024;
 
 export function loadImmediateLibraryData(source = configuredLibrarySource()) {
@@ -14,7 +14,7 @@ export function loadImmediateLibraryData(source = configuredLibrarySource()) {
 
 export async function loadLibraryData(source = configuredLibrarySource()) {
     const response = await fetch(source, {
-        cache: 'no-cache',
+        cache: 'default',
         mode: 'cors',
         credentials: 'omit',
         referrerPolicy: 'strict-origin-when-cross-origin',
@@ -41,6 +41,21 @@ export function normalizeLibrary(payload) {
 
 function normalizeCollection(key, data) {
     const files = Array.isArray(data.files) ? data.files.map(String) : [];
+    const fileVersions = Array.isArray(data.fileVersions) ? data.fileVersions.map(String) : [];
+    const posterFiles = Array.isArray(data.posterFiles) ? data.posterFiles.map(String) : [];
+    const posterVersions = Array.isArray(data.posterVersions) ? data.posterVersions.map(String) : [];
+    const previewFiles = Array.isArray(data.previewFiles) ? data.previewFiles.map(String) : [];
+    const previewVersions = Array.isArray(data.previewVersions) ? data.previewVersions.map(String) : [];
+    const cdnBase = typeof data.cdnBase === 'string' ? data.cdnBase : '';
+    const posterCdnBase = typeof data.posterCdnBase === 'string' ? data.posterCdnBase : '';
+    const previewCdnBase = typeof data.previewCdnBase === 'string' ? data.previewCdnBase : '';
+    const hasDisplayAssets = Boolean(files.length > 0
+        && fileVersions.length === files.length
+        && posterFiles.length === files.length
+        && posterVersions.length === files.length
+        && previewFiles.length === files.length
+        && previewVersions.length === files.length
+        && cdnBase && posterCdnBase && previewCdnBase);
     return {
         key,
         title: key,
@@ -48,9 +63,15 @@ function normalizeCollection(key, data) {
         authorAvatar: typeof data.authorAvatar === 'string' ? data.authorAvatar : '',
         authorLinks: normalizeAuthorLinks(data.authorLinks),
         files,
-        fileVersions: Array.isArray(data.fileVersions) ? data.fileVersions.map(String) : [],
-        count: files.length,
-        cdnBase: typeof data.cdnBase === 'string' ? data.cdnBase : '',
+        fileVersions,
+        posterFiles,
+        posterVersions,
+        previewFiles,
+        previewVersions,
+        count: hasDisplayAssets ? files.length : 0,
+        cdnBase,
+        posterCdnBase,
+        previewCdnBase,
         repository: typeof data.repository === 'string' ? data.repository : '',
     };
 }
@@ -115,12 +136,44 @@ export function animationDownloadFilename(collection, index) {
 }
 
 export function animationUrl(collection, index) {
-    const filename = animationFilename(collection, index)
+    return versionedAssetUrl(
+        collection.cdnBase,
+        collection.files,
+        collection.fileVersions,
+        index,
+        collection.key,
+    );
+}
+
+export function animationPosterUrl(collection, index) {
+    return versionedAssetUrl(
+        collection.posterCdnBase,
+        collection.posterFiles,
+        collection.posterVersions,
+        index,
+        collection.key,
+    );
+}
+
+export function animationPreviewUrl(collection, index) {
+    return versionedAssetUrl(
+        collection.previewCdnBase,
+        collection.previewFiles,
+        collection.previewVersions,
+        index,
+        collection.key,
+    );
+}
+
+function versionedAssetUrl(cdnBase, files, versions, index, collectionKey) {
+    const sourceFilename = files[index - 1];
+    if (!sourceFilename) throw new RangeError(`Asset ${index} does not exist in ${collectionKey}`);
+    const filename = sourceFilename
         .split('/')
         .map(encodeURIComponent)
         .join('/');
-    const url = `${collection.cdnBase}${filename}`;
-    const version = collection.fileVersions[index - 1];
+    const url = `${cdnBase}${filename}`;
+    const version = versions[index - 1];
     return version ? `${url}?v=${encodeURIComponent(version)}` : url;
 }
 
@@ -144,7 +197,6 @@ function cachePayload(source, payload) {
         const value = JSON.stringify({ source, payload });
         if (value.length <= MAX_CACHED_MANIFEST_BYTES) localStorage.setItem(LIBRARY_CACHE_KEY, value);
     } catch {
-        // Storage may be unavailable in private mode; the bundled snapshot
-        // still keeps the first render synchronous.
+        // Storage may be unavailable in private mode.
     }
 }

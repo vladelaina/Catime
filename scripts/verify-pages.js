@@ -15,7 +15,7 @@ const pages = [
     { path: '/about', selector: 'main', minimum: 1 },
     { path: '/support', selector: '.support-project', minimum: 1 },
     { path: '/guide', selector: 'main', minimum: 1 },
-    { path: '/tray', selector: '.artist-showcase', minimum: 1 },
+    { path: '/tray', selector: '.artist-showcase', minimum: 1, mockTrayManifest: true },
     {
         path: '/tools/font-tool/',
         selector: '#uploadArea',
@@ -108,7 +108,7 @@ function createCdpClient(url) {
 
 async function verifyPage(debugPort, baseUrl, page, viewport) {
     const targetResponse = await fetch(
-        `http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent(`${baseUrl}${page.path}`)}`,
+        `http://127.0.0.1:${debugPort}/json/new?${encodeURIComponent('about:blank')}`,
         { method: 'PUT', signal: AbortSignal.timeout(10000) },
     );
     const target = await targetResponse.json();
@@ -129,6 +129,7 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
             mobile: viewport.mobile,
         }),
     ]);
+    if (page.mockTrayManifest) await enableTrayManifestMock(client, baseUrl, exceptions);
 
     const loaded = new Promise((resolveLoaded) => client.on('Page.loadEventFired', resolveLoaded));
     await client.send('Page.navigate', { url: `${baseUrl}${page.path}` });
@@ -154,6 +155,48 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
         throw new Error(`${page.path}: missing globals ${result.missingGlobals.join(', ')}`);
     }
     process.stdout.write(`PASS ${page.path} [${viewport.name}]\n`);
+}
+
+async function enableTrayManifestMock(client, baseUrl, exceptions) {
+    const assetUrl = `${baseUrl}/assets/catime.webp`;
+    const manifest = {
+        version: 'verify',
+        generated: '2026-07-29T00:00:00.000Z',
+        sections: {
+            verification: {
+                count: 1,
+                authorAvatar: `${assetUrl}?v=verify`,
+                authorLinks: [],
+                repository: 'https://github.com/catime-labs/tray-hub',
+                cdnBase: `${baseUrl}/assets/`,
+                files: ['catime.webp'],
+                fileVersions: ['verify'],
+                posterCdnBase: `${baseUrl}/assets/`,
+                posterFiles: ['catime.webp'],
+                posterVersions: ['verify'],
+                previewCdnBase: `${baseUrl}/assets/`,
+                previewFiles: ['catime.webp'],
+                previewVersions: ['verify'],
+            },
+        },
+    };
+    const body = Buffer.from(JSON.stringify(manifest)).toString('base64');
+
+    client.on('Fetch.requestPaused', ({ requestId }) => {
+        client.send('Fetch.fulfillRequest', {
+            requestId,
+            responseCode: 200,
+            responseHeaders: [
+                { name: 'Content-Type', value: 'application/json; charset=utf-8' },
+                { name: 'Access-Control-Allow-Origin', value: '*' },
+                { name: 'Cache-Control', value: 'no-store' },
+            ],
+            body,
+        }).catch(error => exceptions.push(`Unable to fulfill tray manifest: ${error.message}`));
+    });
+    await client.send('Fetch.enable', {
+        patterns: [{ urlPattern: 'https://tray.cati.me/sections.json*', requestStage: 'Request' }],
+    });
 }
 
 const profileDirectory = await mkdtemp(join(tmpdir(), 'catime-chromium-'));
