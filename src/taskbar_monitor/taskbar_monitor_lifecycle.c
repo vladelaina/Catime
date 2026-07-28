@@ -60,6 +60,7 @@ static void DestroyMonitorWindow(void) {
     g_taskbarMonitor.host = NULL;
     g_taskbarMonitor.taskList = NULL;
     g_taskbarMonitor.modernTaskbar = FALSE;
+    g_taskbarMonitor.presentTimerActive = FALSE;
     g_taskbarMonitor.mode = TASKBAR_HOST_NONE;
     g_taskbarMonitor.compositionMode = TASKBAR_COMPOSITION_UNKNOWN;
     g_taskbarMonitor.themeRecheckDueTick = 0;

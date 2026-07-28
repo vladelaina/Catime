@@ -6,6 +6,7 @@
 #include "taskbar_monitor_internal.h"
 
 #include "system_monitor.h"
+#include "log.h"
 #include "tray/tray_events.h"
 
 #include <stdio.h>
@@ -16,7 +17,8 @@ void TaskbarMonitor_UpdateSnapshot(
     if (!snapshot) return;
     g_taskbarMonitor.metrics = *snapshot;
     if (IsWindow(g_taskbarMonitor.window)) {
-        if (IsWindow(g_taskbarMonitor.taskbar)) {
+        if (!g_taskbarMonitor.presentTimerActive &&
+            IsWindow(g_taskbarMonitor.taskbar)) {
             TaskbarMonitor_RefreshAttachment();
         }
         InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
@@ -122,8 +124,13 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
     (void)lParam;
     switch (message) {
         case WM_CREATE:
-            SetTimer(window, TASKBAR_MONITOR_PRESENT_TIMER_ID,
-                     TASKBAR_MONITOR_PRESENT_MS, NULL);
+            g_taskbarMonitor.presentTimerActive = SetTimer(
+                window, TASKBAR_MONITOR_PRESENT_TIMER_ID,
+                TASKBAR_MONITOR_PRESENT_MS, NULL) != 0;
+            if (!g_taskbarMonitor.presentTimerActive) {
+                LOG_WARNING("Failed to start taskbar monitor placement timer (error=%lu)",
+                            GetLastError());
+            }
             {
                 DWORD fields = 0;
                 if (g_taskbarMonitor.cpuMemoryEnabled) {
@@ -152,6 +159,7 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
                 return 0;
             }
             if (wParam == TASKBAR_MONITOR_PRESENT_TIMER_ID) {
+                TaskbarMonitor_RefreshAttachment();
                 if (g_taskbarMonitor.mode == TASKBAR_HOST_MODERN) {
                     SetWindowPos(window, HWND_TOP, 0, 0, 0, 0,
                                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
@@ -183,6 +191,7 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             return 0;
         case WM_NCDESTROY:
             KillTimer(window, TASKBAR_MONITOR_PRESENT_TIMER_ID);
+            g_taskbarMonitor.presentTimerActive = FALSE;
             KillTimer(window,
                       TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID);
             g_taskbarMonitor.themeRecheckDueTick = 0;

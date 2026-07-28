@@ -73,6 +73,7 @@ typedef struct {
     BOOL networkEnabled;
     BOOL taskListReserved;
     BOOL modernTaskbar;
+    BOOL presentTimerActive;
     TaskbarHostMode mode;
     SystemMonitorSnapshot metrics;
     TaskbarCompositionMode compositionMode;

@@ -24,6 +24,14 @@ static HWND FindDescendantByClass(HWND parent, const wchar_t* className) {
     return NULL;
 }
 
+static BOOL WindowRectMatchesParent(
+    HWND window, HWND parent, const RECT* expected) {
+    RECT current = {0};
+    return IsWindowVisible(window) &&
+           TaskbarMonitor_GetWindowRectInParent(window, parent, &current) &&
+           TaskbarMonitor_RectsNearEqual(&current, expected);
+}
+
 void TaskbarMonitor_RestoreClassicTaskList(void) {
     if (!g_taskbarMonitor.taskListReserved ||
         !IsWindow(g_taskbarMonitor.taskList) ||
@@ -107,10 +115,13 @@ static BOOL ReserveClassicSlot(RECT* monitorRect) {
             &baseRect, g_taskbarMonitor.horizontal,
             g_taskbarMonitor.width, g_taskbarMonitor.height,
             gap, minimum, &reserved, &placement)) return FALSE;
-    if (!MoveWindow(g_taskbarMonitor.taskList,
-                    reserved.left, reserved.top,
-                    reserved.right - reserved.left,
-                    reserved.bottom - reserved.top, TRUE)) return FALSE;
+    if (!g_taskbarMonitor.taskListReserved ||
+        !TaskbarMonitor_RectsNearEqual(&taskRect, &reserved)) {
+        if (!MoveWindow(g_taskbarMonitor.taskList,
+                        reserved.left, reserved.top,
+                        reserved.right - reserved.left,
+                        reserved.bottom - reserved.top, TRUE)) return FALSE;
+    }
     g_taskbarMonitor.reservedTaskList = reserved;
     g_taskbarMonitor.taskListReserved = TRUE;
     if (monitorRect) *monitorRect = placement;
@@ -119,6 +130,10 @@ static BOOL ReserveClassicSlot(RECT* monitorRect) {
 
 static BOOL PositionClassicMonitor(const RECT* monitorRect) {
     if (!monitorRect) return FALSE;
+    if (WindowRectMatchesParent(
+            g_taskbarMonitor.window, g_taskbarMonitor.host, monitorRect)) {
+        return TRUE;
+    }
     return SetWindowPos(
         g_taskbarMonitor.window, HWND_TOP,
         monitorRect->left, monitorRect->top,
@@ -151,6 +166,10 @@ static BOOL PositionBesideNotificationArea(void) {
             g_taskbarMonitor.horizontal,
             g_taskbarMonitor.width, g_taskbarMonitor.height,
             gap, fallbackInset, &placement)) return FALSE;
+    if (WindowRectMatchesParent(
+            g_taskbarMonitor.window, g_taskbarMonitor.taskbar, &placement)) {
+        return TRUE;
+    }
     return SetWindowPos(
         g_taskbarMonitor.window, HWND_TOP,
         placement.left, placement.top,
