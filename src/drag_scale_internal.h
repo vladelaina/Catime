@@ -27,8 +27,6 @@
 #define SCALE_DRAG_SUPPRESS_MS 120u
 #define SCALE_DRAG_RELEASE_SUPPRESS_MS 120u
 #define SCALE_POST_RESIZE_ANCHOR_MS 1200u
-#define EDIT_DRAG_APPLY_TIMER_ID 42428
-#define EDIT_DRAG_APPLY_INTERVAL_MS 8u
 
 extern BOOL g_editModeForcedTopmost;
 extern BOOL g_editModeTopmostOverride;
@@ -55,8 +53,6 @@ extern BOOL g_dragBlockNeedsReleaseCooldown;
 extern BOOL g_dragAnchorValid;
 extern POINT g_dragStartCursorPos;
 extern RECT g_dragStartWindowRect;
-extern UINT_PTR g_dragApplyTimer;
-extern HWND g_dragApplyTimerHwnd;
 extern BOOL g_pendingScaleResizeAnchorPostScale;
 extern DWORD g_pendingScaleResizeAnchorUntilTick;
 extern BOOL g_manualEditPositionValid;
@@ -64,7 +60,6 @@ extern HWND g_manualEditPositionHwnd;
 extern POINT g_manualEditPosition;
 extern UINT_PTR g_configSaveTimer;
 extern HWND g_configSaveTimerHwnd;
-extern DWORD g_lastDragApplyTick;
 
 DWORD TickElapsedMs(DWORD now, DWORD then);
 UINT GetScaleApplyInterval(HWND hwnd);
@@ -88,11 +83,7 @@ void SetPendingScaleResizeAnchorWithRatio(HWND hwnd, POINT anchor,
 void ForceClearPendingScaleResizeAnchor(void);
 BOOL IsPostScaleResizeAnchorActive(HWND hwnd);
 
-void ResetDragApplyThrottle(void);
-BOOL ShouldApplyDragMoveNow(DWORD now);
 BOOL ApplyDragPositionForCursor(HWND hwnd, POINT cursorPos);
-void StopDragApplyTimer(HWND hwnd);
-BOOL EnsureDragApplyTimer(HWND hwnd);
 void FinishDragWindow(HWND hwnd, BOOL saveSettings,
                       BOOL refreshAfterDrag, BOOL applyFinalPosition);
 void CancelDragForScale(HWND hwnd);

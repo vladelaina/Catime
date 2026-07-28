@@ -41,8 +41,6 @@ void StartDragWindow(HWND hwnd) {
 
     CLOCK_IS_DRAGGING = TRUE;
     CLOCK_LAST_MOUSE_POS = cursorPos;
-    StopDragApplyTimer(hwnd);
-    ResetDragApplyThrottle();
     StopDrawingRenderAnimationTimer(hwnd);
 }
 
@@ -117,32 +115,12 @@ static BOOL HandleDragWindowInternal(HWND hwnd, BOOL leftButtonDown) {
         return TRUE;
     }
 
-    DWORD now = GetTickCount();
     int deltaFromLastX = currentPos.x - CLOCK_LAST_MOUSE_POS.x;
     int deltaFromLastY = currentPos.y - CLOCK_LAST_MOUSE_POS.y;
     if (deltaFromLastX == 0 && deltaFromLastY == 0) {
         return TRUE;
     }
-    if (!ShouldApplyDragMoveNow(now)) {
-        if (!EnsureDragApplyTimer(hwnd)) {
-            ApplyDragPositionForCursor(hwnd, currentPos);
-        }
-        return TRUE;
-    }
-
-    int newX = g_dragStartWindowRect.left +
-               (currentPos.x - g_dragStartCursorPos.x);
-    int newY = g_dragStartWindowRect.top +
-               (currentPos.y - g_dragStartCursorPos.y);
-    BOOL moved = SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
-                              SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-    if (moved) {
-        CLOCK_LAST_MOUSE_POS = currentPos;
-        CLOCK_WINDOW_POS_X = newX;
-        CLOCK_WINDOW_POS_Y = newY;
-        g_lastDragApplyTick = now;
-        RecordManualEditPosition(hwnd, newX, newY);
-    }
+    ApplyDragPositionForCursor(hwnd, currentPos);
     return TRUE;
 }
 
