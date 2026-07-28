@@ -33,6 +33,9 @@ Run the complete production and browser smoke verification with:
 npm run verify
 ```
 
+The verification also audits the source tree as a static deployment, checking
+that every page stylesheet import, module script, and local asset is present.
+
 ---
 
 ## 📥 Quick Start
