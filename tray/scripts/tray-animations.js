@@ -20,10 +20,8 @@ const copy = {
         loadErrorTitle: '动画资源加载失败',
         loadErrorDescription: '请稍后刷新页面重试。',
         artistTag: '动画作者',
-        authorHomepage: '作者主页',
         expand: '展开',
         collapse: '收起',
-        reviews: count => `${count.toLocaleString('zh-CN')} 条评价`,
         animations: count => `${count.toLocaleString('zh-CN')} 个托盘动画`,
         loadMore: count => `加载更多（剩余 ${count.toLocaleString('zh-CN')} 个）`,
         openProfile: name => `打开 ${name} 的作者主页`,
@@ -41,10 +39,8 @@ const copy = {
         loadErrorTitle: 'Unable to load animations',
         loadErrorDescription: 'Please refresh the page and try again later.',
         artistTag: 'Animation Artist',
-        authorHomepage: 'Artist Profile',
         expand: 'Expand',
         collapse: 'Collapse',
-        reviews: count => `${count.toLocaleString('en-US')} reviews`,
         animations: count => `${count.toLocaleString('en-US')} tray animations`,
         loadMore: count => `Load more (${count.toLocaleString('en-US')} remaining)`,
         openProfile: name => `Open ${name}'s profile`,
@@ -58,8 +54,6 @@ const state = {
     authors: [],
     expandedAuthor: null,
     visibleByCollection: new Map(),
-    revision: '',
-    userInteracted: false,
 };
 
 const elements = {};
@@ -110,17 +104,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateTrayClock, 30000);
     const immediateLibrary = loadImmediateLibraryData();
     if (immediateLibrary?.collections.length) applyLibrary(immediateLibrary);
-    loadLibrary(Boolean(immediateLibrary?.collections.length));
+    loadLibrary();
 });
 
-async function loadLibrary(hasImmediateLibrary) {
+async function loadLibrary() {
     try {
         const library = await loadLibraryData();
-        // Keep an already-visible board stable. The fresh payload has been
-        // cached for the next navigation. A newer catalog can update this view
-        // only while the user has not started interacting with it.
-        const hasNewRevision = isNewerRevision(library.revision, state.revision);
-        if (!hasImmediateLibrary || (hasNewRevision && !state.userInteracted)) applyLibrary(library);
+        applyLibrary(library);
     } catch (error) {
         console.error('Unable to load tray animation library.', error);
         if (state.collections.length) return;
@@ -131,18 +121,9 @@ async function loadLibrary(hasImmediateLibrary) {
     }
 }
 
-function isNewerRevision(next, current) {
-    if (!next || next === current) return false;
-    const nextTime = Date.parse(next);
-    const currentTime = Date.parse(current);
-    if (Number.isFinite(nextTime) && Number.isFinite(currentTime)) return nextTime > currentTime;
-    return true;
-}
-
 function applyLibrary(library) {
     state.collections = library.collections;
     state.authors = orderAuthors(library.authors);
-    state.revision = library.revision;
     preloadFirstRow(state.authors[0]);
     renderBoard();
 
@@ -174,7 +155,7 @@ function createArtistRow(author, index) {
         <span class="artist-heading">
             <span class="artist-name-line">
                 ${createArtistName(author)}
-                <span class="artist-status">${escapeHtml(author.tag || copy.artistTag)}</span>
+                <span class="artist-status">${escapeHtml(copy.artistTag)}</span>
                 ${createAuthorLinks(author)}
             </span>
             <span class="artist-metrics">${createArtistMetrics(author)}</span>
@@ -185,7 +166,6 @@ function createArtistRow(author, index) {
     toggle.addEventListener('mouseenter', () => previewFirstWork(author));
     toggle.addEventListener('focus', () => previewFirstWork(author));
     const toggleExpanded = () => {
-        state.userInteracted = true;
         const shouldExpand = !row.classList.contains('expanded');
         const expandedRow = elements.board.querySelector('.artist-showcase.expanded');
 
@@ -213,10 +193,7 @@ function createArtistRow(author, index) {
 }
 
 function createAuthorLinks(author) {
-    const links = author.links.length > 0
-        ? author.links
-        : author.url ? [{ label: author.tag || copy.authorHomepage, url: author.url }] : [];
-    return links.map(link => `
+    return author.links.map(link => `
         <a class="artist-gallery-tag" href="${escapeAttribute(link.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(link.label)}</a>
     `).join('');
 }
@@ -230,10 +207,7 @@ function createArtistName(author) {
 }
 
 function preferredAuthorUrl(author) {
-    const links = author.links.length > 0
-        ? author.links
-        : author.url ? [{ label: author.tag || copy.authorHomepage, url: author.url }] : [];
-    const pixiv = links.find(link => {
+    const pixiv = author.links.find(link => {
         if (link.label.toLowerCase() === 'pixiv') return true;
         try {
             const hostname = new URL(link.url).hostname.toLowerCase();
@@ -242,7 +216,7 @@ function preferredAuthorUrl(author) {
             return false;
         }
     });
-    return pixiv?.url || links[0]?.url || '';
+    return pixiv?.url || author.links[0]?.url || '';
 }
 
 function setArtistRowExpanded(row, expanded, author) {
@@ -278,9 +252,6 @@ function createArtistAvatar(author, highPriority = false) {
 }
 
 function createArtistMetrics(author) {
-    if (author.rating > 0) {
-        return `<span class="artist-rating"><i class="fas fa-star"></i> ${author.rating.toFixed(1)}</span><span>${copy.reviews(author.reviewCount)}</span>`;
-    }
     return `<span class="artist-rating"><i class="fas fa-star"></i></span><span>${copy.animations(author.total)}</span>`;
 }
 
@@ -342,7 +313,6 @@ function createCollectionSection(collection) {
         loadMore.textContent = copy.loadMore(collection.count - visibleCount);
         loadMore.addEventListener('click', event => {
             event.stopPropagation();
-            state.userInteracted = true;
             state.visibleByCollection.set(collection.key, Math.min(visibleCount + LOAD_MORE_SIZE, collection.count));
             section.replaceWith(createCollectionSection(collection));
         });

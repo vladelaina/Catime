@@ -1,24 +1,20 @@
-import { bundledLibraryPayload } from './library-snapshot.js';
-
 const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
-const LIBRARY_CACHE_KEY = 'catime:tray-library:v5';
+const LIBRARY_CACHE_KEY = 'catime:tray-library:v6';
 const MAX_CACHED_MANIFEST_BYTES = 2 * 1024 * 1024;
 
 export function loadImmediateLibraryData(source = configuredLibrarySource()) {
     const cached = readCachedPayload(source);
-    const bundled = source === DEFAULT_LIBRARY_SOURCE ? bundledLibraryPayload : null;
-    const payload = newerPayload(cached, bundled);
-    if (!payload) return null;
+    if (!cached) return null;
     try {
-        return normalizeLibrary(payload);
+        return normalizeLibrary(cached);
     } catch {
-        return payload !== bundled && bundled ? normalizeLibrary(bundled) : null;
+        return null;
     }
 }
 
 export async function loadLibraryData(source = configuredLibrarySource()) {
     const response = await fetch(source, {
-        cache: 'default',
+        cache: 'no-cache',
         mode: 'cors',
         credentials: 'omit',
         referrerPolicy: 'strict-origin-when-cross-origin',
@@ -31,7 +27,7 @@ export async function loadLibraryData(source = configuredLibrarySource()) {
     return normalizeLibrary(payload);
 }
 
-function normalizeLibrary(payload) {
+export function normalizeLibrary(payload) {
     const collections = Object.entries(payload.sections && typeof payload.sections === 'object' ? payload.sections : {})
         .filter(([, data]) => data && typeof data === 'object')
         .map(([key, data]) => normalizeCollection(key, data))
@@ -40,28 +36,22 @@ function normalizeLibrary(payload) {
     return {
         collections,
         authors: groupByAuthor(collections),
-        revision: String(payload.generated || payload.version || ''),
     };
 }
 
 function normalizeCollection(key, data) {
+    const files = Array.isArray(data.files) ? data.files.map(String) : [];
     return {
         key,
-        title: data.title || key,
-        author: String(data.author || data.creator || data.contributor || data.title || key).trim(),
-        authorBio: data.authorBio || data.bio || '',
-        authorAvatar: data.authorAvatar || data.avatar || '',
-        authorUrl: data.authorUrl || data.creatorUrl || '',
-        authorTag: data.authorTag || data.tag || '',
+        title: key,
+        author: key,
+        authorAvatar: typeof data.authorAvatar === 'string' ? data.authorAvatar : '',
         authorLinks: normalizeAuthorLinks(data.authorLinks),
-        rating: Number(data.rating) || 0,
-        reviewCount: Number(data.reviewCount) || 0,
-        description: data.description || '',
-        files: Array.isArray(data.files) ? data.files.map(String) : [],
+        files,
         fileVersions: Array.isArray(data.fileVersions) ? data.fileVersions.map(String) : [],
-        count: Array.isArray(data.files) ? data.files.length : Number(data.count) || 0,
-        cdnBase: data.cdnBase || `./gifs/${key}/`,
-        repository: data.repository || '',
+        count: files.length,
+        cdnBase: typeof data.cdnBase === 'string' ? data.cdnBase : '',
+        repository: typeof data.repository === 'string' ? data.repository : '',
     };
 }
 
@@ -77,13 +67,8 @@ function groupByAuthor(collections) {
         name,
         items,
         total: items.reduce((sum, item) => sum + item.count, 0),
-        bio: items.find(item => item.authorBio)?.authorBio || '',
         avatar: items.find(item => item.authorAvatar)?.authorAvatar || '',
-        url: items.find(item => item.authorUrl)?.authorUrl || '',
-        tag: items.find(item => item.authorTag)?.authorTag || '',
         links: mergeAuthorLinks(items),
-        rating: items.find(item => item.rating)?.rating || 0,
-        reviewCount: items.reduce((sum, item) => sum + item.reviewCount, 0),
     }));
 }
 
@@ -113,8 +98,9 @@ function mergeAuthorLinks(items) {
 }
 
 export function animationFilename(collection, index) {
-    return collection.files[index - 1]
-        || `${String(index).padStart(4, '0')}_${collection.key}.gif`;
+    const filename = collection.files[index - 1];
+    if (!filename) throw new RangeError(`Animation ${index} does not exist in ${collection.key}`);
+    return filename;
 }
 
 export function animationDownloadFilename(collection, index) {
@@ -161,12 +147,4 @@ function cachePayload(source, payload) {
         // Storage may be unavailable in private mode; the bundled snapshot
         // still keeps the first render synchronous.
     }
-}
-
-function newerPayload(first, second) {
-    if (!first) return second;
-    if (!second) return first;
-    const firstTime = Date.parse(first.generated || '') || 0;
-    const secondTime = Date.parse(second.generated || '') || 0;
-    return firstTime >= secondTime ? first : second;
 }

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tray/scripts/secure-random-order.test.js",
+    "test": "node --test tray/scripts/*.test.js",
     "verify": "npm test && npm run build && node scripts/verify-static.js && node scripts/verify-pages.js"
   },
   "devDependencies": {
