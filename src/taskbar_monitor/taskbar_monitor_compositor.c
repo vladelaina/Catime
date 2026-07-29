@@ -171,10 +171,8 @@ BOOL TaskbarMonitor_Present(
         if (frameReady) {
             TaskbarMonitor_ColorizeTextMask(
                 pixels, pixelCount, textColor);
-            if (!g_taskbarMonitor.menuPreviewSessionActive) {
-                TaskbarMonitor_EnsureInteractiveAlpha(
-                    pixels, pixelCount, textColor);
-            }
+            TaskbarMonitor_EnsureInteractiveAlpha(
+                pixels, pixelCount, textColor);
             presented = PresentPerPixel(
                 window, screenDc, sourceDc, width, height);
         }

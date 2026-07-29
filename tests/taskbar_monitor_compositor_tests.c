@@ -188,6 +188,22 @@ static void CheckWindowHitSurface(HWND window) {
            "transparent taskbar surface did not retain mouse input");
 }
 
+static void CheckPreviewInteractionStyle(HWND window) {
+    RECT rect = {0};
+    Expect(GetWindowRect(window, &rect),
+           "failed to query the preview interaction test bounds");
+    POINT point = {rect.right - 1, rect.bottom - 1};
+    LONG_PTR extendedStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
+    SetWindowLongPtrW(
+        window, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
+    Expect(WindowFromPoint(point) != window,
+           "preview interaction style did not pass mouse input through");
+
+    SetWindowLongPtrW(window, GWL_EXSTYLE, extendedStyle);
+    Expect(WindowFromPoint(point) == window,
+           "clearing preview interaction style required a frame refresh");
+}
+
 int main(void) {
     CheckSyntheticMaskPixels();
     CheckInteractiveAlphaPixels();
@@ -202,10 +218,15 @@ int main(void) {
     Expect(RegisterClassW(&windowClass) != 0,
            "failed to register the compositor test window");
 
+    const int testWidth = 180;
+    const int testHeight = 36;
+    int testX = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    int testY = GetSystemMetrics(SM_YVIRTUALSCREEN) - testHeight + 1;
     HWND window = CreateWindowExW(
-        WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE |
+            WS_EX_TOPMOST,
         className, L"", WS_POPUP,
-        -32000, -32000, 180, 36,
+        testX, testY, testWidth, testHeight,
         NULL, NULL, instance, NULL);
     Expect(window != NULL, "failed to create the compositor test window");
     if (!window) return 1;
@@ -238,6 +259,11 @@ int main(void) {
             (void)PresentTheme(window, target, metrics, (i & 1) != 0);
         }
         CheckWindowHitSurface(window);
+        g_taskbarMonitor.menuPreviewSessionActive = TRUE;
+        (void)PresentTheme(window, target, metrics, TRUE);
+        CheckWindowHitSurface(window);
+        CheckPreviewInteractionStyle(window);
+        g_taskbarMonitor.menuPreviewSessionActive = FALSE;
     }
 
     if (target) ReleaseDC(window, target);

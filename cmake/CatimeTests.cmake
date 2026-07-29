@@ -142,6 +142,29 @@ target_link_libraries(taskbar_monitor_compositor_tests PRIVATE gdi32 user32)
 add_test(NAME taskbar_monitor_compositor
     COMMAND taskbar_monitor_compositor_tests)
 
+add_executable(taskbar_monitor_parent_tests
+    tests/taskbar_monitor_parent_tests.c
+    src/taskbar_monitor/taskbar_monitor_parent.c
+)
+target_include_directories(taskbar_monitor_parent_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(taskbar_monitor_parent_tests PRIVATE user32)
+add_test(NAME taskbar_monitor_parent
+    COMMAND taskbar_monitor_parent_tests)
+
+add_executable(taskbar_monitor_policy_tests
+    tests/taskbar_monitor_policy_tests.c
+    src/taskbar_monitor/taskbar_monitor_policy.c
+)
+target_include_directories(taskbar_monitor_policy_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+add_test(NAME taskbar_monitor_policy
+    COMMAND taskbar_monitor_policy_tests)
+
 add_executable(taskbar_monitor_placement_tests
     tests/taskbar_monitor_placement_tests.c
     src/taskbar_monitor/taskbar_monitor_placement.c
@@ -182,6 +205,8 @@ set(_catime_test_targets
     system_monitor_snapshot_tests
     tray_metric_sync_tests
     taskbar_monitor_compositor_tests
+    taskbar_monitor_parent_tests
+    taskbar_monitor_policy_tests
     taskbar_monitor_placement_tests
     tray_percent_font_tests
 )

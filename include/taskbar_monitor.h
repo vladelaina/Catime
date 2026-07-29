@@ -40,6 +40,9 @@ BOOL TaskbarMonitor_IsEnabled(void);
 /** Return whether one metric group is selected. */
 BOOL TaskbarMonitor_IsOptionEnabled(TaskbarMonitorOption option);
 
+/** Keep sampling alive across a temporary menu preview transition. */
+BOOL TaskbarMonitor_NeedsSystemMonitor(void);
+
 /** Persist and apply one metric-group preference. */
 BOOL TaskbarMonitor_SetOptionEnabled(TaskbarMonitorOption option,
                                      BOOL enabled);

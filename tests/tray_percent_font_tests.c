@@ -61,6 +61,70 @@ static void CheckFallbackFont(HFONT sourceFont) {
     }
 }
 
+static int GetFontCellHeight(HDC dc, HFONT font) {
+    HGDIOBJ oldFont = dc ? SelectObject(dc, font) : NULL;
+    if (!oldFont || oldFont == HGDI_ERROR) return 0;
+    TEXTMETRICW metrics = {0};
+    BOOL measured = GetTextMetricsW(dc, &metrics);
+    SelectObject(dc, oldFont);
+    return measured ? metrics.tmHeight : 0;
+}
+
+static void CheckFittedMetricCellFont(UINT dpi, int maxCellHeight) {
+    LOGFONTW preferred = {0};
+    InitializeSystemUiMetricTextLogFont(
+        &preferred, dpi, ANTIALIASED_QUALITY);
+    HFONT preferredFont = CreateFontIndirectW(&preferred);
+    HFONT font = CreateFittedSystemUiMetricTextFont(
+        dpi, ANTIALIASED_QUALITY, maxCellHeight);
+    Expect(font != NULL, "failed to create a height-fitted metric font");
+    Expect(preferredFont != NULL,
+           "failed to create the preferred metric font");
+    if (!font || !preferredFont) {
+        if (font) DeleteObject(font);
+        if (preferredFont) DeleteObject(preferredFont);
+        return;
+    }
+
+    HDC dc = GetDC(NULL);
+    HGDIOBJ oldFont = dc ? SelectObject(dc, font) : NULL;
+    TEXTMETRICW metrics = {0};
+    LOGFONTW actual = {0};
+    BOOL selected = dc && oldFont && oldFont != HGDI_ERROR;
+    BOOL measured = selected && GetTextMetricsW(dc, &metrics);
+    int preferredCellHeight = GetFontCellHeight(dc, preferredFont);
+    int allowedCellHeight = maxCellHeight + 1;
+    Expect(measured && metrics.tmHeight <= allowedCellHeight,
+           "height-fitted metric font exceeded its row");
+    Expect(GetObjectW(font, sizeof(actual), &actual) == sizeof(actual),
+           "failed to inspect the height-fitted metric font");
+    int preferredPixelHeight = preferred.lfHeight < 0
+        ? (int)-preferred.lfHeight : (int)preferred.lfHeight;
+    if (preferredCellHeight > allowedCellHeight) {
+        if (-actual.lfHeight >= preferredPixelHeight) {
+            fprintf(stderr,
+                    "compressed font mismatch: dpi=%u maxCell=%d "
+                    "preferred=%d actual=%ld cell=%ld\n",
+                    dpi, maxCellHeight, preferredPixelHeight,
+                    actual.lfHeight, metrics.tmHeight);
+            ++g_failures;
+        }
+    } else {
+        if (-actual.lfHeight != preferredPixelHeight) {
+            fprintf(stderr,
+                    "roomy font mismatch: dpi=%u maxCell=%d "
+                    "preferred=%d actual=%ld cell=%ld\n",
+                    dpi, maxCellHeight, preferredPixelHeight,
+                    actual.lfHeight, metrics.tmHeight);
+            ++g_failures;
+        }
+    }
+    if (selected) SelectObject(dc, oldFont);
+    if (dc) ReleaseDC(NULL, dc);
+    DeleteObject(preferredFont);
+    DeleteObject(font);
+}
+
 static void CheckTransparentTextPixels(HDC dc, HFONT font,
                                        COLORREF textColor) {
     DWORD pixels[16 * 16] = {0};
@@ -190,6 +254,9 @@ int main(void) {
         &metricTemplate, 96, ANTIALIASED_QUALITY);
     Expect(metricTemplate.lfHeight == -12,
            "the shared 9pt metric font was not 12px at 96 DPI");
+    CheckFittedMetricCellFont(96, 16);
+    CheckFittedMetricCellFont(96, 12);
+    CheckFittedMetricCellFont(144, 24);
 
     SIZE oneDigitSize = {0};
     SIZE twoDigitSize = {0};

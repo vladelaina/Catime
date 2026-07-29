@@ -9,6 +9,7 @@
 #define TASKBAR_MONITOR_PRESENT_TIMER_ID 2u
 #define TASKBAR_MONITOR_PRESENT_MS 100u
 #define TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID 3u
+#define TASKBAR_MONITOR_RECOVERY_MS 250u
 #define TASKBAR_MONITOR_FALLBACK_NETWORK_WIDTH 72
 #define TASKBAR_MONITOR_FALLBACK_RESOURCE_WIDTH 64
 #define TASKBAR_MONITOR_HORIZONTAL_HEIGHT 32
@@ -74,10 +75,18 @@ typedef struct {
     BOOL taskListReserved;
     BOOL modernTaskbar;
     BOOL presentTimerActive;
+    BOOL windowDestroyExpected;
+    UINT_PTR recoveryTimerId;
     BOOL menuPreviewSessionActive;
     BOOL menuPreviewWindowCreated;
     BOOL menuPreviewOriginalCpuMemoryEnabled;
     BOOL menuPreviewOriginalNetworkEnabled;
+    BOOL menuPreviewOriginalWindowRectValid;
+    BOOL menuPreviewWindowResized;
+    HWND menuPreviewOriginalParent;
+    RECT menuPreviewOriginalWindowRect;
+    int menuPreviewOriginalWidth;
+    int menuPreviewOriginalHeight;
     TaskbarHostMode mode;
     SystemMonitorSnapshot metrics;
     TaskbarCompositionMode compositionMode;
@@ -98,12 +107,29 @@ void TaskbarMonitor_RecreateFont(void);
 void TaskbarMonitor_UpdateThemeState(void);
 void TaskbarMonitor_RefreshTextLayout(void);
 void TaskbarMonitor_UpdateDimensions(const RECT* taskbarRect);
+DWORD TaskbarMonitor_GetSnapshotFields(
+    BOOL cpuMemoryEnabled, BOOL networkEnabled);
+BOOL TaskbarMonitor_ShouldKeepSystemMonitorActive(
+    BOOL cpuMemoryEnabled, BOOL networkEnabled,
+    BOOL menuPreviewSessionActive,
+    BOOL originalCpuMemoryEnabled,
+    BOOL originalNetworkEnabled);
+BOOL TaskbarMonitor_SnapshotsEqual(
+    const SystemMonitorSnapshot* first,
+    const SystemMonitorSnapshot* second);
+void TaskbarMonitor_ClearMenuPreviewWindowInteraction(void);
+void TaskbarMonitor_ResetMenuPreviewWindowGeometry(void);
+BOOL TaskbarMonitor_CaptureMenuPreviewWindowGeometry(void);
+BOOL TaskbarMonitor_RestoreMenuPreviewWindowGeometry(void);
+BOOL TaskbarMonitor_UpdateMenuPreviewWindowGeometry(void);
 BOOL TaskbarMonitor_ShouldUseClassicPlacement(
     BOOL modernTaskbar, BOOL classicHostAvailable,
     BOOL taskListAvailable);
 BOOL TaskbarMonitor_IsWindows11OrLaterVersion(
     DWORD majorVersion, DWORD buildNumber);
 BOOL TaskbarMonitor_IsModernTaskbar(HWND taskbar);
+HWND TaskbarMonitor_FindDescendantByClass(
+    HWND parent, const wchar_t* className);
 BOOL TaskbarMonitor_CalculateClassicPlacement(
     const RECT* taskListRect, BOOL horizontal,
     int monitorWidth, int monitorHeight, int gap,
@@ -114,6 +140,17 @@ BOOL TaskbarMonitor_CalculateModernPlacement(
     BOOL hasNotificationArea, BOOL horizontal,
     int monitorWidth, int monitorHeight, int gap,
     int fallbackInset, RECT* monitorRect);
+BOOL TaskbarMonitor_CalculateMonitorSize(
+    int taskbarWidth, int taskbarHeight, BOOL horizontal,
+    UINT dpi, int networkGroupWidth, int resourceGroupWidth,
+    BOOL cpuMemoryEnabled, BOOL networkEnabled,
+    int* monitorWidth, int* monitorHeight);
+int TaskbarMonitor_CalculateMetricRowHeight(
+    int monitorHeight, BOOL horizontal,
+    BOOL cpuMemoryEnabled, BOOL networkEnabled);
+BOOL TaskbarMonitor_CalculatePreviewPlacement(
+    const RECT* originalRect, BOOL horizontal,
+    int monitorWidth, int monitorHeight, RECT* monitorRect);
 BOOL TaskbarMonitor_Present(
     HWND window, HDC fallbackTarget,
     const TaskbarMetricText* metrics,
@@ -127,8 +164,15 @@ void TaskbarMonitor_DrawMetricGrid(
     const TaskbarMetricText* metrics, int metricCount);
 
 void TaskbarMonitor_RestoreClassicTaskList(void);
+BOOL TaskbarMonitor_SetWindowParent(HWND parent, BOOL childStyle);
+BOOL TaskbarMonitor_SetMenuPreviewPassThrough(BOOL enabled);
+BOOL TaskbarMonitor_EnsureWindowAtTop(void);
 BOOL TaskbarMonitor_AttachToTaskbar(void);
 void TaskbarMonitor_RefreshAttachment(void);
+BOOL TaskbarMonitor_CreateWindow(void);
+void TaskbarMonitor_CancelWindowRecovery(void);
+void TaskbarMonitor_ScheduleWindowRecovery(void);
+void TaskbarMonitor_OnMonitorWindowDestroyed(HWND window);
 
 LRESULT CALLBACK TaskbarMonitorWindowProc(
     HWND window, UINT message, WPARAM wParam, LPARAM lParam);

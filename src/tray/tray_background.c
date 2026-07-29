@@ -69,7 +69,7 @@ BOOL ShouldKeepSystemMonitorActive(void) {
         !IsTrayIconActiveForWindow(hwnd)) {
         return FALSE;
     }
-    if (TaskbarMonitor_IsEnabled()) return TRUE;
+    if (TaskbarMonitor_NeedsSystemMonitor()) return TRUE;
     if (IsTrayInteractionSuspended()) {
         return CurrentTrayIconNeedsSystemMonitor() ||
                CurrentAnimationSpeedNeedsSystemMonitor();

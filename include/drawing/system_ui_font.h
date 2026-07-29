@@ -10,6 +10,10 @@ void InitializeSystemUiTextLogFont(
 void InitializeSystemUiMetricTextLogFont(
     LOGFONTW* logFont, UINT dpi, BYTE quality);
 
+/** Create the largest shared metric font visually fitting maxCellHeight. */
+HFONT CreateFittedSystemUiMetricTextFont(
+    UINT dpi, BYTE quality, int maxCellHeight);
+
 /** Clone a font without antialiasing for exact color-key fallbacks. */
 HFONT CreateNonAntialiasedFontCopy(HFONT sourceFont);
 

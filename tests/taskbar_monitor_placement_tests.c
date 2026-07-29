@@ -144,6 +144,107 @@ static void TestClassicVerticalAndMinimum(void) {
     Expect(!placed, "classic placement violated minimum task-list space");
 }
 
+static void TestMonitorSizes(void) {
+    int width = 0;
+    int height = 0;
+    Expect(TaskbarMonitor_CalculateMonitorSize(
+               1920, 40, TRUE, 96, 72, 64,
+               FALSE, TRUE, &width, &height),
+           "horizontal network monitor size calculation failed");
+    Expect(width == 72 && height == 32,
+           "horizontal network monitor size was incorrect");
+
+    Expect(TaskbarMonitor_CalculateMonitorSize(
+               1920, 40, TRUE, 96, 72, 64,
+               TRUE, FALSE, &width, &height),
+           "horizontal resource monitor size calculation failed");
+    Expect(width == 64 && height == 32,
+           "horizontal resource monitor size was incorrect");
+
+    Expect(TaskbarMonitor_CalculateMonitorSize(
+               1920, 40, TRUE, 96, 72, 64,
+               TRUE, TRUE, &width, &height),
+           "horizontal combined monitor size calculation failed");
+    Expect(width == 138 && height == 32,
+           "horizontal combined monitor size was incorrect");
+
+    Expect(TaskbarMonitor_CalculateMonitorSize(
+               1920, 40, TRUE, 96, 72, 64,
+               FALSE, FALSE, &width, &height),
+           "empty preview monitor size calculation failed");
+    Expect(width == 64 && height == 32,
+           "empty preview retained combined monitor width");
+
+    Expect(TaskbarMonitor_CalculateMonitorSize(
+               2880, 60, TRUE, 144, 108, 96,
+               TRUE, TRUE, &width, &height),
+           "high-DPI combined monitor size calculation failed");
+    Expect(width == 207 && height == 48,
+           "high-DPI combined monitor size was incorrect");
+
+    Expect(TaskbarMonitor_CalculateMonitorSize(
+               48, 1080, FALSE, 96, 72, 64,
+               TRUE, TRUE, &width, &height),
+           "vertical combined monitor size calculation failed");
+    Expect(width == 44 && height == 72,
+           "vertical combined monitor size was incorrect");
+
+    Expect(TaskbarMonitor_CalculateMonitorSize(
+               48, 1080, FALSE, 96, 72, 64,
+               FALSE, FALSE, &width, &height),
+           "vertical empty preview monitor size calculation failed");
+    Expect(width == 44 && height == 36,
+           "vertical empty preview retained combined monitor height");
+}
+
+static void TestMetricRowHeights(void) {
+    Expect(TaskbarMonitor_CalculateMetricRowHeight(
+               32, TRUE, TRUE, FALSE) == 16,
+           "normal horizontal metric row height was incorrect");
+    Expect(TaskbarMonitor_CalculateMetricRowHeight(
+               24, TRUE, TRUE, TRUE) == 12,
+           "short horizontal metric row height was incorrect");
+    Expect(TaskbarMonitor_CalculateMetricRowHeight(
+               36, FALSE, TRUE, FALSE) == 18,
+           "single-group vertical metric row height was incorrect");
+    Expect(TaskbarMonitor_CalculateMetricRowHeight(
+               72, FALSE, TRUE, TRUE) == 18,
+           "combined vertical metric row height was incorrect");
+    Expect(TaskbarMonitor_CalculateMetricRowHeight(
+               48, FALSE, TRUE, TRUE) == 12,
+           "compressed vertical metric row height was incorrect");
+    Expect(TaskbarMonitor_CalculateMetricRowHeight(
+               0, TRUE, TRUE, FALSE) == 0,
+           "invalid monitor height produced a metric row");
+}
+
+static void TestPreviewPlacement(void) {
+    RECT original = {100, 4, 164, 36};
+    RECT preview = {0};
+    Expect(TaskbarMonitor_CalculatePreviewPlacement(
+               &original, TRUE, 138, 32, &preview),
+           "horizontal preview placement calculation failed");
+    Expect(preview.left == 26 && preview.top == 4 &&
+           preview.right == 164 && preview.bottom == 36,
+           "horizontal preview did not preserve its right edge");
+
+    original = preview;
+    Expect(TaskbarMonitor_CalculatePreviewPlacement(
+               &original, TRUE, 72, 32, &preview),
+           "horizontal preview shrink calculation failed");
+    Expect(preview.left == 92 && preview.top == 4 &&
+           preview.right == 164 && preview.bottom == 36,
+           "horizontal preview shrink moved its right edge");
+
+    const RECT verticalOriginal = {4, 100, 48, 136};
+    Expect(TaskbarMonitor_CalculatePreviewPlacement(
+               &verticalOriginal, FALSE, 44, 72, &preview),
+           "vertical preview placement calculation failed");
+    Expect(preview.left == 4 && preview.top == 64 &&
+           preview.right == 48 && preview.bottom == 136,
+           "vertical preview did not preserve its bottom edge");
+}
+
 int main(void) {
     TestHostSelection();
     TestModernHorizontalOptionSwitches();
@@ -151,6 +252,9 @@ int main(void) {
     TestModernVerticalOptionSwitches();
     TestClassicHorizontalOptionSwitches();
     TestClassicVerticalAndMinimum();
+    TestMonitorSizes();
+    TestMetricRowHeights();
+    TestPreviewPlacement();
     if (failures == 0) {
         puts("All taskbar monitor placement tests passed.");
     }

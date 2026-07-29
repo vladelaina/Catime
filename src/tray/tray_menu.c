@@ -31,6 +31,7 @@
 #include "tray/tray_menu_theme.h"
 #include "color/color_parser.h"
 #include "taskbar_monitor.h"
+#include "tray/tray.h"
 #include "window_procedure/window_message_handlers.h"
 
 /* External dependencies needed for menu display logic */
@@ -110,6 +111,7 @@ void ShowColorMenu(HWND hwnd) {
     }
     FinishMenuPreviewTracking(hwnd);
     TaskbarMonitor_EndMenuPreviewSession();
+    RefreshTrayBackgroundWorkState();
     if (selectedCommand != 0 && !isTaskbarMonitorCommand &&
         IsWindow(hwnd)) {
         SendMessageW(hwnd, WM_COMMAND,

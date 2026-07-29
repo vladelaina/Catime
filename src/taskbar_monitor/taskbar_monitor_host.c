@@ -7,23 +7,6 @@
 
 #include "log.h"
 
-#include <wchar.h>
-
-static HWND FindDescendantByClass(HWND parent, const wchar_t* className) {
-    HWND child = NULL;
-    if (!parent || !className) return NULL;
-    while ((child = FindWindowExW(parent, child, NULL, NULL)) != NULL) {
-        wchar_t actualClass[64] = {0};
-        if (GetClassNameW(child, actualClass, _countof(actualClass)) > 0 &&
-            wcscmp(actualClass, className) == 0) {
-            return child;
-        }
-        HWND nested = FindDescendantByClass(child, className);
-        if (nested) return nested;
-    }
-    return NULL;
-}
-
 static BOOL WindowRectMatchesParent(
     HWND window, HWND parent, const RECT* expected) {
     RECT current = {0};
@@ -53,42 +36,6 @@ void TaskbarMonitor_RestoreClassicTaskList(void) {
                        g_taskbarMonitor.originalTaskList.top, TRUE);
     }
     g_taskbarMonitor.taskListReserved = FALSE;
-}
-
-static BOOL SetMonitorParent(HWND parent, BOOL childStyle) {
-    LONG_PTR style;
-    LONG_PTR extendedStyle;
-    DWORD error;
-    if (!IsWindow(g_taskbarMonitor.window) || !IsWindow(parent)) return FALSE;
-    SetLastError(ERROR_SUCCESS);
-    HWND previous = SetParent(g_taskbarMonitor.window, parent);
-    error = GetLastError();
-    if (!previous && error != ERROR_SUCCESS) {
-        LOG_WARNING("Taskbar monitor shell attachment failed (error=%lu)",
-                    error);
-        return FALSE;
-    }
-    style = GetWindowLongPtrW(g_taskbarMonitor.window, GWL_STYLE);
-    if (childStyle) {
-        style = (style & ~WS_POPUP) | WS_CHILD | WS_CLIPSIBLINGS;
-    } else {
-        style = (style & ~WS_CHILD) | WS_POPUP | WS_CLIPSIBLINGS;
-    }
-    SetWindowLongPtrW(g_taskbarMonitor.window, GWL_STYLE, style);
-    extendedStyle = GetWindowLongPtrW(g_taskbarMonitor.window, GWL_EXSTYLE);
-    extendedStyle = (extendedStyle & ~WS_EX_TOPMOST) |
-                    WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE |
-                    WS_EX_LAYERED;
-    if (g_taskbarMonitor.menuPreviewSessionActive) {
-        extendedStyle |= WS_EX_TRANSPARENT;
-    } else {
-        extendedStyle &= ~WS_EX_TRANSPARENT;
-    }
-    SetWindowLongPtrW(
-        g_taskbarMonitor.window, GWL_EXSTYLE, extendedStyle);
-    SetWindowPos(g_taskbarMonitor.window, HWND_TOP, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    return TRUE;
 }
 
 static BOOL ReserveClassicSlot(RECT* monitorRect) {
@@ -155,7 +102,7 @@ static BOOL PositionBesideNotificationArea(void) {
     if (!GetClientRect(g_taskbarMonitor.taskbar, &bounds)) {
         return FALSE;
     }
-    HWND notify = FindDescendantByClass(
+    HWND notify = TaskbarMonitor_FindDescendantByClass(
         g_taskbarMonitor.taskbar, L"TrayNotifyWnd");
     BOOL hasNotify = notify && GetWindowRect(notify, &notifyRect);
     if (hasNotify) {
@@ -184,7 +131,7 @@ static BOOL PositionBesideNotificationArea(void) {
 }
 
 static BOOL AttachModernMonitor(HWND taskbar) {
-    if (!SetMonitorParent(
+    if (!TaskbarMonitor_SetWindowParent(
             taskbar, g_taskbarMonitor.modernTaskbar)) return FALSE;
     g_taskbarMonitor.host = taskbar;
     g_taskbarMonitor.taskList = NULL;
@@ -220,36 +167,55 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
     RECT taskbarRect = {0};
     HWND taskbar = FindWindowW(L"Shell_TrayWnd", NULL);
     if (!taskbar || !GetWindowRect(taskbar, &taskbarRect)) return FALSE;
-    TaskbarMonitor_RestoreClassicTaskList();
+    HWND previousTaskbar = g_taskbarMonitor.taskbar;
+    HWND previousHost = g_taskbarMonitor.host;
+    HWND previousTaskList = g_taskbarMonitor.taskList;
+    TaskbarHostMode previousMode = g_taskbarMonitor.mode;
     g_taskbarMonitor.taskbar = taskbar;
     g_taskbarMonitor.dpi = TaskbarMonitor_GetWindowDpi(taskbar);
     TaskbarMonitor_UpdateThemeState();
+    /* Resolve the available row height before creating the font. Text width
+     * is measured in a second pass after the fitted font is available. */
+    TaskbarMonitor_UpdateDimensions(&taskbarRect);
     TaskbarMonitor_RecreateFont();
     TaskbarMonitor_RefreshTextLayout();
     TaskbarMonitor_UpdateDimensions(&taskbarRect);
     BOOL modernTaskbar = TaskbarMonitor_IsModernTaskbar(taskbar);
     g_taskbarMonitor.modernTaskbar = modernTaskbar;
     if (g_taskbarMonitor.menuPreviewSessionActive) {
+        /* A recovered preview window must not strand an older classic slot. */
+        TaskbarMonitor_RestoreClassicTaskList();
         return AttachModernMonitor(taskbar);
     }
-    HWND host = FindDescendantByClass(taskbar, L"ReBarWindow32");
-    if (!host) host = FindDescendantByClass(taskbar, L"WorkerW");
+    HWND host = TaskbarMonitor_FindDescendantByClass(
+        taskbar, L"ReBarWindow32");
+    if (!host) {
+        host = TaskbarMonitor_FindDescendantByClass(taskbar, L"WorkerW");
+    }
     HWND taskList = host
-        ? FindDescendantByClass(host, L"MSTaskSwWClass") : NULL;
+        ? TaskbarMonitor_FindDescendantByClass(
+            host, L"MSTaskSwWClass") : NULL;
     if (!taskList && host) {
-        taskList = FindDescendantByClass(host, L"MSTaskListWClass");
+        taskList = TaskbarMonitor_FindDescendantByClass(
+            host, L"MSTaskListWClass");
     }
     if (TaskbarMonitor_ShouldUseClassicPlacement(
             modernTaskbar, host != NULL, taskList != NULL)) {
         RECT monitorRect = {0};
+        BOOL sameClassicHost =
+            previousMode == TASKBAR_HOST_CLASSIC &&
+            previousTaskbar == taskbar && previousHost == host &&
+            previousTaskList == taskList;
+        if (!sameClassicHost) TaskbarMonitor_RestoreClassicTaskList();
         g_taskbarMonitor.host = host;
         g_taskbarMonitor.taskList = taskList;
         g_taskbarMonitor.mode = TASKBAR_HOST_CLASSIC;
         if (ReserveClassicSlot(&monitorRect) &&
-            SetMonitorParent(host, FALSE) &&
+            TaskbarMonitor_SetWindowParent(host, FALSE) &&
             PositionClassicMonitor(&monitorRect)) return TRUE;
         TaskbarMonitor_RestoreClassicTaskList();
     }
+    TaskbarMonitor_RestoreClassicTaskList();
     if (AttachModernMonitor(taskbar)) return TRUE;
     ConfigureHiddenRetry();
     return FALSE;
@@ -257,6 +223,9 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
 
 void TaskbarMonitor_RefreshAttachment(void) {
     if (!IsWindow(g_taskbarMonitor.window)) return;
+    /* Attachment may reparent the window or resize Explorer's task list.
+     * Defer all such corrections until TrackPopupMenu releases the UI. */
+    if (g_taskbarMonitor.menuPreviewSessionActive) return;
     HWND taskbar = FindWindowW(L"Shell_TrayWnd", NULL);
     if (!taskbar) {
         ShowWindow(g_taskbarMonitor.window, SW_HIDE);

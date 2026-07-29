@@ -3,16 +3,22 @@
  * @brief Shared taskbar-monitor state, DPI, font, and geometry helpers.
  */
 
+#include "taskbar_monitor.h"
 #include "taskbar_monitor_internal.h"
 
 #include "drawing/system_ui_font.h"
 #include "language.h"
 #include "tray/tray_theme_state.h"
+#include "utils/win32_dynamic_loader.h"
 
 #include <stdlib.h>
 #include <wchar.h>
 
 TaskbarMonitorState g_taskbarMonitor = {0};
+
+typedef UINT (WINAPI* TaskbarGetDpiForWindowFunc)(HWND);
+static TaskbarGetDpiForWindowFunc s_getDpiForWindow = NULL;
+static BOOL s_getDpiForWindowResolved = FALSE;
 
 int TaskbarMonitor_ScaleForDpi(int value, UINT dpi) {
     if (dpi == 0) dpi = 96;
@@ -20,6 +26,19 @@ int TaskbarMonitor_ScaleForDpi(int value, UINT dpi) {
 }
 
 UINT TaskbarMonitor_GetWindowDpi(HWND window) {
+    if (!s_getDpiForWindowResolved) {
+        HMODULE user32 = GetModuleHandleW(L"user32.dll");
+        if (user32) {
+            CATIME_LOAD_PROC_ADDRESS(
+                user32, "GetDpiForWindow", s_getDpiForWindow);
+        }
+        s_getDpiForWindowResolved = TRUE;
+    }
+    if (window && s_getDpiForWindow) {
+        UINT dpi = s_getDpiForWindow(window);
+        if (dpi > 0) return dpi;
+    }
+
     UINT dpi = 96;
     HDC dc = GetDC(window);
     if (dc) {
@@ -49,6 +68,15 @@ BOOL TaskbarMonitor_RectsNearEqual(
            abs(first->bottom - second->bottom) <= tolerance;
 }
 
+BOOL TaskbarMonitor_NeedsSystemMonitor(void) {
+    return TaskbarMonitor_ShouldKeepSystemMonitorActive(
+        g_taskbarMonitor.cpuMemoryEnabled,
+        g_taskbarMonitor.networkEnabled,
+        g_taskbarMonitor.menuPreviewSessionActive,
+        g_taskbarMonitor.menuPreviewOriginalCpuMemoryEnabled,
+        g_taskbarMonitor.menuPreviewOriginalNetworkEnabled);
+}
+
 void TaskbarMonitor_DeleteFont(void) {
     if (g_taskbarMonitor.font) {
         DeleteObject(g_taskbarMonitor.font);
@@ -57,12 +85,20 @@ void TaskbarMonitor_DeleteFont(void) {
 }
 
 void TaskbarMonitor_RecreateFont(void) {
-    LOGFONTW font = {0};
     UINT dpi = g_taskbarMonitor.dpi ? g_taskbarMonitor.dpi : 96;
+    BOOL cpuMemoryLayoutEnabled =
+        g_taskbarMonitor.cpuMemoryEnabled ||
+        g_taskbarMonitor.menuPreviewSessionActive;
+    BOOL networkLayoutEnabled =
+        g_taskbarMonitor.networkEnabled ||
+        g_taskbarMonitor.menuPreviewSessionActive;
+    int rowHeight = TaskbarMonitor_CalculateMetricRowHeight(
+        g_taskbarMonitor.height,
+        g_taskbarMonitor.horizontal,
+        cpuMemoryLayoutEnabled, networkLayoutEnabled);
     TaskbarMonitor_DeleteFont();
-    InitializeSystemUiMetricTextLogFont(
-        &font, dpi, CLEARTYPE_QUALITY);
-    g_taskbarMonitor.font = CreateFontIndirectW(&font);
+    g_taskbarMonitor.font = CreateFittedSystemUiMetricTextFont(
+        dpi, CLEARTYPE_QUALITY, rowHeight);
 }
 
 void TaskbarMonitor_UpdateThemeState(void) {
@@ -163,46 +199,16 @@ void TaskbarMonitor_UpdateDimensions(const RECT* taskbarRect) {
     BOOL networkLayoutEnabled =
         g_taskbarMonitor.networkEnabled ||
         g_taskbarMonitor.menuPreviewSessionActive;
-    int groupCount = (cpuMemoryLayoutEnabled ? 1 : 0) +
-                     (networkLayoutEnabled ? 1 : 0);
-    if (groupCount <= 0) groupCount = 1;
     g_taskbarMonitor.taskbarWidth = taskbarWidth;
     g_taskbarMonitor.taskbarHeight = taskbarHeight;
     g_taskbarMonitor.horizontal = taskbarWidth >= taskbarHeight;
-    if (g_taskbarMonitor.horizontal) {
-        g_taskbarMonitor.width = 0;
-        if (networkLayoutEnabled) {
-            g_taskbarMonitor.width += g_taskbarMonitor.networkGroupWidth;
-        }
-        if (cpuMemoryLayoutEnabled) {
-            g_taskbarMonitor.width += g_taskbarMonitor.resourceGroupWidth;
-        }
-        if (networkLayoutEnabled && cpuMemoryLayoutEnabled) {
-            g_taskbarMonitor.width += TaskbarMonitor_ScaleForDpi(
-                TASKBAR_MONITOR_GROUP_GAP, g_taskbarMonitor.dpi);
-        }
-        if (g_taskbarMonitor.width <= 0) {
-            g_taskbarMonitor.width = TaskbarMonitor_ScaleForDpi(
-                TASKBAR_MONITOR_FALLBACK_RESOURCE_WIDTH,
-                g_taskbarMonitor.dpi);
-        }
-        g_taskbarMonitor.height = TaskbarMonitor_ScaleForDpi(
-            TASKBAR_MONITOR_HORIZONTAL_HEIGHT, g_taskbarMonitor.dpi);
-        if (g_taskbarMonitor.height > taskbarHeight - 2) {
-            g_taskbarMonitor.height = taskbarHeight - 2;
-        }
-        if (g_taskbarMonitor.height < TaskbarMonitor_ScaleForDpi(
-                24, g_taskbarMonitor.dpi)) {
-            g_taskbarMonitor.height = taskbarHeight;
-        }
-    } else {
-        g_taskbarMonitor.width = taskbarWidth - 4;
-        if (g_taskbarMonitor.width < TaskbarMonitor_ScaleForDpi(
-                36, g_taskbarMonitor.dpi)) {
-            g_taskbarMonitor.width = taskbarWidth;
-        }
-        g_taskbarMonitor.height = TaskbarMonitor_ScaleForDpi(
-            TASKBAR_MONITOR_GROUP_HEIGHT * groupCount,
-            g_taskbarMonitor.dpi);
+    if (!TaskbarMonitor_CalculateMonitorSize(
+            taskbarWidth, taskbarHeight, g_taskbarMonitor.horizontal,
+            g_taskbarMonitor.dpi, g_taskbarMonitor.networkGroupWidth,
+            g_taskbarMonitor.resourceGroupWidth,
+            cpuMemoryLayoutEnabled, networkLayoutEnabled,
+            &g_taskbarMonitor.width, &g_taskbarMonitor.height)) {
+        g_taskbarMonitor.width = taskbarWidth > 0 ? taskbarWidth : 1;
+        g_taskbarMonitor.height = taskbarHeight > 0 ? taskbarHeight : 1;
     }
 }

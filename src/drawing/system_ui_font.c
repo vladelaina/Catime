@@ -5,6 +5,7 @@
 
 #include "drawing/system_ui_font.h"
 
+#include <limits.h>
 #include <wchar.h>
 
 #define SYSTEM_UI_METRIC_TEXT_POINT_SIZE 9
@@ -52,6 +53,48 @@ void InitializeSystemUiMetricTextLogFont(
         SYSTEM_UI_METRIC_TEXT_POINT_SIZE, (int)dpi, 72);
     InitializeSystemUiTextLogFont(logFont, pixelHeight, FW_NORMAL);
     if (logFont) logFont->lfQuality = quality;
+}
+
+static int MeasureFontCellHeight(HDC dc, HFONT font) {
+    if (!dc || !font) return 0;
+    HGDIOBJ oldFont = SelectObject(dc, font);
+    if (!oldFont || oldFont == HGDI_ERROR) return 0;
+    TEXTMETRICW metrics = {0};
+    BOOL measured = GetTextMetricsW(dc, &metrics);
+    SelectObject(dc, oldFont);
+    return measured ? metrics.tmHeight : 0;
+}
+
+HFONT CreateFittedSystemUiMetricTextFont(
+    UINT dpi, BYTE quality, int maxCellHeight) {
+    LOGFONTW logFont = {0};
+    InitializeSystemUiMetricTextLogFont(&logFont, dpi, quality);
+    int preferredPixelHeight = logFont.lfHeight < 0
+        ? (int)-logFont.lfHeight : (int)logFont.lfHeight;
+    if (preferredPixelHeight < 1) preferredPixelHeight = 1;
+    if (maxCellHeight < 1) return CreateFontIndirectW(&logFont);
+
+    HDC dc = GetDC(NULL);
+    if (!dc) return CreateFontIndirectW(&logFont);
+    int cellHeightLimit = maxCellHeight < INT_MAX
+        ? maxCellHeight + 1 : maxCellHeight;
+    for (int pixelHeight = preferredPixelHeight;
+         pixelHeight >= 1; --pixelHeight) {
+        logFont.lfHeight = -pixelHeight;
+        HFONT font = CreateFontIndirectW(&logFont);
+        if (!font) continue;
+        int cellHeight = MeasureFontCellHeight(dc, font);
+        /* GDI metric fonts can report one internal-leading pixel beyond the
+         * requested row; clipping it does not clip the visible glyph. */
+        if (cellHeight == 0 || cellHeight <= cellHeightLimit ||
+            pixelHeight == 1) {
+            ReleaseDC(NULL, dc);
+            return font;
+        }
+        DeleteObject(font);
+    }
+    ReleaseDC(NULL, dc);
+    return NULL;
 }
 
 HFONT CreateNonAntialiasedFontCopy(HFONT sourceFont) {

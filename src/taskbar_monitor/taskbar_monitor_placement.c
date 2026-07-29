@@ -15,6 +15,11 @@ static int ClampInt(int value, int minimum, int maximum) {
     return value;
 }
 
+static int ScaleForDpi(int value, UINT dpi) {
+    if (dpi == 0) dpi = 96;
+    return MulDiv(value, (int)dpi, 96);
+}
+
 static BOOL RectHasArea(const RECT* rect) {
     return rect && rect->right > rect->left &&
            rect->bottom > rect->top;
@@ -107,10 +112,10 @@ BOOL TaskbarMonitor_CalculateModernPlacement(
         return FALSE;
     }
 
-    int boundsWidth = taskbarBounds->right - taskbarBounds->left;
-    int boundsHeight = taskbarBounds->bottom - taskbarBounds->top;
     RECT monitor = {0};
     if (horizontal) {
+        int boundsHeight =
+            taskbarBounds->bottom - taskbarBounds->top;
         BOOL useNotification = hasNotificationArea &&
             HasHorizontalNotificationAnchor(
                 taskbarBounds, notificationArea);
@@ -129,6 +134,8 @@ BOOL TaskbarMonitor_CalculateModernPlacement(
             (boundsHeight - monitorHeight) / 2;
         monitor.bottom = monitor.top + monitorHeight;
     } else {
+        int boundsWidth =
+            taskbarBounds->right - taskbarBounds->left;
         BOOL useNotification = hasNotificationArea &&
             HasVerticalNotificationAnchor(
                 taskbarBounds, notificationArea);
@@ -148,5 +155,94 @@ BOOL TaskbarMonitor_CalculateModernPlacement(
         monitor.right = monitor.left + monitorWidth;
     }
     *monitorRect = monitor;
+    return TRUE;
+}
+
+BOOL TaskbarMonitor_CalculateMonitorSize(
+    int taskbarWidth, int taskbarHeight, BOOL horizontal,
+    UINT dpi, int networkGroupWidth, int resourceGroupWidth,
+    BOOL cpuMemoryEnabled, BOOL networkEnabled,
+    int* monitorWidth, int* monitorHeight) {
+    if (taskbarWidth <= 0 || taskbarHeight <= 0 ||
+        !monitorWidth || !monitorHeight) {
+        return FALSE;
+    }
+    if (networkGroupWidth <= 0) {
+        networkGroupWidth = ScaleForDpi(
+            TASKBAR_MONITOR_FALLBACK_NETWORK_WIDTH, dpi);
+    }
+    if (resourceGroupWidth <= 0) {
+        resourceGroupWidth = ScaleForDpi(
+            TASKBAR_MONITOR_FALLBACK_RESOURCE_WIDTH, dpi);
+    }
+
+    int groupCount = (cpuMemoryEnabled ? 1 : 0) +
+                     (networkEnabled ? 1 : 0);
+    if (groupCount <= 0) groupCount = 1;
+    int width = 0;
+    int height = 0;
+    if (horizontal) {
+        if (networkEnabled) width += networkGroupWidth;
+        if (cpuMemoryEnabled) width += resourceGroupWidth;
+        if (networkEnabled && cpuMemoryEnabled) {
+            width += ScaleForDpi(TASKBAR_MONITOR_GROUP_GAP, dpi);
+        }
+        if (width <= 0) width = resourceGroupWidth;
+        height = ScaleForDpi(
+            TASKBAR_MONITOR_HORIZONTAL_HEIGHT, dpi);
+        if (height > taskbarHeight - 2) height = taskbarHeight - 2;
+        if (height < ScaleForDpi(24, dpi)) height = taskbarHeight;
+    } else {
+        width = taskbarWidth - 4;
+        if (width < ScaleForDpi(36, dpi)) width = taskbarWidth;
+        height = ScaleForDpi(
+            TASKBAR_MONITOR_GROUP_HEIGHT * groupCount, dpi);
+    }
+    if (width <= 0 || height <= 0) return FALSE;
+    *monitorWidth = width;
+    *monitorHeight = height;
+    return TRUE;
+}
+
+int TaskbarMonitor_CalculateMetricRowHeight(
+    int monitorHeight, BOOL horizontal,
+    BOOL cpuMemoryEnabled, BOOL networkEnabled) {
+    if (monitorHeight < 1) return 0;
+
+    int rowCount = 2;
+    if (!horizontal) {
+        int groupCount = (cpuMemoryEnabled ? 1 : 0) +
+                         (networkEnabled ? 1 : 0);
+        if (groupCount < 1) groupCount = 1;
+        rowCount *= groupCount;
+    }
+    int rowHeight = monitorHeight / rowCount;
+    return rowHeight > 0 ? rowHeight : 1;
+}
+
+BOOL TaskbarMonitor_CalculatePreviewPlacement(
+    const RECT* originalRect, BOOL horizontal,
+    int monitorWidth, int monitorHeight, RECT* monitorRect) {
+    if (!RectHasArea(originalRect) || !monitorRect ||
+        monitorWidth <= 0 || monitorHeight <= 0) {
+        return FALSE;
+    }
+    RECT placement = {0};
+    if (horizontal) {
+        placement.right = originalRect->right;
+        placement.left = placement.right - monitorWidth;
+        placement.top = originalRect->top +
+            ((originalRect->bottom - originalRect->top) -
+             monitorHeight) / 2;
+        placement.bottom = placement.top + monitorHeight;
+    } else {
+        placement.bottom = originalRect->bottom;
+        placement.top = placement.bottom - monitorHeight;
+        placement.left = originalRect->left +
+            ((originalRect->right - originalRect->left) -
+             monitorWidth) / 2;
+        placement.right = placement.left + monitorWidth;
+    }
+    *monitorRect = placement;
     return TRUE;
 }

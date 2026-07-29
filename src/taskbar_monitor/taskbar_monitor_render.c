@@ -15,10 +15,8 @@
 void TaskbarMonitor_UpdateSnapshot(
     const SystemMonitorSnapshot* snapshot) {
     if (!snapshot) return;
-    if (snapshot->revision != 0 &&
-        snapshot->revision == g_taskbarMonitor.metrics.revision) {
-        return;
-    }
+    if (TaskbarMonitor_SnapshotsEqual(
+            snapshot, &g_taskbarMonitor.metrics)) return;
     g_taskbarMonitor.metrics = *snapshot;
     if (IsWindow(g_taskbarMonitor.window)) {
         if (!g_taskbarMonitor.presentTimerActive &&
@@ -119,7 +117,8 @@ static void PaintMonitor(HWND window) {
     if (!target) return;
     TaskbarMetricText metrics[TASKBAR_MONITOR_MAX_METRICS] = {0};
     int metricCount = BuildMetricTexts(metrics);
-    TaskbarMonitor_Present(window, target, metrics, metricCount);
+    (void)TaskbarMonitor_Present(
+        window, target, metrics, metricCount);
     EndPaint(window, &paint);
 }
 
@@ -136,16 +135,14 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
                             GetLastError());
             }
             {
-                DWORD fields = 0;
-                if (g_taskbarMonitor.cpuMemoryEnabled) {
-                    fields |= SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY;
-                }
-                if (g_taskbarMonitor.networkEnabled) {
-                    fields |= SYSTEM_MONITOR_SNAPSHOT_NETWORK;
-                }
-                SystemMonitorSnapshot snapshot = {0};
-                if (SystemMonitor_GetSnapshot(fields, &snapshot)) {
-                    TaskbarMonitor_UpdateSnapshot(&snapshot);
+                DWORD fields = TaskbarMonitor_GetSnapshotFields(
+                    g_taskbarMonitor.cpuMemoryEnabled,
+                    g_taskbarMonitor.networkEnabled);
+                if (fields != 0) {
+                    SystemMonitorSnapshot snapshot = {0};
+                    if (SystemMonitor_GetSnapshot(fields, &snapshot)) {
+                        TaskbarMonitor_UpdateSnapshot(&snapshot);
+                    }
                 }
             }
             return 0;
@@ -164,9 +161,9 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             }
             if (wParam == TASKBAR_MONITOR_PRESENT_TIMER_ID) {
                 TaskbarMonitor_RefreshAttachment();
-                if (g_taskbarMonitor.mode == TASKBAR_HOST_MODERN) {
-                    SetWindowPos(window, HWND_TOP, 0, 0, 0, 0,
-                                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+                if (g_taskbarMonitor.mode == TASKBAR_HOST_MODERN &&
+                    !g_taskbarMonitor.menuPreviewSessionActive) {
+                    (void)TaskbarMonitor_EnsureWindowAtTop();
                 }
                 return 0;
             }
@@ -200,9 +197,7 @@ LRESULT CALLBACK TaskbarMonitorWindowProc(
             KillTimer(window,
                       TASKBAR_MONITOR_THEME_RECHECK_TIMER_ID);
             g_taskbarMonitor.themeRecheckDueTick = 0;
-            if (g_taskbarMonitor.window == window) {
-                g_taskbarMonitor.window = NULL;
-            }
+            TaskbarMonitor_OnMonitorWindowDestroyed(window);
             break;
         default:
             break;
