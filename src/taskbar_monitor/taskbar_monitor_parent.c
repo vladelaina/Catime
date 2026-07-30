@@ -7,6 +7,11 @@
 
 #include "log.h"
 
+BOOL TaskbarMonitor_IsWindowShown(HWND window) {
+    return IsWindow(window) &&
+           (GetWindowLongPtrW(window, GWL_STYLE) & WS_VISIBLE) != 0;
+}
+
 static BOOL SetWindowLongChecked(
     HWND window, int index, LONG_PTR value, const char* operation) {
     SetLastError(ERROR_SUCCESS);

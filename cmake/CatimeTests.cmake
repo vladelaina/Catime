@@ -165,6 +165,19 @@ target_include_directories(taskbar_monitor_policy_tests PRIVATE
 add_test(NAME taskbar_monitor_policy
     COMMAND taskbar_monitor_policy_tests)
 
+add_executable(taskbar_monitor_recovery_tests
+    tests/taskbar_monitor_recovery_tests.c
+    src/taskbar_monitor/taskbar_monitor_parent.c
+    src/taskbar_monitor/taskbar_monitor_recovery.c
+)
+target_include_directories(taskbar_monitor_recovery_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(taskbar_monitor_recovery_tests PRIVATE user32)
+add_test(NAME taskbar_monitor_recovery
+    COMMAND taskbar_monitor_recovery_tests)
+
 add_executable(taskbar_monitor_placement_tests
     tests/taskbar_monitor_placement_tests.c
     src/taskbar_monitor/taskbar_monitor_placement.c
@@ -207,6 +220,7 @@ set(_catime_test_targets
     taskbar_monitor_compositor_tests
     taskbar_monitor_parent_tests
     taskbar_monitor_policy_tests
+    taskbar_monitor_recovery_tests
     taskbar_monitor_placement_tests
     tray_percent_font_tests
 )

@@ -167,10 +167,12 @@ void TaskbarMonitor_RestoreClassicTaskList(void);
 BOOL TaskbarMonitor_SetWindowParent(HWND parent, BOOL childStyle);
 BOOL TaskbarMonitor_SetMenuPreviewPassThrough(BOOL enabled);
 BOOL TaskbarMonitor_EnsureWindowAtTop(void);
+BOOL TaskbarMonitor_IsWindowShown(HWND window);
 BOOL TaskbarMonitor_AttachToTaskbar(void);
 void TaskbarMonitor_RefreshAttachment(void);
 BOOL TaskbarMonitor_CreateWindow(void);
 void TaskbarMonitor_CancelWindowRecovery(void);
+BOOL TaskbarMonitor_HasUsableWindow(void);
 void TaskbarMonitor_ScheduleWindowRecovery(void);
 void TaskbarMonitor_OnMonitorWindowDestroyed(HWND window);
 

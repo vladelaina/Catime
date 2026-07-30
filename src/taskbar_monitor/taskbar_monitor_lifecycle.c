@@ -30,7 +30,6 @@ static BOOL RegisterMonitorClass(void) {
     g_taskbarMonitor.classRegistered = TRUE;
     return TRUE;
 }
-
 BOOL TaskbarMonitor_CreateWindow(void) {
     TaskbarMonitor_CancelWindowRecovery();
     if (IsWindow(g_taskbarMonitor.window)) return TRUE;
@@ -52,9 +51,11 @@ BOOL TaskbarMonitor_CreateWindow(void) {
     if (!TaskbarMonitor_AttachToTaskbar()) {
         ShowWindow(g_taskbarMonitor.window, SW_HIDE);
     }
+    if (!TaskbarMonitor_HasUsableWindow()) {
+        TaskbarMonitor_ScheduleWindowRecovery();
+    }
     return TRUE;
 }
-
 static void DestroyMonitorWindow(void) {
     TaskbarMonitor_CancelWindowRecovery();
     g_taskbarMonitor.windowDestroyExpected = TRUE;
@@ -80,7 +81,8 @@ static void SyncMonitorWindow(BOOL reattachExisting) {
     if (TaskbarMonitor_IsEnabled()) {
         if (!IsWindow(g_taskbarMonitor.window)) {
             TaskbarMonitor_CreateWindow();
-        } else if (reattachExisting) {
+        } else if (reattachExisting ||
+                   !TaskbarMonitor_HasUsableWindow()) {
             TaskbarMonitor_AttachToTaskbar();
             InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
         }
@@ -107,6 +109,8 @@ BOOL TaskbarMonitor_BeginMenuPreviewSession(void) {
     if (g_taskbarMonitor.menuPreviewWindowCreated) {
         g_taskbarMonitor.window = NULL;
         (void)TaskbarMonitor_CreateWindow();
+    } else if (!TaskbarMonitor_HasUsableWindow()) {
+        (void)TaskbarMonitor_AttachToTaskbar();
     }
     if (IsWindow(g_taskbarMonitor.window)) {
         (void)TaskbarMonitor_SetMenuPreviewPassThrough(TRUE);
@@ -124,6 +128,8 @@ void TaskbarMonitor_EndMenuPreviewSession(void) {
             g_taskbarMonitor.menuPreviewOriginalNetworkEnabled;
     BOOL hostNeedsSync =
         g_taskbarMonitor.menuPreviewWindowCreated || configurationChanged ||
+        (TaskbarMonitor_IsEnabled() &&
+         !TaskbarMonitor_HasUsableWindow()) ||
         (TaskbarMonitor_IsEnabled() !=
          IsWindow(g_taskbarMonitor.window));
     if (!hostNeedsSync && g_taskbarMonitor.menuPreviewWindowResized &&

@@ -15,14 +15,14 @@
 void TaskbarMonitor_UpdateSnapshot(
     const SystemMonitorSnapshot* snapshot) {
     if (!snapshot) return;
+    if (IsWindow(g_taskbarMonitor.window) &&
+        !g_taskbarMonitor.presentTimerActive) {
+        TaskbarMonitor_RefreshAttachment();
+    }
     if (TaskbarMonitor_SnapshotsEqual(
             snapshot, &g_taskbarMonitor.metrics)) return;
     g_taskbarMonitor.metrics = *snapshot;
     if (IsWindow(g_taskbarMonitor.window)) {
-        if (!g_taskbarMonitor.presentTimerActive &&
-            IsWindow(g_taskbarMonitor.taskbar)) {
-            TaskbarMonitor_RefreshAttachment();
-        }
         InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
     }
 }

@@ -10,9 +10,26 @@
 static BOOL WindowRectMatchesParent(
     HWND window, HWND parent, const RECT* expected) {
     RECT current = {0};
-    return IsWindowVisible(window) &&
+    return TaskbarMonitor_IsWindowShown(window) &&
            TaskbarMonitor_GetWindowRectInParent(window, parent, &current) &&
            TaskbarMonitor_RectsNearEqual(&current, expected);
+}
+
+static BOOL CompleteTaskbarAttachment(BOOL wasShown) {
+    if (!TaskbarMonitor_HasUsableWindow()) {
+        TaskbarMonitor_ScheduleWindowRecovery();
+        return FALSE;
+    }
+    TaskbarMonitor_CancelWindowRecovery();
+    if (!wasShown && IsWindow(g_taskbarMonitor.window)) {
+        /* A layered window can become visible before Windows requests its
+         * first paint. Present the initial frame synchronously so a restored
+         * startup preference never leaves a transparent taskbar slot. */
+        RedrawWindow(
+            g_taskbarMonitor.window, NULL, NULL,
+            RDW_INVALIDATE | RDW_UPDATENOW | RDW_NOERASE);
+    }
+    return TRUE;
 }
 
 void TaskbarMonitor_RestoreClassicTaskList(void) {
@@ -164,9 +181,20 @@ static void ConfigureHiddenRetry(void) {
 }
 
 BOOL TaskbarMonitor_AttachToTaskbar(void) {
+    if (!IsWindow(g_taskbarMonitor.window)) {
+        TaskbarMonitor_ScheduleWindowRecovery();
+        return FALSE;
+    }
+    BOOL wasShown = TaskbarMonitor_IsWindowShown(
+        g_taskbarMonitor.window);
     RECT taskbarRect = {0};
     HWND taskbar = FindWindowW(L"Shell_TrayWnd", NULL);
-    if (!taskbar || !GetWindowRect(taskbar, &taskbarRect)) return FALSE;
+    if (!taskbar || !GetWindowRect(taskbar, &taskbarRect)) {
+        TaskbarMonitor_RestoreClassicTaskList();
+        ConfigureHiddenRetry();
+        TaskbarMonitor_ScheduleWindowRecovery();
+        return FALSE;
+    }
     HWND previousTaskbar = g_taskbarMonitor.taskbar;
     HWND previousHost = g_taskbarMonitor.host;
     HWND previousTaskList = g_taskbarMonitor.taskList;
@@ -185,7 +213,11 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
     if (g_taskbarMonitor.menuPreviewSessionActive) {
         /* A recovered preview window must not strand an older classic slot. */
         TaskbarMonitor_RestoreClassicTaskList();
-        return AttachModernMonitor(taskbar);
+        if (AttachModernMonitor(taskbar) &&
+            CompleteTaskbarAttachment(wasShown)) return TRUE;
+        ConfigureHiddenRetry();
+        TaskbarMonitor_ScheduleWindowRecovery();
+        return FALSE;
     }
     HWND host = TaskbarMonitor_FindDescendantByClass(
         taskbar, L"ReBarWindow32");
@@ -212,12 +244,15 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
         g_taskbarMonitor.mode = TASKBAR_HOST_CLASSIC;
         if (ReserveClassicSlot(&monitorRect) &&
             TaskbarMonitor_SetWindowParent(host, FALSE) &&
-            PositionClassicMonitor(&monitorRect)) return TRUE;
+            PositionClassicMonitor(&monitorRect) &&
+            CompleteTaskbarAttachment(wasShown)) return TRUE;
         TaskbarMonitor_RestoreClassicTaskList();
     }
     TaskbarMonitor_RestoreClassicTaskList();
-    if (AttachModernMonitor(taskbar)) return TRUE;
+    if (AttachModernMonitor(taskbar) &&
+        CompleteTaskbarAttachment(wasShown)) return TRUE;
     ConfigureHiddenRetry();
+    TaskbarMonitor_ScheduleWindowRecovery();
     return FALSE;
 }
 
@@ -229,15 +264,13 @@ void TaskbarMonitor_RefreshAttachment(void) {
     HWND taskbar = FindWindowW(L"Shell_TrayWnd", NULL);
     if (!taskbar) {
         ShowWindow(g_taskbarMonitor.window, SW_HIDE);
+        TaskbarMonitor_ScheduleWindowRecovery();
         return;
     }
     if (taskbar != g_taskbarMonitor.taskbar ||
-        !IsWindow(g_taskbarMonitor.taskbar) ||
+        !TaskbarMonitor_HasUsableWindow() ||
         TaskbarMonitor_IsModernTaskbar(taskbar) !=
-            g_taskbarMonitor.modernTaskbar ||
-        (g_taskbarMonitor.mode == TASKBAR_HOST_CLASSIC &&
-         (!IsWindow(g_taskbarMonitor.host) ||
-          !IsWindow(g_taskbarMonitor.taskList)))) {
+            g_taskbarMonitor.modernTaskbar) {
         TaskbarMonitor_AttachToTaskbar();
         return;
     }

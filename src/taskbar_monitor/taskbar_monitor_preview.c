@@ -31,8 +31,8 @@ static BOOL GetMonitorWindowRectForPreview(
 
 BOOL TaskbarMonitor_CaptureMenuPreviewWindowGeometry(void) {
     TaskbarMonitor_ResetMenuPreviewWindowGeometry();
-    if (!IsWindow(g_taskbarMonitor.window) ||
-        !IsWindowVisible(g_taskbarMonitor.window)) return FALSE;
+    if (!TaskbarMonitor_IsWindowShown(
+            g_taskbarMonitor.window)) return FALSE;
     HWND parent = IsWindow(g_taskbarMonitor.host)
         ? g_taskbarMonitor.host : GetParent(g_taskbarMonitor.window);
     RECT windowRect = {0};
