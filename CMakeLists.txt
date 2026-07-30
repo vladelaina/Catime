@@ -31,6 +31,18 @@ configure_file(
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+
+# Catime supports Windows 7. Keep the SDK target explicit so changing the
+# compiler or Windows SDK cannot silently expose APIs that would prevent the
+# executable from starting on Windows 7.
+if(WIN32)
+    add_compile_definitions(
+        WINVER=0x0601
+        _WIN32_WINNT=0x0601
+        NTDDI_VERSION=0x06010000
+    )
+endif()
+
 option(CATIME_ENABLE_WARNINGS "Enable stricter compiler warnings" ON)
 option(CATIME_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(CATIME_ENABLE_ASAN "Enable AddressSanitizer for analyzer builds" OFF)

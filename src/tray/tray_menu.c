@@ -41,12 +41,24 @@ extern BOOL CLOCK_EDIT_MODE;
 /* Function to format time string (extern from tray_menu_pomodoro.c or similar) */
 extern void FormatPomodoroTime(int minutes, wchar_t* buffer, size_t size);
 
+static POINT ResolveTrayMenuAnchor(HWND hwnd, const POINT* anchor) {
+    if (anchor) return *anchor;
+    POINT point = {0};
+    if (GetCursorPos(&point)) return point;
+    RECT windowRect = {0};
+    if (GetWindowRect(hwnd, &windowRect)) {
+        point.x = windowRect.left;
+        point.y = windowRect.bottom;
+    }
+    return point;
+}
+
 /**
  * @brief Build and display right-click configuration menu (Coordinator)
  * @param hwnd Main window handle
  * @note Delegates to specialized submenu builders for maintainability
  */
-void ShowColorMenu(HWND hwnd) {
+void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
@@ -92,9 +104,8 @@ void ShowColorMenu(HWND hwnd) {
                 GetLocalizedString(NULL, L"Exit"));
     
     /* Display menu */
-    POINT pt;
+    POINT pt = ResolveTrayMenuAnchor(hwnd, anchor);
     (void)TaskbarMonitor_BeginMenuPreviewSession();
-    GetCursorPos(&pt);
     SetForegroundWindow(hwnd);
     UINT selectedCommand = TrackPopupMenu(
         hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
@@ -127,7 +138,7 @@ void ShowColorMenu(HWND hwnd) {
  * @param hwnd Main window handle
  * @note Includes timer management, Pomodoro, and quick countdown options
  */
-void ShowContextMenu(HWND hwnd) {
+void ShowContextMenu(HWND hwnd, const POINT* anchor) {
     ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
@@ -214,8 +225,7 @@ void ShowContextMenu(HWND hwnd) {
         AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_QUICK_TIME_BASE + i, menu_item);
     }
 
-    POINT pt;
-    GetCursorPos(&pt);
+    POINT pt = ResolveTrayMenuAnchor(hwnd, anchor);
     SetForegroundWindow(hwnd);
     TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
     PostMessage(hwnd, WM_NULL, 0, 0);

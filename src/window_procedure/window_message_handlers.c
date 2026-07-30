@@ -99,7 +99,7 @@ LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
 }
 
 LRESULT HandleTrayIcon(HWND hwnd, WPARAM wp, LPARAM lp) {
-    HandleTrayIconMessage(hwnd, (UINT)wp, (UINT)lp);
+    HandleTrayIconMessage(hwnd, wp, lp);
     return 0;
 }
 

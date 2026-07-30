@@ -24,6 +24,7 @@ DWORD g_lastTrayRecreateRetryTick = 0;
 BOOL g_trayRecreateRetryLimitLogged = FALSE;
 BOOL g_trayShuttingDown = FALSE;
 BOOL g_showingOpacityTip = FALSE;
+UINT g_trayCallbackVersion = 0;
 TrayHoverRectCache g_trayIconRectCache = {0};
 volatile LONG g_trayInteractionSuspended = FALSE;
 int g_pendingOpacityToSave = -1;

@@ -20,6 +20,7 @@ void RemoveTrayIconInternal(BOOL finalCleanup) {
         CancelTrayRecreateRetry(trayHwnd ? trayHwnd : g_mainHwnd);
     }
     g_trayIconActive = FALSE;
+    g_trayCallbackVersion = 0;
 
     if (trayHwnd) {
         KillTimer(trayHwnd, TRAY_TIP_TIMER_ID);
@@ -65,6 +66,7 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     HWND oldTrayHwnd = nid.hWnd;
     BOOL hadActiveTrayItem = g_trayIconActive && oldTrayHwnd;
     g_trayIconActive = FALSE;
+    g_trayCallbackVersion = 0;
     if (oldTrayHwnd) {
         KillTimer(oldTrayHwnd, TRAY_TIP_TIMER_ID);
         g_trayTipTimerActive = FALSE;

@@ -82,6 +82,16 @@ target_include_directories(tray_hover_cache_tests PRIVATE
 target_link_libraries(tray_hover_cache_tests PRIVATE user32)
 add_test(NAME tray_hover_cache COMMAND tray_hover_cache_tests)
 
+add_executable(tray_event_protocol_tests
+    tests/tray_event_protocol_tests.c
+    src/tray/tray_event_protocol.c
+)
+target_include_directories(tray_event_protocol_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+add_test(NAME tray_event_protocol COMMAND tray_event_protocol_tests)
+
 add_executable(timer_render_cache_tests
     tests/timer_render_cache_tests.c
     src/timer/timer_render_cache.c
@@ -213,6 +223,7 @@ set(_catime_test_targets
     tray_animation_timer_tests
     tray_icon_lifetime_tests
     tray_hover_cache_tests
+    tray_event_protocol_tests
     timer_render_cache_tests
     render_retry_tests
     system_monitor_snapshot_tests

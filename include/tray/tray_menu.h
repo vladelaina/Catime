@@ -16,16 +16,18 @@
 /**
  * @brief Show context menu (left-click)
  * @param hwnd Window handle
+ * @param anchor Optional Shell-provided screen coordinate
  * 
  * @details
  * Timer controls, time display, Pomodoro presets (loaded from config).
  * Dynamic content reloaded each display.
  */
-void ShowContextMenu(HWND hwnd);
+void ShowContextMenu(HWND hwnd, const POINT* anchor);
 
 /**
  * @brief Show config menu (right-click)
  * @param hwnd Window handle
+ * @param anchor Optional Shell-provided screen coordinate
  * 
  * @details
  * Comprehensive settings: edit mode, timeout actions, presets, time format,
@@ -34,6 +36,6 @@ void ShowContextMenu(HWND hwnd);
  * 
  * Modular helpers for maintainability.
  */
-void ShowColorMenu(HWND hwnd);
+void ShowColorMenu(HWND hwnd, const POINT* anchor);
 
 #endif

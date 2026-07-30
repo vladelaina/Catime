@@ -105,9 +105,10 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
 
     memset(&nid, 0, sizeof(nid));
     g_trayIconActive = FALSE;
+    g_trayCallbackVersion = 0;
     nid.cbSize = sizeof(nid);
     nid.uID = CLOCK_ID_TRAY_APP_ICON;
-    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE;
+    nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_SHOWTIP;
     nid.hIcon = hInitial ? hInitial
                          : LoadIconW(hInstance,
                                      MAKEINTRESOURCEW(IDI_CATIME));
@@ -123,6 +124,13 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
     BOOL iconAdded = Shell_NotifyIconW(NIM_ADD, &nid);
     if (iconAdded) {
         g_trayIconActive = TRUE;
+        nid.uVersion = NOTIFYICON_VERSION_4;
+        if (Shell_NotifyIconW(NIM_SETVERSION, &nid)) {
+            g_trayCallbackVersion = NOTIFYICON_VERSION_4;
+        } else {
+            nid.uVersion = 0;
+            LOG_WARNING("Tray callback version 4 unavailable; using legacy events");
+        }
         wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip), nid.szTip);
         CancelTrayRecreateRetry(hwnd);
     } else {
@@ -138,7 +146,7 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
     }
     if (iconAdded) {
         nid.hIcon = NULL;
-        nid.uFlags = NIF_MESSAGE | NIF_TIP;
+        nid.uFlags = NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP;
     }
 
     if (WM_TASKBARCREATED == 0) {

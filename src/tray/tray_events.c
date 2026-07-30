@@ -1,6 +1,8 @@
 #include <windows.h>
 #include <shellapi.h>
+#include "tray_internal.h"
 #include "tray/tray_events.h"
+#include "tray/tray_event_protocol.h"
 #include "tray/tray_menu.h"
 #include "tray/tray.h"
 #include "color/color.h"
@@ -173,27 +175,11 @@ static inline BOOL RestartTimerWithInterval(HWND hwnd, UINT timerId, UINT interv
 static inline BOOL IsTimerActive(void) {
     return !CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0);
 }
-BOOL HandleTrayMenuClick(HWND hwnd, UINT mouseMessage) {
-    if ((mouseMessage != WM_LBUTTONUP &&
-         mouseMessage != WM_RBUTTONUP) ||
-        !IsValidTrayEventWindow(hwnd) ||
-        IsTrayInteractionSuspended()) {
-        return FALSE;
-    }
-    StopNotificationSound();
-    SetCursor(LoadCursorW(NULL, IDC_ARROW));
-    TryRestorePendingWindowPosition(hwnd);
-    SetTrayInteractionSuspended(TRUE);
-    if (mouseMessage == WM_RBUTTONUP) {
-        ShowColorMenu(hwnd);
-    } else {
-        ShowContextMenu(hwnd);
-    }
-    SetTrayInteractionSuspended(FALSE);
-    return TRUE;
-}
-void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
-    if (uID != CLOCK_ID_TRAY_APP_ICON ||
+void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
+    TrayCallbackEvent event = {0};
+    BOOL version4 = g_trayCallbackVersion == NOTIFYICON_VERSION_4;
+    if (!TrayCallback_Decode(version4, wParam, lParam, &event) ||
+        event.iconId != CLOCK_ID_TRAY_APP_ICON ||
         !IsValidTrayEventWindow(hwnd) ||
         !IsTrayIconActive(hwnd)) {
         return;
@@ -202,15 +188,19 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
     if (!interactionSuspended) {
         StartTrayHoverDetection(hwnd);
     }
-    switch (uMouseMsg) {
-        case WM_MOUSEMOVE:
-        case NIN_POPUPOPEN:
+    switch (event.kind) {
+        case TRAY_CALLBACK_HOVER_MOVE:
+            if (interactionSuspended) break;
+            InstallTrayMouseHook();
+            SetTrayHoverCheckInterval(hwnd, TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS);
+            break;
+        case TRAY_CALLBACK_HOVER_OPEN:
             if (interactionSuspended) break;
             InstallTrayMouseHook();
             SetTrayTooltipActive(TRUE);
             SetTrayHoverCheckInterval(hwnd, TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS);
             break;
-        case NIN_POPUPCLOSE:
+        case TRAY_CALLBACK_HOVER_CLOSE:
             if (interactionSuspended) break;
             if (!SetTrayHoverCheckInterval(hwnd,
                                            TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS)) {
@@ -220,9 +210,15 @@ void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg) {
                 }
             }
             break;
-        case WM_RBUTTONUP:
-        case WM_LBUTTONUP:
-            (void)HandleTrayMenuClick(hwnd, uMouseMsg);
+        case TRAY_CALLBACK_PRIMARY_MENU:
+            (void)HandleTrayIconMenuActivation(
+                hwnd, WM_LBUTTONUP,
+                event.hasAnchor ? &event.anchor : NULL);
+            break;
+        case TRAY_CALLBACK_SECONDARY_MENU:
+            (void)HandleTrayIconMenuActivation(
+                hwnd, WM_RBUTTONUP,
+                event.hasAnchor ? &event.anchor : NULL);
             break;
         default:
             break;

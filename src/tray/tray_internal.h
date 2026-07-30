@@ -48,6 +48,7 @@ extern UINT g_trayRecreateRetryCount;
 extern DWORD g_lastTrayRecreateRetryTick;
 extern BOOL g_trayRecreateRetryLimitLogged;
 extern BOOL g_trayShuttingDown;
+extern UINT g_trayCallbackVersion;
 extern TrayHoverRectCache g_trayIconRectCache;
 extern volatile LONG g_trayInteractionSuspended;
 extern int g_pendingOpacityToSave;
@@ -89,6 +90,8 @@ BOOL TryReleaseTrayMouseHook(void);
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 void CALLBACK TrayRecreateRetryTimerProc(HWND hwnd, UINT msg,
                                          UINT_PTR id, DWORD time);
+BOOL HandleTrayIconMenuActivation(HWND hwnd, UINT mouseMessage,
+                                  const POINT* anchor);
 
 void ClearPendingTrayOpacitySave(void);
 void RollBackPendingTrayOpacitySave(HWND hwnd);

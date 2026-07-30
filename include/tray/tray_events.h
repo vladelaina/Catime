@@ -19,14 +19,15 @@
 /**
  * @brief Handle tray icon mouse events
  * @param hwnd Window handle
- * @param uID Icon ID (reserved for future multi-icon)
- * @param uMouseMsg Message type
+ * @param wParam Raw Shell callback wParam
+ * @param lParam Raw Shell callback lParam
  * 
  * @details
- * - WM_RBUTTONUP: Color menu (quick theme changes)
- * - WM_LBUTTONUP: Main context menu
+ * - Primary activation: Main context menu
+ * - Secondary activation: Color/configuration menu
+ * - Supports VERSION_4 callbacks and legacy button-up fallback
  */
-void HandleTrayIconMessage(HWND hwnd, UINT uID, UINT uMouseMsg);
+void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam);
 
 /**
  * @brief Run the tray left/right-click action for another tray surface
