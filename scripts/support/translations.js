@@ -71,7 +71,7 @@ function translateSharedChrome(currentLang) {
             : 'Tools <i class="fas fa-chevron-down"></i>';
     }
 
-    const fontToolLink = document.querySelector('.dropdown-menu a');
+    const fontToolLink = document.querySelector('.dropdown-menu a[href*="font-tool"]');
     if (fontToolLink && fontToolLink.textContent.includes('Font Simplifier')) {
         fontToolLink.innerHTML = currentLang === 'zh'
             ? '<i class="fas fa-font"></i> 字体简化工具'
@@ -79,6 +79,13 @@ function translateSharedChrome(currentLang) {
     }
     if (fontToolLink && fontToolLink.textContent.includes('字体简化工具') && currentLang === 'en') {
         fontToolLink.innerHTML = '<i class="fas fa-font"></i> Font Simplifier';
+    }
+
+    const traySorterLink = document.querySelector('.dropdown-menu a[href*="tray-icon-sorter"]');
+    if (traySorterLink) {
+        traySorterLink.innerHTML = currentLang === 'zh'
+            ? '<i class="fas fa-arrow-down-1-9"></i> 托盘图标排序工具'
+            : '<i class="fas fa-arrow-down-1-9"></i> Tray Icon Sorter';
     }
 
     const actionTranslations = currentLang === 'zh'

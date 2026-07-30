@@ -8,6 +8,8 @@ const cleanRoutes = new Map([
     ['/support', '/support.html'],
     ['/tray', '/tray/index.html'],
     ['/tray/', '/tray/index.html'],
+    ['/tools/tray-icon-sorter', '/tools/tray-icon-sorter/index.html'],
+    ['/tools/tray-icon-sorter/', '/tools/tray-icon-sorter/index.html'],
 ]);
 
 const legacyRoutes = new Map([
@@ -77,6 +79,7 @@ export default defineConfig({
                 support: resolve(import.meta.dirname, 'support.html'),
                 tray: resolve(import.meta.dirname, 'tray/index.html'),
                 fontTool: resolve(import.meta.dirname, 'tools/font-tool/index.html'),
+                trayIconSorter: resolve(import.meta.dirname, 'tools/tray-icon-sorter/index.html'),
             },
         },
     },

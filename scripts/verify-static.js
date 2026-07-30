@@ -12,6 +12,7 @@ const htmlPages = [
     'guide.html',
     'tray/index.html',
     'tools/font-tool/index.html',
+    'tools/tray-icon-sorter/index.html',
 ];
 
 function isExternalReference(value) {

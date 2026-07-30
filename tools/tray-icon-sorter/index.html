@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sort tray icon images by dragging, automatically number them from 1, and download the result as a ready-to-use ZIP archive.">
+    <title>Catime - Tray Icon Sorter</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer">
+
+    <link rel="stylesheet" href="../../styles/style.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="../../assets/catime.webp">
+
+    <script vite-ignore src="../../scripts/config.js" defer></script>
+    <script vite-ignore src="../../scripts/ui-utils.js" defer></script>
+    <script vite-ignore src="../../scripts/components.js" data-auto-load defer></script>
+    <script vite-ignore src="../../scripts/navigation.js" defer></script>
+    <script type="module" src="scripts/app.js"></script>
+</head>
+<body class="tray-sorter-page">
+    <header class="main-header"></header>
+
+    <main>
+        <section class="sorter-hero" aria-labelledby="sorterTitle">
+            <div class="container sorter-hero-layout">
+                <div class="sorter-hero-copy">
+                    <h1 id="sorterTitle">
+                        <span data-i18n="heroTitle">Tray Icon</span>
+                        <span class="hero-title-accent" data-i18n="heroTitleAccent">Sorter</span>
+                    </h1>
+                    <p class="sorter-hero-description" data-i18n="heroDescription">
+                        Add images, press and drag to sort, then download the ZIP.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="sorter-workspace-section" aria-labelledby="workspaceTitle">
+            <div class="container">
+                <div class="sorter-workspace">
+                    <div class="workspace-header">
+                        <h2 id="workspaceTitle" data-i18n="workspaceTitle">Images</h2>
+
+                        <div class="workspace-controls">
+                            <div class="workspace-stats" aria-live="polite">
+                                <span><strong id="imageCount">0</strong> <span data-i18n="imagesLabel">images</span></span>
+                                <span class="duplicate-stat" id="duplicateStat" hidden>
+                                    <span class="stats-divider" aria-hidden="true"></span>
+                                    <strong id="duplicateCount">0</strong> <span id="duplicateLabel">duplicates</span>
+                                </span>
+                                <span class="stats-divider" aria-hidden="true"></span>
+                                <span id="totalSize">0 B</span>
+                            </div>
+                            <button class="tool-button tool-button-secondary" id="clearButton" type="button" disabled>
+                                <i class="fas fa-trash-can" aria-hidden="true"></i>
+                                <span data-i18n="clearAll">Clear all</span>
+                            </button>
+                            <button class="tool-button tool-button-primary" id="addButton" type="button">
+                                <i class="fas fa-plus" aria-hidden="true"></i>
+                                <span data-i18n="addImages">Add images</span>
+                            </button>
+                            <input id="fileInput" type="file" accept="image/*,.ico,.heic,.heif" multiple hidden>
+                        </div>
+                    </div>
+
+                    <div class="upload-zone" id="uploadZone" role="button" tabindex="0" aria-describedby="uploadHint">
+                        <div class="upload-icon-stack" aria-hidden="true">
+                            <i class="fas fa-images"></i>
+                        </div>
+                        <div class="upload-copy">
+                            <h3 data-i18n="uploadTitle">Add images</h3>
+                            <p id="uploadHint" data-i18n="uploadDescription">Drop files here, click to select, or paste with Ctrl+V.</p>
+                        </div>
+                        <span class="upload-cta" data-i18n="browseImages">Browse images</span>
+                    </div>
+
+                    <div class="sorter-panel" id="sorterPanel" hidden>
+                        <div class="sorter-instructions">
+                            <p><i class="fas fa-hand-pointer" aria-hidden="true"></i> <span id="reorderHint" data-i18n="reorderHint">Press and drag the image to reorder. You can also use the arrow buttons or arrow keys.</span></p>
+                            <p class="filename-example"><span data-i18n="filenameExample">ZIP filenames:</span> <code>1.png</code> <code>2.webp</code> <code>3.jpg</code>…</p>
+                        </div>
+                        <ol class="image-grid" id="imageGrid" aria-live="polite"></ol>
+                    </div>
+
+                    <div class="export-bar" id="exportBar">
+                        <div class="export-copy">
+                            <span class="export-icon" aria-hidden="true"><i class="fas fa-box-archive"></i></span>
+                            <div>
+                                <strong id="exportSummary" data-i18n="nothingToExport">Add images to prepare your ZIP</strong>
+                                <p id="statusMessage" role="status" aria-live="polite" data-i18n="statusIdle">Everything stays in your browser.</p>
+                            </div>
+                        </div>
+                        <div class="export-action">
+                            <div class="export-progress" id="exportProgress" hidden aria-hidden="true">
+                                <span id="exportProgressFill"></span>
+                            </div>
+                            <button class="download-zip-button" id="downloadButton" type="button" disabled>
+                                <i class="fas fa-download" aria-hidden="true"></i>
+                                <span data-i18n="downloadZip">Download ZIP</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div class="file-drag-overlay" id="fileDragOverlay" hidden aria-hidden="true">
+        <div class="file-drag-overlay-card">
+            <i class="fas fa-images" aria-hidden="true"></i>
+            <strong data-i18n="dropOverlayTitle">Release to add images</strong>
+            <span data-i18n="dropOverlayDescription">They will be appended to the current sequence</span>
+        </div>
+    </div>
+</body>
+</html>

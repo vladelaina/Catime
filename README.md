@@ -22,7 +22,7 @@ The Vite development server provides clean routes such as `/guide`, `/about`,
   from `styles/modules/`, so both direct static hosting and Vite builds preserve
   the original cascade.
 - Page-specific CSS is grouped under `styles/about/`, `styles/support/`,
-  `tools/font-tool/styles/`, and `tray/styles/modules/`.
+  `tools/font-tool/styles/`, `tools/tray-icon-sorter/`, and `tray/styles/modules/`.
 - Larger classic scripts are split by feature under `scripts/support/` and
   `tools/font-tool/scripts/`; their order in the corresponding HTML is part of
   the public page contract.

@@ -10,6 +10,146 @@ const viewports = [
     { name: 'desktop', width: 1440, height: 900, deviceScaleFactor: 1, mobile: false },
     { name: 'mobile', width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
 ];
+const traySorterInteraction = `async () => {
+    const source = await (await fetch('/assets/catime.webp')).arrayBuffer();
+    const uniqueCanvas = document.createElement('canvas');
+    uniqueCanvas.width = 32;
+    uniqueCanvas.height = 32;
+    const uniqueContext = uniqueCanvas.getContext('2d');
+    uniqueContext.fillStyle = '#e43f52';
+    uniqueContext.fillRect(0, 0, 32, 32);
+    const uniqueBlob = await new Promise(resolve => uniqueCanvas.toBlob(resolve, 'image/png'));
+    const files = [
+        new File([source], 'third.png', { type: 'image/png' }),
+        new File([source], 'first.webp', { type: 'image/webp' }),
+        new File([source], 'second.jpg', { type: 'image/jpeg' }),
+        new File([uniqueBlob], 'unique.png', { type: 'image/png' }),
+    ];
+    window.trayIconSorter.addFiles(files);
+    await window.trayIconSorter.scanForDuplicates();
+
+    const duplicateStates = Array.from(
+        document.querySelectorAll('.image-card'),
+        card => card.classList.contains('is-duplicate'),
+    );
+    const duplicateCount = document.getElementById('duplicateCount').textContent;
+
+    const names = () => Array.from(document.querySelectorAll('[data-role="output-name"]'), node => node.textContent);
+    const before = names();
+    let dragSurfaces = document.querySelectorAll('[data-role="drag-surface"]');
+    const usesCustomPointerDrag = Array.from(dragSurfaces).every(surface => !surface.draggable)
+        && Array.from(document.querySelectorAll('.card-preview img')).every(image => !image.draggable);
+    const scrollCalls = [];
+    const originalScrollBy = window.scrollBy;
+    window.scrollBy = (x, y) => scrollCalls.push([x, y]);
+
+    const pointerSurface = dragSurfaces[0];
+    const pointerRect = pointerSurface.getBoundingClientRect();
+    pointerSurface.setPointerCapture = () => {};
+    pointerSurface.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        buttons: 1,
+        pointerId: 71,
+        pointerType: 'mouse',
+        clientX: pointerRect.left + (pointerRect.width / 2),
+        clientY: pointerRect.top + (pointerRect.height / 2),
+    }));
+    const initialGhostTransform = document.querySelector('.drag-ghost')?.style.transform;
+    const ghostHasNoTransition = getComputedStyle(document.querySelector('.drag-ghost')).transitionDuration === '0s';
+    pointerSurface.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        buttons: 1,
+        pointerId: 71,
+        pointerType: 'mouse',
+        clientX: pointerRect.left + (pointerRect.width / 2) + 30,
+        clientY: pointerRect.top + (pointerRect.height / 2) + 20,
+    }));
+    const movedGhostTransform = document.querySelector('.drag-ghost')?.style.transform;
+    const ghostFollowsPointer = Boolean(initialGhostTransform)
+        && initialGhostTransform !== movedGhostTransform;
+    window.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true }));
+    pointerSurface.dispatchEvent(new PointerEvent('pointerup', {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        pointerId: 71,
+        pointerType: 'mouse',
+        clientX: pointerRect.left + (pointerRect.width / 2),
+        clientY: pointerRect.top + (pointerRect.height / 2),
+    }));
+
+    dragSurfaces = document.querySelectorAll('[data-role="drag-surface"]');
+    const transfer = new DataTransfer();
+    const targetRect = dragSurfaces[1].getBoundingClientRect();
+    dragSurfaces[0].dispatchEvent(new DragEvent('dragstart', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: transfer,
+        clientX: targetRect.left,
+        clientY: targetRect.top,
+    }));
+    dragSurfaces[1].dispatchEvent(new DragEvent('dragover', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: transfer,
+        clientX: targetRect.right - 2,
+        clientY: targetRect.top + (targetRect.height / 2),
+    }));
+    dragSurfaces[1].dispatchEvent(new DragEvent('drop', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: transfer,
+        clientX: targetRect.right - 2,
+        clientY: targetRect.top + (targetRect.height / 2),
+    }));
+    window.scrollBy = originalScrollBy;
+    const after = names();
+
+    let download = null;
+    window.trayIconSorter.triggerDownload = (blob, filename) => {
+        download = { blob, filename };
+    };
+    await window.downloadSortedImages();
+
+    const zipBytes = new Uint8Array(await download.blob.arrayBuffer());
+    const zipText = new TextDecoder().decode(zipBytes);
+    const signature = new DataView(zipBytes.buffer).getUint32(0, true);
+    const result = {
+        before,
+        after,
+        cardCount: document.querySelectorAll('.image-card').length,
+        filename: download.filename,
+        zipSignature: signature,
+        containsExpectedNames: ['1.webp', '2.png', '3.jpg', '4.png'].every(name => zipText.includes(name)),
+        duplicateStates,
+        duplicateCount,
+        dragWheelScrolled: scrollCalls.some(([, y]) => y > 120),
+        usesCustomPointerDrag,
+        ghostFollowsPointer,
+        ghostHasNoTransition,
+    };
+    window.clearImages();
+
+    return {
+        ok: JSON.stringify(before) === JSON.stringify(['1.png', '2.webp', '3.jpg', '4.png'])
+            && JSON.stringify(after) === JSON.stringify(['1.webp', '2.png', '3.jpg', '4.png'])
+            && result.cardCount === 4
+            && result.filename === 'catime-tray-icons.zip'
+            && result.zipSignature === 0x04034b50
+            && result.containsExpectedNames
+            && JSON.stringify(result.duplicateStates) === JSON.stringify([true, true, true, false])
+            && result.duplicateCount === '3'
+            && result.dragWheelScrolled
+            && result.usesCustomPointerDrag
+            && result.ghostFollowsPointer
+            && result.ghostHasNoTransition,
+        ...result,
+    };
+}`;
 const pages = [
     { path: '/', selector: 'main', minimum: 1 },
     { path: '/about', selector: 'main', minimum: 1 },
@@ -21,6 +161,13 @@ const pages = [
         selector: '#uploadArea',
         minimum: 1,
         globals: ['clearFiles', 'setCharacters', 'startProcessing', 'downloadAllFonts'],
+    },
+    {
+        path: '/tools/tray-icon-sorter/',
+        selector: '#uploadZone',
+        minimum: 1,
+        globals: ['clearImages', 'downloadSortedImages'],
+        interaction: traySorterInteraction,
     },
 ];
 
@@ -146,6 +293,23 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
     }))()`;
     const evaluation = await client.send('Runtime.evaluate', { expression, returnByValue: true });
     const result = evaluation.result.value;
+
+    if (page.interaction) {
+        const interactionEvaluation = await client.send('Runtime.evaluate', {
+            expression: `(${page.interaction})()`,
+            awaitPromise: true,
+            returnByValue: true,
+        });
+        if (interactionEvaluation.exceptionDetails) {
+            const message = interactionEvaluation.exceptionDetails.exception?.description
+                || interactionEvaluation.exceptionDetails.text;
+            throw new Error(`${page.path}: interaction failed: ${message}`);
+        }
+        if (!interactionEvaluation.result.value?.ok) {
+            throw new Error(`${page.path}: interaction assertions failed: ${JSON.stringify(interactionEvaluation.result.value)}`);
+        }
+    }
+
     client.close();
 
     if (exceptions.length) throw new Error(`${page.path}: ${exceptions.join(' | ')}`);

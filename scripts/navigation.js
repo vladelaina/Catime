@@ -18,6 +18,10 @@ class CatimeNavigation {
         if (path.includes('/tools/font-tool/')) {
             return 'font-tool';
         }
+
+        if (path.includes('/tools/tray-icon-sorter/')) {
+            return 'tray-icon-sorter';
+        }
         
         return filename.replace('.html', '') || 'index';
     }
@@ -27,7 +31,7 @@ class CatimeNavigation {
         if (path === '/tray' || path.startsWith('/tray/')) {
             return '../';
         }
-        if (path.includes('/tools/font-tool/')) {
+        if (path.includes('/tools/')) {
             return '../../';
         }
         return '';
@@ -54,6 +58,7 @@ class CatimeNavigation {
             about: this.translate('About', '关于'),
             tools: this.translate('Tools', '工具'),
             fontSimplifier: this.translate('Font Simplifier', '字体简化工具'),
+            trayIconSorter: this.translate('Tray Icon Sorter', '托盘图标排序工具'),
             plugins: this.translate('Plugins', '插件'),
             openMenu: this.translate('Open navigation', '打开导航菜单'),
             closeMenu: this.translate('Close navigation', '关闭导航菜单'),
@@ -72,10 +77,11 @@ class CatimeNavigation {
                         <li><a href="${prefix}guide"${this.currentPage === 'guide' ? ' class="active"' : ''}>${labels.guide}</a></li>
                         <li><a href="${prefix}tray"${this.currentPage === 'tray' ? ' class="active"' : ''}>${labels.trayAnimations}</a></li>
                         <li><a href="${prefix}about"${this.currentPage === 'about' ? ' class="active"' : ''}>${labels.about}</a></li>
-                        <li class="dropdown${this.currentPage === 'font-tool' ? ' active' : ''}">
+                        <li class="dropdown${['font-tool', 'tray-icon-sorter'].includes(this.currentPage) ? ' active' : ''}">
                             <a href="#" class="dropdown-toggle" role="button" aria-haspopup="true" aria-expanded="false">${labels.tools} <i class="fas fa-chevron-down" aria-hidden="true"></i></a>
                             <ul class="dropdown-menu">
                                 <li><a href="${prefix}tools/font-tool/"${this.currentPage === 'font-tool' ? ' class="active"' : ''}><i class="fas fa-font" aria-hidden="true"></i> ${labels.fontSimplifier}</a></li>
+                                <li><a href="${prefix}tools/tray-icon-sorter/"${this.currentPage === 'tray-icon-sorter' ? ' class="active"' : ''}><i class="fas fa-arrow-down-1-9" aria-hidden="true"></i> ${labels.trayIconSorter}</a></li>
                             </ul>
                         </li>
                         <li><a href="https://github.com/vladelaina/Catime-Plugins" target="_blank" rel="noopener noreferrer">${labels.plugins}</a></li>
