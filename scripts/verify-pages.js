@@ -43,19 +43,23 @@ const traySorterInteraction = `async () => {
     const originalScrollBy = window.scrollBy;
     window.scrollBy = (x, y) => scrollCalls.push([x, y]);
 
-    const pointerSurface = dragSurfaces[0];
-    const pointerRect = pointerSurface.getBoundingClientRect();
-    pointerSurface.setPointerCapture = () => {};
-    pointerSurface.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true,
-        cancelable: true,
-        button: 0,
-        buttons: 1,
-        pointerId: 71,
-        pointerType: 'mouse',
-        clientX: pointerRect.left + (pointerRect.width / 2),
-        clientY: pointerRect.top + (pointerRect.height / 2),
-    }));
+    const startPointerDrag = (index, pointerId) => {
+        const surface = document.querySelectorAll('[data-role="drag-surface"]')[index];
+        const rect = surface.getBoundingClientRect();
+        surface.dispatchEvent(new PointerEvent('pointerdown', {
+            bubbles: true,
+            cancelable: true,
+            button: 0,
+            buttons: 1,
+            pointerId,
+            pointerType: 'mouse',
+            clientX: rect.left + (rect.width / 2),
+            clientY: rect.top + (rect.height / 2),
+        }));
+        return { surface, rect };
+    };
+
+    let { surface: pointerSurface, rect: pointerRect } = startPointerDrag(0, 71);
     const initialGhostTransform = document.querySelector('.drag-ghost')?.style.transform;
     const ghostHasNoTransition = getComputedStyle(document.querySelector('.drag-ghost')).transitionDuration === '0s';
     pointerSurface.dispatchEvent(new PointerEvent('pointermove', {
@@ -72,7 +76,7 @@ const traySorterInteraction = `async () => {
     const ghostFollowsPointer = Boolean(initialGhostTransform)
         && initialGhostTransform !== movedGhostTransform;
     window.dispatchEvent(new WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true }));
-    pointerSurface.dispatchEvent(new PointerEvent('pointerup', {
+    window.dispatchEvent(new PointerEvent('pointerup', {
         bubbles: true,
         cancelable: true,
         button: 0,
@@ -81,31 +85,86 @@ const traySorterInteraction = `async () => {
         clientX: pointerRect.left + (pointerRect.width / 2),
         clientY: pointerRect.top + (pointerRect.height / 2),
     }));
+    const ghostRemovedAfterPointerUp = !document.querySelector('.drag-ghost');
 
-    dragSurfaces = document.querySelectorAll('[data-role="drag-surface"]');
-    const transfer = new DataTransfer();
-    const targetRect = dragSurfaces[1].getBoundingClientRect();
-    dragSurfaces[0].dispatchEvent(new DragEvent('dragstart', {
+    ({ surface: pointerSurface, rect: pointerRect } = startPointerDrag(0, 72));
+    const secondSurface = document.querySelectorAll('[data-role="drag-surface"]')[1];
+    const secondRect = secondSurface.getBoundingClientRect();
+    secondSurface.dispatchEvent(new PointerEvent('pointerdown', {
         bubbles: true,
         cancelable: true,
-        dataTransfer: transfer,
-        clientX: targetRect.left,
-        clientY: targetRect.top,
+        button: 0,
+        buttons: 1,
+        pointerId: 73,
+        pointerType: 'touch',
+        clientX: secondRect.left + (secondRect.width / 2),
+        clientY: secondRect.top + (secondRect.height / 2),
     }));
-    dragSurfaces[1].dispatchEvent(new DragEvent('dragover', {
+    const ignoresSecondPointer = document.querySelectorAll('.drag-ghost').length === 1
+        && window.trayIconSorter.touchDrag?.pointerId === 72;
+    window.dispatchEvent(new PointerEvent('pointermove', {
         bubbles: true,
         cancelable: true,
-        dataTransfer: transfer,
+        button: -1,
+        buttons: 0,
+        pointerId: 72,
+        pointerType: 'mouse',
+        clientX: pointerRect.left + (pointerRect.width / 2),
+        clientY: pointerRect.top + (pointerRect.height / 2),
+    }));
+    const ghostRemovedAfterLostButton = !document.querySelector('.drag-ghost');
+
+    startPointerDrag(0, 74);
+    window.dispatchEvent(new Event('blur'));
+    const ghostRemovedAfterBlur = !document.querySelector('.drag-ghost')
+        && !document.body.classList.contains('is-touch-sorting');
+
+    startPointerDrag(0, 75);
+    window.dispatchEvent(new PointerEvent('pointercancel', {
+        bubbles: true,
+        cancelable: true,
+        pointerId: 75,
+        pointerType: 'mouse',
+    }));
+    const ghostRemovedAfterCancel = !document.querySelector('.drag-ghost');
+
+    ({ surface: pointerSurface, rect: pointerRect } = startPointerDrag(0, 76));
+    await window.trayIconSorter.scanForDuplicates();
+    const dragSurvivesDuplicateRefresh = pointerSurface.isConnected
+        && Boolean(document.querySelector('.drag-ghost'));
+    const targetRect = document.querySelectorAll('[data-role="drag-surface"]')[1].getBoundingClientRect();
+    window.dispatchEvent(new PointerEvent('pointermove', {
+        bubbles: true,
+        cancelable: true,
+        button: -1,
+        buttons: 1,
+        pointerId: 76,
+        pointerType: 'mouse',
         clientX: targetRect.right - 2,
         clientY: targetRect.top + (targetRect.height / 2),
     }));
-    dragSurfaces[1].dispatchEvent(new DragEvent('drop', {
+    window.dispatchEvent(new PointerEvent('pointerup', {
         bubbles: true,
         cancelable: true,
-        dataTransfer: transfer,
+        button: 0,
+        buttons: 0,
+        pointerId: 76,
+        pointerType: 'mouse',
         clientX: targetRect.right - 2,
         clientY: targetRect.top + (targetRect.height / 2),
     }));
+
+    const fileTransfer = new DataTransfer();
+    fileTransfer.items.add(new File([source], 'overlay.webp', { type: 'image/webp' }));
+    document.dispatchEvent(new DragEvent('dragenter', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: fileTransfer,
+    }));
+    const overlayOpened = !document.getElementById('fileDragOverlay').hidden;
+    window.dispatchEvent(new Event('blur'));
+    const overlayClearedAfterBlur = overlayOpened && document.getElementById('fileDragOverlay').hidden;
+
     window.scrollBy = originalScrollBy;
     const after = names();
 
@@ -131,6 +190,13 @@ const traySorterInteraction = `async () => {
         usesCustomPointerDrag,
         ghostFollowsPointer,
         ghostHasNoTransition,
+        ghostRemovedAfterPointerUp,
+        ignoresSecondPointer,
+        ghostRemovedAfterLostButton,
+        ghostRemovedAfterBlur,
+        ghostRemovedAfterCancel,
+        dragSurvivesDuplicateRefresh,
+        overlayClearedAfterBlur,
     };
     window.clearImages();
 
@@ -146,7 +212,14 @@ const traySorterInteraction = `async () => {
             && result.dragWheelScrolled
             && result.usesCustomPointerDrag
             && result.ghostFollowsPointer
-            && result.ghostHasNoTransition,
+            && result.ghostHasNoTransition
+            && result.ghostRemovedAfterPointerUp
+            && result.ignoresSecondPointer
+            && result.ghostRemovedAfterLostButton
+            && result.ghostRemovedAfterBlur
+            && result.ghostRemovedAfterCancel
+            && result.dragSurvivesDuplicateRefresh
+            && result.overlayClearedAfterBlur,
         ...result,
     };
 }`;

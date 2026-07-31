@@ -117,7 +117,6 @@ class TrayIconSorter {
         this.itemSequence = 0;
         this.exporting = false;
         this.fileDragDepth = 0;
-        this.nativeDrag = null;
         this.touchDrag = null;
         this.autoScrollFrame = null;
         this.dragPointer = null;
@@ -202,15 +201,15 @@ class TrayIconSorter {
 
         imageGrid.addEventListener('click', event => this.handleGridClick(event));
         imageGrid.addEventListener('keydown', event => this.handleGridKeydown(event));
-        imageGrid.addEventListener('dragstart', event => this.handleNativeDragStart(event));
-        imageGrid.addEventListener('dragover', event => this.handleNativeDragOver(event));
-        imageGrid.addEventListener('drop', event => this.handleNativeDrop(event));
-        imageGrid.addEventListener('dragend', () => this.finishNativeDrag());
         imageGrid.addEventListener('pointerdown', event => this.handlePointerDown(event));
-        imageGrid.addEventListener('pointermove', event => this.handlePointerMove(event));
-        imageGrid.addEventListener('pointerup', event => this.finishTouchDrag(event));
-        imageGrid.addEventListener('pointercancel', event => this.finishTouchDrag(event));
+        window.addEventListener('pointermove', event => this.handlePointerMove(event));
+        window.addEventListener('pointerup', event => this.finishTouchDrag(event));
+        window.addEventListener('pointercancel', event => this.finishTouchDrag(event));
+        window.addEventListener('blur', () => this.handleWindowBlur());
         window.addEventListener('wheel', event => this.handleDragWheel(event), { capture: true, passive: false });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) this.handleWindowBlur();
+        });
 
         document.addEventListener('paste', event => this.handlePaste(event));
         document.addEventListener('dragenter', event => this.handleFileDragEnter(event));
@@ -226,6 +225,7 @@ class TrayIconSorter {
 
     addFiles(fileList) {
         if (this.exporting) return;
+        this.finishActivePointerDrag();
 
         const files = Array.from(fileList || []);
         const imageFiles = files.filter(isImageFile);
@@ -416,7 +416,7 @@ class TrayIconSorter {
     }
 
     handleGridClick(event) {
-        if (this.exporting) return;
+        if (this.exporting || this.touchDrag) return;
         const actionButton = event.target.closest('[data-action]');
         const card = actionButton?.closest('.image-card');
         if (!actionButton || !card) return;
@@ -440,7 +440,7 @@ class TrayIconSorter {
     }
 
     handleGridKeydown(event) {
-        if (this.exporting || !event.target.matches('[data-role="drag-surface"]')) return;
+        if (this.exporting || this.touchDrag || !event.target.matches('[data-role="drag-surface"]')) return;
         const card = event.target.closest('.image-card');
         const index = this.items.findIndex(item => item.id === card?.dataset.id);
         if (index < 0) return;
@@ -487,6 +487,7 @@ class TrayIconSorter {
         if (this.exporting || this.items.length === 0) return;
         if (!options.skipConfirmation && !window.confirm(this.translate('confirmClear'))) return;
 
+        this.finishActivePointerDrag();
         this.revokeAllPreviewUrls();
         this.items = [];
         this.duplicateScanVersion += 1;
@@ -494,56 +495,8 @@ class TrayIconSorter {
         this.setStatus(this.translate('statusCleared'), 'success');
     }
 
-    handleNativeDragStart(event) {
-        if (this.exporting) return;
-        if (event.target.closest('[data-action]')) {
-            event.preventDefault();
-            return;
-        }
-        const surface = event.target.closest('[data-role="drag-surface"]');
-        const card = surface?.closest('.image-card');
-        if (!surface || !card) {
-            event.preventDefault();
-            return;
-        }
-
-        const initialPosition = this.getCardPosition(card.dataset.id);
-        this.nativeDrag = { id: card.dataset.id, initialPosition };
-        this.updateDragPointer(event.clientX, event.clientY);
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', card.dataset.id);
-        event.dataTransfer.setDragImage(card, Math.min(event.offsetX, card.offsetWidth / 2), 25);
-        requestAnimationFrame(() => card.classList.add('is-dragging'));
-    }
-
-    handleNativeDragOver(event) {
-        if (!this.nativeDrag) return;
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'move';
-        this.updateDragPointer(event.clientX, event.clientY);
-
-        const sourceCard = this.getCardById(this.nativeDrag.id);
-        const targetCard = event.target.closest('.image-card');
-        if (!sourceCard || !targetCard || sourceCard === targetCard) return;
-        this.placeCardNearPointer(sourceCard, targetCard, event.clientX, event.clientY);
-    }
-
-    handleNativeDrop(event) {
-        if (!this.nativeDrag) return;
-        event.preventDefault();
-        this.finishNativeDrag();
-    }
-
-    finishNativeDrag() {
-        if (!this.nativeDrag) return;
-        const drag = this.nativeDrag;
-        this.nativeDrag = null;
-        this.stopAutoScroll();
-        this.finishDomReorder(drag.id, drag.initialPosition);
-    }
-
     handlePointerDown(event) {
-        if (this.exporting || event.button !== 0) return;
+        if (this.exporting || this.touchDrag || event.button !== 0) return;
         if (event.target.closest('[data-action]')) return;
         const surface = event.target.closest('[data-role="drag-surface"]');
         const card = surface?.closest('.image-card');
@@ -575,7 +528,6 @@ class TrayIconSorter {
             grabRatioX: cardRect.width > 0 ? (event.clientX - cardRect.left) / cardRect.width : 0.5,
             grabRatioY: cardRect.height > 0 ? (event.clientY - cardRect.top) / cardRect.height : 0.5,
         };
-        surface.setPointerCapture(event.pointerId);
         card.classList.add('is-dragging');
         document.body.classList.add('is-touch-sorting');
         this.positionGhost(event.clientX, event.clientY);
@@ -584,6 +536,10 @@ class TrayIconSorter {
 
     handlePointerMove(event) {
         if (!this.touchDrag || event.pointerId !== this.touchDrag.pointerId) return;
+        if (event.pointerType === 'mouse' && (event.buttons & 1) === 0) {
+            this.finishActivePointerDrag();
+            return;
+        }
         event.preventDefault();
         this.positionGhost(event.clientX, event.clientY);
         this.updateDragPointer(event.clientX, event.clientY);
@@ -598,15 +554,22 @@ class TrayIconSorter {
         if (!this.touchDrag || event.pointerId !== this.touchDrag.pointerId) return;
         event.preventDefault();
 
+        this.finishActivePointerDrag();
+    }
+
+    finishActivePointerDrag() {
+        if (!this.touchDrag) return;
         const drag = this.touchDrag;
         this.touchDrag = null;
         this.stopAutoScroll();
-        if (drag.surface.hasPointerCapture?.(drag.pointerId)) {
-            drag.surface.releasePointerCapture(drag.pointerId);
-        }
         drag.ghost.remove();
         document.body.classList.remove('is-touch-sorting');
         this.finishDomReorder(drag.id, drag.initialPosition);
+    }
+
+    handleWindowBlur() {
+        this.finishActivePointerDrag();
+        this.hideFileDragOverlay();
     }
 
     positionGhost(clientX, clientY) {
@@ -627,7 +590,7 @@ class TrayIconSorter {
 
     runAutoScroll() {
         this.autoScrollFrame = null;
-        if ((!this.nativeDrag && !this.touchDrag) || !this.dragPointer) return;
+        if (!this.touchDrag || !this.dragPointer) return;
 
         const edge = Math.min(100, window.innerHeight * 0.18);
         const { clientY } = this.dragPointer;
@@ -651,7 +614,7 @@ class TrayIconSorter {
     }
 
     handleDragWheel(event) {
-        if (!this.nativeDrag && !this.touchDrag) return;
+        if (!this.touchDrag) return;
         event.preventDefault();
         const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE
             ? 16
@@ -665,7 +628,7 @@ class TrayIconSorter {
 
     reorderAtDragPointer() {
         if (!this.dragPointer) return;
-        const sourceId = this.nativeDrag?.id || this.touchDrag?.id;
+        const sourceId = this.touchDrag?.id;
         const sourceCard = this.getCardById(sourceId);
         const targetCard = this.findCardAtPoint(
             this.dragPointer.clientX,
@@ -791,7 +754,7 @@ class TrayIconSorter {
 
         if (scanVersion !== this.duplicateScanVersion) return;
         this.recalculateDuplicateGroups();
-        this.render();
+        this.refreshDuplicatePresentation();
     }
 
     recalculateDuplicateGroups() {
@@ -803,6 +766,18 @@ class TrayIconSorter {
                 this.items[right].duplicate = true;
             }
         }
+    }
+
+    refreshDuplicatePresentation() {
+        const itemMap = new Map(this.items.map(item => [item.id, item]));
+        this.elements.imageGrid.querySelectorAll('.image-card').forEach(card => {
+            const item = itemMap.get(card.dataset.id);
+            if (!item) return;
+            card.classList.toggle('is-duplicate', item.duplicate);
+            const badge = card.querySelector('.duplicate-badge');
+            if (badge) badge.hidden = !item.duplicate;
+        });
+        this.updateSummary();
     }
 
     getCardById(id) {
@@ -846,6 +821,10 @@ class TrayIconSorter {
 
     handleFileDragLeave(event) {
         if (this.fileDragDepth === 0) return;
+        if (event.relatedTarget === null) {
+            this.hideFileDragOverlay();
+            return;
+        }
         this.fileDragDepth -= 1;
         if (this.fileDragDepth === 0) this.hideFileDragOverlay();
     }
@@ -867,6 +846,7 @@ class TrayIconSorter {
     async downloadZip() {
         if (this.exporting || this.items.length === 0) return;
 
+        this.finishActivePointerDrag();
         const snapshot = [...this.items];
         this.setExporting(true);
 
