@@ -29,6 +29,7 @@
 #include "tray/tray_menu_font.h"
 #include "tray/tray_menu_submenus.h"
 #include "tray/tray_menu_theme.h"
+#include "tray/tray_menu_tracking.h"
 #include "color/color_parser.h"
 #include "taskbar_monitor.h"
 #include "tray/tray.h"
@@ -42,7 +43,7 @@ extern BOOL CLOCK_EDIT_MODE;
 extern void FormatPomodoroTime(int minutes, wchar_t* buffer, size_t size);
 
 static POINT ResolveTrayMenuAnchor(HWND hwnd, const POINT* anchor) {
-    if (anchor) return *anchor;
+    if (anchor && !(anchor->x == -1 && anchor->y == -1)) return *anchor;
     POINT point = {0};
     if (GetCursorPos(&point)) return point;
     RECT windowRect = {0};
@@ -59,11 +60,16 @@ static POINT ResolveTrayMenuAnchor(HWND hwnd, const POINT* anchor) {
  * @note Delegates to specialized submenu builders for maintainability
  */
 void ShowColorMenu(HWND hwnd, const POINT* anchor) {
+    TrayMenuTrackingState tracking = {0};
+    (void)TrayMenuTracking_Begin(hwnd, &tracking);
     ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
-    if (!hMenu) return;
+    if (!hMenu) {
+        TrayMenuTracking_End(&tracking);
+        return;
+    }
     
     /* Edit mode toggle */
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
@@ -106,10 +112,13 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     /* Display menu */
     POINT pt = ResolveTrayMenuAnchor(hwnd, anchor);
     (void)TaskbarMonitor_BeginMenuPreviewSession();
-    SetForegroundWindow(hwnd);
+    if (!TrayMenuTracking_ReassertForeground(&tracking)) {
+        LOG_WARNING("Tray menu foreground acquisition failed");
+    }
     UINT selectedCommand = TrackPopupMenu(
         hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
         pt.x, pt.y, 0, hwnd, NULL);
+    TrayMenuTracking_End(&tracking);
     BOOL isTaskbarMonitorCommand =
         selectedCommand == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY ||
         selectedCommand == CLOCK_IDM_TASKBAR_MONITOR_NETWORK;
@@ -128,7 +137,6 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
         SendMessageW(hwnd, WM_COMMAND,
                      MAKEWPARAM(selectedCommand, 0), 0);
     }
-    PostMessage(hwnd, WM_NULL, 0, 0);
     DestroyMenu(hMenu);
 }
 
@@ -139,15 +147,21 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
  * @note Includes timer management, Pomodoro, and quick countdown options
  */
 void ShowContextMenu(HWND hwnd, const POINT* anchor) {
+    TrayMenuTrackingState tracking = {0};
+    (void)TrayMenuTracking_Begin(hwnd, &tracking);
     ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
-    if (!hMenu) return;
+    if (!hMenu) {
+        TrayMenuTracking_End(&tracking);
+        return;
+    }
     
     HMENU hTimerManageMenu = CreatePopupMenu();
     if (!hTimerManageMenu) {
         DestroyMenu(hMenu);
+        TrayMenuTracking_End(&tracking);
         return;
     }
     
@@ -226,8 +240,16 @@ void ShowContextMenu(HWND hwnd, const POINT* anchor) {
     }
 
     POINT pt = ResolveTrayMenuAnchor(hwnd, anchor);
-    SetForegroundWindow(hwnd);
-    TrackPopupMenu(hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN, pt.x, pt.y, 0, hwnd, NULL);
-    PostMessage(hwnd, WM_NULL, 0, 0);
+    if (!TrayMenuTracking_ReassertForeground(&tracking)) {
+        LOG_WARNING("Tray menu foreground acquisition failed");
+    }
+    UINT selectedCommand = TrackPopupMenu(
+        hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_RETURNCMD,
+        pt.x, pt.y, 0, hwnd, NULL);
+    TrayMenuTracking_End(&tracking);
     DestroyMenu(hMenu);
+    if (selectedCommand != 0 && IsWindow(hwnd)) {
+        SendMessageW(hwnd, WM_COMMAND,
+                     MAKEWPARAM(selectedCommand, 0), 0);
+    }
 }

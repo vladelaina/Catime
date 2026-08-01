@@ -22,8 +22,13 @@ static TrayCallbackKind ClassifyMessage(BOOL version4, UINT message) {
         return TRAY_CALLBACK_NONE;
     }
 
-    if (message == WM_LBUTTONUP) return TRAY_CALLBACK_PRIMARY_MENU;
-    if (message == WM_RBUTTONUP) return TRAY_CALLBACK_SECONDARY_MENU;
+    if (message == WM_LBUTTONUP || message == NIN_SELECT ||
+        message == NIN_KEYSELECT) {
+        return TRAY_CALLBACK_PRIMARY_MENU;
+    }
+    if (message == WM_RBUTTONUP || message == WM_CONTEXTMENU) {
+        return TRAY_CALLBACK_SECONDARY_MENU;
+    }
     return TRAY_CALLBACK_NONE;
 }
 

@@ -92,6 +92,16 @@ target_include_directories(tray_event_protocol_tests PRIVATE
 )
 add_test(NAME tray_event_protocol COMMAND tray_event_protocol_tests)
 
+add_executable(tray_menu_tracking_tests
+    tests/tray_menu_tracking_tests.c
+    src/tray/tray_menu_tracking.c
+)
+target_include_directories(tray_menu_tracking_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(tray_menu_tracking_tests PRIVATE user32)
+add_test(NAME tray_menu_tracking COMMAND tray_menu_tracking_tests)
+
 add_executable(timer_render_cache_tests
     tests/timer_render_cache_tests.c
     src/timer/timer_render_cache.c
@@ -224,6 +234,7 @@ set(_catime_test_targets
     tray_icon_lifetime_tests
     tray_hover_cache_tests
     tray_event_protocol_tests
+    tray_menu_tracking_tests
     timer_render_cache_tests
     render_retry_tests
     system_monitor_snapshot_tests

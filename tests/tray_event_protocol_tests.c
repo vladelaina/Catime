@@ -21,9 +21,9 @@ static LPARAM Version4Param(UINT message, UINT iconId) {
 }
 
 static void TestWindows7TrayContract(void) {
+    assert(NOTIFYICON_VERSION == 3);
     assert(NOTIFYICON_VERSION_4 == 4);
     assert(NIM_SETFOCUS == 0x00000003);
-    assert(NIF_SHOWTIP == 0x00000080);
     assert(NIN_POPUPOPEN == WM_USER + 6);
     assert(NIN_POPUPCLOSE == WM_USER + 7);
     assert(sizeof(NOTIFYICONDATAW) ==
@@ -41,6 +41,19 @@ static void TestLegacyCallbacks(void) {
 
     assert(TrayCallback_Decode(FALSE, CLOCK_ID_TRAY_APP_ICON,
                                WM_RBUTTONUP, &event));
+    assert(event.kind == TRAY_CALLBACK_SECONDARY_MENU);
+
+    assert(TrayCallback_Decode(FALSE, CLOCK_ID_TRAY_APP_ICON,
+                               NIN_SELECT, &event));
+    assert(event.kind == TRAY_CALLBACK_PRIMARY_MENU);
+    assert(!event.hasAnchor);
+
+    assert(TrayCallback_Decode(FALSE, CLOCK_ID_TRAY_APP_ICON,
+                               NIN_KEYSELECT, &event));
+    assert(event.kind == TRAY_CALLBACK_PRIMARY_MENU);
+
+    assert(TrayCallback_Decode(FALSE, CLOCK_ID_TRAY_APP_ICON,
+                               WM_CONTEXTMENU, &event));
     assert(event.kind == TRAY_CALLBACK_SECONDARY_MENU);
 
     assert(TrayCallback_Decode(FALSE, CLOCK_ID_TRAY_APP_ICON,
