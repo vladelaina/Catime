@@ -5,11 +5,12 @@
 
 #include "tray_menu_submenus_internal.h"
 
-static void FormatSupportLabel(wchar_t* buffer, size_t bufferCount, const wchar_t* face) {
+static void FormatSupportLabel(wchar_t* buffer, size_t bufferCount,
+                               const wchar_t* textKey, const wchar_t* face) {
     if (!buffer || bufferCount == 0) return;
 
     _snwprintf_s(buffer, bufferCount, _TRUNCATE, L"%s %s",
-                 GetLocalizedString(NULL, L"Support Catime"), face);
+                 GetLocalizedString(NULL, textKey), face);
 }
 
 static int FindDirectMenuItemByCommand(HMENU hMenu, UINT commandId) {
@@ -30,13 +31,17 @@ BOOL UpdateHelpSubmenuSupportFace(HMENU hMenu) {
         return FALSE;
     }
 
-    static BOOL s_useTrailingEyeSupportFace = FALSE;
-    const wchar_t* supportFace = s_useTrailingEyeSupportFace ? L"ovO" : L"Ovo";
+    static BOOL s_offerMilkTea = FALSE;
+    const wchar_t* supportTextKey = s_offerMilkTea
+        ? L"Support Catime Milk Tea"
+        : L"Support Catime";
+    const wchar_t* supportFace = s_offerMilkTea ? L"ovO" : L"Ovo";
     MENUITEMINFOW menuItemInfo = {0};
     wchar_t supportLabel[96];
 
-    s_useTrailingEyeSupportFace = !s_useTrailingEyeSupportFace;
-    FormatSupportLabel(supportLabel, _countof(supportLabel), supportFace);
+    s_offerMilkTea = !s_offerMilkTea;
+    FormatSupportLabel(supportLabel, _countof(supportLabel),
+                       supportTextKey, supportFace);
 
     menuItemInfo.cbSize = sizeof(menuItemInfo);
     menuItemInfo.fMask = MIIM_STRING;
@@ -53,7 +58,8 @@ void BuildHelpSubmenu(HMENU hMenu) {
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_ABOUT, GetLocalizedString(NULL, L"About"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
-    FormatSupportLabel(supportLabel, _countof(supportLabel), L"Ovo");
+    FormatSupportLabel(supportLabel, _countof(supportLabel),
+                       L"Support Catime", L"Ovo");
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_SUPPORT, supportLabel);
     HBITMAP hSupportHeart = TraySubmenu_GetSupportHeartBitmap();
     MENUITEMINFOW supportMii = {0};

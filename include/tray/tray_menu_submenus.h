@@ -62,7 +62,7 @@ void BuildPluginsSubmenu(HMENU hMenu);
 void BuildHelpSubmenu(HMENU hMenu);
 
 /**
- * @brief Refresh the support item face when the help submenu is about to open
+ * @brief Refresh the support item text and face before the help submenu opens
  * @param hMenu Popup menu being initialized
  * @return TRUE when the menu was the help submenu and the item was updated
  */
