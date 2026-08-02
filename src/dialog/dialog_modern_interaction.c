@@ -110,7 +110,9 @@ BOOL ModernPointIsPassiveContent(ModernDialogState* state,
     }
     const ModernControl* control = ModernFindControl(state, target);
     return control && (control->kind == MODERN_CONTROL_OTHER ||
-                       control->kind == MODERN_CONTROL_GROUP);
+                       control->kind == MODERN_CONTROL_GROUP ||
+                       control->kind == MODERN_CONTROL_INSTRUCTION ||
+                       control->kind == MODERN_CONTROL_FEEDBACK);
 }
 
 BOOL ModernCursorIsOverPassiveContent(ModernDialogState* state) {

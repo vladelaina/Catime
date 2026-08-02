@@ -14,8 +14,7 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
 
     switch (msg) {
         case WM_SHOWWINDOW:
-            if (wParam && state && !state->finalized) ModernFinalize(state);
-            break;
+            return ModernHandleShowWindow(hwnd, wParam, lParam, state);
         case MODERN_DIALOG_FINALIZE_MESSAGE:
             ModernFinalize(state);
             return 0;

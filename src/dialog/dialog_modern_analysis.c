@@ -123,7 +123,8 @@ BOOL ModernApplyFieldRegionRaw(ModernControl* control, BOOL redraw) {
     if (!control || !control->hwnd) return FALSE;
     if (control->kind != MODERN_CONTROL_FIELD &&
         control->kind != MODERN_CONTROL_LIST &&
-        control->kind != MODERN_CONTROL_COMBO) return FALSE;
+        control->kind != MODERN_CONTROL_COMBO &&
+        control->kind != MODERN_CONTROL_INSTRUCTION) return FALSE;
     RECT client = {0};
     GetClientRect(control->hwnd, &client);
     int radius = DialogModern_Scale(control->owner->dpi, 9);

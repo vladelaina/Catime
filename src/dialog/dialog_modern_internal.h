@@ -19,7 +19,8 @@ void ModernDeleteBrushes(ModernDialogState* state);
 void ModernRebuildResources(ModernDialogState* state);
 int ModernTo96(UINT dpi, int value);
 BOOL ModernEnsureControlCapacity(ModernDialogState* state, size_t count);
-ModernControlKind ModernClassifyControl(HWND hwnd);
+ModernControlKind ModernClassifyControl(const ModernDialogState* state,
+                                        HWND hwnd, int id);
 BOOL ModernWindowHasClass(HWND hwnd, const wchar_t* expected);
 BOOL ModernIsDateTimeControl(const ModernControl* control);
 BOOL CALLBACK ModernAttachDateTimeChild(HWND child, LPARAM data);
@@ -86,6 +87,8 @@ void ModernDrawFieldOutline(ModernControl* control);
 void ModernPaintChoiceControl(ModernControl* control, HDC suppliedDc);
 void ModernPaintSlider(ModernControl* control, HDC suppliedDc);
 void ModernPaintCombo(ModernControl* control, HDC suppliedDc);
+void ModernPaintInstruction(ModernControl* control, HDC suppliedDc);
+void ModernPaintFeedback(ModernControl* control, HDC suppliedDc);
 BOOL ModernGetDateTimeLayout(const ModernControl* control,
                                     ModernDateTimeLayout* layout);
 int ModernDateTimePartMaximum(int part);
@@ -156,6 +159,8 @@ void ModernRefreshControlHover(ModernControl* control);
 void ModernEndSliderDrag(ModernControl* control, BOOL commitPosition,
                                 int x, int y);
 void ModernRefreshBodyScrollbarHover(ModernDialogState* state);
+LRESULT ModernHandleShowWindow(HWND hwnd, WPARAM wParam, LPARAM lParam,
+                               ModernDialogState* state);
 BOOL DialogModern_Attach(HWND hwndDlg, int dialogType);
 void DialogModern_Refresh(HWND hwndDlg);
 LRESULT ModernHandleControlPointerMessage(

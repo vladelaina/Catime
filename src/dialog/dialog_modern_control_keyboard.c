@@ -145,6 +145,9 @@ LRESULT ModernHandleControlKeyboardMessage(
             if (control && ModernIsDateTimeControl(control)) {
                 ModernStopDateTimeRepeat(control);
             }
+            if (control && control->kind == MODERN_CONTROL_FEEDBACK) {
+                RemovePropW(hwnd, MODERN_FEEDBACK_STATE_PROP);
+            }
             RemoveWindowSubclass(hwnd, ModernControlSubclassProc,
                                  MODERN_CONTROL_SUBCLASS_ID);
             break;

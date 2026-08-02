@@ -152,18 +152,23 @@ static void UpdatePomodoroComboPreview(HWND hwndDlg) {
     wchar_t input[POMODORO_OPTIONS_MAX_INPUT_CHARS + 1] = {0};
     GetDlgItemTextW(hwndDlg, CLOCK_IDC_EDIT, input, _countof(input));
     if (Dialog_IsEmptyOrWhitespace(input)) {
-        SetDlgItemTextW(hwndDlg, IDC_POMODORO_COMBO_HINT, L"");
+        DialogModern_SetFeedback(
+            hwndDlg, IDC_POMODORO_COMBO_HINT,
+            DIALOG_MODERN_FEEDBACK_NONE, L"");
         return;
     }
 
     wchar_t preview[1024] = {0};
     if (!BuildPomodoroComboPreview(input, preview, sizeof(preview))) {
-        SetDlgItemTextW(
+        DialogModern_SetFeedback(
             hwndDlg, IDC_POMODORO_COMBO_HINT,
+            DIALOG_MODERN_FEEDBACK_INVALID,
             GetLocalizedString(NULL, L"Invalid input format"));
         return;
     }
-    SetDlgItemTextW(hwndDlg, IDC_POMODORO_COMBO_HINT, preview);
+    DialogModern_SetFeedback(
+        hwndDlg, IDC_POMODORO_COMBO_HINT,
+        DIALOG_MODERN_FEEDBACK_VALID, preview);
 }
 
 void ShowPomodoroComboDialog(HWND hwndParent) {

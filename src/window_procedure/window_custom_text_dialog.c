@@ -4,6 +4,42 @@
  */
 
 #include "window_commands_plugin_internal.h"
+#include "dialog/dialog_modern.h"
+
+static void LayoutCustomTextDisplayHint(HWND hwndDlg) {
+    UINT dpi = DialogModern_GetDpi(hwndDlg);
+    RECT hint = {0};
+    RECT edit = {0};
+    RECT cancel = {0};
+    RECT accept = {0};
+    if (!DialogModern_GetChildRect96(
+            hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_HINT, dpi, &hint) ||
+        !DialogModern_GetChildRect96(
+            hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_TEXT, dpi, &edit) ||
+        !DialogModern_GetChildRect96(hwndDlg, IDCANCEL, dpi, &cancel) ||
+        !DialogModern_GetChildRect96(hwndDlg, IDOK, dpi, &accept)) {
+        return;
+    }
+
+    int hintHeight = 56;
+    int editTop = hint.top + hintHeight + 12;
+    int editHeight = edit.bottom - edit.top;
+    int buttonTop = editTop + editHeight + 16;
+    DialogModern_SetChildRect96(
+        hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_HINT, dpi,
+        edit.left, hint.top, edit.right - edit.left, hintHeight);
+    DialogModern_SetChildRect96(
+        hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_TEXT, dpi,
+        edit.left, editTop, edit.right - edit.left, editHeight);
+    DialogModern_SetChildRect96(
+        hwndDlg, IDCANCEL, dpi,
+        cancel.left, buttonTop, cancel.right - cancel.left,
+        cancel.bottom - cancel.top);
+    DialogModern_SetChildRect96(
+        hwndDlg, IDOK, dpi,
+        accept.left, buttonTop, accept.right - accept.left,
+        accept.bottom - accept.top);
+}
 
 static LRESULT CALLBACK CustomTextDisplayEditSubclassProc(HWND hwnd, UINT msg,
                                                           WPARAM wParam,
@@ -53,6 +89,7 @@ static INT_PTR CALLBACK CustomTextDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM 
             SetDlgItemTextW(hwndDlg, IDCANCEL, GetLocalizedString(NULL, L"Close"));
             SetDlgItemTextW(hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_HINT,
                             GetLocalizedString(NULL, L"Use <md>...</md> to enable Markdown"));
+            LayoutCustomTextDisplayHint(hwndDlg);
             Dialog_CenterOnPrimaryScreen(hwndDlg);
 
             HWND hwndEdit = GetDlgItem(hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_TEXT);

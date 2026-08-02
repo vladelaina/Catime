@@ -59,3 +59,19 @@ void ModernRefreshBodyScrollbarHover(ModernDialogState* state) {
     state->scrollBarHovered = hovered;
     InvalidateRect(state->hwnd, NULL, FALSE);
 }
+
+LRESULT ModernHandleShowWindow(HWND hwnd, WPARAM wParam, LPARAM lParam,
+                               ModernDialogState* state) {
+    if (wParam && state && !state->finalized) {
+        ModernFinalize(state);
+    }
+
+    LRESULT result = DefSubclassProc(hwnd, WM_SHOWWINDOW, wParam, lParam);
+    if (wParam && state && ModernGetState(hwnd) == state &&
+        state->finalized) {
+        RedrawWindow(hwnd, NULL, NULL,
+                     RDW_INVALIDATE | RDW_NOERASE | RDW_FRAME |
+                         RDW_ALLCHILDREN | RDW_UPDATENOW);
+    }
+    return result;
+}

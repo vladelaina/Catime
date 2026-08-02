@@ -15,11 +15,21 @@ LRESULT ModernHandleControlPaintMessage(
     switch (msg) {
         case WM_ERASEBKGND:
             if (control && (control->kind == MODERN_CONTROL_SLIDER ||
-                            ModernIsDateTimeControl(control))) {
+                            ModernIsDateTimeControl(control) ||
+                            control->kind == MODERN_CONTROL_INSTRUCTION ||
+                            control->kind == MODERN_CONTROL_FEEDBACK)) {
                 MODERN_RETURN_HANDLED(handled, 1);
             }
             break;
         case WM_PAINT:
+            if (control && control->kind == MODERN_CONTROL_INSTRUCTION) {
+                ModernPaintInstruction(control, NULL);
+                MODERN_RETURN_HANDLED(handled, 0);
+            }
+            if (control && control->kind == MODERN_CONTROL_FEEDBACK) {
+                ModernPaintFeedback(control, NULL);
+                MODERN_RETURN_HANDLED(handled, 0);
+            }
             if (control && (control->kind == MODERN_CONTROL_CHECK ||
                             control->kind == MODERN_CONTROL_RADIO ||
                             control->kind == MODERN_CONTROL_GROUP)) {
@@ -48,6 +58,14 @@ LRESULT ModernHandleControlPaintMessage(
             }
             break;
         case WM_PRINTCLIENT:
+            if (control && control->kind == MODERN_CONTROL_INSTRUCTION) {
+                ModernPaintInstruction(control, (HDC)wParam);
+                MODERN_RETURN_HANDLED(handled, 0);
+            }
+            if (control && control->kind == MODERN_CONTROL_FEEDBACK) {
+                ModernPaintFeedback(control, (HDC)wParam);
+                MODERN_RETURN_HANDLED(handled, 0);
+            }
             if (control && (control->kind == MODERN_CONTROL_CHECK ||
                             control->kind == MODERN_CONTROL_RADIO ||
                             control->kind == MODERN_CONTROL_GROUP)) {

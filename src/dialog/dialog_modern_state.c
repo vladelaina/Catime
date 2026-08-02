@@ -91,10 +91,45 @@ BOOL ModernEnsureControlCapacity(ModernDialogState* state, size_t count) {
     return TRUE;
 }
 
-ModernControlKind ModernClassifyControl(HWND hwnd) {
+static BOOL ModernIsInstructionControl(const ModernDialogState* state,
+                                       int id) {
+    if (!state) return FALSE;
+    if (id == IDC_COLOR_FORMAT_HELP) {
+        return state->dialogType == DIALOG_INSTANCE_COLOR;
+    }
+    if (id == IDC_CUSTOM_TEXT_DISPLAY_HINT) {
+        return state->dialogType == DIALOG_INSTANCE_CUSTOM_TEXT_DISPLAY;
+    }
+    if (id != CLOCK_IDC_STATIC) return FALSE;
+
+    switch (state->dialogType) {
+        case DIALOG_INSTANCE_INPUT:
+        case DIALOG_INSTANCE_POMODORO_COMBO:
+        case DIALOG_INSTANCE_WEBSITE:
+        case DIALOG_INSTANCE_SHORTCUT:
+        case DIALOG_INSTANCE_STARTUP:
+        case DIALOG_INSTANCE_POMODORO_TIME:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+ModernControlKind ModernClassifyControl(const ModernDialogState* state,
+                                        HWND hwnd, int id) {
     wchar_t className[64] = {0};
     GetClassNameW(hwnd, className, _countof(className));
     LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+
+    if (_wcsicmp(className, L"Static") == 0) {
+        if (state && state->dialogType == DIALOG_INSTANCE_POMODORO_COMBO &&
+            id == IDC_POMODORO_COMBO_HINT) {
+            return MODERN_CONTROL_FEEDBACK;
+        }
+        if (ModernIsInstructionControl(state, id)) {
+            return MODERN_CONTROL_INSTRUCTION;
+        }
+    }
 
     if (_wcsicmp(className, L"Button") == 0) {
         UINT type = (UINT)style & BS_TYPEMASK;
@@ -178,7 +213,7 @@ BOOL CALLBACK ModernCaptureChild(HWND child, LPARAM lParam) {
     control->dateTimeHotPart = MODERN_DATETIME_HIT_NONE;
     control->dateTimePressedPart = MODERN_DATETIME_HIT_NONE;
     control->id = GetDlgCtrlID(child);
-    control->kind = ModernClassifyControl(child);
+    control->kind = ModernClassifyControl(state, child, control->id);
     control->primary = ModernIsPrimaryButton(control->id);
     control->sourceVisible =
         (GetWindowLongPtrW(child, GWL_STYLE) & WS_VISIBLE) != 0;

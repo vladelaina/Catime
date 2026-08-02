@@ -101,7 +101,8 @@ void ModernApplyBodyControlRegion(
     }
 
     if (!fullyInside && height <= viewportHeight &&
-        control->kind != MODERN_CONTROL_GROUP) {
+        control->kind != MODERN_CONTROL_GROUP &&
+        control->kind != MODERN_CONTROL_INSTRUCTION) {
         ModernHideBodyControl(control, !suppressRedraw);
         return;
     }
@@ -113,7 +114,8 @@ void ModernApplyBodyControlRegion(
     BOOL fullyVisible = visibleTop == 0 && visibleBottom == height;
     BOOL rounded = control->kind == MODERN_CONTROL_FIELD ||
                    control->kind == MODERN_CONTROL_LIST ||
-                   control->kind == MODERN_CONTROL_COMBO;
+                   control->kind == MODERN_CONTROL_COMBO ||
+                   control->kind == MODERN_CONTROL_INSTRUCTION;
     if (fullyVisible) {
         ModernBodyRegionMode mode = rounded
             ? MODERN_BODY_REGION_FULL_ROUNDED
@@ -202,6 +204,8 @@ void ModernLayoutBodyControls(ModernDialogState* state,
          * should use the available surface width when a localized title makes
          * the dialog wider. Narrow canvases (HSV/swatch controls) intentionally
          * remain at their authored dimensions. */
+        BOOL fullWidthPanel = control->kind == MODERN_CONTROL_INSTRUCTION &&
+                              width96 >= state->contentWidth96 - 24;
         if (control->kind == MODERN_CONTROL_OTHER) {
             wchar_t className[32] = {0};
             LONG_PTR style = GetWindowLongPtrW(control->hwnd, GWL_STYLE);
@@ -209,11 +213,14 @@ void ModernLayoutBodyControls(ModernDialogState* state,
                 _wcsicmp(className, L"Static") == 0 &&
                 (style & SS_OWNERDRAW) != 0 &&
                 width96 >= state->contentWidth96 - 24) {
-                x96 = state->sidePadding96;
-                width96 = state->clientWidth96 -
-                          state->sidePadding96 * 2 -
-                          (state->bodyScrollMax96 > 0 ? 12 : 0);
+                fullWidthPanel = TRUE;
             }
+        }
+        if (fullWidthPanel) {
+            x96 = state->sidePadding96;
+            width96 = state->clientWidth96 -
+                      state->sidePadding96 * 2 -
+                      (state->bodyScrollMax96 > 0 ? 12 : 0);
         }
         control->bodyLayoutX = DialogModern_Scale(state->dpi, x96);
         control->bodyLayoutY = DialogModern_Scale(state->dpi, y96);

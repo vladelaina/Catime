@@ -22,6 +22,9 @@ void ShowHotkeySettingsDialog(HWND parent) {
                            MAKEINTRESOURCEW(CLOCK_IDD_HOTKEY_DIALOG),
                            parent, HotkeySettingsDlgProc);
     if (dialog) {
+        if (!DialogModern_PrepareForShow(dialog)) {
+            LOG_WARNING("Failed to prepare hotkey dialog before show");
+        }
         ShowWindow(dialog, SW_SHOW);
     } else {
         LOG_ERROR("Failed to create hotkey dialog (error=%lu)",

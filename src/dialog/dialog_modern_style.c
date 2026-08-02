@@ -83,7 +83,9 @@ void ModernStyleControl(ModernDialogState* state,
         control->kind == MODERN_CONTROL_FIELD ||
         control->kind == MODERN_CONTROL_LIST ||
         control->kind == MODERN_CONTROL_COMBO ||
-        control->kind == MODERN_CONTROL_SLIDER) {
+        control->kind == MODERN_CONTROL_SLIDER ||
+        control->kind == MODERN_CONTROL_INSTRUCTION ||
+        control->kind == MODERN_CONTROL_FEEDBACK) {
         SetWindowSubclass(control->hwnd, ModernControlSubclassProc,
                           MODERN_CONTROL_SUBCLASS_ID, (DWORD_PTR)control);
     }

@@ -20,6 +20,11 @@ BOOL DialogModern_IsAttached(HWND hwndDlg) {
     return ModernGetState(hwndDlg) != NULL;
 }
 
+BOOL DialogModern_PrepareForShow(HWND hwndDlg) {
+    ModernDialogState* state = ModernGetState(hwndDlg);
+    return state && ModernFinalize(state);
+}
+
 BOOL DialogModern_Attach(HWND hwndDlg, int dialogType) {
     if (!hwndDlg || !IsWindow(hwndDlg) || DialogModern_IsAttached(hwndDlg)) {
         return hwndDlg && DialogModern_IsAttached(hwndDlg);
@@ -74,4 +79,25 @@ void DialogModern_Refresh(HWND hwndDlg) {
         if (!state->refreshPending) break;
     }
     state->refreshing = FALSE;
+}
+
+void DialogModern_SetFeedback(HWND hwndDlg, int controlId,
+                              DialogModernFeedbackKind kind,
+                              const wchar_t* text) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) return;
+    HWND control = GetDlgItem(hwndDlg, controlId);
+    if (!control) return;
+
+    if (kind < DIALOG_MODERN_FEEDBACK_NONE ||
+        kind > DIALOG_MODERN_FEEDBACK_INVALID) {
+        kind = DIALOG_MODERN_FEEDBACK_NONE;
+    }
+    SetWindowTextW(control, text ? text : L"");
+    if (kind == DIALOG_MODERN_FEEDBACK_NONE) {
+        RemovePropW(control, MODERN_FEEDBACK_STATE_PROP);
+    } else {
+        SetPropW(control, MODERN_FEEDBACK_STATE_PROP,
+                 (HANDLE)(INT_PTR)kind);
+    }
+    InvalidateRect(control, NULL, FALSE);
 }

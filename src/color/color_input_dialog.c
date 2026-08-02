@@ -13,6 +13,7 @@
 #include "color/color_state.h"
 #include "menu_preview.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_form_layout.h"
 #include "language.h"
 #include "utils/string_convert.h"
 #include "../resource/resource.h"
@@ -126,6 +127,9 @@ INT_PTR CALLBACK ColorDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
             /* Set localized format help text */
             SetDlgItemTextW(hwndDlg, IDC_COLOR_FORMAT_HELP,
                            GetLocalizedString(NULL, L"ColorFormatHelp"));
+            DialogFormLayout_ApplyInstruction(
+                hwndDlg, IDC_COLOR_FORMAT_HELP, CLOCK_IDC_EDIT,
+                CLOCK_IDC_BUTTON_OK);
 
             HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
             if (hwndEdit) {

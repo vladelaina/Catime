@@ -70,20 +70,21 @@ void DialogFormLayout_ApplyInstruction(HWND hwndDlg, int instructionId,
     }
 
     int originalWidth96 = instructionRect.right - instructionRect.left;
-    int contentWidth96 = longestLine96 + 16;
+    int contentWidth96 = longestLine96 + 32;
     if (contentWidth96 < originalWidth96) contentWidth96 = originalWidth96;
     if (contentWidth96 < 320) contentWidth96 = 320;
     if (contentWidth96 > 480) contentWidth96 = 480;
 
-    int textHeight96 = instructionRect.bottom - instructionRect.top;
+    int textHeight96 = instructionRect.bottom - instructionRect.top + 36;
     hdc = GetDC(instruction);
     if (hdc) {
         HGDIOBJ oldFont = SelectObject(hdc, bodyFont);
-        RECT measure = {0, 0, DialogModern_Scale(dpi, contentWidth96), 0};
+        int innerWidth96 = contentWidth96 - 32;
+        RECT measure = {0, 0, DialogModern_Scale(dpi, innerWidth96), 0};
         if (DrawTextW(hdc, text, -1, &measure,
                       DT_CALCRECT | DT_WORDBREAK | DT_EDITCONTROL |
                           DT_NOPREFIX) > 0) {
-            int measured96 = DialogFormLayout_To96(dpi, measure.bottom) + 8;
+            int measured96 = DialogFormLayout_To96(dpi, measure.bottom) + 39;
             if (measured96 > textHeight96) textHeight96 = measured96;
         }
         SelectObject(hdc, oldFont);

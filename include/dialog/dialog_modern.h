@@ -24,14 +24,28 @@ typedef struct {
     COLORREF dangerBackground;
 } DialogModernPalette;
 
+typedef enum {
+    DIALOG_MODERN_FEEDBACK_NONE = 0,
+    DIALOG_MODERN_FEEDBACK_VALID,
+    DIALOG_MODERN_FEEDBACK_INVALID
+} DialogModernFeedbackKind;
+
 /** Attach modern chrome and control styling to a resource dialog. */
 BOOL DialogModern_Attach(HWND hwndDlg, int dialogType);
 
 /** Return TRUE when the resource dialog already has a modern host. */
 BOOL DialogModern_IsAttached(HWND hwndDlg);
 
+/** Finalize layout and drawing resources while a dialog is still hidden. */
+BOOL DialogModern_PrepareForShow(HWND hwndDlg);
+
 /** Re-read system colors and redraw the dialog and its children. */
 void DialogModern_Refresh(HWND hwndDlg);
+
+/** Set the text and semantic appearance of a live input feedback label. */
+void DialogModern_SetFeedback(HWND hwndDlg, int controlId,
+                              DialogModernFeedbackKind kind,
+                              const wchar_t* text);
 
 /** Shared DPI and design-token helpers used by specialized dialogs. */
 UINT DialogModern_GetDpi(HWND hwnd);
