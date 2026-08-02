@@ -25,6 +25,8 @@ const trayLibraryInteraction = `async () => {
     }
     const backgroundPreviewCount = previewRequestCount();
     const featuredOrder = animationOrder(row.querySelector('.artist-featured-gallery'));
+    const interactionTextSelectionBlocked = getComputedStyle(row).userSelect === 'none'
+        && getComputedStyle(toggle).userSelect === 'none';
 
     const supportButton = document.querySelector('.main-header .nav-actions .support-btn');
     supportButton?.focus();
@@ -47,6 +49,7 @@ const trayLibraryInteraction = `async () => {
         focusedSupportBackground,
         featuredOrder,
         detailOrder: animationOrder(row.querySelector('.artist-details')),
+        interactionTextSelectionBlocked,
     };
 
     return {
@@ -57,6 +60,7 @@ const trayLibraryInteraction = `async () => {
             && result.automaticPreviewRequests >= 6
             && result.backgroundPreviewCount >= 6
             && result.supportStayedPink
+            && result.interactionTextSelectionBlocked
             && JSON.stringify(result.featuredOrder) === JSON.stringify(result.detailOrder.slice(0, 5))
             && JSON.stringify([...result.detailOrder].sort()) === JSON.stringify([
                 'source-1', 'source-2', 'source-3', 'source-4', 'source-5', 'source-6',
@@ -87,6 +91,8 @@ const traySorterInteraction = `async () => {
         card => card.classList.contains('is-duplicate'),
     );
     const duplicateCount = document.getElementById('duplicateCount').textContent;
+    const interactionTextSelectionBlocked = getComputedStyle(document.querySelector('.sorter-workspace')).userSelect === 'none'
+        && getComputedStyle(document.querySelector('[data-role="drag-surface"]')).userSelect === 'none';
 
     const names = () => Array.from(document.querySelectorAll('[data-role="output-name"]'), node => node.textContent);
     const before = names();
@@ -240,6 +246,7 @@ const traySorterInteraction = `async () => {
         containsExpectedNames: ['1.webp', '2.png', '3.jpg', '4.png'].every(name => zipText.includes(name)),
         duplicateStates,
         duplicateCount,
+        interactionTextSelectionBlocked,
         dragWheelScrolled: scrollCalls.some(([, y]) => y > 120),
         usesCustomPointerDrag,
         ghostFollowsPointer,
@@ -263,6 +270,7 @@ const traySorterInteraction = `async () => {
             && result.containsExpectedNames
             && JSON.stringify(result.duplicateStates) === JSON.stringify([true, true, true, false])
             && result.duplicateCount === '3'
+            && result.interactionTextSelectionBlocked
             && result.dragWheelScrolled
             && result.usesCustomPointerDrag
             && result.ghostFollowsPointer

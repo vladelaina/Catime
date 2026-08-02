@@ -12,6 +12,12 @@
     min-height: 80vh;
 }
 
+.sorter-workspace,
+.file-drag-overlay {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 .tray-sorter-page .main-header .nav-actions .support-btn,
 .tray-sorter-page .main-header .nav-actions .support-btn:visited,
 .tray-sorter-page .main-header .nav-actions .support-btn:hover,

@@ -96,6 +96,14 @@ img {
     user-select: none !important;
 }
 
+button,
+[role="button"],
+.main-header .nav-links,
+.main-header .nav-actions {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 .main-header {
     position: fixed;
     top: 0;

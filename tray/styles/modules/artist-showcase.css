@@ -4,6 +4,11 @@
     display: none;
 }
 
+.artist-showcase {
+    -webkit-user-select: none;
+    user-select: none;
+}
+
 .artist-showcase-static {
     padding-bottom: 30px;
 }
@@ -315,4 +320,3 @@
     opacity: 1;
     transform: translateX(-50%) translateY(0) scale(1);
 }
-
