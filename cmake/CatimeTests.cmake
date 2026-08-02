@@ -31,6 +31,17 @@ target_include_directories(startup_shortcut_tests PRIVATE
 target_link_libraries(startup_shortcut_tests PRIVATE ole32 uuid shlwapi)
 add_test(NAME startup_shortcut COMMAND startup_shortcut_tests)
 
+add_executable(time_parser_tests
+    tests/time_parser_tests.c
+    src/utils/time_parser.c
+    src/utils/time_parser_advanced.c
+    src/utils/time_format.c
+)
+target_include_directories(time_parser_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+add_test(NAME time_parser COMMAND time_parser_tests)
+
 add_executable(tray_animation_playback_tests
     tests/tray_animation_playback_tests.c
     src/tray/tray_animation_playback.c
@@ -238,6 +249,7 @@ set(_catime_test_targets
     window_placement_tests
     startup_policy_tests
     startup_shortcut_tests
+    time_parser_tests
     tray_animation_playback_tests
     tray_animation_speed_input_tests
     tray_animation_timer_tests

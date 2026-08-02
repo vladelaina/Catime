@@ -130,6 +130,19 @@ static char GetHigherUnit(char unit) {
 }
 
 /**
+ * @brief Get lower-level unit for smart inference
+ * @param unit Current unit ('h' or 'm')
+ * @return Lower-level unit ('m' for 'h', 's' for 'm', '\0' otherwise)
+ */
+static char GetLowerUnit(char unit) {
+    switch (unit) {
+        case 'h': return 'm';
+        case 'm': return 's';
+        default: return '\0';
+    }
+}
+
+/**
  * @brief Infer units for components with smart detection
  * @param components Array of time components
  * @param count Number of components
@@ -138,6 +151,9 @@ static char GetHigherUnit(char unit) {
  * - If component has explicit unit, keep it
  * - If component has no unit but next component has unit X:
  *   Use higher-level unit than X (e.g., if next is 'm', this is 'h')
+ * - If there is no later explicit unit, infer one level below the previous
+ *   component (e.g., "2h3" is 2 hours 3 minutes and "23m3" is
+ *   23 minutes 3 seconds)
  * - If all components have no units, apply positional rules:
  *   1 component: m
  *   2 components: m, s
@@ -187,8 +203,13 @@ static void InferUnits(TimeComponent* components, int count) {
                     components[i].unit = 'h';
                 }
             } else {
-                /* No explicit unit found after this, default to minutes */
-                components[i].unit = 'm';
+                /* Continue downward from the preceding component. */
+                char previous_unit = i > 0 ? components[i - 1].unit : '\0';
+                components[i].unit = GetLowerUnit(previous_unit);
+                if (components[i].unit == '\0') {
+                    /* Preserve the standalone/default unit behavior. */
+                    components[i].unit = 'm';
+                }
             }
         }
     }
