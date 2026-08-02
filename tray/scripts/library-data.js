@@ -16,7 +16,7 @@ export async function loadLibraryData(source = configuredLibrarySource()) {
     const response = await fetch(source, {
         cache: 'default',
         mode: 'cors',
-        credentials: 'omit',
+        credentials: 'same-origin',
         referrerPolicy: 'strict-origin-when-cross-origin',
         headers: { Accept: 'application/json' },
     });

@@ -12,9 +12,21 @@
     min-height: 80vh;
 }
 
-.tray-sorter-page .main-header .support-btn {
+.tray-sorter-page .main-header .nav-actions .support-btn,
+.tray-sorter-page .main-header .nav-actions .support-btn:visited,
+.tray-sorter-page .main-header .nav-actions .support-btn:hover,
+.tray-sorter-page .main-header .nav-actions .support-btn:focus,
+.tray-sorter-page .main-header .nav-actions .support-btn:focus-visible,
+.tray-sorter-page .main-header .nav-actions .support-btn:active {
     background: var(--accent-color) !important;
+    background-color: var(--accent-color) !important;
     background-image: none !important;
+    box-shadow: 0 4px 15px rgba(247, 125, 170, 0.3) !important;
+    transition-property: transform, box-shadow;
+}
+
+.tray-sorter-page .main-header .nav-actions .support-btn:hover {
+    box-shadow: 0 6px 20px rgba(247, 125, 170, 0.4) !important;
 }
 
 .tray-sorter-page .main-header .download-btn {

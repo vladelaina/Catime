@@ -6,10 +6,10 @@ export function resolveMotionPolicy({ reducedMotion = false, saveData = false, e
         return { automatic: false, manual: true, concurrency: 1 };
     }
     if (networkType === '3g') return { automatic: true, manual: true, concurrency: 1 };
-    return { automatic: true, manual: true, concurrency: 2 };
+    return { automatic: true, manual: true, concurrency: 4 };
 }
 
-export function createPreviewLoader({ concurrency = 2, loadPreview }) {
+export function createPreviewLoader({ concurrency = 4, loadPreview }) {
     if (!Number.isInteger(concurrency) || concurrency < 1) {
         throw new RangeError('Preview concurrency must be a positive integer');
     }

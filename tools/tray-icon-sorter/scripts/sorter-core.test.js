@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    createArchiveFilename,
     createNumberedFilename,
     createSequentialEntries,
     formatBytes,
@@ -10,6 +11,12 @@ import {
     moveItem,
     totalFileSize,
 } from './sorter-core.js';
+
+test('archive filenames include a Windows-safe local timestamp', () => {
+    const date = new Date(2026, 6, 31, 9, 5, 7);
+
+    assert.equal(createArchiveFilename(date), 'catime-tray-icons-20260731-090507.zip');
+});
 
 test('image files keep their original extension while receiving sequential names', () => {
     const png = { name: 'cat.frame.PNG', type: 'image/png', size: 10, lastModified: 1 };

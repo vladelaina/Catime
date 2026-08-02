@@ -16,7 +16,7 @@ test('adapts animated previews to motion preferences and network limits', () => 
         automatic: true, manual: true, concurrency: 1,
     });
     assert.deepEqual(resolveMotionPolicy({ effectiveType: '4g' }), {
-        automatic: true, manual: true, concurrency: 2,
+        automatic: true, manual: true, concurrency: 4,
     });
 });
 

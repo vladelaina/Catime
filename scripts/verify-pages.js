@@ -10,6 +10,51 @@ const viewports = [
     { name: 'desktop', width: 1440, height: 900, deviceScaleFactor: 1, mobile: false },
     { name: 'mobile', width: 390, height: 844, deviceScaleFactor: 1, mobile: true },
 ];
+const trayLibraryInteraction = `async () => {
+    const row = document.querySelector('.artist-showcase');
+    const toggle = row?.querySelector('.artist-identity');
+
+    const previewRequestCount = () => new Set(performance.getEntriesByType('resource')
+        .filter(entry => entry.name.includes('preview-'))
+        .map(entry => entry.name)).size;
+    const preloadDeadline = Date.now() + 5000;
+    while (previewRequestCount() < 6 && Date.now() < preloadDeadline) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    const backgroundPreviewCount = previewRequestCount();
+
+    const supportButton = document.querySelector('.main-header .nav-actions .support-btn');
+    supportButton?.focus();
+    const focusedSupportBackground = supportButton ? getComputedStyle(supportButton).backgroundImage : '';
+    const supportStayedPink = focusedSupportBackground.includes('rgb(247, 125, 170)')
+        && focusedSupportBackground.includes('rgb(247, 153, 184)');
+
+    toggle?.click();
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const result = {
+        expanded: row?.classList.contains('expanded') || false,
+        cardCount: row?.querySelectorAll('.artist-details .animation-item').length || 0,
+        animatedCardCount: [...(row?.querySelectorAll('.artist-details .animation-item img') || [])]
+            .filter(image => image.currentSrc.includes('preview-')).length,
+        hasLoadMore: Boolean(row?.querySelector('.load-more')),
+        automaticPreviewRequests: previewRequestCount(),
+        backgroundPreviewCount,
+        supportStayedPink,
+        focusedSupportBackground,
+    };
+
+    return {
+        ok: result.expanded
+            && result.cardCount === 6
+            && result.animatedCardCount === 6
+            && !result.hasLoadMore
+            && result.automaticPreviewRequests >= 6
+            && result.backgroundPreviewCount >= 6
+            && result.supportStayedPink,
+        ...result,
+    };
+}`;
 const traySorterInteraction = `async () => {
     const source = await (await fetch('/assets/catime.webp')).arrayBuffer();
     const uniqueCanvas = document.createElement('canvas');
@@ -204,7 +249,7 @@ const traySorterInteraction = `async () => {
         ok: JSON.stringify(before) === JSON.stringify(['1.png', '2.webp', '3.jpg', '4.png'])
             && JSON.stringify(after) === JSON.stringify(['1.webp', '2.png', '3.jpg', '4.png'])
             && result.cardCount === 4
-            && result.filename === 'catime-tray-icons.zip'
+            && /^catime-tray-icons-\\d{8}-\\d{6}\\.zip$/.test(result.filename)
             && result.zipSignature === 0x04034b50
             && result.containsExpectedNames
             && JSON.stringify(result.duplicateStates) === JSON.stringify([true, true, true, false])
@@ -228,7 +273,14 @@ const pages = [
     { path: '/about', selector: 'main', minimum: 1 },
     { path: '/support', selector: '.support-project', minimum: 1 },
     { path: '/guide', selector: 'main', minimum: 1 },
-    { path: '/tray', selector: '.artist-showcase', minimum: 1, mockTrayManifest: true },
+    {
+        path: '/tray',
+        selector: '.artist-showcase',
+        minimum: 1,
+        mockTrayManifest: true,
+        verifySupportHover: true,
+        interaction: trayLibraryInteraction,
+    },
     {
         path: '/tools/font-tool/',
         selector: '#uploadArea',
@@ -240,9 +292,17 @@ const pages = [
         selector: '#uploadZone',
         minimum: 1,
         globals: ['clearImages', 'downloadSortedImages'],
+        verifySupportHover: true,
         interaction: traySorterInteraction,
     },
 ];
+const selectedPages = process.env.VERIFY_PAGE
+    ? pages.filter(page => page.path === process.env.VERIFY_PAGE)
+    : pages;
+
+if (selectedPages.length === 0) {
+    throw new Error(`Unknown VERIFY_PAGE: ${process.env.VERIFY_PAGE}`);
+}
 
 function getAvailablePort() {
     return new Promise((resolvePort, reject) => {
@@ -342,6 +402,8 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
     await Promise.all([
         client.send('Page.enable'),
         client.send('Runtime.enable'),
+        client.send('DOM.enable'),
+        client.send('CSS.enable'),
         client.send('Emulation.setDeviceMetricsOverride', {
             width: viewport.width,
             height: viewport.height,
@@ -366,6 +428,42 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
     }))()`;
     const evaluation = await client.send('Runtime.evaluate', { expression, returnByValue: true });
     const result = evaluation.result.value;
+
+    if (page.verifySupportHover) {
+        const { root } = await client.send('DOM.getDocument');
+        const { nodeId } = await client.send('DOM.querySelector', {
+            nodeId: root.nodeId,
+            selector: '.main-header .nav-actions .support-btn',
+        });
+        if (!nodeId) throw new Error(`${page.path}: missing header support button`);
+        if (viewport.mobile) {
+            await client.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: ['hover'] });
+        } else {
+            const { model } = await client.send('DOM.getBoxModel', { nodeId });
+            const [x1, y1, x2, y2, , , x4, y4] = model.border;
+            await client.send('Input.dispatchMouseEvent', {
+                type: 'mouseMoved',
+                x: (x1 + x2 + x4) / 3,
+                y: (y1 + y2 + y4) / 3,
+            });
+            await new Promise(resolveHover => setTimeout(resolveHover, 400));
+        }
+        const hoverEvaluation = await client.send('Runtime.evaluate', {
+            expression: `(() => {
+                const style = getComputedStyle(document.querySelector('.main-header .nav-actions .support-btn'));
+                return { backgroundColor: style.backgroundColor, backgroundImage: style.backgroundImage };
+            })()`,
+            returnByValue: true,
+        });
+        const hoverStyle = hoverEvaluation.result.value;
+        const hoverPaint = `${hoverStyle.backgroundColor} ${hoverStyle.backgroundImage}`;
+        if (!hoverPaint.includes('rgb(247, 125, 170)') || hoverPaint.includes('rgb(122, 162, 247)')) {
+            throw new Error(`${page.path}: support hover is not pink: ${hoverPaint}`);
+        }
+        if (viewport.mobile) {
+            await client.send('CSS.forcePseudoState', { nodeId, forcedPseudoClasses: [] });
+        }
+    }
 
     if (page.interaction) {
         const interactionEvaluation = await client.send('Runtime.evaluate', {
@@ -396,24 +494,28 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
 
 async function enableTrayManifestMock(client, baseUrl, exceptions) {
     const assetUrl = `${baseUrl}/assets/catime.webp`;
+    const files = Array(6).fill('catime.webp');
+    const fileVersions = Array.from({ length: files.length }, (_, index) => `source-${index + 1}`);
+    const posterVersions = Array.from({ length: files.length }, (_, index) => `poster-${index + 1}`);
+    const previewVersions = Array.from({ length: files.length }, (_, index) => `preview-${index + 1}`);
     const manifest = {
         version: 'verify',
         generated: '2026-07-29T00:00:00.000Z',
         sections: {
             verification: {
-                count: 1,
+                count: files.length,
                 authorAvatar: `${assetUrl}?v=verify`,
                 authorLinks: [],
                 repository: 'https://github.com/catime-labs/tray-hub',
                 cdnBase: `${baseUrl}/assets/`,
-                files: ['catime.webp'],
-                fileVersions: ['verify'],
+                files,
+                fileVersions,
                 posterCdnBase: `${baseUrl}/assets/`,
-                posterFiles: ['catime.webp'],
-                posterVersions: ['verify'],
+                posterFiles: files,
+                posterVersions,
                 previewCdnBase: `${baseUrl}/assets/`,
-                previewFiles: ['catime.webp'],
-                previewVersions: ['verify'],
+                previewFiles: files,
+                previewVersions,
             },
         },
     };
@@ -465,7 +567,7 @@ try {
         ),
     ]);
     for (const viewport of viewports) {
-        for (const page of pages) await verifyPage(debugPort, baseUrl, page, viewport);
+        for (const page of selectedPages) await verifyPage(debugPort, baseUrl, page, viewport);
     }
 } finally {
     await Promise.all([stopChild(preview), stopChild(chromium)]);

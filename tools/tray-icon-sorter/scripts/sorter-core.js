@@ -62,6 +62,14 @@ export function createSequentialEntries(items) {
     }));
 }
 
+export function createArchiveFilename(date = new Date()) {
+    const pad = value => String(value).padStart(2, '0');
+    const day = [date.getFullYear(), pad(date.getMonth() + 1), pad(date.getDate())].join('');
+    const time = [pad(date.getHours()), pad(date.getMinutes()), pad(date.getSeconds())].join('');
+
+    return `catime-tray-icons-${day}-${time}.zip`;
+}
+
 export function moveItem(items, fromIndex, toIndex) {
     if (!Array.isArray(items)) return [];
     if (fromIndex < 0 || fromIndex >= items.length) return [...items];

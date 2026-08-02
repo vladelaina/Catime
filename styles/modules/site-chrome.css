@@ -7,6 +7,22 @@ body {
     overflow-x: clip;
 }
 
+/* Keep the header support action pink in every link interaction state. */
+.main-header .nav-actions .support-btn,
+.main-header .nav-actions .support-btn:visited,
+.main-header .nav-actions .support-btn:focus,
+.main-header .nav-actions .support-btn:focus-visible,
+.main-header .nav-actions .support-btn:active,
+.main-header .nav-actions .support-btn.active {
+    background-color: var(--accent-color) !important;
+    background-image: linear-gradient(45deg, var(--accent-color), #f799b8) !important;
+    color: #fff !important;
+}
+
+.main-header .nav-actions .support-btn:hover {
+    background-image: linear-gradient(45deg, #f799b8, var(--accent-color)) !important;
+}
+
 /* Oversized animated artwork must not influence the page's intrinsic width. */
 .hero,
 .hero-visual-container,

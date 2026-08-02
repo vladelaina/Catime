@@ -10,8 +10,6 @@ import { createPreviewLoader, resolveMotionPolicy } from './adaptive-image-loadi
 import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
 import { createSecureRandomOrder } from './secure-random-order.js';
 
-const INITIAL_VISIBLE_ANIMATIONS = 18;
-const LOAD_MORE_SIZE = 24;
 const FEATURED_ANIMATIONS = 5;
 const orderAuthors = createSecureRandomOrder(author => author.name);
 const networkConnection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -40,7 +38,6 @@ const copy = {
         expand: '展开',
         collapse: '收起',
         animations: count => `${count.toLocaleString('zh-CN')} 个托盘动画`,
-        loadMore: count => `加载更多（剩余 ${count.toLocaleString('zh-CN')} 个）`,
         openProfile: name => `打开 ${name} 的作者主页`,
         previewLabel: 'Windows 托盘动画效果预览',
         previewAlt: '托盘图标效果',
@@ -59,7 +56,6 @@ const copy = {
         expand: 'Expand',
         collapse: 'Collapse',
         animations: count => `${count.toLocaleString('en-US')} tray animations`,
-        loadMore: count => `Load more (${count.toLocaleString('en-US')} remaining)`,
         openProfile: name => `Open ${name}'s profile`,
         previewLabel: 'Windows tray animation preview',
         previewAlt: 'Tray icon preview',
@@ -70,7 +66,6 @@ const state = {
     collections: [],
     authors: [],
     expandedAuthor: null,
-    visibleByCollection: new Map(),
 };
 
 const elements = {};
@@ -258,6 +253,7 @@ function setArtistRowExpanded(row, expanded, author) {
         const newDetails = createArtistDetails(author);
         row.appendChild(newDetails);
         observeAnimationImages(newDetails);
+        startExpandedAnimations(newDetails);
     }
     if (!expanded) details?.remove();
 }
@@ -325,34 +321,16 @@ function createCollectionSection(collection) {
     const section = document.createElement('section');
     section.className = 'artist-collection';
 
-    const visibleCount = state.visibleByCollection.get(collection.key)
-        || Math.min(INITIAL_VISIBLE_ANIMATIONS, collection.count);
-
     const grid = document.createElement('div');
     grid.className = 'animation-grid';
     const fragment = document.createDocumentFragment();
 
-    for (let index = 1; index <= visibleCount; index += 1) {
+    for (let index = 1; index <= collection.count; index += 1) {
         fragment.appendChild(createAnimationItem(collection, index));
     }
     grid.appendChild(fragment);
 
     section.appendChild(grid);
-    if (visibleCount < collection.count) {
-        const loadMore = document.createElement('button');
-        loadMore.type = 'button';
-        loadMore.className = 'load-more';
-        loadMore.textContent = copy.loadMore(collection.count - visibleCount);
-        loadMore.addEventListener('click', event => {
-            event.stopPropagation();
-            state.visibleByCollection.set(collection.key, Math.min(visibleCount + LOAD_MORE_SIZE, collection.count));
-            const replacement = createCollectionSection(collection);
-            section.replaceWith(replacement);
-            observeAnimationImages(replacement);
-        });
-        section.appendChild(loadMore);
-    }
-
     return section;
 }
 
@@ -467,6 +445,7 @@ function startProgressivePreviews(generation) {
     if (generation !== renderGeneration || automaticMotionStarted) return;
     automaticMotionStarted = true;
     if (trayPreviewSelection) loadTrayMotion(trayPreviewSelection, { manual: false });
+    preloadLibraryPreviews(generation);
     if (!('IntersectionObserver' in window)) {
         const firstImage = elements.board.querySelector('img[data-preview-url]');
         if (firstImage) {
@@ -482,7 +461,7 @@ function startProgressivePreviews(generation) {
             image.dataset.inViewport = String(entry.isIntersecting);
             if (entry.isIntersecting) {
                 requestAnimationMotion(image);
-            } else if (image.dataset.manualMotion !== 'true') {
+            } else if (image.dataset.manualMotion !== 'true' && image.dataset.expandedMotion !== 'true') {
                 restorePoster(image);
             }
         });
@@ -493,10 +472,35 @@ function startProgressivePreviews(generation) {
     observeAnimationImages(elements.board);
 }
 
+async function preloadLibraryPreviews(generation) {
+    const featuredUrls = [...new Set([...elements.board.querySelectorAll(
+        '.artist-featured-gallery img[data-preview-url]',
+    )].map(image => image.dataset.previewUrl).filter(Boolean))];
+
+    await Promise.all(featuredUrls.map(url => previewLoader.request(url)));
+    if (generation !== renderGeneration || !automaticMotionStarted) return;
+
+    scheduleAfterCriticalRender(() => {
+        if (generation !== renderGeneration || !automaticMotionStarted) return;
+        state.collections.forEach(collection => {
+            for (let index = 1; index <= collection.count; index += 1) {
+                previewLoader.request(animationPreviewUrl(collection, index));
+            }
+        });
+    });
+}
+
 function observeAnimationImages(root) {
     if (!previewObserver || !root) return;
     if (root.matches?.('img[data-preview-url]')) previewObserver.observe(root);
     root.querySelectorAll?.('img[data-preview-url]').forEach(image => previewObserver.observe(image));
+}
+
+function startExpandedAnimations(root) {
+    root.querySelectorAll('img[data-preview-url]').forEach(image => {
+        image.dataset.expandedMotion = 'true';
+        requestAnimationMotion(image);
+    });
 }
 
 function requestAnimationMotion(image, { manual = false, priority = false } = {}) {
@@ -506,7 +510,9 @@ function requestAnimationMotion(image, { manual = false, priority = false } = {}
 
     previewLoader.request(previewUrl, { priority }).then(loaded => {
         if (!loaded || !image.isConnected || image.dataset.previewUrl !== previewUrl) return;
-        const shouldAnimate = image.dataset.inViewport === 'true' || image.dataset.manualMotion === 'true';
+        const shouldAnimate = image.dataset.inViewport === 'true'
+            || image.dataset.manualMotion === 'true'
+            || image.dataset.expandedMotion === 'true';
         if (shouldAnimate && image.getAttribute('src') !== previewUrl) image.src = previewUrl;
     });
 }

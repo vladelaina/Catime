@@ -1,4 +1,5 @@
 import {
+    createArchiveFilename,
     createNumberedFilename,
     createSequentialEntries,
     formatBytes,
@@ -859,7 +860,7 @@ class TrayIconSorter {
                     }
                 },
             });
-            this.triggerDownload(zip, 'catime-tray-icons.zip');
+            this.triggerDownload(zip, createArchiveFilename());
             this.setStatus(this.translate('statusDownloadStarted'), 'success');
         } catch (error) {
             console.error('Unable to create tray icon ZIP:', error);

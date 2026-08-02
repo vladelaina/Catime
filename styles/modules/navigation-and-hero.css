@@ -69,7 +69,7 @@
     font-size: 1.1em; /* 增加图标大小，相对于按钮文字 */
 }
 
-.nav-button:hover {
+.nav-button:not(.support-btn):hover {
     background-color: var(--primary-hover);
     color: white !important;
     text-decoration: none;
@@ -585,4 +585,3 @@ video.hero-screenshot {
     0% { transform: translateY(0px) translateX(0px) rotate(0deg); }
     100% { transform: translateY(-20px) translateX(15px) rotate(20deg); }
 }
-
