@@ -11,11 +11,13 @@
 
 #include <windows.h>
 #include "../../resource/resource.h"
+#include "tray/tray_menu_pagination.h"
 
 /**
  * @brief Build animation submenu
  * @param hMenu Parent menu handle
  * @param currentAnimationName Current animation for checkmark
+ * @param customItemRange Receives the range occupied by custom animations
  * 
  * @details
  * Uses the latest cached animations folder scan.
@@ -24,7 +26,9 @@
  * Branch folders become submenus.
  * Returns TRUE when custom animation entries are available.
  */
-BOOL BuildAnimationMenu(HMENU hMenu, const char* currentAnimationName);
+BOOL BuildAnimationMenu(
+    HMENU hMenu, const char* currentAnimationName,
+    TrayMenuPaginationRange* customItemRange);
 
 /**
  * @brief Reset shutdown state before using the animation menu cache

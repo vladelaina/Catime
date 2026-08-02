@@ -6,6 +6,7 @@
 #include "tray_animation_menu_internal.h"
 #include "taskbar_monitor.h"
 #include "tray/tray.h"
+#include "tray/tray_menu_pagination.h"
 
 BOOL SetCurrentAnimationName(const char* name);
 
@@ -109,8 +110,14 @@ static void BuildAnimationMenuFromEntries(
     }
 }
 
-BOOL BuildAnimationMenu(HMENU menu, const char* currentAnimationName) {
+BOOL BuildAnimationMenu(
+    HMENU menu, const char* currentAnimationName,
+    TrayMenuPaginationRange* customItemRange) {
     if (!menu) return FALSE;
+    if (customItemRange) {
+        customItemRange->firstItem = 0;
+        customItemRange->itemCount = 0;
+    }
     ResetAnimationMenuIdMap();
     AnimationMenu_RequestScanAsync();
 
@@ -148,11 +155,19 @@ BOOL BuildAnimationMenu(HMENU menu, const char* currentAnimationName) {
     }
     ReleaseSRWLockShared(&g_animMenuCacheLock);
 
+    BOOL rangeStarted = customItemRange &&
+        TrayMenuPagination_BeginRange(menu, customItemRange);
     if (animationCount > 0) {
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
         BuildAnimationMenuFromEntries(
             menu, snapshot, animationCount,
             currentAnimationName, &nextId);
+    }
+    if (rangeStarted &&
+        !TrayMenuPagination_EndRange(menu, customItemRange)) {
+        customItemRange->firstItem = 0;
+        customItemRange->itemCount = 0;
+        LOG_WARNING("Failed to capture custom animation menu items");
     }
     free(snapshot);
     if (animationCount <= 0 && !cacheReady) {

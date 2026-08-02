@@ -8,6 +8,7 @@
 #include "config.h"
 #include "language.h"
 #include "log.h"
+#include "tray/tray_menu_pagination.h"
 #include "tray/tray_menu.h"
 #include "../resource/resource.h"
 
@@ -116,6 +117,7 @@ void BuildFontSubmenu(HMENU hMenu) {
         return;
     }
     FontMenuInternal_ResetIdMap();
+    TrayMenuPaginationRange fontItems = {0};
 
     int g_advancedFontId = CMD_FONT_SELECTION_BASE;
 
@@ -159,8 +161,15 @@ void BuildFontSubmenu(HMENU hMenu) {
                             : GetLocalizedString(NULL, L"Loading..."));
             AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
         } else {
+            BOOL rangeStarted = TrayMenuPagination_BeginRange(
+                hFontSubMenu, &fontItems);
             FontMenuInternal_BuildMenuFromEntries(hFontSubMenu, fontSnapshot, fontCount,
                                      currentFontRelPath, &g_advancedFontId);
+            if (!rangeStarted ||
+                !TrayMenuPagination_EndRange(hFontSubMenu, &fontItems)) {
+                fontItems.itemCount = 0;
+                LOG_WARNING("Failed to capture font menu items");
+            }
             AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
         }
 
@@ -199,6 +208,13 @@ void BuildFontSubmenu(HMENU hMenu) {
         AppendMenuW(hFontSubMenu, MF_SEPARATOR, 0, NULL);
         AppendMenuW(hFontSubMenu, MF_STRING, CLOCK_IDC_FONT_ADVANCED,
                    GetLocalizedString(NULL, L"Open fonts folder"));
+
+        if (fontItems.itemCount > 0 &&
+            !TrayMenuPagination_ApplyRangeForCurrentMonitor(
+                hFontSubMenu, &fontItems,
+                GetLocalizedString(NULL, L"More"))) {
+            LOG_WARNING("Failed to paginate the font menu");
+        }
     }
 
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hFontSubMenu,

@@ -4,6 +4,7 @@
  */
 
 #include "tray_menu_submenus_internal.h"
+#include "tray/tray_menu_pagination.h"
 
 static BOOL IsCustomTextDisplaySourceActive(void) {
     if (!PluginData_IsActive()) {
@@ -30,7 +31,9 @@ void BuildAnimationSubmenu(HMENU hMenu) {
     if (!hAnimMenu) return;
     {
         const char* currentAnim = GetCurrentAnimationName();
-        BOOL hasCustomAnimations = BuildAnimationMenu(hAnimMenu, currentAnim);
+        TrayMenuPaginationRange customAnimationItems = {0};
+        BOOL hasCustomAnimations = BuildAnimationMenu(
+            hAnimMenu, currentAnim, &customAnimationItems);
 
         if (hasCustomAnimations) {
             AppendMenuW(hAnimMenu, MF_SEPARATOR, 0, NULL);
@@ -65,6 +68,12 @@ void BuildAnimationSubmenu(HMENU hMenu) {
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_GET_MORE,
                     GetLocalizedString(NULL, L"Get More"));
         AppendMenuW(hAnimMenu, MF_STRING, CLOCK_IDM_ANIMATIONS_OPEN_DIR, GetLocalizedString(NULL, L"Open animations folder"));
+        if (customAnimationItems.itemCount > 0 &&
+            !TrayMenuPagination_ApplyRangeForCurrentMonitor(
+                hAnimMenu, &customAnimationItems,
+                GetLocalizedString(NULL, L"More"))) {
+            LOG_WARNING("Failed to paginate the animation menu");
+        }
     }
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hAnimMenu, GetLocalizedString(NULL, L"Tray Icon"))) {
         DestroyMenu(hAnimMenu);
@@ -88,10 +97,13 @@ void BuildPluginsSubmenu(HMENU hMenu) {
         activePluginIndex = -1;
     }
 
+    TrayMenuPaginationRange pluginItems = {0};
     if (pluginCount == 0) {
         AppendMenuW(hPluginsMenu, MF_STRING | MF_GRAYED, 0,
                     GetLocalizedString(NULL, L"No plugins found"));
     } else {
+        BOOL rangeStarted = TrayMenuPagination_BeginRange(
+            hPluginsMenu, &pluginItems);
         for (int i = 0; i < pluginCount; i++) {
             PluginInfo plugin;
             if (PluginManager_CopyPlugin(i, &plugin)) {
@@ -104,6 +116,11 @@ void BuildPluginsSubmenu(HMENU hMenu) {
                 /* plugin->displayName is already wchar_t, use directly */
                 AppendMenuW(hPluginsMenu, flags, CLOCK_IDM_PLUGINS_BASE + i, plugin.displayName);
             }
+        }
+        if (!rangeStarted ||
+            !TrayMenuPagination_EndRange(hPluginsMenu, &pluginItems)) {
+            pluginItems.itemCount = 0;
+            LOG_WARNING("Failed to capture plugin menu items");
         }
     }
 
@@ -121,6 +138,13 @@ void BuildPluginsSubmenu(HMENU hMenu) {
     AppendMenuW(hPluginsMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hPluginsMenu, MF_STRING, CLOCK_IDM_PLUGINS_OPEN_DIR,
                 GetLocalizedString(NULL, L"Open plugins folder"));
+
+    if (pluginItems.itemCount > 0 &&
+        !TrayMenuPagination_ApplyRangeForCurrentMonitor(
+            hPluginsMenu, &pluginItems,
+            GetLocalizedString(NULL, L"More"))) {
+        LOG_WARNING("Failed to paginate the plugin menu");
+    }
 
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPluginsMenu,
                      GetLocalizedString(NULL, L"Plugins"))) {
