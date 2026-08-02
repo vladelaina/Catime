@@ -8,7 +8,7 @@
 #pragma code_page(65001)
 
 /** @brief Dialog for configuring Pomodoro timer combination presets */
-CLOCK_IDD_POMODORO_COMBO_DIALOG DIALOGEX 0, 0, 200, 130
+CLOCK_IDD_POMODORO_COMBO_DIALOG DIALOGEX 0, 0, 200, 155
 STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Set Pomodoro Time Combination"
 FONT 9, "Segoe UI"
@@ -17,6 +17,8 @@ BEGIN
     LTEXT           "Enter pomodoro time sequence, separated by spaces:\n\n25m = 25 minutes\n30s = 30 seconds\n1h30m = 1 hour 30 minutes\nExample: 25m 5m 25m 10m - work 25min, short break 5min, work 25min, long break 10min", CLOCK_IDC_STATIC, 10, 10, 180, 70
     /** Multi-format input for preset combinations */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 85, 180, 20, ES_AUTOHSCROLL | ES_MULTILINE
+    /** Live preview of the parsed duration sequence */
+    LTEXT           "", IDC_POMODORO_COMBO_HINT, 10, 108, 180, 22
     /** Confirmation button with dynamic text */
-    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 110, 50, 14
-END 
+    PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 135, 50, 14
+END

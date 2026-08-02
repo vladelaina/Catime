@@ -17,6 +17,17 @@
 #define POMODORO_OPTIONS_MAX_INPUT_CHARS 512
 #define POMODORO_OPTIONS_MAX_INPUT_BYTES ((POMODORO_OPTIONS_MAX_INPUT_CHARS * 4) + 1)
 #define POMODORO_OPTIONS_TOKEN_DELIMITERS " \t\r\n"
+#define POMODORO_LOOP_FOCUS_MESSAGE (WM_APP + 210)
+
+static void FocusPomodoroLoopInput(HWND hwndDlg) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) return;
+    HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
+    if (!hwndEdit || !IsWindow(hwndEdit)) return;
+    SetForegroundWindow(hwndDlg);
+    SetFocus(hwndEdit);
+    Dialog_SelectAllText(hwndEdit);
+}
+
 static void LayoutPomodoroLoopPrompt(HWND hwndDlg) {
     UINT dpi = DialogModern_GetDpi(hwndDlg);
     DialogModern_SetChildRect96(hwndDlg, CLOCK_IDC_STATIC, dpi,
@@ -51,6 +62,7 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_POMODORO_LOOP)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_POMODORO_LOOP);
         SetForegroundWindow(existing);
+        PostMessageW(existing, POMODORO_LOOP_FOCUS_MESSAGE, 0, 0);
         return;
     }
     HWND hwndDlg = CreateDialogW(
@@ -61,6 +73,8 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
     );
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
+        SetForegroundWindow(hwndDlg);
+        PostMessageW(hwndDlg, POMODORO_LOOP_FOCUS_MESSAGE, 0, 0);
     }
 }
 INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -134,6 +148,9 @@ INT_PTR CALLBACK PomodoroLoopDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, L
                 return TRUE;
             }
             break;
+        case POMODORO_LOOP_FOCUS_MESSAGE:
+            FocusPomodoroLoopInput(hwndDlg);
+            return TRUE;
         case WM_DESTROY:
             if (ctx) {
                 HWND hwndEdit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);

@@ -71,19 +71,18 @@ static BOOL HandleShortcutSubmit(HWND dialog) {
     return TRUE;
 }
 
-static BOOL PersistParsedTime(HWND dialog, const InputDialogState* state,
-                              int seconds) {
-    int dialogId = (int)state->dialogId;
+BOOL DialogInput_PersistParsedTime(HWND dialog, DWORD dialogId,
+                                   int pomodoroTimeIndex, int seconds) {
     if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
         int count = g_AppConfig.pomodoro.times_count;
         if (count < 0) count = 0;
         if (count > (int)_countof(g_AppConfig.pomodoro.times))
             count = (int)_countof(g_AppConfig.pomodoro.times);
-        if (state->pomodoroTimeIndex < 0 || state->pomodoroTimeIndex >= count)
+        if (pomodoroTimeIndex < 0 || pomodoroTimeIndex >= count)
             return FALSE;
         int updated[_countof(g_AppConfig.pomodoro.times)] = {0};
         memcpy(updated, g_AppConfig.pomodoro.times, (size_t)count * sizeof(int));
-        updated[state->pomodoroTimeIndex] = seconds;
+        updated[pomodoroTimeIndex] = seconds;
         return WriteConfigPomodoroTimeOptions(updated, count);
     }
     if (dialogId == CLOCK_IDD_POMODORO_LOOP_DIALOG)
@@ -104,7 +103,9 @@ static BOOL HandleTimeSubmit(HWND dialog, const InputDialogState* state) {
     char utf8[256] = {0};
     int seconds = 0;
     if (!WideToUtf8(inputText, utf8, sizeof(utf8)) ||
-        !ParseInput(utf8, &seconds) || !PersistParsedTime(dialog, state, seconds))
+        !ParseInput(utf8, &seconds) ||
+        !DialogInput_PersistParsedTime(dialog, state->dialogId,
+                                       state->pomodoroTimeIndex, seconds))
         return FALSE;
     DestroyWindow(dialog);
     return TRUE;

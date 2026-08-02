@@ -170,7 +170,7 @@ void CountdownLayout(HWND hwnd, CountdownDialogState* state) {
     state->editFrame.right = width - margin;
     state->editFrame.bottom = fieldY + fieldHeight;
 
-    int editLeft = state->editFrame.left + CountdownScaleValue(state, 48);
+    int editLeft = state->editFrame.left + CountdownScaleValue(state, 14);
     int editTop = state->editFrame.top + CountdownScaleValue(state, 7);
     int editWidth = state->editFrame.right - editLeft - CountdownScaleValue(state, 14);
     int editHeight = fieldHeight - CountdownScaleValue(state, 14);

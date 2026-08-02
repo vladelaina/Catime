@@ -145,8 +145,6 @@ void CountdownEnsureContentWidth(HWND hwnd, CountdownDialogState* state);
 
 void CountdownDrawExamplesGrid(HDC hdc, const CountdownDialogState* state,
                                const RECT* rect);
-void CountdownDrawClockIcon(HDC hdc, int centerX, int centerY, int radius,
-                            COLORREF color);
 void CountdownDrawCheckIcon(HDC hdc, int centerX, int centerY, int radius,
                             COLORREF color);
 void CountdownDrawWarningIcon(HDC hdc, int centerX, int centerY, int radius,
@@ -168,6 +166,7 @@ void CountdownSanitizeEditText(HWND hwnd, CountdownDialogState* state);
 void CountdownUpdatePreview(HWND hwnd, CountdownDialogState* state);
 BOOL CountdownSubmit(HWND hwnd, CountdownDialogState* state);
 
+void CountdownHandlePaint(HWND hwnd, CountdownDialogState* state);
 void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target);
 void CountdownDrawButton(const DRAWITEMSTRUCT* drawItem,
                          CountdownDialogState* state);
@@ -184,7 +183,8 @@ LRESULT CALLBACK CountdownButtonSubclassProc(HWND hwnd, UINT msg, WPARAM wParam,
 void CountdownReleaseModifiers(void);
 BOOL CountdownRegisterWindowClass(void);
 BOOL CountdownCreateControls(HWND hwnd, CountdownDialogState* state);
-HWND CreateCustomCountdownDialog(HWND hwndParent);
+HWND CreateCustomTimeInputDialog(HWND hwndParent, DWORD dialogId,
+                                 int pomodoroTimeIndex);
 LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg, WPARAM wParam,
                                      LPARAM lParam);
 

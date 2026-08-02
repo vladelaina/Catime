@@ -12,8 +12,15 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             if (!newState) {
                 return FALSE;
             }
-            newState->input.dialogId = CLOCK_IDD_DIALOG1;
-            newState->input.pomodoroTimeIndex = -1;
+            const CREATESTRUCTW* create = (const CREATESTRUCTW*)lParam;
+            const CountdownInputState* input = create
+                ? (const CountdownInputState*)create->lpCreateParams : NULL;
+            if (input) {
+                newState->input = *input;
+            } else {
+                newState->input.dialogId = CLOCK_IDD_DIALOG1;
+                newState->input.pomodoroTimeIndex = -1;
+            }
             newState->dpi = CountdownGetDpi(hwnd);
             newState->selectAllOnNextFocus = TRUE;
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR)newState);
@@ -27,31 +34,10 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             }
             return 0;
 
-        case WM_PAINT: {
+        case WM_PAINT:
             if (!state) break;
-            PAINTSTRUCT paint = {0};
-            HDC target = BeginPaint(hwnd, &paint);
-            RECT client = {0};
-            GetClientRect(hwnd, &client);
-            int width = client.right - client.left;
-            int height = client.bottom - client.top;
-            HDC buffer = CreateCompatibleDC(target);
-            HBITMAP bitmap = buffer ? CreateCompatibleBitmap(target, width, height) : NULL;
-            HGDIOBJ oldBitmap = buffer && bitmap ? SelectObject(buffer, bitmap) : NULL;
-            if (buffer && bitmap) {
-                CountdownPaint(hwnd, state, buffer);
-                BitBlt(target, 0, 0, width, height, buffer, 0, 0, SRCCOPY);
-                SelectObject(buffer, oldBitmap);
-                DeleteObject(bitmap);
-                DeleteDC(buffer);
-            } else {
-                CountdownPaint(hwnd, state, target);
-                if (bitmap) DeleteObject(bitmap);
-                if (buffer) DeleteDC(buffer);
-            }
-            EndPaint(hwnd, &paint);
+            CountdownHandlePaint(hwnd, state);
             return 0;
-        }
 
         case WM_PRINTCLIENT:
             if (state) {
@@ -275,8 +261,11 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
         case WM_NCDESTROY:
             if (state) {
                 KillTimer(hwnd, INPUT_FOCUS_TIMER_ID);
-                Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_INPUT, hwnd);
-                if (g_hwndInputDialog == hwnd) {
+                DialogInstanceType instanceType =
+                    DialogInput_GetInstanceType(state->input.dialogId);
+                Dialog_UnregisterInstanceForWindow(instanceType, hwnd);
+                if (state->input.dialogId == CLOCK_IDD_DIALOG1 &&
+                    g_hwndInputDialog == hwnd) {
                     g_hwndInputDialog = NULL;
                 }
                 if (state->editBrush) DeleteObject(state->editBrush);
@@ -289,9 +278,3 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
 
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
-
-
-/**
- * @brief Show countdown input dialog (modeless)
- * @param hwndParent Parent window handle
- */

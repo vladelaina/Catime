@@ -67,6 +67,9 @@
 #define IDD_MESSAGE_DIALOG 2080
 #define IDC_MESSAGE_TEXT 2081
 
+/** @brief Pomodoro combination live duration preview */
+#define IDC_POMODORO_COMBO_HINT 2090
+
 /** @brief Startup configuration control */
 #define IDC_STARTUP_TIME 1401            /**< Startup time control */
 

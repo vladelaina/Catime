@@ -5,6 +5,34 @@
 
 #include "dialog_countdown_internal.h"
 
+void CountdownHandlePaint(HWND hwnd, CountdownDialogState* state) {
+    if (!hwnd || !state) return;
+
+    PAINTSTRUCT paint = {0};
+    HDC target = BeginPaint(hwnd, &paint);
+    RECT client = {0};
+    GetClientRect(hwnd, &client);
+    int width = client.right - client.left;
+    int height = client.bottom - client.top;
+    HDC buffer = CreateCompatibleDC(target);
+    HBITMAP bitmap = buffer
+        ? CreateCompatibleBitmap(target, width, height) : NULL;
+    HGDIOBJ oldBitmap = buffer && bitmap
+        ? SelectObject(buffer, bitmap) : NULL;
+    if (buffer && bitmap) {
+        CountdownPaint(hwnd, state, buffer);
+        BitBlt(target, 0, 0, width, height, buffer, 0, 0, SRCCOPY);
+        SelectObject(buffer, oldBitmap);
+        DeleteObject(bitmap);
+        DeleteDC(buffer);
+    } else {
+        CountdownPaint(hwnd, state, target);
+        if (bitmap) DeleteObject(bitmap);
+        if (buffer) DeleteDC(buffer);
+    }
+    EndPaint(hwnd, &paint);
+}
+
 void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
     if (!hwnd || !state || !target) {
         return;
@@ -135,12 +163,6 @@ void CountdownPaint(HWND hwnd, CountdownDialogState* state, HDC target) {
     CountdownDrawRounded(target, &state->editFrame, radius, state->fieldColor,
                          fieldBorder, editFocused || state->showValidationError ?
                          CountdownScaleValue(state, 2) : 1);
-    CountdownDrawClockIcon(target,
-                           state->editFrame.left + CountdownScaleValue(state, 25),
-                           (state->editFrame.top + state->editFrame.bottom) / 2,
-                           CountdownScaleValue(state, 9),
-                           editFocused ? state->accentColor : state->mutedColor);
-
     int previewTop = state->editFrame.bottom + smallGap;
     int previewHeight96 = state->ultraCompactLayout ? 30 :
                           (state->compactLayout ? 38 : 46);

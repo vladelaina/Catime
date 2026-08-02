@@ -1,5 +1,6 @@
 #include "dialog_input_state.h"
 #include "dialog/dialog_input.h"
+#include "dialog/dialog_input_internal.h"
 #include "dialog/dialog_form_layout.h"
 #include "dialog/dialog_input_options.h"
 #include "dialog/dialog_language.h"
@@ -10,6 +11,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strsafe.h>
+
+int DialogInput_GetInitialSeconds(DWORD dialogId, int pomodoroTimeIndex) {
+    if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
+        return g_AppConfig.timer.default_start_time;
+    }
+    if (dialogId != CLOCK_IDD_POMODORO_TIME_DIALOG) {
+        return 0;
+    }
+
+    int count = g_AppConfig.pomodoro.times_count;
+    if (count < 0) count = 0;
+    if (count > (int)_countof(g_AppConfig.pomodoro.times)) {
+        count = (int)_countof(g_AppConfig.pomodoro.times);
+    }
+    if (pomodoroTimeIndex < 0 || pomodoroTimeIndex >= count) {
+        return 0;
+    }
+    return g_AppConfig.pomodoro.times[pomodoroTimeIndex];
+}
 
 static void PopulateInitialInput(HWND dialog, const InputDialogState* state) {
     HWND edit = GetDlgItem(dialog, CLOCK_IDC_EDIT);
@@ -24,17 +44,8 @@ static void PopulateInitialInput(HWND dialog, const InputDialogState* state) {
             SetWindowTextW(edit, wideOptions);
         return;
     }
-    int seconds = 0;
-    if (dialogId == CLOCK_IDD_STARTUP_DIALOG) {
-        seconds = g_AppConfig.timer.default_start_time;
-    } else if (dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG) {
-        int count = g_AppConfig.pomodoro.times_count;
-        if (count < 0) count = 0;
-        if (count > (int)_countof(g_AppConfig.pomodoro.times))
-            count = (int)_countof(g_AppConfig.pomodoro.times);
-        if (state->pomodoroTimeIndex >= 0 && state->pomodoroTimeIndex < count)
-            seconds = g_AppConfig.pomodoro.times[state->pomodoroTimeIndex];
-    }
+    int seconds = DialogInput_GetInitialSeconds(
+        dialogId, state->pomodoroTimeIndex);
     if (seconds > 0) {
         char value[64];
         wchar_t wideValue[64] = {0};

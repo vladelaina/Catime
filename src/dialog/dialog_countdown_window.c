@@ -5,6 +5,22 @@
 
 #include "dialog_countdown_internal.h"
 
+static void CountdownPopulateInitialInput(CountdownDialogState* state) {
+    if (!state || !state->hwndEdit) return;
+
+    int seconds = DialogInput_GetInitialSeconds(
+        state->input.dialogId, state->input.pomodoroTimeIndex);
+    if (seconds <= 0) return;
+
+    char value[64] = {0};
+    wchar_t wideValue[64] = {0};
+    Dialog_FormatSecondsToString(seconds, value, sizeof(value));
+    if (MultiByteToWideChar(CP_UTF8, 0, value, -1, wideValue,
+                            _countof(wideValue)) > 0) {
+        SetWindowTextW(state->hwndEdit, wideValue);
+    }
+}
+
 void CountdownReleaseModifiers(void) {
     INPUT inputs[8] = {0};
     WORD keys[8] = {
@@ -102,11 +118,16 @@ BOOL CountdownCreateControls(HWND hwnd, CountdownDialogState* state) {
     CountdownUpdateTextMetrics(hwnd, state);
     CountdownEnsureContentWidth(hwnd, state);
     CountdownLayout(hwnd, state);
+    CountdownPopulateInitialInput(state);
     CountdownUpdatePreview(hwnd, state);
 
     SetWindowTextW(hwnd, state->title);
-    Dialog_InitializeInstance(DIALOG_INSTANCE_INPUT, hwnd);
-    g_hwndInputDialog = hwnd;
+    DialogInstanceType instanceType =
+        DialogInput_GetInstanceType(state->input.dialogId);
+    Dialog_InitializeInstance(instanceType, hwnd);
+    if (state->input.dialogId == CLOCK_IDD_DIALOG1) {
+        g_hwndInputDialog = hwnd;
+    }
 
     SetFocus(state->hwndEdit);
     PostMessageW(hwnd, WM_APP + 200, 0, 0);
@@ -119,10 +140,13 @@ BOOL CountdownCreateControls(HWND hwnd, CountdownDialogState* state) {
     return TRUE;
 }
 
-HWND CreateCustomCountdownDialog(HWND hwndParent) {
+HWND CreateCustomTimeInputDialog(HWND hwndParent, DWORD dialogId,
+                                 int pomodoroTimeIndex) {
     if (!CountdownRegisterWindowClass()) {
         return NULL;
     }
+
+    CountdownInputState input = {dialogId, pomodoroTimeIndex};
 
     UINT dpi = CountdownGetDpi(hwndParent);
     int width = MulDiv(COUNTDOWN_BASE_WIDTH, (int)dpi, 96);
@@ -157,7 +181,7 @@ HWND CreateCustomCountdownDialog(HWND hwndParent) {
             COUNTDOWN_WINDOW_CLASS_NAME, L"Set Countdown",
             WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
             x, y, width, height, hwndParent, NULL,
-            GetModuleHandleW(NULL), NULL);
+            GetModuleHandleW(NULL), &input);
     }
 
     int screenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -169,5 +193,5 @@ HWND CreateCustomCountdownDialog(HWND hwndParent) {
         COUNTDOWN_WINDOW_CLASS_NAME, L"Set Countdown",
         WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
         x, y, width, height, hwndParent, NULL,
-        GetModuleHandleW(NULL), NULL);
+        GetModuleHandleW(NULL), &input);
 }

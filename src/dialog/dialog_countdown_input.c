@@ -197,10 +197,11 @@ BOOL CountdownSubmit(HWND hwnd, CountdownDialogState* state) {
         return FALSE;
     }
 
-    HWND hwndParent = DialogInput_GetParent(hwnd);
-    if (hwndParent) {
-        PostMessage(hwndParent, WM_DIALOG_COUNTDOWN,
-                    (WPARAM)totalSeconds, 0);
+    if (!DialogInput_PersistParsedTime(
+            hwnd, state->input.dialogId,
+            state->input.pomodoroTimeIndex, totalSeconds)) {
+        Dialog_ShowErrorAndRefocus(hwnd, CLOCK_IDC_EDIT);
+        return FALSE;
     }
     DestroyWindow(hwnd);
     return TRUE;

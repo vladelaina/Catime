@@ -111,22 +111,6 @@ void CountdownDrawExamplesGrid(HDC hdc,
     }
 }
 
-void CountdownDrawClockIcon(HDC hdc, int centerX, int centerY,
-                                   int radius, COLORREF color) {
-    HPEN pen = CreatePen(PS_SOLID, radius > 8 ? 2 : 1, color);
-    HGDIOBJ oldPen = SelectObject(hdc, pen);
-    HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
-    Ellipse(hdc, centerX - radius, centerY - radius,
-            centerX + radius, centerY + radius);
-    MoveToEx(hdc, centerX, centerY, NULL);
-    LineTo(hdc, centerX, centerY - radius / 2);
-    MoveToEx(hdc, centerX, centerY, NULL);
-    LineTo(hdc, centerX + radius / 2, centerY + radius / 3);
-    SelectObject(hdc, oldBrush);
-    SelectObject(hdc, oldPen);
-    DeleteObject(pen);
-}
-
 void CountdownDrawCheckIcon(HDC hdc, int centerX, int centerY,
                                    int radius, COLORREF color) {
     HPEN pen = CreatePen(PS_SOLID, radius > 8 ? 2 : 1, color);

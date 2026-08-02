@@ -14,7 +14,6 @@ typedef struct {
 InputDialogState* DialogInput_GetState(DialogContext* ctx);
 DWORD DialogInput_GetDialogId(DialogContext* ctx);
 void DialogInput_FreeState(DialogContext* ctx);
-DialogInstanceType DialogInput_GetInstanceType(DWORD dialogId);
 INT_PTR DialogInput_HandleInit(HWND hwndDlg, LPARAM parameter);
 BOOL DialogInput_HandleCommand(HWND hwndDlg, DialogContext* ctx, WPARAM wParam);
 

@@ -52,7 +52,7 @@ void CountdownCopyEscapedText(wchar_t* destination, size_t destinationCount,
 }
 
 void CountdownLoadTexts(CountdownDialogState* state) {
-    static const wchar_t fallbackExamples[] =
+    static const wchar_t fallbackCountdownExamples[] =
         L"25 = 25 minutes\\n"
         L"25h = 25 hours\\n"
         L"25s = 25 seconds\\n"
@@ -61,30 +61,46 @@ void CountdownLoadTexts(CountdownDialogState* state) {
         L"1 30 20 = 1 hour 30 minutes 20 seconds\\n"
         L"17 20t = Countdown to 17:20\\n"
         L"9 9 9t = Countdown to 9:09:09";
+    static const wchar_t fallbackPomodoroExamples[] =
+        L"25 = 25 minutes\\n"
+        L"25h = 25 hours\\n"
+        L"25s = 25 seconds\\n"
+        L"25 30 = 25 minutes 30 seconds\\n"
+        L"25 30m = 25 hours 30 minutes\\n"
+        L"1 30 20 = 1 hour 30 minutes 20 seconds";
 
-    const wchar_t* title = GetDialogLocalizedString(CLOCK_IDD_DIALOG1, -1);
+    if (!state) return;
+    int dialogId = (int)state->input.dialogId;
+    BOOL isPomodoro = dialogId == CLOCK_IDD_POMODORO_TIME_DIALOG;
+    if (!isPomodoro) dialogId = CLOCK_IDD_DIALOG1;
+
+    const wchar_t* title = GetDialogLocalizedString(dialogId, -1);
     const wchar_t* format = GetLocalizedString(NULL, L"Format");
-    const wchar_t* field = GetLocalizedString(NULL, L"Countdown");
-    const wchar_t* start = GetLocalizedString(NULL, L"Start");
+    const wchar_t* field = isPomodoro
+        ? GetDialogLocalizedString(dialogId, -1)
+        : GetLocalizedString(NULL, L"Countdown");
+    const wchar_t* start = GetLocalizedString(
+        NULL, isPomodoro ? L"Save" : L"Start");
     const wchar_t* cancel = GetLocalizedString(NULL, L"Cancel");
     const wchar_t* invalid = GetLocalizedString(NULL, L"Invalid input format");
     const wchar_t* examples =
-        GetDialogLocalizedString(CLOCK_IDD_DIALOG1, CLOCK_IDC_STATIC);
+        GetDialogLocalizedString(dialogId, CLOCK_IDC_STATIC);
 
     CountdownCopyText(state->title, _countof(state->title), title,
-                      L"Set Countdown");
+                      isPomodoro ? L"Set Pomodoro Time" : L"Set Countdown");
     CountdownCopyText(state->formatLabel, _countof(state->formatLabel), format,
                       L"Format");
     CountdownCopyText(state->fieldLabel, _countof(state->fieldLabel), field,
-                      L"Countdown");
+                      isPomodoro ? L"Pomodoro Time" : L"Countdown");
     CountdownCopyText(state->startText, _countof(state->startText), start,
-                      L"Start");
+                      isPomodoro ? L"Save" : L"Start");
     CountdownCopyText(state->cancelText, _countof(state->cancelText), cancel,
                       L"Cancel");
     CountdownCopyText(state->invalidText, _countof(state->invalidText), invalid,
                       L"Invalid input format");
-    CountdownCopyEscapedText(state->examples, _countof(state->examples),
-                             examples, fallbackExamples);
+    CountdownCopyEscapedText(
+        state->examples, _countof(state->examples), examples,
+        isPomodoro ? fallbackPomodoroExamples : fallbackCountdownExamples);
 }
 
 void CountdownRefreshPalette(CountdownDialogState* state) {

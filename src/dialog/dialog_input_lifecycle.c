@@ -88,8 +88,3 @@ void ShowStartupTimeDialog(HWND parent) {
     ShowInputDialog(parent, DIALOG_INSTANCE_STARTUP,
                     CLOCK_IDD_STARTUP_DIALOG, CLOCK_IDD_STARTUP_DIALOG, -1);
 }
-void ShowPomodoroTimeEditDialog(HWND parent, int timeIndex) {
-    ShowInputDialog(parent, DIALOG_INSTANCE_POMODORO_TIME,
-                    CLOCK_IDD_POMODORO_TIME_DIALOG,
-                    CLOCK_IDD_POMODORO_TIME_DIALOG, timeIndex);
-}
