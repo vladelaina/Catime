@@ -7,11 +7,13 @@ import {
     loadLibraryData,
 } from './library-data.js';
 import { createPreviewLoader, resolveMotionPolicy } from './adaptive-image-loading.js';
+import { createAuthorWorkOrder } from './author-work-order.js';
 import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
 import { createSecureRandomOrder } from './secure-random-order.js';
 
 const FEATURED_ANIMATIONS = 5;
 const orderAuthors = createSecureRandomOrder(author => author.name);
+const orderAuthorWorks = createAuthorWorkOrder();
 const networkConnection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
 const motionPolicy = resolveMotionPolicy({
     reducedMotion: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
@@ -139,11 +141,14 @@ async function loadLibrary() {
 
 function applyLibrary(library) {
     state.collections = library.collections;
-    state.authors = orderAuthors(library.authors);
+    state.authors = orderAuthors(library.authors).map(author => ({
+        ...author,
+        works: orderAuthorWorks(author),
+    }));
     const generation = renderBoard();
 
-    const firstCollection = state.authors[0]?.items[0] || state.collections[0];
-    if (firstCollection) setTrayPreview(firstCollection, 1);
+    const firstWork = state.authors[0]?.works[0];
+    if (firstWork) setTrayPreview(firstWork.collection, firstWork.index);
     scheduleProgressivePreviews(generation);
 }
 
@@ -270,7 +275,8 @@ function createArtistAvatar(author, highPriority = false) {
     if (author.avatar) {
         return `<${tag} class="artist-avatar artist-profile-link"${linkAttributes}><img src="${escapeAttribute(author.avatar)}" alt="${escapeAttribute(author.name)}"${imagePriority}></${tag}>`;
     }
-    const preview = author.items[0] ? animationPosterUrl(author.items[0], 1) : '';
+    const firstWork = author.works[0];
+    const preview = firstWork ? animationPosterUrl(firstWork.collection, firstWork.index) : '';
     if (preview) {
         return `<${tag} class="artist-avatar artist-profile-link"${linkAttributes}><img src="${escapeAttribute(preview)}" alt="${escapeAttribute(author.name)}"${imagePriority}></${tag}>`;
     }
@@ -284,7 +290,7 @@ function createArtistMetrics(author) {
 function createFeaturedGallery(author, highPriority = false) {
     const gallery = document.createElement('div');
     gallery.className = 'artist-featured-gallery';
-    gallery.append(...collectFeaturedWorks(author.items, FEATURED_ANIMATIONS).map(({ collection, index }, featuredIndex) => {
+    gallery.append(...author.works.slice(0, FEATURED_ANIMATIONS).map(({ collection, index }, featuredIndex) => {
         const item = createAnimationItem(collection, index, {
             highPriority: highPriority && featuredIndex === 0,
         });
@@ -294,30 +300,18 @@ function createFeaturedGallery(author, highPriority = false) {
     return gallery;
 }
 
-function collectFeaturedWorks(collections, limit) {
-    const works = [];
-    let index = 1;
-    while (works.length < limit && collections.some(collection => index <= collection.count)) {
-        collections.forEach(collection => {
-            if (works.length < limit && index <= collection.count) works.push({ collection, index });
-        });
-        index += 1;
-    }
-    return works;
-}
-
 function createArtistDetails(author) {
     const details = document.createElement('div');
     details.className = 'artist-details';
 
     const collections = document.createElement('div');
     collections.className = 'artist-collections';
-    collections.append(...author.items.map(createCollectionSection));
+    collections.appendChild(createWorkSection(author.works));
     details.appendChild(collections);
     return details;
 }
 
-function createCollectionSection(collection) {
+function createWorkSection(works) {
     const section = document.createElement('section');
     section.className = 'artist-collection';
 
@@ -325,9 +319,9 @@ function createCollectionSection(collection) {
     grid.className = 'animation-grid';
     const fragment = document.createDocumentFragment();
 
-    for (let index = 1; index <= collection.count; index += 1) {
+    works.forEach(({ collection, index }) => {
         fragment.appendChild(createAnimationItem(collection, index));
-    }
+    });
     grid.appendChild(fragment);
 
     section.appendChild(grid);
@@ -393,8 +387,8 @@ async function downloadAnimation(event, url, filename) {
 }
 
 function previewFirstWork(author) {
-    const collection = author.items[0];
-    if (collection) setTrayPreview(collection, 1, { manual: true });
+    const firstWork = author.works[0];
+    if (firstWork) setTrayPreview(firstWork.collection, firstWork.index, { manual: true });
 }
 
 function setTrayPreview(collection, index, { manual = false } = {}) {

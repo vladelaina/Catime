@@ -31,7 +31,7 @@ function createUniqueRank(usedRanks, fillRandom) {
 
 function fillWithWebCrypto(words) {
     if (!globalThis.crypto?.getRandomValues) {
-        throw new Error('Secure author ordering requires Web Crypto');
+        throw new Error('Secure random ordering requires Web Crypto');
     }
     globalThis.crypto.getRandomValues(words);
 }

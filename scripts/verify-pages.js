@@ -13,6 +13,8 @@ const viewports = [
 const trayLibraryInteraction = `async () => {
     const row = document.querySelector('.artist-showcase');
     const toggle = row?.querySelector('.artist-identity');
+    const animationOrder = root => [...root.querySelectorAll('.animation-item')]
+        .map(item => new URL(item.href).searchParams.get('v'));
 
     const previewRequestCount = () => new Set(performance.getEntriesByType('resource')
         .filter(entry => entry.name.includes('preview-'))
@@ -22,6 +24,7 @@ const trayLibraryInteraction = `async () => {
         await new Promise(resolve => setTimeout(resolve, 50));
     }
     const backgroundPreviewCount = previewRequestCount();
+    const featuredOrder = animationOrder(row.querySelector('.artist-featured-gallery'));
 
     const supportButton = document.querySelector('.main-header .nav-actions .support-btn');
     supportButton?.focus();
@@ -42,6 +45,8 @@ const trayLibraryInteraction = `async () => {
         backgroundPreviewCount,
         supportStayedPink,
         focusedSupportBackground,
+        featuredOrder,
+        detailOrder: animationOrder(row.querySelector('.artist-details')),
     };
 
     return {
@@ -51,7 +56,11 @@ const trayLibraryInteraction = `async () => {
             && !result.hasLoadMore
             && result.automaticPreviewRequests >= 6
             && result.backgroundPreviewCount >= 6
-            && result.supportStayedPink,
+            && result.supportStayedPink
+            && JSON.stringify(result.featuredOrder) === JSON.stringify(result.detailOrder.slice(0, 5))
+            && JSON.stringify([...result.detailOrder].sort()) === JSON.stringify([
+                'source-1', 'source-2', 'source-3', 'source-4', 'source-5', 'source-6',
+            ]),
         ...result,
     };
 }`;
