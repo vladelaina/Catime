@@ -25,6 +25,18 @@ const trayLibraryInteraction = `async () => {
     }
     const backgroundPreviewCount = previewRequestCount();
     const featuredOrder = animationOrder(row.querySelector('.artist-featured-gallery'));
+    const featuredDownload = row.querySelector('.artist-featured-gallery .animation-item');
+    const directDownloadReady = Boolean(featuredDownload?.download)
+        && new URL(featuredDownload.href).searchParams.get('download') === featuredDownload.download;
+    featuredDownload?.addEventListener('click', event => event.preventDefault(), { once: true });
+    featuredDownload?.click();
+    const directDownloadFeedback = featuredDownload?.classList.contains('is-downloading')
+        && featuredDownload?.getAttribute('aria-busy') === 'true';
+    let duplicateDownloadBlocked = false;
+    featuredDownload?.addEventListener('click', event => {
+        duplicateDownloadBlocked = event.defaultPrevented;
+    }, { once: true });
+    featuredDownload?.click();
     const interactionTextSelectionBlocked = getComputedStyle(row).userSelect === 'none'
         && getComputedStyle(toggle).userSelect === 'none';
 
@@ -50,6 +62,9 @@ const trayLibraryInteraction = `async () => {
         featuredOrder,
         detailOrder: animationOrder(row.querySelector('.artist-details')),
         interactionTextSelectionBlocked,
+        directDownloadReady,
+        directDownloadFeedback,
+        duplicateDownloadBlocked,
     };
 
     return {
@@ -61,6 +76,9 @@ const trayLibraryInteraction = `async () => {
             && result.backgroundPreviewCount >= 6
             && result.supportStayedPink
             && result.interactionTextSelectionBlocked
+            && result.directDownloadReady
+            && result.directDownloadFeedback
+            && result.duplicateDownloadBlocked
             && JSON.stringify(result.featuredOrder) === JSON.stringify(result.detailOrder.slice(0, 5))
             && JSON.stringify([...result.detailOrder].sort()) === JSON.stringify([
                 'source-1', 'source-2', 'source-3', 'source-4', 'source-5', 'source-6',
@@ -524,6 +542,7 @@ async function enableTrayManifestMock(client, baseUrl, exceptions) {
                 authorAvatar: `${assetUrl}?v=verify`,
                 authorLinks: [],
                 repository: 'https://github.com/catime-labs/tray-hub',
+                directDownload: true,
                 cdnBase: `${baseUrl}/assets/`,
                 files,
                 fileVersions,

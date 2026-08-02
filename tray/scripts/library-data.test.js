@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+    animationDownloadUrl,
     animationFilename,
     animationPosterUrl,
     animationPreviewUrl,
@@ -25,6 +26,7 @@ test('uses the repository key, explicit files, avatar, and README links', () => 
                 previewCdnBase: 'https://tray.example/previews/eirna/',
                 previewFiles: ['1.gif.webp', '2.png.webp'],
                 previewVersions: ['preview-abc', 'preview-def'],
+                directDownload: true,
             },
         },
     });
@@ -35,10 +37,28 @@ test('uses the repository key, explicit files, avatar, and README links', () => 
         { label: 'Bilibili', url: 'https://space.bilibili.com/1195508399' },
     ]);
     assert.equal(library.collections[0].count, 2);
+    assert.equal(library.collections[0].directDownload, true);
     assert.equal(animationFilename(library.collections[0], 2), '2.png');
+    assert.equal(
+        animationDownloadUrl(library.collections[0], 2),
+        'https://tray.example/assets/eirna/2.png?v=def&download=eirna-2.png',
+    );
     assert.equal(animationUrl(library.collections[0], 1), 'https://tray.example/assets/eirna/1.gif?v=abc');
     assert.equal(animationPosterUrl(library.collections[0], 1), 'https://tray.example/posters/eirna/1.gif.webp?v=poster-abc');
     assert.equal(animationPreviewUrl(library.collections[0], 2), 'https://tray.example/previews/eirna/2.png.webp?v=preview-def');
+});
+
+test('keeps the original asset URL for legacy manifests without direct downloads', () => {
+    const collection = {
+        key: 'legacy',
+        author: 'legacy',
+        files: ['1.gif'],
+        fileVersions: ['abc'],
+        cdnBase: 'https://tray.example/assets/legacy/',
+        directDownload: false,
+    };
+
+    assert.equal(animationDownloadUrl(collection, 1), 'https://tray.example/assets/legacy/1.gif?v=abc');
 });
 
 test('does not revive collections through legacy count or filename conventions', () => {

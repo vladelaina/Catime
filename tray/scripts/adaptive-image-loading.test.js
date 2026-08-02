@@ -34,8 +34,11 @@ test('deduplicates previews, respects concurrency, and promotes priority work', 
     const first = loader.request('first.webp');
     const duplicate = loader.request('first.webp');
     const second = loader.request('second.webp');
+    const queued = loader.request('queued.webp');
+    const promoted = loader.request('queued.webp', { priority: true });
     const priority = loader.request('priority.webp', { priority: true });
     assert.equal(first, duplicate);
+    assert.equal(queued, promoted);
     assert.deepEqual(started, ['first.webp']);
 
     completions.get('first.webp')(true);
@@ -46,7 +49,12 @@ test('deduplicates previews, respects concurrency, and promotes priority work', 
     completions.get('priority.webp')(true);
     assert.equal(await priority, true);
     await Promise.resolve();
-    assert.deepEqual(started, ['first.webp', 'priority.webp', 'second.webp']);
+    assert.deepEqual(started, ['first.webp', 'priority.webp', 'queued.webp']);
+
+    completions.get('queued.webp')(true);
+    assert.equal(await queued, true);
+    await Promise.resolve();
+    assert.deepEqual(started, ['first.webp', 'priority.webp', 'queued.webp', 'second.webp']);
 
     completions.get('second.webp')(true);
     assert.equal(await second, true);

@@ -1,5 +1,6 @@
 import {
     animationDownloadFilename,
+    animationDownloadUrl,
     animationPosterUrl,
     animationPreviewUrl,
     animationUrl,
@@ -40,6 +41,7 @@ const copy = {
         expand: '展开',
         collapse: '收起',
         animations: count => `${count.toLocaleString('zh-CN')} 个托盘动画`,
+        downloadAnimation: filename => `下载 ${filename}`,
         openProfile: name => `打开 ${name} 的作者主页`,
         previewLabel: 'Windows 托盘动画效果预览',
         previewAlt: '托盘图标效果',
@@ -58,6 +60,7 @@ const copy = {
         expand: 'Expand',
         collapse: 'Collapse',
         animations: count => `${count.toLocaleString('en-US')} tray animations`,
+        downloadAnimation: filename => `Download ${filename}`,
         openProfile: name => `Open ${name}'s profile`,
         previewLabel: 'Windows tray animation preview',
         previewAlt: 'Tray icon preview',
@@ -75,6 +78,7 @@ let automaticMotionStarted = false;
 let previewObserver = null;
 let renderGeneration = 0;
 let trayPreviewSelection = null;
+let librarySignature = '';
 
 function getCurrentLanguage() {
     const saved = localStorage.getItem('catime-language');
@@ -117,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     localizePage();
-    window.initAOSOnce?.();
     updateTrayClock();
     setInterval(updateTrayClock, 30000);
     const immediateLibrary = loadImmediateLibraryData();
@@ -140,6 +143,9 @@ async function loadLibrary() {
 }
 
 function applyLibrary(library) {
+    const nextSignature = JSON.stringify(library.collections);
+    if (nextSignature === librarySignature) return;
+    librarySignature = nextSignature;
     state.collections = library.collections;
     state.authors = orderAuthors(library.authors).map(author => ({
         ...author,
@@ -330,13 +336,16 @@ function createWorkSection(works) {
 
 function createAnimationItem(collection, index, { highPriority = false } = {}) {
     const originalUrl = animationUrl(collection, index);
+    const downloadUrl = animationDownloadUrl(collection, index);
     const posterUrl = animationPosterUrl(collection, index);
     const previewUrl = animationPreviewUrl(collection, index);
     const filename = animationDownloadFilename(collection, index);
     const item = document.createElement('a');
     item.className = 'animation-item';
-    item.href = originalUrl;
+    item.href = downloadUrl;
     item.download = filename;
+    item.setAttribute('aria-label', copy.downloadAnimation(filename));
+    item.title = copy.downloadAnimation(filename);
 
     const image = document.createElement('img');
     image.alt = `${collection.title} ${index}`;
@@ -364,12 +373,24 @@ function createAnimationItem(collection, index, { highPriority = false } = {}) {
     item.addEventListener('mouseleave', deactivateMotion);
     item.addEventListener('focus', activateMotion);
     item.addEventListener('blur', deactivateMotion);
-    item.addEventListener('click', event => downloadAnimation(event, originalUrl, filename));
+    if (collection.directDownload) {
+        item.addEventListener('click', event => {
+            if (item.getAttribute('aria-busy') === 'true') {
+                event.preventDefault();
+                return;
+            }
+            showNativeDownloadFeedback(item);
+        });
+    } else {
+        item.addEventListener('click', event => downloadAnimation(event, originalUrl, filename, item));
+    }
     return item;
 }
 
-async function downloadAnimation(event, url, filename) {
+async function downloadAnimation(event, url, filename, item) {
     event.preventDefault();
+    if (item.getAttribute('aria-busy') === 'true') return;
+    setDownloadPending(item, true);
 
     try {
         const response = await fetch(url);
@@ -378,12 +399,28 @@ async function downloadAnimation(event, url, filename) {
         const anchor = document.createElement('a');
         anchor.href = objectUrl;
         anchor.download = filename;
+        anchor.hidden = true;
+        document.body.appendChild(anchor);
         anchor.click();
+        anchor.remove();
         setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
     } catch (error) {
         console.warn('Direct download failed; opening the animation source instead.', error);
         window.open(url, '_blank', 'noopener,noreferrer');
+    } finally {
+        setDownloadPending(item, false);
     }
+}
+
+function showNativeDownloadFeedback(item) {
+    setDownloadPending(item, true);
+    setTimeout(() => setDownloadPending(item, false), 6000);
+}
+
+function setDownloadPending(item, pending) {
+    item.classList.toggle('is-downloading', pending);
+    if (pending) item.setAttribute('aria-busy', 'true');
+    else item.removeAttribute('aria-busy');
 }
 
 function previewFirstWork(author) {
@@ -493,7 +530,7 @@ function observeAnimationImages(root) {
 function startExpandedAnimations(root) {
     root.querySelectorAll('img[data-preview-url]').forEach(image => {
         image.dataset.expandedMotion = 'true';
-        requestAnimationMotion(image);
+        requestAnimationMotion(image, { priority: true });
     });
 }
 
@@ -520,22 +557,30 @@ function loadPreviewImage(url) {
     return new Promise(resolve => {
         const image = new Image();
         let settled = false;
+        let loadHandled = false;
         const finish = loaded => {
             if (settled) return;
             settled = true;
             resolve(loaded);
         };
-        image.decoding = 'async';
-        image.referrerPolicy = 'strict-origin-when-cross-origin';
-        image.addEventListener('load', () => {
+        const finishLoaded = () => {
+            if (loadHandled) return;
+            loadHandled = true;
             if (typeof image.decode !== 'function') {
                 finish(true);
                 return;
             }
             image.decode().catch(() => {}).finally(() => finish(true));
-        }, { once: true });
+        };
+        image.decoding = 'async';
+        image.referrerPolicy = 'strict-origin-when-cross-origin';
+        image.addEventListener('load', finishLoaded, { once: true });
         image.addEventListener('error', () => finish(false), { once: true });
         image.src = url;
+        if (image.complete) {
+            if (image.naturalWidth > 0) finishLoaded();
+            else finish(false);
+        }
     });
 }
 

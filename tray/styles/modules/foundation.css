@@ -73,6 +73,29 @@
     opacity: 1;
 }
 
+.creator-note .section-title,
+.creator-note .section-subtitle {
+    animation: trayIntroReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.creator-note .section-subtitle {
+    animation-delay: 0.1s;
+}
+
+@keyframes trayIntroReveal {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .creator-note .section-title,
+    .creator-note .section-subtitle {
+        animation: none;
+    }
+}
+
 /* Ambient Bokeh Spheres */
 .tray-board-section::before {
     content: '';
@@ -125,4 +148,3 @@
     border: 1.5px solid rgba(122, 162, 247, 0.35);
     box-shadow: 0 15px 45px rgba(122, 162, 247, 0.12);
 }
-

@@ -1,5 +1,5 @@
-const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json';
-const LIBRARY_CACHE_KEY = 'catime:tray-library:v7';
+const DEFAULT_LIBRARY_SOURCE = 'https://tray.cati.me/sections.json?schema=2';
+const LIBRARY_CACHE_KEY = 'catime:tray-library:v8';
 const MAX_CACHED_MANIFEST_BYTES = 2 * 1024 * 1024;
 
 export function loadImmediateLibraryData(source = configuredLibrarySource()) {
@@ -18,7 +18,6 @@ export async function loadLibraryData(source = configuredLibrarySource()) {
         mode: 'cors',
         credentials: 'same-origin',
         referrerPolicy: 'strict-origin-when-cross-origin',
-        headers: { Accept: 'application/json' },
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -73,6 +72,7 @@ function normalizeCollection(key, data) {
         posterCdnBase,
         previewCdnBase,
         repository: typeof data.repository === 'string' ? data.repository : '',
+        directDownload: data.directDownload === true,
     };
 }
 
@@ -133,6 +133,14 @@ export function animationDownloadFilename(collection, index) {
         .trim() || 'animation';
 
     return `${author}-${index}${extension}`;
+}
+
+export function animationDownloadUrl(collection, index) {
+    const url = animationUrl(collection, index);
+    if (!collection.directDownload) return url;
+    const downloadUrl = new URL(url);
+    downloadUrl.searchParams.set('download', animationDownloadFilename(collection, index));
+    return downloadUrl.toString();
 }
 
 export function animationUrl(collection, index) {
