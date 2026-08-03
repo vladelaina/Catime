@@ -26,6 +26,7 @@
 #define MODERN_COMBO_LIST_SUBCLASS_ID 0xD144
 #define MODERN_DIALOG_FINALIZE_MESSAGE (WM_APP + 490)
 #define MODERN_DIALOG_CLEAR_FOCUS_MESSAGE (WM_APP + 491)
+#define MODERN_DWM_CLOAK_ATTRIBUTE 13
 #define MODERN_FEEDBACK_STATE_PROP L"Catime.ModernDialog.FeedbackState"
 #define MODERN_COMBO_VISIBLE_ITEMS 7
 #define MODERN_TITLE_HOVER_COLOR RGB(0xF7, 0x7D, 0xAA)
@@ -156,6 +157,8 @@ struct ModernDialogState {
     BOOL attached;
     BOOL finalized;
     BOOL finalizing;
+    BOOL firstShowCloaked;
+    BOOL firstShowTransparent;
     BOOL refreshing;
     BOOL refreshPending;
 };

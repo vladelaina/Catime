@@ -36,7 +36,7 @@ BOOL DialogModern_Attach(HWND hwndDlg, int dialogType);
 /** Return TRUE when the resource dialog already has a modern host. */
 BOOL DialogModern_IsAttached(HWND hwndDlg);
 
-/** Finalize layout and drawing resources while a dialog is still hidden. */
+/** Finalize while hidden and guard the compositor until the first paint. */
 BOOL DialogModern_PrepareForShow(HWND hwndDlg);
 
 /** Re-read system colors and redraw the dialog and its children. */

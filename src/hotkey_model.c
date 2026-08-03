@@ -41,6 +41,10 @@ BOOL Hotkey_IsModifierKey(BYTE virtualKey) {
            virtualKey == VK_RWIN;
 }
 
+BOOL Hotkey_IsImeVirtualKey(BYTE virtualKey) {
+    return virtualKey == VK_PROCESSKEY || virtualKey == VK_PACKET;
+}
+
 BOOL Hotkey_ValidateAndSanitize(WORD* hotkey) {
     WORD normalized;
     BOOL changed;

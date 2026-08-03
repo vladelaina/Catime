@@ -5,6 +5,36 @@
 
 #include "dialog_modern_internal.h"
 
+#include <dwmapi.h>
+
+static void ModernArmFirstShowGuard(ModernDialogState* state) {
+    if (!state || !state->hwnd || IsWindowVisible(state->hwnd) ||
+        state->firstShowCloaked || state->firstShowTransparent) {
+        return;
+    }
+
+    BOOL cloak = TRUE;
+    if (SUCCEEDED(DwmSetWindowAttribute(
+            state->hwnd, MODERN_DWM_CLOAK_ATTRIBUTE,
+            &cloak, sizeof(cloak)))) {
+        state->firstShowCloaked = TRUE;
+        return;
+    }
+
+    LONG_PTR exStyle = GetWindowLongPtrW(state->hwnd, GWL_EXSTYLE);
+    if ((exStyle & WS_EX_LAYERED) != 0) return;
+
+    SetLastError(ERROR_SUCCESS);
+    LONG_PTR previous = SetWindowLongPtrW(
+        state->hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
+    if (previous == 0 && GetLastError() != ERROR_SUCCESS) return;
+    if (SetLayeredWindowAttributes(state->hwnd, 0, 0, LWA_ALPHA)) {
+        state->firstShowTransparent = TRUE;
+    } else {
+        SetWindowLongPtrW(state->hwnd, GWL_EXSTYLE, exStyle);
+    }
+}
+
 BOOL DialogModern_CopyPalette(HWND hwnd, DialogModernPalette* palette) {
     if (!palette) return FALSE;
     const ModernDialogState* state = ModernGetState(hwnd);
@@ -22,7 +52,9 @@ BOOL DialogModern_IsAttached(HWND hwndDlg) {
 
 BOOL DialogModern_PrepareForShow(HWND hwndDlg) {
     ModernDialogState* state = ModernGetState(hwndDlg);
-    return state && ModernFinalize(state);
+    if (!state || !ModernFinalize(state)) return FALSE;
+    ModernArmFirstShowGuard(state);
+    return TRUE;
 }
 
 BOOL DialogModern_Attach(HWND hwndDlg, int dialogType) {

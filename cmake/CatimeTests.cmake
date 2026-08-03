@@ -42,6 +42,8 @@ target_include_directories(time_parser_tests PRIVATE
 )
 add_test(NAME time_parser COMMAND time_parser_tests)
 
+include(cmake/CatimeHotkeyTests.cmake)
+
 add_executable(tray_animation_playback_tests
     tests/tray_animation_playback_tests.c
     src/tray/tray_animation_playback.c
@@ -250,6 +252,7 @@ set(_catime_test_targets
     startup_policy_tests
     startup_shortcut_tests
     time_parser_tests
+    hotkey_config_tests
     tray_animation_playback_tests
     tray_animation_speed_input_tests
     tray_animation_timer_tests

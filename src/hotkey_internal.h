@@ -13,6 +13,13 @@
 #define HOTKEYF_ALT 0x04
 #endif
 
+#ifndef VK_PROCESSKEY
+#define VK_PROCESSKEY 0xE5
+#endif
+#ifndef VK_PACKET
+#define VK_PACKET 0xE7
+#endif
+
 #define HOTKEY_DIALOG_SUBCLASS_ID 0xD142
 
 typedef struct {
@@ -35,6 +42,7 @@ extern const HotkeyMetadata g_hotkeyMetadata[HOTKEY_COUNT];
 
 BOOL Hotkey_IsEditControl(DWORD controlId);
 BOOL Hotkey_IsModifierKey(BYTE virtualKey);
+BOOL Hotkey_IsImeVirtualKey(BYTE virtualKey);
 BOOL Hotkey_ValidateAndSanitize(WORD* hotkey);
 BOOL Hotkey_IsExistingEvent(WORD keyCombination);
 void Hotkey_ClearDuplicates(HWND dialog, int currentControlId,

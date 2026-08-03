@@ -96,13 +96,25 @@ LRESULT CALLBACK HotkeyControlSubclassProc(
             return 1;
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
-        case WM_SYSKEYDOWN:
         case WM_KEYUP:
         case WM_SYSKEYUP:
             InvalidateRect(hwnd, NULL, FALSE);
+            if ((uMsg == WM_KEYUP || uMsg == WM_SYSKEYUP) &&
+                Hotkey_IsImeVirtualKey((BYTE)wParam)) {
+                return 0;
+            }
+            break;
+        case WM_SYSKEYDOWN:
+            InvalidateRect(hwnd, NULL, FALSE);
+            if (Hotkey_IsImeVirtualKey((BYTE)wParam)) {
+                return 0;
+            }
             break;
         case WM_KEYDOWN:
             InvalidateRect(hwnd, NULL, FALSE);
+            if (Hotkey_IsImeVirtualKey((BYTE)wParam)) {
+                return 0;
+            }
             if (wParam == VK_TAB && GetKeyState(VK_CONTROL) >= 0 &&
                 GetKeyState(VK_MENU) >= 0 &&
                 MoveDialogFocus(hwnd, GetKeyState(VK_SHIFT) < 0)) {
@@ -110,11 +122,15 @@ LRESULT CALLBACK HotkeyControlSubclassProc(
             }
             break;
         case WM_CHAR:
-            if (wParam == VK_TAB && GetKeyState(VK_CONTROL) >= 0 &&
-                GetKeyState(VK_MENU) >= 0) {
-                return 0;
-            }
-            break;
+        case WM_SYSCHAR:
+        case WM_UNICHAR:
+        case WM_IME_CHAR:
+        case WM_IME_STARTCOMPOSITION:
+        case WM_IME_COMPOSITION:
+        case WM_IME_ENDCOMPOSITION:
+        case WM_IME_KEYDOWN:
+        case WM_IME_KEYUP:
+            return 0;
         case HKM_SETHOTKEY:
             InvalidateRect(hwnd, NULL, FALSE);
             break;
@@ -123,7 +139,7 @@ LRESULT CALLBACK HotkeyControlSubclassProc(
                                  uIdSubclass);
             break;
         case WM_GETDLGCODE:
-            return DLGC_WANTALLKEYS | DLGC_WANTCHARS;
+            return DLGC_WANTALLKEYS;
     }
     return DefSubclassProc(hwnd, uMsg, wParam, lParam);
 }

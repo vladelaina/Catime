@@ -11,8 +11,11 @@
 #define HOTKEYF_CONTROL 0x02
 #define HOTKEYF_ALT     0x04
 #endif
-#ifndef VK_IME_SHIFT
-#define VK_IME_SHIFT 0xE5
+#ifndef VK_PROCESSKEY
+#define VK_PROCESSKEY 0xE5
+#endif
+#ifndef VK_PACKET
+#define VK_PACKET 0xE7
 #endif
 #define HOTKEY_SUPPORTED_MODIFIERS (HOTKEYF_SHIFT | HOTKEYF_CONTROL | HOTKEYF_ALT)
 typedef struct {
@@ -198,6 +201,11 @@ static BOOL IsModifierVirtualKey(BYTE vk) {
             return FALSE;
     }
 }
+
+static BOOL IsImeVirtualKey(BYTE vk) {
+    return vk == VK_PROCESSKEY || vk == VK_PACKET;
+}
+
 WORD StringToHotkey(const char* str) {
     if (!str) {
         return 0;
@@ -269,6 +277,5 @@ BOOL IsHotkeyValueAllowed(WORD hotkey) {
     if (IsModifierVirtualKey(LOBYTE(hotkey))) {
         return FALSE;
     }
-    return !(LOBYTE(hotkey) == VK_IME_SHIFT &&
-             HIBYTE(hotkey) == HOTKEYF_SHIFT);
+    return !IsImeVirtualKey(LOBYTE(hotkey));
 }
