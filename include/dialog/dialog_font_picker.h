@@ -18,6 +18,12 @@
  */
 BOOL ShowSystemFontDialog(HWND hwndParent);
 
+/** Begin filling the font list cache without opening the dialog. */
+void PrefetchSystemFontDialogResources(void);
+
+/** Mark cached system fonts stale after Windows broadcasts WM_FONTCHANGE. */
+void InvalidateSystemFontDialogCache(void);
+
 /**
  * @brief Stop any pending font picker enumeration and release cached state
  *

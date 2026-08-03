@@ -40,6 +40,9 @@ BOOL TaskbarMonitor_IsEnabled(void);
 /** Return whether one metric group is selected. */
 BOOL TaskbarMonitor_IsOptionEnabled(TaskbarMonitorOption option);
 
+/** Return metric fields needed by the active display or menu prefetch. */
+DWORD TaskbarMonitor_GetRequiredSnapshotFields(void);
+
 /** Keep sampling alive across a temporary menu preview transition. */
 BOOL TaskbarMonitor_NeedsSystemMonitor(void);
 

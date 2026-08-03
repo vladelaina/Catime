@@ -15,11 +15,19 @@
 HANDLE g_fontEnumThread = NULL;
 HANDLE g_fontEnumStopEvent = NULL;
 BOOL g_fontEnumRestartAfterCleanup = FALSE;
+BOOL g_fontEnumPrefetchActive = FALSE;
+volatile LONG g_fontMapCacheReady = 0;
 volatile LONG g_fontEnumGeneration = 0;
 
 BOOL DialogFontPickerInternal_ShouldStopEnumeration(HANDLE stopEvent) {
     return stopEvent &&
            WaitForSingleObject(stopEvent, 0) == WAIT_OBJECT_0;
+}
+
+BOOL DialogFontPickerInternal_IsFontMapCacheReady(void) {
+    LONG generation = InterlockedCompareExchange(&g_fontEnumGeneration, 0, 0);
+    LONG readyGeneration = InterlockedCompareExchange(&g_fontMapCacheReady, 0, 0);
+    return generation != 0 && readyGeneration == generation;
 }
 
 BOOL DialogFontPickerInternal_CleanupCompletedEnumeration(void) {
@@ -42,6 +50,7 @@ BOOL DialogFontPickerInternal_CleanupCompletedEnumeration(void) {
 
     CloseHandle(g_fontEnumThread);
     g_fontEnumThread = NULL;
+    g_fontEnumPrefetchActive = FALSE;
     if (g_fontEnumStopEvent) {
         CloseHandle(g_fontEnumStopEvent);
         g_fontEnumStopEvent = NULL;
@@ -56,6 +65,7 @@ BOOL DialogFontPickerInternal_StopEnumeration(DWORD timeoutMs) {
     if (g_fontEnumStopEvent) {
         SetEvent(g_fontEnumStopEvent);
     }
+    g_fontEnumPrefetchActive = FALSE;
     if (!g_fontEnumThread) {
         if (g_fontEnumStopEvent) {
             CloseHandle(g_fontEnumStopEvent);
@@ -126,6 +136,7 @@ static VOID CALLBACK FontEnumDeferredCleanupTimerProc(HWND hwnd, UINT msg,
 
     KillTimer(hwnd, FONT_ENUM_DEFERRED_CLEANUP_TIMER_ID);
     DialogFontPickerInternal_ResetFontMap();
+    InterlockedExchange(&g_fontMapCacheReady, 0);
     g_currentFontIndex = -1;
     g_previewFontIndex = -1;
     g_fontListReady = FALSE;
@@ -159,6 +170,7 @@ void CleanupSystemFontDialogResources(void) {
     }
 
     DialogFontPickerInternal_ResetFontMap();
+    InterlockedExchange(&g_fontMapCacheReady, 0);
     g_currentFontIndex = -1;
     g_previewFontIndex = -1;
     g_fontListReady = FALSE;
@@ -174,12 +186,14 @@ static DWORD WINAPI FontEnumerationThread(LPVOID param) {
     free(params);
 
     DialogFontPickerInternal_BuildFontMap(stopEvent);
-    if (!DialogFontPickerInternal_ShouldStopEnumeration(stopEvent) &&
-        InterlockedCompareExchange(&g_fontEnumGeneration, 0, 0) == generation &&
-        hdlg && IsWindow(hdlg) &&
-        Dialog_GetInstance(DIALOG_INSTANCE_FONT_PICKER) == hdlg) {
-        PostMessageW(hdlg, WM_APP_FONT_ENUM_COMPLETE,
-                     (WPARAM)generation, 0);
+    if (!DialogFontPickerInternal_ShouldStopEnumeration(stopEvent)) {
+        InterlockedExchange(&g_fontMapCacheReady, generation);
+        if (InterlockedCompareExchange(&g_fontEnumGeneration, 0, 0) == generation &&
+            hdlg && IsWindow(hdlg) &&
+            Dialog_GetInstance(DIALOG_INSTANCE_FONT_PICKER) == hdlg) {
+            PostMessageW(hdlg, WM_APP_FONT_ENUM_COMPLETE,
+                         (WPARAM)generation, 0);
+        }
     }
 
     if (stopEvent) {
@@ -239,13 +253,19 @@ static void ShowFontEnumerationUnavailable(HWND hdlg) {
 }
 
 BOOL DialogFontPickerInternal_StartEnumeration(HWND hdlg) {
+    BOOL prefetch = hdlg == NULL;
+    g_fontEnumPrefetchActive = prefetch;
+    InterlockedExchange(&g_fontMapCacheReady, 0);
     CloseFontEnumStopEventIfIdle();
     g_fontEnumStopEvent = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (!g_fontEnumStopEvent) {
         LOG_WARNING("FontPicker: Failed to create enumeration stop event (error=%lu)",
                     GetLastError());
-        ShowFontEnumerationUnavailable(hdlg);
-        StartFontEnumRetryTimer(hdlg);
+        g_fontEnumPrefetchActive = FALSE;
+        if (hdlg) {
+            ShowFontEnumerationUnavailable(hdlg);
+            StartFontEnumRetryTimer(hdlg);
+        }
         return FALSE;
     }
 
@@ -253,12 +273,17 @@ BOOL DialogFontPickerInternal_StartEnumeration(HWND hdlg) {
     if (!g_fontEnumThread) {
         LOG_WARNING("FontPicker: Background enumeration unavailable; retrying asynchronously");
         CloseFontEnumStopEventIfIdle();
-        ShowFontEnumerationUnavailable(hdlg);
-        StartFontEnumRetryTimer(hdlg);
+        g_fontEnumPrefetchActive = FALSE;
+        if (hdlg) {
+            ShowFontEnumerationUnavailable(hdlg);
+            StartFontEnumRetryTimer(hdlg);
+        }
         return FALSE;
     }
 
-    KillTimer(hdlg, FONT_ENUM_START_RETRY_TIMER_ID);
-    DialogFontPickerInternal_StartPollTimer(hdlg);
+    if (hdlg) {
+        KillTimer(hdlg, FONT_ENUM_START_RETRY_TIMER_ID);
+        DialogFontPickerInternal_StartPollTimer(hdlg);
+    }
     return TRUE;
 }

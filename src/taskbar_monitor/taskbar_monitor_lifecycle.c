@@ -106,6 +106,7 @@ BOOL TaskbarMonitor_BeginMenuPreviewSession(void) {
         !IsWindow(g_taskbarMonitor.window);
     TaskbarMonitor_ResetMenuPreviewWindowGeometry();
     g_taskbarMonitor.menuPreviewSessionActive = TRUE;
+    TaskbarMonitor_PrefetchSnapshot(TaskbarMonitor_GetRequiredSnapshotFields(), TRUE);
     if (g_taskbarMonitor.menuPreviewWindowCreated) {
         g_taskbarMonitor.window = NULL;
         (void)TaskbarMonitor_CreateWindow();
@@ -161,7 +162,7 @@ void TaskbarMonitor_ApplyConfig(BOOL enabled, BOOL cpuMemoryEnabled,
     if (g_taskbarMonitor.menuPreviewSessionActive) {
         /* Resize only Catime's prepared window. Explorer task-list reservation
          * stays unchanged while TrackPopupMenu owns the UI thread. */
-        if (TaskbarMonitor_IsEnabled()) SystemMonitor_Init();
+        TaskbarMonitor_PrefetchSnapshot(TaskbarMonitor_GetRequiredSnapshotFields(), FALSE);
         if (IsWindow(g_taskbarMonitor.window)) {
             (void)TaskbarMonitor_UpdateMenuPreviewWindowGeometry();
         }

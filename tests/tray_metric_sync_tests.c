@@ -12,6 +12,7 @@ static DWORD g_requestedFields = 0;
 static int g_sampleCalls = 0;
 static int g_taskbarUpdates = 0;
 static int g_iconUpdates = 0;
+static BOOL g_sampleAvailable = TRUE;
 static const SystemMonitorSnapshot* g_taskbarSnapshot = NULL;
 static const SystemMonitorSnapshot* g_iconSnapshot = NULL;
 static const wchar_t* g_iconTooltip = NULL;
@@ -32,9 +33,11 @@ BOOL GetSystemMetricsSnapshot(DWORD fields,
     snapshot->uploadBytesPerSecond = 1024.0f;
     snapshot->downloadBytesPerSecond = 2048.0f;
     snapshot->revision = 42;
-    snapshot->cpuAvailable = TRUE;
-    snapshot->memoryAvailable = TRUE;
-    snapshot->networkAvailable = TRUE;
+    snapshot->basicSampleTick = GetTickCount64();
+    snapshot->networkSampleTick = snapshot->basicSampleTick;
+    snapshot->cpuAvailable = g_sampleAvailable;
+    snapshot->memoryAvailable = g_sampleAvailable;
+    snapshot->networkAvailable = g_sampleAvailable;
     return TRUE;
 }
 
@@ -45,6 +48,17 @@ BOOL TaskbarMonitor_IsEnabled(void) {
 BOOL TaskbarMonitor_IsOptionEnabled(TaskbarMonitorOption option) {
     return option == TASKBAR_MONITOR_OPTION_CPU_MEMORY
         ? g_cpuMemoryEnabled : g_networkEnabled;
+}
+
+DWORD TaskbarMonitor_GetRequiredSnapshotFields(void) {
+    DWORD fields = 0;
+    if (g_cpuMemoryEnabled) {
+        fields |= SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY;
+    }
+    if (g_networkEnabled) {
+        fields |= SYSTEM_MONITOR_SNAPSHOT_NETWORK;
+    }
+    return fields;
 }
 
 void TaskbarMonitor_UpdateSnapshot(
@@ -101,6 +115,16 @@ int main(void) {
                (SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY |
                 SYSTEM_MONITOR_SNAPSHOT_NETWORK),
            "tooltip did not request all displayed metrics");
+
+    g_sampleAvailable = FALSE;
+    ZeroMemory(&snapshot, sizeof(snapshot));
+    shared = TrayMetricSync_GetSnapshot(TRUE, FALSE, &snapshot);
+    Expect(shared && shared->cpuAvailable && shared->memoryAvailable &&
+               shared->networkAvailable,
+           "transient refresh discarded the last available snapshot");
+    Expect(shared->cpuPercent == 37.25f &&
+               shared->downloadBytesPerSecond == 2048.0f,
+           "transient refresh did not reuse the cached metric values");
 
     int previousIconUpdates = g_iconUpdates;
     TrayMetricSync_UpdateIcon(TRUE, TRUE, NULL);

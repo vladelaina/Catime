@@ -34,6 +34,7 @@
 #include "taskbar_monitor.h"
 #include "tray/tray.h"
 #include "window_procedure/window_message_handlers.h"
+#include "dialog/dialog_font_picker.h"
 
 /* External dependencies needed for menu display logic */
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
@@ -70,6 +71,9 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
         TrayMenuTracking_End(&tracking);
         return;
     }
+    (void)TaskbarMonitor_BeginMenuPreviewSession();
+    RefreshTrayBackgroundWorkState();
+    PrefetchSystemFontDialogResources();
     
     /* Edit mode toggle */
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
@@ -111,7 +115,6 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     
     /* Display menu */
     POINT pt = ResolveTrayMenuAnchor(hwnd, anchor);
-    (void)TaskbarMonitor_BeginMenuPreviewSession();
     if (!TrayMenuTracking_ReassertForeground(&tracking)) {
         LOG_WARNING("Tray menu foreground acquisition failed");
     }

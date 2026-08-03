@@ -69,12 +69,24 @@ BOOL TaskbarMonitor_RectsNearEqual(
 }
 
 BOOL TaskbarMonitor_NeedsSystemMonitor(void) {
-    return TaskbarMonitor_ShouldKeepSystemMonitorActive(
+    return TaskbarMonitor_GetRequiredSnapshotFields() != 0 &&
+           TaskbarMonitor_ShouldKeepSystemMonitorActive(
         g_taskbarMonitor.cpuMemoryEnabled,
         g_taskbarMonitor.networkEnabled,
         g_taskbarMonitor.menuPreviewSessionActive,
         g_taskbarMonitor.menuPreviewOriginalCpuMemoryEnabled,
         g_taskbarMonitor.menuPreviewOriginalNetworkEnabled);
+}
+
+DWORD TaskbarMonitor_GetRequiredSnapshotFields(void) {
+    DWORD fields = TaskbarMonitor_GetSnapshotFields(
+        g_taskbarMonitor.cpuMemoryEnabled,
+        g_taskbarMonitor.networkEnabled);
+    if (g_taskbarMonitor.menuPreviewSessionActive) {
+        fields |= SYSTEM_MONITOR_SNAPSHOT_CPU_MEMORY |
+                  SYSTEM_MONITOR_SNAPSHOT_NETWORK;
+    }
+    return fields;
 }
 
 void TaskbarMonitor_DeleteFont(void) {

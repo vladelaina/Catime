@@ -46,6 +46,8 @@ extern HANDLE g_fontEnumThread;
 extern HANDLE g_fontEnumStopEvent;
 extern BOOL g_fontListReady;
 extern BOOL g_fontEnumRestartAfterCleanup;
+extern BOOL g_fontEnumPrefetchActive;
+extern volatile LONG g_fontMapCacheReady;
 extern volatile LONG g_fontEnumGeneration;
 extern int g_currentFontIndex;
 extern int g_previewFontIndex;
@@ -68,6 +70,7 @@ void DialogFontPickerInternal_PopulateFontList(HWND hdlg);
 void DialogFontPickerInternal_BuildFontMap(HANDLE stopEvent);
 
 BOOL DialogFontPickerInternal_ShouldStopEnumeration(HANDLE stopEvent);
+BOOL DialogFontPickerInternal_IsFontMapCacheReady(void);
 BOOL DialogFontPickerInternal_CleanupCompletedEnumeration(void);
 BOOL DialogFontPickerInternal_StopEnumeration(DWORD timeoutMs);
 BOOL DialogFontPickerInternal_StartPollTimer(HWND hdlg);

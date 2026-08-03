@@ -22,9 +22,10 @@ BOOL TaskbarMonitor_ShouldKeepSystemMonitorActive(
     BOOL menuPreviewSessionActive,
     BOOL originalCpuMemoryEnabled,
     BOOL originalNetworkEnabled) {
+    (void)originalCpuMemoryEnabled;
+    (void)originalNetworkEnabled;
     if (cpuMemoryEnabled || networkEnabled) return TRUE;
-    return menuPreviewSessionActive &&
-           (originalCpuMemoryEnabled || originalNetworkEnabled);
+    return menuPreviewSessionActive;
 }
 
 BOOL TaskbarMonitor_SnapshotsEqual(

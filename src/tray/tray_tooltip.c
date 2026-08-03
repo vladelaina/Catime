@@ -49,10 +49,10 @@ static void BuildBasicTooltip(
     const wchar_t* uploadLabel = GetLocalizedString(NULL, L"Tray Tooltip Upload");
     const wchar_t* downloadLabel = GetLocalizedString(NULL, L"Tray Tooltip Download");
 
-    wchar_t cpu[32] = L"--";
-    wchar_t memory[32] = L"--";
-    wchar_t upload[48] = L"--";
-    wchar_t download[48] = L"--";
+    wchar_t cpu[32] = L"0.0%";
+    wchar_t memory[32] = L"0.0%";
+    wchar_t upload[48] = L"0.0 KB/s";
+    wchar_t download[48] = L"0.0 KB/s";
     if (snapshot && snapshot->cpuAvailable) {
         _snwprintf_s(cpu, _countof(cpu), _TRUNCATE,
                      L"%.1f%%", snapshot->cpuPercent);

@@ -117,6 +117,7 @@ BOOL TaskbarMonitor_ShouldKeepSystemMonitorActive(
 BOOL TaskbarMonitor_SnapshotsEqual(
     const SystemMonitorSnapshot* first,
     const SystemMonitorSnapshot* second);
+void TaskbarMonitor_PrefetchSnapshot(DWORD fields, BOOL forceRefresh);
 void TaskbarMonitor_ClearMenuPreviewWindowInteraction(void);
 void TaskbarMonitor_ResetMenuPreviewWindowGeometry(void);
 BOOL TaskbarMonitor_CaptureMenuPreviewWindowGeometry(void);

@@ -35,6 +35,13 @@ INT_PTR DialogFontPickerInternal_OnInit(HWND hdlg) {
         return TRUE;
     }
 
+    if (!DialogFontPickerInternal_CleanupCompletedEnumeration() &&
+        g_fontEnumPrefetchActive) {
+        EnableWindow(hwndList, FALSE);
+        EnableWindow(GetDlgItem(hdlg, IDOK), FALSE);
+        DialogFontPickerInternal_StartPollTimer(hdlg);
+        return TRUE;
+    }
     if (!DialogFontPickerInternal_CleanupCompletedEnumeration()) {
         DialogFontPickerInternal_StopEnumeration(FONT_ENUM_STOP_WAIT_MS);
     }
@@ -48,6 +55,12 @@ INT_PTR DialogFontPickerInternal_OnInit(HWND hdlg) {
     }
 
     g_fontEnumRestartAfterCleanup = FALSE;
+    if (DialogFontPickerInternal_IsFontMapCacheReady() &&
+        g_fontMapCount > 0) {
+        g_fontListReady = TRUE;
+        DialogFontPickerInternal_PopulateFontList(hdlg);
+        return TRUE;
+    }
     DialogFontPickerInternal_ResetFontMap();
     g_fontListReady = FALSE;
     EnableWindow(hwndList, FALSE);
@@ -68,7 +81,6 @@ INT_PTR DialogFontPickerInternal_OnEnumerationComplete(HWND hdlg, WPARAM wp) {
         return TRUE;
     }
     if (!DialogFontPickerInternal_CleanupCompletedEnumeration()) {
-        g_fontEnumRestartAfterCleanup = FALSE;
         DialogFontPickerInternal_StartPollTimer(hdlg);
         return TRUE;
     }
@@ -78,7 +90,8 @@ INT_PTR DialogFontPickerInternal_OnEnumerationComplete(HWND hdlg, WPARAM wp) {
 }
 
 static void RestartFontEnumerationIfNeeded(HWND hdlg) {
-    if (!g_fontEnumRestartAfterCleanup) {
+    if (!g_fontEnumRestartAfterCleanup &&
+        DialogFontPickerInternal_IsFontMapCacheReady()) {
         if (!g_fontListReady) {
             g_fontListReady = TRUE;
             DialogFontPickerInternal_PopulateFontList(hdlg);
@@ -88,6 +101,7 @@ static void RestartFontEnumerationIfNeeded(HWND hdlg) {
 
     g_fontEnumRestartAfterCleanup = FALSE;
     DialogFontPickerInternal_ResetFontMap();
+    InterlockedExchange(&g_fontMapCacheReady, 0);
     g_fontListReady = FALSE;
     HWND hwndList = GetDlgItem(hdlg, IDC_FONT_LIST_SIMPLE);
     if (hwndList) {
@@ -208,18 +222,24 @@ INT_PTR DialogFontPickerInternal_OnDestroy(HWND hdlg) {
     KillTimer(hdlg, FONT_ENUM_START_RETRY_TIMER_ID);
     Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_FONT_PICKER, hdlg);
 
-    BOOL enumStopped = DialogFontPickerInternal_StopEnumeration(
-        FONT_ENUM_STOP_WAIT_MS);
-    if (!enumStopped) {
-        LOG_WARNING("FontPicker: Leaving slow enumeration thread to finish asynchronously");
-        DialogFontPickerInternal_ScheduleDeferredCleanup();
+    BOOL keepPrefetchRunning = g_fontEnumPrefetchActive &&
+                               g_fontEnumThread &&
+                               !g_fontEnumRestartAfterCleanup;
+    BOOL enumStopped = !keepPrefetchRunning;
+    if (!keepPrefetchRunning) {
+        enumStopped = DialogFontPickerInternal_StopEnumeration(
+            FONT_ENUM_STOP_WAIT_MS);
+        if (!enumStopped) {
+            LOG_WARNING("FontPicker: Leaving slow enumeration thread to finish asynchronously");
+            DialogFontPickerInternal_ScheduleDeferredCleanup();
+        }
     }
 
     g_currentFontIndex = -1;
     g_previewFontIndex = -1;
     g_fontListReady = FALSE;
     g_fontState.closeHandled = FALSE;
-    if (enumStopped) {
+    if (enumStopped && !DialogFontPickerInternal_IsFontMapCacheReady()) {
         DialogFontPickerInternal_ResetFontMap();
     }
     return TRUE;

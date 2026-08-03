@@ -35,9 +35,9 @@ static void CheckSystemMonitorRetention(void) {
     Expect(TaskbarMonitor_ShouldKeepSystemMonitorActive(
                FALSE, FALSE, TRUE, TRUE, FALSE),
            "removal preview released the original sampler");
-    Expect(!TaskbarMonitor_ShouldKeepSystemMonitorActive(
+    Expect(TaskbarMonitor_ShouldKeepSystemMonitorActive(
                FALSE, FALSE, TRUE, FALSE, FALSE),
-           "disabled menu session started system sampling");
+           "menu preview did not prefetch system metrics");
 }
 
 static void CheckSnapshotEquality(void) {

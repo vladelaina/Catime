@@ -5,6 +5,7 @@
 
 #include "window_procedure/window_message_handlers_internal.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_font_picker.h"
 #include "drag_scale.h"
 #include "tray/tray_menu_theme.h"
 #include "tray/tray_animation_core.h"
@@ -83,6 +84,11 @@ LRESULT HandleSettingChange(HWND hwnd, WPARAM wp, LPARAM lp) {
         RestoreWindowPositionAfterSystemChange(hwnd);
     }
     return DefWindowProc(hwnd, WM_SETTINGCHANGE, wp, lp);
+}
+
+LRESULT HandleFontChange(HWND hwnd, WPARAM wp, LPARAM lp) {
+    InvalidateSystemFontDialogCache();
+    return DefWindowProc(hwnd, WM_FONTCHANGE, wp, lp);
 }
 
 LRESULT HandleThemeChanged(HWND hwnd, WPARAM wp, LPARAM lp) {

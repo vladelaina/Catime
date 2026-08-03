@@ -15,15 +15,52 @@
 void TaskbarMonitor_UpdateSnapshot(
     const SystemMonitorSnapshot* snapshot) {
     if (!snapshot) return;
+    SystemMonitorSnapshot next = *snapshot;
+    if (g_taskbarMonitor.menuPreviewSessionActive) {
+        if (!next.cpuAvailable &&
+            g_taskbarMonitor.metrics.cpuAvailable) {
+            next.cpuPercent = g_taskbarMonitor.metrics.cpuPercent;
+            next.cpuAvailable = TRUE;
+            next.basicSampleTick =
+                g_taskbarMonitor.metrics.basicSampleTick;
+        }
+        if (!next.memoryAvailable &&
+            g_taskbarMonitor.metrics.memoryAvailable) {
+            next.memoryPercent = g_taskbarMonitor.metrics.memoryPercent;
+            next.memoryAvailable = TRUE;
+            next.basicSampleTick =
+                g_taskbarMonitor.metrics.basicSampleTick;
+        }
+        if (!next.networkAvailable &&
+            g_taskbarMonitor.metrics.networkAvailable) {
+            next.uploadBytesPerSecond =
+                g_taskbarMonitor.metrics.uploadBytesPerSecond;
+            next.downloadBytesPerSecond =
+                g_taskbarMonitor.metrics.downloadBytesPerSecond;
+            next.networkAvailable = TRUE;
+            next.networkSampleTick =
+                g_taskbarMonitor.metrics.networkSampleTick;
+        }
+    }
     if (IsWindow(g_taskbarMonitor.window) &&
         !g_taskbarMonitor.presentTimerActive) {
         TaskbarMonitor_RefreshAttachment();
     }
     if (TaskbarMonitor_SnapshotsEqual(
-            snapshot, &g_taskbarMonitor.metrics)) return;
-    g_taskbarMonitor.metrics = *snapshot;
+            &next, &g_taskbarMonitor.metrics)) return;
+    g_taskbarMonitor.metrics = next;
     if (IsWindow(g_taskbarMonitor.window)) {
         InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
+    }
+}
+
+void TaskbarMonitor_PrefetchSnapshot(DWORD fields, BOOL forceRefresh) {
+    if (fields == 0) return;
+    SystemMonitor_Init();
+    if (forceRefresh) SystemMonitor_ForceRefresh();
+    SystemMonitorSnapshot snapshot = {0};
+    if (SystemMonitor_GetSnapshot(fields, &snapshot)) {
+        TaskbarMonitor_UpdateSnapshot(&snapshot);
     }
 }
 
@@ -33,7 +70,7 @@ static void FormatRate(float bytesPerSecond, BOOL available,
     const wchar_t* unit = L"K/s";
     if (!output || outputCount == 0) return;
     if (!available) {
-        wcsncpy_s(output, outputCount, L"--", _TRUNCATE);
+        wcsncpy_s(output, outputCount, L"0.0K/s", _TRUNCATE);
         return;
     }
     if (value < 0.0) value = 0.0;
@@ -92,14 +129,14 @@ static int BuildMetricTexts(TaskbarMetricText* metrics) {
             _snwprintf_s(cpu, _countof(cpu), _TRUNCATE, L"%d%%",
                          RoundPercent(g_taskbarMonitor.metrics.cpuPercent));
         } else {
-            wcsncpy_s(cpu, _countof(cpu), L"--", _TRUNCATE);
+            wcsncpy_s(cpu, _countof(cpu), L"0%", _TRUNCATE);
         }
         if (g_taskbarMonitor.metrics.memoryAvailable) {
             _snwprintf_s(
                 memory, _countof(memory), _TRUNCATE, L"%d%%",
                 RoundPercent(g_taskbarMonitor.metrics.memoryPercent));
         } else {
-            wcsncpy_s(memory, _countof(memory), L"--", _TRUNCATE);
+            wcsncpy_s(memory, _countof(memory), L"0%", _TRUNCATE);
         }
         SetMetricText(&metrics[metricCount], TASKBAR_METRIC_GROUP_RESOURCE,
                       0, g_taskbarMonitor.cpuLabel, cpu);

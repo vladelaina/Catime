@@ -96,7 +96,7 @@ void ReleaseIdleTraySystemMonitor(void) {
 BOOL ShouldRunTrayBackgroundTimer(HWND hwnd) {
     return g_trayBackgroundWorkEnabled &&
            IsTrayIconActiveForWindow(hwnd) &&
-           (TaskbarMonitor_IsEnabled() ||
+           (TaskbarMonitor_NeedsSystemMonitor() ||
             (!IsTrayInteractionSuspended() && IsTrayTooltipActive()) ||
             CurrentTrayIconNeedsBackgroundRefresh() ||
             TrayAnimation_HasDeferredIconUpdate());
@@ -143,6 +143,10 @@ void SetTrayTooltipActive(BOOL active) {
     }
 
     InterlockedExchange(&g_trayTooltipActive, normalized ? 1L : 0L);
+    if (normalized) {
+        EnsureTraySystemMonitorActive();
+        SystemMonitor_ForceRefresh();
+    }
     RefreshTrayBackgroundWorkState();
     if (IsTrayTooltipActive() && hwnd) {
         TrayTipTimerProc(hwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
