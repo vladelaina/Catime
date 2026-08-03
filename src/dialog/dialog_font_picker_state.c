@@ -84,8 +84,10 @@ BOOL DialogFontPickerInternal_PreviewFont(const wchar_t* fontName,
     HWND hwnd = FindCurrentProcessMainWindow();
     if (hwnd) {
         ShowWindowForPreview(hwnd);
-        StartPreview(PREVIEW_TYPE_FONT, fontPath, hwnd);
-        if (GetActivePreviewType() != PREVIEW_TYPE_FONT) {
+        BOOL previewStarted = StartPreviewWithSource(
+            PREVIEW_TYPE_FONT, fontPath, PREVIEW_SOURCE_FONT_PICKER, hwnd);
+        if (!previewStarted || GetActivePreviewType() != PREVIEW_TYPE_FONT ||
+            GetActivePreviewSource() != PREVIEW_SOURCE_FONT_PICKER) {
             RestoreWindowVisibility(hwnd);
             return FALSE;
         }

@@ -116,6 +116,7 @@ BOOL ApplyPreview(HWND hwnd) {
             return FALSE;
     }
     g_previewState.type = PREVIEW_TYPE_NONE;
+    g_previewState.source = PREVIEW_SOURCE_NONE;
     if (appliedType == PREVIEW_TYPE_FONT) {
         RefreshCustomTextDisplayDialogFont();
     }
@@ -126,6 +127,7 @@ BOOL ApplyPreview(HWND hwnd) {
 void MarkAnimationPreviewApplied(HWND hwnd) {
     if (g_previewState.type != PREVIEW_TYPE_ANIMATION) return;
     g_previewState.type = PREVIEW_TYPE_NONE;
+    g_previewState.source = PREVIEW_SOURCE_NONE;
     g_previewState.data.animationPath[0] = '\0';
     if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
 }

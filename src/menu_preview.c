@@ -18,7 +18,7 @@ extern BOOL IS_PREVIEWING;
 extern char PREVIEW_FONT_NAME[MAX_PATH];
 extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 extern void ResetTimerWithInterval(HWND hwnd);
-PreviewState g_previewState = {PREVIEW_TYPE_NONE};
+PreviewState g_previewState = {0};
 static BOOL ShouldCleanupPreviewEffectBuffers(EffectType previousPreviewEffect,
                                               EffectType nextPreviewEffect) {
     return TextEffect_UsesSharedEffectBuffer(previousPreviewEffect) &&
@@ -30,6 +30,9 @@ BOOL IsPreviewActive(void) {
 }
 PreviewType GetActivePreviewType(void) {
     return g_previewState.type;
+}
+PreviewSource GetActivePreviewSource(void) {
+    return IsPreviewActive() ? g_previewState.source : PREVIEW_SOURCE_NONE;
 }
 static BOOL LoadPreviewFontName(const char* fontName, char* internalName, size_t internalNameSize) {
     if (!fontName || !fontName[0] || !internalName || internalNameSize == 0) {
@@ -85,7 +88,7 @@ static void ApplyTaskbarMonitorPreview(void) {
     RefreshTrayBackgroundWorkState();
 }
 
-BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
+static BOOL StartPreviewInternal(PreviewType type, const void* data, HWND hwnd) {
     if (type <= PREVIEW_TYPE_NONE || type > PREVIEW_TYPE_TASKBAR_MONITOR ||
         !data) {
         return FALSE;
@@ -239,6 +242,18 @@ BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
     }
     return TRUE;
 }
+BOOL StartPreviewWithSource(PreviewType type, const void* data,
+                            PreviewSource source, HWND hwnd) {
+    if (source <= PREVIEW_SOURCE_NONE ||
+        source > PREVIEW_SOURCE_FONT_PICKER) return FALSE;
+    BOOL started = StartPreviewInternal(type, data, hwnd);
+    if (started) g_previewState.source = source;
+    return started;
+}
+BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
+    return StartPreviewWithSource(
+        type, data, PREVIEW_SOURCE_TRANSIENT, hwnd);
+}
 void CancelPreview(HWND hwnd) {
     if (g_isPreviewActive || g_previewState.type == PREVIEW_TYPE_ANIMATION) {
         CancelAnimationPreview();
@@ -270,6 +285,7 @@ void CancelPreview(HWND hwnd) {
         RestoreConfiguredFontAfterPreview();
     }
     g_previewState.type = PREVIEW_TYPE_NONE;
+    g_previewState.source = PREVIEW_SOURCE_NONE;
     if (needsFontReload) {
         RefreshCustomTextDisplayDialogFont();
     }

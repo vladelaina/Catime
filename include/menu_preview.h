@@ -49,6 +49,13 @@ typedef enum {
     PREVIEW_TYPE_TASKBAR_MONITOR,
 } PreviewType;
 
+/** @brief Identifies the component that currently owns a preview. */
+typedef enum {
+    PREVIEW_SOURCE_NONE = 0,
+    PREVIEW_SOURCE_TRANSIENT,
+    PREVIEW_SOURCE_FONT_PICKER,
+} PreviewSource;
+
 /* ============================================================================
  * Core Preview Functions
  * ============================================================================ */
@@ -74,6 +81,17 @@ typedef enum {
  * @note Cancels any existing preview before starting new one
  */
 BOOL StartPreview(PreviewType type, const void* data, HWND hwnd);
+
+/**
+ * @brief Start a preview owned by a specific UI component
+ * @param type Preview type to activate
+ * @param data Type-specific data
+ * @param source Component that owns the preview lifecycle
+ * @param hwnd Window handle for UI updates
+ * @return TRUE when the preview is active or was started successfully
+ */
+BOOL StartPreviewWithSource(PreviewType type, const void* data,
+                            PreviewSource source, HWND hwnd);
 
 /**
  * @brief Cancel preview and restore original state
@@ -109,6 +127,9 @@ BOOL IsPreviewActive(void);
  * @return Active preview type or PREVIEW_TYPE_NONE
  */
 PreviewType GetActivePreviewType(void);
+
+/** @brief Get the source that owns the active preview. */
+PreviewSource GetActivePreviewSource(void);
 
 /* ============================================================================
  * Type-Safe Accessors (return preview value if active, otherwise real value)

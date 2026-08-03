@@ -7,6 +7,7 @@
 
 typedef struct {
     PreviewType type;
+    PreviewSource source;
     union {
         char colorHex[COLOR_HEX_BUFFER];
         struct { char fontName[MAX_PATH]; char internalName[MAX_PATH]; } font;

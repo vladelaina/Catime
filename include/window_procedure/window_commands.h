@@ -16,7 +16,7 @@
 typedef LRESULT (*CommandHandler)(HWND hwnd, WPARAM wp, LPARAM lp);
 
 /* ============================================================================
- * Main Command Dispatcher (window_commands.c)
+ * Main Command Dispatcher (window_command_dispatch.c)
  * ============================================================================ */
 
 LRESULT HandleCommand(HWND hwnd, WPARAM wp, LPARAM lp);
