@@ -122,17 +122,23 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     BOOL isTaskbarMonitorCommand =
         selectedCommand == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY ||
         selectedCommand == CLOCK_IDM_TASKBAR_MONITOR_NETWORK;
-    /* Commit taskbar previews before ending the session so the prepared
-     * monitor window can be reused. Other commands run after cleanup to avoid
-     * keeping preview state active while they open dialogs. */
-    if (isTaskbarMonitorCommand && IsWindow(hwnd)) {
+    char selectedAnimationName[MAX_PATH] = {0};
+    BOOL isAnimationCommand = GetAnimationNameFromMenuId(
+        selectedCommand, selectedAnimationName,
+        sizeof(selectedAnimationName));
+    BOOL commitsActivePreview =
+        isTaskbarMonitorCommand || isAnimationCommand;
+    /* Commit preview-backed choices before ending the session. Animation
+     * previews can then be promoted directly instead of briefly restoring the
+     * previous tray icon and loading the selected icon again. */
+    if (commitsActivePreview && IsWindow(hwnd)) {
         SendMessageW(hwnd, WM_COMMAND,
                      MAKEWPARAM(selectedCommand, 0), 0);
     }
     FinishMenuPreviewTracking(hwnd);
     TaskbarMonitor_EndMenuPreviewSession();
     RefreshTrayBackgroundWorkState();
-    if (selectedCommand != 0 && !isTaskbarMonitorCommand &&
+    if (selectedCommand != 0 && !commitsActivePreview &&
         IsWindow(hwnd)) {
         SendMessageW(hwnd, WM_COMMAND,
                      MAKEWPARAM(selectedCommand, 0), 0);

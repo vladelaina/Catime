@@ -54,6 +54,15 @@ target_include_directories(tray_animation_playback_tests PRIVATE
 )
 add_test(NAME tray_animation_playback COMMAND tray_animation_playback_tests)
 
+add_executable(tray_animation_selection_tests
+    tests/tray_animation_selection_tests.c
+    src/tray/tray_animation_selection.c
+)
+target_include_directories(tray_animation_selection_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+add_test(NAME tray_animation_selection COMMAND tray_animation_selection_tests)
+
 add_executable(tray_animation_speed_input_tests
     tests/tray_animation_speed_input_tests.c
     src/tray/tray_animation_speed_input.c
@@ -256,6 +265,7 @@ set(_catime_test_targets
     menu_preview_lifecycle_tests
     hotkey_config_tests
     tray_animation_playback_tests
+    tray_animation_selection_tests
     tray_animation_speed_input_tests
     tray_animation_timer_tests
     tray_icon_lifetime_tests

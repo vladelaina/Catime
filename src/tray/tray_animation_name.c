@@ -4,6 +4,7 @@
  */
 
 #include "tray_animation_core_internal.h"
+#include "tray_animation_selection.h"
 
 BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig) {
     if (!name || !*name) return FALSE;
@@ -16,19 +17,22 @@ BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig) {
         goto done;
     }
 
-    BOOL sameAnimationNoPreview = FALSE;
+    BOOL canReuseCurrentAnimation = FALSE;
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
-        sameAnimationNoPreview = !g_isPreviewActive &&
-                                 _stricmp(g_animationName, requestedName) == 0;
+        canReuseCurrentAnimation = TrayAnimationSelection_CanReuseCurrent(
+            g_animationName, requestedName, g_isPreviewActive,
+            g_pendingPreviewName[0] != '\0');
         LeaveCriticalSection(&g_animCriticalSection);
     } else {
-        sameAnimationNoPreview = !g_isPreviewActive &&
-                                 _stricmp(g_animationName, requestedName) == 0;
+        canReuseCurrentAnimation = TrayAnimationSelection_CanReuseCurrent(
+            g_animationName, requestedName, g_isPreviewActive,
+            g_pendingPreviewName[0] != '\0');
     }
 
-    /* Prevent redundant reloads if name is same and no preview is active */
-    if (sameAnimationNoPreview) {
+    /* A queued preview must still pass through the commit path so its worker
+     * request is canceled before it can become active after this selection. */
+    if (canReuseCurrentAnimation) {
         result = persistConfig ? WriteAnimationNameToConfigIfChanged(requestedName) : TRUE;
         goto done;
     }
