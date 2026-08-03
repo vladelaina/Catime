@@ -8,6 +8,7 @@
 #include "drag_scale.h"
 #include "log.h"
 #include "markdown/markdown_interactive.h"
+#include "tray/tray.h"
 #include "window.h"
 #include "window/window_visual_effects.h"
 #include "window_procedure/window_events.h"
@@ -166,6 +167,13 @@ LRESULT HandleLButtonUp(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT HandleMouseWheel(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
     int delta = GET_WHEEL_DELTA_WPARAM(wp);
+    if (CLOCK_EDIT_MODE &&
+        (GET_KEYSTATE_WPARAM(wp) & MK_CONTROL) != 0) {
+        if (delta != 0) {
+            HandleTrayOpacityWheel(hwnd, delta > 0 ? 1 : -1, TRUE);
+        }
+        return 0;
+    }
     HandleScaleWindow(hwnd, delta);
     return 0;
 }

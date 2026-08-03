@@ -134,7 +134,7 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 - **Left-click tray icon**: Set **time**
 - **Right-click tray icon**: Set **menu**
-- **Edit mode**: Drag to adjust position, scroll wheel to resize, 🖱️ right-click to exit edit mode
+- **Edit mode**: Drag to adjust position, scroll wheel to resize, Ctrl+scroll wheel to adjust opacity, 🖱️ right-click to exit edit mode
 
 > Configuration file saved at `%LOCALAPPDATA%\Catime\config.ini`
 
