@@ -30,7 +30,7 @@ typedef struct {
 
 /**
  * @brief Write complete current configuration to file
- * @param config_path Path to config.ini (UTF-8)
+ * @param configPath Path to config.ini (UTF-8)
  *
  * @details
  * Collects all current configuration from global variables and writes to INI.
@@ -72,17 +72,17 @@ BOOL CollectAnimationSpeedConfigItems(ConfigWriteItem* items, int itemCapacity, 
  * @details
  * Batch writes items to INI file with one atomic flush.
  */
-BOOL WriteConfigItems(const char* config_path, const ConfigWriteItem* items, int count);
+BOOL WriteConfigItems(const char* configPath, const ConfigWriteItem* items, int count);
 
 /**
  * @brief Write specific section only
- * @param config_path Path to config.ini (UTF-8)
+ * @param configPath Path to config.ini (UTF-8)
  * @param section Section name to write
  *
  * @details
  * Selectively updates one section (e.g., Timer, Display).
  * Uses atomic update for the specific keys.
  */
-BOOL WriteConfigSection(const char* config_path, const char* section);
+BOOL WriteConfigSection(const char* configPath, const char* section);
 
 #endif /* CONFIG_WRITER_H */

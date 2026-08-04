@@ -257,19 +257,19 @@ BOOL WriteDefaultsToConfig(const char* config_path) {
     return TRUE;
 }
 
-BOOL CreateDefaultConfig(const char* config_path) {
-    if (!config_path) return FALSE;
+BOOL CreateDefaultConfig(const char* configPath) {
+    if (!configPath) return FALSE;
     const char* detectedLangName = GetDetectedSystemLanguageConfigKey();
 
     /* Write all defaults */
-    if (!WriteDefaultsToConfig(config_path)) {
-        LOG_ERROR("Failed to create default config: %s", config_path);
+    if (!WriteDefaultsToConfig(configPath)) {
+        LOG_ERROR("Failed to create default config: %s", configPath);
         return FALSE;
     }
 
     /* Override language with detected value */
     BOOL result = TRUE;
-    if (!WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", detectedLangName, config_path)) {
+    if (!WriteIniString(INI_SECTION_GENERAL, "LANGUAGE", detectedLangName, configPath)) {
         LOG_ERROR("Failed to write detected language to default config: %s", detectedLangName);
         result = FALSE;
     }

@@ -112,34 +112,34 @@ BOOL SaveRecentFile(const char* filePath) {
     return TRUE;
 }
 
-char* UTF8ToANSI(const char* utf8Str) {
+char* UTF8ToANSI(const char* utf8String) {
     int wideLength = MultiByteToWideChar(
-        CP_UTF8, 0, utf8Str, -1, NULL, 0);
-    if (wideLength == 0) return _strdup(utf8Str);
+        CP_UTF8, 0, utf8String, -1, NULL, 0);
+    if (wideLength == 0) return _strdup(utf8String);
     wchar_t* wideString = malloc(sizeof(wchar_t) * (size_t)wideLength);
-    if (!wideString) return _strdup(utf8Str);
+    if (!wideString) return _strdup(utf8String);
     if (MultiByteToWideChar(
-            CP_UTF8, 0, utf8Str, -1, wideString, wideLength) == 0) {
+            CP_UTF8, 0, utf8String, -1, wideString, wideLength) == 0) {
         free(wideString);
-        return _strdup(utf8Str);
+        return _strdup(utf8String);
     }
     int ansiLength = WideCharToMultiByte(
         936, 0, wideString, -1, NULL, 0, NULL, NULL);
     if (ansiLength == 0) {
         free(wideString);
-        return _strdup(utf8Str);
+        return _strdup(utf8String);
     }
     char* result = malloc((size_t)ansiLength);
     if (!result) {
         free(wideString);
-        return _strdup(utf8Str);
+        return _strdup(utf8String);
     }
     if (WideCharToMultiByte(
             936, 0, wideString, -1, result,
             ansiLength, NULL, NULL) == 0) {
         free(wideString);
         free(result);
-        return _strdup(utf8Str);
+        return _strdup(utf8String);
     }
     free(wideString);
     return result;

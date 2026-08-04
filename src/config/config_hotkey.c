@@ -206,12 +206,12 @@ static BOOL IsImeVirtualKey(BYTE vk) {
     return vk == VK_PROCESSKEY || vk == VK_PACKET;
 }
 
-WORD StringToHotkey(const char* str) {
-    if (!str) {
+WORD StringToHotkey(const char* value) {
+    if (!value) {
         return 0;
     }
     char buffer[256];
-    strncpy(buffer, str, sizeof(buffer) - 1);
+    strncpy(buffer, value, sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0';
     char* input = TrimHotkeyToken(buffer);
     if (!input || input[0] == '\0' || _stricmp(input, "None") == 0) {

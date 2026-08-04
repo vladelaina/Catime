@@ -115,7 +115,9 @@ jobs:
   # Build the Microsoft Store package from the signed EXE.
   # It remains a workflow artifact and is not attached to the GitHub Release.
   store-package:
-    if: github.repository == 'vladelaina/Catime'
+    if: >-
+      github.repository == 'vladelaina/Catime' &&
+      !contains(needs.build.outputs.tag_version, '-')
     needs: [build, sign]
     runs-on: windows-latest
 

@@ -3,8 +3,8 @@
 #include "font/font_ttf_parser.h"
 #include <string.h>
 
-void ProcessConfigFontPath(ConfigSnapshot* snapshot, const char* config_path) {
-    if (!snapshot || !config_path) return;
+void ProcessConfigFontPath(ConfigSnapshot* snapshot, const char* configPath) {
+    if (!snapshot || !configPath) return;
     char actualFontFileName[MAX_PATH];
     BOOL isFontsFolderFont = FALSE;
     const char* localappdata_prefix = FONTS_PATH_PREFIX;
@@ -23,7 +23,7 @@ void ProcessConfigFontPath(ConfigSnapshot* snapshot, const char* config_path) {
     if (isFontsFolderFont) {
         BOOL resolvedFontName = FALSE;
         wchar_t wConfigPath[MAX_PATH] = {0};
-        if (MultiByteToWideChar(CP_UTF8, 0, config_path, -1,
+        if (MultiByteToWideChar(CP_UTF8, 0, configPath, -1,
                                 wConfigPath, MAX_PATH) > 0) {
             wchar_t* lastSep = wcsrchr(wConfigPath, L'\\');
             if (lastSep) {

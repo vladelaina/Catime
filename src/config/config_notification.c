@@ -68,45 +68,45 @@ static BOOL NotificationIniValueMatches(const char* config_path, const char* key
     }
     return strcmp(current, expected ? expected : "") == 0;
 }
-BOOL WriteConfigNotificationMessages(const char* timeout_msg) {
-    if (!timeout_msg) timeout_msg = "";
+BOOL WriteConfigNotificationMessages(const char* timeoutMessage) {
+    if (!timeoutMessage) timeoutMessage = "";
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     BOOL runtimeMatches =
-        strcmp(g_AppConfig.notification.messages.timeout_message, timeout_msg) == 0;
+        strcmp(g_AppConfig.notification.messages.timeout_message, timeoutMessage) == 0;
     BOOL configMatches =
-        NotificationIniValueMatches(config_path, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg);
+        NotificationIniValueMatches(config_path, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeoutMessage);
     if (runtimeMatches && configMatches) {
         return TRUE;
     }
     if (!configMatches &&
         !WriteIniString(INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT",
-                        timeout_msg, config_path)) {
+                        timeoutMessage, config_path)) {
         return FALSE;
     }
-    strncpy(g_AppConfig.notification.messages.timeout_message, timeout_msg, sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
+    strncpy(g_AppConfig.notification.messages.timeout_message, timeoutMessage, sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
     g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
     return TRUE;
 }
-BOOL WriteConfigNotificationTimeout(int timeout_ms) {
-    if (timeout_ms < 0) timeout_ms = 0;
+BOOL WriteConfigNotificationTimeout(int timeoutMs) {
+    if (timeoutMs < 0) timeoutMs = 0;
     char timeoutStr[32];
-    if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeout_ms) < 0) {
+    if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeoutMs) < 0) {
         return FALSE;
     }
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
-    BOOL runtimeMatches = (g_AppConfig.notification.display.timeout_ms == timeout_ms);
+    BOOL runtimeMatches = (g_AppConfig.notification.display.timeout_ms == timeoutMs);
     BOOL configMatches =
         NotificationIniValueMatches(config_path, "NOTIFICATION_TIMEOUT_MS", timeoutStr);
     if (runtimeMatches && configMatches) {
         return TRUE;
     }
     if (!configMatches &&
-        !UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", timeout_ms)) {
+        !UpdateConfigIntAtomic(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", timeoutMs)) {
         return FALSE;
     }
-    g_AppConfig.notification.display.timeout_ms = timeout_ms;
+    g_AppConfig.notification.display.timeout_ms = timeoutMs;
     return TRUE;
 }
 BOOL WriteConfigNotificationOpacity(int opacity) {
@@ -167,11 +167,11 @@ void WriteConfigNotificationDisabled(BOOL disabled) {
     }
     g_AppConfig.notification.display.disabled = disabled;
 }
-void WriteConfigNotificationSound(const char* sound_file) {
-    if (!sound_file) return;
+void WriteConfigNotificationSound(const char* soundFile) {
+    if (!soundFile) return;
     char clean_path[MAX_PATH] = {0};
     char to_write[MAX_PATH] = {0};
-    BuildNotificationSoundConfigValue(sound_file, clean_path, sizeof(clean_path),
+    BuildNotificationSoundConfigValue(soundFile, clean_path, sizeof(clean_path),
                                       to_write, sizeof(to_write));
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -190,25 +190,25 @@ void WriteConfigNotificationSound(const char* sound_file) {
     strncpy(g_AppConfig.notification.sound.sound_file, clean_path, sizeof(g_AppConfig.notification.sound.sound_file) - 1);
     g_AppConfig.notification.sound.sound_file[sizeof(g_AppConfig.notification.sound.sound_file) - 1] = '\0';
 }
-BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
+BOOL WriteConfigNotificationSettings(const char* timeoutMessage, int timeoutMs,
                                      int opacity, NotificationType type,
-                                     int corner_radius, int font_percent, BOOL disabled,
-                                     const char* sound_file, int volume) {
-    if (!timeout_msg) timeout_msg = "";
-    if (timeout_ms < 0) timeout_ms = 0;
+                                     int cornerRadius, int fontPercent, BOOL disabled,
+                                     const char* soundFile, int volume) {
+    if (!timeoutMessage) timeoutMessage = "";
+    if (timeoutMs < 0) timeoutMs = 0;
     if (opacity < MIN_VISIBLE_OPACITY) opacity = MIN_VISIBLE_OPACITY;
     if (opacity > 100) opacity = 100;
-    if (corner_radius < MIN_NOTIFICATION_CORNER_RADIUS) {
-        corner_radius = MIN_NOTIFICATION_CORNER_RADIUS;
+    if (cornerRadius < MIN_NOTIFICATION_CORNER_RADIUS) {
+        cornerRadius = MIN_NOTIFICATION_CORNER_RADIUS;
     }
-    if (corner_radius > MAX_NOTIFICATION_CORNER_RADIUS) {
-        corner_radius = MAX_NOTIFICATION_CORNER_RADIUS;
+    if (cornerRadius > MAX_NOTIFICATION_CORNER_RADIUS) {
+        cornerRadius = MAX_NOTIFICATION_CORNER_RADIUS;
     }
-    if (font_percent < MIN_NOTIFICATION_FONT_SIZE) {
-        font_percent = MIN_NOTIFICATION_FONT_SIZE;
+    if (fontPercent < MIN_NOTIFICATION_FONT_SIZE) {
+        fontPercent = MIN_NOTIFICATION_FONT_SIZE;
     }
-    if (font_percent > MAX_NOTIFICATION_FONT_SIZE) {
-        font_percent = MAX_NOTIFICATION_FONT_SIZE;
+    if (fontPercent > MAX_NOTIFICATION_FONT_SIZE) {
+        fontPercent = MAX_NOTIFICATION_FONT_SIZE;
     }
     if (type < NOTIFICATION_TYPE_CATIME || type > NOTIFICATION_TYPE_OS) {
         type = NOTIFICATION_TYPE_CATIME;
@@ -221,25 +221,25 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
     char radiusStr[32];
     char fontPercentStr[32];
     char volumeStr[32];
-    if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeout_ms) < 0 ||
+    if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeoutMs) < 0 ||
         snprintf(opacityStr, sizeof(opacityStr), "%d", opacity) < 0 ||
-        snprintf(radiusStr, sizeof(radiusStr), "%d", corner_radius) < 0 ||
-        snprintf(fontPercentStr, sizeof(fontPercentStr), "%d", font_percent) < 0 ||
+        snprintf(radiusStr, sizeof(radiusStr), "%d", cornerRadius) < 0 ||
+        snprintf(fontPercentStr, sizeof(fontPercentStr), "%d", fontPercent) < 0 ||
         snprintf(volumeStr, sizeof(volumeStr), "%d", volume) < 0) {
         return FALSE;
     }
     char cleanSoundPath[MAX_PATH] = {0};
     char soundConfigValue[MAX_PATH] = {0};
-    BuildNotificationSoundConfigValue(sound_file, cleanSoundPath, sizeof(cleanSoundPath),
+    BuildNotificationSoundConfigValue(soundFile, cleanSoundPath, sizeof(cleanSoundPath),
                                       soundConfigValue, sizeof(soundConfigValue));
     const char* typeStr = EnumToString(NOTIFICATION_TYPE_MAP, type, "CATIME");
     const char* disabledStr = disabled ? "TRUE" : "FALSE";
     BOOL runtimeMatches =
-        strcmp(g_AppConfig.notification.messages.timeout_message, timeout_msg) == 0 &&
-        g_AppConfig.notification.display.timeout_ms == timeout_ms &&
+        strcmp(g_AppConfig.notification.messages.timeout_message, timeoutMessage) == 0 &&
+        g_AppConfig.notification.display.timeout_ms == timeoutMs &&
         g_AppConfig.notification.display.max_opacity == opacity &&
-        g_AppConfig.notification.display.corner_radius == corner_radius &&
-        g_AppConfig.notification.display.font_size == font_percent &&
+        g_AppConfig.notification.display.corner_radius == cornerRadius &&
+        g_AppConfig.notification.display.font_size == fontPercent &&
         g_AppConfig.notification.display.type == type &&
         g_AppConfig.notification.display.disabled == disabled &&
         strcmp(g_AppConfig.notification.sound.sound_file, cleanSoundPath) == 0 &&
@@ -247,7 +247,7 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     if (runtimeMatches &&
-        NotificationIniValueMatches(config_path, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg) &&
+        NotificationIniValueMatches(config_path, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeoutMessage) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_TIMEOUT_MS", timeoutStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_MAX_OPACITY", opacityStr) &&
         NotificationIniValueMatches(config_path, "NOTIFICATION_CORNER_RADIUS", radiusStr) &&
@@ -259,7 +259,7 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
         return TRUE;
     }
     const IniKeyValue updates[] = {
-        {INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeout_msg},
+        {INI_SECTION_NOTIFICATION, "CLOCK_TIMEOUT_MESSAGE_TEXT", timeoutMessage},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", timeoutStr},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_MAX_OPACITY", opacityStr},
         {INI_SECTION_NOTIFICATION, "NOTIFICATION_CORNER_RADIUS", radiusStr},
@@ -272,13 +272,13 @@ BOOL WriteConfigNotificationSettings(const char* timeout_msg, int timeout_ms,
     if (!WriteIniMultipleAtomic(config_path, updates, sizeof(updates) / sizeof(updates[0]))) {
         return FALSE;
     }
-    strncpy(g_AppConfig.notification.messages.timeout_message, timeout_msg,
+    strncpy(g_AppConfig.notification.messages.timeout_message, timeoutMessage,
             sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
     g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
-    g_AppConfig.notification.display.timeout_ms = timeout_ms;
+    g_AppConfig.notification.display.timeout_ms = timeoutMs;
     g_AppConfig.notification.display.max_opacity = opacity;
-    g_AppConfig.notification.display.corner_radius = corner_radius;
-    g_AppConfig.notification.display.font_size = font_percent;
+    g_AppConfig.notification.display.corner_radius = cornerRadius;
+    g_AppConfig.notification.display.font_size = fontPercent;
     g_AppConfig.notification.display.type = type;
     g_AppConfig.notification.display.disabled = disabled;
     strncpy(g_AppConfig.notification.sound.sound_file, cleanSoundPath,

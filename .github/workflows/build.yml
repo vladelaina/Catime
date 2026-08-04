@@ -769,7 +769,8 @@ jobs:
     if: >-
       github.repository == 'vladelaina/Catime' &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
+      github.ref == 'refs/heads/main' &&
+      !contains(needs.build.outputs.version, '-')
     needs: [build, sign]
     runs-on: windows-latest
     steps:

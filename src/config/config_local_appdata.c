@@ -56,12 +56,12 @@ static BOOL ResolveStandardLocalAppDataW(wchar_t* outPath, size_t outSize) {
     return SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_LOCAL_APPDATA, NULL, 0, outPath));
 }
 
-BOOL ConfigPath_ResolveEffectiveLocalAppDataW(wchar_t* outPath, size_t outSize) {
-    if (!outPath || outSize == 0 || outSize > MAXDWORD) return FALSE;
-    outPath[0] = L'\0';
+BOOL ConfigPath_ResolveEffectiveLocalAppDataW(wchar_t* output, size_t outputSize) {
+    if (!output || outputSize == 0 || outputSize > MAXDWORD) return FALSE;
+    output[0] = L'\0';
 
     if (!IsRunningPackagedApp()) {
-        return ResolveStandardLocalAppDataW(outPath, outSize);
+        return ResolveStandardLocalAppDataW(output, outputSize);
     }
 
     wchar_t userProfile[MAX_PATH] = {0};
@@ -72,16 +72,16 @@ BOOL ConfigPath_ResolveEffectiveLocalAppDataW(wchar_t* outPath, size_t outSize) 
     }
 
     int written = _snwprintf_s(
-        outPath, outSize, _TRUNCATE,
+        output, outputSize, _TRUNCATE,
         L"%s\\AppData\\Local\\Packages\\%s\\LocalCache\\Local",
         userProfile, packageFamily);
     if (written < 0) {
-        outPath[0] = L'\0';
+        output[0] = L'\0';
         return FALSE;
     }
 
-    int createResult = SHCreateDirectoryExW(NULL, outPath, NULL);
-    return ConfigPath_IsDirectoryCreateResultOk(createResult, outPath);
+    int createResult = SHCreateDirectoryExW(NULL, output, NULL);
+    return ConfigPath_IsDirectoryCreateResultOk(createResult, output);
 }
 
 BOOL GetEffectiveLocalAppDataPath(char* path, size_t size) {

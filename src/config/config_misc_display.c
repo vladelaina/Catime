@@ -83,10 +83,10 @@ UINT GetTimerInterval(void) {
     return 1000;
 }
 
-void ResetTimerWithInterval(HWND hwnd) {
+void ResetTimerWithInterval(HWND window) {
     UINT interval = GetTimerInterval();
-    if (ShouldRunMainTimer(hwnd)) {
-        if (!MainTimer_Start(hwnd, interval)) {
+    if (ShouldRunMainTimer(window)) {
+        if (!MainTimer_Start(window, interval)) {
             LOG_WARNING(
                 "Failed to reset main timer with interval %u; pausing active timer state",
                 interval);

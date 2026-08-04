@@ -21,12 +21,12 @@ static BOOL EnsureDirectoryExistsW(const wchar_t* path) {
     return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-BOOL ConfigPath_IsDirectoryCreateResultOk(int createResult, const wchar_t* path) {
-    if (createResult == ERROR_SUCCESS) {
+BOOL ConfigPath_IsDirectoryCreateResultOk(int result, const wchar_t* path) {
+    if (result == ERROR_SUCCESS) {
         return TRUE;
     }
 
-    if (createResult != ERROR_ALREADY_EXISTS && createResult != ERROR_FILE_EXISTS) {
+    if (result != ERROR_ALREADY_EXISTS && result != ERROR_FILE_EXISTS) {
         return FALSE;
     }
 
@@ -34,40 +34,40 @@ BOOL ConfigPath_IsDirectoryCreateResultOk(int createResult, const wchar_t* path)
     return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-BOOL ConfigPath_BuildFromLocalAppData(const wchar_t* wLocalAppData,
-                                            char* outPathUtf8,
-                                            size_t outSize) {
-    if (!outPathUtf8 || outSize == 0) {
+BOOL ConfigPath_BuildFromLocalAppData(const wchar_t* root,
+                                      char* output,
+                                      size_t outputSize) {
+    if (!output || outputSize == 0) {
         return FALSE;
     }
-    outPathUtf8[0] = '\0';
-    if (!wLocalAppData || !*wLocalAppData || outSize > INT_MAX) {
+    output[0] = '\0';
+    if (!root || !*root || outputSize > INT_MAX) {
         return FALSE;
     }
 
     wchar_t wDir[MAX_PATH] = {0};
-    if (_snwprintf_s(wDir, MAX_PATH, _TRUNCATE, L"%s\\Catime", wLocalAppData) < 0 ||
+    if (_snwprintf_s(wDir, MAX_PATH, _TRUNCATE, L"%s\\Catime", root) < 0 ||
         !EnsureDirectoryExistsW(wDir)) {
         return FALSE;
     }
 
     wchar_t wConfigPath[MAX_PATH] = {0};
     if (_snwprintf_s(wConfigPath, MAX_PATH, _TRUNCATE,
-                     L"%s\\Catime\\config.ini", wLocalAppData) < 0) {
+                     L"%s\\Catime\\config.ini", root) < 0) {
         return FALSE;
     }
 
     if (WideCharToMultiByte(CP_UTF8, 0, wConfigPath, -1,
-                            outPathUtf8, (int)outSize, NULL, NULL) <= 0) {
-        outPathUtf8[0] = '\0';
+                            output, (int)outputSize, NULL, NULL) <= 0) {
+        output[0] = '\0';
         return FALSE;
     }
     return TRUE;
 }
 
-BOOL ConfigPath_ResolveCiRootW(wchar_t* outPath, size_t outSize) {
-    if (!outPath || outSize == 0 || outSize > INT_MAX) return FALSE;
-    outPath[0] = L'\0';
+BOOL ConfigPath_ResolveCiRootW(wchar_t* output, size_t outputSize) {
+    if (!output || outputSize == 0 || outputSize > INT_MAX) return FALSE;
+    output[0] = L'\0';
 
     const wchar_t* commandLine = GetCommandLineW();
     if (!commandLine) return FALSE;
@@ -112,11 +112,11 @@ BOOL ConfigPath_ResolveCiRootW(wchar_t* outPath, size_t outSize) {
         DWORD attributes = GetFileAttributesW(fullPath);
         if (attributes == INVALID_FILE_ATTRIBUTES ||
             (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0 ||
-            wcslen(fullPath) >= outSize) {
+            wcslen(fullPath) >= outputSize) {
             break;
         }
 
-        wcscpy_s(outPath, outSize, fullPath);
+        wcscpy_s(output, outputSize, fullPath);
         resolved = TRUE;
         break;
     }
@@ -125,12 +125,12 @@ BOOL ConfigPath_ResolveCiRootW(wchar_t* outPath, size_t outSize) {
     return resolved;
 }
 
-BOOL ConfigPath_BuildFromUserProfile(char* outPathUtf8, size_t outSize) {
-    if (!outPathUtf8 || outSize == 0) {
+BOOL ConfigPath_BuildFromUserProfile(char* output, size_t outputSize) {
+    if (!output || outputSize == 0) {
         return FALSE;
     }
-    outPathUtf8[0] = '\0';
-    if (outSize > INT_MAX) {
+    output[0] = '\0';
+    if (outputSize > INT_MAX) {
         return FALSE;
     }
 
@@ -154,8 +154,8 @@ BOOL ConfigPath_BuildFromUserProfile(char* outPathUtf8, size_t outSize) {
     }
 
     if (WideCharToMultiByte(CP_UTF8, 0, wConfigPath, -1,
-                            outPathUtf8, (int)outSize, NULL, NULL) <= 0) {
-        outPathUtf8[0] = '\0';
+                            output, (int)outputSize, NULL, NULL) <= 0) {
+        output[0] = '\0';
         return FALSE;
     }
     return TRUE;
