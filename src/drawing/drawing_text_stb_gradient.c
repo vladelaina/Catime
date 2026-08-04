@@ -68,7 +68,7 @@ void InitGlowGradientContext(GlowGradientContext* ctx,
  */
 void GetGlowGradientColor(int x, int y,
                           int* r, int* g, int* b,
-                          void* userData) {
+                          const void* userData) {
     const GlowGradientContext* ctx = (const GlowGradientContext*)userData;
     (void)y;
 

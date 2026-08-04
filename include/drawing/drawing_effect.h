@@ -12,7 +12,8 @@
  * @param b Output Blue
  * @param userData Custom data passed to the callback
  */
-typedef void (*GlowColorCallback)(int x, int y, int* r, int* g, int* b, void* userData);
+typedef void (*GlowColorCallback)(int x, int y, int* r, int* g, int* b,
+                                  const void* userData);
 
 /**
  * @brief Render a glow effect around a bitmap using Gaussian blur

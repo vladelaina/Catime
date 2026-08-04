@@ -34,19 +34,19 @@ int AquaFractalNoise(int screenX, int screenY, int freqXPpm, int freqYPpm,
     long long y = (long long)screenY * freqYPpm * AQUA_NOISE_FIXED_ONE / 1000000LL;
     return AquaValueNoiseQ8((int)x, (int)(y - flowQ8), seed);
 }
-int AquaNoiseAt(const unsigned char* map, int width, int height, int x, int y) {
+int AquaNoiseAt(const unsigned char* noiseMap, int width, int height, int x, int y) {
     x = AquaClampInt(x, 0, width - 1); y = AquaClampInt(y, 0, height - 1);
-    return map[(size_t)y * width + (size_t)x];
+    return noiseMap[(size_t)y * width + (size_t)x];
 }
-int AquaNoiseAtUnchecked(const unsigned char* map, int width, int x, int y) {
-    return map[(size_t)y * width + (size_t)x];
+int AquaNoiseAtUnchecked(const unsigned char* noiseMap, int width, int x, int y) {
+    return noiseMap[(size_t)y * width + (size_t)x];
 }
-int AquaSampleAlphaBilinear(const unsigned char* map, int width, int height,
+int AquaSampleAlphaBilinear(const unsigned char* alphaMap, int width, int height,
                             int xQ8, int yQ8) {
     int x = AquaFloorFixed8(xQ8), y = AquaFloorFixed8(yQ8);
     if (x < 0 || y < 0 || x >= width - 1 || y >= height - 1) return 0;
     int tx = xQ8 - (x << 8), ty = yQ8 - (y << 8);
-    const unsigned char* row0 = map + (size_t)y * width;
+    const unsigned char* row0 = alphaMap + (size_t)y * width;
     const unsigned char* row1 = row0 + width;
     int top = AquaLerpByte256(row0[x], row0[x + 1], tx);
     int bottom = AquaLerpByte256(row1[x], row1[x + 1], tx);

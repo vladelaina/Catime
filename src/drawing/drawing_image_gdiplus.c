@@ -17,12 +17,12 @@ static BOOL ScaleDimension(UINT value, float scale, int* output) {
     return TRUE;
 }
 
-BOOL GetImageDimensions(const wchar_t* imagePath, int* width, int* height) {
+BOOL GetImageDimensions(const wchar_t* imagePath, int* outWidth, int* outHeight) {
     const CachedImageEntry* entry;
 
-    if (!imagePath || !width || !height) return FALSE;
-    *width = 0;
-    *height = 0;
+    if (!imagePath || !outWidth || !outHeight) return FALSE;
+    *outWidth = 0;
+    *outHeight = 0;
     if (!DrawingImage_LockState()) return FALSE;
     if (!DrawingImage_EnsureInitializedLocked()) {
         DrawingImage_UnlockState();
@@ -30,21 +30,21 @@ BOOL GetImageDimensions(const wchar_t* imagePath, int* width, int* height) {
     }
     entry = DrawingImageCache_Get(imagePath);
     if (entry) {
-        *width = (int)entry->width;
-        *height = (int)entry->height;
+        *outWidth = (int)entry->width;
+        *outHeight = (int)entry->height;
     }
     DrawingImage_UnlockState();
     return entry != NULL;
 }
 
-BOOL BeginImageRenderContext(HDC hdc, ImageRenderContext* context) {
+BOOL BeginImageRenderContext(HDC hdc, ImageRenderContext* ctx) {
     GpGraphics graphics = NULL;
 
-    if (!context) return FALSE;
-    context->graphics = NULL;
-    context->stateLocked = FALSE;
+    if (!ctx) return FALSE;
+    ctx->graphics = NULL;
+    ctx->stateLocked = FALSE;
     if (!hdc || !DrawingImage_LockState()) return FALSE;
-    context->stateLocked = TRUE;
+    ctx->stateLocked = TRUE;
     if (!DrawingImage_EnsureInitializedLocked() ||
         !g_drawingImageRuntime.createFromHdc ||
         !g_drawingImageRuntime.deleteGraphics ||
@@ -52,28 +52,28 @@ BOOL BeginImageRenderContext(HDC hdc, ImageRenderContext* context) {
         g_drawingImageRuntime.createFromHdc(hdc, &graphics) !=
             GDIPLUS_STATUS_OK ||
         !graphics) {
-        context->stateLocked = FALSE;
+        ctx->stateLocked = FALSE;
         DrawingImage_UnlockState();
         return FALSE;
     }
-    context->graphics = graphics;
+    ctx->graphics = graphics;
     return TRUE;
 }
 
-void EndImageRenderContext(ImageRenderContext* context) {
-    if (!context) return;
-    if (context->stateLocked && context->graphics &&
+void EndImageRenderContext(ImageRenderContext* ctx) {
+    if (!ctx) return;
+    if (ctx->stateLocked && ctx->graphics &&
         g_drawingImageRuntime.deleteGraphics) {
-        g_drawingImageRuntime.deleteGraphics((GpGraphics)context->graphics);
+        g_drawingImageRuntime.deleteGraphics((GpGraphics)ctx->graphics);
     }
-    context->graphics = NULL;
-    if (context->stateLocked) {
-        context->stateLocked = FALSE;
+    ctx->graphics = NULL;
+    if (ctx->stateLocked) {
+        ctx->stateLocked = FALSE;
         DrawingImage_UnlockState();
     }
 }
 
-BOOL RenderImageGDIPlusWithContext(ImageRenderContext* context,
+BOOL RenderImageGDIPlusWithContext(ImageRenderContext* ctx,
                                    int x, int y, int width, int height,
                                    const wchar_t* imagePath) {
     CachedImageEntry* entry;
@@ -83,7 +83,7 @@ BOOL RenderImageGDIPlusWithContext(ImageRenderContext* context,
     int drawWidth = 0;
     int drawHeight = 0;
 
-    if (!context || !context->stateLocked || !context->graphics ||
+    if (!ctx || !ctx->stateLocked || !ctx->graphics ||
         !imagePath || width <= 0 || height <= 0 ||
         !g_drawingImageRuntime.drawImageRect) {
         return FALSE;
@@ -101,7 +101,7 @@ BOOL RenderImageGDIPlusWithContext(ImageRenderContext* context,
         return FALSE;
     }
     return g_drawingImageRuntime.drawImageRect(
-               (GpGraphics)context->graphics, (GpImage)entry->bitmap,
+               (GpGraphics)ctx->graphics, (GpImage)entry->bitmap,
                x, y, drawWidth, drawHeight) == GDIPLUS_STATUS_OK;
 }
 

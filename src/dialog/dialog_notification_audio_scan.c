@@ -120,8 +120,8 @@ void NotificationAudio_StopFolderWatcher(void) {
         &g_soundFolderWatcher, NOTIFICATION_SOUND_SCAN_STOP_TIMEOUT_MS);
 }
 
-DWORD WINAPI NotificationAudio_ScanThread(LPVOID parameter) {
-    LONG generation = (LONG)(INT_PTR)parameter;
+DWORD WINAPI NotificationAudio_ScanThread(LPVOID lpParam) {
+    LONG generation = (LONG)(INT_PTR)lpParam;
     wchar_t (*files)[MAX_PATH] = malloc(
         (size_t)NOTIFICATION_SOUND_ENTRY_LIMIT * sizeof(*files));
     if (!files) {

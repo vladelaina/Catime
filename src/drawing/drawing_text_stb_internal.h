@@ -151,7 +151,7 @@ void InitGlowGradientContext(GlowGradientContext* ctx,
                              int timeOffset);
 void GetGlowGradientColor(int x, int y,
                           int* r, int* g, int* b,
-                          void* userData);
+                          const void* userData);
 BOOL GradientLUTMatches(const GradientInfo* info);
 void InitializeGradientLUT(const GradientInfo* info);
 
