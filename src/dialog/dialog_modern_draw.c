@@ -157,6 +157,7 @@ void ModernDrawComboItemContent(ModernControl* control, HDC hdc,
 
     wchar_t text[512] = {0};
     SendMessageW(control->hwnd, CB_GETLBTEXT, itemId, (LPARAM)text);
+    text[_countof(text) - 1] = L'\0';
     RECT textRect = rect;
     textRect.left += DialogModern_Scale(state->dpi, 16);
     textRect.right -= DialogModern_Scale(state->dpi, chosen ? 34 : 24);

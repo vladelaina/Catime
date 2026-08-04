@@ -110,14 +110,14 @@ void ModernPaintDateTime(ModernControl* control, HDC suppliedDc) {
         }
         COLORREF idleArrow = enabled ? state->palette.text
                                      : state->palette.mutedText;
-        COLORREF upArrow = stepUpHot || stepUpPressed
-            ? (state->palette.highContrast && stepUpPressed
+        COLORREF upArrow = stepUpPressed
+            ? (state->palette.highContrast
                    ? state->palette.surface : state->palette.accent)
-            : idleArrow;
-        COLORREF downArrow = stepDownHot || stepDownPressed
-            ? (state->palette.highContrast && stepDownPressed
+            : (stepUpHot ? state->palette.accent : idleArrow);
+        COLORREF downArrow = stepDownPressed
+            ? (state->palette.highContrast
                    ? state->palette.surface : state->palette.accent)
-            : idleArrow;
+            : (stepDownHot ? state->palette.accent : idleArrow);
         int arrowWidth = max(1, DialogModern_Scale(state->dpi, 1));
         int centerX = (layout.stepper.left + layout.stepper.right) / 2;
         int arm = max(2, DialogModern_Scale(state->dpi, 3));

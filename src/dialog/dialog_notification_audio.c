@@ -13,25 +13,25 @@ static void OnAudioPlaybackComplete(HWND hwnd) {
 }
 
 BOOL GetSelectedNotificationSoundFile(
-    HWND combo, char* outSoundFile, size_t outSize) {
-    if (!combo || !outSoundFile || outSize == 0) {
+    HWND hwndCombo, char* outSoundFile, size_t outSize) {
+    if (!hwndCombo || !outSoundFile || outSize == 0) {
         return FALSE;
     }
     outSoundFile[0] = '\0';
 
-    LRESULT index = SendMessageW(combo, CB_GETCURSEL, 0, 0);
+    LRESULT index = SendMessageW(hwndCombo, CB_GETCURSEL, 0, 0);
     if (index == CB_ERR || index <= 0) {
         return TRUE;
     }
 
     LRESULT textLength = SendMessageW(
-        combo, CB_GETLBTEXTLEN, (WPARAM)index, 0);
+        hwndCombo, CB_GETLBTEXTLEN, (WPARAM)index, 0);
     if (textLength == CB_ERR || textLength < 0 || textLength >= MAX_PATH) {
         return FALSE;
     }
 
     wchar_t wideFileName[MAX_PATH] = {0};
-    if (SendMessageW(combo, CB_GETLBTEXT, (WPARAM)index,
+    if (SendMessageW(hwndCombo, CB_GETLBTEXT, (WPARAM)index,
                      (LPARAM)wideFileName) == CB_ERR) {
         return FALSE;
     }

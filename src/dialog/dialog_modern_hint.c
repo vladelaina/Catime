@@ -44,7 +44,7 @@ static wchar_t* ModernHintTrim(wchar_t* text) {
     return text;
 }
 
-static wchar_t* ModernHintFindSeparator(wchar_t* line) {
+static wchar_t* ModernHintFindSeparator(const wchar_t* line) {
     wchar_t* separator = wcschr(line, L'=');
     if (separator) return separator;
     if (!iswdigit(*line)) return NULL;
@@ -85,7 +85,7 @@ static int ModernHintMeasureToken(HDC hdc, HFONT font,
 }
 
 static void ModernHintDrawTokenRow(HDC hdc, ModernDialogState* state,
-                                   wchar_t* line, wchar_t* separator,
+                                   const wchar_t* line, wchar_t* separator,
                                    const RECT* content, int* y,
                                    int tokenWidth, int rowGap) {
     wchar_t* tokenEnd = separator;
@@ -175,7 +175,7 @@ static void ModernDrawInstruction(ModernControl* control, HDC hdc,
     int maximumToken = 0;
     for (int i = 0; i < count; i++) {
         lines[i] = ModernHintTrim(lines[i]);
-        wchar_t* separator = ModernHintFindSeparator(lines[i]);
+        const wchar_t* separator = ModernHintFindSeparator(lines[i]);
         if (separator) {
             maximumToken = max(maximumToken, ModernHintMeasureToken(
                 hdc, state->labelFont, lines[i], separator));
@@ -209,7 +209,7 @@ static void ModernDrawInstruction(ModernControl* control, HDC hdc,
 }
 
 void ModernPaintInstruction(ModernControl* control, HDC suppliedDc) {
-    ModernDialogState* state = control ? control->owner : NULL;
+    const ModernDialogState* state = control ? control->owner : NULL;
     if (!state || !control->hwnd) return;
     PAINTSTRUCT paint = {0};
     HDC hdc = suppliedDc ? suppliedDc : BeginPaint(control->hwnd, &paint);

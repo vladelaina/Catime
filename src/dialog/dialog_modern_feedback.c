@@ -98,7 +98,7 @@ static void ModernFeedbackDraw(ModernControl* control, HDC hdc,
 }
 
 void ModernPaintFeedback(ModernControl* control, HDC suppliedDc) {
-    ModernDialogState* state = control ? control->owner : NULL;
+    const ModernDialogState* state = control ? control->owner : NULL;
     if (!state || !control->hwnd) return;
     PAINTSTRUCT paint = {0};
     HDC hdc = suppliedDc ? suppliedDc : BeginPaint(control->hwnd, &paint);

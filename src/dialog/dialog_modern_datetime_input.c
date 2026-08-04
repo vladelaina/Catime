@@ -100,6 +100,7 @@ int ModernDateTimePartMaximum(int part) {
 
 BOOL ModernReadDateTime(const ModernControl* control, SYSTEMTIME* value) {
     if (!control || !control->hwnd || !value) return FALSE;
+    ZeroMemory(value, sizeof(*value));
     return SendMessageW(control->hwnd, DTM_GETSYSTEMTIME, 0,
                         (LPARAM)value) == GDT_VALID;
 }
