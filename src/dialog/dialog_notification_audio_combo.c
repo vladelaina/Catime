@@ -1,13 +1,13 @@
 #include "dialog_notification_audio_internal.h"
 
 static int FindNotificationSoundItem(
-    wchar_t items[][MAX_PATH], int count, int firstIndex,
+    const wchar_t* items, int count, int firstIndex,
     const wchar_t* value) {
     if (!items || !value || firstIndex < 0) {
         return -1;
     }
     for (int i = firstIndex; i < count; i++) {
-        if (wcscmp(items[i], value) == 0) {
+        if (wcscmp(items + (size_t)i * MAX_PATH, value) == 0) {
             return i;
         }
     }
@@ -39,7 +39,7 @@ static int BuildNotificationSoundItems(
             if (NotificationAudio_GetCurrentFileName(
                     currentFile, currentFileName, MAX_PATH)) {
                 int index = FindNotificationSoundItem(
-                    items, count, 2, currentFileName);
+                    items[0], count, 2, currentFileName);
                 if (index < 0 && count < capacity &&
                     NotificationAudio_IsSupportedFileName(currentFileName)) {
                     wcsncpy_s(items[count], MAX_PATH,
@@ -59,7 +59,7 @@ static int BuildNotificationSoundItems(
 }
 
 static BOOL NotificationSoundComboItemsMatch(
-    HWND combo, wchar_t items[][MAX_PATH], int count) {
+    HWND combo, const wchar_t* items, int count) {
     if (!combo || !items || count < 0 ||
         (int)SendMessageW(combo, CB_GETCOUNT, 0, 0) != count) {
         return FALSE;
@@ -71,8 +71,11 @@ static BOOL NotificationSoundComboItemsMatch(
             return FALSE;
         }
         wchar_t existing[MAX_PATH] = {0};
-        if (SendMessageW(combo, CB_GETLBTEXT, i, (LPARAM)existing) == CB_ERR ||
-            wcscmp(existing, items[i]) != 0) {
+        if (SendMessageW(combo, CB_GETLBTEXT, i, (LPARAM)existing) == CB_ERR) {
+            return FALSE;
+        }
+        existing[MAX_PATH - 1] = L'\0';
+        if (wcscmp(existing, items + (size_t)i * MAX_PATH) != 0) {
             return FALSE;
         }
     }
@@ -80,7 +83,7 @@ static BOOL NotificationSoundComboItemsMatch(
 }
 
 static void ApplyNotificationSoundItems(
-    HWND combo, wchar_t items[][MAX_PATH], int count, int selection) {
+    HWND combo, const wchar_t* items, int count, int selection) {
     if (!combo || !items || count < 0) {
         return;
     }
@@ -104,7 +107,7 @@ static void ApplyNotificationSoundItems(
         int added = 0;
         for (; added < count; added++) {
             if (SendMessageW(combo, CB_ADDSTRING, 0,
-                             (LPARAM)items[added]) < 0) {
+                             (LPARAM)(items + (size_t)added * MAX_PATH)) < 0) {
                 break;
             }
         }
@@ -119,8 +122,8 @@ static void ApplyNotificationSoundItems(
                  RDW_ALLCHILDREN);
 }
 
-void PopulateNotificationSoundComboBox(HWND combo, const char* currentFile) {
-    if (!combo) {
+void PopulateNotificationSoundComboBox(HWND hwndCombo, const char* currentFile) {
+    if (!hwndCombo) {
         return;
     }
     NotificationSoundCache_RequestScanAsync();
@@ -133,20 +136,21 @@ void PopulateNotificationSoundComboBox(HWND combo, const char* currentFile) {
     int selection = 0;
     int count = BuildNotificationSoundItems(
         items, capacity, currentFile, &selection);
-    ApplyNotificationSoundItems(combo, items, count, selection);
+    ApplyNotificationSoundItems(hwndCombo, items[0], count, selection);
     free(items);
 }
 
-void RefreshNotificationSoundComboBox(HWND combo) {
-    if (!combo) {
+void RefreshNotificationSoundComboBox(HWND hwndCombo) {
+    if (!hwndCombo) {
         return;
     }
 
-    int selectedIndex = (int)SendMessageW(combo, CB_GETCURSEL, 0, 0);
+    int selectedIndex = (int)SendMessageW(hwndCombo, CB_GETCURSEL, 0, 0);
     wchar_t selectedFile[MAX_PATH] = {0};
     if (selectedIndex >= 2) {
-        SendMessageW(combo, CB_GETLBTEXT,
+        SendMessageW(hwndCombo, CB_GETLBTEXT,
                      selectedIndex, (LPARAM)selectedFile);
+        selectedFile[MAX_PATH - 1] = L'\0';
     }
 
     const char* currentFile = selectedIndex > 0
@@ -165,13 +169,13 @@ void RefreshNotificationSoundComboBox(HWND combo) {
         selection = 1;
     } else if (selectedIndex >= 2 && selectedFile[0] != L'\0') {
         selection = FindNotificationSoundItem(
-            items, count, 2, selectedFile);
+            items[0], count, 2, selectedFile);
         if (selection < 0) {
             selection = 0;
         }
     } else if (selectedIndex == 0) {
         selection = 0;
     }
-    ApplyNotificationSoundItems(combo, items, count, selection);
+    ApplyNotificationSoundItems(hwndCombo, items[0], count, selection);
     free(items);
 }

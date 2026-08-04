@@ -66,23 +66,23 @@ BOOL GetSelectedNotificationSoundFile(
 }
 
 BOOL HandleSoundTestButton(
-    HWND dialog, HWND combo, HWND slider, BOOL* isPlaying) {
-    if (!dialog || !combo || !slider || !isPlaying) {
+    HWND hwndDlg, HWND hwndCombo, HWND hwndSlider, BOOL* isPlaying) {
+    if (!hwndDlg || !hwndCombo || !hwndSlider || !isPlaying) {
         return FALSE;
     }
 
     if (!*isPlaying) {
         char soundFile[MAX_PATH] = {0};
         if (!GetSelectedNotificationSoundFile(
-                combo, soundFile, sizeof(soundFile))) {
+                hwndCombo, soundFile, sizeof(soundFile))) {
             return FALSE;
         }
         if (soundFile[0] != '\0') {
-            int volume = (int)SendMessageW(slider, TBM_GETPOS, 0, 0);
+            int volume = (int)SendMessageW(hwndSlider, TBM_GETPOS, 0, 0);
             SetAudioVolume(volume);
-            if (PreviewNotificationSoundFile(dialog, soundFile)) {
+            if (PreviewNotificationSoundFile(hwndDlg, soundFile)) {
                 SetDlgItemTextW(
-                    dialog, IDC_TEST_SOUND_BUTTON,
+                    hwndDlg, IDC_TEST_SOUND_BUTTON,
                     GetLocalizedString(NULL, L"Stop"));
                 *isPlaying = TRUE;
             }
@@ -90,15 +90,15 @@ BOOL HandleSoundTestButton(
     } else {
         StopNotificationSound();
         SetDlgItemTextW(
-            dialog, IDC_TEST_SOUND_BUTTON,
+            hwndDlg, IDC_TEST_SOUND_BUTTON,
             GetLocalizedString(NULL, L"Test"));
         *isPlaying = FALSE;
     }
     return TRUE;
 }
 
-void HandleSoundDirButton(HWND dialog, HWND combo) {
-    if (!dialog || !combo) {
+void HandleSoundDirButton(HWND hwndDlg, HWND hwndCombo) {
+    if (!hwndDlg || !hwndCombo) {
         return;
     }
 
@@ -113,18 +113,18 @@ void HandleSoundDirButton(HWND dialog, HWND combo) {
                             wideAudioPath, MAX_PATH) <= 0) {
         return;
     }
-    ShellExecuteW(dialog, L"open", wideAudioPath, NULL, NULL, SW_SHOWNORMAL);
+    ShellExecuteW(hwndDlg, L"open", wideAudioPath, NULL, NULL, SW_SHOWNORMAL);
     NotificationAudio_RequestCacheScanAsync();
 }
 
-void HandleSoundComboDropdown(HWND combo) {
-    if (combo) {
+void HandleSoundComboDropdown(HWND hwndCombo) {
+    if (hwndCombo) {
         NotificationAudio_RequestCacheScanAsync();
     }
 }
 
-void SetupAudioPlaybackCallback(HWND dialog) {
-    SetAudioPlaybackCompleteCallback(dialog, OnAudioPlaybackComplete);
+void SetupAudioPlaybackCallback(HWND hwndDlg) {
+    SetAudioPlaybackCompleteCallback(hwndDlg, OnAudioPlaybackComplete);
 }
 
 void CleanupAudioPlayback(BOOL isPlaying) {
