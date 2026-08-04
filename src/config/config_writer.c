@@ -33,22 +33,17 @@ BOOL CollectCurrentConfig(ConfigWriteItem* items, int itemCapacity,
 
 BOOL WriteConfigItems(const char* configPath,
                       const ConfigWriteItem* items, int count) {
-    IniKeyValue stackUpdates[CONFIG_WRITE_ITEM_CAPACITY];
-    IniKeyValue* updates = stackUpdates;
+    IniKeyValue updates[CONFIG_WRITE_ITEM_CAPACITY];
     BOOL result;
 
-    if (!configPath || !items || count <= 0) return FALSE;
-    if (count > CONFIG_WRITE_ITEM_CAPACITY) {
-        updates = (IniKeyValue*)calloc((size_t)count, sizeof(*updates));
-        if (!updates) return FALSE;
-    }
+    if (!configPath || !items || count <= 0 ||
+        count > CONFIG_WRITE_ITEM_CAPACITY) return FALSE;
     for (int i = 0; i < count; ++i) {
         updates[i].section = items[i].section;
         updates[i].key = items[i].key;
         updates[i].value = items[i].value;
     }
     result = WriteIniMultipleAtomic(configPath, updates, (size_t)count);
-    if (updates != stackUpdates) free(updates);
     return result;
 }
 

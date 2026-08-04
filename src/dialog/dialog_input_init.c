@@ -72,44 +72,44 @@ static void ShowBuildDate(HWND dialog) {
     SetDlgItemTextW(dialog, IDC_BUILD_DATE, text);
 }
 
-INT_PTR DialogInput_HandleInit(HWND dialog, LPARAM parameter) {
+INT_PTR DialogInput_HandleInit(HWND hwndDlg, LPARAM parameter) {
     InputDialogState* state = (InputDialogState*)parameter;
     if (!state) {
-        DestroyWindow(dialog);
+        DestroyWindow(hwndDlg);
         return TRUE;
     }
     DialogContext* context = Dialog_CreateContext();
     if (!context) {
         free(state);
-        DestroyWindow(dialog);
+        DestroyWindow(hwndDlg);
         return TRUE;
     }
     context->userData = state;
-    Dialog_SetContext(dialog, context);
-    Dialog_InitializeInstance(DialogInput_GetInstanceType(state->dialogId), dialog);
-    if (state->dialogId == CLOCK_IDD_DIALOG1) g_hwndInputDialog = dialog;
-    Dialog_CenterOnPrimaryScreen(dialog);
-    HWND edit = GetDlgItem(dialog, CLOCK_IDC_EDIT);
+    Dialog_SetContext(hwndDlg, context);
+    Dialog_InitializeInstance(DialogInput_GetInstanceType(state->dialogId), hwndDlg);
+    if (state->dialogId == CLOCK_IDD_DIALOG1) g_hwndInputDialog = hwndDlg;
+    Dialog_CenterOnPrimaryScreen(hwndDlg);
+    HWND edit = GetDlgItem(hwndDlg, CLOCK_IDC_EDIT);
     Dialog_SubclassEdit(edit, context);
     if (edit) {
         SendMessageW(edit, EM_SETLIMITTEXT,
                      state->dialogId == CLOCK_IDD_SHORTCUT_DIALOG
                          ? QUICK_TIME_OPTIONS_MAX_INPUT_CHARS : 255, 0);
     }
-    PopulateInitialInput(dialog, state);
-    ApplyDialogLanguage(dialog, (int)state->dialogId);
-    DialogFormLayout_ApplyInstruction(dialog, CLOCK_IDC_STATIC,
+    PopulateInitialInput(hwndDlg, state);
+    ApplyDialogLanguage(hwndDlg, (int)state->dialogId);
+    DialogFormLayout_ApplyInstruction(hwndDlg, CLOCK_IDC_STATIC,
                                       CLOCK_IDC_EDIT, CLOCK_IDC_BUTTON_OK);
     SetFocus(edit);
-    PostMessage(dialog, WM_APP + 100, 0, (LPARAM)edit);
-    PostMessage(dialog, WM_APP + 101, 0, (LPARAM)edit);
-    PostMessage(dialog, WM_APP + 102, 0, (LPARAM)edit);
+    PostMessage(hwndDlg, WM_APP + 100, 0, (LPARAM)edit);
+    PostMessage(hwndDlg, WM_APP + 101, 0, (LPARAM)edit);
+    PostMessage(hwndDlg, WM_APP + 102, 0, (LPARAM)edit);
     Dialog_SelectAllText(edit);
-    SendMessage(dialog, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
-    if (!SetTimer(dialog, INPUT_FOCUS_TIMER_ID, INPUT_FOCUS_TIMER_DELAY_MS, NULL))
+    SendMessage(hwndDlg, DM_SETDEFID, CLOCK_IDC_BUTTON_OK, 0);
+    if (!SetTimer(hwndDlg, INPUT_FOCUS_TIMER_ID, INPUT_FOCUS_TIMER_DELAY_MS, NULL))
         LOG_WARNING("InputDialog: Failed to start focus timer (error=%lu)",
                     GetLastError());
-    PostMessage(dialog, WM_APP + 103, 0, 0);
-    ShowBuildDate(dialog);
+    PostMessage(hwndDlg, WM_APP + 103, 0, 0);
+    ShowBuildDate(hwndDlg);
     return FALSE;
 }

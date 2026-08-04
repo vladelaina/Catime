@@ -111,18 +111,18 @@ static BOOL HandleTimeSubmit(HWND dialog, const InputDialogState* state) {
     return TRUE;
 }
 
-BOOL DialogInput_HandleCommand(HWND dialog, DialogContext* context,
+BOOL DialogInput_HandleCommand(HWND hwndDlg, DialogContext* ctx,
                                WPARAM wParam) {
     int controlId = LOWORD(wParam);
     if (controlId == IDCANCEL) {
-        DestroyWindow(dialog);
+        DestroyWindow(hwndDlg);
         return TRUE;
     }
     if (controlId != CLOCK_IDC_BUTTON_OK) return FALSE;
-    const InputDialogState* state = DialogInput_GetState(context);
+    const InputDialogState* state = DialogInput_GetState(ctx);
     if (!state) return TRUE;
     BOOL success = state->dialogId == CLOCK_IDD_SHORTCUT_DIALOG
-        ? HandleShortcutSubmit(dialog) : HandleTimeSubmit(dialog, state);
-    if (!success) Dialog_ShowErrorAndRefocus(dialog, CLOCK_IDC_EDIT);
+        ? HandleShortcutSubmit(hwndDlg) : HandleTimeSubmit(hwndDlg, state);
+    if (!success) Dialog_ShowErrorAndRefocus(hwndDlg, CLOCK_IDC_EDIT);
     return TRUE;
 }

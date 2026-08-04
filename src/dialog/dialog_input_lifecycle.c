@@ -56,12 +56,12 @@ DialogInstanceType DialogInput_GetInstanceType(DWORD dialogId) {
     }
 }
 
-HWND DialogInput_CreateResourceDialog(HWND parent, int resourceId,
+HWND DialogInput_CreateResourceDialog(HWND hwndParent, int resourceId,
                                       DWORD dialogId, int pomodoroTimeIndex) {
     InputDialogState* state = CreateInputDialogState(dialogId, pomodoroTimeIndex);
     if (!state) return NULL;
     HWND dialog = CreateDialogParamW(GetModuleHandle(NULL),
-                                     MAKEINTRESOURCEW(resourceId), parent,
+                                     MAKEINTRESOURCEW(resourceId), hwndParent,
                                      DlgProc, (LPARAM)state);
     if (!dialog) free(state);
     return dialog;
@@ -80,11 +80,11 @@ static void ShowInputDialog(HWND parent, DialogInstanceType type,
     if (dialog) ShowWindow(dialog, SW_SHOW);
 }
 
-void ShowShortcutTimeDialog(HWND parent) {
-    ShowInputDialog(parent, DIALOG_INSTANCE_SHORTCUT,
+void ShowShortcutTimeDialog(HWND hwndParent) {
+    ShowInputDialog(hwndParent, DIALOG_INSTANCE_SHORTCUT,
                     CLOCK_IDD_SHORTCUT_DIALOG, CLOCK_IDD_SHORTCUT_DIALOG, -1);
 }
-void ShowStartupTimeDialog(HWND parent) {
-    ShowInputDialog(parent, DIALOG_INSTANCE_STARTUP,
+void ShowStartupTimeDialog(HWND hwndParent) {
+    ShowInputDialog(hwndParent, DIALOG_INSTANCE_STARTUP,
                     CLOCK_IDD_STARTUP_DIALOG, CLOCK_IDD_STARTUP_DIALOG, -1);
 }

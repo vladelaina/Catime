@@ -84,24 +84,25 @@ BOOL PluginTrustStore_Rewrite(const PluginTrustState* trust) {
     return success;
 }
 
-static BOOL ParseEntry(char* value, PluginTrustEntry* entry, int index) {
-    char* separator;
+static BOOL ParseEntry(const char* value, PluginTrustEntry* entry, int index) {
+    const char* separator;
     const char* hash;
+    size_t pathLength;
 
     separator = strchr(value, '|');
-    if (!separator || separator == value ||
-        (size_t)(separator - value) >= sizeof(entry->path)) {
+    pathLength = separator ? (size_t)(separator - value) : 0;
+    if (!separator || pathLength == 0 || pathLength >= sizeof(entry->path)) {
         LOG_WARNING("Ignoring malformed plugin trust entry %d", index);
         return FALSE;
     }
-    *separator = '\0';
     hash = separator + 1;
     if (!PluginTrust_IsValidHash(hash)) {
         LOG_WARNING("Ignoring plugin trust entry %d with an invalid hash",
                     index);
         return FALSE;
     }
-    safe_strncpy(entry->path, value, sizeof(entry->path));
+    memcpy(entry->path, value, pathLength);
+    entry->path[pathLength] = '\0';
     safe_strncpy(entry->sha256, hash, sizeof(entry->sha256));
     return TRUE;
 }

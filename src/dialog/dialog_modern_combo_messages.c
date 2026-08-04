@@ -28,10 +28,8 @@ LRESULT CALLBACK ModernComboListSubclassProc(
         }
         case WM_MOUSEWHEEL:
             if (control && state) {
-                int count = (int)SendMessageW(hwnd, LB_GETCOUNT, 0, 0);
                 int visibleItems = ModernGetComboListVisibleItems(
                     hwnd, control);
-                int maximumTop = max(0, count - visibleItems);
                 int previousTop = (int)SendMessageW(
                     hwnd, LB_GETTOPINDEX, 0, 0);
                 UINT scrollLines = 3;
@@ -45,6 +43,8 @@ LRESULT CALLBACK ModernComboListSubclassProc(
                 int notches = control->comboWheelDelta / WHEEL_DELTA;
                 control->comboWheelDelta -= notches * WHEEL_DELTA;
                 if (notches != 0) {
+                    int count = (int)SendMessageW(hwnd, LB_GETCOUNT, 0, 0);
+                    int maximumTop = max(0, count - visibleItems);
                     int topIndex = previousTop - notches * lineCount;
                     if (topIndex < 0) topIndex = 0;
                     if (topIndex > maximumTop) topIndex = maximumTop;
@@ -93,13 +93,14 @@ LRESULT CALLBACK ModernComboListSubclassProc(
                 BOOL hasScrollbar = ModernGetComboListScrollbarRects(
                     hwnd, control, &track, &thumb);
                 if (control->comboScrollDragging && hasScrollbar) {
-                    int count = (int)SendMessageW(hwnd, LB_GETCOUNT, 0, 0);
-                    int visibleItems = ModernGetComboListVisibleItems(
-                        hwnd, control);
-                    int maximumTop = max(0, count - visibleItems);
                     int travel = (track.bottom - track.top) -
                                  (thumb.bottom - thumb.top);
                     if (travel > 0) {
+                        int count = (int)SendMessageW(
+                            hwnd, LB_GETCOUNT, 0, 0);
+                        int visibleItems = ModernGetComboListVisibleItems(
+                            hwnd, control);
+                        int maximumTop = max(0, count - visibleItems);
                         int previousTop = (int)SendMessageW(
                             hwnd, LB_GETTOPINDEX, 0, 0);
                         int topIndex = control->comboScrollDragStartTopIndex +
