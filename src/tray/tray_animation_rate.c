@@ -26,8 +26,8 @@ BOOL FrameRateController_ShouldUpdateTray(FrameRateController* ctrl,
     return TRUE;
 }
 
-BOOL AnimationUpdateBackoff_ShouldRetry(BOOL active, DWORD lastFailureTick,
+BOOL AnimationUpdateBackoff_ShouldRetry(BOOL backoffActive, DWORD lastFailureTick,
                                         DWORD now, UINT backoffMs) {
-    if (!active || lastFailureTick == 0 || backoffMs == 0) return TRUE;
+    if (!backoffActive || lastFailureTick == 0 || backoffMs == 0) return TRUE;
     return (DWORD)(now - lastFailureTick) >= backoffMs;
 }

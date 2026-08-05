@@ -111,9 +111,9 @@ static void BuildAnimationMenuFromEntries(
 }
 
 BOOL BuildAnimationMenu(
-    HMENU menu, const char* currentAnimationName,
+    HMENU hMenu, const char* currentAnimationName,
     TrayMenuPaginationRange* customItemRange) {
-    if (!menu) return FALSE;
+    if (!hMenu) return FALSE;
     if (customItemRange) {
         customItemRange->firstItem = 0;
         customItemRange->itemCount = 0;
@@ -130,12 +130,12 @@ BOOL BuildAnimationMenu(
             flags |= MF_CHECKED;
         }
         AppendMenuW(
-            menu, flags, builtins[i].menuId,
+            hMenu, flags, builtins[i].menuId,
             GetLocalizedString(NULL, builtins[i].menuLabel));
     }
-    AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
-    AppendTaskbarMonitorOptions(menu);
-    AppendMenuW(menu, MF_SEPARATOR, 0, NULL);
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
+    AppendTaskbarMonitorOptions(hMenu);
+    AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
     BOOL cacheReady = FALSE;
     int animationCount = 0;
@@ -156,25 +156,25 @@ BOOL BuildAnimationMenu(
     ReleaseSRWLockShared(&g_animMenuCacheLock);
 
     BOOL rangeStarted = customItemRange &&
-        TrayMenuPagination_BeginRange(menu, customItemRange);
+        TrayMenuPagination_BeginRange(hMenu, customItemRange);
     if (animationCount > 0) {
         UINT nextId = CLOCK_IDM_ANIMATIONS_BASE;
         BuildAnimationMenuFromEntries(
-            menu, snapshot, animationCount,
+            hMenu, snapshot, animationCount,
             currentAnimationName, &nextId);
     }
     if (rangeStarted &&
-        !TrayMenuPagination_EndRange(menu, customItemRange)) {
+        !TrayMenuPagination_EndRange(hMenu, customItemRange)) {
         customItemRange->firstItem = 0;
         customItemRange->itemCount = 0;
         LOG_WARNING("Failed to capture custom animation menu items");
     }
     free(snapshot);
     if (animationCount <= 0 && !cacheReady) {
-        AppendMenuW(menu, MF_STRING | MF_GRAYED, 0,
+        AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0,
                     GetLocalizedString(NULL, L"Loading..."));
     } else if (animationCount <= 0) {
-        AppendMenuW(menu, MF_STRING | MF_GRAYED, 0,
+        AppendMenuW(hMenu, MF_STRING | MF_GRAYED, 0,
                     GetLocalizedString(
                         NULL, L"(Supports GIF, WebP, ANI, PNG, etc.)"));
     }

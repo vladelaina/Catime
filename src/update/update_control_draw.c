@@ -7,32 +7,31 @@ int UpdateClampScrollPosition(int position, int maximum, int page) {
     return position > limit ? limit : position;
 }
 
-void CalculateScrollbarThumbRect(RECT clientRect, int scrollPosition,
-                                 int scrollMaximum, int scrollPage,
-                                 RECT* thumbRect) {
-    if (!thumbRect) return;
+void CalculateScrollbarThumbRect(RECT clientRect, int scrollPos,
+                                 int scrollMax, int scrollPage,
+                                 RECT* outThumbRect) {
+    if (!outThumbRect) return;
     int trackHeight = clientRect.bottom - clientRect.top;
-    if (trackHeight <= 0 || scrollMaximum <= scrollPage || scrollPage <= 0) {
-        SetRectEmpty(thumbRect);
+    if (trackHeight <= 0 || scrollMax <= scrollPage || scrollPage <= 0) {
+        SetRectEmpty(outThumbRect);
         return;
     }
 
-    scrollPosition = UpdateClampScrollPosition(
-        scrollPosition, scrollMaximum, scrollPage);
-    int thumbHeight = MulDiv(scrollPage, trackHeight, scrollMaximum);
+    scrollPos = UpdateClampScrollPosition(scrollPos, scrollMax, scrollPage);
+    int thumbHeight = MulDiv(scrollPage, trackHeight, scrollMax);
     if (thumbHeight < MODERN_SCROLLBAR_MIN_THUMB) {
         thumbHeight = MODERN_SCROLLBAR_MIN_THUMB;
     }
     if (thumbHeight > trackHeight) thumbHeight = trackHeight;
 
     int travel = trackHeight - thumbHeight;
-    int range = scrollMaximum - scrollPage;
-    int thumbTop = travel > 0 ? MulDiv(scrollPosition, travel, range) : 0;
-    thumbRect->left = clientRect.right - MODERN_SCROLLBAR_WIDTH -
+    int range = scrollMax - scrollPage;
+    int thumbTop = travel > 0 ? MulDiv(scrollPos, travel, range) : 0;
+    outThumbRect->left = clientRect.right - MODERN_SCROLLBAR_WIDTH -
                       MODERN_SCROLLBAR_MARGIN;
-    thumbRect->top = clientRect.top + thumbTop;
-    thumbRect->right = clientRect.right - MODERN_SCROLLBAR_MARGIN;
-    thumbRect->bottom = thumbRect->top + thumbHeight;
+    outThumbRect->top = clientRect.top + thumbTop;
+    outThumbRect->right = clientRect.right - MODERN_SCROLLBAR_MARGIN;
+    outThumbRect->bottom = outThumbRect->top + thumbHeight;
 }
 
 void DrawRoundedRect(HDC hdc, RECT rect, int radius, COLORREF color) {

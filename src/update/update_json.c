@@ -106,22 +106,22 @@ static void DecodeJsonEscapes(const char* input, char* output,
 }
 
 BOOL ParseGitHubRelease(const char* jsonResponse,
-                        char* latestVersion, size_t versionMaxLength,
-                        char* downloadUrl, size_t urlMaxLength,
-                        char* releaseNotes, size_t notesMaxLength) {
-    if (latestVersion && versionMaxLength) latestVersion[0] = '\0';
-    if (downloadUrl && urlMaxLength) downloadUrl[0] = '\0';
-    if (releaseNotes && notesMaxLength) releaseNotes[0] = '\0';
+                        char* latestVersion, size_t versionMaxLen,
+                        char* downloadUrl, size_t urlMaxLen,
+                        char* releaseNotes, size_t notesMaxLen) {
+    if (latestVersion && versionMaxLen) latestVersion[0] = '\0';
+    if (downloadUrl && urlMaxLen) downloadUrl[0] = '\0';
+    if (releaseNotes && notesMaxLen) releaseNotes[0] = '\0';
     if (!latestVersion || !downloadUrl || !releaseNotes) return FALSE;
 
     if (!ExtractJsonString(jsonResponse, "tag_name", latestVersion,
-                           versionMaxLength, FALSE)) {
+                           versionMaxLen, FALSE)) {
         return FALSE;
     }
     if (latestVersion[0] == 'v' || latestVersion[0] == 'V') {
         memmove(latestVersion, latestVersion + 1, strlen(latestVersion));
     }
-    if (!ExtractSafeDownloadUrl(jsonResponse, downloadUrl, urlMaxLength)) {
+    if (!ExtractSafeDownloadUrl(jsonResponse, downloadUrl, urlMaxLen)) {
         return FALSE;
     }
 
@@ -129,10 +129,10 @@ BOOL ParseGitHubRelease(const char* jsonResponse,
     if (!rawNotes) return FALSE;
     if (ExtractJsonString(jsonResponse, "body", rawNotes,
                           NOTES_BUFFER_SIZE, TRUE)) {
-        DecodeJsonEscapes(rawNotes, releaseNotes, notesMaxLength);
+        DecodeJsonEscapes(rawNotes, releaseNotes, notesMaxLen);
     } else {
         LOG_WARNING("Release notes not found, using default text");
-        StringCbCopyA(releaseNotes, notesMaxLength,
+        StringCbCopyA(releaseNotes, notesMaxLen,
                       "No release notes available.");
     }
     free(rawNotes);

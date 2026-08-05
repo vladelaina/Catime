@@ -66,11 +66,11 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion,
     return IDNO;
 }
 
-void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMessage) {
+void ShowUpdateErrorDialog(HWND hwnd, const wchar_t* errorMsg) {
     UNREFERENCED_PARAMETER(hwnd);
     char message[512] = {0};
-    if (errorMessage &&
-        WideToUtf8(errorMessage, message, sizeof(message))) {
+    if (errorMsg &&
+        WideToUtf8(errorMsg, message, sizeof(message))) {
         LOG_WARNING("Update check failed: %s", message);
     } else {
         LOG_WARNING("Update check failed");

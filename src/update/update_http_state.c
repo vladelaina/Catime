@@ -52,23 +52,23 @@ void UpdateHttp_TrackConnect(HINTERNET handle) {
     LeaveCriticalSection(&g_httpCriticalSection);
 }
 
-void UpdateHttp_CloseTracked(HINTERNET* handlePointer) {
-    if (!handlePointer || !*handlePointer) return;
-    HINTERNET handle = *handlePointer;
+void UpdateHttp_CloseTracked(HINTERNET* handle) {
+    if (!handle || !*handle) return;
+    HINTERNET trackedHandle = *handle;
     BOOL shouldClose = FALSE;
 
     EnsureCriticalSection();
     EnterCriticalSection(&g_httpCriticalSection);
-    if (g_activeConnect == handle) {
+    if (g_activeConnect == trackedHandle) {
         g_activeConnect = NULL;
         shouldClose = TRUE;
-    } else if (g_activeInternet == handle) {
+    } else if (g_activeInternet == trackedHandle) {
         g_activeInternet = NULL;
         shouldClose = TRUE;
     }
     LeaveCriticalSection(&g_httpCriticalSection);
-    if (shouldClose) InternetCloseHandle(handle);
-    *handlePointer = NULL;
+    if (shouldClose) InternetCloseHandle(trackedHandle);
+    *handle = NULL;
 }
 
 static void CancelAndCloseActiveHandles(void) {
