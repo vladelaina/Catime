@@ -148,11 +148,11 @@ static BOOL ParseFontName(const char* stringData, size_t dataLength, BOOL isUnic
  * ============================================================================ */
 
 /* Extract the preferred family-name record from an open font file. */
-BOOL FontTtf_ExtractName(HANDLE hFile, char* fontName, size_t fontNameSize) {
-    if (hFile == INVALID_HANDLE_VALUE || !fontName || fontNameSize == 0) return FALSE;
+BOOL FontTtf_ExtractName(HANDLE file, char* fontName, size_t fontNameSize) {
+    if (file == INVALID_HANDLE_VALUE || !fontName || fontNameSize == 0) return FALSE;
 
     LARGE_INTEGER fileSizeLarge;
-    if (!GetFileSizeEx(hFile, &fileSizeLarge) ||
+    if (!GetFileSizeEx(file, &fileSizeLarge) ||
         fileSizeLarge.QuadPart < 0 ||
         fileSizeLarge.QuadPart > MAXDWORD) {
         return FALSE;
@@ -166,7 +166,7 @@ BOOL FontTtf_ExtractName(HANDLE hFile, char* fontName, size_t fontNameSize) {
     FontDirectoryHeader fontHeader;
     DWORD bytesRead;
 
-    if (!ReadFile(hFile, &fontHeader, sizeof(FontDirectoryHeader), &bytesRead, NULL) ||
+    if (!ReadFile(file, &fontHeader, sizeof(FontDirectoryHeader), &bytesRead, NULL) ||
         bytesRead != sizeof(FontDirectoryHeader)) {
         return FALSE;
     }
@@ -181,7 +181,7 @@ BOOL FontTtf_ExtractName(HANDLE hFile, char* fontName, size_t fontNameSize) {
 
     /* Locate 'name' table */
     DWORD nameTableOffset = 0, nameTableLength = 0;
-    if (!FindTTFTable(hFile, fontHeader.numTables, TTF_NAME_TABLE_TAG, fileSize,
+    if (!FindTTFTable(file, fontHeader.numTables, TTF_NAME_TABLE_TAG, fileSize,
                      &nameTableOffset, &nameTableLength)) {
         return FALSE;
     }
@@ -191,13 +191,13 @@ BOOL FontTtf_ExtractName(HANDLE hFile, char* fontName, size_t fontNameSize) {
     }
 
     /* Seek to name table */
-    if (!SeekFileOffset(hFile, nameTableOffset)) {
+    if (!SeekFileOffset(file, nameTableOffset)) {
         return FALSE;
     }
 
     /* Read name table header */
     NameTableHeader nameHeader;
-    if (!ReadFile(hFile, &nameHeader, sizeof(NameTableHeader), &bytesRead, NULL) ||
+    if (!ReadFile(file, &nameHeader, sizeof(NameTableHeader), &bytesRead, NULL) ||
         bytesRead != sizeof(NameTableHeader)) {
         return FALSE;
     }
@@ -220,7 +220,7 @@ BOOL FontTtf_ExtractName(HANDLE hFile, char* fontName, size_t fontNameSize) {
     for (WORD i = 0; i < nameHeader.count; i++) {
         NameRecord nameRecord;
 
-        if (!ReadFile(hFile, &nameRecord, sizeof(NameRecord), &bytesRead, NULL) ||
+        if (!ReadFile(file, &nameRecord, sizeof(NameRecord), &bytesRead, NULL) ||
             bytesRead != sizeof(NameRecord)) {
             return FALSE;
         }
@@ -267,7 +267,7 @@ BOOL FontTtf_ExtractName(HANDLE hFile, char* fontName, size_t fontNameSize) {
     }
     DWORD stringDataOffset = nameTableOffset + stringRelativeOffset;
 
-    if (!SeekFileOffset(hFile, stringDataOffset)) {
+    if (!SeekFileOffset(file, stringDataOffset)) {
         return FALSE;
     }
 
@@ -280,7 +280,7 @@ BOOL FontTtf_ExtractName(HANDLE hFile, char* fontName, size_t fontNameSize) {
     if (!stringBuffer) return FALSE;
 
     BOOL success = FALSE;
-    if (ReadFile(hFile, stringBuffer, nameLength, &bytesRead, NULL) &&
+    if (ReadFile(file, stringBuffer, nameLength, &bytesRead, NULL) &&
         bytesRead == nameLength) {
         success = ParseFontName(stringBuffer, nameLength, isUnicode, fontName, fontNameSize);
     }

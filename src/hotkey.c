@@ -10,17 +10,17 @@
 #include "log.h"
 #include "window_procedure/window_procedure.h"
 
-void ShowHotkeySettingsDialog(HWND parent) {
+void ShowHotkeySettingsDialog(HWND hwndParent) {
     HWND dialog;
 
     if (Dialog_IsOpen(DIALOG_INSTANCE_HOTKEY)) {
         SetForegroundWindow(Dialog_GetInstance(DIALOG_INSTANCE_HOTKEY));
         return;
     }
-    if (!Hotkey_IsValidParent(parent)) return;
+    if (!Hotkey_IsValidParent(hwndParent)) return;
     dialog = CreateDialogW(GetModuleHandle(NULL),
                            MAKEINTRESOURCEW(CLOCK_IDD_HOTKEY_DIALOG),
-                           parent, HotkeySettingsDlgProc);
+                           hwndParent, HotkeySettingsDlgProc);
     if (dialog) {
         if (!DialogModern_PrepareForShow(dialog)) {
             LOG_WARNING("Failed to prepare hotkey dialog before show");
@@ -102,13 +102,13 @@ static INT_PTR InitializeDialog(HWND dialog) {
     return FALSE;
 }
 
-INT_PTR CALLBACK HotkeySettingsDlgProc(HWND dialog, UINT message,
+INT_PTR CALLBACK HotkeySettingsDlgProc(HWND hwndDlg, UINT msg,
                                        WPARAM wParam, LPARAM lParam) {
-    HotkeyDialogState* state = Hotkey_GetDialogState(dialog);
+    HotkeyDialogState* state = Hotkey_GetDialogState(hwndDlg);
 
-    switch (message) {
+    switch (msg) {
         case WM_INITDIALOG:
-            return InitializeDialog(dialog);
+            return InitializeDialog(hwndDlg);
         case WM_CTLCOLORDLG:
         case WM_CTLCOLORSTATIC:
             SetBkColor((HDC)wParam, DIALOG_BG_COLOR);
@@ -126,37 +126,37 @@ INT_PTR CALLBACK HotkeySettingsDlgProc(HWND dialog, UINT message,
             break;
         case WM_LBUTTONDOWN: {
             POINT point = {LOWORD(lParam), HIWORD(lParam)};
-            HWND hit = ChildWindowFromPoint(dialog, point);
-            if (hit && hit != dialog) {
+            HWND hit = ChildWindowFromPoint(hwndDlg, point);
+            if (hit && hit != hwndDlg) {
                 if (!Hotkey_IsEditControl(GetDlgCtrlID(hit))) {
-                    SetFocus(GetDlgItem(dialog, IDOK));
+                    SetFocus(GetDlgItem(hwndDlg, IDOK));
                 }
-            } else if (hit == dialog) {
-                SetFocus(GetDlgItem(dialog, IDOK));
+            } else if (hit == hwndDlg) {
+                SetFocus(GetDlgItem(hwndDlg, IDOK));
                 return TRUE;
             }
             break;
         }
         case WM_COMMAND:
-            if (HandleCommand(dialog, wParam)) return TRUE;
+            if (HandleCommand(hwndDlg, wParam)) return TRUE;
             break;
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
-                Hotkey_PostReregister(dialog);
-                DestroyWindow(dialog);
+                Hotkey_PostReregister(hwndDlg);
+                DestroyWindow(hwndDlg);
                 return TRUE;
             }
             break;
         case WM_CLOSE:
-            Hotkey_PostReregister(dialog);
-            DestroyWindow(dialog);
+            Hotkey_PostReregister(hwndDlg);
+            DestroyWindow(hwndDlg);
             return TRUE;
         case WM_DESTROY:
-            Hotkey_PostReregister(dialog);
-            Hotkey_RemoveControlSubclasses(dialog);
+            Hotkey_PostReregister(hwndDlg);
+            Hotkey_RemoveControlSubclasses(hwndDlg);
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_HOTKEY,
-                                               dialog);
-            Hotkey_DestroyDialogState(dialog, state);
+                                               hwndDlg);
+            Hotkey_DestroyDialogState(hwndDlg, state);
             break;
     }
     return FALSE;

@@ -113,11 +113,11 @@ void CleanupLogSystem(void) {
     LogFile_Shutdown();
 }
 
-void SetMinimumLogLevel(LogLevel minimumLevel) {
-    if (minimumLevel < LOG_LEVEL_DEBUG || minimumLevel >= LOG_LEVEL_MAX) {
-        minimumLevel = LOG_LEVEL_DEBUG;
+void SetMinimumLogLevel(LogLevel minLevel) {
+    if (minLevel < LOG_LEVEL_DEBUG || minLevel >= LOG_LEVEL_MAX) {
+        minLevel = LOG_LEVEL_DEBUG;
     }
-    InterlockedExchange(&g_minimumLogLevel, minimumLevel);
+    InterlockedExchange(&g_minimumLogLevel, minLevel);
 }
 
 LogLevel GetMinimumLogLevel(void) {

@@ -26,11 +26,11 @@ void ListAvailableFonts(void) {
 }
 
 int CALLBACK EnumFontFamExProc(
-    ENUMLOGFONTEXW* logFont, NEWTEXTMETRICEX* textMetric,
-    DWORD fontType, LPARAM parameter) {
-    (void)logFont;
-    (void)textMetric;
-    (void)fontType;
-    (void)parameter;
+    ENUMLOGFONTEXW* lpelfe, NEWTEXTMETRICEX* lpntme,
+    DWORD FontType, LPARAM lParam) {
+    (void)lpelfe;
+    (void)lpntme;
+    (void)FontType;
+    (void)lParam;
     return 1;
 }
