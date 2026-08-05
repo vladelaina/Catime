@@ -32,31 +32,34 @@ LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
 
         /* The current WM_KEYDOWN is authoritative; poll the other arrows only
          * to preserve diagonal movement across remote/input-driver variants. */
-        BOOL upDown = wp == VK_UP || (GetKeyState(VK_UP) & 0x8000);
-        BOOL downDown = wp == VK_DOWN || (GetKeyState(VK_DOWN) & 0x8000);
-        BOOL leftDown = wp == VK_LEFT || (GetKeyState(VK_LEFT) & 0x8000);
-        BOOL rightDown = wp == VK_RIGHT || (GetKeyState(VK_RIGHT) & 0x8000);
-        int dx = (rightDown ? step : 0) - (leftDown ? step : 0);
-        int dy = (downDown ? step : 0) - (upDown ? step : 0);
-
-        if (dx != 0 || dy != 0) {
-            FinalizeScaleWindowGestureForManualMove(hwnd);
-            /* Keyboard placement also supersedes a completed scale anchor. */
-            ConsumePendingScaleResizeAnchor(hwnd);
-
-            RECT rect;
-            GetWindowRect(hwnd, &rect);
-            int newX = rect.left + dx;
-            int newY = rect.top + dy;
-            if (SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
-                             SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) {
-                CLOCK_WINDOW_POS_X = newX;
-                CLOCK_WINDOW_POS_Y = newY;
-                MarkManualEditWindowPosition(hwnd);
-                ScheduleConfigSave(hwnd);
-            }
-            return 0;
+        int dx = 0;
+        int dy = 0;
+        if (wp == VK_LEFT || wp == VK_RIGHT) {
+            dx = wp == VK_RIGHT ? step : -step;
+            dy = ((GetKeyState(VK_DOWN) & 0x8000) ? step : 0) -
+                 ((GetKeyState(VK_UP) & 0x8000) ? step : 0);
+        } else {
+            dy = wp == VK_DOWN ? step : -step;
+            dx = ((GetKeyState(VK_RIGHT) & 0x8000) ? step : 0) -
+                 ((GetKeyState(VK_LEFT) & 0x8000) ? step : 0);
         }
+
+        FinalizeScaleWindowGestureForManualMove(hwnd);
+        /* Keyboard placement also supersedes a completed scale anchor. */
+        ConsumePendingScaleResizeAnchor(hwnd);
+
+        RECT rect;
+        GetWindowRect(hwnd, &rect);
+        int newX = rect.left + dx;
+        int newY = rect.top + dy;
+        if (SetWindowPos(hwnd, NULL, newX, newY, 0, 0,
+                         SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) {
+            CLOCK_WINDOW_POS_X = newX;
+            CLOCK_WINDOW_POS_Y = newY;
+            MarkManualEditWindowPosition(hwnd);
+            ScheduleConfigSave(hwnd);
+        }
+        return 0;
     }
     return DefWindowProc(hwnd, WM_KEYDOWN, wp, lp);
 }

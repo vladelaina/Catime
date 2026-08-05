@@ -56,11 +56,11 @@ BOOL WindowCore_IsCurrentProcessWindow(HWND hwnd) {
     return processId == GetCurrentProcessId();
 }
 
-HWND CreateMainWindow(HINSTANCE instance, int commandShow) {
+HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     LOG_INFO("Creating main window");
     WNDCLASSW windowClass = {0};
     windowClass.lpfnWndProc = WindowProcedure;
-    windowClass.hInstance = instance;
+    windowClass.hInstance = hInstance;
     windowClass.lpszClassName = WINDOW_CLASS_NAME;
     if (!RegisterClassW(&windowClass)) {
         LOG_WINDOWS_ERROR("Window class registration failed");
@@ -84,14 +84,14 @@ HWND CreateMainWindow(HINSTANCE instance, int commandShow) {
     HWND hwnd = CreateWindowExW(
         extendedStyle, WINDOW_CLASS_NAME, WINDOW_TITLE, WS_POPUP,
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
-        initialWidth, initialHeight, NULL, NULL, instance, NULL);
+        initialWidth, initialHeight, NULL, NULL, hInstance, NULL);
     if (!hwnd) {
         LOG_WINDOWS_ERROR("Window creation failed");
-        UnregisterClassW(WINDOW_CLASS_NAME, instance);
+        UnregisterClassW(WINDOW_CLASS_NAME, hInstance);
         return NULL;
     }
-    InitializeTrayAndAnimation(hwnd, instance);
-    ApplyInitialWindowState(hwnd, commandShow);
+    InitializeTrayAndAnimation(hwnd, hInstance);
+    ApplyInitialWindowState(hwnd, nCmdShow);
     if (g_pendingSystemPositionRestore) {
         WindowCore_ScheduleDisplayRestoreTimer(
             hwnd, DISPLAY_RESTORE_DELAY_MS);

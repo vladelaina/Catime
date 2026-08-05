@@ -177,10 +177,10 @@ static BOOL FindTaskbarRect(HMONITOR monitor, const wchar_t* className,
     return FALSE;
 }
 
-BOOL GetTaskbarRectForMonitor(HMONITOR monitor, RECT* output) {
-    if (!monitor || !output) return FALSE;
-    return FindTaskbarRect(monitor, TASKBAR_CLASS, output) ||
-           FindTaskbarRect(monitor, SECONDARY_TASKBAR_CLASS, output);
+BOOL GetTaskbarRectForMonitor(HMONITOR monitor, RECT* outRect) {
+    if (!monitor || !outRect) return FALSE;
+    return FindTaskbarRect(monitor, TASKBAR_CLASS, outRect) ||
+           FindTaskbarRect(monitor, SECONDARY_TASKBAR_CLASS, outRect);
 }
 
 void ReattachToDesktop(HWND hwnd) {

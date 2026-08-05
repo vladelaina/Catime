@@ -73,21 +73,21 @@ static BOOL HandleColorSelectionInternal(HWND hwnd, UINT command) {
     return TRUE;
 }
 
-BOOL HandleColorSelection(HWND hwnd, UINT command, int index) {
+BOOL HandleColorSelection(HWND hwnd, UINT cmd, int index) {
     (void)index;
-    return HandleColorSelectionInternal(hwnd, command);
+    return HandleColorSelectionInternal(hwnd, cmd);
 }
 
-BOOL HandleRecentFile(HWND hwnd, UINT command, int index) {
-    (void)command;
+BOOL HandleRecentFile(HWND hwnd, UINT cmd, int index) {
+    (void)cmd;
     return HandleRecentFileInternal(hwnd, index);
 }
 
-BOOL HandleFontSelection(HWND hwnd, UINT command, int index) {
+BOOL HandleFontSelection(HWND hwnd, UINT cmd, int index) {
     (void)index;
     char fontPath[MAX_PATH];
-    if (!GetFontPathFromMenuId(command, fontPath, sizeof(fontPath))) {
-        LOG_ERROR("Failed to get font path from menu ID: %u", command);
+    if (!GetFontPathFromMenuId(cmd, fontPath, sizeof(fontPath))) {
+        LOG_ERROR("Failed to get font path from menu ID: %u", cmd);
         return FALSE;
     }
     LOG_INFO("User selected font from menu: %s", fontPath);
@@ -109,73 +109,73 @@ typedef struct {
     RangeCommandHandler handler;
 } RangeCommandDescriptor;
 
-BOOL DispatchRangeCommand(HWND hwnd, UINT command, WPARAM wp, LPARAM lp) {
+BOOL DispatchRangeCommand(HWND hwnd, UINT cmd, WPARAM wp, LPARAM lp) {
     (void)wp;
     (void)lp;
-    if (HandleAnimationMenuCommand(hwnd, command)) return TRUE;
-    if (command == CLOCK_IDM_ANIM_SPEED_ORIGINAL) {
+    if (HandleAnimationMenuCommand(hwnd, cmd)) return TRUE;
+    if (cmd == CLOCK_IDM_ANIM_SPEED_ORIGINAL) {
         CmdAnimationSpeed(hwnd, ANIMATION_SPEED_ORIGINAL); return TRUE;
     }
-    if (command == CLOCK_IDM_ANIM_SPEED_MEMORY) {
+    if (cmd == CLOCK_IDM_ANIM_SPEED_MEMORY) {
         CmdAnimationSpeed(hwnd, ANIMATION_SPEED_MEMORY); return TRUE;
     }
-    if (command == CLOCK_IDM_ANIM_SPEED_CPU) {
+    if (cmd == CLOCK_IDM_ANIM_SPEED_CPU) {
         CmdAnimationSpeed(hwnd, ANIMATION_SPEED_CPU); return TRUE;
     }
-    if (command == CLOCK_IDM_ANIM_SPEED_TIMER) {
+    if (cmd == CLOCK_IDM_ANIM_SPEED_TIMER) {
         CmdAnimationSpeed(hwnd, ANIMATION_SPEED_TIMER); return TRUE;
     }
-    if (command == CLOCK_IDM_ANIM_SPEED_FIXED) {
+    if (cmd == CLOCK_IDM_ANIM_SPEED_FIXED) {
         CmdAnimationFixedSpeed(hwnd); return TRUE;
     }
-    if (command == CLOCK_IDM_TIME_FORMAT_DEFAULT) {
+    if (cmd == CLOCK_IDM_TIME_FORMAT_DEFAULT) {
         CmdTimeFormat(hwnd, TIME_FORMAT_DEFAULT); return TRUE;
     }
-    if (command == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED) {
+    if (cmd == CLOCK_IDM_TIME_FORMAT_ZERO_PADDED) {
         CmdTimeFormat(hwnd, TIME_FORMAT_ZERO_PADDED); return TRUE;
     }
-    if (command == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) {
+    if (cmd == CLOCK_IDM_TIME_FORMAT_FULL_PADDED) {
         CmdTimeFormat(hwnd, TIME_FORMAT_FULL_PADDED); return TRUE;
     }
-    TextEffectType effect = TextEffect_FromMenuId(command);
+    TextEffectType effect = TextEffect_FromMenuId(cmd);
     if (effect != TEXT_EFFECT_NONE) {
         ToggleTextEffect(hwnd, effect);
         return TRUE;
     }
-    if (command == CLOCK_IDM_TIMEOUT_SHOW_TIME) {
+    if (cmd == CLOCK_IDM_TIMEOUT_SHOW_TIME) {
         CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_SHOW_TIME); return TRUE;
     }
-    if (command == CLOCK_IDM_TIMEOUT_COUNT_UP) {
+    if (cmd == CLOCK_IDM_TIMEOUT_COUNT_UP) {
         CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_COUNT_UP); return TRUE;
     }
-    if (command == CLOCK_IDM_SHOW_MESSAGE) {
+    if (cmd == CLOCK_IDM_SHOW_MESSAGE) {
         CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_MESSAGE); return TRUE;
     }
-    if (command == CLOCK_IDM_LOCK_SCREEN) {
+    if (cmd == CLOCK_IDM_LOCK_SCREEN) {
         CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_LOCK); return TRUE;
     }
-    if (command == CLOCK_IDM_SHUTDOWN) {
+    if (cmd == CLOCK_IDM_SHUTDOWN) {
         CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_SHUTDOWN); return TRUE;
     }
-    if (command == CLOCK_IDM_RESTART) {
+    if (cmd == CLOCK_IDM_RESTART) {
         CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_RESTART); return TRUE;
     }
-    if (command == CLOCK_IDM_SLEEP) {
+    if (cmd == CLOCK_IDM_SLEEP) {
         CmdSetTimeoutAction(hwnd, TIMEOUT_ACTION_SLEEP); return TRUE;
     }
-    if (command == CLOCK_IDC_START_SHOW_TIME) {
+    if (cmd == CLOCK_IDC_START_SHOW_TIME) {
         CmdSetStartupMode(hwnd, "SHOW_TIME"); return TRUE;
     }
-    if (command == CLOCK_IDC_START_COUNT_UP) {
+    if (cmd == CLOCK_IDC_START_COUNT_UP) {
         CmdSetStartupMode(hwnd, "COUNT_UP"); return TRUE;
     }
-    if (command == CLOCK_IDC_START_NO_DISPLAY) {
+    if (cmd == CLOCK_IDC_START_NO_DISPLAY) {
         CmdSetStartupMode(hwnd, "NO_DISPLAY"); return TRUE;
     }
-    if (command == CLOCK_IDC_START_POMODORO) {
+    if (cmd == CLOCK_IDC_START_POMODORO) {
         CmdSetStartupMode(hwnd, "POMODORO"); return TRUE;
     }
-    if (HandlePluginCommand(hwnd, command)) return TRUE;
+    if (HandlePluginCommand(hwnd, cmd)) return TRUE;
 
     const RangeCommandDescriptor ranges[] = {
         {CMD_QUICK_COUNTDOWN_BASE, CMD_QUICK_COUNTDOWN_END,
@@ -197,18 +197,18 @@ BOOL DispatchRangeCommand(HWND hwnd, UINT command, WPARAM wp, LPARAM lp) {
     };
     for (const RangeCommandDescriptor* range = ranges;
          range->handler; range++) {
-        if (command >= range->rangeStart && command <= range->rangeEnd) {
+        if (cmd >= range->rangeStart && cmd <= range->rangeEnd) {
             return range->handler(
-                hwnd, command, (int)(command - range->rangeStart));
+                hwnd, cmd, (int)(cmd - range->rangeStart));
         }
     }
-    if (HandleLanguageSelection(hwnd, command)) return TRUE;
-    if (command == CLOCK_IDM_POMODORO_WORK ||
-        command == CLOCK_IDM_POMODORO_BREAK ||
-        command == CLOCK_IDM_POMODORO_LBREAK) {
-        int index = command == CLOCK_IDM_POMODORO_WORK ? 0 :
-                    command == CLOCK_IDM_POMODORO_BREAK ? 1 : 2;
-        return HandlePomodoroTime(hwnd, command, index);
+    if (HandleLanguageSelection(hwnd, cmd)) return TRUE;
+    if (cmd == CLOCK_IDM_POMODORO_WORK ||
+        cmd == CLOCK_IDM_POMODORO_BREAK ||
+        cmd == CLOCK_IDM_POMODORO_LBREAK) {
+        int index = cmd == CLOCK_IDM_POMODORO_WORK ? 0 :
+                    cmd == CLOCK_IDM_POMODORO_BREAK ? 1 : 2;
+        return HandlePomodoroTime(hwnd, cmd, index);
     }
     return FALSE;
 }

@@ -78,7 +78,7 @@ void HideWindowIntentionally(HWND hwnd) {
     ShowWindow(hwnd, SW_HIDE);
 }
 
-BOOL HandleTopmostVisibilityChange(HWND hwnd, const WINDOWPOS* position) {
+BOOL HandleTopmostVisibilityChange(HWND hwnd, const WINDOWPOS* pwp) {
     BOOL hiddenByPosition;
     BOOL hiddenNow;
 
@@ -86,19 +86,19 @@ BOOL HandleTopmostVisibilityChange(HWND hwnd, const WINDOWPOS* position) {
                                "HandleTopmostVisibilityChange")) {
         return FALSE;
     }
-    if (!position) s_restoreActive = FALSE;
-    if (position && (position->flags & SWP_SHOWWINDOW)) {
+    if (!pwp) s_restoreActive = FALSE;
+    if (pwp && (pwp->flags & SWP_SHOWWINDOW)) {
         s_intentionallyHidden = FALSE;
         CancelVisibilityRestore(hwnd);
         return FALSE;
     }
 
-    hiddenByPosition = position && (position->flags & SWP_HIDEWINDOW);
+    hiddenByPosition = pwp && (pwp->flags & SWP_HIDEWINDOW);
     hiddenNow = !IsWindowVisible(hwnd) || IsIconic(hwnd);
-    if (position && !hiddenByPosition) return FALSE;
+    if (pwp && !hiddenByPosition) return FALSE;
     if (!ShouldRecoverVisibility(hwnd)) return FALSE;
     if (!hiddenByPosition && !hiddenNow) return FALSE;
-    if (position) return ScheduleVisibilityRestore(hwnd);
+    if (pwp) return ScheduleVisibilityRestore(hwnd);
 
     EnsureWindowVisibleWithTopmostState(hwnd);
     InvalidateRect(hwnd, NULL, TRUE);
@@ -119,12 +119,12 @@ void HandleTopmostShownEvent(HWND hwnd) {
     TryRestorePendingWindowPosition(hwnd);
 }
 
-BOOL HandleTopmostMinimizeCommand(HWND hwnd, UINT systemCommand) {
+BOOL HandleTopmostMinimizeCommand(HWND hwnd, UINT sysCommand) {
     if (!WindowDesktop_IsValid(hwnd,
                                "HandleTopmostMinimizeCommand")) {
         return FALSE;
     }
-    if ((systemCommand & 0xFFF0) != SC_MINIMIZE ||
+    if ((sysCommand & 0xFFF0) != SC_MINIMIZE ||
         !CLOCK_WINDOW_EFFECTIVE_TOPMOST) {
         return FALSE;
     }
