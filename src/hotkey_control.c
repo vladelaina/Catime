@@ -94,7 +94,12 @@ LRESULT CALLBACK HotkeyControlSubclassProc(
             return 0;
         case WM_ERASEBKGND:
             return 1;
-        case WM_SETFOCUS:
+        case WM_SETFOCUS: {
+            LRESULT result = DefSubclassProc(hwnd, uMsg, wParam, lParam);
+            HideCaret(hwnd);
+            InvalidateRect(hwnd, NULL, FALSE);
+            return result;
+        }
         case WM_KILLFOCUS:
         case WM_KEYUP:
         case WM_SYSKEYUP:
@@ -113,6 +118,16 @@ LRESULT CALLBACK HotkeyControlSubclassProc(
         case WM_KEYDOWN:
             InvalidateRect(hwnd, NULL, FALSE);
             if (Hotkey_IsImeVirtualKey((BYTE)wParam)) {
+                return 0;
+            }
+            if (wParam == VK_RETURN) {
+                HWND dialog = GetParent(hwnd);
+                HWND button = dialog ? GetDlgItem(dialog, IDOK) : NULL;
+                if (dialog) {
+                    SendMessageW(dialog, WM_COMMAND,
+                                 MAKEWPARAM(IDOK, BN_CLICKED),
+                                 (LPARAM)button);
+                }
                 return 0;
             }
             if (wParam == VK_TAB && GetKeyState(VK_CONTROL) >= 0 &&
