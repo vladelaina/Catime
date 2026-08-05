@@ -10,12 +10,12 @@ HWND g_pluginNotifyWindow = NULL;
 wchar_t g_pluginLastLaunchError[128] = {0};
 DWORD g_pluginLaunchFailureCooldownUntil = 0;
 
-void PluginProcess_CloseMonitorThreadHandle(HANDLE thread, BOOL waitForExit) {
-    if (!thread) return;
+void PluginProcess_CloseMonitorThreadHandle(HANDLE hThread, BOOL waitForExit) {
+    if (!hThread) return;
     if (waitForExit) {
-        DWORD threadId = GetThreadId(thread);
+        DWORD threadId = GetThreadId(hThread);
         if (threadId && threadId != GetCurrentThreadId()) {
-            DWORD result = WaitForSingleObject(thread, 2000);
+            DWORD result = WaitForSingleObject(hThread, 2000);
             if (result == WAIT_TIMEOUT) {
                 LOG_WARNING("[Process] Monitor thread did not exit before handle close");
             } else if (result == WAIT_FAILED) {
@@ -23,10 +23,10 @@ void PluginProcess_CloseMonitorThreadHandle(HANDLE thread, BOOL waitForExit) {
                             GetLastError());
             }
         }
-    } else if (WaitForSingleObject(thread, 0) == WAIT_TIMEOUT) {
+    } else if (WaitForSingleObject(hThread, 0) == WAIT_TIMEOUT) {
         LOG_DEBUG("[Process] Closing monitor thread handle before thread has fully returned");
     }
-    CloseHandle(thread);
+    CloseHandle(hThread);
 }
 
 void PluginProcess_ClearHandles(PluginInfo* plugin,
@@ -66,8 +66,8 @@ void PluginProcess_SetLastError(const wchar_t* errorMsg) {
     g_pluginLastLaunchError[_countof(g_pluginLastLaunchError) - 1] = L'\0';
 }
 
-void PluginProcess_SetNotifyWindow(HWND window) {
-    g_pluginNotifyWindow = IsValidPluginNotifyWindow(window) ? window : NULL;
+void PluginProcess_SetNotifyWindow(HWND hwnd) {
+    g_pluginNotifyWindow = IsValidPluginNotifyWindow(hwnd) ? hwnd : NULL;
 }
 
 HWND PluginProcess_GetNotifyWindow(void) {

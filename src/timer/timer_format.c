@@ -47,9 +47,9 @@ static void FormatRemaining(char* output) {
     FormatComponents(hours, minutes, remaining % SECONDS_PER_MINUTE, output);
 }
 
-void FormatTime(int remainingTime, char* output) {
-    (void)remainingTime;
-    if (CLOCK_SHOW_CURRENT_TIME) FormatSystemClock(output);
-    else if (CLOCK_COUNT_UP) FormatElapsed(output);
-    else FormatRemaining(output);
+void FormatTime(int remaining_time, char* time_text) {
+    (void)remaining_time;
+    if (CLOCK_SHOW_CURRENT_TIME) FormatSystemClock(time_text);
+    else if (CLOCK_COUNT_UP) FormatElapsed(time_text);
+    else FormatRemaining(time_text);
 }

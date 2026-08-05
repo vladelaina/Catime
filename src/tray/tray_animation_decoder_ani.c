@@ -54,10 +54,10 @@ UINT AniJiffiesToMilliseconds(DWORD jiffies, DWORD fallbackJiffies) {
     }
     return ClampAniFrameDelayMs((UINT)ms);
 }
-BYTE* ReadAniFileBytes(const wchar_t* wPath, DWORD* outSize) {
-    if (!wPath || !outSize) return NULL;
+BYTE* ReadAniFileBytes(const wchar_t* path, DWORD* outSize) {
+    if (!path || !outSize) return NULL;
     *outSize = 0;
-    HANDLE file = CreateFileW(wPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    HANDLE file = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (file == INVALID_HANDLE_VALUE) {
         return NULL;
     }

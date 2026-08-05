@@ -105,19 +105,19 @@ static HICON CreateIconFromScaledConverter(IWICFormatConverter* converter,
     return icon;
 }
 
-HICON CreateIconFromWICSource(IWICImagingFactory* factory,
+HICON CreateIconFromWICSource(IWICImagingFactory* pFactory,
                               IWICBitmapSource* source,
-                              int width, int height) {
-    if (!factory || !source) return NULL;
-    TrayDecoder_NormalizeIconSize(&width, &height);
+                              int cx, int cy) {
+    if (!pFactory || !source) return NULL;
+    TrayDecoder_NormalizeIconSize(&cx, &cy);
 
     UINT sourceWidth = 0;
     UINT sourceHeight = 0;
     if (FAILED(source->lpVtbl->GetSize(
             source, &sourceWidth, &sourceHeight)) ||
         sourceWidth == 0 || sourceHeight == 0) {
-        sourceWidth = (UINT)width;
-        sourceHeight = (UINT)height;
+        sourceWidth = (UINT)cx;
+        sourceHeight = (UINT)cy;
     } else {
         UINT checkedStride = 0;
         UINT checkedSize = 0;
@@ -127,8 +127,8 @@ HICON CreateIconFromWICSource(IWICImagingFactory* factory,
         }
     }
 
-    double scaleX = (double)width / sourceWidth;
-    double scaleY = (double)height / sourceHeight;
+    double scaleX = (double)cx / sourceWidth;
+    double scaleY = (double)cy / sourceHeight;
     double scale = scaleX < scaleY ? scaleX : scaleY;
     if (scale <= 0.0) scale = 1.0;
     UINT scaledWidth = (UINT)((double)sourceWidth * scale + 0.5);
@@ -139,14 +139,14 @@ HICON CreateIconFromWICSource(IWICImagingFactory* factory,
     IWICBitmapScaler* scaler = NULL;
     IWICFormatConverter* converter = NULL;
     HICON icon = NULL;
-    HRESULT result = factory->lpVtbl->CreateBitmapScaler(factory, &scaler);
+    HRESULT result = pFactory->lpVtbl->CreateBitmapScaler(pFactory, &scaler);
     if (SUCCEEDED(result) && scaler) {
         result = scaler->lpVtbl->Initialize(
             scaler, source, scaledWidth, scaledHeight,
             WICBitmapInterpolationModeFant);
     }
     if (SUCCEEDED(result)) {
-        result = factory->lpVtbl->CreateFormatConverter(factory, &converter);
+        result = pFactory->lpVtbl->CreateFormatConverter(pFactory, &converter);
     }
     if (SUCCEEDED(result) && converter) {
         result = converter->lpVtbl->Initialize(
@@ -156,7 +156,7 @@ HICON CreateIconFromWICSource(IWICImagingFactory* factory,
     }
     if (SUCCEEDED(result)) {
         icon = CreateIconFromScaledConverter(converter, scaledWidth,
-                                             scaledHeight, width, height);
+                                             scaledHeight, cx, cy);
     }
 
     if (converter) converter->lpVtbl->Release(converter);
@@ -164,15 +164,15 @@ HICON CreateIconFromWICSource(IWICImagingFactory* factory,
     return icon;
 }
 
-HICON CreateIconFromPBGRA(IWICImagingFactory* factory,
+HICON CreateIconFromPBGRA(IWICImagingFactory* pFactory,
                           const BYTE* canvasPixels,
                           UINT canvasWidth, UINT canvasHeight,
-                          int width, int height) {
-    if (!factory || !canvasPixels || !canvasWidth || !canvasHeight) {
+                          int cx, int cy) {
+    if (!pFactory || !canvasPixels || !canvasWidth || !canvasHeight) {
         return NULL;
     }
-    TrayDecoder_NormalizeIconSize(&width, &height);
-    if (canvasWidth == (UINT)width && canvasHeight == (UINT)height) {
+    TrayDecoder_NormalizeIconSize(&cx, &cy);
+    if (canvasWidth == (UINT)cx && canvasHeight == (UINT)cy) {
         return TrayDecoder_CreateExactIcon(canvasPixels,
                                            canvasWidth, canvasHeight);
     }
@@ -185,50 +185,50 @@ HICON CreateIconFromPBGRA(IWICImagingFactory* factory,
     }
 
     IWICBitmap* bitmap = NULL;
-    HRESULT result = factory->lpVtbl->CreateBitmapFromMemory(
-        factory, canvasWidth, canvasHeight, &GUID_WICPixelFormat32bppPBGRA,
+    HRESULT result = pFactory->lpVtbl->CreateBitmapFromMemory(
+        pFactory, canvasWidth, canvasHeight, &GUID_WICPixelFormat32bppPBGRA,
         stride, size, (BYTE*)canvasPixels, &bitmap);
     if (FAILED(result) || !bitmap) return NULL;
 
     HICON icon = CreateIconFromWICSource(
-        factory, (IWICBitmapSource*)bitmap, width, height);
+        pFactory, (IWICBitmapSource*)bitmap, cx, cy);
     bitmap->lpVtbl->Release(bitmap);
     return icon;
 }
 
-HICON DecodeStaticImageWithFactory(IWICImagingFactory* factory,
-                                   const wchar_t* path,
-                                   int width, int height) {
-    if (!path) return NULL;
-    TrayDecoder_NormalizeIconSize(&width, &height);
+HICON DecodeStaticImageWithFactory(IWICImagingFactory* pFactory,
+                                   const wchar_t* wPath,
+                                   int iconWidth, int iconHeight) {
+    if (!wPath) return NULL;
+    TrayDecoder_NormalizeIconSize(&iconWidth, &iconHeight);
 
-    const wchar_t* extension = wcsrchr(path, L'.');
+    const wchar_t* extension = wcsrchr(wPath, L'.');
     if (extension && _wcsicmp(extension, L".ico") == 0) {
-        return (HICON)LoadImageW(NULL, path, IMAGE_ICON, width, height,
+        return (HICON)LoadImageW(NULL, wPath, IMAGE_ICON, iconWidth, iconHeight,
                                  LR_LOADFROMFILE);
     }
-    if (!factory) return NULL;
+    if (!pFactory) return NULL;
 
     IWICBitmapDecoder* decoder = NULL;
-    HRESULT result = factory->lpVtbl->CreateDecoderFromFilename(
-        factory, path, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad,
+    HRESULT result = pFactory->lpVtbl->CreateDecoderFromFilename(
+        pFactory, wPath, NULL, GENERIC_READ, WICDecodeMetadataCacheOnLoad,
         &decoder);
     if (FAILED(result) || !decoder) return NULL;
 
     HICON icon = NULL;
     IWICBitmapFrameDecode* frame = NULL;
     if (SUCCEEDED(decoder->lpVtbl->GetFrame(decoder, 0, &frame)) && frame) {
-        icon = CreateIconFromWICSource(factory, (IWICBitmapSource*)frame,
-                                       width, height);
+        icon = CreateIconFromWICSource(pFactory, (IWICBitmapSource*)frame,
+                                       iconWidth, iconHeight);
         frame->lpVtbl->Release(frame);
     }
     decoder->lpVtbl->Release(decoder);
     return icon;
 }
 
-HICON DecodeStaticImage(const char* utf8Path, int width, int height) {
+HICON DecodeStaticImage(const char* utf8Path, int iconWidth, int iconHeight) {
     if (!utf8Path) return NULL;
-    TrayDecoder_NormalizeIconSize(&width, &height);
+    TrayDecoder_NormalizeIconSize(&iconWidth, &iconHeight);
 
     wchar_t path[MAX_PATH] = {0};
     if (MultiByteToWideChar(CP_UTF8, 0, utf8Path, -1,
@@ -238,7 +238,7 @@ HICON DecodeStaticImage(const char* utf8Path, int width, int height) {
 
     const wchar_t* extension = wcsrchr(path, L'.');
     if (extension && _wcsicmp(extension, L".ico") == 0) {
-        return DecodeStaticImageWithFactory(NULL, path, width, height);
+        return DecodeStaticImageWithFactory(NULL, path, iconWidth, iconHeight);
     }
 
     HRESULT coInit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
@@ -247,7 +247,8 @@ HICON DecodeStaticImage(const char* utf8Path, int width, int height) {
     if (SUCCEEDED(CoCreateInstance(
             &CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER,
             &IID_IWICImagingFactory, (void**)&factory)) && factory) {
-        icon = DecodeStaticImageWithFactory(factory, path, width, height);
+        icon = DecodeStaticImageWithFactory(
+            factory, path, iconWidth, iconHeight);
         factory->lpVtbl->Release(factory);
     }
     if (SUCCEEDED(coInit)) CoUninitialize();
