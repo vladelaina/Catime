@@ -36,11 +36,11 @@ void ProcessMarkdownCharacter(
     const MarkdownBlockquote* blockquotes,
     int blockquoteCount,
     MarkdownRangeCursors* cursors,
-    HFONT hOriginalFont,
-    const LOGFONT* baseLf,
+    HFONT originalFont,
+    const LOGFONT* baseFont,
     int baseFontHeight,
     MarkdownFontCache* fontCache,
-    HFONT* hCurrentFont,
+    HFONT* currentFont,
     int* lastHeadingLevel,
     int* lastStyleType,
     BOOL* lastBlockquoteFont,
@@ -52,11 +52,11 @@ void ProcessMarkdownCharacter(
     BOOL renderMode
 ) {
     if (ch == L'\n') {
-        if (*hCurrentFont) {
-            if (hOriginalFont) {
-                SelectObject(hdc, hOriginalFont);
+        if (*currentFont) {
+            if (originalFont) {
+                SelectObject(hdc, originalFont);
             }
-            *hCurrentFont = NULL;
+            *currentFont = NULL;
             UpdateLineHeightFromCurrentFont(hdc, ctx);
         }
         *lastHeadingLevel = 0;
@@ -155,25 +155,25 @@ void ProcessMarkdownCharacter(
         *lastStyleType != currentStyleType ||
         *lastBlockquoteFont != currentBlockquoteFont) {
 
-        if (hOriginalFont && (isHeading || isStyled || isBlockquote)) {
-            HFONT hNewFont = GetCachedMarkdownFont(fontCache, baseLf, currentFontHeight,
+        if (originalFont && (isHeading || isStyled || isBlockquote)) {
+            HFONT hNewFont = GetCachedMarkdownFont(fontCache, baseFont, currentFontHeight,
                                                    currentFontWeight, currentItalic,
                                                    currentMonospace);
             if (hNewFont) {
                 if (SelectObject(hdc, hNewFont)) {
-                    *hCurrentFont = hNewFont;
+                    *currentFont = hNewFont;
                 } else {
-                    SelectObject(hdc, hOriginalFont);
-                    *hCurrentFont = NULL;
+                    SelectObject(hdc, originalFont);
+                    *currentFont = NULL;
                 }
             } else {
-                SelectObject(hdc, hOriginalFont);
-                *hCurrentFont = NULL;
+                SelectObject(hdc, originalFont);
+                *currentFont = NULL;
             }
             UpdateLineHeightFromCurrentFont(hdc, ctx);
         } else {
-            if (hOriginalFont) {
-                SelectObject(hdc, hOriginalFont);
+            if (originalFont) {
+                SelectObject(hdc, originalFont);
             }
             UpdateLineHeightFromCurrentFont(hdc, ctx);
         }

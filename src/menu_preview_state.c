@@ -9,24 +9,24 @@ extern BOOL IS_PREVIEWING;
 extern char PREVIEW_FONT_NAME[MAX_PATH];
 extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 
-void GetActiveColor(char* outColor, size_t size) {
-    if (!outColor || !size) return;
+void GetActiveColor(char* outColor, size_t bufferSize) {
+    if (!outColor || !bufferSize) return;
     const char* value = g_previewState.type == PREVIEW_TYPE_COLOR
         ? g_previewState.data.colorHex : CLOCK_TEXT_COLOR;
-    strncpy_s(outColor, size, value, _TRUNCATE);
+    strncpy_s(outColor, bufferSize, value, _TRUNCATE);
 }
 
-void GetActiveFont(char* outName, char* outInternal, size_t size) {
-    if (!outName || !outInternal || !size) return;
+void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) {
+    if (!outFontName || !outInternalName || !bufferSize) return;
     if (g_previewState.type == PREVIEW_TYPE_FONT) {
-        strncpy_s(outName, size, g_previewState.data.font.fontName, _TRUNCATE);
-        strncpy_s(outInternal, size, g_previewState.data.font.internalName, _TRUNCATE);
+        strncpy_s(outFontName, bufferSize, g_previewState.data.font.fontName, _TRUNCATE);
+        strncpy_s(outInternalName, bufferSize, g_previewState.data.font.internalName, _TRUNCATE);
     } else if (IS_PREVIEWING) {
-        strncpy_s(outName, size, PREVIEW_FONT_NAME, _TRUNCATE);
-        strncpy_s(outInternal, size, PREVIEW_INTERNAL_NAME, _TRUNCATE);
+        strncpy_s(outFontName, bufferSize, PREVIEW_FONT_NAME, _TRUNCATE);
+        strncpy_s(outInternalName, bufferSize, PREVIEW_INTERNAL_NAME, _TRUNCATE);
     } else {
-        strncpy_s(outName, size, FONT_RUNTIME_FILE_NAME, _TRUNCATE);
-        strncpy_s(outInternal, size, FONT_INTERNAL_NAME, _TRUNCATE);
+        strncpy_s(outFontName, bufferSize, FONT_RUNTIME_FILE_NAME, _TRUNCATE);
+        strncpy_s(outInternalName, bufferSize, FONT_INTERNAL_NAME, _TRUNCATE);
     }
 }
 

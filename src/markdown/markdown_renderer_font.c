@@ -1,16 +1,16 @@
  #include "markdown_renderer_internal.h"
  #include <string.h>
-void InitBaseFontState(HDC hdc, HFONT* hOriginalFont, LOGFONT* baseLf, int* baseFontHeight) {
-    if (hOriginalFont) {
-        *hOriginalFont = NULL;
+void InitBaseFontState(HDC hdc, HFONT* originalFont, LOGFONT* baseFont, int* baseFontHeight) {
+    if (originalFont) {
+        *originalFont = NULL;
     }
-    if (baseLf) {
-        memset(baseLf, 0, sizeof(*baseLf));
+    if (baseFont) {
+        memset(baseFont, 0, sizeof(*baseFont));
     }
     if (baseFontHeight) {
         *baseFontHeight = 16;
     }
-    if (!hdc || !baseLf || !baseFontHeight) return;
+    if (!hdc || !baseFont || !baseFontHeight) return;
 
     TEXTMETRIC tm;
     if (GetTextMetrics(hdc, &tm) && tm.tmHeight > 0) {
@@ -18,33 +18,33 @@ void InitBaseFontState(HDC hdc, HFONT* hOriginalFont, LOGFONT* baseLf, int* base
     }
 
     HFONT hCurrentFont = (HFONT)GetCurrentObject(hdc, OBJ_FONT);
-    if (hOriginalFont) {
-        *hOriginalFont = hCurrentFont;
+    if (originalFont) {
+        *originalFont = hCurrentFont;
     }
 
-    if (hCurrentFont && GetObject(hCurrentFont, sizeof(*baseLf), baseLf) == sizeof(*baseLf)) {
-        if (baseLf->lfHeight != 0) {
-            *baseFontHeight = baseLf->lfHeight;
+    if (hCurrentFont && GetObject(hCurrentFont, sizeof(*baseFont), baseFont) == sizeof(*baseFont)) {
+        if (baseFont->lfHeight != 0) {
+            *baseFontHeight = baseFont->lfHeight;
         }
         return;
     }
 
     HFONT hDefaultFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
-    if (hDefaultFont && GetObject(hDefaultFont, sizeof(*baseLf), baseLf) == sizeof(*baseLf)) {
-        if (baseLf->lfHeight != 0) {
-            *baseFontHeight = baseLf->lfHeight;
+    if (hDefaultFont && GetObject(hDefaultFont, sizeof(*baseFont), baseFont) == sizeof(*baseFont)) {
+        if (baseFont->lfHeight != 0) {
+            *baseFontHeight = baseFont->lfHeight;
         }
         return;
     }
 
-    baseLf->lfHeight = *baseFontHeight;
-    baseLf->lfWeight = FW_NORMAL;
-    wcscpy_s(baseLf->lfFaceName, LF_FACESIZE, L"Segoe UI");
+    baseFont->lfHeight = *baseFontHeight;
+    baseFont->lfWeight = FW_NORMAL;
+    wcscpy_s(baseFont->lfFaceName, LF_FACESIZE, L"Segoe UI");
 }
 
-HFONT GetCachedMarkdownFont(MarkdownFontCache* cache, const LOGFONT* baseLf,
+HFONT GetCachedMarkdownFont(MarkdownFontCache* cache, const LOGFONT* baseFont,
                                    int height, int weight, BOOL italic, BOOL monospace) {
-    if (!cache || !baseLf) return NULL;
+    if (!cache || !baseFont) return NULL;
 
     BYTE italicByte = (BYTE)(italic ? 1 : 0);
 
@@ -63,7 +63,7 @@ HFONT GetCachedMarkdownFont(MarkdownFontCache* cache, const LOGFONT* baseLf,
     }
 
     LOGFONT lf;
-    memcpy(&lf, baseLf, sizeof(LOGFONT));
+    memcpy(&lf, baseFont, sizeof(LOGFONT));
     lf.lfHeight = height;
     lf.lfWeight = weight;
     lf.lfItalic = italicByte;

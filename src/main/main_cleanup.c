@@ -22,7 +22,7 @@
 #include "update_checker.h"
 #include "window/window_visual_effects.h"
 
-void CleanupResources(HANDLE mutex) {
+void CleanupResources(HANDLE hMutex) {
     CleanupMarkdownInteractive();
     CleanupDrawingRenderCache();
     CleanupDrawingEffects();
@@ -48,9 +48,9 @@ void CleanupResources(HANDLE mutex) {
         LOG_WARNING("Config watcher did not stop; INI cache retained");
     }
     CleanupLanguage();
-    if (mutex) {
-        ReleaseMutex(mutex);
-        CloseHandle(mutex);
+    if (hMutex) {
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
         ClearGlobalMutexHandle();
     }
     CoUninitialize();
