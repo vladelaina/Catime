@@ -285,6 +285,7 @@ function translateSupportElements() {
     }
     
     const supporterCellTranslations = {
+        '感谢UP主开源': 'Thank you for open-sourcing this project!',
         '功能简洁 实用便利 赞': 'Simple, practical, and convenient. Great!',
         '喝咖啡': 'Coffee',
         '软件做得好棒，要一直热爱下去呀': 'The software is wonderfully made. Keep that passion alive!',
