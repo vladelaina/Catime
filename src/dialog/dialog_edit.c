@@ -151,3 +151,12 @@ BOOL Dialog_HasFocusWithin(HWND hwndDlg) {
     HWND focused = GetFocus();
     return focused == hwndDlg || (focused && IsChild(hwndDlg, focused));
 }
+
+void Dialog_FocusControl(HWND hwndDlg, int controlId, BOOL selectAll) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) return;
+    HWND control = GetDlgItem(hwndDlg, controlId);
+    if (!control || !IsWindow(control)) return;
+    SetForegroundWindow(hwndDlg);
+    SetFocus(control);
+    if (selectAll) Dialog_SelectAllText(control);
+}

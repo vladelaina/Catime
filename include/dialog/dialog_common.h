@@ -160,6 +160,9 @@ void Dialog_InitEditWithValue(HWND hwndEdit, const wchar_t* initialValue);
  */
 BOOL Dialog_HasFocusWithin(HWND hwndDlg);
 
+/** Focus a child control after a modeless dialog has been shown. */
+void Dialog_FocusControl(HWND hwndDlg, int controlId, BOOL selectAll);
+
 /* ============================================================================
  * Color Message Handling
  * ============================================================================ */
@@ -205,14 +208,6 @@ BOOL Dialog_HandleColorMessages(UINT msg, WPARAM wParam, DialogContext* ctx, INT
  * Call in WM_INITDIALOG after setting dialog size.
  */
 void Dialog_CenterOnPrimaryScreen(HWND hwndDlg);
-
-/**
- * @brief Make dialog topmost (for settings dialogs)
- * @param hwndDlg Dialog handle
- *
- * @details Call in WM_INITDIALOG to ensure visibility
- */
-void Dialog_ApplyTopmost(HWND hwndDlg);
 
 /* ============================================================================
  * Validation and Utilities

@@ -122,7 +122,6 @@ static INT_PTR CALLBACK DialogMessageDlgProc(HWND hwndDlg, UINT msg,
                 Dialog_InitializeInstance(params->instanceType, hwndDlg);
             } else {
                 DialogModern_Attach(hwndDlg, (int)params->instanceType);
-                Dialog_ApplyTopmost(hwndDlg);
             }
             SetFocus(GetDlgItem(hwndDlg, IDOK));
             return FALSE;

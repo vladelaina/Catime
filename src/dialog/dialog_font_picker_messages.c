@@ -14,11 +14,6 @@
 
 INT_PTR DialogFontPickerInternal_OnInit(HWND hdlg) {
     Dialog_InitializeInstance(DIALOG_INSTANCE_FONT_PICKER, hdlg);
-    if (!SetTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID, 500, NULL)) {
-        LOG_WARNING("FontPicker: Failed to start topmost timer (error=%lu)",
-                    GetLastError());
-    }
-
     g_currentFontIndex = -1;
     g_previewFontIndex = -1;
     SetWindowTextW(hdlg, GetLocalizedString(NULL, L"Select Font"));
@@ -112,10 +107,6 @@ static void RestartFontEnumerationIfNeeded(HWND hdlg) {
 }
 
 INT_PTR DialogFontPickerInternal_OnTimer(HWND hdlg, WPARAM wp) {
-    if (wp == FONT_PICKER_TOPMOST_TIMER_ID) {
-        Dialog_ApplyTopmost(hdlg);
-        return TRUE;
-    }
     if (wp == FONT_ENUM_POLL_TIMER_ID) {
         if (DialogFontPickerInternal_CleanupCompletedEnumeration()) {
             KillTimer(hdlg, FONT_ENUM_POLL_TIMER_ID);
@@ -179,7 +170,6 @@ static void HandleFontListSelection(HWND hdlg) {
 static void CloseFontPickerWithCancel(HWND hdlg) {
     DialogFontPickerInternal_RestoreOriginalFont();
     g_fontState.closeHandled = TRUE;
-    KillTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID);
     DestroyWindow(hdlg);
 }
 
@@ -191,7 +181,6 @@ INT_PTR DialogFontPickerInternal_OnCommand(HWND hdlg, WPARAM wp) {
             return TRUE;
         }
         g_fontState.closeHandled = TRUE;
-        KillTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID);
         DestroyWindow(hdlg);
         return TRUE;
     }
@@ -217,7 +206,6 @@ INT_PTR DialogFontPickerInternal_OnDestroy(HWND hdlg) {
         DialogFontPickerInternal_RestoreOriginalFont();
         g_fontState.closeHandled = TRUE;
     }
-    KillTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID);
     KillTimer(hdlg, FONT_ENUM_POLL_TIMER_ID);
     KillTimer(hdlg, FONT_ENUM_START_RETRY_TIMER_ID);
     Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_FONT_PICKER, hdlg);

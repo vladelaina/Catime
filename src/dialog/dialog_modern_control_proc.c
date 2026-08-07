@@ -5,6 +5,31 @@
 
 #include "dialog_modern_internal.h"
 
+static BOOL ModernEditNeedsFullRedraw(UINT msg) {
+    switch (msg) {
+        case WM_KEYDOWN:
+        case WM_CHAR:
+        case WM_PASTE:
+        case WM_CUT:
+        case WM_CLEAR:
+        case WM_UNDO:
+        case WM_SETTEXT:
+        case EM_REPLACESEL:
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static void ModernRedrawEditAfterInput(HWND hwnd, const ModernControl* control,
+                                       UINT msg) {
+    if (!control || !ModernIsNativeEdit(control) ||
+        !ModernEditNeedsFullRedraw(msg) || !IsWindow(hwnd)) {
+        return;
+    }
+    RedrawWindow(hwnd, NULL, NULL,
+                 RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+}
+
 LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
                                            WPARAM wParam, LPARAM lParam,
                                            UINT_PTR subclassId,
@@ -42,6 +67,10 @@ LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
 
         case WM_KEYDOWN:
         case WM_CHAR:
+        case WM_IME_STARTCOMPOSITION:
+        case WM_IME_COMPOSITION:
+        case WM_IME_ENDCOMPOSITION:
+        case WM_IME_SETCONTEXT:
         case WM_SETCURSOR:
         case WM_GETDLGCODE:
         case DTM_SETSYSTEMTIME:
@@ -53,7 +82,10 @@ LRESULT CALLBACK ModernControlSubclassProc(HWND hwnd, UINT msg,
     }
 
     if (handled) {
+        ModernRedrawEditAfterInput(hwnd, control, msg);
         return result;
     }
-    return DefSubclassProc(hwnd, msg, wParam, lParam);
+    result = DefSubclassProc(hwnd, msg, wParam, lParam);
+    ModernRedrawEditAfterInput(hwnd, control, msg);
+    return result;
 }

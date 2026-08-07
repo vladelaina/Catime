@@ -46,7 +46,7 @@ BOOL DialogNotificationInternal_IsValidParent(HWND hwnd) {
 }
 
 HWND DialogNotificationInternal_GetParent(HWND hwndDlg) {
-    HWND hwndParent = hwndDlg ? GetParent(hwndDlg) : NULL;
+    HWND hwndParent = Dialog_GetOwnerWindow(hwndDlg);
     return DialogNotificationInternal_IsValidParent(hwndParent) ? hwndParent : NULL;
 }
 

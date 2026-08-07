@@ -39,7 +39,7 @@ static BOOL IsValidColorInputParentWindow(HWND hwnd) {
 }
 
 static HWND GetColorInputParent(HWND hwndDlg) {
-    HWND hwndMain = hwndDlg ? GetParent(hwndDlg) : NULL;
+    HWND hwndMain = Dialog_GetOwnerWindow(hwndDlg);
     return IsValidColorInputParentWindow(hwndMain) ? hwndMain : NULL;
 }
 

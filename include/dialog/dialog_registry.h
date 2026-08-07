@@ -40,6 +40,7 @@ void Dialog_InitializeInstance(DialogInstanceType type, HWND hwnd);
 void Dialog_UnregisterInstance(DialogInstanceType type);
 void Dialog_UnregisterInstanceForWindow(DialogInstanceType type, HWND hwnd);
 HWND Dialog_GetInstance(DialogInstanceType type);
+HWND Dialog_GetOwnerWindow(HWND hwndDlg);
 BOOL Dialog_IsOpen(DialogInstanceType type);
 void Dialog_RefreshOpenThemes(void);
 BOOL Dialog_ProcessModelessMessage(MSG* msg);

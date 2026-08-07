@@ -122,16 +122,17 @@ static INT_PTR CALLBACK CliHelpDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LP
             DestroyWindow(hwndDlg);
             return TRUE;
         
-        case WM_DESTROY:
+        case WM_DESTROY: {
+            HWND hMainWnd = Dialog_GetOwnerWindow(hwndDlg);
             Dialog_UnregisterInstanceForWindow(DIALOG_INSTANCE_CLI_HELP, hwndDlg);
             if (hwndDlg == g_cliHelpDialog) {
                 g_cliHelpDialog = NULL;
-                HWND hMainWnd = GetParent(hwndDlg);
                 if (hMainWnd && CLOCK_WINDOW_TOPMOST) {
                     RefreshWindowTopmostState(hMainWnd);
                 }
             }
             return TRUE;
+        }
     }
     
     if (ShouldCloseHelpDialog(msg, wParam)) {

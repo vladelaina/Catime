@@ -41,6 +41,23 @@ static void LayoutCustomTextDisplayHint(HWND hwndDlg) {
         accept.bottom - accept.top);
 }
 
+static void FocusCustomTextDisplayEdit(HWND hwndDlg, BOOL moveCaretToEnd) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) {
+        return;
+    }
+
+    HWND hwndEdit = GetDlgItem(hwndDlg, IDC_CUSTOM_TEXT_DISPLAY_TEXT);
+    if (!hwndEdit || !IsWindow(hwndEdit)) {
+        return;
+    }
+
+    SetForegroundWindow(hwndDlg);
+    SetFocus(hwndEdit);
+    if (moveCaretToEnd) {
+        WindowPlugin_MoveEditCaretToEnd(hwndEdit);
+    }
+}
+
 static LRESULT CALLBACK CustomTextDisplayEditSubclassProc(HWND hwnd, UINT msg,
                                                           WPARAM wParam,
                                                           LPARAM lParam,
@@ -108,9 +125,7 @@ static INT_PTR CALLBACK CustomTextDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM 
                                           state->originalText ? state->originalText : L"",
                                           state->contentPath,
                                           TRUE);
-            SetFocus(hwndEdit);
-            WindowPlugin_MoveEditCaretToEnd(hwndEdit);
-            return FALSE;
+            return TRUE;
         }
 
         case WM_TIMER:
@@ -182,7 +197,7 @@ static INT_PTR CALLBACK CustomTextDisplayDlgProc(HWND hwndDlg, UINT msg, WPARAM 
 static BOOL ShowCustomTextDisplayDialog(HWND hwnd) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_CUSTOM_TEXT_DISPLAY)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_CUSTOM_TEXT_DISPLAY);
-        SetForegroundWindow(existing);
+        FocusCustomTextDisplayEdit(existing, FALSE);
         return TRUE;
     }
 
@@ -218,6 +233,7 @@ static BOOL ShowCustomTextDisplayDialog(HWND hwnd) {
     }
 
     ShowWindow(hwndDlg, SW_SHOW);
+    FocusCustomTextDisplayEdit(hwndDlg, TRUE);
     return TRUE;
 }
 

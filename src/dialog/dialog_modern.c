@@ -133,3 +133,12 @@ void DialogModern_SetFeedback(HWND hwndDlg, int controlId,
     }
     InvalidateRect(control, NULL, FALSE);
 }
+
+void ModernSetImeCompositionActive(HWND hwndEdit, BOOL active) {
+    if (!hwndEdit || !IsWindow(hwndEdit)) return;
+    if (active) {
+        SetPropW(hwndEdit, MODERN_IME_COMPOSITION_PROP, (HANDLE)1);
+    } else {
+        RemovePropW(hwndEdit, MODERN_IME_COMPOSITION_PROP);
+    }
+}

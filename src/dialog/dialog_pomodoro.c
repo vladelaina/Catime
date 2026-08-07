@@ -174,7 +174,7 @@ static void UpdatePomodoroComboPreview(HWND hwndDlg) {
 void ShowPomodoroComboDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_POMODORO_COMBO)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_POMODORO_COMBO);
-        SetForegroundWindow(existing);
+        Dialog_FocusControl(existing, CLOCK_IDC_EDIT, TRUE);
         return;
     }
     HWND hwndDlg = CreateDialogW(
@@ -185,6 +185,7 @@ void ShowPomodoroComboDialog(HWND hwndParent) {
     );
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
+        Dialog_FocusControl(hwndDlg, CLOCK_IDC_EDIT, TRUE);
     }
 }
 INT_PTR CALLBACK PomodoroComboDialogProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {

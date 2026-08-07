@@ -36,7 +36,6 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg,
             return DialogFontPickerInternal_OnCommand(hdlg, wp);
 
         case WM_CLOSE:
-            KillTimer(hdlg, FONT_PICKER_TOPMOST_TIMER_ID);
             SendMessageW(hdlg, WM_COMMAND, IDCANCEL, 0);
             return TRUE;
 

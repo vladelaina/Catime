@@ -2,28 +2,68 @@
 #include "dialog/dialog_modern.h"
 
 static HWND g_dialogInstances[DIALOG_INSTANCE_COUNT] = {0};
+static HWND g_dialogOwners[DIALOG_INSTANCE_COUNT] = {0};
+
+static BOOL Dialog_IsModalInstance(DialogInstanceType type) {
+    switch (type) {
+        case DIALOG_INSTANCE_MESSAGE_INFO:
+        case DIALOG_INSTANCE_MESSAGE_WARNING:
+        case DIALOG_INSTANCE_MESSAGE_ERROR:
+        case DIALOG_INSTANCE_INPUT_BOX:
+        case DIALOG_INSTANCE_COLOR_PICKER:
+            return TRUE;
+        default:
+            return FALSE;
+    }
+}
+
+static void Dialog_DetachModelessOwner(DialogInstanceType type, HWND hwnd) {
+    if (!hwnd || Dialog_IsModalInstance(type)) return;
+
+    HWND owner = GetWindow(hwnd, GW_OWNER);
+    if (!owner || !IsWindow(owner)) return;
+    g_dialogOwners[type] = owner;
+
+    /* Keep modeless dialogs independent in z-order while retaining the owner
+     * handle in the registry for callbacks that need to notify the main window. */
+    if (!SetWindowLongPtrW(hwnd, GWLP_HWNDPARENT, 0)) {
+        g_dialogOwners[type] = NULL;
+        return;
+    }
+    LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+    if (!(style & WS_EX_TOOLWINDOW)) {
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, style | WS_EX_TOOLWINDOW);
+        SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                     SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+}
 
 void Dialog_RegisterInstance(DialogInstanceType type, HWND hwnd) {
     if (type < 0 || type >= DIALOG_INSTANCE_COUNT) return;
     g_dialogInstances[type] = hwnd;
+    g_dialogOwners[type] = NULL;
 }
 
 void Dialog_InitializeInstance(DialogInstanceType type, HWND hwnd) {
     Dialog_RegisterInstance(type, hwnd);
     if (hwnd && IsWindow(hwnd)) {
         DialogModern_Attach(hwnd, (int)type);
-        Dialog_ApplyTopmost(hwnd);
+        Dialog_DetachModelessOwner(type, hwnd);
     }
 }
 
 void Dialog_UnregisterInstance(DialogInstanceType type) {
     if (type < 0 || type >= DIALOG_INSTANCE_COUNT) return;
     g_dialogInstances[type] = NULL;
+    g_dialogOwners[type] = NULL;
 }
 
 void Dialog_UnregisterInstanceForWindow(DialogInstanceType type, HWND hwnd) {
-    if (type >= 0 && type < DIALOG_INSTANCE_COUNT && g_dialogInstances[type] == hwnd)
+    if (type >= 0 && type < DIALOG_INSTANCE_COUNT && g_dialogInstances[type] == hwnd) {
         g_dialogInstances[type] = NULL;
+        g_dialogOwners[type] = NULL;
+    }
 }
 
 HWND Dialog_GetInstance(DialogInstanceType type) {
@@ -31,6 +71,7 @@ HWND Dialog_GetInstance(DialogInstanceType type) {
     HWND hwnd = g_dialogInstances[type];
     if (hwnd && !IsWindow(hwnd)) {
         g_dialogInstances[type] = NULL;
+        g_dialogOwners[type] = NULL;
         return NULL;
     }
     return hwnd;
@@ -38,6 +79,17 @@ HWND Dialog_GetInstance(DialogInstanceType type) {
 
 BOOL Dialog_IsOpen(DialogInstanceType type) {
     return Dialog_GetInstance(type) != NULL;
+}
+
+HWND Dialog_GetOwnerWindow(HWND hwndDlg) {
+    if (!hwndDlg) return NULL;
+    for (int type = 0; type < DIALOG_INSTANCE_COUNT; type++) {
+        if (g_dialogInstances[type] == hwndDlg) {
+            HWND owner = g_dialogOwners[type];
+            return owner && IsWindow(owner) ? owner : NULL;
+        }
+    }
+    return GetWindow(hwndDlg, GW_OWNER);
 }
 
 void Dialog_RefreshOpenThemes(void) {

@@ -61,7 +61,7 @@ BOOL UpdateUi_IsValidParent(HWND hwnd) {
 }
 
 HWND UpdateUi_GetDialogParent(HWND dialog) {
-    HWND parent = dialog ? GetParent(dialog) : NULL;
+    HWND parent = Dialog_GetOwnerWindow(dialog);
     return UpdateUi_IsValidParent(parent) ? parent : NULL;
 }
 

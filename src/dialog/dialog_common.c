@@ -146,16 +146,9 @@ void Dialog_CenterOnPrimaryScreen(HWND hwndDlg) {
     int newX = mi.rcMonitor.left + (primaryWidth - dialogWidth) / 2;
     int newY = mi.rcMonitor.top + (primaryHeight - dialogHeight) / 2;
 
-    /* Move dialog to center position (TOPMOST is applied separately by Dialog_RegisterInstance) */
+    /* Moving the dialog must not change its current z-order. */
     SetWindowPos(hwndDlg, NULL, newX, newY, 0, 0,
                  SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-}
-
-void Dialog_ApplyTopmost(HWND hwndDlg) {
-    if (!hwndDlg) return;
-
-    SetWindowPos(hwndDlg, HWND_TOPMOST, 0, 0, 0, 0,
-                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 }
 
 /* ============================================================================

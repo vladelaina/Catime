@@ -25,7 +25,7 @@ static BOOL ConvertWideUrlToUtf8(const wchar_t* source, char* dest, size_t destS
 void ShowWebsiteDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_WEBSITE)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_WEBSITE);
-        SetForegroundWindow(existing);
+        Dialog_FocusControl(existing, CLOCK_IDC_EDIT, TRUE);
         return;
     }
 
@@ -38,6 +38,7 @@ void ShowWebsiteDialog(HWND hwndParent) {
 
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
+        Dialog_FocusControl(hwndDlg, CLOCK_IDC_EDIT, TRUE);
     }
 }
 

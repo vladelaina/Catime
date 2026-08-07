@@ -9,7 +9,8 @@
     do { *(flag) = TRUE; return (value); } while (0)
 
 LRESULT ModernHandleDialogColorMessage(
-    UINT msg, WPARAM wParam, ModernDialogState* state, BOOL* handled) {
+    UINT msg, WPARAM wParam, LPARAM lParam,
+    ModernDialogState* state, BOOL* handled) {
     *handled = FALSE;
     switch (msg) {
         case WM_CTLCOLORDLG:
@@ -26,6 +27,15 @@ LRESULT ModernHandleDialogColorMessage(
             }
             break;
         case WM_CTLCOLOREDIT:
+            if (state && state->finalized) {
+                BOOL composing = lParam && GetPropW(
+                    (HWND)lParam, MODERN_IME_COMPOSITION_PROP) != NULL;
+                SetBkMode((HDC)wParam, composing ? TRANSPARENT : OPAQUE);
+                SetBkColor((HDC)wParam, state->palette.field);
+                SetTextColor((HDC)wParam, state->palette.text);
+                MODERN_RETURN_HANDLED(handled, (LRESULT)state->fieldBrush);
+            }
+            break;
         case WM_CTLCOLORLISTBOX:
             if (state && state->finalized) {
                 SetBkColor((HDC)wParam, state->palette.field);

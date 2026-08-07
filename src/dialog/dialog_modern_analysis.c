@@ -147,11 +147,13 @@ void ModernApplyFieldRegion(ModernControl* control) {
 
 /* Compact visual single-line edits use the multiline formatting rectangle so
  * Win32 can center text without replacing its native editing behavior. */
+BOOL ModernIsNativeEdit(const ModernControl* control) {
+    return control && control->kind == MODERN_CONTROL_FIELD &&
+           ModernWindowHasClass(control->hwnd, L"Edit");
+}
+
 BOOL ModernIsCompactEdit(const ModernControl* control) {
-    if (!control || control->kind != MODERN_CONTROL_FIELD ||
-        !ModernWindowHasClass(control->hwnd, L"Edit")) {
-        return FALSE;
-    }
+    if (!ModernIsNativeEdit(control)) return FALSE;
 
     LONG_PTR style = GetWindowLongPtrW(control->hwnd, GWL_STYLE);
     if ((style & (ES_MULTILINE | ES_AUTOHSCROLL)) !=

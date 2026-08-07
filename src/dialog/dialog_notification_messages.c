@@ -19,7 +19,7 @@
 void ShowNotificationMessagesDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_NOTIFICATION_MSG)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_NOTIFICATION_MSG);
-        SetForegroundWindow(existing);
+        Dialog_FocusControl(existing, IDC_NOTIFICATION_EDIT1, TRUE);
         return;
     }
 
@@ -30,6 +30,7 @@ void ShowNotificationMessagesDialog(HWND hwndParent) {
 
     if (hwndDlg) {
         ShowWindow(hwndDlg, SW_SHOW);
+        Dialog_FocusControl(hwndDlg, IDC_NOTIFICATION_EDIT1, TRUE);
     }
 }
 

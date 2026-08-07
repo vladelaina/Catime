@@ -237,7 +237,7 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
         case WM_CTLCOLORBTN: {
             BOOL handled = FALSE;
             LRESULT result = ModernHandleDialogColorMessage(
-                msg, wParam, state, &handled);
+                msg, wParam, lParam, state, &handled);
             if (handled) return result;
             break;
         }

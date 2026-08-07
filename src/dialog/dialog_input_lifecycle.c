@@ -19,7 +19,7 @@ BOOL DialogInput_IsValidParentWindow(HWND hwnd) {
 }
 
 HWND DialogInput_GetParent(HWND hwndDlg) {
-    HWND parent = hwndDlg ? GetParent(hwndDlg) : NULL;
+    HWND parent = Dialog_GetOwnerWindow(hwndDlg);
     return DialogInput_IsValidParentWindow(parent) ? parent : NULL;
 }
 

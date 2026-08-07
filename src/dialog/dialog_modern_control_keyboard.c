@@ -13,6 +13,37 @@ LRESULT ModernHandleControlKeyboardMessage(
     ModernControl* control, ModernDialogState* state, BOOL* handled) {
     *handled = FALSE;
     switch (msg) {
+        case WM_IME_STARTCOMPOSITION:
+            if (ModernIsNativeEdit(control)) {
+                ModernSetImeCompositionActive(hwnd, TRUE);
+            }
+            break;
+        case WM_IME_COMPOSITION:
+            if (ModernIsNativeEdit(control)) {
+                LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+                RedrawWindow(hwnd, NULL, NULL,
+                             RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+                MODERN_RETURN_HANDLED(handled, result);
+            }
+            break;
+        case WM_IME_ENDCOMPOSITION:
+            if (ModernIsNativeEdit(control)) {
+                LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+                ModernSetImeCompositionActive(hwnd, FALSE);
+                RedrawWindow(hwnd, NULL, NULL,
+                             RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+                MODERN_RETURN_HANDLED(handled, result);
+            }
+            break;
+        case WM_IME_SETCONTEXT:
+            if (ModernIsNativeEdit(control) && !wParam) {
+                LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+                ModernSetImeCompositionActive(hwnd, FALSE);
+                RedrawWindow(hwnd, NULL, NULL,
+                             RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+                MODERN_RETURN_HANDLED(handled, result);
+            }
+            break;
         case WM_KEYDOWN:
             if (control && control->kind == MODERN_CONTROL_SLIDER &&
                 IsWindowEnabled(hwnd) &&
@@ -142,6 +173,7 @@ LRESULT ModernHandleControlKeyboardMessage(
             MODERN_RETURN_HANDLED(handled, result);
         }
         case WM_NCDESTROY:
+            ModernSetImeCompositionActive(hwnd, FALSE);
             if (control && ModernIsDateTimeControl(control)) {
                 ModernStopDateTimeRepeat(control);
             }

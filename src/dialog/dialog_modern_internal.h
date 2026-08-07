@@ -35,6 +35,8 @@ void ModernSetControlFont(const ModernDialogState* state,
 BOOL ModernApplyFieldRegionRaw(ModernControl* control, BOOL redraw);
 void ModernApplyFieldRegion(ModernControl* control);
 BOOL ModernIsCompactEdit(const ModernControl* control);
+BOOL ModernIsNativeEdit(const ModernControl* control);
+void ModernSetImeCompositionActive(HWND hwndEdit, BOOL active);
 void ModernApplyEditLayout(ModernControl* control);
 wchar_t* ModernCreateSingleLineText(const wchar_t* source,
                                            size_t length,
@@ -173,6 +175,7 @@ LRESULT ModernHandleControlKeyboardMessage(
     HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam,
     ModernControl* control, ModernDialogState* state, BOOL* handled);
 LRESULT ModernHandleDialogColorMessage(
-    UINT msg, WPARAM wParam, ModernDialogState* state, BOOL* handled);
+    UINT msg, WPARAM wParam, LPARAM lParam,
+    ModernDialogState* state, BOOL* handled);
 
 #endif /* DIALOG_MODERN_INTERNAL_H */

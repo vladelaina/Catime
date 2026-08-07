@@ -121,6 +121,13 @@ LRESULT ModernHandleControlPointerMessage(
             }
             break;
         case WM_CANCELMODE:
+            if (ModernIsNativeEdit(control)) {
+                LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+                ModernSetImeCompositionActive(hwnd, FALSE);
+                RedrawWindow(hwnd, NULL, NULL,
+                             RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+                MODERN_RETURN_HANDLED(handled, result);
+            }
             if (control && control->kind == MODERN_CONTROL_SLIDER &&
                 control->pressed) {
                 ModernEndSliderDrag(control, FALSE, 0, 0);
@@ -167,6 +174,13 @@ LRESULT ModernHandleControlPointerMessage(
                     ModernResetDateTimeInput(control);
                 }
                 InvalidateRect(hwnd, NULL, FALSE);
+            }
+            if (ModernIsNativeEdit(control)) {
+                LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
+                ModernSetImeCompositionActive(hwnd, FALSE);
+                RedrawWindow(hwnd, NULL, NULL,
+                             RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW);
+                MODERN_RETURN_HANDLED(handled, result);
             }
             break;
     }
