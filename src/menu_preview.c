@@ -128,7 +128,7 @@ static BOOL StartPreviewInternal(PreviewType type, const void* data, HWND hwnd) 
                   sizeof(g_previewState.data.colorHex), colorHex, _TRUNCATE);
         if (hwnd) ResetTimerWithInterval(hwnd);
         RefreshToastNotificationColors();
-        if (hwnd) InvalidateRect(hwnd, NULL, TRUE);
+        if (hwnd) InvalidateRect(hwnd, NULL, FALSE);
         return TRUE;
     }
     if (type == PREVIEW_TYPE_ANIMATION &&
@@ -238,7 +238,7 @@ static BOOL StartPreviewInternal(PreviewType type, const void* data, HWND hwnd) 
             return FALSE;
     }
     if (hwnd && type != PREVIEW_TYPE_ANIMATION) {
-        InvalidateRect(hwnd, NULL, TRUE);
+        InvalidateRect(hwnd, NULL, type == PREVIEW_TYPE_COLOR ? FALSE : TRUE);
     }
     return TRUE;
 }

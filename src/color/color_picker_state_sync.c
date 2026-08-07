@@ -16,9 +16,9 @@ static void PickerInvalidateVisuals(ModernColorPickerState* state) {
     int controls[] = {
         IDC_MODERN_COLOR_SV,
         IDC_MODERN_COLOR_HUE,
-        IDC_MODERN_COLOR_PREVIEW,
-        IDC_MODERN_COLOR_SAVED
+        IDC_MODERN_COLOR_PREVIEW
     };
+    /* Saved swatches change only when explicitly saved, not while dragging. */
     for (size_t i = 0; i < _countof(controls); i++) {
         HWND control = GetDlgItem(state->hwnd, controls[i]);
         if (control) InvalidateRect(control, NULL, FALSE);

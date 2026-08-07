@@ -157,6 +157,8 @@ static LRESULT CALLBACK ColorPickerCanvasSubclassProc(
     switch (msg) {
         case WM_GETDLGCODE:
             return DLGC_WANTARROWS | DLGC_WANTCHARS;
+        case WM_ERASEBKGND:
+            return 1;
         case WM_LBUTTONDOWN:
             SetFocus(hwnd);
             SetCapture(hwnd);

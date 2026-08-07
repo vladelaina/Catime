@@ -10,6 +10,53 @@
 
 #define COLOR_PICKER_MAX_CANVAS_DIMENSION 2048
 
+typedef struct {
+    HDC target;
+    HDC dc;
+    HBITMAP bitmap;
+    HGDIOBJ oldBitmap;
+    RECT rect;
+    POINT targetOrigin;
+    int width;
+    int height;
+} PickerPaintBuffer;
+
+static void PickerBeginPaintBuffer(const DRAWITEMSTRUCT* item,
+                                   PickerPaintBuffer* paint) {
+    ZeroMemory(paint, sizeof(*paint));
+    paint->target = item->hDC;
+    paint->dc = item->hDC;
+    paint->rect = item->rcItem;
+    paint->targetOrigin.x = item->rcItem.left;
+    paint->targetOrigin.y = item->rcItem.top;
+    paint->width = item->rcItem.right - item->rcItem.left;
+    paint->height = item->rcItem.bottom - item->rcItem.top;
+    if (paint->width <= 0 || paint->height <= 0) return;
+    HDC buffer = CreateCompatibleDC(item->hDC);
+    HBITMAP bitmap = buffer
+        ? CreateCompatibleBitmap(item->hDC, paint->width, paint->height) : NULL;
+    HGDIOBJ oldBitmap = buffer && bitmap ? SelectObject(buffer, bitmap) : NULL;
+    if (!buffer || !bitmap || !oldBitmap || oldBitmap == HGDI_ERROR) {
+        if (bitmap) DeleteObject(bitmap);
+        if (buffer) DeleteDC(buffer);
+        return;
+    }
+    paint->dc = buffer;
+    paint->bitmap = bitmap;
+    paint->oldBitmap = oldBitmap;
+    SetRect(&paint->rect, 0, 0, paint->width, paint->height);
+}
+
+static void PickerEndPaintBuffer(PickerPaintBuffer* paint) {
+    if (!paint || !paint->bitmap) return;
+    BitBlt(paint->target, paint->targetOrigin.x, paint->targetOrigin.y,
+           paint->width, paint->height,
+           paint->dc, 0, 0, SRCCOPY);
+    SelectObject(paint->dc, paint->oldBitmap);
+    DeleteObject(paint->bitmap);
+    DeleteDC(paint->dc);
+}
+
 static DWORD PickerColorToDibPixel(COLORREF color) {
     return (DWORD)GetBValue(color) |
            ((DWORD)GetGValue(color) << 8) |
@@ -133,7 +180,9 @@ void ColorPickerInternal_RefreshPalette(ModernColorPickerState* state,
 
 void ColorPickerInternal_PaintSv(ModernColorPickerState* state,
                           const DRAWITEMSTRUCT* item) {
-    RECT rect = item->rcItem;
+    PickerPaintBuffer paint;
+    PickerBeginPaintBuffer(item, &paint);
+    RECT rect = paint.rect;
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
     DialogModernPalette palette;
@@ -142,20 +191,20 @@ void ColorPickerInternal_PaintSv(ModernColorPickerState* state,
     int canvasRadius = DialogModern_Scale(dpi, 11);
     HBRUSH surface = CreateSolidBrush(palette.surface);
     if (surface) {
-        FillRect(item->hDC, &rect, surface);
+        FillRect(paint.dc, &rect, surface);
         DeleteObject(surface);
     }
-    DialogModern_DrawRoundedRect(item->hDC, &rect, canvasRadius * 2,
+    DialogModern_DrawRoundedRect(paint.dc, &rect, canvasRadius * 2,
                                  palette.field, palette.field, 0);
     if (PickerBuildSvPixels(state, width, height)) {
-        PickerDrawRoundedPixels(item->hDC, &rect, state->svPixels,
+        PickerDrawRoundedPixels(paint.dc, &rect, state->svPixels,
                                 width, height, canvasRadius);
     }
 
     RECT canvasOutline = rect;
     InflateRect(&canvasOutline, -1, -1);
     BOOL focused = GetFocus() == item->hwndItem;
-    ColorPickerInternal_DrawOutline(item->hDC, &canvasOutline, canvasRadius * 2,
+    ColorPickerInternal_DrawOutline(paint.dc, &canvasOutline, canvasRadius * 2,
                       focused ? palette.accent : palette.border,
                       focused ? 2 : 1);
 
@@ -173,16 +222,19 @@ void ColorPickerInternal_PaintSv(ModernColorPickerState* state,
     }
     RECT marker = {x - markerRadius, y - markerRadius,
                    x + markerRadius + 1, y + markerRadius + 1};
-    ColorPickerInternal_DrawOutline(item->hDC, &marker, markerRadius * 2,
+    ColorPickerInternal_DrawOutline(paint.dc, &marker, markerRadius * 2,
                       RGB(0xFF, 0xFF, 0xFF), 3);
     InflateRect(&marker, -2, -2);
-    ColorPickerInternal_DrawOutline(item->hDC, &marker, markerRadius * 2,
+    ColorPickerInternal_DrawOutline(paint.dc, &marker, markerRadius * 2,
                       RGB(0x18, 0x22, 0x30), 1);
+    PickerEndPaintBuffer(&paint);
 }
 
 void ColorPickerInternal_PaintHue(ModernColorPickerState* state,
                            const DRAWITEMSTRUCT* item) {
-    RECT rect = item->rcItem;
+    PickerPaintBuffer paint;
+    PickerBeginPaintBuffer(item, &paint);
+    RECT rect = paint.rect;
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
     DialogModernPalette palette;
@@ -191,20 +243,20 @@ void ColorPickerInternal_PaintHue(ModernColorPickerState* state,
     int canvasRadius = DialogModern_Scale(dpi, 7);
     HBRUSH surface = CreateSolidBrush(palette.surface);
     if (surface) {
-        FillRect(item->hDC, &rect, surface);
+        FillRect(paint.dc, &rect, surface);
         DeleteObject(surface);
     }
-    DialogModern_DrawRoundedRect(item->hDC, &rect, canvasRadius * 2,
+    DialogModern_DrawRoundedRect(paint.dc, &rect, canvasRadius * 2,
                                  palette.field, palette.field, 0);
     if (PickerBuildHuePixels(state, width, height)) {
-        PickerDrawRoundedPixels(item->hDC, &rect, state->huePixels,
+        PickerDrawRoundedPixels(paint.dc, &rect, state->huePixels,
                                 width, height, canvasRadius);
     }
 
     RECT canvasOutline = rect;
     InflateRect(&canvasOutline, -1, -1);
     BOOL focused = GetFocus() == item->hwndItem;
-    ColorPickerInternal_DrawOutline(item->hDC, &canvasOutline, canvasRadius * 2,
+    ColorPickerInternal_DrawOutline(paint.dc, &canvasOutline, canvasRadius * 2,
                       focused ? palette.accent : palette.border,
                       focused ? 2 : 1);
     int y = rect.top + (int)(ColorPickerInternal_NormalizeHue(state->hue) *
@@ -219,11 +271,12 @@ void ColorPickerInternal_PaintHue(ModernColorPickerState* state,
     RECT marker = {rect.left + 1, y - markerHalfHeight,
                    rect.right - 1, y + markerHalfHeight + 1};
     int markerRadius = DialogModern_Scale(dpi, 5);
-    ColorPickerInternal_DrawOutline(item->hDC, &marker, markerRadius,
+    ColorPickerInternal_DrawOutline(paint.dc, &marker, markerRadius,
                       RGB(0xFF, 0xFF, 0xFF),
                       DialogModern_Scale(dpi, 2));
     InflateRect(&marker, -1, -1);
-    ColorPickerInternal_DrawOutline(item->hDC, &marker, DialogModern_Scale(dpi, 4),
+    ColorPickerInternal_DrawOutline(paint.dc, &marker, DialogModern_Scale(dpi, 4),
                       RGB(0x18, 0x22, 0x30),
                       DialogModern_Scale(dpi, 1));
+    PickerEndPaintBuffer(&paint);
 }

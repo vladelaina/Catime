@@ -73,6 +73,9 @@ static LRESULT CALLBACK AboutLinkSubclassProc(HWND hwnd, UINT msg, WPARAM wParam
     }
 
     switch (msg) {
+        case WM_ERASEBKGND:
+            /* WM_DRAWITEM paints the complete link surface. */
+            return 1;
         case WM_MOUSEMOVE:
             if (!GetPropW(hwnd, ABOUT_LINK_HOVER_PROP)) {
                 TRACKMOUSEEVENT track = {0};
