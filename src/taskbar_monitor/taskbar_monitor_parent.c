@@ -25,20 +25,6 @@ static BOOL SetWindowLongChecked(
     return TRUE;
 }
 
-BOOL TaskbarMonitor_SetMenuPreviewPassThrough(BOOL enabled) {
-    HWND window = g_taskbarMonitor.window;
-    if (!IsWindow(window)) return FALSE;
-    LONG_PTR extendedStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
-    LONG_PTR desiredStyle = enabled
-        ? extendedStyle | WS_EX_TRANSPARENT
-        : extendedStyle & ~WS_EX_TRANSPARENT;
-    if (desiredStyle == extendedStyle) return TRUE;
-    return SetWindowLongChecked(
-        window, GWL_EXSTYLE, desiredStyle,
-        enabled ? "preview pass-through enable"
-                : "preview pass-through restore");
-}
-
 BOOL TaskbarMonitor_EnsureWindowAtTop(void) {
     HWND window = g_taskbarMonitor.window;
     if (!IsWindow(window)) return FALSE;
@@ -85,12 +71,8 @@ BOOL TaskbarMonitor_SetWindowParent(HWND parent, BOOL childStyle) {
     LONG_PTR extendedStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
     LONG_PTR desiredExtendedStyle =
         (extendedStyle & ~WS_EX_TOPMOST) |
-        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED;
-    if (g_taskbarMonitor.menuPreviewSessionActive) {
-        desiredExtendedStyle |= WS_EX_TRANSPARENT;
-    } else {
-        desiredExtendedStyle &= ~WS_EX_TRANSPARENT;
-    }
+        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED |
+        WS_EX_TRANSPARENT;
     if (desiredExtendedStyle != extendedStyle &&
         !SetWindowLongChecked(
             window, GWL_EXSTYLE, desiredExtendedStyle,
@@ -106,6 +88,15 @@ BOOL TaskbarMonitor_SetWindowParent(HWND parent, BOOL childStyle) {
         LOG_WARNING(
             "Taskbar monitor frame synchronization failed (error=%lu)",
             GetLastError());
+        return FALSE;
+    }
+
+    extendedStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
+    if ((extendedStyle & WS_EX_TRANSPARENT) == 0 &&
+        !SetWindowLongChecked(
+            window, GWL_EXSTYLE,
+            extendedStyle | WS_EX_TRANSPARENT,
+            "mouse pass-through enable")) {
         return FALSE;
     }
     return TRUE;

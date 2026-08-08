@@ -118,7 +118,6 @@ BOOL TaskbarMonitor_SnapshotsEqual(
     const SystemMonitorSnapshot* first,
     const SystemMonitorSnapshot* second);
 void TaskbarMonitor_PrefetchSnapshot(DWORD fields, BOOL forceRefresh);
-void TaskbarMonitor_ClearMenuPreviewWindowInteraction(void);
 void TaskbarMonitor_ResetMenuPreviewWindowGeometry(void);
 BOOL TaskbarMonitor_CaptureMenuPreviewWindowGeometry(void);
 BOOL TaskbarMonitor_RestoreMenuPreviewWindowGeometry(void);
@@ -158,15 +157,12 @@ BOOL TaskbarMonitor_Present(
     int metricCount);
 void TaskbarMonitor_ColorizeTextMask(
     DWORD* pixels, size_t count, COLORREF textColor);
-void TaskbarMonitor_EnsureInteractiveAlpha(
-    DWORD* pixels, size_t count, COLORREF textColor);
 void TaskbarMonitor_DrawMetricGrid(
     HDC dc, int width, int height,
     const TaskbarMetricText* metrics, int metricCount);
 
 void TaskbarMonitor_RestoreClassicTaskList(void);
 BOOL TaskbarMonitor_SetWindowParent(HWND parent, BOOL childStyle);
-BOOL TaskbarMonitor_SetMenuPreviewPassThrough(BOOL enabled);
 BOOL TaskbarMonitor_EnsureWindowAtTop(void);
 BOOL TaskbarMonitor_IsWindowShown(HWND window);
 BOOL TaskbarMonitor_AttachToTaskbar(void);

@@ -163,11 +163,9 @@ static void ConfigureHiddenRetry(void) {
     SetParent(g_taskbarMonitor.window, NULL);
     SetWindowLongPtrW(g_taskbarMonitor.window, GWL_STYLE,
                       (style & ~WS_CHILD) | WS_POPUP);
-    exStyle = (exStyle & ~(WS_EX_TOPMOST | WS_EX_TRANSPARENT)) |
-              WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED;
-    if (g_taskbarMonitor.menuPreviewSessionActive) {
-        exStyle |= WS_EX_TRANSPARENT;
-    }
+    exStyle = (exStyle & ~WS_EX_TOPMOST) |
+              WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_LAYERED |
+              WS_EX_TRANSPARENT;
     SetWindowLongPtrW(g_taskbarMonitor.window, GWL_EXSTYLE,
                       exStyle);
     SetWindowPos(g_taskbarMonitor.window, HWND_NOTOPMOST, 0, 0, 0, 0,

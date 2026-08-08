@@ -61,6 +61,9 @@ int main(void) {
     LONG_PTR style = GetWindowLongPtrW(monitor, GWL_STYLE);
     Expect((style & WS_POPUP) != 0 && (style & WS_CHILD) == 0,
            "taskbar popup style was not applied");
+    Expect((GetWindowLongPtrW(monitor, GWL_EXSTYLE) &
+            WS_EX_TRANSPARENT) != 0,
+           "taskbar monitor did not enable mouse pass-through");
 
     g_frameMessages = 0;
     Expect(TaskbarMonitor_SetWindowParent(firstParent, FALSE),
@@ -76,22 +79,11 @@ int main(void) {
     Expect(g_frameMessages > 0,
            "changed taskbar parent did not synchronize the frame");
 
-    g_frameMessages = 0;
-    Expect(TaskbarMonitor_SetMenuPreviewPassThrough(TRUE),
-           "failed to enable taskbar preview pass-through");
-    Expect((GetWindowLongPtrW(monitor, GWL_EXSTYLE) &
-            WS_EX_TRANSPARENT) != 0,
-           "taskbar preview pass-through style was not applied");
-    Expect(g_frameMessages == 0,
-           "preview pass-through unnecessarily refreshed the frame");
-    Expect(TaskbarMonitor_SetMenuPreviewPassThrough(FALSE),
-           "failed to restore taskbar preview interaction");
-    Expect((GetWindowLongPtrW(monitor, GWL_EXSTYLE) &
-            WS_EX_TRANSPARENT) == 0,
-           "taskbar preview pass-through style was not cleared");
-
     Expect(TaskbarMonitor_SetWindowParent(secondParent, TRUE),
            "failed to prepare child z-order test window");
+    Expect((GetWindowLongPtrW(monitor, GWL_EXSTYLE) &
+            WS_EX_TRANSPARENT) != 0,
+           "child transition disabled mouse pass-through");
     HWND sibling = CreateWindowExW(
         0, className, L"", WS_CHILD,
         0, 0, 16, 16, secondParent, NULL, instance, NULL);

@@ -52,26 +52,6 @@ static void CheckSyntheticMaskPixels(void) {
            "a dark glyph edge was not premultiplied correctly");
 }
 
-static void CheckInteractiveAlphaPixels(void) {
-    DWORD darkSurface[] = {0, 0xffffffffu, 0xaa555555u};
-    TaskbarMonitor_EnsureInteractiveAlpha(
-        darkSurface, _countof(darkSurface), RGB(255, 255, 255));
-    Expect(darkSurface[0] == 0x01000000u,
-           "dark transparent background did not retain mouse input");
-    Expect(darkSurface[1] == 0xffffffffu &&
-           darkSurface[2] == 0xaa555555u,
-           "interactive alpha changed visible dark-theme pixels");
-
-    DWORD lightSurface[] = {0, 0xff000000u, 0xaa000000u};
-    TaskbarMonitor_EnsureInteractiveAlpha(
-        lightSurface, _countof(lightSurface), RGB(0, 0, 0));
-    Expect(lightSurface[0] == 0x01010101u,
-           "light transparent background did not retain mouse input");
-    Expect(lightSurface[1] == 0xff000000u &&
-           lightSurface[2] == 0xaa000000u,
-           "interactive alpha changed visible light-theme pixels");
-}
-
 static void CheckRenderedMaskPixels(void) {
     const int width = 180;
     const int height = 20;
@@ -179,34 +159,17 @@ static BOOL PresentTheme(HWND window, HDC target,
     return presented;
 }
 
-static void CheckWindowHitSurface(HWND window) {
+static void CheckWindowPassThrough(HWND window) {
     RECT rect = {0};
     Expect(GetWindowRect(window, &rect),
            "failed to query the compositor test window bounds");
     POINT point = {rect.right - 1, rect.bottom - 1};
-    Expect(WindowFromPoint(point) == window,
-           "transparent taskbar surface did not retain mouse input");
-}
-
-static void CheckPreviewInteractionStyle(HWND window) {
-    RECT rect = {0};
-    Expect(GetWindowRect(window, &rect),
-           "failed to query the preview interaction test bounds");
-    POINT point = {rect.right - 1, rect.bottom - 1};
-    LONG_PTR extendedStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
-    SetWindowLongPtrW(
-        window, GWL_EXSTYLE, extendedStyle | WS_EX_TRANSPARENT);
     Expect(WindowFromPoint(point) != window,
-           "preview interaction style did not pass mouse input through");
-
-    SetWindowLongPtrW(window, GWL_EXSTYLE, extendedStyle);
-    Expect(WindowFromPoint(point) == window,
-           "clearing preview interaction style required a frame refresh");
+           "taskbar monitor did not pass mouse input through");
 }
 
 int main(void) {
     CheckSyntheticMaskPixels();
-    CheckInteractiveAlphaPixels();
     CheckRenderedMaskPixels();
 
     const wchar_t className[] = L"CatimeTaskbarCompositorTest";
@@ -224,7 +187,7 @@ int main(void) {
     int testY = GetSystemMetrics(SM_YVIRTUALSCREEN) - testHeight + 1;
     HWND window = CreateWindowExW(
         WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE |
-            WS_EX_TOPMOST,
+            WS_EX_TOPMOST | WS_EX_TRANSPARENT,
         className, L"", WS_POPUP,
         testX, testY, testWidth, testHeight,
         NULL, NULL, instance, NULL);
@@ -258,11 +221,10 @@ int main(void) {
         for (int i = 0; i < 8; ++i) {
             (void)PresentTheme(window, target, metrics, (i & 1) != 0);
         }
-        CheckWindowHitSurface(window);
+        CheckWindowPassThrough(window);
         g_taskbarMonitor.menuPreviewSessionActive = TRUE;
         (void)PresentTheme(window, target, metrics, TRUE);
-        CheckWindowHitSurface(window);
-        CheckPreviewInteractionStyle(window);
+        CheckWindowPassThrough(window);
         g_taskbarMonitor.menuPreviewSessionActive = FALSE;
     }
 

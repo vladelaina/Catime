@@ -39,7 +39,7 @@ BOOL TaskbarMonitor_CreateWindow(void) {
     }
     if (TaskbarMonitor_IsEnabled()) SystemMonitor_Init();
     g_taskbarMonitor.window = CreateWindowExW(
-        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT,
         TASKBAR_MONITOR_CLASS, L"Catime Taskbar Monitor", WS_POPUP,
         0, 0, 1, 1, NULL, NULL, g_taskbarMonitor.instance, NULL);
     if (!g_taskbarMonitor.window) {
@@ -113,9 +113,6 @@ BOOL TaskbarMonitor_BeginMenuPreviewSession(void) {
     } else if (!TaskbarMonitor_HasUsableWindow()) {
         (void)TaskbarMonitor_AttachToTaskbar();
     }
-    if (IsWindow(g_taskbarMonitor.window)) {
-        (void)TaskbarMonitor_SetMenuPreviewPassThrough(TRUE);
-    }
     (void)TaskbarMonitor_CaptureMenuPreviewWindowGeometry();
     return IsWindow(g_taskbarMonitor.window);
 }
@@ -141,8 +138,6 @@ void TaskbarMonitor_EndMenuPreviewSession(void) {
     g_taskbarMonitor.menuPreviewWindowCreated = FALSE;
     if (hostNeedsSync) {
         SyncMonitorWindow(TRUE);
-    } else {
-        TaskbarMonitor_ClearMenuPreviewWindowInteraction();
     }
     TaskbarMonitor_ResetMenuPreviewWindowGeometry();
 }

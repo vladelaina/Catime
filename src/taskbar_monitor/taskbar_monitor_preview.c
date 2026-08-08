@@ -5,10 +5,6 @@
 
 #include "taskbar_monitor_internal.h"
 
-void TaskbarMonitor_ClearMenuPreviewWindowInteraction(void) {
-    (void)TaskbarMonitor_SetMenuPreviewPassThrough(FALSE);
-}
-
 void TaskbarMonitor_ResetMenuPreviewWindowGeometry(void) {
     g_taskbarMonitor.menuPreviewOriginalWindowRectValid = FALSE;
     g_taskbarMonitor.menuPreviewWindowResized = FALSE;
