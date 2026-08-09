@@ -22,12 +22,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 Write-Host ''; ^
 Write-Host ''; ^
 $e=[char]27; ^
-Write-Host \"${e}[1m${e}[38;2;138;43;226m██████╗ ${e}[38;2;147;112;219m █████╗ ${e}[38;2;153;102;255m████████╗${e}[38;2;160;120;255m██╗${e}[38;2;186;85;211m███╗   ███╗${e}[38;2;221;160;221m███████╗${e}[0m\"; ^
-Write-Host \"${e}[1m${e}[38;2;138;43;226m██╔════╝${e}[38;2;147;112;219m ██╔══██╗${e}[38;2;153;102;255m╚══██╔══╝${e}[38;2;160;120;255m██║${e}[38;2;186;85;211m████╗ ████║${e}[38;2;221;160;221m██╔════╝${e}[0m\"; ^
-Write-Host \"${e}[1m${e}[38;2;138;43;226m██║     ${e}[38;2;147;112;219m ███████║${e}[38;2;153;102;255m   ██║   ${e}[38;2;160;120;255m██║${e}[38;2;186;85;211m██╔████╔██║${e}[38;2;221;160;221m█████╗  ${e}[0m\"; ^
-Write-Host \"${e}[1m${e}[38;2;138;43;226m██║     ${e}[38;2;147;112;219m ██╔══██║${e}[38;2;153;102;255m   ██║   ${e}[38;2;160;120;255m██║${e}[38;2;186;85;211m██║╚██╔╝██║${e}[38;2;221;160;221m██╔══╝  ${e}[0m\"; ^
-Write-Host \"${e}[1m${e}[38;2;138;43;226m╚██████╗${e}[38;2;147;112;219m ██║  ██║${e}[38;2;153;102;255m   ██║   ${e}[38;2;160;120;255m██║${e}[38;2;186;85;211m██║ ╚═╝ ██║${e}[38;2;221;160;221m███████╗${e}[0m\"; ^
-Write-Host \"${e}[1m${e}[38;2;138;43;226m ╚═════╝${e}[38;2;147;112;219m ╚═╝  ╚═╝${e}[38;2;153;102;255m   ╚═╝   ${e}[38;2;160;120;255m╚═╝${e}[38;2;186;85;211m╚═╝     ╚═╝${e}[38;2;221;160;221m╚══════╝${e}[0m\"; ^
+Write-Host \"${e}[1m${e}[38;2;84;174;255m██████╗ ${e}[38;2;117;164;238m █████╗ ${e}[38;2;150;154;221m████████╗${e}[38;2;181;135;187m██╗${e}[38;2;214;130;170m███╗   ███╗${e}[38;2;247;125;170m███████╗${e}[0m\"; ^
+Write-Host \"${e}[1m${e}[38;2;84;174;255m██╔════╝${e}[38;2;117;164;238m ██╔══██╗${e}[38;2;150;154;221m╚══██╔══╝${e}[38;2;181;135;187m██║${e}[38;2;214;130;170m████╗ ████║${e}[38;2;247;125;170m██╔════╝${e}[0m\"; ^
+Write-Host \"${e}[1m${e}[38;2;84;174;255m██║     ${e}[38;2;117;164;238m ███████║${e}[38;2;150;154;221m   ██║   ${e}[38;2;181;135;187m██║${e}[38;2;214;130;170m██╔████╔██║${e}[38;2;247;125;170m█████╗  ${e}[0m\"; ^
+Write-Host \"${e}[1m${e}[38;2;84;174;255m██║     ${e}[38;2;117;164;238m ██╔══██║${e}[38;2;150;154;221m   ██║   ${e}[38;2;181;135;187m██║${e}[38;2;214;130;170m██║╚██╔╝██║${e}[38;2;247;125;170m██╔══╝  ${e}[0m\"; ^
+Write-Host \"${e}[1m${e}[38;2;84;174;255m╚██████╗${e}[38;2;117;164;238m ██║  ██║${e}[38;2;150;154;221m   ██║   ${e}[38;2;181;135;187m██║${e}[38;2;214;130;170m██║ ╚═╝ ██║${e}[38;2;247;125;170m███████╗${e}[0m\"; ^
+Write-Host \"${e}[1m${e}[38;2;84;174;255m ╚═════╝${e}[38;2;117;164;238m ╚═╝  ╚═╝${e}[38;2;150;154;221m   ╚═╝   ${e}[38;2;181;135;187m╚═╝${e}[38;2;214;130;170m╚═╝     ╚═╝${e}[38;2;247;125;170m╚══════╝${e}[0m\"; ^
 Write-Host ''"
 
 REM Check if CMake is available
@@ -102,7 +102,7 @@ if exist "CMakeCache.txt" (
 )
 
 REM Step 1: Configure with progress bar
-powershell -NoProfile -Command "$e=[char]27; Write-Host -NoNewline \"${e}[1m${e}[38;2;147;112;219m[ 25%%]${e}[0m ${e}[38;2;138;43;226m##########${e}[38;2;80;80;80m..............................${e}[0m ${e}[38;2;100;200;255mConfiguring project...${e}[0m\""
+powershell -NoProfile -Command "$e=[char]27; Write-Host -NoNewline \"${e}[1m${e}[38;2;84;174;255m[ 25%%]${e}[0m ${e}[38;2;247;125;170m##########${e}[38;2;80;80;80m..............................${e}[0m ${e}[38;2;100;200;255mConfiguring project...${e}[0m\""
 cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=%BUILD_TYPE% >cmake_config.log 2>&1
 if errorlevel 1 (
     echo.
@@ -111,15 +111,15 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
-powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;147;112;219m[100%%]${e}[0m ${e}[38;2;138;43;226m########################################${e}[0m ${e}[38;2;100;200;255mConfiguring project... ✓${e}[0m\""
+powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;84;174;255m[100%%]${e}[0m ${e}[38;2;247;125;170m########################################${e}[0m ${e}[38;2;100;200;255mConfiguring project... ✓${e}[0m\""
 
 REM Step 2: Analyze and count source files
-powershell -NoProfile -Command "$e=[char]27; Write-Host -NoNewline \"${e}[1m${e}[38;2;147;112;219m[ 50%%]${e}[0m ${e}[38;2;138;43;226m####################${e}[38;2;80;80;80m....................${e}[0m ${e}[38;2;255;200;100mAnalyzing source files...${e}[0m\""
+powershell -NoProfile -Command "$e=[char]27; Write-Host -NoNewline \"${e}[1m${e}[38;2;84;174;255m[ 50%%]${e}[0m ${e}[38;2;247;125;170m####################${e}[38;2;80;80;80m....................${e}[0m ${e}[38;2;255;200;100mAnalyzing source files...${e}[0m\""
 
 REM Count total source files
 for /f %%a in ('dir /s /b ..\src\*.c 2^>nul ^| find /c /v ""') do set TOTAL_FILES=%%a
 set /a TOTAL_FILES=%TOTAL_FILES%+3
-powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;147;112;219m[100%%]${e}[0m ${e}[38;2;138;43;226m########################################${e}[0m ${e}[38;2;255;200;100mAnalyzing source files... ✓${e}[0m\""
+powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;84;174;255m[100%%]${e}[0m ${e}[38;2;247;125;170m########################################${e}[0m ${e}[38;2;255;200;100mAnalyzing source files... ✓${e}[0m\""
 
 REM Step 3: Build with real-time progress monitoring
 REM Clean up any previous build completion marker
@@ -156,9 +156,9 @@ if "!BUILD_OK!"=="1" (
 )
 
 REM Step 4: Finalize with progress bar
-powershell -NoProfile -Command "$e=[char]27; Write-Host -NoNewline \"${e}[1m${e}[38;2;147;112;219m[100%%]${e}[0m ${e}[38;2;138;43;226m########################################${e}[0m ${e}[38;2;100;255;150mFinalizing build...${e}[0m\""
+powershell -NoProfile -Command "$e=[char]27; Write-Host -NoNewline \"${e}[1m${e}[38;2;84;174;255m[100%%]${e}[0m ${e}[38;2;247;125;170m########################################${e}[0m ${e}[38;2;100;255;150mFinalizing build...${e}[0m\""
 timeout /t 1 /nobreak >nul
-powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;147;112;219m[100%%]${e}[0m ${e}[38;2;138;43;226m########################################${e}[0m ${e}[38;2;100;255;150mFinalizing build... ✓${e}[0m\""
+powershell -NoProfile -Command "$e=[char]27; Write-Host \"`r${e}[1m${e}[38;2;84;174;255m[100%%]${e}[0m ${e}[38;2;247;125;170m########################################${e}[0m ${e}[38;2;100;255;150mFinalizing build... ✓${e}[0m\""
 
 REM Check if build was successful
 if "!BUILD_OK!"=="1" (

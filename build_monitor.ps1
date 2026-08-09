@@ -32,8 +32,8 @@ function Show-Progress {
     $dots = "." * $empty
     
     # Write progress with carriage return (same line update)
-    Write-Host -NoNewline "`r${e}[1m${e}[38;2;147;112;219m[$($percentage.ToString().PadLeft(3))%]${e}[0m "
-    Write-Host -NoNewline "${e}[38;2;138;43;226m$progress${e}[38;2;80;80;80m$dots${e}[0m "
+    Write-Host -NoNewline "`r${e}[1m${e}[38;2;84;174;255m[$($percentage.ToString().PadLeft(3))%]${e}[0m "
+    Write-Host -NoNewline "${e}[38;2;247;125;170m$progress${e}[38;2;80;80;80m$dots${e}[0m "
     Write-Host -NoNewline "${e}[$messageColor`m$Message${e}[0m"
 }
 
