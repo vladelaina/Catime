@@ -345,7 +345,6 @@ function createAnimationItem(collection, index, { highPriority = false } = {}) {
     item.href = downloadUrl;
     item.download = filename;
     item.setAttribute('aria-label', copy.downloadAnimation(filename));
-    item.title = copy.downloadAnimation(filename);
 
     const image = document.createElement('img');
     image.alt = `${collection.title} ${index}`;
