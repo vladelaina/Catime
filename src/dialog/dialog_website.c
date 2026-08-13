@@ -37,7 +37,7 @@ void ShowWebsiteDialog(HWND hwndParent) {
     );
 
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
         Dialog_FocusControl(hwndDlg, CLOCK_IDC_EDIT, TRUE);
     }
 }

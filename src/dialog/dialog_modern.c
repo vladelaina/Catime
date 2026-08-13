@@ -7,32 +7,71 @@
 
 #include <dwmapi.h>
 
-static void ModernArmFirstShowGuard(ModernDialogState* state) {
-    if (!state || !state->hwnd || IsWindowVisible(state->hwnd) ||
-        state->firstShowCloaked || state->firstShowTransparent) {
-        return;
+static void ModernArmWindowFirstShowGuard(HWND hwnd, BOOL* cloaked,
+                                          BOOL* transparent,
+                                          BOOL allowCloak) {
+    if (cloaked) *cloaked = FALSE;
+    if (transparent) *transparent = FALSE;
+    if (!hwnd || !cloaked || !transparent || IsWindowVisible(hwnd)) return;
+
+    if (allowCloak) {
+        BOOL cloak = TRUE;
+        if (SUCCEEDED(DwmSetWindowAttribute(
+                hwnd, MODERN_DWM_CLOAK_ATTRIBUTE,
+                &cloak, sizeof(cloak)))) {
+            *cloaked = TRUE;
+            return;
+        }
     }
 
-    BOOL cloak = TRUE;
-    if (SUCCEEDED(DwmSetWindowAttribute(
-            state->hwnd, MODERN_DWM_CLOAK_ATTRIBUTE,
-            &cloak, sizeof(cloak)))) {
-        state->firstShowCloaked = TRUE;
-        return;
-    }
-
-    LONG_PTR exStyle = GetWindowLongPtrW(state->hwnd, GWL_EXSTYLE);
+    LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
     if ((exStyle & WS_EX_LAYERED) != 0) return;
 
     SetLastError(ERROR_SUCCESS);
     LONG_PTR previous = SetWindowLongPtrW(
-        state->hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
+        hwnd, GWL_EXSTYLE, exStyle | WS_EX_LAYERED);
     if (previous == 0 && GetLastError() != ERROR_SUCCESS) return;
-    if (SetLayeredWindowAttributes(state->hwnd, 0, 0, LWA_ALPHA)) {
-        state->firstShowTransparent = TRUE;
+    if (SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA)) {
+        *transparent = TRUE;
     } else {
-        SetWindowLongPtrW(state->hwnd, GWL_EXSTYLE, exStyle);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle);
     }
+}
+
+static void ModernReleaseWindowFirstShowGuard(HWND hwnd, BOOL cloaked,
+                                              BOOL transparent) {
+    if (!hwnd) return;
+
+    if (cloaked) {
+        BOOL cloak = FALSE;
+        (void)DwmFlush();
+        (void)DwmSetWindowAttribute(
+            hwnd, MODERN_DWM_CLOAK_ATTRIBUTE, &cloak, sizeof(cloak));
+    }
+    if (transparent &&
+        !SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA)) {
+        LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
+        SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                         SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+}
+
+void ModernArmFirstShowGuard(ModernDialogState* state, BOOL allowCloak) {
+    if (!state || state->firstShowCloaked ||
+        state->firstShowTransparent) return;
+    ModernArmWindowFirstShowGuard(state->hwnd, &state->firstShowCloaked,
+                                  &state->firstShowTransparent, allowCloak);
+}
+
+void ModernReleaseFirstShowGuard(ModernDialogState* state) {
+    if (!state) return;
+    ModernReleaseWindowFirstShowGuard(state->hwnd,
+                                      state->firstShowCloaked,
+                                      state->firstShowTransparent);
+    state->firstShowCloaked = FALSE;
+    state->firstShowTransparent = FALSE;
 }
 
 BOOL DialogModern_CopyPalette(HWND hwnd, DialogModernPalette* palette) {
@@ -53,8 +92,24 @@ BOOL DialogModern_IsAttached(HWND hwndDlg) {
 BOOL DialogModern_PrepareForShow(HWND hwndDlg) {
     ModernDialogState* state = ModernGetState(hwndDlg);
     if (!state || !ModernFinalize(state)) return FALSE;
-    ModernArmFirstShowGuard(state);
+    ModernArmFirstShowGuard(state, TRUE);
     return TRUE;
+}
+
+void DialogModern_ShowPaintedWindow(HWND hwnd, int showCommand) {
+    if (!hwnd || !IsWindow(hwnd)) return;
+
+    ModernDialogState* state = ModernGetState(hwnd);
+    if (state) (void)ModernFinalize(state);
+
+    BOOL cloaked = FALSE;
+    BOOL transparent = FALSE;
+    ModernArmWindowFirstShowGuard(hwnd, &cloaked, &transparent, FALSE);
+    ShowWindow(hwnd, showCommand);
+    RedrawWindow(hwnd, NULL, NULL,
+                 RDW_INVALIDATE | RDW_NOERASE | RDW_FRAME |
+                     RDW_ALLCHILDREN | RDW_UPDATENOW);
+    ModernReleaseWindowFirstShowGuard(hwnd, cloaked, transparent);
 }
 
 BOOL DialogModern_Attach(HWND hwndDlg, int dialogType) {

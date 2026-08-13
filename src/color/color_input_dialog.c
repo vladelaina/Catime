@@ -13,6 +13,7 @@
 #include "color/color_state.h"
 #include "menu_preview.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "dialog/dialog_form_layout.h"
 #include "language.h"
 #include "utils/string_convert.h"
@@ -105,7 +106,7 @@ void ShowColorInputDialog(HWND hwndParent) {
     );
 
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
     }
 }
 

@@ -28,8 +28,7 @@ static void ShowModernTimeInputDialog(HWND hwndParent,
     }
 
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOWNORMAL);
-        UpdateWindow(hwndDlg);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOWNORMAL);
         SetForegroundWindow(hwndDlg);
     }
 }

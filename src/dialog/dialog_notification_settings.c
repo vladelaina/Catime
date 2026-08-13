@@ -5,6 +5,7 @@
 
 #include "dialog/dialog_notification_settings_internal.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "dialog/dialog_notification_audio.h"
 #include "dialog/dialog_procedure.h"
 #include "language.h"
@@ -82,7 +83,7 @@ void ShowNotificationSettingsDialog(HWND hwndParent) {
               NotificationSettingsDlgProc);
 
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
     }
 }
 

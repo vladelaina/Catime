@@ -1,5 +1,6 @@
 #include "update_ui_state.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "dialog/dialog_procedure.h"
 #include "language.h"
 #include "log.h"
@@ -23,7 +24,7 @@ void ShowExitMessageDialog(HWND hwnd) {
     HWND dialog = CreateDialogW(
         GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_EXIT_DIALOG),
         hwnd, ExitMsgDlgProc);
-    if (dialog) ShowWindow(dialog, SW_SHOW);
+    if (dialog) DialogModern_ShowPaintedWindow(dialog, SW_SHOW);
 }
 
 int ShowUpdateNotification(HWND hwnd, const char* currentVersion,
@@ -58,7 +59,7 @@ int ShowUpdateNotification(HWND hwnd, const char* currentVersion,
         GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_UPDATE_DIALOG),
         hwnd, UpdateDlgProc);
     if (dialog) {
-        ShowWindow(dialog, SW_SHOW);
+        DialogModern_ShowPaintedWindow(dialog, SW_SHOW);
     } else {
         LOG_WARNING("Update dialog creation failed (error=%lu)",
                     GetLastError());
@@ -95,7 +96,7 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
         GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_NO_UPDATE_DIALOG),
         hwnd, NoUpdateDlgProc);
     if (dialog) {
-        ShowWindow(dialog, SW_SHOW);
+        DialogModern_ShowPaintedWindow(dialog, SW_SHOW);
     } else {
         LOG_WARNING("No-update dialog creation failed (error=%lu)",
                     GetLastError());

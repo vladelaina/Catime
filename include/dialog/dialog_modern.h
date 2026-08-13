@@ -39,6 +39,9 @@ BOOL DialogModern_IsAttached(HWND hwndDlg);
 /** Finalize while hidden and guard the compositor until the first paint. */
 BOOL DialogModern_PrepareForShow(HWND hwndDlg);
 
+/** Show a fully initialized painted window without exposing a blank frame. */
+void DialogModern_ShowPaintedWindow(HWND hwnd, int showCommand);
+
 /** Re-read system colors and redraw the dialog and its children. */
 void DialogModern_Refresh(HWND hwndDlg);
 

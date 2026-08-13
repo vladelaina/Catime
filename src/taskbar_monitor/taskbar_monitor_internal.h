@@ -155,6 +155,7 @@ BOOL TaskbarMonitor_Present(
     HWND window, HDC fallbackTarget,
     const TaskbarMetricText* metrics,
     int metricCount);
+BOOL TaskbarMonitor_PresentCurrentFrame(HWND window);
 void TaskbarMonitor_ColorizeTextMask(
     DWORD* pixels, size_t count, COLORREF textColor);
 void TaskbarMonitor_DrawMetricGrid(
@@ -162,6 +163,9 @@ void TaskbarMonitor_DrawMetricGrid(
     const TaskbarMetricText* metrics, int metricCount);
 
 void TaskbarMonitor_RestoreClassicTaskList(void);
+BOOL TaskbarMonitor_ReserveClassicSlot(RECT* monitorRect);
+BOOL TaskbarMonitor_PositionClassic(const RECT* monitorRect);
+BOOL TaskbarMonitor_PositionModern(void);
 BOOL TaskbarMonitor_SetWindowParent(HWND parent, BOOL childStyle);
 BOOL TaskbarMonitor_EnsureWindowAtTop(void);
 BOOL TaskbarMonitor_IsWindowShown(HWND window);
@@ -169,6 +173,7 @@ BOOL TaskbarMonitor_AttachToTaskbar(void);
 void TaskbarMonitor_RefreshAttachment(void);
 BOOL TaskbarMonitor_CreateWindow(void);
 void TaskbarMonitor_CancelWindowRecovery(void);
+BOOL TaskbarMonitor_HasAttachedWindow(void);
 BOOL TaskbarMonitor_HasUsableWindow(void);
 void TaskbarMonitor_ScheduleWindowRecovery(void);
 void TaskbarMonitor_OnMonitorWindowDestroyed(HWND window);

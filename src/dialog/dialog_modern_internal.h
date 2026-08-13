@@ -74,6 +74,8 @@ void ModernCommitClientSize(ModernDialogState* state,
 void ModernSyncClientSizeFromWindow(ModernDialogState* state);
 void ModernCenterAndResize(ModernDialogState* state);
 BOOL ModernFinalize(ModernDialogState* state);
+void ModernArmFirstShowGuard(ModernDialogState* state, BOOL allowCloak);
+void ModernReleaseFirstShowGuard(ModernDialogState* state);
 ModernControl* ModernFindControl(ModernDialogState* state, HWND hwnd);
 void ModernDrawButton(ModernDialogState* state,
                              const DRAWITEMSTRUCT* item);

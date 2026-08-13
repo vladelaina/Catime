@@ -107,6 +107,12 @@ int main(void) {
            "detached taskbar monitor was treated as usable");
     Expect(TaskbarMonitor_SetWindowParent(owner, FALSE),
            "failed to attach popup-style recovery test window");
+    ShowWindow(monitor, SW_HIDE);
+    Expect(TaskbarMonitor_HasAttachedWindow(),
+           "hidden attached taskbar monitor was not ready for first frame");
+    Expect(!TaskbarMonitor_HasUsableWindow(),
+           "hidden attached taskbar monitor was treated as visible");
+    ShowWindow(monitor, SW_SHOWNOACTIVATE);
     Expect(TaskbarMonitor_HasUsableWindow(),
            "visible modern taskbar monitor was not usable");
 

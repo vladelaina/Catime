@@ -8,9 +8,8 @@
 
 #include "log.h"
 
-BOOL TaskbarMonitor_HasUsableWindow(void) {
+BOOL TaskbarMonitor_HasAttachedWindow(void) {
     if (!IsWindow(g_taskbarMonitor.window) ||
-        !TaskbarMonitor_IsWindowShown(g_taskbarMonitor.window) ||
         g_taskbarMonitor.mode == TASKBAR_HOST_NONE ||
         !IsWindow(g_taskbarMonitor.taskbar) ||
         !IsWindow(g_taskbarMonitor.host)) {
@@ -39,6 +38,11 @@ BOOL TaskbarMonitor_HasUsableWindow(void) {
     }
     return IsWindow(g_taskbarMonitor.taskList) &&
            g_taskbarMonitor.taskListReserved;
+}
+
+BOOL TaskbarMonitor_HasUsableWindow(void) {
+    return TaskbarMonitor_IsWindowShown(g_taskbarMonitor.window) &&
+           TaskbarMonitor_HasAttachedWindow();
 }
 
 static BOOL CanRecoverMonitorWindow(void) {

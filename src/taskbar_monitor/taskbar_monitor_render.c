@@ -147,14 +147,27 @@ static int BuildMetricTexts(TaskbarMetricText* metrics) {
     return metricCount;
 }
 
+static BOOL PresentMonitorFrame(HWND window, HDC target) {
+    if (!window || !target) return FALSE;
+    TaskbarMetricText metrics[TASKBAR_MONITOR_MAX_METRICS] = {0};
+    int metricCount = BuildMetricTexts(metrics);
+    return TaskbarMonitor_Present(window, target, metrics, metricCount);
+}
+
+BOOL TaskbarMonitor_PresentCurrentFrame(HWND window) {
+    if (!IsWindow(window)) return FALSE;
+    HDC target = GetDC(window);
+    if (!target) return FALSE;
+    BOOL presented = PresentMonitorFrame(window, target);
+    ReleaseDC(window, target);
+    return presented;
+}
+
 static void PaintMonitor(HWND window) {
     PAINTSTRUCT paint = {0};
     HDC target = BeginPaint(window, &paint);
     if (!target) return;
-    TaskbarMetricText metrics[TASKBAR_MONITOR_MAX_METRICS] = {0};
-    int metricCount = BuildMetricTexts(metrics);
-    (void)TaskbarMonitor_Present(
-        window, target, metrics, metricCount);
+    (void)PresentMonitorFrame(window, target);
     EndPaint(window, &paint);
 }
 

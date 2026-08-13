@@ -5,6 +5,7 @@
 
 #include "dialog_font_picker_internal.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "../../resource/resource.h"
 
 static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg,
@@ -56,7 +57,7 @@ BOOL ShowSystemFontDialog(HWND hwndParent) {
         GetModuleHandle(NULL), MAKEINTRESOURCEW(IDD_FONT_PICKER_SIMPLE),
         hwndParent, SimpleFontPickerProc);
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
         return TRUE;
     }
     return FALSE;

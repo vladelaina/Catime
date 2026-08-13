@@ -55,7 +55,7 @@ void ShowAboutDialog(HWND hwndParent) {
     );
 
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
     }
 
     if (hOldDpiContext && hUser32) {

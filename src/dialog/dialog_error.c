@@ -108,7 +108,7 @@ void ShowErrorDialog(HWND hwndParent) {
     );
     
     if (g_hwndErrorDialog) {
-        ShowWindow(g_hwndErrorDialog, SW_SHOW);
+        DialogModern_ShowPaintedWindow(g_hwndErrorDialog, SW_SHOW);
     } else {
         free(state);
     }
@@ -135,7 +135,7 @@ void ShowErrorDialogWithRefocus(HWND hwndParent, int editControlId) {
     );
     
     if (g_hwndErrorDialog) {
-        ShowWindow(g_hwndErrorDialog, SW_SHOW);
+        DialogModern_ShowPaintedWindow(g_hwndErrorDialog, SW_SHOW);
     } else {
         free(state);
     }

@@ -194,7 +194,6 @@ int main(void) {
     Expect(window != NULL, "failed to create the compositor test window");
     if (!window) return 1;
 
-    ShowWindow(window, SW_SHOWNOACTIVATE);
     HDC target = GetDC(window);
     Expect(target != NULL, "failed to acquire the compositor test DC");
 
@@ -218,6 +217,24 @@ int main(void) {
     SetMetric(&metrics[1], 1, L"MEM:", L"68%");
 
     if (target && font) {
+        Expect(!IsWindowVisible(window),
+               "compositor test window became visible before its first frame");
+        (void)PresentTheme(window, target, metrics, FALSE);
+        Expect(!IsWindowVisible(window),
+               "hidden first-frame presentation unexpectedly showed the window");
+
+        HRGN hiddenRegion = CreateRectRgn(0, 0, 0, 0);
+        Expect(hiddenRegion != NULL,
+               "failed to create the first-frame visibility guard");
+        if (hiddenRegion) {
+            BOOL guarded = SetWindowRgn(window, hiddenRegion, FALSE) != 0;
+            Expect(guarded, "failed to apply the first-frame visibility guard");
+            if (!guarded) DeleteObject(hiddenRegion);
+        }
+        ShowWindow(window, SW_SHOWNOACTIVATE);
+        (void)PresentTheme(window, target, metrics, FALSE);
+        Expect(SetWindowRgn(window, NULL, TRUE) != 0,
+               "failed to release the first-frame visibility guard");
         for (int i = 0; i < 8; ++i) {
             (void)PresentTheme(window, target, metrics, (i & 1) != 0);
         }

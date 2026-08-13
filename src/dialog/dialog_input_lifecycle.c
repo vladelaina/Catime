@@ -1,5 +1,6 @@
 #include "dialog/dialog_input.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "dialog/dialog_input_internal.h"
 #include "dialog_input_state.h"
 #include "../resource/resource.h"
@@ -77,7 +78,7 @@ static void ShowInputDialog(HWND parent, DialogInstanceType type,
     if (!DialogInput_IsValidParentWindow(parent)) return;
     HWND dialog = DialogInput_CreateResourceDialog(parent, resourceId,
                                                     dialogId, index);
-    if (dialog) ShowWindow(dialog, SW_SHOW);
+    if (dialog) DialogModern_ShowPaintedWindow(dialog, SW_SHOW);
 }
 
 void ShowShortcutTimeDialog(HWND hwndParent) {

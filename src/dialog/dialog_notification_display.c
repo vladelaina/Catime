@@ -5,6 +5,7 @@
 
 #include "dialog/dialog_notification.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "language.h"
 #include "config.h"
 #include "config/config_defaults.h"
@@ -37,7 +38,7 @@ void ShowNotificationDisplayDialog(HWND hwndParent) {
               NotificationDisplayDlgProc);
 
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
         Dialog_FocusControl(hwndDlg, IDC_NOTIFICATION_TIME_EDIT, TRUE);
     }
 }

@@ -124,6 +124,7 @@ static INT_PTR CALLBACK DialogMessageDlgProc(HWND hwndDlg, UINT msg,
                 DialogModern_Attach(hwndDlg, (int)params->instanceType);
             }
             SetFocus(GetDlgItem(hwndDlg, IDOK));
+            DialogModern_PrepareForShow(hwndDlg);
             return FALSE;
         }
         case WM_COMMAND:

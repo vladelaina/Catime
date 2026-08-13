@@ -5,6 +5,7 @@
 
 #include "color/color_picker_internal.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "language.h"
 #include "../resource/resource.h"
 
@@ -53,6 +54,7 @@ static INT_PTR CALLBACK ModernColorPickerDlgProc(HWND hwndDlg, UINT msg,
                              &state->saturation, &state->value);
             ColorPickerInternal_UpdateFields(state);
             SetFocus(GetDlgItem(hwndDlg, IDC_MODERN_COLOR_SV));
+            DialogModern_PrepareForShow(hwndDlg);
             return FALSE;
         }
         case WM_DRAWITEM: {

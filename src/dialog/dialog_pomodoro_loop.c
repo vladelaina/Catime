@@ -72,7 +72,7 @@ void ShowPomodoroLoopDialog(HWND hwndParent) {
         PomodoroLoopDialogProc
     );
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
         SetForegroundWindow(hwndDlg);
         PostMessageW(hwndDlg, POMODORO_LOOP_FOCUS_MESSAGE, 0, 0);
     }

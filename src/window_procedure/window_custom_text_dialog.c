@@ -232,7 +232,7 @@ static BOOL ShowCustomTextDisplayDialog(HWND hwnd) {
         return FALSE;
     }
 
-    ShowWindow(hwndDlg, SW_SHOW);
+    DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
     FocusCustomTextDisplayEdit(hwndDlg, TRUE);
     return TRUE;
 }

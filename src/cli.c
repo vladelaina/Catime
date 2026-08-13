@@ -21,6 +21,7 @@
 #include "audio_player.h"
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "drag_scale.h"
 #include "language.h"
 #include "log.h"
@@ -156,7 +157,7 @@ void ShowCliHelpDialog(HWND hwndParent) {
             0
         );
         if (g_cliHelpDialog) {
-            ShowWindow(g_cliHelpDialog, SW_SHOW);
+            DialogModern_ShowPaintedWindow(g_cliHelpDialog, SW_SHOW);
             ForceForegroundAndFocus(g_cliHelpDialog);
         }
     }

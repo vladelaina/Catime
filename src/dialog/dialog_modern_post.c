@@ -5,34 +5,6 @@
 
 #include "dialog_modern_internal.h"
 
-#include <dwmapi.h>
-
-static void ModernReleaseFirstShowGuard(ModernDialogState* state) {
-    if (!state || !state->hwnd) return;
-
-    if (state->firstShowCloaked) {
-        BOOL cloak = FALSE;
-        (void)DwmFlush();
-        (void)DwmSetWindowAttribute(
-            state->hwnd, MODERN_DWM_CLOAK_ATTRIBUTE,
-            &cloak, sizeof(cloak));
-        state->firstShowCloaked = FALSE;
-    }
-    if (state->firstShowTransparent) {
-        if (!SetLayeredWindowAttributes(
-                state->hwnd, 0, 255, LWA_ALPHA)) {
-            LONG_PTR exStyle = GetWindowLongPtrW(
-                state->hwnd, GWL_EXSTYLE);
-            SetWindowLongPtrW(state->hwnd, GWL_EXSTYLE,
-                              exStyle & ~WS_EX_LAYERED);
-            SetWindowPos(state->hwnd, NULL, 0, 0, 0, 0,
-                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                             SWP_NOACTIVATE | SWP_FRAMECHANGED);
-        }
-        state->firstShowTransparent = FALSE;
-    }
-}
-
 BOOL ModernHandleBodyWheel(ModernDialogState* state, WPARAM wParam) {
     if (!state || state->bodyScrollMax96 <= 0) return FALSE;
     state->bodyWheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);

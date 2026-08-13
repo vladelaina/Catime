@@ -10,6 +10,7 @@
 #include "pomodoro.h"
 #include "dialog/dialog_procedure.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_modern.h"
 #include "drawing.h"
 #include "notification.h"
 #include "../resource/resource.h"
@@ -81,6 +82,7 @@ INT_PTR CALLBACK InputBoxProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPa
             Dialog_SelectAllText(hwndEdit);
             SetFocus(hwndEdit);
             Dialog_CenterOnPrimaryScreen(hwndDlg);
+            DialogModern_PrepareForShow(hwndDlg);
             return FALSE;
         }
         case WM_KEYDOWN:

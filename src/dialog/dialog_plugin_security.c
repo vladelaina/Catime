@@ -246,7 +246,7 @@ void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const cha
     SetPendingPluginHash(pluginHash);
     HWND hwndDlg = CreateDialogParamW( GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_PLUGIN_SECURITY_DIALOG), hwndParent, PluginSecurityDlgProc, (LPARAM)hwndParent );
     if (hwndDlg) {
-        ShowWindow(hwndDlg, SW_SHOW);
+        DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOW);
     } else {
         LOG_ERROR("Failed to create plugin security dialog (error: %lu)", GetLastError());
         ClearPendingPluginInfo();
