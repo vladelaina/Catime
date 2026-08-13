@@ -3,8 +3,9 @@
  * @brief Desktop shortcut management for package manager installs
  * 
  * Auto-creates shortcuts for package manager installs (Store/WinGet) to improve
- * discoverability. Respects user deletion (doesn't recreate if manually removed).
- * State persistence prevents redundant checks on subsequent runs.
+ * discoverability. Store packages use an AppsFolder activation link because
+ * their WindowsApps executables are protected. Respects user deletion and uses
+ * persisted state to prevent redundant checks on later runs.
  */
 
 #ifndef SHORTCUT_CHECKER_H
@@ -23,8 +24,8 @@
  * - POINTS TO CURRENT → OK (do nothing)
  * - POINTS TO OTHER → Update to current executable
  * 
- * Package detection paths:
- * - Store: C:\Program Files\WindowsApps\*
+ * Store shortcuts activate the package through shell:AppsFolder. Unpackaged
+ * package-manager detection paths include:
  * - WinGet: *\AppData\Local\Microsoft\WinGet\Packages\*
  * - WinGet: *\AppData\Local\Microsoft\*WinGet*
  * - WinGet: *\WinGet\catime.exe

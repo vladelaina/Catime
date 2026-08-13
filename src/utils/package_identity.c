@@ -13,6 +13,7 @@
 
 typedef LONG (WINAPI *GetCurrentPackageFullNameFn)(UINT32*, PWSTR);
 typedef LONG (WINAPI *GetCurrentPackageFamilyNameFn)(UINT32*, PWSTR);
+typedef LONG (WINAPI *GetCurrentApplicationUserModelIdFn)(UINT32*, PWSTR);
 
 BOOL IsRunningPackagedApp(void) {
     HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
@@ -49,5 +50,30 @@ BOOL GetCurrentPackageFamilyNameSafeW(wchar_t* familyName, size_t familyNameSize
         return FALSE;
     }
 
+    return TRUE;
+}
+
+BOOL GetCurrentApplicationUserModelIdSafeW(wchar_t* appUserModelId,
+                                           size_t appUserModelIdSize) {
+    if (!appUserModelId || appUserModelIdSize == 0 ||
+        appUserModelIdSize > UINT32_MAX) {
+        return FALSE;
+    }
+    appUserModelId[0] = L'\0';
+
+    HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
+    if (!kernel32) return FALSE;
+
+    GetCurrentApplicationUserModelIdFn getCurrentApplicationUserModelId = NULL;
+    CATIME_LOAD_PROC_ADDRESS(kernel32, "GetCurrentApplicationUserModelId",
+                             getCurrentApplicationUserModelId);
+    if (!getCurrentApplicationUserModelId) return FALSE;
+
+    UINT32 length = (UINT32)appUserModelIdSize;
+    LONG result = getCurrentApplicationUserModelId(&length, appUserModelId);
+    if (result != ERROR_SUCCESS) {
+        appUserModelId[0] = L'\0';
+        return FALSE;
+    }
     return TRUE;
 }

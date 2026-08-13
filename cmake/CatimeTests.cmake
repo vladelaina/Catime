@@ -31,6 +31,29 @@ target_include_directories(startup_shortcut_tests PRIVATE
 target_link_libraries(startup_shortcut_tests PRIVATE ole32 uuid shlwapi)
 add_test(NAME startup_shortcut COMMAND startup_shortcut_tests)
 
+add_executable(shortcut_policy_tests
+    tests/shortcut_policy_tests.c
+    src/shortcut_policy.c
+)
+target_include_directories(shortcut_policy_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+add_test(NAME shortcut_policy COMMAND shortcut_policy_tests)
+
+add_executable(shortcut_packaged_tests
+    tests/shortcut_packaged_tests.c
+    src/startup_shortcut.c
+    src/shortcut_shell_packaged.c
+    src/utils/string_convert.c
+)
+target_include_directories(shortcut_packaged_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+)
+target_link_libraries(shortcut_packaged_tests PRIVATE
+    ole32 shell32 uuid shlwapi)
+add_test(NAME shortcut_packaged COMMAND shortcut_packaged_tests)
+
 add_executable(time_parser_tests
     tests/time_parser_tests.c
     src/utils/time_parser.c
@@ -261,6 +284,8 @@ set(_catime_test_targets
     window_placement_tests
     startup_policy_tests
     startup_shortcut_tests
+    shortcut_policy_tests
+    shortcut_packaged_tests
     time_parser_tests
     menu_preview_lifecycle_tests
     hotkey_config_tests

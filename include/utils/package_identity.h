@@ -26,4 +26,13 @@ BOOL IsRunningPackagedApp(void);
  */
 BOOL GetCurrentPackageFamilyNameSafeW(wchar_t* familyName, size_t familyNameSize);
 
+/**
+ * @brief Get the registered application user model ID for this process
+ * @param appUserModelId Output buffer
+ * @param appUserModelIdSize Buffer size in wide characters
+ * @return TRUE when running packaged and the AUMID was retrieved
+ */
+BOOL GetCurrentApplicationUserModelIdSafeW(wchar_t* appUserModelId,
+                                           size_t appUserModelIdSize);
+
 #endif /* UTILS_PACKAGE_IDENTITY_H */

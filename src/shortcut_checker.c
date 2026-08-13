@@ -1,9 +1,11 @@
 #include "shortcut_checker.h"
 #include "config.h"
 #include "log.h"
+#include "utils/package_identity.h"
 #include "utils/path_utils.h"
 #include "utils/string_convert.h"
 #include "shortcut_checker_internal.h"
+#include "shortcut_policy.h"
 #include <stdio.h>
 #include <shlobj.h>
 #include <objbase.h>
@@ -12,7 +14,8 @@
 #include <shobjidl.h>
 #include <stdbool.h>
 #include <string.h>
-#define STORE_PATH_PREFIX "C:\\Program Files\\WindowsApps"
+#define STORE_PACKAGE_NAME "vladelaina.Catime"
+#define STORE_EXECUTABLE_NAME "catime.exe"
 #define WINGET_PATH_PATTERN "\\AppData\\Local\\Microsoft\\WinGet\\Packages"
 #define WINGET_MS_PATH_PATTERN "\\AppData\\Local\\Microsoft\\"
 #define WINGET_KEYWORD "WinGet"
@@ -37,14 +40,6 @@ static bool EnsureComInitializedForShortcut(bool* should_uninitialize) {
     LOG_ERROR("COM library initialization failed, hr=0x%08X", (unsigned int)hr);
     return false;
 }
-static bool StartsWith(const char* str, const char* prefix) {
-    size_t prefix_len = strlen(prefix);
-    size_t str_len = strlen(str);
-    if (str_len < prefix_len) {
-        return false;
-    }
-    return strncmp(str, prefix, prefix_len) == 0;
-}
 static bool Contains(const char* str, const char* substring) {
     return strstr(str, substring) != NULL;
 }
@@ -52,7 +47,6 @@ static bool ContainsBoth(const char* str, const char* sub1, const char* sub2) {
     return Contains(str, sub1) && Contains(str, sub2);
 }
 static const PackageDetectionRule PACKAGE_RULES[] = {
-    { STORE_PATH_PREFIX,      StartsWith },
     { WINGET_PATH_PATTERN,    Contains },
     { WINGET_EXE_PATTERN,     Contains },
 };
@@ -68,6 +62,107 @@ static bool IsPackageManagerInstall(const char* exe_path) {
     }
     return false;
 }
+
+static bool CreateAndVerifyPackagedShortcut(
+    const wchar_t* appUserModelId,
+    const char* existingShortcutPath) {
+    if (!ShortcutShell_CreateOrUpdatePackaged(
+            appUserModelId, existingShortcutPath)) {
+        return false;
+    }
+
+    ShortcutStatus verified = existingShortcutPath && *existingShortcutPath
+        ? ShortcutShell_CheckPackagedPath(
+              appUserModelId, existingShortcutPath, NULL, 0)
+        : ShortcutShell_CheckPackagedStatus(
+              appUserModelId, NULL, 0, NULL, 0);
+    if (verified != SHORTCUT_POINTS_TO_CURRENT) {
+        LOG_ERROR("Packaged desktop shortcut failed post-write verification");
+        return false;
+    }
+    return true;
+}
+
+static void PersistShortcutCheckDone(void) {
+    if (!SetShortcutCheckDone(TRUE)) {
+        LOG_WARNING("Failed to persist shortcut check completion flag");
+    }
+}
+
+static bool CreateAndVerifyRegularShortcut(const char* executablePath,
+                                           const char* existingShortcutPath) {
+    char targetPath[MAX_PATH] = {0};
+    if (!ShortcutShell_CreateOrUpdate(executablePath, existingShortcutPath)) {
+        return false;
+    }
+    ShortcutStatus status = existingShortcutPath && *existingShortcutPath
+        ? ShortcutShell_CheckPath(
+              executablePath, existingShortcutPath,
+              targetPath, sizeof(targetPath))
+        : ShortcutShell_CheckStatus(
+              executablePath, NULL, 0,
+              targetPath, sizeof(targetPath));
+    return status ==
+           SHORTCUT_POINTS_TO_CURRENT;
+}
+
+static int CheckAndCreatePackagedShortcut(void) {
+    wchar_t appUserModelId[MAX_PATH] = {0};
+    char shortcutPath[MAX_PATH] = {0};
+    char targetPath[MAX_PATH] = {0};
+    ShortcutStatus status;
+    bool shortcutCheckDone = IsShortcutCheckDone();
+    int result = 0;
+
+    if (!GetCurrentApplicationUserModelIdSafeW(
+            appUserModelId, _countof(appUserModelId))) {
+        LOG_ERROR("Failed to resolve packaged shortcut identity");
+        return 1;
+    }
+
+    status = ShortcutShell_CheckPackagedStatus(
+        appUserModelId, shortcutPath, _countof(shortcutPath),
+        targetPath, _countof(targetPath));
+    switch (status) {
+        case SHORTCUT_NOT_FOUND:
+            if (!shortcutCheckDone) {
+                if (!CreateAndVerifyPackagedShortcut(appUserModelId, NULL)) {
+                    result = 1;
+                } else {
+                    PersistShortcutCheckDone();
+                }
+            }
+            break;
+        case SHORTCUT_POINTS_TO_CURRENT:
+            if (!shortcutCheckDone) PersistShortcutCheckDone();
+            break;
+        case SHORTCUT_POINTS_TO_OTHER:
+            /* Only repair links previously generated for a Store package. Do
+             * not overwrite a user's shortcut for another installation. */
+            if (ShortcutPolicy_IsLegacyPackagedTarget(
+                    targetPath, STORE_PACKAGE_NAME,
+                    STORE_EXECUTABLE_NAME)) {
+                if (!CreateAndVerifyPackagedShortcut(
+                        appUserModelId, shortcutPath)) {
+                    result = 1;
+                } else if (!shortcutCheckDone) {
+                    PersistShortcutCheckDone();
+                }
+            } else if (!shortcutCheckDone) {
+                PersistShortcutCheckDone();
+            }
+            break;
+        case SHORTCUT_CHECK_ERROR:
+            LOG_ERROR("Failed to inspect the packaged desktop shortcut");
+            result = 1;
+            break;
+        default:
+            result = 1;
+            break;
+    }
+    return result;
+}
+
 int CheckAndCreateShortcut(void) {
     char exe_path[MAX_PATH];
     char shortcut_path[MAX_PATH];
@@ -80,6 +175,11 @@ int CheckAndCreateShortcut(void) {
     int result = 0;
     if (!EnsureComInitializedForShortcut(&should_uninitialize_com)) {
         return 1;
+    }
+    if (IsRunningPackagedApp()) {
+        result = CheckAndCreatePackagedShortcut();
+        if (should_uninitialize_com) CoUninitialize();
+        return result;
     }
     if (!GetShortcutExecutablePathW(exe_path_w, MAX_PATH)) {
         LOG_ERROR("Failed to get program path");
@@ -103,30 +203,28 @@ int CheckAndCreateShortcut(void) {
         case SHORTCUT_NOT_FOUND:
             if (shortcut_check_done) {
             } else if (is_package_install) {
-                result = ShortcutShell_CreateOrUpdate(exe_path, NULL) ? 0 : 1;
-                if (!SetShortcutCheckDone(true)) {
-                    LOG_WARNING("Failed to persist shortcut check completion flag");
+                if (!CreateAndVerifyRegularShortcut(exe_path, NULL)) {
+                    result = 1;
+                } else {
+                    PersistShortcutCheckDone();
                 }
             } else {
-                if (!SetShortcutCheckDone(true)) {
-                    LOG_WARNING("Failed to persist shortcut check completion flag");
-                }
+                PersistShortcutCheckDone();
             }
             break;
         case SHORTCUT_POINTS_TO_CURRENT:
-            if (!shortcut_check_done) {
-                if (!SetShortcutCheckDone(true)) {
-                    LOG_WARNING("Failed to persist shortcut check completion flag");
-                }
-            }
+            if (!shortcut_check_done) PersistShortcutCheckDone();
             break;
         case SHORTCUT_POINTS_TO_OTHER:
-            result = ShortcutShell_CreateOrUpdate(exe_path, shortcut_path) ? 0 : 1;
-            if (!shortcut_check_done) {
-                if (!SetShortcutCheckDone(true)) {
-                    LOG_WARNING("Failed to persist shortcut check completion flag");
-                }
+            if (!CreateAndVerifyRegularShortcut(exe_path, shortcut_path)) {
+                result = 1;
+            } else if (!shortcut_check_done) {
+                PersistShortcutCheckDone();
             }
+            break;
+        case SHORTCUT_CHECK_ERROR:
+            LOG_ERROR("Failed to inspect the desktop shortcut");
+            result = 1;
             break;
         default:
             LOG_ERROR("Unknown shortcut check status");

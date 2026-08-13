@@ -18,6 +18,12 @@ typedef struct {
     IPersistFile* persistFile;
 } ComShellLink;
 
+typedef enum {
+    FIND_SHORTCUT_ERROR = -1,
+    FIND_SHORTCUT_NOT_FOUND = 0,
+    FIND_SHORTCUT_FOUND = 1
+} FindShortcutResult;
+
 static bool CopyStringExact(const char* src, char* output, size_t outputSize) {
     if (!src || !output || outputSize == 0) return false;
     output[0] = '\0';
@@ -92,20 +98,18 @@ static bool ExtractDirectory(const char* filePath, char* output,
     return true;
 }
 
-static bool ShortcutFileExists(const char* pathUtf8) {
-    wchar_t path[MAX_PATH];
-    return Utf8ToWide(pathUtf8, path, MAX_PATH) &&
-           GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
-}
-
-static bool ReadShortcutTarget(const char* shortcutPath, char* target,
-                               size_t targetSize) {
+static bool ReadShortcutDetails(const char* shortcutPath, char* target,
+                                size_t targetSize, char* arguments,
+                                size_t argumentsSize) {
     ComShellLink link;
     if (!InitComShellLink(&link)) return false;
     wchar_t shortcutPathW[MAX_PATH];
     wchar_t targetW[MAX_PATH];
+    wchar_t argumentsW[MAX_PATH];
     WIN32_FIND_DATAW findData;
     bool success = false;
+    if (target && targetSize > 0) target[0] = '\0';
+    if (arguments && argumentsSize > 0) arguments[0] = '\0';
     if (!Utf8ToWide(shortcutPath, shortcutPathW, MAX_PATH)) goto cleanup;
     HRESULT hr = link.persistFile->lpVtbl->Load(link.persistFile,
                                                 shortcutPathW, STGM_READ);
@@ -114,47 +118,93 @@ static bool ReadShortcutTarget(const char* shortcutPath, char* target,
         goto cleanup;
     }
     hr = link.shellLink->lpVtbl->GetPath(link.shellLink, targetW, MAX_PATH,
-                                         &findData, 0);
+                                         &findData, SLGP_RAWPATH);
     if (FAILED(hr)) {
         LOG_ERROR("Failed to get shortcut target path, hr=0x%08X",
                   (unsigned int)hr);
         goto cleanup;
     }
-    success = WideToUtf8(targetW, target, targetSize);
+    if (target && targetSize > 0 && !WideToUtf8(targetW, target, targetSize)) {
+        goto cleanup;
+    }
+    if (arguments && argumentsSize > 0) {
+        hr = link.shellLink->lpVtbl->GetArguments(
+            link.shellLink, argumentsW, _countof(argumentsW));
+        if (FAILED(hr) || !WideToUtf8(argumentsW, arguments, argumentsSize)) {
+            goto cleanup;
+        }
+    }
+    success = true;
 cleanup:
     CleanupComShellLink(&link);
     return success;
 }
 
-static bool FindExistingShortcut(char* output, size_t outputSize) {
-    if (!output || outputSize == 0) return false;
+static bool ReadShortcutTarget(const char* shortcutPath, char* target,
+                               size_t targetSize) {
+    return ReadShortcutDetails(shortcutPath, target, targetSize, NULL, 0);
+}
+
+static FindShortcutResult FindExistingShortcut(char* output,
+                                               size_t outputSize) {
+    if (!output || outputSize == 0) return FIND_SHORTCUT_ERROR;
     output[0] = '\0';
     char desktopPath[MAX_PATH];
     char shortcutPath[MAX_PATH];
+    wchar_t shortcutPathW[MAX_PATH];
+    bool resolvedDesktop = false;
     const int desktopTypes[] = {CSIDL_DESKTOP, CSIDL_COMMON_DESKTOPDIRECTORY};
     for (size_t i = 0; i < sizeof(desktopTypes) / sizeof(desktopTypes[0]); i++) {
-        if (GetDesktopPath(desktopTypes[i], desktopPath, MAX_PATH) &&
-            BuildShortcutPath(desktopPath, shortcutPath, MAX_PATH) &&
-            ShortcutFileExists(shortcutPath)) {
-            return CopyStringExact(shortcutPath, output, outputSize);
+        if (!GetDesktopPath(desktopTypes[i], desktopPath,
+                            _countof(desktopPath))) {
+            continue;
+        }
+        resolvedDesktop = true;
+        if (!BuildShortcutPath(desktopPath, shortcutPath,
+                               _countof(shortcutPath)) ||
+            !Utf8ToWide(shortcutPath, shortcutPathW,
+                        _countof(shortcutPathW))) {
+            return FIND_SHORTCUT_ERROR;
+        }
+        DWORD attributes = GetFileAttributesW(shortcutPathW);
+        if (attributes != INVALID_FILE_ATTRIBUTES) {
+            return CopyStringExact(shortcutPath, output, outputSize)
+                       ? FIND_SHORTCUT_FOUND
+                       : FIND_SHORTCUT_ERROR;
+        }
+        DWORD error = GetLastError();
+        if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) {
+            return FIND_SHORTCUT_ERROR;
         }
     }
-    return false;
+    return resolvedDesktop ? FIND_SHORTCUT_NOT_FOUND : FIND_SHORTCUT_ERROR;
 }
 
 ShortcutStatus ShortcutShell_CheckStatus(const char* exePath,
                                          char* shortcutPath, size_t shortcutSize,
                                          char* targetPath, size_t targetSize) {
     char shortcut[MAX_PATH];
-    char target[MAX_PATH];
-    if (!FindExistingShortcut(shortcut, MAX_PATH)) return SHORTCUT_NOT_FOUND;
+    FindShortcutResult found = FindExistingShortcut(shortcut, MAX_PATH);
+    if (found == FIND_SHORTCUT_NOT_FOUND) return SHORTCUT_NOT_FOUND;
+    if (found == FIND_SHORTCUT_ERROR) return SHORTCUT_CHECK_ERROR;
     if (shortcutPath && shortcutSize > 0 &&
         !CopyStringExact(shortcut, shortcutPath, shortcutSize))
-        return SHORTCUT_NOT_FOUND;
-    if (!ReadShortcutTarget(shortcut, target, MAX_PATH)) return SHORTCUT_NOT_FOUND;
+        return SHORTCUT_CHECK_ERROR;
+    return ShortcutShell_CheckPath(
+        exePath, shortcut, targetPath, targetSize);
+}
+
+ShortcutStatus ShortcutShell_CheckPath(const char* exePath,
+                                       const char* shortcutPath,
+                                       char* targetPath, size_t targetSize) {
+    char target[MAX_PATH];
+    if (!exePath || !*exePath || !shortcutPath || !*shortcutPath ||
+        !ReadShortcutTarget(shortcutPath, target, MAX_PATH)) {
+        return SHORTCUT_CHECK_ERROR;
+    }
     if (targetPath && targetSize > 0 &&
         !CopyStringExact(target, targetPath, targetSize))
-        return SHORTCUT_NOT_FOUND;
+        return SHORTCUT_CHECK_ERROR;
     return _stricmp(target, exePath) == 0
         ? SHORTCUT_POINTS_TO_CURRENT : SHORTCUT_POINTS_TO_OTHER;
 }

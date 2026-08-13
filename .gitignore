@@ -2,6 +2,7 @@
 build/*
 !build/.gitkeep
 build-*/
+output/
 
 *.exe
 *.out
