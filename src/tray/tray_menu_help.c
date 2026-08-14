@@ -69,7 +69,13 @@ void BuildHelpSubmenu(HMENU hMenu) {
     SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_SUPPORT, FALSE, &supportMii);
 
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_VLAINA,
-                GetLocalizedString(NULL, L"Author's new work: vlaina"));
+                GetLocalizedString(NULL, L"Need to take notes? Try Vlaina"));
+    HBITMAP hVlainaCheck = TraySubmenu_GetVlainaCheckBitmap();
+    MENUITEMINFOW vlainaMii = {0};
+    vlainaMii.cbSize = sizeof(vlainaMii);
+    vlainaMii.fMask = MIIM_BITMAP;
+    vlainaMii.hbmpItem = hVlainaCheck;
+    SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_VLAINA, FALSE, &vlainaMii);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));

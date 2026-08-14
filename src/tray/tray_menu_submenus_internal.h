@@ -46,5 +46,6 @@ void GetConfigPath(char* path, size_t size);
 
 HBITMAP TraySubmenu_GetUpdateDotBitmap(void);
 HBITMAP TraySubmenu_GetSupportHeartBitmap(void);
+HBITMAP TraySubmenu_GetVlainaCheckBitmap(void);
 
 #endif /* CATIME_TRAY_MENU_SUBMENUS_INTERNAL_H */
