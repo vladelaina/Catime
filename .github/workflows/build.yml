@@ -224,17 +224,76 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.x"
 
+      - name: Determine analyzer scope
+        id: scope
+        shell: pwsh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          $runAnalyzer = $false
+          $diffRange = $null
+
+          switch ($env:EVENT_NAME) {
+            "schedule" { $runAnalyzer = $true }
+            "workflow_dispatch" { $runAnalyzer = $true }
+            "push" {
+              if ([string]::IsNullOrWhiteSpace($env:EVENT_BEFORE) -or
+                  $env:EVENT_BEFORE -match '^0+$') {
+                $runAnalyzer = $true
+              } else {
+                $diffRange = "$($env:EVENT_BEFORE)..$($env:CURRENT_SHA)"
+              }
+            }
+            "pull_request" {
+              if ([string]::IsNullOrWhiteSpace($env:PR_BASE_SHA)) {
+                $runAnalyzer = $true
+              } else {
+                $diffRange = "$($env:PR_BASE_SHA)..$($env:CURRENT_SHA)"
+              }
+            }
+            default { $runAnalyzer = $true }
+          }
+
+          if (-not $runAnalyzer) {
+            $changedFiles = @(git diff --name-only --diff-filter=ACMRTUXB $diffRange)
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to determine changed files for $diffRange"
+            }
+
+            $relevantFiles = @($changedFiles | Where-Object {
+              $_ -match '^(src|include|libs|resource|cmake)/' -or
+              $_ -eq 'CMakeLists.txt' -or
+              $_ -eq '.github/workflows/build.yml'
+            })
+            $runAnalyzer = $relevantFiles.Count -gt 0
+            if ($runAnalyzer) {
+              Write-Output "MSVC analyzer relevant changes:"
+              $relevantFiles | ForEach-Object { Write-Output "  $_" }
+            } else {
+              Write-Output "No MSVC analyzer relevant changes in $diffRange"
+            }
+          }
+
+          "run=$($runAnalyzer.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+
       - name: Configure MSVC analyzer build
+        if: steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           cmake -S . -B build-msvc -G "Visual Studio 18 2026" -A Win32 `
             -DCMAKE_BUILD_TYPE=Debug `
+            -DBUILD_TESTING=OFF `
             -DCATIME_ENABLE_MSVC_ANALYZE=ON `
             -DCATIME_ENABLE_WARNINGS=ON `
             -DCATIME_WARNINGS_AS_ERRORS=OFF `
@@ -243,11 +302,12 @@ jobs:
 
       - name: Build with MSVC analyzer
         id: build
+        if: steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
           $ErrorActionPreference = "Continue"
-          cmake --build build-msvc --config Debug *>&1 | Tee-Object quality-msvc-analyze\build.log
+          cmake --build build-msvc --config Debug --target catime *>&1 | Tee-Object quality-msvc-analyze\build.log
           "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
           $binary = Get-ChildItem .\build-msvc -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($binary) {
@@ -259,7 +319,7 @@ jobs:
           exit 0
 
       - name: Dump MSVC ResourceCompile config
-        if: always() && steps.build.outputs.binary_exists != 'true'
+        if: always() && steps.scope.outputs.run == 'true' && steps.build.outputs.binary_exists != 'true'
         shell: pwsh
         run: |
           $project = Get-ChildItem .\build-msvc -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -271,7 +331,7 @@ jobs:
 
       - name: Merge analyzer SARIF
         id: sarif
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
@@ -280,7 +340,7 @@ jobs:
 
       - name: Summarize analyzer findings
         id: summarize
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
@@ -324,6 +384,14 @@ jobs:
         if: always()
         shell: pwsh
         run: |
+          if ("${{ steps.scope.outcome }}" -ne "success") {
+            Write-Output "::error::Unable to determine MSVC analyzer scope"
+            exit 1
+          }
+          if ("${{ steps.scope.outputs.run }}" -ne "true") {
+            Write-Output "::notice::MSVC analyzer skipped because no relevant files changed"
+            exit 0
+          }
           if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
             Write-Output "::error::${{ steps.summarize.outputs.reason }}"
             Write-Output "::notice::MSVC /analyze finding count: ${{ steps.summarize.outputs.finding_count }}"

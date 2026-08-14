@@ -40,6 +40,7 @@ if(MSVC)
     endif()
     if(CATIME_ENABLE_MSVC_ANALYZE)
         target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:/MP4>
             $<$<COMPILE_LANGUAGE:C>:/analyze>
             $<$<COMPILE_LANGUAGE:C>:/analyze:quiet>
             $<$<COMPILE_LANGUAGE:C>:/analyze:autolog>
