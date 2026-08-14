@@ -36,4 +36,6 @@ BEGIN
                                                                           165,  65,  50, 12
     CONTROL     "Discord",                   IDC_SUPPORT,         "Static", SS_OWNERDRAW | SS_NOTIFY,
                                                                           215,  65,  50, 12
+    CONTROL     "QQ Group (1079222265)",       IDC_QQ_GROUP_LINK,   "Static", SS_OWNERDRAW | SS_NOTIFY,
+                                                                          230,  65,  60, 12
 END

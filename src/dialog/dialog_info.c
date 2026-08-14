@@ -76,6 +76,13 @@ INT_PTR CALLBACK AboutDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lPar
 
             ApplyDialogLanguage(hwndDlg, IDD_ABOUT_DIALOG);
 
+            /* The QQ group is intended for Simplified Chinese users only. It
+             * must be hidden before the modern dialog host measures controls
+             * so other languages do not reserve footer space for it. */
+            if (GetCurrentLanguage() != APP_LANG_CHINESE_SIMP) {
+                ShowWindow(GetDlgItem(hwndDlg, IDC_QQ_GROUP_LINK), SW_HIDE);
+            }
+
             const wchar_t* versionFormat = GetDialogLocalizedString(IDD_ABOUT_DIALOG, IDC_VERSION_TEXT);
             if (versionFormat) {
                 wchar_t versionText[256];

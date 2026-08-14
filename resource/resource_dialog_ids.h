@@ -34,6 +34,7 @@
 #define IDC_SUPPORT 1019                 /**< Support link control */
 #define IDC_BILIBILI_LINK 1020           /**< Bilibili link control */
 #define IDC_GITHUB_LINK 1021             /**< GitHub link control */
+#define IDC_QQ_GROUP_LINK 1023           /**< Simplified Chinese QQ group link */
 
 /** @brief CLI help dialog identifiers */
 #define IDD_CLI_HELP_DIALOG 1100         /**< CLI help dialog */

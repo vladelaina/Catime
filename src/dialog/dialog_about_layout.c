@@ -12,7 +12,9 @@ AboutLinkInfo g_aboutLinkInfos[] = {
     {IDC_BILIBILI_LINK, NULL, L"BiliBili", L"https://space.bilibili.com/1862395225"},
     {IDC_GITHUB_LINK, NULL, L"GitHub", L"https://github.com/vladelaina/Catime"},
     {IDC_COPYRIGHT_LINK, NULL, L"Copyright Notice", L"https://github.com/vladelaina/Catime#️copyright-notice"},
-    {IDC_SUPPORT, NULL, L"Discord", L"https://discord.com/invite/W3tW2gtp6g"}
+    {IDC_SUPPORT, NULL, L"Discord", L"https://discord.com/invite/W3tW2gtp6g"},
+    {IDC_QQ_GROUP_LINK, L"QQ群（1079222265）", L"QQ Group (1079222265)",
+     L"https://qun.qq.com/universal-share/share?ac=1&authKey=ZCDmL8bNwuEDJa356bVF7Fj32MnLNVqGmGYa0%2BQkRcmmdoV2N665OVTuMPD6mNnc&busi_data=eyJncm91cENvZGUiOiIxMDc5MjIyMjY1IiwidG9rZW4iOiJlMEREUS9XeFVUQWpRSkNJSjNoU0F2TSs1M1NGdTUrRmZyOE13aGJBM2xOS3FwaUF4bU9KZWZiSHNHSTZCTUU4IiwidWluIjoiMjM3NzY0MDY5OSJ9&data=lMYxB9vSqwDoob-O8j5_4Z_kAtDoF1BUr3GVXlpmYT02pHPeu_oKI6oihwuYfSZBJZl3TxYexAYK0bJVD5EfEw&svctype=4&tempid=h5_group_info"}
 };
 
 const size_t g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
@@ -183,7 +185,8 @@ void DialogInfo_LayoutAboutDialogControls(HWND hwndDlg) {
         IDC_BILIBILI_LINK,
         IDC_GITHUB_LINK,
         IDC_COPYRIGHT_LINK,
-        IDC_SUPPORT
+        IDC_SUPPORT,
+        IDC_QQ_GROUP_LINK
     };
     UINT dpi = GetAboutDialogDpi(hwndDlg);
     SetAboutControlRect96(hwndDlg, IDC_ABOUT_ICON, dpi,
@@ -195,24 +198,32 @@ void DialogInfo_LayoutAboutDialogControls(HWND hwndDlg) {
     SetAboutControlRect96(hwndDlg, IDC_CREDIT_LINK, dpi, 112, 78, 336, 24);
 
     int widths[_countof(footerLinks)] = {0};
+    size_t visibleFooterCount = 0;
     int totalWidth = 0;
     const int gap = 12;
     for (size_t i = 0; i < _countof(footerLinks); i++) {
         HWND link = GetDlgItem(hwndDlg, (int)footerLinks[i]);
-        widths[i] = link ? MeasureAboutLinkWidth96(link, dpi) : 44;
+        LONG_PTR style = link ? GetWindowLongPtrW(link, GWL_STYLE) : 0;
+        if (!link || (style & WS_VISIBLE) == 0) continue;
+        widths[i] = MeasureAboutLinkWidth96(link, dpi);
         totalWidth += widths[i];
+        visibleFooterCount++;
     }
-    totalWidth += gap * ((int)_countof(footerLinks) - 1);
+    if (visibleFooterCount > 1) {
+        totalWidth += gap * ((int)visibleFooterCount - 1);
+    }
 
     int availableForText = ABOUT_CONTENT_WIDTH_96 -
-                           gap * ((int)_countof(footerLinks) - 1);
+                           gap * ((int)(visibleFooterCount > 0 ? visibleFooterCount - 1 : 0));
     int textWidth = totalWidth -
-                    gap * ((int)_countof(footerLinks) - 1);
+                    gap * ((int)(visibleFooterCount > 0 ? visibleFooterCount - 1 : 0));
     if (textWidth > availableForText) {
         int remainingWidth = availableForText;
         int remainingIdealWidth = textWidth;
+        size_t processedCount = 0;
         for (size_t i = 0; i < _countof(footerLinks); i++) {
-            int remainingItems = (int)_countof(footerLinks) - (int)i;
+            if (widths[i] == 0) continue;
+            int remainingItems = (int)visibleFooterCount - (int)processedCount;
             int idealWidth = widths[i];
             int width = remainingItems == 1 ? remainingWidth :
                 MulDiv(idealWidth, remainingWidth, remainingIdealWidth);
@@ -222,12 +233,14 @@ void DialogInfo_LayoutAboutDialogControls(HWND hwndDlg) {
             widths[i] = width;
             remainingWidth -= width;
             remainingIdealWidth -= idealWidth;
+            processedCount++;
         }
         totalWidth = ABOUT_CONTENT_WIDTH_96;
     }
 
     int x = (ABOUT_CONTENT_WIDTH_96 - totalWidth) / 2;
     for (size_t i = 0; i < _countof(footerLinks); i++) {
+        if (widths[i] == 0) continue;
         SetAboutControlRect96(hwndDlg, footerLinks[i], dpi,
                               x, 122, widths[i], 24);
         x += widths[i] + gap;
