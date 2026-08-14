@@ -4,7 +4,8 @@ title = "Catime Gitleaks Config"
 useDefault = true
 
 [allowlist]
-description = "Allow public QQ community invite links used in project docs"
+description = "Allow public QQ community invite links used in project docs and UI"
+regexTarget = "line"
 paths = [
   '''^README(?:_EN)?\.md$''',
   '''^i18n/.*\.md$''',
