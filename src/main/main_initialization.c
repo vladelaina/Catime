@@ -28,6 +28,8 @@
 #include "../../resource/resource.h"
 
 #include <commctrl.h>
+#include <shellapi.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -149,21 +151,34 @@ static void InitializeAsyncCaches(HWND hwnd) {
 }
 
 static BOOL HandleCommandLine(HWND hwnd, BOOL* launchedFromStartup) {
-    const wchar_t* commandLine = GetCommandLineW();
-    while (*commandLine && *commandLine != L' ') commandLine++;
-    while (*commandLine == L' ') commandLine++;
-    if (!*commandLine) return TRUE;
+    int argumentCount = 0;
+    LPWSTR* arguments = CommandLineToArgvW(
+        GetCommandLineW(), &argumentCount);
+    if (!arguments) return FALSE;
 
-    wchar_t command[512];
-    wcsncpy(command, commandLine, _countof(command) - 1);
-    command[_countof(command) - 1] = L'\0';
-    wchar_t* startupFlag = wcsstr(command, L"--startup");
-    if (startupFlag) {
-        *launchedFromStartup = TRUE;
-        size_t length = wcslen(L"--startup");
-        wmemmove(startupFlag, startupFlag + length,
-                 wcslen(startupFlag + length) + 1);
+    wchar_t command[512] = {0};
+    size_t used = 0;
+    for (int i = 1; i < argumentCount; ++i) {
+        const wchar_t* argument = arguments[i];
+        if (!argument || !argument[0]) continue;
+        if (_wcsicmp(argument, L"--startup") == 0) {
+            *launchedFromStartup = TRUE;
+            continue;
+        }
+        if (wcsncmp(argument, L"--", 2) == 0) continue;
+
+        int written = _snwprintf_s(
+            command + used, _countof(command) - used, _TRUNCATE,
+            used ? L" %s" : L"%s", argument);
+        if (written < 0) {
+            command[0] = L'\0';
+            break;
+        }
+        used += (size_t)written;
     }
+    LocalFree(arguments);
+    if (!command[0]) return TRUE;
+
     char* utf8 = WideToUtf8Alloc(command);
     if (utf8) {
         (void)HandleCliArguments(hwnd, utf8);
@@ -191,7 +206,6 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         LOG_WARNING("Taskbar monitor initialization failed");
     }
     BOOL launchedFromStartup = FALSE;
-    HandleCommandLine(hwnd, &launchedFromStartup);
 
     if (!MainTimer_Start(hwnd, GetTimerInterval())) {
         LOG_WINDOWS_ERROR("Timer creation failed");
@@ -206,6 +220,7 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         StartAutomaticUpdateCheck(hwnd);
     }
     HandleStartupMode(hwnd);
+    HandleCommandLine(hwnd, &launchedFromStartup);
     if (IsCiSmokeMode()) {
         Main_ScheduleCiSmokeExit(hwnd, GetCiExitTimeoutMs());
     }

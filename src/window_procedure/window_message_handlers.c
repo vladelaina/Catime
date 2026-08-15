@@ -47,6 +47,11 @@ LRESULT HandleEraseBkgnd(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT HandleTimer(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)lp;
+    if (wp == HOTKEY_REGISTRATION_RETRY_TIMER_ID) {
+        KillTimer(hwnd, HOTKEY_REGISTRATION_RETRY_TIMER_ID);
+        RegisterGlobalHotkeys(hwnd);
+        return 0;
+    }
     if (wp == TIMER_ID_DISPLAY_RESTORE) {
         KillTimer(hwnd, TIMER_ID_DISPLAY_RESTORE);
         RestoreWindowPositionAfterSystemChange(hwnd);
@@ -91,7 +96,7 @@ LRESULT HandleDestroy(HWND hwnd, WPARAM wp, LPARAM lp) {
     WindowMessageInternal_ResetEditExitRightClickState(hwnd);
     StopMenuPreviewTrackingForCommand(hwnd);
     CancelPreview(hwnd);
-    UnregisterGlobalHotkeys(hwnd);
+    ShutdownGlobalHotkeys(hwnd);
     HandleWindowDestroy(hwnd);
     ConfigWatcher_Stop();
 

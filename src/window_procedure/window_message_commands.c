@@ -57,6 +57,7 @@ LRESULT HandleKeyDown(HWND hwnd, WPARAM wp, LPARAM lp) {
             CLOCK_WINDOW_POS_X = newX;
             CLOCK_WINDOW_POS_Y = newY;
             MarkManualEditWindowPosition(hwnd);
+            MarkWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_POSITION);
             ScheduleConfigSave(hwnd);
         }
         return 0;

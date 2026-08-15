@@ -1,6 +1,6 @@
 /**
  * @file tray_animation_startup.c
- * @brief Startup preload, hot-applied config, and interval APIs.
+ * @brief Startup preload, runtime animation reload, and interval APIs.
  */
 
 #include "tray_animation_core_internal.h"
@@ -67,7 +67,7 @@ HICON GetInitialAnimationHicon(void) {
 }
 
 /**
- * @brief Apply animation path without persistence
+ * @brief Apply a process-local animation path without persistence
  */
 void ApplyAnimationPathValueNoPersist(const char* value) {
     if (!value || !*value) return;

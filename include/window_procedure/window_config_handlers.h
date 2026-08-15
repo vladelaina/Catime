@@ -18,7 +18,7 @@
 LRESULT HandleAppConfigChanged(HWND hwnd);
 
 /**
- * @brief Handle WM_APP_DISPLAY_CHANGED
+ * @brief Preserve process-local display state on config changes
  */
 LRESULT HandleAppDisplayChanged(HWND hwnd);
 
@@ -48,17 +48,17 @@ LRESULT HandleAppHotkeysChanged(HWND hwnd);
 LRESULT HandleAppRecentFilesChanged(HWND hwnd);
 
 /**
- * @brief Handle WM_APP_COLORS_CHANGED
+ * @brief Preserve process-local color state on config changes
  */
 LRESULT HandleAppColorsChanged(HWND hwnd);
 
 /**
- * @brief Handle WM_APP_ANIM_SPEED_CHANGED
+ * @brief Preserve the process-local animation speed on config changes
  */
 LRESULT HandleAppAnimSpeedChanged(HWND hwnd);
 
 /**
- * @brief Handle WM_APP_ANIM_PATH_CHANGED
+ * @brief Reload shared taskbar-monitor options without replacing local animation
  */
 LRESULT HandleAppAnimPathChanged(HWND hwnd);
 

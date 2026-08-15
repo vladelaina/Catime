@@ -10,7 +10,6 @@
 #include "log/log_exception.h"
 #include "log/log_core.h"
 #include "log.h"
-#include "main/main_single_instance.h"
 
 
 /** Atomic flag prevents deadlock in crash handler */
@@ -31,7 +30,6 @@ static const char* GetSignalDescription(int signal) {
 /**
  * Lock-free crash handler prevents deadlock
  * @note Skips critical section since crash may occur while holding it
- * @note Releases global mutex before exit to allow new instance to start
  */
 static void SignalHandler(int signal) {
     if (InterlockedExchange(&inCrashHandler, 1) != 0) {
@@ -56,14 +54,6 @@ static void SignalHandler(int signal) {
             WriteFile(hLogFile, buffer, len, &written, NULL);
             FlushFileBuffers(hLogFile);
         }
-    }
-
-    /* Release global mutex before crash exit to let a new instance start.
-     * The handle is process-owned global state; do not close it here.
-     */
-    HANDLE hMutex = GetGlobalMutexHandle();
-    if (hMutex) {
-        ReleaseMutex(hMutex);
     }
 
     /* Don't show MessageBox - just log to file and exit silently

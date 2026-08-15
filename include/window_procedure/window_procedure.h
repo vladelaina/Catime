@@ -96,7 +96,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
  * 
  * @details
  * Loop-based via g_hotkeyConfigs array (configKey-driven).
- * Loads from INI, registers with Windows, writes back conflicts.
+ * Loads from INI and registers with Windows. Invalid or duplicate values are
+ * normalized, while OS registration conflicts are kept for other instances.
  * Scalable (just add to array).
  */
 BOOL RegisterGlobalHotkeys(HWND hwnd);

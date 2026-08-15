@@ -46,6 +46,7 @@ void FinishDragWindow(HWND hwnd, BOOL saveSettings,
     }
 
     if (saveSettings && CLOCK_EDIT_MODE) {
+        MarkWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_POSITION);
         ScheduleConfigSave(hwnd);
     }
     if (refreshAfterDrag && IsValidDragScaleWindow(hwnd)) {

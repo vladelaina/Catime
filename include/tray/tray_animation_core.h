@@ -89,11 +89,11 @@ void PreloadAnimationFromConfig(void);
 HICON GetInitialAnimationHicon(void);
 
 /**
- * @brief Apply animation path from config without persistence
- * @param value Animation path (from config file)
+ * @brief Apply an animation path without persistence
+ * @param value Animation path or built-in animation name
  * 
  * @details
- * For config watcher - applies changes without writing back.
+ * Used when rebuilding the current process-local tray animation.
  */
 void ApplyAnimationPathValueNoPersist(const char* value);
 

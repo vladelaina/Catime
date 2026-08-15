@@ -33,7 +33,12 @@ static BOOL RegisterMonitorClass(void) {
 BOOL TaskbarMonitor_CreateWindow(void) {
     TaskbarMonitor_CancelWindowRecovery();
     if (IsWindow(g_taskbarMonitor.window)) return TRUE;
+    if (!TaskbarMonitor_TryAcquireOwnership()) {
+        TaskbarMonitor_ScheduleWindowRecovery();
+        return TRUE;
+    }
     if (!RegisterMonitorClass()) {
+        TaskbarMonitor_ReleaseOwnership();
         TaskbarMonitor_ScheduleWindowRecovery();
         return FALSE;
     }
@@ -43,6 +48,7 @@ BOOL TaskbarMonitor_CreateWindow(void) {
         TASKBAR_MONITOR_CLASS, L"Catime Taskbar Monitor", WS_POPUP,
         0, 0, 1, 1, NULL, NULL, g_taskbarMonitor.instance, NULL);
     if (!g_taskbarMonitor.window) {
+        TaskbarMonitor_ReleaseOwnership();
         LOG_WARNING("Taskbar monitor window creation failed (error=%lu)",
                     GetLastError());
         TaskbarMonitor_ScheduleWindowRecovery();
@@ -75,8 +81,8 @@ static void DestroyMonitorWindow(void) {
     g_taskbarMonitor.themeRecheckDueTick = 0;
     TaskbarMonitor_ResetMenuPreviewWindowGeometry();
     TaskbarMonitor_DeleteFont();
+    TaskbarMonitor_ReleaseOwnership();
 }
-
 static void SyncMonitorWindow(BOOL reattachExisting) {
     if (TaskbarMonitor_IsEnabled()) {
         if (!IsWindow(g_taskbarMonitor.window)) {
@@ -86,12 +92,10 @@ static void SyncMonitorWindow(BOOL reattachExisting) {
             TaskbarMonitor_AttachToTaskbar();
             InvalidateRect(g_taskbarMonitor.window, NULL, FALSE);
         }
-    } else if (IsWindow(g_taskbarMonitor.window) ||
-               g_taskbarMonitor.taskListReserved) {
+    } else {
         DestroyMonitorWindow();
     }
 }
-
 BOOL TaskbarMonitor_BeginMenuPreviewSession(void) {
     if (!g_taskbarMonitor.initialized) return FALSE;
     if (g_taskbarMonitor.menuPreviewSessionActive) {

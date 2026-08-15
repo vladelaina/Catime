@@ -212,15 +212,52 @@ static void NormalizeWhitespace(char* input) {
     input[INPUT_BUFFER_SIZE - 1] = '\0';
 }
 
-/**
- * @brief Parse time input and start countdown
- * 
- * This is the only command processing needed in cli.c because:
- * - Simple commands (s, u, p, r, h, e, v, pr, q1-q3) are handled by main_cli_routing.c
- *   which sends WM_HOTKEY or WM_COMMAND messages directly to the existing instance
- * - Only time inputs (like "25m", "1h30m") and unknown commands are forwarded here
- *   via WM_COPYDATA
- */
+typedef struct {
+    const char* command;
+    UINT message;
+    WPARAM wParam;
+    LPARAM lParam;
+} CliShortcut;
+
+static const CliShortcut CLI_SHORTCUTS[] = {
+    {"s",  WM_HOTKEY, HOTKEY_ID_SHOW_TIME, 0},
+    {"u",  WM_HOTKEY, HOTKEY_ID_COUNT_UP, 0},
+    {"p",  WM_HOTKEY, HOTKEY_ID_POMODORO, 0},
+    {"r",  WM_HOTKEY, HOTKEY_ID_RESTART_TIMER, 0},
+    {"h",  WM_APP_SHOW_CLI_HELP, 0, 0},
+    {"e",  WM_COMMAND, CLOCK_IDC_EDIT_MODE, 0},
+    {"v",  WM_COMMAND, CLOCK_IDC_TOGGLE_VISIBILITY, 0},
+    {"pr", WM_HOTKEY, HOTKEY_ID_PAUSE_RESUME, 0},
+    {"q1", WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN1, 0},
+    {"q2", WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN2, 0},
+    {"q3", WM_HOTKEY, HOTKEY_ID_QUICK_COUNTDOWN3, 0},
+};
+
+static BOOL HandleShortcut(HWND hwnd, const char* input) {
+    if (!hwnd || !input) return FALSE;
+
+    for (size_t i = 0; i < _countof(CLI_SHORTCUTS); ++i) {
+        if (_stricmp(input, CLI_SHORTCUTS[i].command) == 0) {
+            SendMessageW(hwnd, CLI_SHORTCUTS[i].message,
+                         CLI_SHORTCUTS[i].wParam, CLI_SHORTCUTS[i].lParam);
+            return TRUE;
+        }
+    }
+
+    if (tolower((unsigned char)input[0]) == 'p' && input[1] != '\0') {
+        char* end = NULL;
+        long index = strtol(input + 1, &end, 10);
+        if (index > 0 && end && *end == '\0') {
+            SendMessageW(hwnd, WM_APP_QUICK_COUNTDOWN_INDEX, 0,
+                         (LPARAM)index);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/** Parse time input and start countdown. */
 
 BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     if (!cmdLine || !*cmdLine) {
@@ -243,7 +280,11 @@ BOOL HandleCliArguments(HWND hwnd, const char* cmdLine) {
     }
     
     NormalizeWhitespace(input);
-    
+
+    if (HandleShortcut(hwnd, input)) {
+        return TRUE;
+    }
+
     /* Parse time input and start countdown */
     int totalSeconds = 0;
     if (ParseInput(input, &totalSeconds)) {

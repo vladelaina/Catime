@@ -44,8 +44,15 @@ static LRESULT HandlePowerBroadcast(HWND hwnd, WPARAM wp, LPARAM lp) {
         }
         Timer_OnSystemResume();
         LOG_INFO("System resumed from sleep/hibernate, reinitializing tray icon animation");
+        char currentAnimation[MAX_PATH] = {0};
+        const char* currentAnimationName = GetCurrentAnimationName();
+        if (currentAnimationName) {
+            strncpy_s(currentAnimation, sizeof(currentAnimation),
+                      currentAnimationName, _TRUNCATE);
+        }
         TrayAnimation_ClearCurrentName();
-        HandleAppAnimPathChanged(hwnd);
+        ApplyAnimationPathValueNoPersist(
+            currentAnimation[0] ? currentAnimation : "__logo__");
         RecreateTaskbarIcon(hwnd, GetModuleHandle(NULL));
         if (!BeginSystemPositionChangeGuard(hwnd)) {
             RestoreWindowPositionAfterSystemChange(hwnd);

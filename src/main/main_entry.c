@@ -7,9 +7,7 @@
 #include <windows.h>
 #include "main/main_initialization.h"
 #include "main_initialization_internal.h"
-#include "main/main_single_instance.h"
 #include "window.h"
-#include "window/window_visual_effects.h"
 #include "log.h"
 #include "config.h"
 #include "startup.h"
@@ -38,19 +36,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     }
 
     if (!IsCiSmokeMode() && !RepairExistingAutoStartShortcut()) {
-        LOG_WARNING("Could not repair the existing startup shortcut before single-instance routing");
-    }
-
-    HANDLE hMutex = NULL;
-    if (!HandleSingleInstance(GetCommandLineW(), &hMutex)) {
-        ShutdownWindowVisualEffects();
-        CoUninitialize();
-        CleanupLogSystem();
-        return 0;
+        LOG_WARNING("Could not repair the existing startup shortcut before startup");
     }
 
     if (!InitializeApplicationSubsystem(hInstance)) {
-        CleanupResources(hMutex);
+        CleanupResources();
         return 1;
     }
 
@@ -63,14 +53,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HWND hwnd = CreateMainWindow(hInstance, nCmdShow);
     if (!hwnd) {
         LOG_ERROR("Main window creation failed. Application cannot continue. Check log file for details.");
-        CleanupResources(hMutex);
+        CleanupResources();
         return 0;
     }
     LOG_INFO("Main window creation successful, handle: 0x%p", hwnd);
 
     if (!SetupMainWindow(hInstance, hwnd, nCmdShow)) {
         DestroyWindow(hwnd);
-        CleanupResources(hMutex);
+        CleanupResources();
         return 0;
     }
 
@@ -79,7 +69,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         exitCode = Main_GetCiSmokeExitCode();
     }
 
-    CleanupResources(hMutex);
+    CleanupResources();
 
     return exitCode;
 }

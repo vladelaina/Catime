@@ -62,10 +62,7 @@ UINT GetCiExitTimeoutMs(void);
  */
 int RunMessageLoop(HWND hwnd);
 
-/**
- * Cleanup resources before exit
- * @param hMutex Mutex handle to release
- */
-void CleanupResources(HANDLE hMutex);
+/** Cleanup resources before exit. */
+void CleanupResources(void);
 
 #endif /* MAIN_INITIALIZATION_H */

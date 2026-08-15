@@ -55,13 +55,13 @@ BOOL DisableAutoStart(void);
 BOOL RemoveShortcut(void);
 
 /**
- * @brief Repair an existing startup shortcut before single-instance routing
+ * @brief Repair an existing startup shortcut before application startup
  * @return TRUE when no repair is needed or the repair succeeded
  *
  * @details This lets a newly launched version replace a stale old-version
- * target even while the old process still owns the single-instance mutex.
- * A legacy install with no shortcut is recorded as disabled; only an explicit
- * enabled preference may recreate a previously absent shortcut here.
+ * target before the application creates its window. A legacy install with no
+ * shortcut is recorded as disabled; only an explicit enabled preference may
+ * recreate a previously absent shortcut here.
  */
 BOOL RepairExistingAutoStartShortcut(void);
 

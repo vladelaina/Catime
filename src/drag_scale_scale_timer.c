@@ -53,6 +53,11 @@ static VOID CALLBACK ScaleApplyTimerProc(HWND hwnd, UINT msg,
         (inputIdle && targetReached)) {
         if (g_scaleTargetValid && CLOCK_EDIT_MODE &&
             inputIdle && targetReached) {
+            MarkWindowSettingsDirty(
+                WINDOW_SETTINGS_DIRTY_POSITION |
+                (g_scaleTargetPluginMode
+                    ? WINDOW_SETTINGS_DIRTY_PLUGIN_SCALE
+                    : WINDOW_SETTINGS_DIRTY_SCALE));
             ScheduleConfigSave(hwnd);
         }
         StopScaleApplyTimer(hwnd);

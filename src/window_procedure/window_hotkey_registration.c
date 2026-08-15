@@ -28,6 +28,10 @@
     X(TOGGLE_MILLISECONDS, "HOTKEY_TOGGLE_MILLISECONDS") \
     X(TOPMOST, "HOTKEY_TOPMOST")
 
+#define HOTKEY_REGISTRATION_RETRY_INTERVAL_MS 3000u
+#define HOTKEY_OWNER_MUTEX_NAME \
+    L"Local\\Vladelaina.Catime.GlobalHotkeyOwner"
+
 typedef struct { int id; WORD value; const char* configKey; } HotkeyConfig;
 static HotkeyConfig g_hotkeyConfigs[] = {
 #define X(name, key) {HOTKEY_ID_##name, 0, key},
@@ -35,7 +39,48 @@ static HotkeyConfig g_hotkeyConfigs[] = {
 #undef X
 };
 static HWND g_registeredHotkeyHwnd;
+static BOOL g_hotkeyRegistrationIncomplete = FALSE;
+static HANDLE g_hotkeyOwnerMutex = NULL;
+static BOOL g_ownsGlobalHotkeys = FALSE;
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+
+static BOOL TryAcquireHotkeyOwnership(void) {
+    if (g_ownsGlobalHotkeys && g_hotkeyOwnerMutex) return TRUE;
+
+    HANDLE mutex = CreateMutexW(NULL, FALSE, HOTKEY_OWNER_MUTEX_NAME);
+    if (!mutex) {
+        LOG_WARNING("Failed to create global hotkey ownership mutex (error=%lu)",
+                    GetLastError());
+        return FALSE;
+    }
+
+    DWORD waitResult = WaitForSingleObject(mutex, 0);
+    if (waitResult != WAIT_OBJECT_0 && waitResult != WAIT_ABANDONED) {
+        if (waitResult != WAIT_TIMEOUT) {
+            LOG_WARNING("Failed to acquire global hotkey ownership (result=%lu, error=%lu)",
+                        waitResult, GetLastError());
+        }
+        CloseHandle(mutex);
+        return FALSE;
+    }
+
+    g_hotkeyOwnerMutex = mutex;
+    g_ownsGlobalHotkeys = TRUE;
+    return TRUE;
+}
+
+static void ReleaseHotkeyOwnership(void) {
+    HANDLE mutex = g_hotkeyOwnerMutex;
+    BOOL ownsHotkeys = g_ownsGlobalHotkeys;
+    g_hotkeyOwnerMutex = NULL;
+    g_ownsGlobalHotkeys = FALSE;
+    if (!mutex) return;
+    if (ownsHotkeys && !ReleaseMutex(mutex)) {
+        LOG_WARNING("Failed to release global hotkey ownership (error=%lu)",
+                    GetLastError());
+    }
+    CloseHandle(mutex);
+}
 
 static void LoadValues(const char* path, WORD* values) {
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); ++i) {
@@ -70,7 +115,6 @@ static BOOL RegisterOne(HWND hwnd, HotkeyConfig* config) {
     char text[64];
     HotkeyToString(config->value, text, sizeof(text));
     LOG_WARNING("Hotkey registration failed [%s]: %s", config->configKey, text);
-    config->value = 0;
     return FALSE;
 }
 
@@ -92,18 +136,15 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
     WORD desired[ARRAY_SIZE(g_hotkeyConfigs)] = {0};
     LoadValues(path, desired);
     BOOL changed = SanitizeValues(desired);
-    if (!changed && g_registeredHotkeyHwnd == hwnd && ValuesMatch(desired))
+    if (!changed && g_ownsGlobalHotkeys &&
+        g_registeredHotkeyHwnd == hwnd &&
+        !g_hotkeyRegistrationIncomplete && ValuesMatch(desired))
         return AnyValue(desired);
 
     if (g_registeredHotkeyHwnd) UnregisterGlobalHotkeys(g_registeredHotkeyHwnd);
     else UnregisterGlobalHotkeys(hwnd);
-    BOOL any = FALSE;
-    int failures = 0;
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); ++i) {
         g_hotkeyConfigs[i].value = desired[i];
-        WORD old = desired[i];
-        if (RegisterOne(hwnd, &g_hotkeyConfigs[i])) any = TRUE;
-        else if (old) { changed = TRUE; ++failures; }
     }
     if (changed) {
         char values[ARRAY_SIZE(g_hotkeyConfigs)][64];
@@ -116,13 +157,56 @@ BOOL RegisterGlobalHotkeys(HWND hwnd) {
         if (!WriteIniMultipleAtomic(path, updates, ARRAY_SIZE(updates)))
             LOG_WARNING("Failed to persist cleared hotkeys");
     }
+
+    if (!AnyValue(desired)) {
+        ReleaseHotkeyOwnership();
+        return FALSE;
+    }
+    if (!TryAcquireHotkeyOwnership()) {
+        g_registeredHotkeyHwnd = hwnd;
+        g_hotkeyRegistrationIncomplete = TRUE;
+        if (!SetTimer(hwnd, HOTKEY_REGISTRATION_RETRY_TIMER_ID,
+                      HOTKEY_REGISTRATION_RETRY_INTERVAL_MS, NULL)) {
+            LOG_WARNING("Failed to schedule global hotkey ownership retry (error=%lu)",
+                        GetLastError());
+        }
+        return FALSE;
+    }
+
+    BOOL any = FALSE;
+    int failures = 0;
+    for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); ++i) {
+        WORD old = desired[i];
+        if (RegisterOne(hwnd, &g_hotkeyConfigs[i])) any = TRUE;
+        else if (old) { ++failures; }
+    }
     g_registeredHotkeyHwnd = hwnd;
+    g_hotkeyRegistrationIncomplete = failures > 0;
+    if (g_hotkeyRegistrationIncomplete) {
+        if (!SetTimer(hwnd, HOTKEY_REGISTRATION_RETRY_TIMER_ID,
+                      HOTKEY_REGISTRATION_RETRY_INTERVAL_MS, NULL)) {
+            LOG_WARNING("Failed to schedule global hotkey retry (error=%lu)",
+                        GetLastError());
+        }
+    } else {
+        KillTimer(hwnd, HOTKEY_REGISTRATION_RETRY_TIMER_ID);
+    }
     if (failures) LOG_WARNING("%d global hotkeys could not be registered", failures);
     return any;
 }
 
 void UnregisterGlobalHotkeys(HWND hwnd) {
+    if (hwnd) KillTimer(hwnd, HOTKEY_REGISTRATION_RETRY_TIMER_ID);
     for (size_t i = 0; i < ARRAY_SIZE(g_hotkeyConfigs); ++i)
         UnregisterHotKey(hwnd, g_hotkeyConfigs[i].id);
-    if (!hwnd || g_registeredHotkeyHwnd == hwnd) g_registeredHotkeyHwnd = NULL;
+    if (!hwnd || g_registeredHotkeyHwnd == hwnd) {
+        g_registeredHotkeyHwnd = NULL;
+        g_hotkeyRegistrationIncomplete = FALSE;
+    }
+    if (!hwnd) ReleaseHotkeyOwnership();
+}
+
+void ShutdownGlobalHotkeys(HWND hwnd) {
+    UnregisterGlobalHotkeys(hwnd);
+    ReleaseHotkeyOwnership();
 }

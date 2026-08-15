@@ -18,7 +18,7 @@
  * 
  * @details
  * Displays: Version, build date, author, license, GitHub/Bilibili links
- * Supports: Update check button, single instance (prevents duplicates)
+ * Supports: Update check button
  */
 void ShowAboutDialog(HWND hwndParent);
 

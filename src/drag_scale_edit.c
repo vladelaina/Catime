@@ -5,8 +5,6 @@
 
 #include "drag_scale_internal.h"
 #include "config.h"
-#include "color/color_parser.h"
-#include "color/color_state.h"
 #include "window/window_desktop_integration.h"
 #include "window/window_placement.h"
 #include "window_procedure/ole_drop_target.h"
@@ -124,6 +122,7 @@ void EndEditMode(HWND hwnd) {
         /* A missed button-up must not snap to a later right-click point. */
         FinishDragWindow(hwnd, FALSE, FALSE, IsLeftButtonPhysicallyDown());
         CLOCK_WINDOW_POSITION_MANUAL = TRUE;
+        MarkWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_POSITION);
     }
     ApplyPendingScaleTarget(hwnd);
     StopScaleApplyTimer(hwnd);
@@ -158,10 +157,6 @@ void EndEditMode(HWND hwnd) {
     }
     SaveWindowSettings(hwnd);
     ClearManualEditPosition();
-
-    if (!WriteConfigColor(CLOCK_TEXT_COLOR)) {
-        LOG_WARNING("EndEditMode: failed to persist text color");
-    }
     g_editModeForcedTopmost = FALSE;
     g_editModeTopmostOverride = FALSE;
 }

@@ -2,6 +2,8 @@
 
 LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    StopScaleApplyTimer(hwnd);
+    ConsumePendingScaleResizeAnchor(hwnd);
     char posX[32], posY[32];
     snprintf(posX, sizeof(posX), "%d", DEFAULT_WINDOW_POS_X);
     snprintf(posY, sizeof(posY), "%d", DEFAULT_WINDOW_POS_Y);
@@ -25,6 +27,8 @@ LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
         LOG_WARNING("Failed to reset window position configuration");
         return 0;
     }
+    CancelScheduledConfigSave(hwnd);
+    ClearWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_ALL);
     CLOCK_WINDOW_POSITION_MANUAL = FALSE;
     float windowScale = ParseDefaultScaleOrFallback(
         DEFAULT_WINDOW_SCALE, CLOCK_WINDOW_SCALE);
@@ -49,6 +53,10 @@ LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
 
 LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
+    StopScaleApplyTimer(hwnd);
+    ConsumePendingScaleResizeAnchor(hwnd);
+    CancelScheduledConfigSave(hwnd);
+    ClearWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_ALL);
     CleanupBeforeTimerAction(hwnd);
     MainTimer_Stop();
     UnregisterGlobalHotkeys(hwnd);
@@ -58,6 +66,8 @@ LRESULT CmdResetDefaults(HWND hwnd, WPARAM wp, LPARAM lp) {
     g_ForceApplyConfig = TRUE;
     ReadConfig();
     g_ForceApplyConfig = FALSE;
+    ApplyAnimationPathValueNoPersist("__logo__");
+    TrayAnimation_RecomputeTimerDelay();
     HandleStartupMode(hwnd);
     CLOCK_EDIT_MODE = FALSE;
     SetClickThrough(hwnd, TRUE);

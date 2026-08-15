@@ -119,6 +119,8 @@ BOOL TaskbarMonitor_SnapshotsEqual(
     const SystemMonitorSnapshot* second);
 void TaskbarMonitor_PrefetchSnapshot(DWORD fields, BOOL forceRefresh);
 void TaskbarMonitor_ResetMenuPreviewWindowGeometry(void);
+BOOL TaskbarMonitor_TryAcquireOwnership(void);
+void TaskbarMonitor_ReleaseOwnership(void);
 BOOL TaskbarMonitor_CaptureMenuPreviewWindowGeometry(void);
 BOOL TaskbarMonitor_RestoreMenuPreviewWindowGeometry(void);
 BOOL TaskbarMonitor_UpdateMenuPreviewWindowGeometry(void);

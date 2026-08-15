@@ -1,5 +1,4 @@
 #include "main/main_initialization.h"
-#include "main/main_single_instance.h"
 #include "async_update_checker.h"
 #include "audio_player.h"
 #include "config.h"
@@ -22,7 +21,7 @@
 #include "update_checker.h"
 #include "window/window_visual_effects.h"
 
-void CleanupResources(HANDLE hMutex) {
+void CleanupResources(void) {
     CleanupMarkdownInteractive();
     CleanupDrawingRenderCache();
     CleanupDrawingEffects();
@@ -48,11 +47,6 @@ void CleanupResources(HANDLE hMutex) {
         LOG_WARNING("Config watcher did not stop; INI cache retained");
     }
     CleanupLanguage();
-    if (hMutex) {
-        ReleaseMutex(hMutex);
-        CloseHandle(hMutex);
-        ClearGlobalMutexHandle();
-    }
     CoUninitialize();
     CleanupLogSystem();
 }

@@ -75,6 +75,10 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
         BOOL applied = ApplyScaleToWindow(hwnd, isPluginMode,
                                           newScale, cursorPos);
         if (applied) {
+            MarkWindowSettingsDirty(
+                WINDOW_SETTINGS_DIRTY_POSITION |
+                (isPluginMode ? WINDOW_SETTINGS_DIRTY_PLUGIN_SCALE
+                              : WINDOW_SETTINGS_DIRTY_SCALE));
             ScheduleConfigSave(hwnd);
         }
         return applied;
@@ -95,6 +99,10 @@ BOOL HandleScaleWindow(HWND hwnd, int delta) {
     g_scaleTargetPluginMode = isPluginMode;
     g_scaleTarget = newScale;
     g_lastScaleWheelTick = GetTickCount();
+    MarkWindowSettingsDirty(
+        WINDOW_SETTINGS_DIRTY_POSITION |
+        (isPluginMode ? WINDOW_SETTINGS_DIRTY_PLUGIN_SCALE
+                      : WINDOW_SETTINGS_DIRTY_SCALE));
     ScheduleConfigSave(hwnd);
 
     if (!hadActiveTimer) {

@@ -1,35 +1,18 @@
 /**
  * @file window_config_handlers_misc.c
- * @brief Reloads colors, recent files, hotkeys, and tray animation settings.
+ * @brief Reloads recent files, hotkeys, and shared monitor settings.
  */
 
 #include "window_procedure/window_config_handlers_internal.h"
 #include "window_procedure/window_hotkeys.h"
-#include "color/color.h"
-#include "color/gradient.h"
 #include "config.h"
-#include "config/config_defaults.h"
 #include "log.h"
 #include "taskbar_monitor.h"
-#include "tray/tray.h"
 #include "tray/tray_animation_core.h"
 #include "window_procedure/window_utils.h"
 
 #include <stdio.h>
 #include <string.h>
-
-#define COLOR_OPTIONS_CONFIG_BUFFER 2048
-#define PERCENT_ICON_COLOR_CONFIG_BUFFER 32
-
-typedef struct {
-    BOOL colorOptionsValid;
-    char colorOptions[COLOR_OPTIONS_CONFIG_BUFFER];
-    char percentIconTextColor[PERCENT_ICON_COLOR_CONFIG_BUFFER];
-    char percentIconBgColor[PERCENT_ICON_COLOR_CONFIG_BUFFER];
-} HotReloadColorConfig;
-
-static BOOL g_hotReloadColorConfigValid = FALSE;
-static HotReloadColorConfig g_lastHotReloadColorConfig = {0};
 
 typedef struct {
     char recentFiles[MAX_RECENT_FILES][MAX_PATH];
@@ -39,57 +22,6 @@ typedef struct {
 
 static BOOL g_hotReloadRecentFilesConfigValid = FALSE;
 static HotReloadRecentFilesConfig g_lastHotReloadRecentFilesConfig = {0};
-
-static void ReadHotReloadColorConfig(HotReloadColorConfig* config) {
-    if (!config) return;
-
-    config->colorOptionsValid = ReadIniStringExact(
-        CFG_SECTION_COLORS, "COLOR_OPTIONS", DEFAULT_COLOR_OPTIONS_INI,
-        config->colorOptions, sizeof(config->colorOptions), GetCachedConfigPath());
-    if (!config->colorOptionsValid) {
-        config->colorOptions[0] = '\0';
-        LOG_WARNING("Hot reload ignored COLOR_OPTIONS because the config value is too long");
-    }
-    ReadConfigStr("Animation", "PERCENT_ICON_TEXT_COLOR", "auto",
-                  config->percentIconTextColor, sizeof(config->percentIconTextColor));
-    ReadConfigStr("Animation", "PERCENT_ICON_BG_COLOR", "transparent",
-                  config->percentIconBgColor, sizeof(config->percentIconBgColor));
-}
-
-static BOOL HotReloadColorOptionsChanged(const HotReloadColorConfig* config) {
-    if (!config || !config->colorOptionsValid) return FALSE;
-    return !g_hotReloadColorConfigValid ||
-           strcmp(config->colorOptions, g_lastHotReloadColorConfig.colorOptions) != 0;
-}
-
-static BOOL HotReloadPercentIconColorsChanged(const HotReloadColorConfig* config) {
-    return !g_hotReloadColorConfigValid ||
-           strcmp(config->percentIconTextColor,
-                  g_lastHotReloadColorConfig.percentIconTextColor) != 0 ||
-           strcmp(config->percentIconBgColor,
-                  g_lastHotReloadColorConfig.percentIconBgColor) != 0;
-}
-
-static void RememberHotReloadColorConfig(const HotReloadColorConfig* config) {
-    if (!config) return;
-
-    if (config->colorOptionsValid) {
-        g_lastHotReloadColorConfig.colorOptionsValid = TRUE;
-        memcpy(g_lastHotReloadColorConfig.colorOptions,
-               config->colorOptions,
-               sizeof(g_lastHotReloadColorConfig.colorOptions));
-    } else if (!g_hotReloadColorConfigValid) {
-        g_lastHotReloadColorConfig.colorOptionsValid = FALSE;
-        g_lastHotReloadColorConfig.colorOptions[0] = '\0';
-    }
-    memcpy(g_lastHotReloadColorConfig.percentIconTextColor,
-           config->percentIconTextColor,
-           sizeof(g_lastHotReloadColorConfig.percentIconTextColor));
-    memcpy(g_lastHotReloadColorConfig.percentIconBgColor,
-           config->percentIconBgColor,
-           sizeof(g_lastHotReloadColorConfig.percentIconBgColor));
-    g_hotReloadColorConfigValid = TRUE;
-}
 
 static void ReadHotReloadRecentFilesConfig(HotReloadRecentFilesConfig* config) {
     if (!config) return;
@@ -181,41 +113,22 @@ LRESULT HandleAppRecentFilesChanged(HWND hwnd) {
 }
 
 LRESULT HandleAppColorsChanged(HWND hwnd) {
-    HotReloadColorConfig colorConfig = {0};
-    ReadHotReloadColorConfig(&colorConfig);
-
-    BOOL colorOptionsChanged = HotReloadColorOptionsChanged(&colorConfig);
-    BOOL percentIconColorsChanged = HotReloadPercentIconColorsChanged(&colorConfig);
-    if (!colorOptionsChanged && !percentIconColorsChanged) {
-        return 0;
-    }
-
-    if (colorOptionsChanged) {
-        if (ReplaceColorOptionsFromConfigValue(colorConfig.colorOptions)) {
-            InvalidateRect(hwnd, NULL, TRUE);
-        } else {
-            LOG_WARNING("Hot reload ignored invalid COLOR_OPTIONS; keeping current palette");
-        }
-    }
-
-    if (percentIconColorsChanged) {
-        ReadPercentIconColorsConfig();
-        TrayTipTimerProc(hwnd, WM_TIMER, TRAY_TIP_TIMER_ID, 0);
-    }
-
-    RememberHotReloadColorConfig(&colorConfig);
+    (void)hwnd;
+    /* Active colors and palette choices are process-local after startup. */
     return 0;
 }
 
 LRESULT HandleAppAnimSpeedChanged(HWND hwnd) {
     (void)hwnd;
-    ReloadAnimationSpeedFromConfig();
-    TrayAnimation_RecomputeTimerDelay();
+    /* Animation speed is runtime-local after startup. Menu commands update
+     * this process immediately and persist the latest choice for new ones. */
     return 0;
 }
 
 LRESULT HandleAppAnimPathChanged(HWND hwnd) {
     (void)hwnd;
+    /* The taskbar monitor is one shared surface, so its options remain
+     * synchronized even though each process keeps its own tray animation. */
     BOOL taskbarMonitorEnabled = ReadConfigBool(
         "Animation", "TASKBAR_MONITOR_ENABLED", FALSE);
     BOOL taskbarMonitorCpuMemory = taskbarMonitorEnabled && ReadConfigBool(
@@ -232,12 +145,5 @@ LRESULT HandleAppAnimPathChanged(HWND hwnd) {
             taskbarMonitorNetwork);
         RefreshTrayBackgroundWorkState();
     }
-    char buffer[MAX_PATH] = {0};
-    if (!ReadIniStringExact("Animation", "ANIMATION_PATH", "__logo__",
-                            buffer, sizeof(buffer), GetCachedConfigPath())) {
-        LOG_WARNING("Hot reload ignored ANIMATION_PATH because the config value is too long");
-        return 0;
-    }
-    ApplyAnimationPathValueNoPersist(buffer);
     return 0;
 }

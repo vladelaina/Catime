@@ -161,6 +161,9 @@ void ClearPendingScaleResizeAnchor(HWND hwnd);
  */
 void ConsumePendingScaleResizeAnchor(HWND hwnd);
 
+/** Cancel a pending smooth scale target without applying it. */
+void StopScaleApplyTimer(HWND hwnd);
+
 /* ============================================================================
  * Utility Functions (Internal Use)
  * ============================================================================ */

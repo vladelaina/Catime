@@ -70,6 +70,22 @@ HWND FindCurrentProcessMainWindow(void);
  */
 BOOL SaveWindowSettings(HWND hwnd);
 
+typedef enum {
+    WINDOW_SETTINGS_DIRTY_POSITION = 1u << 0,
+    WINDOW_SETTINGS_DIRTY_SCALE = 1u << 1,
+    WINDOW_SETTINGS_DIRTY_PLUGIN_SCALE = 1u << 2,
+    WINDOW_SETTINGS_DIRTY_ALL =
+        WINDOW_SETTINGS_DIRTY_POSITION |
+        WINDOW_SETTINGS_DIRTY_SCALE |
+        WINDOW_SETTINGS_DIRTY_PLUGIN_SCALE
+} WindowSettingsDirtyFlags;
+
+/** Mark window fields explicitly changed by this process. */
+void MarkWindowSettingsDirty(UINT flags);
+
+/** Clear pending fields replaced by a successful direct configuration write. */
+void ClearWindowSettingsDirty(UINT flags);
+
 /**
  * @brief Resolve configured or default window position for a given size
  * @param width Desired window width

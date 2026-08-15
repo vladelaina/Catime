@@ -28,7 +28,10 @@ BOOL TaskbarMonitor_BeginMenuPreviewSession(void);
 /** Restore normal taskbar sizing and interaction after the tray menu closes. */
 void TaskbarMonitor_EndMenuPreviewSession(void);
 
-/** Initialize the taskbar monitor after the main window is available. */
+/**
+ * Initialize the shared taskbar monitor after the main window is available.
+ * Only one Catime process displays it; standby instances take over as needed.
+ */
 BOOL TaskbarMonitor_Initialize(HINSTANCE instance, HWND owner);
 
 /** Restore any reserved shell space and release taskbar monitor resources. */
