@@ -229,11 +229,11 @@ build.bat                         # Windows
 
 ## 🌟 Star 히스토리
 
-<a href="https://www.star-history.com/#vladelaina/Catime&Date">
+<a href="https://star-history.dera.page/#vladelaina/Catime&Date">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=vladelaina/Catime&type=Date" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=vladelaina/Catime&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=vladelaina/Catime&type=Date" />
+   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=vladelaina/Catime&type=Date" />
  </picture>
 </a>
 
