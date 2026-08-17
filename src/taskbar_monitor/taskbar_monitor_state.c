@@ -162,7 +162,7 @@ void TaskbarMonitor_RefreshTextLayout(void) {
 
     const wchar_t* networkLabels[] = {L"\x2191:", L"\x2193:"};
     const wchar_t* networkValues[] = {
-        L"99.9M/s", L"1023K/s", L"1023M/s", L"1023G/s"
+        L"99.9MB/s", L"1023KB/s", L"1023MB/s", L"1023GB/s"
     };
     const wchar_t* resourceLabels[] = {
         g_taskbarMonitor.cpuLabel, g_taskbarMonitor.memoryLabel

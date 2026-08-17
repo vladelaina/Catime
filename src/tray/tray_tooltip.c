@@ -10,36 +10,10 @@
 #include "timer/timer.h"
 #include "tray/tray_animation_core.h"
 #include "tray/tray_animation_loader.h"
+#include "utils/network_rate.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
-
-typedef struct {
-    double value;
-    const wchar_t* unit;
-} FormattedBytes;
-
-static FormattedBytes FormatBytesPerSecond(double bytes) {
-    FormattedBytes result = {bytes, L"B/s"};
-    if (result.value <= 0.0) {
-        result.value = 0.0;
-        result.unit = L"KB/s";
-        return result;
-    }
-    if (result.value >= 1024.0) {
-        result.value /= 1024.0;
-        result.unit = L"KB/s";
-    }
-    if (result.value >= 1024.0) {
-        result.value /= 1024.0;
-        result.unit = L"MB/s";
-    }
-    if (result.value >= 1024.0) {
-        result.value /= 1024.0;
-        result.unit = L"GB/s";
-    }
-    return result;
-}
 
 static void BuildBasicTooltip(
     wchar_t* tip, size_t tipSize,
@@ -62,14 +36,14 @@ static void BuildBasicTooltip(
                      L"%.1f%%", snapshot->memoryPercent);
     }
     if (snapshot && snapshot->networkAvailable) {
-        FormattedBytes uploadRate = FormatBytesPerSecond(
+        FormattedNetworkRate uploadRate = FormatNetworkBytesPerSecond(
             (double)snapshot->uploadBytesPerSecond);
-        FormattedBytes downloadRate = FormatBytesPerSecond(
+        FormattedNetworkRate downloadRate = FormatNetworkBytesPerSecond(
             (double)snapshot->downloadBytesPerSecond);
         _snwprintf_s(upload, _countof(upload), _TRUNCATE,
-                     L"%.1f %s", uploadRate.value, uploadRate.unit);
+                     L"%.1f %ls", uploadRate.value, uploadRate.unit);
         _snwprintf_s(download, _countof(download), _TRUNCATE,
-                     L"%.1f %s", downloadRate.value, downloadRate.unit);
+                     L"%.1f %ls", downloadRate.value, downloadRate.unit);
     }
 
     _snwprintf_s(tip, tipSize, _TRUNCATE,

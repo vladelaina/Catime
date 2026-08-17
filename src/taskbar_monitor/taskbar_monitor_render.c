@@ -7,6 +7,7 @@
 
 #include "system_monitor.h"
 #include "log.h"
+#include "utils/network_rate.h"
 
 #include <stdio.h>
 #include <wchar.h>
@@ -65,26 +66,12 @@ void TaskbarMonitor_PrefetchSnapshot(DWORD fields, BOOL forceRefresh) {
 
 static void FormatRate(float bytesPerSecond, BOOL available,
                        wchar_t* output, size_t outputCount) {
-    double value = bytesPerSecond;
-    const wchar_t* unit = L"K/s";
     if (!output || outputCount == 0) return;
-    if (!available) {
-        wcsncpy_s(output, outputCount, L"0.0K/s", _TRUNCATE);
-        return;
-    }
-    if (value < 0.0) value = 0.0;
-    value /= 1024.0;
-    if (value >= 1024.0) {
-        value /= 1024.0;
-        unit = L"M/s";
-    }
-    if (value >= 1024.0) {
-        value /= 1024.0;
-        unit = L"G/s";
-    }
+    FormattedNetworkRate rate = FormatNetworkBytesPerSecond(
+        available ? (double)bytesPerSecond : 0.0);
     _snwprintf_s(output, outputCount, _TRUNCATE,
-                 value >= 100.0 ? L"%.0f%ls" : L"%.1f%ls",
-                 value, unit);
+                 rate.value >= 100.0 ? L"%.0f%ls" : L"%.1f%ls",
+                 rate.value, rate.unit);
 }
 
 static void SetMetricText(
