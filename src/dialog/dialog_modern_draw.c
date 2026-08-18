@@ -282,5 +282,6 @@ void ModernDrawDialog(ModernDialogState* state, HDC hdc) {
                           &titleRect, title,
                           DT_LEFT | DT_VCENTER | DT_SINGLELINE |
                           DT_END_ELLIPSIS);
+    ModernDrawBodyGroups(state, hdc);
     ModernDrawBodyScrollbar(state, hdc);
 }

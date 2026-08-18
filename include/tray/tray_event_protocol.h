@@ -28,4 +28,9 @@ typedef struct {
 BOOL TrayCallback_Decode(BOOL version4, WPARAM wParam, LPARAM lParam,
                          TrayCallbackEvent* event);
 
+BOOL TrayCallback_DecodeCompatible(BOOL preferVersion4,
+                                   WPARAM wParam, LPARAM lParam,
+                                   UINT expectedIconId,
+                                   TrayCallbackEvent* event);
+
 #endif

@@ -14,9 +14,15 @@ BOOL UpdatePercentIconIfNeededInternal(
 
     HWND trayHwnd = GetValidTrayAnimationWindow();
     if (!trayHwnd) goto done;
-    /* During normal hover, icon and tooltip are committed together from one
-     * snapshot. Other native feedback tips keep the existing icon stable. */
-    if (IsTrayTooltipActive() && !synchronizedTooltip) goto done;
+
+    TrayPresentationUpdateMode updateMode = TrayUpdatePolicy_Select(
+        IsTrayTooltipActive(), synchronizedTooltip != NULL);
+    if (updateMode == TRAY_UPDATE_DEFER) goto done;
+    if (updateMode == TRAY_UPDATE_TOOLTIP_ONLY) {
+        UpdateTrayTooltip(synchronizedTooltip);
+        tooltipApplied = TRUE;
+        goto done;
+    }
 
     char animationName[MAX_PATH] = {0};
     BOOL previewActive = FALSE;
@@ -90,7 +96,7 @@ BOOL UpdatePercentIconIfNeededInternal(
     updateData.uID = CLOCK_ID_TRAY_APP_ICON;
     updateData.uFlags = NIF_ICON;
     updateData.hIcon = hIcon;
-    if (synchronizedTooltip) {
+    if (updateMode == TRAY_UPDATE_ICON_AND_TOOLTIP) {
         updateData.uFlags |= NIF_TIP;
         wcsncpy_s(updateData.szTip, _countof(updateData.szTip),
                   synchronizedTooltip, _TRUNCATE);
@@ -101,7 +107,7 @@ BOOL UpdatePercentIconIfNeededInternal(
         RecordBuiltinIconUpdateCache(animationName, value,
                                      textColor, bgColor,
                                      iconCx, iconCy);
-        if (synchronizedTooltip) {
+        if (updateMode == TRAY_UPDATE_ICON_AND_TOOLTIP) {
             wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip),
                      updateData.szTip);
             tooltipApplied = TRUE;

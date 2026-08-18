@@ -55,7 +55,7 @@ void ModernRememberBodyRegion(ModernControl* control,
                                      int width, int height,
                                      int top, int bottom, UINT dpi);
 void ModernHideBodyControl(ModernControl* control, BOOL redraw);
-void ModernShowBodyControl(ModernControl* control);
+void ModernShowBodyControl(ModernControl* control, BOOL redraw);
 void ModernApplyBodyControlRegion(
     ModernDialogState* state, ModernControl* control, int y96,
     BOOL suppressRedraw);
@@ -84,6 +84,7 @@ void ModernDrawComboItemContent(ModernControl* control, HDC hdc,
                                        UINT itemState);
 void ModernDrawComboItem(ModernDialogState* state,
                                 const DRAWITEMSTRUCT* item);
+void ModernDrawBodyGroups(ModernDialogState* state, HDC hdc);
 void ModernDrawDialog(ModernDialogState* state, HDC hdc);
 void ModernPaintBuffered(ModernDialogState* state, HDC target);
 void ModernDrawFieldOutlineToDc(ModernControl* control, HDC hdc);
@@ -159,6 +160,11 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                                                  UINT_PTR subclassId,
                                                  DWORD_PTR refData);
 BOOL ModernHandleBodyWheel(ModernDialogState* state, WPARAM wParam);
+BOOL ModernHandleBodyScrollTimer(ModernDialogState* state, WPARAM timerId);
+void ModernBeginBodyScrollDrag(ModernDialogState* state, int pointerY);
+void ModernQueueBodyScrollDrag(ModernDialogState* state, int offset96);
+void ModernEndBodyScrollDrag(ModernDialogState* state);
+void ModernDiscardBodyScrollDrag(ModernDialogState* state);
 void ModernRefreshControlHover(ModernControl* control);
 void ModernEndSliderDrag(ModernControl* control, BOOL commitPosition,
                                 int x, int y);

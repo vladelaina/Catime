@@ -138,6 +138,15 @@ target_include_directories(tray_event_protocol_tests PRIVATE
 )
 add_test(NAME tray_event_protocol COMMAND tray_event_protocol_tests)
 
+add_executable(tray_update_policy_tests
+    tests/tray_update_policy_tests.c
+    src/tray/tray_update_policy.c
+)
+target_include_directories(tray_update_policy_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+add_test(NAME tray_update_policy COMMAND tray_update_policy_tests)
+
 add_executable(tray_menu_tracking_tests
     tests/tray_menu_tracking_tests.c
     src/tray/tray_menu_tracking.c
@@ -296,6 +305,7 @@ set(_catime_test_targets
     tray_icon_lifetime_tests
     tray_hover_cache_tests
     tray_event_protocol_tests
+    tray_update_policy_tests
     tray_menu_tracking_tests
     tray_menu_pagination_tests
     timer_render_cache_tests

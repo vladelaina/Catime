@@ -12,6 +12,16 @@ void UpdateTrayIconToCurrentFrameInternal(void) {
         return;
     }
 
+    /* Replacing an animated icon restarts Explorer's native tooltip delay.
+     * Keep the latest frame pending while the pointer is over the icon; the
+     * existing hover-leave path flushes it immediately afterward. */
+    if (TrayUpdatePolicy_Select(IsTrayTooltipActive(), FALSE) ==
+        TRAY_UPDATE_DEFER) {
+        MarkTrayFrameDirty();
+        RefreshTrayBackgroundWorkState();
+        return;
+    }
+
     ClearPendingTrayUpdate();
     ClearTrayFrameDirty();
 

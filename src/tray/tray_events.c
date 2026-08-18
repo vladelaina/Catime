@@ -178,8 +178,9 @@ static inline BOOL IsTimerActive(void) {
 void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     TrayCallbackEvent event = {0};
     BOOL version4 = g_trayCallbackVersion == NOTIFYICON_VERSION_4;
-    if (!TrayCallback_Decode(version4, wParam, lParam, &event) ||
-        event.iconId != CLOCK_ID_TRAY_APP_ICON ||
+    if (!TrayCallback_DecodeCompatible(
+            version4, wParam, lParam,
+            CLOCK_ID_TRAY_APP_ICON, &event) ||
         !IsValidTrayEventWindow(hwnd) ||
         !IsTrayIconActive(hwnd)) {
         return;
@@ -192,6 +193,7 @@ void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
         case TRAY_CALLBACK_HOVER_MOVE:
             if (interactionSuspended) break;
             InstallTrayMouseHook();
+            SetTrayTooltipActive(TRUE);
             SetTrayHoverCheckInterval(hwnd, TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS);
             break;
         case TRAY_CALLBACK_HOVER_OPEN:

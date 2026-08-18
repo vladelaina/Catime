@@ -53,3 +53,31 @@ BOOL TrayCallback_Decode(BOOL version4, WPARAM wParam, LPARAM lParam,
          event->kind == TRAY_CALLBACK_SECONDARY_MENU);
     return TRUE;
 }
+
+static BOOL IsExpectedEvent(const TrayCallbackEvent* event,
+                            UINT expectedIconId) {
+    return event && event->iconId == expectedIconId &&
+           event->kind != TRAY_CALLBACK_NONE;
+}
+
+BOOL TrayCallback_DecodeCompatible(BOOL preferVersion4,
+                                   WPARAM wParam, LPARAM lParam,
+                                   UINT expectedIconId,
+                                   TrayCallbackEvent* event) {
+    if (!event) return FALSE;
+
+    TrayCallbackEvent decoded = {0};
+    if (TrayCallback_Decode(preferVersion4, wParam, lParam, &decoded) &&
+        IsExpectedEvent(&decoded, expectedIconId)) {
+        *event = decoded;
+        return TRUE;
+    }
+    if (TrayCallback_Decode(!preferVersion4, wParam, lParam, &decoded) &&
+        IsExpectedEvent(&decoded, expectedIconId)) {
+        *event = decoded;
+        return TRUE;
+    }
+
+    memset(event, 0, sizeof(*event));
+    return FALSE;
+}

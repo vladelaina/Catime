@@ -24,6 +24,9 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                 ModernClearFocusedChild(state);
             }
             return 0;
+        case WM_TIMER:
+            if (ModernHandleBodyScrollTimer(state, wParam)) return 0;
+            break;
         case WM_PAINT:
             if (state && state->finalized) {
                 PAINTSTRUCT paint = {0};
@@ -113,10 +116,7 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                 RECT thumb = {0};
                 if (ModernGetScrollbarRects(state, &track, &thumb)) {
                     if (PtInRect(&thumb, point)) {
-                        state->scrollBarDragging = TRUE;
-                        state->scrollDragStartY = point.y;
-                        state->scrollDragStartOffset96 =
-                            state->bodyScrollOffset96;
+                        ModernBeginBodyScrollDrag(state, point.y);
                         SetCapture(hwnd);
                         return 0;
                     }
@@ -136,7 +136,7 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             break;
         case WM_LBUTTONUP:
             if (state && state->scrollBarDragging) {
-                state->scrollBarDragging = FALSE;
+                ModernEndBodyScrollDrag(state);
                 if (GetCapture() == hwnd) ReleaseCapture();
                 ModernRefreshBodyScrollbarHover(state);
                 return 0;
@@ -159,7 +159,7 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                             int offset = state->scrollDragStartOffset96 +
                                 MulDiv(point.y - state->scrollDragStartY,
                                        state->bodyScrollMax96, travel);
-                            ModernSetBodyScrollOffset(state, offset);
+                            ModernQueueBodyScrollDrag(state, offset);
                         }
                         return 0;
                     }
@@ -204,13 +204,13 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
         case WM_CAPTURECHANGED:
             if (state && state->scrollBarDragging &&
                 (HWND)lParam != hwnd) {
-                state->scrollBarDragging = FALSE;
+                ModernEndBodyScrollDrag(state);
                 ModernRefreshBodyScrollbarHover(state);
             }
             break;
         case WM_CANCELMODE:
             if (state && state->scrollBarDragging) {
-                state->scrollBarDragging = FALSE;
+                ModernEndBodyScrollDrag(state);
                 if (GetCapture() == hwnd) ReleaseCapture();
                 ModernRefreshBodyScrollbarHover(state);
                 return 0;
@@ -280,6 +280,7 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             }
             break;
         case WM_NCDESTROY: {
+            ModernDiscardBodyScrollDrag(state);
             LRESULT result = DefSubclassProc(hwnd, msg, wParam, lParam);
             RemovePropW(hwnd, MODERN_DIALOG_STATE_PROP);
             RemoveWindowSubclass(hwnd, ModernDialogSubclassProc,

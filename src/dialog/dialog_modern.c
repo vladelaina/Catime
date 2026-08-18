@@ -48,13 +48,19 @@ static void ModernReleaseWindowFirstShowGuard(HWND hwnd, BOOL cloaked,
         (void)DwmSetWindowAttribute(
             hwnd, MODERN_DWM_CLOAK_ATTRIBUTE, &cloak, sizeof(cloak));
     }
-    if (transparent &&
-        !SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA)) {
+    if (transparent) {
+        (void)SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
         LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
-        SetWindowLongPtrW(hwnd, GWL_EXSTYLE, exStyle & ~WS_EX_LAYERED);
-        SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
-                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
-                         SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        if ((exStyle & WS_EX_LAYERED) != 0) {
+            SetWindowLongPtrW(hwnd, GWL_EXSTYLE,
+                              exStyle & ~WS_EX_LAYERED);
+            SetWindowPos(hwnd, NULL, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                             SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            RedrawWindow(hwnd, NULL, NULL,
+                         RDW_INVALIDATE | RDW_NOERASE | RDW_FRAME |
+                             RDW_ALLCHILDREN | RDW_UPDATENOW);
+        }
     }
 }
 

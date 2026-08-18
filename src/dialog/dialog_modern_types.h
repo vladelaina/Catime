@@ -32,6 +32,7 @@
 #define MODERN_COMBO_VISIBLE_ITEMS 7
 #define MODERN_TITLE_HOVER_COLOR RGB(0xF7, 0x7D, 0xAA)
 #define MODERN_DATETIME_REPEAT_TIMER 0xD145
+#define MODERN_SCROLL_DRAG_TIMER 0xD146
 #define MODERN_DATETIME_INPUT_TIMEOUT_MS 1200u
 
 typedef enum {
@@ -150,11 +151,14 @@ struct ModernDialogState {
     int bodyWheelDelta;
     int scrollDragStartY;
     int scrollDragStartOffset96;
+    int scrollPendingOffset96;
     RECT titleFrame;
     BOOL hasFooter;
     BOOL titleHovered;
     BOOL scrollBarHovered;
     BOOL scrollBarDragging;
+    BOOL scrollUpdatePending;
+    BOOL scrollUpdateTimerActive;
     BOOL attached;
     BOOL finalized;
     BOOL finalizing;

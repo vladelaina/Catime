@@ -12,6 +12,15 @@ void ModernApplyBodyControlRegion(
         return;
     }
 
+    /* Group frames are painted by the dialog behind the interactive child
+     * controls. Keeping the resource group-box window visible gives it a
+     * large sibling surface that can erase check boxes during a synchronized
+     * scroll repaint. */
+    if (control->kind == MODERN_CONTROL_GROUP) {
+        ModernHideBodyControl(control, !suppressRedraw);
+        return;
+    }
+
     RECT client = {0};
     GetClientRect(control->hwnd, &client);
     int width = client.right - client.left;
@@ -39,16 +48,6 @@ void ModernApplyBodyControlRegion(
     int viewportHeight = viewportBottom - viewportTop;
     BOOL fullyInside = visibleTop <= 0 && visibleBottom >= height;
 
-    /* Group boxes are decorative sibling windows; their labelled frame must
-     * not be moved or shortened as it scrolls out of the body.  Once the
-     * group title is above the viewport, hide only the frame.  Its sibling
-     * controls remain visible and continue to be clipped independently. */
-    if (!fullyInside && control->kind == MODERN_CONTROL_GROUP &&
-        controlTop < viewportTop) {
-        ModernHideBodyControl(control, !suppressRedraw);
-        return;
-    }
-
     if (!fullyInside && height > viewportHeight &&
         ModernControlOwnsVerticalScroll(control)) {
         int clippedTop = controlTop < viewportTop ? viewportTop : controlTop;
@@ -71,12 +70,15 @@ void ModernApplyBodyControlRegion(
                 0, clippedHeight, state->dpi)) {
             SetWindowRgn(control->hwnd, NULL, !suppressRedraw);
         }
-        ModernShowBodyControl(control);
+        ModernShowBodyControl(control, !suppressRedraw);
         SetWindowPos(control->hwnd, NULL,
                      windowRect.left, clippedTop,
                      windowRect.right - windowRect.left, clippedHeight,
                      SWP_NOZORDER | SWP_NOACTIVATE |
-                         (suppressRedraw ? SWP_NOREDRAW | SWP_NOCOPYBITS : 0));
+                         (suppressRedraw ? SWP_NOREDRAW : 0));
+        if (suppressRedraw) {
+            InvalidateRect(control->hwnd, NULL, FALSE);
+        }
         ModernRememberBodyRegion(
             control, MODERN_BODY_REGION_CROPPED_SCROLL,
             windowRect.right - windowRect.left, clippedHeight,
@@ -100,14 +102,7 @@ void ModernApplyBodyControlRegion(
         }
     }
 
-    if (!fullyInside && height <= viewportHeight &&
-        control->kind != MODERN_CONTROL_GROUP &&
-        control->kind != MODERN_CONTROL_INSTRUCTION) {
-        ModernHideBodyControl(control, !suppressRedraw);
-        return;
-    }
-
-    ModernShowBodyControl(control);
+    ModernShowBodyControl(control, !suppressRedraw);
     if (visibleTop < 0) visibleTop = 0;
     if (visibleBottom > height) visibleBottom = height;
 
@@ -134,6 +129,9 @@ void ModernApplyBodyControlRegion(
         }
         ModernRememberBodyRegion(control, mode, width, height,
                                  0, height, state->dpi);
+        if (suppressRedraw) {
+            InvalidateRect(control->hwnd, NULL, FALSE);
+        }
         return;
     }
 
@@ -169,6 +167,9 @@ void ModernApplyBodyControlRegion(
     }
     ModernRememberBodyRegion(control, mode, width, height,
                              visibleTop, visibleBottom, state->dpi);
+    if (suppressRedraw) {
+        InvalidateRect(control->hwnd, NULL, FALSE);
+    }
 }
 
 void ModernLayoutBodyControls(ModernDialogState* state,
@@ -228,6 +229,13 @@ void ModernLayoutBodyControls(ModernDialogState* state,
         control->bodyLayoutHeight = DialogModern_Scale(state->dpi, height96);
         control->bodyLayoutY96 = y96;
 
+        /* Parent painting owns group frames, so their hidden resource windows
+         * only supply labels and never need to move during scrolling. */
+        if (control->kind == MODERN_CONTROL_GROUP) {
+            ModernHideBodyControl(control, !suppressRedraw);
+            continue;
+        }
+
         int controlBottom = control->bodyLayoutY +
                             control->bodyLayoutHeight;
         BOOL completelyOutside = controlBottom <= viewportTop ||
@@ -241,7 +249,7 @@ void ModernLayoutBodyControls(ModernDialogState* state,
     }
 
     UINT positionFlags = SWP_NOZORDER | SWP_NOACTIVATE |
-        (suppressRedraw ? SWP_NOREDRAW | SWP_NOCOPYBITS : 0);
+        (suppressRedraw ? SWP_NOREDRAW : 0);
     HDWP deferred = pendingCount > 0
         ? BeginDeferWindowPos((int)pendingCount) : NULL;
     BOOL deferredComplete = deferred != NULL;

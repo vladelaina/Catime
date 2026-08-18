@@ -130,6 +130,11 @@ void ModernUpdateBodyScrollMetrics(ModernDialogState* state) {
         state->bodyWheelDelta = 0;
         state->scrollBarHovered = FALSE;
         state->scrollBarDragging = FALSE;
+        state->scrollUpdatePending = FALSE;
+        if (state->scrollUpdateTimerActive) {
+            KillTimer(state->hwnd, MODERN_SCROLL_DRAG_TIMER);
+            state->scrollUpdateTimerActive = FALSE;
+        }
         if (GetCapture() == state->hwnd) ReleaseCapture();
     }
 }
@@ -163,16 +168,33 @@ void ModernHideBodyControl(ModernControl* control, BOOL redraw) {
     if (!control || !control->hwnd) return;
     if (control->bodyRegionMode != MODERN_BODY_REGION_HIDDEN) {
         SetWindowRgn(control->hwnd, NULL, redraw);
-        ShowWindow(control->hwnd, SW_HIDE);
+        if (redraw) {
+            ShowWindow(control->hwnd, SW_HIDE);
+        } else {
+            /* Hide without invalidating the parent while a scroll layout is
+             * still moving the rest of the body controls. */
+            SetWindowPos(control->hwnd, NULL, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                         SWP_NOACTIVATE | SWP_HIDEWINDOW | SWP_NOREDRAW);
+        }
     }
     ModernRememberBodyRegion(control, MODERN_BODY_REGION_HIDDEN,
                              0, 0, 0, 0, 0);
 }
 
-void ModernShowBodyControl(ModernControl* control) {
+void ModernShowBodyControl(ModernControl* control, BOOL redraw) {
     if (!control || !control->hwnd) return;
     if (control->bodyRegionMode == MODERN_BODY_REGION_HIDDEN ||
         control->bodyRegionMode == MODERN_BODY_REGION_UNKNOWN) {
-        ShowWindow(control->hwnd, SW_SHOWNA);
+        if (redraw) {
+            ShowWindow(control->hwnd, SW_SHOWNA);
+        } else {
+            /* SetWindowPos can reveal the child without scheduling an
+             * intermediate paint while a scroll layout is being committed. */
+            SetWindowPos(control->hwnd, NULL, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                         SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOREDRAW);
+            InvalidateRect(control->hwnd, NULL, FALSE);
+        }
     }
 }

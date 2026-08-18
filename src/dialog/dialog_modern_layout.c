@@ -89,16 +89,23 @@ void ModernSetBodyScrollOffset(ModernDialogState* state, int offset96) {
 
     state->bodyScrollOffset96 = offset96;
 
-    /* Moving, clipping and hiding a large group of child windows one by one
-     * exposes intermediate frames on slower machines.  Freeze the short
-     * layout transaction, then invalidate one complete frame.  Keeping the
-     * repaint asynchronous lets consecutive wheel/drag messages coalesce;
-     * forcing every intermediate frame here makes scrolling visibly stall. */
-    SendMessageW(state->hwnd, WM_SETREDRAW, FALSE, 0);
+    /* DeferWindowPos and SWP_NOREDRAW commit the child layout without exposing
+     * intermediate positions. Invalidate the complete body once afterward so
+     * consecutive wheel and thumb updates can coalesce. */
     ModernLayoutBodyControls(state, TRUE);
-    SendMessageW(state->hwnd, WM_SETREDRAW, TRUE, 0);
-    RedrawWindow(state->hwnd, NULL, NULL,
-                 RDW_INVALIDATE | RDW_NOERASE | RDW_ALLCHILDREN);
+
+    RECT client = {0};
+    GetClientRect(state->hwnd, &client);
+    RECT body = {
+        0,
+        DialogModern_Scale(state->dpi, state->headerHeight96),
+        client.right,
+        DialogModern_Scale(
+            state->dpi,
+            state->headerHeight96 + state->bodyViewportHeight96)
+    };
+    RedrawWindow(state->hwnd, &body, NULL,
+                 RDW_INVALIDATE | RDW_NOERASE | RDW_NOCHILDREN);
 }
 
 BOOL ModernGetScrollbarRects(const ModernDialogState* state,

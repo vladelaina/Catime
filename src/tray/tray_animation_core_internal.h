@@ -14,6 +14,7 @@
 #include "tray/tray_animation_percent.h"
 #include "tray/tray_animation_menu.h"
 #include "tray/tray_icon_lifetime.h"
+#include "tray/tray_update_policy.h"
 #include "utils/memory_pool.h"
 #include "config.h"
 #include "system_monitor.h"

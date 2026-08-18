@@ -20,7 +20,15 @@
 extern void ReadPercentIconColorsConfig(void);
 
 void RegisterTaskbarCreatedMessage(void) {
-    WM_TASKBARCREATED = RegisterWindowMessageW(L"TaskbarCreated");
+    if (WM_TASKBARCREATED != 0) return;
+
+    UINT message = RegisterWindowMessageW(L"TaskbarCreated");
+    if (message == 0) {
+        LOG_WARNING("Failed to register TaskbarCreated message (error=%lu)",
+                    GetLastError());
+        return;
+    }
+    WM_TASKBARCREATED = message;
 }
 
 static HICON GetInitialPercentIcon(AnimationType type) {
@@ -73,6 +81,7 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
         LOG_WARNING("InitTrayIconInternal called with invalid main window");
         return;
     }
+    RegisterTaskbarCreatedMessage();
 
     g_mainHwnd = hwnd;
     g_hInstance = hInstance;
@@ -149,9 +158,6 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
         nid.uFlags = NIF_MESSAGE | NIF_TIP;
     }
 
-    if (WM_TASKBARCREATED == 0) {
-        RegisterTaskbarCreatedMessage();
-    }
     RefreshTrayBackgroundWorkState();
 }
 

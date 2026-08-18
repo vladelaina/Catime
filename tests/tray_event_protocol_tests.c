@@ -103,12 +103,41 @@ static void TestHoverCallbacks(void) {
     assert(event.kind == TRAY_CALLBACK_HOVER_CLOSE);
 }
 
+static void TestCompatibleCallbacks(void) {
+    TrayCallbackEvent event = {0};
+    WPARAM anchor = (WPARAM)MAKELPARAM(120, 240);
+
+    assert(TrayCallback_DecodeCompatible(
+        FALSE, anchor,
+        Version4Param(WM_CONTEXTMENU, CLOCK_ID_TRAY_APP_ICON),
+        CLOCK_ID_TRAY_APP_ICON, &event));
+    assert(event.kind == TRAY_CALLBACK_SECONDARY_MENU);
+    assert(event.hasAnchor);
+
+    assert(TrayCallback_DecodeCompatible(
+        TRUE, CLOCK_ID_TRAY_APP_ICON, WM_LBUTTONUP,
+        CLOCK_ID_TRAY_APP_ICON, &event));
+    assert(event.kind == TRAY_CALLBACK_PRIMARY_MENU);
+    assert(!event.hasAnchor);
+
+    assert(!TrayCallback_DecodeCompatible(
+        FALSE, CLOCK_ID_TRAY_APP_ICON + 1, WM_LBUTTONUP,
+        CLOCK_ID_TRAY_APP_ICON, &event));
+    assert(event.kind == TRAY_CALLBACK_NONE);
+    assert(!TrayCallback_DecodeCompatible(
+        FALSE, CLOCK_ID_TRAY_APP_ICON, WM_NULL,
+        CLOCK_ID_TRAY_APP_ICON, &event));
+    assert(!TrayCallback_DecodeCompatible(
+        FALSE, 0, 0, CLOCK_ID_TRAY_APP_ICON, NULL));
+}
+
 int main(void) {
     assert(!TrayCallback_Decode(TRUE, 0, 0, NULL));
     TestWindows7TrayContract();
     TestLegacyCallbacks();
     TestVersion4Callbacks();
     TestHoverCallbacks();
+    TestCompatibleCallbacks();
     puts("tray event protocol tests passed");
     return 0;
 }
