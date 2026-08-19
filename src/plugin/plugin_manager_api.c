@@ -88,7 +88,7 @@ BOOL PluginManager_NeedsSecurityCheck(int index) {
     return !IsPluginTrusted(pluginPathUtf8);
 }
 
-void PluginManager_StopAllPlugins(void) {
+static void StopAllPluginsInternal(BOOL clearPluginData) {
     if (!g_pluginManagerInitialized) return;
 
     PluginInfo* detachedPlugins = AllocatePluginSnapshotArray();
@@ -120,9 +120,17 @@ void PluginManager_StopAllPlugins(void) {
         LeaveCriticalSection(&g_pluginCS);
     }
 
-    PluginData_Clear();
+    if (clearPluginData) PluginData_Clear();
     StopHotReloadThread();
     LeaveCriticalSection(&g_pluginLifecycleCS);
+}
+
+void PluginManager_StopAllPlugins(void) {
+    StopAllPluginsInternal(TRUE);
+}
+
+void StopAllPluginsPreserveData(void) {
+    StopAllPluginsInternal(FALSE);
 }
 
 BOOL PluginManager_OpenPluginFolder(void) {

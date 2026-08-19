@@ -48,13 +48,6 @@ BOOL StartPluginWithExpectedPath(int index, const wchar_t* expectedPath) {
     if (!IsPluginTrusted(pluginPathUtf8)) {
         LOG_INFO("Plugin not trusted, showing security dialog: %ls", pluginDisplayName);
 
-        /* Show modeless security confirmation dialog */
-        HWND hwnd = PluginProcess_GetNotifyWindow();
-        if (IsPluginSecurityDialogOpen()) {
-            ShowPluginSecurityDialog(hwnd, pluginPathUtf8, "", index, "");
-            return FALSE;
-        }
-
         /* Calculate and save hash at dialog show time for later verification */
         char pluginHash[65] = {0};
         if (!CalculatePluginHash(pluginPathUtf8, pluginHash)) {
@@ -66,16 +59,26 @@ BOOL StartPluginWithExpectedPath(int index, const wchar_t* expectedPath) {
             LOG_ERROR("Failed to convert plugin display name to UTF-8: %ls", pluginDisplayName);
             return FALSE;
         }
+        int asyncPost = PluginManager_PostAsyncSecurityRequest(
+            index, pluginPathUtf8, displayNameUtf8, pluginHash);
+        if (asyncPost != 0) {
+            if (asyncPost < 0) PluginProcess_SetLastError(L"Window unavailable");
+            return FALSE;
+        }
+        HWND hwnd = PluginProcess_GetNotifyWindow();
         ShowPluginSecurityDialog(hwnd, pluginPathUtf8, displayNameUtf8, index, pluginHash);
 
         /* Return FALSE - plugin will be started via WM_DIALOG_PLUGIN_SECURITY message handler */
         return FALSE;
     }
 
-    /* Plugin is trusted, launch directly */
-    BOOL result = LaunchPreparedPlugin(index, pluginPath);
+    return StartTrustedPluginWithExpectedPath(index, pluginPath);
+}
+
+BOOL StartTrustedPluginWithExpectedPath(int index, const wchar_t* expectedPath) {
+    BOOL result = LaunchPreparedPlugin(index, expectedPath);
     if (result && PluginManager_IsPluginRunning(index)) {
-        UpdatePluginLastModTimeIfCurrent(index, pluginPath);
+        UpdatePluginLastModTimeIfCurrent(index, expectedPath);
         StartHotReloadIfNeeded();
     }
     return result;
@@ -92,14 +95,24 @@ BOOL PluginManager_StartPlugin(int index) {
  * @return TRUE if plugin started successfully
  */
 BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
-    if (!g_pluginManagerInitialized) return FALSE;
-
     char expectedPluginPathUtf8[MAX_PATH] = {0};
     const char* pendingPluginPath = GetPendingPluginPath();
-    if (pendingPluginPath) {
-        strncpy(expectedPluginPathUtf8, pendingPluginPath, sizeof(expectedPluginPathUtf8) - 1);
-        expectedPluginPathUtf8[sizeof(expectedPluginPathUtf8) - 1] = '\0';
-    }
+    if (pendingPluginPath) strncpy_s(expectedPluginPathUtf8, sizeof(expectedPluginPathUtf8),
+                                     pendingPluginPath, _TRUNCATE);
+    char savedHash[65] = {0};
+    const char* pendingHash = GetPendingPluginHash();
+    if (pendingHash) strncpy_s(savedHash, sizeof(savedHash), pendingHash, _TRUNCATE);
+    BOOL result = StartPluginAfterSecurityCheckWithSnapshot(index, trustPlugin,
+                                                              expectedPluginPathUtf8,
+                                                              savedHash);
+    ClearPendingPluginInfo();
+    return result;
+}
+
+BOOL StartPluginAfterSecurityCheckWithSnapshot(int index, BOOL trustPlugin,
+                                               const char* expectedPluginPathUtf8,
+                                               const char* savedHash) {
+    if (!g_pluginManagerInitialized) return FALSE;
 
     EnterCriticalSection(&g_pluginCS);
 
@@ -127,36 +140,26 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
         _stricmp(expectedPluginPathUtf8, pluginPathUtf8) != 0) {
         LOG_WARNING("Plugin index changed during security dialog; launch cancelled");
         PluginProcess_SetLastError(L"File changed");
-        ClearPendingPluginInfo();
         LeaveCriticalSection(&g_pluginCS);
         return FALSE;
     }
 
     LeaveCriticalSection(&g_pluginCS);
 
-    /* Security: Verify plugin file hasn't changed since dialog was shown */
-    char savedHash[65] = {0};
-    const char* pendingHash = GetPendingPluginHash();
-    if (pendingHash) {
-        strncpy(savedHash, pendingHash, sizeof(savedHash) - 1);
-        savedHash[sizeof(savedHash) - 1] = '\0';
-    }
-
+    /* Security: Verify plugin file hasn't changed since dialog was shown. */
     char verifiedHash[65] = {0};
-    if (savedHash[0] != '\0') {
+    if (savedHash && savedHash[0] != '\0') {
         if (CalculatePluginHash(pluginPathUtf8, verifiedHash)) {
             if (strcmp(savedHash, verifiedHash) != 0) {
                 LOG_ERROR("Plugin file changed during security dialog! Aborting launch for security.");
                 LOG_ERROR("  Saved hash: %s", savedHash);
                 LOG_ERROR("  Current hash: %s", verifiedHash);
                 PluginProcess_SetLastError(L"File changed");
-                ClearPendingPluginInfo();
                 return FALSE;
             }
         } else {
             LOG_ERROR("Failed to calculate current plugin hash, aborting launch for security");
             PluginProcess_SetLastError(L"Hash error");
-            ClearPendingPluginInfo();
             return FALSE;
         }
     } else {

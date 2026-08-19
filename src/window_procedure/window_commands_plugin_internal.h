@@ -13,6 +13,7 @@
 #include "plugin/plugin_data.h"
 #include "plugin/plugin_exit.h"
 #include "dialog/dialog_common.h"
+#include "dialog/dialog_plugin_security.h"
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "color/gradient.h"

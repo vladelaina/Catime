@@ -46,6 +46,8 @@
 #define WM_DIALOG_PLUGIN_SECURITY (WM_USER + 16) /**< Plugin security dialog result: wParam=IDYES(trust)/IDOK(once)/IDCANCEL */
 #define WM_UPDATE_CHECK_RESULT (WM_USER + 17)   /**< Update check result: wParam=1(update available)/0(no update), lParam=0 */
 #define WM_PLUGIN_HOT_RELOAD   (WM_USER + 18)   /**< Plugin hot-reload request: wParam=plugin index */
+#define WM_PLUGIN_SECURITY_REQUEST (WM_USER + 19) /**< Background trust check requires UI confirmation */
+#define WM_PLUGIN_OPERATION_COMPLETE (WM_USER + 20) /**< Background plugin operation result: lParam=result */
 #define WINDOW_HORIZONTAL_PADDING 190    /**< Accounts for window borders, shadow, and visual breathing room */
 #define WINDOW_VERTICAL_PADDING 5        /**< Minimal vertical spacing for compact display */
 

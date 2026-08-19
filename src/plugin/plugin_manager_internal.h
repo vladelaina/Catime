@@ -130,6 +130,15 @@ BOOL PreparePluginLaunchLocked(int index, const wchar_t* expectedPath,
 BOOL LaunchPreparedPlugin(int index, const wchar_t* expectedPath);
 void UpdatePluginLastModTimeIfCurrent(int index, const wchar_t* pluginPath);
 BOOL StartPluginWithExpectedPath(int index, const wchar_t* expectedPath);
+BOOL StartTrustedPluginWithExpectedPath(int index, const wchar_t* expectedPath);
+BOOL StartPluginAfterSecurityCheckWithSnapshot(int index, BOOL trustPlugin,
+                                               const char* expectedPathUtf8,
+                                               const char* savedHash);
+void StopAllPluginsPreserveData(void);
+void PluginManager_InitAsync(void);
+int PluginManager_PostAsyncSecurityRequest(int index, const char* path,
+                                           const char* displayName,
+                                           const char* hash);
 BOOL RestartPluginInternal(int index);
 BOOL RestartPluginInternalWithExpected(int index,
                                        const wchar_t* expectedName,

@@ -25,6 +25,7 @@
 #include "color/color_parser.h"
 #include "plugin/plugin_manager.h"
 #include "plugin/plugin_data.h"
+#include "dialog/dialog_plugin_security.h"
 #include "markdown/markdown_interactive.h"
 #include "drag_scale.h" // Added this line
 #include "preview_display.h"
@@ -130,10 +131,11 @@ void StartQuickCountdownByIndex(HWND hwnd, int index) {
 }
 void CleanupBeforeTimerAction(HWND hwnd) {
     RestoreWindowVisibility(hwnd);
+    ClosePluginSecurityDialog();
     StopNotificationSound();
     CloseAllNotifications();
     if (!PluginData_HasCatimeTag()) {
-        PluginManager_StopAllPlugins();
+        PluginManager_RequestStopAll(hwnd);
     }
 }
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {

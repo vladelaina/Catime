@@ -252,3 +252,9 @@ void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const cha
         ClearPendingPluginInfo();
     }
 }
+
+void ClosePluginSecurityDialog(void) {
+    HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_PLUGIN_SECURITY);
+    ClearPendingPluginInfo();
+    if (existing && IsWindow(existing)) DestroyWindow(existing);
+}

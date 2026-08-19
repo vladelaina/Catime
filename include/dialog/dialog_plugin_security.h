@@ -31,6 +31,9 @@ void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath,
  */
 BOOL IsPluginSecurityDialogOpen(void);
 
+/** Close an obsolete security prompt without posting a result. */
+void ClosePluginSecurityDialog(void);
+
 /**
  * @brief Get pending plugin path (for result handling)
  */

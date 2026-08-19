@@ -24,6 +24,32 @@ typedef struct {
     FILETIME lastModTime;       // Last modification time for hot-reload detection
 } PluginInfo;
 
+typedef struct {
+    LONG serial;
+    int index;
+    char path[MAX_PATH];
+    char displayName[128];
+    char hash[65];
+} PluginSecurityRequest;
+
+typedef struct {
+    LONG serial;
+    int operation;
+    int index;
+    BOOL success;
+    LONG generation;
+    wchar_t error[256];
+} PluginOperationResult;
+
+enum {
+    PLUGIN_OPERATION_START = 1,
+    PLUGIN_OPERATION_START_AFTER_SECURITY,
+    PLUGIN_OPERATION_STOP,
+    PLUGIN_OPERATION_STOP_ALL,
+    PLUGIN_OPERATION_STOP_ALL_PRESERVE_DATA,
+    PLUGIN_OPERATION_HOT_RELOAD
+};
+
 /**
  * @brief Initialize plugin manager
  */
@@ -150,6 +176,20 @@ BOOL PluginManager_RestartPlugin(int index);
  * @return TRUE if restart initiated successfully
  */
 BOOL PluginManager_RestartPendingHotReload(LONG requestGeneration);
+
+/* Non-blocking UI entry points. Operations execute serially on a worker and
+ * report WM_PLUGIN_OPERATION_COMPLETE to the supplied window. */
+BOOL PluginManager_RequestStart(HWND hwnd, int index);
+BOOL PluginManager_RequestStartAfterSecurityCheck(HWND hwnd, int index,
+                                                  BOOL trustPlugin,
+                                                  const char* expectedPath,
+                                                  const char* savedHash);
+BOOL PluginManager_RequestStop(HWND hwnd, int index);
+BOOL PluginManager_RequestStopAll(HWND hwnd);
+BOOL PluginManager_RequestStopAllPreserveData(HWND hwnd);
+BOOL PluginManager_RequestHotReload(HWND hwnd, LONG requestGeneration);
+BOOL PluginManager_IsOperationCurrent(LONG serial);
+void PluginManager_ShutdownAsync(void);
 
 /**
  * @brief Mark a plugin process as exited from the process monitor thread

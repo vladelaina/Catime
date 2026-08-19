@@ -23,6 +23,7 @@ void PluginManager_Init(void) {
     }
 
     g_pluginManagerInitialized = TRUE;
+    PluginManager_InitAsync();
     memset(g_plugins, 0, sizeof(g_plugins));
     g_pluginCount = 0;
     InterlockedExchange(&g_asyncScanPending, 0);
@@ -49,6 +50,9 @@ void PluginManager_Init(void) {
 
 void PluginManager_Shutdown(void) {
     if (!g_pluginManagerInitialized && !g_pluginLocksInitialized) return;
+
+    /* Drain queued start/stop work before tearing down process locks. */
+    PluginManager_ShutdownAsync();
 
     StopPluginFolderWatcher();
 

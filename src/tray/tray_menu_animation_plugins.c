@@ -92,10 +92,6 @@ void BuildPluginsSubmenu(HMENU hMenu) {
     int pluginCount = PluginManager_GetPluginCount();
 
     int activePluginIndex = PluginManager_GetActivePluginIndex();
-    if (activePluginIndex >= 0 &&
-        !PluginManager_IsPluginRunning(activePluginIndex)) {
-        activePluginIndex = -1;
-    }
 
     TrayMenuPaginationRange pluginItems = {0};
     if (pluginCount == 0) {

@@ -158,6 +158,8 @@ static const MessageDispatchEntry MESSAGE_DISPATCH_TABLE[] = {
     {WM_DIALOG_FONT_LICENSE, HandleDialogFontLicense},
     {WM_DIALOG_PLUGIN_SECURITY, HandleDialogPluginSecurity},
     {WM_PLUGIN_HOT_RELOAD, HandlePluginHotReload},
+    {WM_PLUGIN_SECURITY_REQUEST, HandlePluginSecurityRequest},
+    {WM_PLUGIN_OPERATION_COMPLETE, HandlePluginOperationComplete},
     {WM_PLUGIN_NOTIFY, HandlePluginNotifyMessage},
     {0, NULL}
 };
