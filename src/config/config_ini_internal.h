@@ -27,7 +27,7 @@
 #define INI_CS_INITIALIZING 1
 #define INI_CS_INITIALIZED 2
 #define INI_WAIT_SPIN_LIMIT 64u
-#define CONFIG_WRITE_LOCK_TIMEOUT_MS 2000u
+#define CONFIG_WRITE_LOCK_TIMEOUT_MS 500u
 
 typedef struct IniEntry {
     char* key;

@@ -35,7 +35,7 @@ static void TerminateOne(DWORD pid) {
     HANDLE process = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pid);
     if (!process) return;
     TerminateProcess(process, 0);
-    WaitForSingleObject(process, 500);
+    WaitForSingleObject(process, 0);
     CloseHandle(process);
 }
 

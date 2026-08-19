@@ -152,10 +152,13 @@ BOOL PluginProcess_TerminateDetached(PluginInfo* plugin) {
     if (pid) PluginProcess_TerminateTree(pid, 0);
     if (process) {
         TerminateProcess(process, 0);
-        WaitForSingleObject(process, 2000);
+        /* The process is already terminated. Do not make the tray command
+         * wait for a potentially stuck process object; the job/monitor cleanup
+         * will observe the exit asynchronously. */
+        WaitForSingleObject(process, 0);
         CloseHandle(process);
     }
-    if (thread) PluginProcess_CloseMonitorThreadHandle(thread, TRUE);
+    if (thread) PluginProcess_CloseMonitorThreadHandle(thread, FALSE);
     return TRUE;
 }
 

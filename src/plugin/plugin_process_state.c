@@ -15,7 +15,7 @@ void PluginProcess_CloseMonitorThreadHandle(HANDLE hThread, BOOL waitForExit) {
     if (waitForExit) {
         DWORD threadId = GetThreadId(hThread);
         if (threadId && threadId != GetCurrentThreadId()) {
-            DWORD result = WaitForSingleObject(hThread, 2000);
+            DWORD result = WaitForSingleObject(hThread, 250);
             if (result == WAIT_TIMEOUT) {
                 LOG_WARNING("[Process] Monitor thread did not exit before handle close");
             } else if (result == WAIT_FAILED) {

@@ -15,7 +15,7 @@
 #define STARTUP_MARKER_FILENAME L"startup_shortcut_target.txt"
 #define STARTUP_SHORTCUT_MUTEX_NAME \
     L"Local\\Vladelaina.Catime.StartupShortcut"
-#define STARTUP_SHORTCUT_LOCK_TIMEOUT_MS 5000
+#define STARTUP_SHORTCUT_LOCK_TIMEOUT_MS 250
 
 BOOL StartupPaths_GetShortcutPath(wchar_t* output, size_t outputSize) {
     wchar_t startupFolder[MAX_PATH] = {0};

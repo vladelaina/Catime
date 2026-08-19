@@ -157,6 +157,18 @@ target_include_directories(tray_menu_tracking_tests PRIVATE
 target_link_libraries(tray_menu_tracking_tests PRIVATE user32)
 add_test(NAME tray_menu_tracking COMMAND tray_menu_tracking_tests)
 
+add_executable(audio_player_cleanup_tests
+    tests/audio_player_cleanup_tests.c
+    src/audio_player_cleanup.c
+)
+target_include_directories(audio_player_cleanup_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+add_test(NAME audio_player_cleanup COMMAND audio_player_cleanup_tests)
+set_tests_properties(audio_player_cleanup PROPERTIES TIMEOUT 5)
+
 add_executable(tray_menu_pagination_tests
     tests/tray_menu_pagination_tests.c
     src/tray/tray_menu_pagination.c
@@ -307,6 +319,7 @@ set(_catime_test_targets
     tray_event_protocol_tests
     tray_update_policy_tests
     tray_menu_tracking_tests
+    audio_player_cleanup_tests
     tray_menu_pagination_tests
     timer_render_cache_tests
     render_retry_tests

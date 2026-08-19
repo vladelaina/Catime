@@ -5,7 +5,12 @@ void CALLBACK AudioTimerCallback(
     (void)time;
     AudioPlaybackCompleteCallback callback = NULL;
     HWND callbackHwnd = NULL;
-    AcquireSRWLockExclusive(&g_audioStateLock);
+    /* This callback runs on the main window thread. A background playback
+     * request may briefly own the lock while opening or closing the device;
+     * defer completion polling instead of blocking all window messages. */
+    if (!TryAcquireSRWLockExclusive(&g_audioStateLock)) {
+        return;
+    }
     if (message != WM_TIMER || idEvent != g_audioTimerId ||
         g_audioTimerKind == AUDIO_TIMER_NONE ||
         hwnd != g_audioTimerHwnd || !IsCurrentProcessAudioWindow(hwnd)) {
@@ -37,8 +42,10 @@ void CALLBACK AudioTimerCallback(
     }
     if (shouldStop) {
         HWND timerWindow = g_audioTimerHwnd ? g_audioTimerHwnd : hwnd;
+        AcquireSRWLockShared(&g_audioCallbackLock);
         callbackHwnd = g_audioCallbackHwnd;
         callback = g_audioCompleteCallback;
+        ReleaseSRWLockShared(&g_audioCallbackLock);
         BOOL notify = callback && callbackHwnd &&
             callbackHwnd == timerWindow &&
             IsCurrentProcessAudioWindow(callbackHwnd);

@@ -1,17 +1,14 @@
 #include "audio_player_internal.h"
 
-BOOL PauseNotificationSound(void) {
-    AcquireSRWLockExclusive(&g_audioStateLock);
+BOOL PauseNotificationSoundLocked(void) {
     if (!(g_isPlaying && !g_isPaused && g_deviceInitialized &&
           g_decoderInitialized)) {
-        ReleaseSRWLockExclusive(&g_audioStateLock);
         return FALSE;
     }
     DWORD pauseTick = GetTickCount();
     InterlockedExchange(&g_decoderPaused, 1);
     if (ma_device_stop(&g_device) != MA_SUCCESS) {
         InterlockedExchange(&g_decoderPaused, 0);
-        ReleaseSRWLockExclusive(&g_audioStateLock);
         return FALSE;
     }
     g_isPaused = MA_TRUE;
@@ -33,15 +30,12 @@ BOOL PauseNotificationSound(void) {
         g_audioTimerId = 0;
         g_audioTimerHwnd = timerWindow;
     }
-    ReleaseSRWLockExclusive(&g_audioStateLock);
     return TRUE;
 }
 
-BOOL ResumeNotificationSound(void) {
-    AcquireSRWLockExclusive(&g_audioStateLock);
+BOOL ResumeNotificationSoundLocked(void) {
     if (!(g_isPlaying && g_isPaused && g_deviceInitialized &&
           g_decoderInitialized)) {
-        ReleaseSRWLockExclusive(&g_audioStateLock);
         return FALSE;
     }
     HWND timerWindow = g_audioTimerHwnd ?
@@ -55,7 +49,6 @@ BOOL ResumeNotificationSound(void) {
             !StartPlaybackTimer(
                 timerWindow, AUDIO_TIMER_MINIAUDIO,
                 TIMER_INTERVAL_AUDIO_CHECK)) {
-            ReleaseSRWLockExclusive(&g_audioStateLock);
             return FALSE;
         }
         timerStarted = TRUE;
@@ -80,11 +73,29 @@ BOOL ResumeNotificationSound(void) {
             KillTimer(timerWindow, g_audioTimerId);
             g_audioTimerId = 0;
         }
-        ReleaseSRWLockExclusive(&g_audioStateLock);
         return FALSE;
     }
     if (atEnd) InterlockedExchange(&g_decoderDrainRemainingMs, 0);
     g_isPaused = MA_FALSE;
-    ReleaseSRWLockExclusive(&g_audioStateLock);
     return TRUE;
+}
+
+BOOL PauseNotificationSound(void) {
+    InterlockedExchange(&g_audioDesiredPaused, 1);
+    if (!TryAcquireSRWLockExclusive(&g_audioStateLock)) {
+        return TRUE;
+    }
+    BOOL result = PauseNotificationSoundLocked();
+    ReleaseSRWLockExclusive(&g_audioStateLock);
+    return result;
+}
+
+BOOL ResumeNotificationSound(void) {
+    InterlockedExchange(&g_audioDesiredPaused, 0);
+    if (!TryAcquireSRWLockExclusive(&g_audioStateLock)) {
+        return TRUE;
+    }
+    BOOL result = ResumeNotificationSoundLocked();
+    ReleaseSRWLockExclusive(&g_audioStateLock);
+    return result;
 }

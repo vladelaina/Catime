@@ -172,8 +172,13 @@ ma_result StartAudioPlayback(void) {
     result = ma_device_init(NULL, &deviceConfig, &g_device);
     if (result != MA_SUCCESS) return result;
     g_deviceInitialized = MA_TRUE;
+    LONG desiredVolume = InterlockedCompareExchange(
+        &g_audioDesiredVolume, 0, 0);
+    if (desiredVolume < 0 || desiredVolume > 100) {
+        desiredVolume = g_AppConfig.notification.sound.volume;
+    }
     ma_device_set_master_volume(
-        &g_device, (float)g_AppConfig.notification.sound.volume / 100.0f);
+        &g_device, (float)desiredVolume / 100.0f);
     InterlockedExchange(&g_decoderAtEnd, 0);
     InterlockedExchange(&g_decoderDrainDeadline, 0);
     InterlockedExchange(&g_decoderDrainRemainingMs, 0);

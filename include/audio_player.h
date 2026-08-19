@@ -53,7 +53,7 @@ BOOL PlayNotificationSound(HWND hwnd);
  * @brief Plays a specific notification sound without changing global config
  * @param hwnd Window handle for timer ownership/callbacks
  * @param soundFile UTF-8 path, "SYSTEM_BEEP", or empty for silent success
- * @return TRUE on success (including beep fallback), FALSE on catastrophic failure
+ * @return TRUE if playback was queued, FALSE if the request could not be queued
  */
 BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile);
 
@@ -61,10 +61,11 @@ BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile);
  * @brief Plays a specific notification sound for UI preview/testing
  * @param hwnd Window handle for timer ownership/callbacks
  * @param soundFile UTF-8 path, "SYSTEM_BEEP", or empty for silent success
- * @return TRUE if the selected sound played or was intentionally silent
+ * @return TRUE if the preview was queued, FALSE if it could not be queued
  *
  * @details
- * Unlike PlayNotificationSoundFile(), file playback failures do not fall back
+ * Preview loading runs on a background worker. Unlike
+ * PlayNotificationSoundFile(), file playback failures do not fall back
  * to system beep. Selecting "SYSTEM_BEEP" still plays the beep explicitly.
  */
 BOOL PreviewNotificationSoundFile(HWND hwnd, const char* soundFile);
@@ -86,10 +87,12 @@ BOOL PauseNotificationSound(void);
 BOOL ResumeNotificationSound(void);
 
 /**
- * @brief Immediately stops all audio and releases resources
+ * @brief Cancels audio playback without blocking the UI thread
  * 
  * @details
- * Stops all backends (miniaudio, PlaySound, timers) to prevent leaks and artifacts.
+ * Stops all backends (miniaudio, PlaySound, timers) to prevent leaks and
+ * artifacts. If a background request is currently opening the audio device,
+ * the request observes the cancellation and performs cleanup before exiting.
  * Must be called before application exit.
  * 
  * @note Safe to call when nothing is playing

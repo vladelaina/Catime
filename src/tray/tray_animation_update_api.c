@@ -89,3 +89,17 @@ BOOL TrayAnimation_HasDeferredIconUpdate(void) {
     EndTrayAnimationRuntimeUse();
     return deferred;
 }
+
+BOOL TrayAnimation_HasPendingCommit(void) {
+    if (!BeginTrayAnimationRuntimeUse()) return FALSE;
+    BOOL pending = FALSE;
+    if (IsAnimCriticalSectionReady()) {
+        EnterCriticalSection(&g_animCriticalSection);
+        pending = g_pendingPreviewCommit;
+        LeaveCriticalSection(&g_animCriticalSection);
+    } else {
+        pending = g_pendingPreviewCommit;
+    }
+    EndTrayAnimationRuntimeUse();
+    return pending;
+}

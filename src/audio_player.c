@@ -21,21 +21,27 @@ AudioTimerKind g_audioTimerKind = AUDIO_TIMER_NONE;
 HWND g_audioTimerHwnd = NULL;
 volatile LONG g_audioTimerSerial = 0;
 volatile LONG g_audioPlaybackGeneration = 0;
+volatile LONG g_audioDesiredVolume = -1;
+volatile LONG g_audioDesiredPaused = 0;
 SRWLOCK g_audioStateLock = SRWLOCK_INIT;
+SRWLOCK g_audioCallbackLock = SRWLOCK_INIT;
 
 void SetAudioVolume(int volume) {
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
-    AcquireSRWLockExclusive(&g_audioStateLock);
+    InterlockedExchange(&g_audioDesiredVolume, (LONG)volume);
+    AcquireSRWLockExclusive(&g_audioCallbackLock);
     if (g_deviceInitialized) {
         ma_device_set_master_volume(&g_device, (float)volume / 100.0f);
     }
-    ReleaseSRWLockExclusive(&g_audioStateLock);
+    ReleaseSRWLockExclusive(&g_audioCallbackLock);
 }
 
 void SetAudioPlaybackCompleteCallback(
     HWND hwnd, AudioPlaybackCompleteCallback callback) {
-    AcquireSRWLockExclusive(&g_audioStateLock);
+    if (!TryAcquireSRWLockExclusive(&g_audioStateLock)) {
+        return;
+    }
     if (callback && IsCurrentProcessAudioWindow(hwnd)) {
         g_audioCallbackHwnd = hwnd;
         g_audioCompleteCallback = callback;
@@ -54,13 +60,6 @@ void CleanupAudioResourcesLocked(void) {
         KillTimer(g_audioTimerHwnd, g_audioTimerId);
     }
     ResetPlaybackState();
-}
-
-void CleanupAudioResources(void) {
-    InterlockedIncrement(&g_audioPlaybackGeneration);
-    AcquireSRWLockExclusive(&g_audioStateLock);
-    CleanupAudioResourcesLocked();
-    ReleaseSRWLockExclusive(&g_audioStateLock);
 }
 
 static BOOL PlayNotificationSoundFileInternalLocked(
@@ -98,6 +97,7 @@ static DWORD WINAPI AudioPlaybackThreadProc(LPVOID parameter) {
     if (!request) return 0;
     HWND hwnd = request->hwnd;
     LONG generation = request->generation;
+    BOOL allowFinalBeepFallback = request->allowFinalBeepFallback;
     char soundFile[MAX_PATH] = {0};
     strncpy(soundFile, request->soundFile, sizeof(soundFile) - 1);
     soundFile[sizeof(soundFile) - 1] = '\0';
@@ -105,48 +105,45 @@ static DWORD WINAPI AudioPlaybackThreadProc(LPVOID parameter) {
     if (InterlockedCompareExchange(
             &g_audioPlaybackGeneration, 0, 0) != generation) return 0;
     AcquireSRWLockExclusive(&g_audioStateLock);
+    BOOL ownedPlaybackAttempt = FALSE;
+    BOOL playbackResult = FALSE;
     if (InterlockedCompareExchange(
             &g_audioPlaybackGeneration, 0, 0) == generation) {
-        PlayNotificationSoundFileInternalLocked(hwnd, soundFile, TRUE);
-        if (InterlockedCompareExchange(
-                &g_audioPlaybackGeneration, 0, 0) != generation) {
-            CleanupAudioResourcesLocked();
+        ownedPlaybackAttempt = TRUE;
+        playbackResult = PlayNotificationSoundFileInternalLocked(
+            hwnd, soundFile, allowFinalBeepFallback);
+        if (InterlockedCompareExchange(&g_audioDesiredPaused, 0, 0)) {
+            PauseNotificationSoundLocked();
         }
     }
+    if (ownedPlaybackAttempt && InterlockedCompareExchange(
+            &g_audioPlaybackGeneration, 0, 0) != generation) {
+        CleanupAudioResourcesLocked();
+    }
     ReleaseSRWLockExclusive(&g_audioStateLock);
+    if (ownedPlaybackAttempt && !playbackResult && !allowFinalBeepFallback) {
+        AudioPlaybackCompleteCallback callback = NULL;
+        AcquireSRWLockShared(&g_audioCallbackLock);
+        callback = g_audioCompleteCallback;
+        ReleaseSRWLockShared(&g_audioCallbackLock);
+        if (callback) callback(hwnd);
+    }
     return 0;
 }
 
-BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile) {
-    InterlockedIncrement(&g_audioPlaybackGeneration);
-    AcquireSRWLockExclusive(&g_audioStateLock);
-    BOOL result = PlayNotificationSoundFileInternalLocked(
-        hwnd, soundFile, TRUE);
-    ReleaseSRWLockExclusive(&g_audioStateLock);
-    return result;
-}
-
-BOOL PreviewNotificationSoundFile(HWND hwnd, const char* soundFile) {
-    InterlockedIncrement(&g_audioPlaybackGeneration);
-    AcquireSRWLockExclusive(&g_audioStateLock);
-    BOOL result = PlayNotificationSoundFileInternalLocked(
-        hwnd, soundFile, FALSE);
-    ReleaseSRWLockExclusive(&g_audioStateLock);
-    return result;
-}
-
-BOOL PlayNotificationSound(HWND hwnd) {
-    const char* configuredFile =
-        g_AppConfig.notification.sound.sound_file;
-    if (configuredFile[0] == '\0') return TRUE;
+static BOOL QueueAudioPlayback(
+    HWND hwnd, const char* soundFile, BOOL allowFinalBeepFallback) {
+    if (!soundFile) return FALSE;
+    InterlockedExchange(&g_audioDesiredPaused, 0);
     AudioPlaybackRequest* request = calloc(1, sizeof(*request));
     if (!request) {
         LOG_WARNING("Failed to allocate async audio playback request");
-        return PlayNotificationSoundFile(hwnd, configuredFile);
+        return FALSE;
     }
     request->hwnd = hwnd;
     request->generation = InterlockedIncrement(&g_audioPlaybackGeneration);
-    strncpy(request->soundFile, configuredFile,
+    request->allowFinalBeepFallback = allowFinalBeepFallback;
+    strncpy(request->soundFile, soundFile,
             sizeof(request->soundFile) - 1);
     request->soundFile[sizeof(request->soundFile) - 1] = '\0';
     HANDLE thread = CreateThread(
@@ -155,14 +152,24 @@ BOOL PlayNotificationSound(HWND hwnd) {
         LOG_WARNING(
             "Failed to start async audio playback thread (error=%lu)",
             GetLastError());
-        BOOL result = PlayNotificationSoundFile(hwnd, request->soundFile);
         free(request);
-        return result;
+        return FALSE;
     }
     CloseHandle(thread);
     return TRUE;
 }
 
-void StopNotificationSound(void) {
-    CleanupAudioResources();
+BOOL PlayNotificationSoundFile(HWND hwnd, const char* soundFile) {
+    return QueueAudioPlayback(hwnd, soundFile, TRUE);
+}
+
+BOOL PreviewNotificationSoundFile(HWND hwnd, const char* soundFile) {
+    return QueueAudioPlayback(hwnd, soundFile, FALSE);
+}
+
+BOOL PlayNotificationSound(HWND hwnd) {
+    const char* configuredFile =
+        g_AppConfig.notification.sound.sound_file;
+    if (configuredFile[0] == '\0') return TRUE;
+    return QueueAudioPlayback(hwnd, configuredFile, TRUE);
 }

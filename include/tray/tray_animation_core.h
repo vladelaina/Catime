@@ -152,6 +152,9 @@ void TrayAnimation_RefreshCurrentIcon(void);
  */
 BOOL TrayAnimation_HasDeferredIconUpdate(void);
 
+/** @brief Returns TRUE while a menu-selected animation is being committed. */
+BOOL TrayAnimation_HasPendingCommit(void);
+
 /**
  * @brief Queue animation preview from file path without persistence
  */

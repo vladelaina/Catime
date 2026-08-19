@@ -49,6 +49,8 @@ extern HANDLE g_previewCancelEvent;
 extern volatile LONG g_previewRequestSerial;
 extern char g_pendingPreviewName[MAX_PATH];
 extern BOOL g_pendingPreviewFromPath;
+extern BOOL g_pendingPreviewCommit;
+extern BOOL g_pendingPreviewPersist;
 extern BOOL g_previewWorkerRetiring;
 extern DWORD g_previewWorkerStartFailureCooldownUntil;
 extern SRWLOCK g_previewWorkerLock;
@@ -181,6 +183,7 @@ void ScheduleStartupAnimationRetry(HWND hwnd, const char* animationName);
 void CALLBACK TrayAnimationStartupRetryTimerProc(HWND hwnd, UINT msg,
                                                  UINT_PTR id, DWORD time);
 BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath);
+BOOL QueueAnimationCommitRequest(const char* name, BOOL persistConfig);
 BOOL UpdatePercentIconIfNeededInternal(
     const SystemMonitorSnapshot* snapshot,
     const wchar_t* synchronizedTooltip);

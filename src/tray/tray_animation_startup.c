@@ -134,6 +134,8 @@ void ApplyAnimationPathValueNoPersist(const char* value) {
         g_previewAnimationFromPath = FALSE;
         g_previewAnimationName[0] = '\0';
         g_pendingPreviewFromPath = FALSE;
+        g_pendingPreviewCommit = FALSE;
+        g_pendingPreviewPersist = FALSE;
         g_pendingPreviewName[0] = '\0';
         InterlockedIncrement(&g_previewRequestSerial);
         canceledPreviewLoad = TRUE;

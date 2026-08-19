@@ -49,6 +49,7 @@ typedef struct {
     HWND hwnd;
     char soundFile[MAX_PATH];
     LONG generation;
+    BOOL allowFinalBeepFallback;
 } AudioPlaybackRequest;
 
 extern ma_device g_device;
@@ -67,7 +68,10 @@ extern AudioTimerKind g_audioTimerKind;
 extern HWND g_audioTimerHwnd;
 extern volatile LONG g_audioTimerSerial;
 extern volatile LONG g_audioPlaybackGeneration;
+extern volatile LONG g_audioDesiredVolume;
+extern volatile LONG g_audioDesiredPaused;
 extern SRWLOCK g_audioStateLock;
+extern SRWLOCK g_audioCallbackLock;
 
 BOOL IsCurrentProcessAudioWindow(HWND hwnd);
 BOOL GetWideCharPath(
@@ -90,5 +94,7 @@ BOOL PlayAudioWithMiniaudio(
 void CALLBACK AudioTimerCallback(
     HWND hwnd, UINT message, UINT_PTR idEvent, DWORD time);
 void CleanupAudioResourcesLocked(void);
+BOOL PauseNotificationSoundLocked(void);
+BOOL ResumeNotificationSoundLocked(void);
 
 #endif

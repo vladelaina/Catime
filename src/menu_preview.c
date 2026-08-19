@@ -66,7 +66,6 @@ static BOOL RestoreConfiguredFontAfterPreview(void) {
     }
     return TRUE;
 }
-
 static BOOL IsValidTaskbarMonitorOption(TaskbarMonitorOption option) {
     return option == TASKBAR_MONITOR_OPTION_CPU_MEMORY ||
            option == TASKBAR_MONITOR_OPTION_NETWORK;
@@ -255,7 +254,8 @@ BOOL StartPreview(PreviewType type, const void* data, HWND hwnd) {
         type, data, PREVIEW_SOURCE_TRANSIENT, hwnd);
 }
 void CancelPreview(HWND hwnd) {
-    if (g_isPreviewActive || g_previewState.type == PREVIEW_TYPE_ANIMATION) {
+    if ((g_isPreviewActive || g_previewState.type == PREVIEW_TYPE_ANIMATION) &&
+        !TrayAnimation_HasPendingCommit()) {
         CancelAnimationPreview();
     }
     if (!IsPreviewActive()) return;

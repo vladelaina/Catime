@@ -5,7 +5,8 @@
 
 #include "tray_animation_core_internal.h"
 
-BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath) {
+static BOOL QueueAnimationLoadRequest(
+    const char* name, BOOL fromPath, BOOL commit, BOOL persistConfig) {
     if (!name || !*name) return FALSE;
     if (!BeginTrayAnimationRuntimeUse()) return FALSE;
 
@@ -27,10 +28,13 @@ BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath) {
     duplicateRequest =
         (g_isPreviewActive &&
          g_previewAnimationFromPath == fromPath &&
+         !commit &&
          g_previewAnimationName[0] != '\0' &&
          _stricmp(g_previewAnimationName, requestedName) == 0) ||
         (g_previewWorkerThread &&
          g_pendingPreviewFromPath == fromPath &&
+         g_pendingPreviewCommit == commit &&
+         (!commit || g_pendingPreviewPersist == persistConfig) &&
          g_pendingPreviewName[0] != '\0' &&
          _stricmp(g_pendingPreviewName, requestedName) == 0);
     if (IsAnimCriticalSectionReady()) {
@@ -56,6 +60,8 @@ BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath) {
     }
     CopyStringExactA(requestedName, g_pendingPreviewName, sizeof(g_pendingPreviewName));
     g_pendingPreviewFromPath = fromPath;
+    g_pendingPreviewCommit = commit;
+    g_pendingPreviewPersist = persistConfig;
     if (IsAnimCriticalSectionReady()) {
         LeaveCriticalSection(&g_animCriticalSection);
     }
@@ -69,6 +75,14 @@ BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath) {
 done:
     EndTrayAnimationRuntimeUse();
     return queued;
+}
+
+BOOL QueueAnimationPreviewRequest(const char* name, BOOL fromPath) {
+    return QueueAnimationLoadRequest(name, fromPath, FALSE, FALSE);
+}
+
+BOOL QueueAnimationCommitRequest(const char* name, BOOL persistConfig) {
+    return QueueAnimationLoadRequest(name, FALSE, TRUE, persistConfig);
 }
 
 /**
@@ -103,6 +117,8 @@ DWORD WINAPI PreviewWorkerThread(LPVOID param) {
 
         char requestedName[MAX_PATH] = {0};
         BOOL requestedFromPath = FALSE;
+        BOOL requestedCommit = FALSE;
+        BOOL requestedPersist = FALSE;
         LONG requestSerial = 0;
 
         AcquireSRWLockExclusive(&g_previewWorkerLock);
@@ -112,10 +128,14 @@ DWORD WINAPI PreviewWorkerThread(LPVOID param) {
             EnterCriticalSection(&g_animCriticalSection);
             CopyStringExactA(g_pendingPreviewName, requestedName, sizeof(requestedName));
             requestedFromPath = g_pendingPreviewFromPath;
+            requestedCommit = g_pendingPreviewCommit;
+            requestedPersist = g_pendingPreviewPersist;
             LeaveCriticalSection(&g_animCriticalSection);
         } else {
             CopyStringExactA(g_pendingPreviewName, requestedName, sizeof(requestedName));
             requestedFromPath = g_pendingPreviewFromPath;
+            requestedCommit = g_pendingPreviewCommit;
+            requestedPersist = g_pendingPreviewPersist;
         }
 
         if (!requestedName[0]) {
@@ -131,8 +151,10 @@ DWORD WINAPI PreviewWorkerThread(LPVOID param) {
 
         LoadedAnimation tempAnim;
         LoadedAnimation oldPreview;
+        LoadedAnimation oldMain;
         LoadedAnimation_Init(&tempAnim);
         LoadedAnimation_Init(&oldPreview);
+        LoadedAnimation_Init(&oldMain);
 
         int cx = GetSystemMetrics(SM_CXSMICON);
         int cy = GetSystemMetrics(SM_CYSMICON);
@@ -161,26 +183,47 @@ DWORD WINAPI PreviewWorkerThread(LPVOID param) {
         }
 
         if (!BeginTrayAnimationRuntimeUse()) {
+            LoadedAnimation_Free(&oldMain);
             LoadedAnimation_Free(&oldPreview);
             LoadedAnimation_Free(&tempAnim);
             continue;
         }
 
         BOOL shouldApply = FALSE;
+        BOOL canActivate = (tempAnim.count > 0 ||
+                            tempAnim.sourceType == ANIM_SOURCE_PERCENT ||
+                            tempAnim.sourceType == ANIM_SOURCE_CAPSLOCK ||
+                            _stricmp(requestedName, "__none__") == 0);
+        BOOL committedAnimation = FALSE;
         if (IsAnimCriticalSectionReady()) {
             EnterCriticalSection(&g_animCriticalSection);
         }
 
         if (InterlockedCompareExchange(&g_previewRequestSerial, 0, 0) == requestSerial &&
             g_pendingPreviewFromPath == requestedFromPath &&
+            g_pendingPreviewCommit == requestedCommit &&
+            g_pendingPreviewPersist == requestedPersist &&
             g_pendingPreviewName[0] != '\0' &&
             _stricmp(g_pendingPreviewName, requestedName) == 0) {
-
-            BOOL canActivate = (tempAnim.count > 0 || tempAnim.sourceType == ANIM_SOURCE_PERCENT ||
-                                tempAnim.sourceType == ANIM_SOURCE_CAPSLOCK ||
-                                _stricmp(requestedName, "__none__") == 0);
-
-            if (canActivate) {
+            if (requestedCommit && canActivate) {
+                SwapLoadedAnimation(&oldMain, &g_mainAnimation);
+                SwapLoadedAnimation(&g_mainAnimation, &tempAnim);
+                LoadedAnimation_Init(&tempAnim);
+                g_mainIndex = 0;
+                CopyStringExactA(requestedName, g_animationName,
+                                 sizeof(g_animationName));
+                if (g_isPreviewActive) {
+                    SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
+                    LoadedAnimation_Init(&g_previewAnimation);
+                }
+                g_previewIndex = 0;
+                g_isPreviewActive = FALSE;
+                g_previewAnimationFromPath = FALSE;
+                g_previewAnimationName[0] = '\0';
+                ResetFramePlaybackState();
+                shouldApply = TRUE;
+                committedAnimation = TRUE;
+            } else if (!requestedCommit && canActivate) {
                 SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
                 SwapLoadedAnimation(&g_previewAnimation, &tempAnim);
                 LoadedAnimation_Init(&tempAnim);
@@ -193,12 +236,26 @@ DWORD WINAPI PreviewWorkerThread(LPVOID param) {
                 shouldApply = TRUE;
             } else {
                 shouldApply = TRUE;
-                WriteLog(LOG_LEVEL_WARNING, "PreviewWorkerThread: preview failed to load '%s'", requestedName);
+                if (requestedCommit && g_isPreviewActive) {
+                    SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
+                    LoadedAnimation_Init(&g_previewAnimation);
+                    g_previewIndex = 0;
+                    g_isPreviewActive = FALSE;
+                    g_previewAnimationFromPath = FALSE;
+                    g_previewAnimationName[0] = '\0';
+                    ResetFramePlaybackState();
+                }
+                WriteLog(LOG_LEVEL_WARNING,
+                         "PreviewWorkerThread: %s failed for '%s'",
+                         requestedCommit ? "commit" : "preview",
+                         requestedName);
             }
         }
 
         if (shouldApply) {
             g_pendingPreviewFromPath = FALSE;
+            g_pendingPreviewCommit = FALSE;
+            g_pendingPreviewPersist = FALSE;
             g_pendingPreviewName[0] = '\0';
         }
 
@@ -206,9 +263,16 @@ DWORD WINAPI PreviewWorkerThread(LPVOID param) {
             LeaveCriticalSection(&g_animCriticalSection);
         }
 
+        LoadedAnimation_Free(&oldMain);
         LoadedAnimation_Free(&oldPreview);
         LoadedAnimation_Free(&tempAnim);
 
+        if (committedAnimation && requestedPersist &&
+            !WriteAnimationNameToConfigIfChanged(requestedName)) {
+            WriteLog(LOG_LEVEL_WARNING,
+                     "PreviewWorkerThread: animation applied but configuration could not be saved for '%s'",
+                     requestedName);
+        }
         if (shouldApply) {
             PostPreviewLoadedMessage();
         }
@@ -226,63 +290,3 @@ DWORD WINAPI PreviewWorkerThread(LPVOID param) {
 BOOL StartAnimationPreview(const char* name) {
     return QueueAnimationPreviewRequest(name, FALSE);
 }
-
-/**
- * @brief Cancel animation preview
- */
-void CancelAnimationPreview(void) {
-    LoadedAnimation oldPreview;
-    LoadedAnimation_Init(&oldPreview);
-    BOOL restoredMainAnimation = FALSE;
-
-    if (!BeginTrayAnimationRuntimeUse()) return;
-
-    AcquireSRWLockExclusive(&g_previewWorkerLock);
-
-    InterlockedIncrement(&g_previewRequestSerial);
-
-    if (IsAnimCriticalSectionReady()) {
-        EnterCriticalSection(&g_animCriticalSection);
-    }
-
-    BOOL hasPreviewState = g_isPreviewActive || g_pendingPreviewName[0] != '\0';
-    if (!hasPreviewState) {
-        if (IsAnimCriticalSectionReady()) {
-            LeaveCriticalSection(&g_animCriticalSection);
-        }
-        ReleaseSRWLockExclusive(&g_previewWorkerLock);
-        goto done;
-    }
-
-    g_isPreviewActive = FALSE;
-    g_previewAnimationFromPath = FALSE;
-    g_previewAnimationName[0] = '\0';
-    g_pendingPreviewFromPath = FALSE;
-    g_pendingPreviewName[0] = '\0';
-    SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
-    LoadedAnimation_Init(&g_previewAnimation);
-    ResetFramePlaybackState();
-
-    if (IsAnimCriticalSectionReady()) {
-        LeaveCriticalSection(&g_animCriticalSection);
-    }
-
-    SignalPreviewDecodeCancelLocked();
-    WakePreviewWorkerLocked();
-    ReleaseSRWLockExclusive(&g_previewWorkerLock);
-
-    EnsureTrayAnimationTimerState();
-    UpdateTrayIconToCurrentFrameForPreview();
-    restoredMainAnimation = TRUE;
-
-done:
-    LoadedAnimation_Free(&oldPreview);
-    EndTrayAnimationRuntimeUse();
-    if (restoredMainAnimation) {
-        RefreshTrayBackgroundWorkState();
-    }
-}
-
-/**
- * @brief Preload animation from config
- */

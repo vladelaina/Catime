@@ -77,6 +77,8 @@ void StartTrayAnimation(HWND hwnd, UINT intervalMs) {
     }
     LoadedAnimation_Init(&g_previewAnimation);
     g_pendingPreviewFromPath = FALSE;
+    g_pendingPreviewCommit = FALSE;
+    g_pendingPreviewPersist = FALSE;
     g_pendingPreviewName[0] = '\0';
     g_previewAnimationFromPath = FALSE;
     g_previewAnimationName[0] = '\0';
@@ -140,6 +142,8 @@ void StopTrayAnimation(HWND hwnd) {
     if (IsAnimCriticalSectionReady()) {
         EnterCriticalSection(&g_animCriticalSection);
         g_pendingPreviewFromPath = FALSE;
+        g_pendingPreviewCommit = FALSE;
+        g_pendingPreviewPersist = FALSE;
         g_pendingPreviewName[0] = '\0';
         g_previewAnimationFromPath = FALSE;
         g_previewAnimationName[0] = '\0';
@@ -147,6 +151,8 @@ void StopTrayAnimation(HWND hwnd) {
         LeaveCriticalSection(&g_animCriticalSection);
     } else {
         g_pendingPreviewFromPath = FALSE;
+        g_pendingPreviewCommit = FALSE;
+        g_pendingPreviewPersist = FALSE;
         g_pendingPreviewName[0] = '\0';
         g_previewAnimationFromPath = FALSE;
         g_previewAnimationName[0] = '\0';

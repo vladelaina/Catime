@@ -80,6 +80,8 @@ BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig) {
             g_previewAnimationFromPath = FALSE;
             g_previewAnimationName[0] = '\0';
             g_pendingPreviewFromPath = FALSE;
+            g_pendingPreviewCommit = FALSE;
+            g_pendingPreviewPersist = FALSE;
             g_pendingPreviewName[0] = '\0';
             InterlockedIncrement(&g_previewRequestSerial);
             CopyStringExactA(requestedName, g_animationName, sizeof(g_animationName));
@@ -140,67 +142,7 @@ BOOL SetCurrentAnimationNameInternal(const char* name, BOOL persistConfig) {
         }
     }
 
-    LoadedAnimation newMain;
-    LoadedAnimation oldMain;
-    LoadedAnimation oldPreview;
-    LoadedAnimation_Init(&newMain);
-    LoadedAnimation_Init(&oldMain);
-    LoadedAnimation_Init(&oldPreview);
-
-    int cx = GetSystemMetrics(SM_CXSMICON);
-    int cy = GetSystemMetrics(SM_CYSMICON);
-    if (!LoadAnimationByNameWithTemporaryPool(requestedName, &newMain, cx, cy)) {
-        LoadedAnimation_Free(&newMain);
-        goto done;
-    }
-
-    if (persistConfig && !WriteAnimationNameToConfigIfChanged(requestedName)) {
-        LoadedAnimation_Free(&newMain);
-        goto done;
-    }
-
-    BOOL canceledPreviewLoad = FALSE;
-    AcquireSRWLockExclusive(&g_previewWorkerLock);
-    if (IsAnimCriticalSectionReady()) {
-        EnterCriticalSection(&g_animCriticalSection);
-    }
-
-    SwapLoadedAnimation(&oldMain, &g_mainAnimation);
-    SwapLoadedAnimation(&g_mainAnimation, &newMain);
-    LoadedAnimation_Init(&newMain);
-    g_mainIndex = 0;
-    ResetFramePlaybackState();
-
-    if (g_isPreviewActive || g_pendingPreviewName[0] != '\0') {
-        SwapLoadedAnimation(&oldPreview, &g_previewAnimation);
-        LoadedAnimation_Init(&g_previewAnimation);
-        g_isPreviewActive = FALSE;
-        g_previewAnimationFromPath = FALSE;
-        g_previewAnimationName[0] = '\0';
-        g_pendingPreviewFromPath = FALSE;
-        g_pendingPreviewName[0] = '\0';
-        InterlockedIncrement(&g_previewRequestSerial);
-        canceledPreviewLoad = TRUE;
-    }
-
-    CopyStringExactA(requestedName, g_animationName, sizeof(g_animationName));
-
-    if (IsAnimCriticalSectionReady()) {
-        LeaveCriticalSection(&g_animCriticalSection);
-    }
-    if (canceledPreviewLoad) {
-        SignalPreviewDecodeCancelLocked();
-        WakePreviewWorkerLocked();
-    }
-    ReleaseSRWLockExclusive(&g_previewWorkerLock);
-
-    LoadedAnimation_Free(&oldMain);
-    LoadedAnimation_Free(&oldPreview);
-    ResetBuiltinIconUpdateCache();
-    EnsureTrayAnimationTimerState();
-    UpdateTrayIconToCurrentFrame();
-
-    result = TRUE;
+    result = QueueAnimationCommitRequest(requestedName, persistConfig);
 
 done:
     EndTrayAnimationRuntimeUse();
