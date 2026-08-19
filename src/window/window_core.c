@@ -11,6 +11,7 @@ float CLOCK_WINDOW_SCALE = 1.0f;
 int CLOCK_WINDOW_POS_X = 100;
 int CLOCK_WINDOW_POS_Y = 100;
 BOOL CLOCK_WINDOW_POSITION_MANUAL = FALSE;
+BOOL CLOCK_WINDOW_TASKBAR_ANCHORED = FALSE;
 DWORD g_systemPositionGuardUntil = 0;
 BOOL g_pendingSystemPositionRestore = FALSE;
 BOOL g_displayRestoreDeferredForFullscreen = FALSE;

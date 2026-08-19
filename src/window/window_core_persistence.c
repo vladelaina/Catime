@@ -45,6 +45,17 @@ BOOL SaveWindowSettings(HWND hwnd) {
             &monitorOffsetX, &monitorOffsetY,
             &taskbarAvailable, &taskbarAnchored,
             &taskbarAxisRatio, &taskbarCrossOffset);
+        if (!placementAvailable) {
+            monitorId[0] = '\0';
+            monitorOffsetX = 0;
+            monitorOffsetY = 0;
+            taskbarAvailable = FALSE;
+        }
+        if (!taskbarAvailable) {
+            taskbarAnchored = FALSE;
+            taskbarAxisRatio = 0;
+            taskbarCrossOffset = 0;
+        }
     }
 
     char posX[16], posY[16], scale[64], pluginScale[64];
@@ -68,24 +79,22 @@ BOOL SaveWindowSettings(HWND hwnd) {
             INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posY};
         updates[count++] = (IniKeyValue){
             INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY, "TRUE"};
-        if (placementAvailable) {
-            updates[count++] = (IniKeyValue){
-                INI_SECTION_DISPLAY, WINDOW_MONITOR_ID_KEY, monitorId};
-            updates[count++] = (IniKeyValue){
-                INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_X_KEY, offsetX};
-            updates[count++] = (IniKeyValue){
-                INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_Y_KEY, offsetY};
-        }
-        if (taskbarAvailable) {
-            updates[count++] = (IniKeyValue){
-                INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
-                taskbarAnchored ? "TRUE" : "FALSE"};
-            updates[count++] = (IniKeyValue){
-                INI_SECTION_DISPLAY, WINDOW_TASKBAR_AXIS_RATIO_KEY, axisRatio};
-            updates[count++] = (IniKeyValue){
-                INI_SECTION_DISPLAY, WINDOW_TASKBAR_CROSS_OFFSET_KEY,
-                crossOffset};
-        }
+        /* Always overwrite metadata so failed probes cannot leave stale
+           monitor or taskbar anchors behind. */
+        updates[count++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_MONITOR_ID_KEY, monitorId};
+        updates[count++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_X_KEY, offsetX};
+        updates[count++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_Y_KEY, offsetY};
+        updates[count++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
+            taskbarAnchored ? "TRUE" : "FALSE"};
+        updates[count++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_TASKBAR_AXIS_RATIO_KEY, axisRatio};
+        updates[count++] = (IniKeyValue){
+            INI_SECTION_DISPLAY, WINDOW_TASKBAR_CROSS_OFFSET_KEY,
+            crossOffset};
     }
     if (dirtyFlags & WINDOW_SETTINGS_DIRTY_SCALE) {
         updates[count++] = (IniKeyValue){
@@ -107,7 +116,10 @@ BOOL SaveWindowSettings(HWND hwnd) {
         return FALSE;
     }
     g_windowSettingsDirtyFlags &= ~dirtyFlags;
-    if (savePosition) CLOCK_WINDOW_POSITION_MANUAL = TRUE;
+    if (savePosition) {
+        CLOCK_WINDOW_POSITION_MANUAL = TRUE;
+        CLOCK_WINDOW_TASKBAR_ANCHORED = taskbarAnchored;
+    }
     return TRUE;
 }
 

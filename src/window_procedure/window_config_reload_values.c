@@ -157,7 +157,7 @@ BOOL WindowConfigInternal_ParseScaleFactor(const char* text, float* scale) {
     char* end = NULL;
     float parsed = strtof(text, &end);
     if (end == text || errno == ERANGE || !isfinite(parsed) ||
-        parsed < MIN_SCALE_FACTOR) {
+        parsed < MIN_SCALE_FACTOR || parsed > MAX_SCALE_FACTOR) {
         return FALSE;
     }
 

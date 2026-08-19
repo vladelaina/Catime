@@ -6,6 +6,7 @@
 #include "dialog/dialog_common.h"
 #include "dialog/dialog_error.h"
 #include "dialog/dialog_modern.h"
+#include "window/window_placement.h"
 #include "utils/time_parser.h"
 #include "../resource/resource.h"
 #include <stdlib.h>
@@ -119,16 +120,42 @@ BOOL Dialog_HandleColorMessages(UINT msg, WPARAM wParam, DialogContext* ctx, INT
  * Dialog Positioning
  * ============================================================================ */
 
+static BOOL Dialog_GetUsableMonitorBounds(HMONITOR monitor, RECT* bounds) {
+    if (!bounds) return FALSE;
+    SetRectEmpty(bounds);
+
+    MONITORINFO info = {0};
+    info.cbSize = sizeof(info);
+    if (monitor && GetMonitorInfoW(monitor, &info)) {
+        *bounds = info.rcWork;
+        if (bounds->right <= bounds->left ||
+            bounds->bottom <= bounds->top) {
+            *bounds = info.rcMonitor;
+        }
+    }
+
+    if (bounds->right <= bounds->left || bounds->bottom <= bounds->top) {
+        if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, bounds, 0) ||
+            bounds->right <= bounds->left ||
+            bounds->bottom <= bounds->top) {
+            bounds->left = 0;
+            bounds->top = 0;
+            bounds->right = GetSystemMetrics(SM_CXSCREEN);
+            bounds->bottom = GetSystemMetrics(SM_CYSCREEN);
+        }
+    }
+
+    return bounds->right > bounds->left && bounds->bottom > bounds->top;
+}
+
 void Dialog_CenterOnPrimaryScreen(HWND hwndDlg) {
     if (!hwndDlg || !IsWindow(hwndDlg)) {
         return;
     }
 
     HMONITOR hPrimaryMonitor = MonitorFromPoint((POINT){0, 0}, MONITOR_DEFAULTTOPRIMARY);
-    MONITORINFO mi = {0};
-    mi.cbSize = sizeof(MONITORINFO);
-
-    if (!GetMonitorInfo(hPrimaryMonitor, &mi)) {
+    RECT bounds = {0};
+    if (!Dialog_GetUsableMonitorBounds(hPrimaryMonitor, &bounds)) {
         return;
     }
 
@@ -140,15 +167,54 @@ void Dialog_CenterOnPrimaryScreen(HWND hwndDlg) {
     int dialogWidth = dialogRect.right - dialogRect.left;
     int dialogHeight = dialogRect.bottom - dialogRect.top;
 
-    int primaryWidth = mi.rcMonitor.right - mi.rcMonitor.left;
-    int primaryHeight = mi.rcMonitor.bottom - mi.rcMonitor.top;
+    int primaryWidth = bounds.right - bounds.left;
+    int primaryHeight = bounds.bottom - bounds.top;
 
-    int newX = mi.rcMonitor.left + (primaryWidth - dialogWidth) / 2;
-    int newY = mi.rcMonitor.top + (primaryHeight - dialogHeight) / 2;
+    int newX = bounds.left + (primaryWidth - dialogWidth) / 2;
+    int newY = bounds.top + (primaryHeight - dialogHeight) / 2;
+    WindowPlacement_ClampFullyVisible(
+        &bounds, dialogWidth, dialogHeight, &newX, &newY);
 
     /* Moving the dialog must not change its current z-order. */
     SetWindowPos(hwndDlg, NULL, newX, newY, 0, 0,
                  SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+BOOL Dialog_EnsureWindowVisible(HWND hwndDlg) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) return FALSE;
+
+    RECT rect = {0};
+    if (!GetWindowRect(hwndDlg, &rect) ||
+        rect.right <= rect.left || rect.bottom <= rect.top) {
+        return FALSE;
+    }
+
+    HMONITOR monitor = MonitorFromRect(&rect, MONITOR_DEFAULTTONEAREST);
+    RECT bounds = {0};
+    if (!Dialog_GetUsableMonitorBounds(monitor, &bounds)) return FALSE;
+
+    int x = rect.left;
+    int y = rect.top;
+    if (!WindowPlacement_ClampFullyVisible(
+            &bounds, rect.right - rect.left, rect.bottom - rect.top,
+            &x, &y)) {
+        return FALSE;
+    }
+    if (x == rect.left && y == rect.top) return TRUE;
+
+    return SetWindowPos(hwndDlg, NULL, x, y, 0, 0,
+                        SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+void Dialog_ActivateWindow(HWND hwndDlg) {
+    if (!hwndDlg || !IsWindow(hwndDlg)) return;
+    if (IsIconic(hwndDlg)) {
+        ShowWindow(hwndDlg, SW_RESTORE);
+    } else if (!IsWindowVisible(hwndDlg)) {
+        ShowWindow(hwndDlg, SW_SHOW);
+    }
+    Dialog_EnsureWindowVisible(hwndDlg);
+    SetForegroundWindow(hwndDlg);
 }
 
 /* ============================================================================

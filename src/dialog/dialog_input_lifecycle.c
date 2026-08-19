@@ -72,7 +72,7 @@ static void ShowInputDialog(HWND parent, DialogInstanceType type,
                             int resourceId, DWORD dialogId, int index) {
     HWND existing = Dialog_GetInstance(type);
     if (existing) {
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return;
     }
     if (!DialogInput_IsValidParentWindow(parent)) return;

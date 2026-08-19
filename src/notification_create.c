@@ -79,18 +79,7 @@ void NotificationShowToastInternal(HWND hwnd, const wchar_t* message,
 
     ReleaseDC(owner, hdc);
 
-    notifData->windowWidth = notificationWidth;
-
     int x, y, width, height;
-
-    /* Use saved position if valid (>= 0), otherwise auto-calculate */
-    if (g_AppConfig.notification.display.window_x >= 0 &&
-        g_AppConfig.notification.display.window_y >= 0) {
-        x = g_AppConfig.notification.display.window_x;
-        y = g_AppConfig.notification.display.window_y;
-    } else {
-        NotificationCalculatePosition(notificationWidth, NOTIFICATION_HEIGHT, &x, &y);
-    }
 
     /* Use saved size if valid (> 0), otherwise auto-calculate */
     if (g_AppConfig.notification.display.window_width > 0 &&
@@ -101,6 +90,18 @@ void NotificationShowToastInternal(HWND hwnd, const wchar_t* message,
         width = notificationWidth;
         height = NOTIFICATION_HEIGHT;
     }
+
+    /* Only (-1, -1) is the auto-position sentinel. Other negative values are
+       valid coordinates on monitors left of or above the primary display. */
+    if (g_AppConfig.notification.display.window_x == -1 &&
+        g_AppConfig.notification.display.window_y == -1) {
+        NotificationCalculatePosition(width, height, &x, &y);
+    } else {
+        x = g_AppConfig.notification.display.window_x;
+        y = g_AppConfig.notification.display.window_y;
+    }
+    NotificationConstrainPosition(width, height, &x, &y);
+    notifData->windowWidth = width;
 
     HWND hNotification = CreateWindowExW(
         WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW,

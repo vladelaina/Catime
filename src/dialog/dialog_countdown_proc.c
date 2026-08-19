@@ -236,6 +236,10 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             }
             break;
 
+        case WM_DISPLAYCHANGE:
+            Dialog_EnsureWindowVisible(hwnd);
+            return 0;
+
         case WM_SIZE:
             if (state) {
                 CountdownUpdateTextMetrics(hwnd, state);
@@ -245,6 +249,10 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             break;
 
         case WM_SETTINGCHANGE:
+            if (wParam == SPI_SETWORKAREA) {
+                Dialog_EnsureWindowVisible(hwnd);
+            }
+            /* Fall through to refresh theme-dependent colors. */
         case WM_THEMECHANGED:
             if (state) {
                 CountdownRefreshPalette(state);

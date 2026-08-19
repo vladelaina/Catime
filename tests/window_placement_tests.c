@@ -72,6 +72,77 @@ static void TestManualTopLeftRestore(void) {
     }
 }
 
+static void TestMinimumVisibleLength(void) {
+    ExpectNear("invalid visible length",
+               WindowPlacement_GetMinimumVisibleLength(0, 20), 0, 0);
+    ExpectNear("small window remains fully visible",
+               WindowPlacement_GetMinimumVisibleLength(10, 20), 10, 0);
+    ExpectNear("odd window keeps a majority visible",
+               WindowPlacement_GetMinimumVisibleLength(75, 20), 38, 0);
+    ExpectNear("large window keeps half visible",
+               WindowPlacement_GetMinimumVisibleLength(412, 20), 206, 0);
+}
+
+static void TestFullyVisibleClamp(void) {
+    const RECT primaryWorkArea = {0, 0, 1920, 1040};
+    const RECT leftWorkArea = {-1920, 0, 0, 1040};
+    int x = 3000;
+    int y = 2000;
+
+    if (!WindowPlacement_ClampFullyVisible(
+            &primaryWorkArea, 400, 200, &x, &y)) {
+        fprintf(stderr, "valid visibility clamp failed\n");
+        g_failures++;
+    } else {
+        ExpectNear("off-screen clamp x", x, 1520, 0);
+        ExpectNear("off-screen clamp y", y, 840, 0);
+    }
+
+    x = -1800;
+    y = 120;
+    WindowPlacement_ClampFullyVisible(&leftWorkArea, 400, 200, &x, &y);
+    ExpectNear("negative monitor x preserved", x, -1800, 0);
+    ExpectNear("negative monitor y preserved", y, 120, 0);
+
+    x = 500;
+    y = 500;
+    WindowPlacement_ClampFullyVisible(
+        &primaryWorkArea, 4000, 2000, &x, &y);
+    ExpectNear("oversized window aligns left", x, 0, 0);
+    ExpectNear("oversized window aligns top", y, 0, 0);
+
+    RECT invalid = {0, 0, 0, 0};
+    if (WindowPlacement_ClampFullyVisible(&invalid, 400, 200, &x, &y)) {
+        fprintf(stderr, "invalid visibility bounds were accepted\n");
+        g_failures++;
+    }
+}
+
+static void TestTaskbarAnchorPolicy(void) {
+    const RECT taskbar = {0, 1000, 1920, 1080};
+    const RECT overlappingWindow = {1600, 930, 2200, 1200};
+    const RECT separateWindow = {1600, 800, 1800, 900};
+    const RECT touchingWindow = {1600, 900, 1800, 1000};
+
+    if (WindowPlacement_ShouldPreserveTaskbarAnchor(
+            FALSE, &overlappingWindow, &taskbar)) {
+        fprintf(stderr, "incidental taskbar overlap was treated as an anchor\n");
+        g_failures++;
+    }
+    if (!WindowPlacement_ShouldPreserveTaskbarAnchor(
+            TRUE, &overlappingWindow, &taskbar)) {
+        fprintf(stderr, "configured taskbar anchor was not preserved\n");
+        g_failures++;
+    }
+    if (WindowPlacement_ShouldPreserveTaskbarAnchor(
+            TRUE, &separateWindow, &taskbar) ||
+        WindowPlacement_ShouldPreserveTaskbarAnchor(
+            TRUE, &touchingWindow, &taskbar)) {
+        fprintf(stderr, "non-overlapping window used a taskbar anchor\n");
+        g_failures++;
+    }
+}
+
 int main(void) {
     const RECT monitor = {0, 0, 1920, 1080};
     const RECT bottom = {0, 1040, 1920, 1080};
@@ -93,6 +164,9 @@ int main(void) {
     TestRoundTrip("negative-monitor round-trip", &leftMonitor,
                   &leftMonitorTaskbar, &negativeWindow);
     TestManualTopLeftRestore();
+    TestMinimumVisibleLength();
+    TestFullyVisibleClamp();
+    TestTaskbarAnchorPolicy();
 
     int ratio = 0;
     int cross = 0;

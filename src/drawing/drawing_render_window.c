@@ -49,11 +49,12 @@ void AdjustWindowSize(HWND hwnd, const SIZE* textSize, RECT* rect) {
         HMONITOR monitor = MonitorFromRect(&windowRect, MONITOR_DEFAULTTONEAREST);
         MONITORINFO monitorInfo = {0};
         RECT taskbarRect = {0};
-        RECT intersection = {0};
         monitorInfo.cbSize = sizeof(monitorInfo);
         if (monitor && GetMonitorInfo(monitor, &monitorInfo) &&
             GetTaskbarRectForMonitor(monitor, &taskbarRect) &&
-            IntersectRect(&intersection, &windowRect, &taskbarRect)) {
+            WindowPlacement_ShouldPreserveTaskbarAnchor(
+                CLOCK_WINDOW_TASKBAR_ANCHORED,
+                &windowRect, &taskbarRect)) {
             int axisRatio = 0;
             int crossOffset = 0;
             if (WindowPlacement_CaptureTaskbarAnchor(

@@ -194,6 +194,21 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
 
                 RECT rect;
                 if (GetWindowRect(hwnd, &rect)) {
+                    int x = rect.left;
+                    int y = rect.top;
+                    int width = rect.right - rect.left;
+                    int height = rect.bottom - rect.top;
+                    if (NotificationConstrainPosition(
+                            width, height, &x, &y) &&
+                        (x != rect.left || y != rect.top) &&
+                        SetWindowPos(hwnd, NULL, x, y, 0, 0,
+                                     SWP_NOSIZE | SWP_NOZORDER |
+                                     SWP_NOACTIVATE)) {
+                        rect.left = x;
+                        rect.top = y;
+                        rect.right = x + width;
+                        rect.bottom = y + height;
+                    }
                     if (!WriteConfigNotificationWindow(rect.left, rect.top,
                                                        rect.right - rect.left,
                                                        rect.bottom - rect.top)) {
@@ -203,6 +218,29 @@ LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM 
             }
             if (data) {
                 NotificationRenderWithRecovery(hwnd, data);
+            }
+            return 0;
+        }
+
+        case WM_DISPLAYCHANGE:
+        case WM_SETTINGCHANGE: {
+            if (msg == WM_SETTINGCHANGE && wParam != SPI_SETWORKAREA) {
+                break;
+            }
+
+            RECT rect = {0};
+            if (GetWindowRect(hwnd, &rect)) {
+                int x = rect.left;
+                int y = rect.top;
+                int width = rect.right - rect.left;
+                int height = rect.bottom - rect.top;
+                if (NotificationConstrainPosition(
+                        width, height, &x, &y) &&
+                    (x != rect.left || y != rect.top)) {
+                    SetWindowPos(hwnd, NULL, x, y, 0, 0,
+                                 SWP_NOSIZE | SWP_NOZORDER |
+                                 SWP_NOACTIVATE);
+                }
             }
             return 0;
         }

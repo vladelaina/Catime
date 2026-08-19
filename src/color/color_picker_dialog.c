@@ -210,7 +210,7 @@ BOOL ModernColorPicker_Show(HWND hwndParent,
     }
     if (Dialog_IsOpen(DIALOG_INSTANCE_COLOR_PICKER)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_COLOR_PICKER);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return FALSE;
     }
 

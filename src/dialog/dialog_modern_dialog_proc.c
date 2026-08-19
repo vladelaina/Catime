@@ -264,6 +264,9 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
                 return result;
             }
             break;
+        case WM_DISPLAYCHANGE:
+            Dialog_EnsureWindowVisible(hwnd);
+            break;
         case WM_SIZE:
             if (state && state->finalized && !state->finalizing) {
                 ModernSyncClientSizeFromWindow(state);
@@ -273,6 +276,10 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             }
             break;
         case WM_SETTINGCHANGE:
+            if (wParam == SPI_SETWORKAREA) {
+                Dialog_EnsureWindowVisible(hwnd);
+            }
+            /* Fall through to refresh theme-dependent colors. */
         case WM_THEMECHANGED:
             if (state && state->finalized) {
                 DialogModern_Refresh(hwnd);

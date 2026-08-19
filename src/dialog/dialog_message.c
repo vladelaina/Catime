@@ -74,7 +74,7 @@ static BOOL DialogMessageShowInternal(HWND hwndOwner,
     if (hwndOwner && !IsWindow(hwndOwner)) hwndOwner = NULL;
     if (trackInstance && Dialog_IsOpen(instanceType)) {
         HWND existing = Dialog_GetInstance(instanceType);
-        if (existing) SetForegroundWindow(existing);
+        if (existing) Dialog_ActivateWindow(existing);
         return FALSE;
     }
 

@@ -90,7 +90,7 @@ static void UpdateColorPreviewFromEdit(HWND hwndEdit) {
 void ShowColorInputDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_COLOR)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_COLOR);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return;
     }
 

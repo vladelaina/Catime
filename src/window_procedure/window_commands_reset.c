@@ -30,6 +30,7 @@ LRESULT CmdResetPosition(HWND hwnd, WPARAM wp, LPARAM lp) {
     CancelScheduledConfigSave(hwnd);
     ClearWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_ALL);
     CLOCK_WINDOW_POSITION_MANUAL = FALSE;
+    CLOCK_WINDOW_TASKBAR_ANCHORED = FALSE;
     float windowScale = ParseDefaultScaleOrFallback(
         DEFAULT_WINDOW_SCALE, CLOCK_WINDOW_SCALE);
     float pluginScale = ParseDefaultScaleOrFallback(

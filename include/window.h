@@ -26,6 +26,7 @@
  * ============================================================================ */
 
 #define MIN_SCALE_FACTOR 0.5f
+#define MAX_SCALE_FACTOR 20.0f
 
 static inline int ScaleWindowDimensionClamped(int baseDimension, float scaleFactor) {
     double scaled;

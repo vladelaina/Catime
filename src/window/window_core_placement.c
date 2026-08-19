@@ -92,6 +92,10 @@ BOOL WindowCore_TryResolvePlacementMetadata(
 void ClampWindowPositionToVisibleMonitor(
     int width, int height, int* x, int* y) {
     if (!x || !y || width <= 0 || height <= 0) return;
+    int requiredWidth = WindowPlacement_GetMinimumVisibleLength(
+        width, WINDOW_VISIBLE_MARGIN);
+    int requiredHeight = WindowPlacement_GetMinimumVisibleLength(
+        height, WINDOW_VISIBLE_MARGIN);
     RECT rect = {*x, *y,
                  WindowCore_AddIntsClamped(*x, width),
                  WindowCore_AddIntsClamped(*y, height)};
@@ -100,19 +104,19 @@ void ClampWindowPositionToVisibleMonitor(
     MONITORINFO info = {0};
     info.cbSize = sizeof(info);
     if (!GetMonitorInfo(monitor, &info)) WindowCore_GetPrimaryMonitorInfo(&info);
-    if ((long long)*x + WINDOW_VISIBLE_MARGIN > info.rcMonitor.right) {
-        *x = info.rcMonitor.right - WINDOW_VISIBLE_MARGIN;
+    if ((long long)*x + requiredWidth > info.rcMonitor.right) {
+        *x = info.rcMonitor.right - requiredWidth;
     }
-    if ((long long)*x + width - WINDOW_VISIBLE_MARGIN < info.rcMonitor.left) {
+    if ((long long)*x + width - requiredWidth < info.rcMonitor.left) {
         *x = WindowCore_ClampInt64ToInt(
-            (long long)info.rcMonitor.left - width + WINDOW_VISIBLE_MARGIN);
+            (long long)info.rcMonitor.left - width + requiredWidth);
     }
-    if ((long long)*y + WINDOW_VISIBLE_MARGIN > info.rcMonitor.bottom) {
-        *y = info.rcMonitor.bottom - WINDOW_VISIBLE_MARGIN;
+    if ((long long)*y + requiredHeight > info.rcMonitor.bottom) {
+        *y = info.rcMonitor.bottom - requiredHeight;
     }
-    if ((long long)*y + height - WINDOW_VISIBLE_MARGIN < info.rcMonitor.top) {
+    if ((long long)*y + height - requiredHeight < info.rcMonitor.top) {
         *y = WindowCore_ClampInt64ToInt(
-            (long long)info.rcMonitor.top - height + WINDOW_VISIBLE_MARGIN);
+            (long long)info.rcMonitor.top - height + requiredHeight);
     }
 }
 
@@ -134,6 +138,10 @@ void ResolveConfiguredWindowPosition(
     CLOCK_WINDOW_POSITION_MANUAL = ReadIniBool(
         INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY,
         FALSE, configPath);
+    CLOCK_WINDOW_TASKBAR_ANCHORED =
+        CLOCK_WINDOW_POSITION_MANUAL && ReadIniBool(
+            INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
+            FALSE, configPath);
     g_placementRetryNeeded = FALSE;
     MONITORINFO info = {0};
     WindowCore_GetPrimaryMonitorInfo(&info);

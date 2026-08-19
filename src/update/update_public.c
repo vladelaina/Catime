@@ -16,7 +16,7 @@
 
 void ShowExitMessageDialog(HWND hwnd) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_EXIT_MSG)) {
-        SetForegroundWindow(
+        Dialog_ActivateWindow(
             Dialog_GetInstance(DIALOG_INSTANCE_EXIT_MSG));
         return;
     }
@@ -82,7 +82,7 @@ void ShowNoUpdateDialog(HWND hwnd, const char* currentVersion) {
     UpdateUi_CloseDialog(DIALOG_INSTANCE_UPDATE);
     UpdateUi_ClearPendingUrl();
     if (Dialog_IsOpen(DIALOG_INSTANCE_NO_UPDATE)) {
-        SetForegroundWindow(
+        Dialog_ActivateWindow(
             Dialog_GetInstance(DIALOG_INSTANCE_NO_UPDATE));
         return;
     }

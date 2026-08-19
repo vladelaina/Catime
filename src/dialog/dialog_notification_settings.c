@@ -69,7 +69,7 @@ void DialogNotificationInternal_SetDialog(HWND hwndDlg) {
 void ShowNotificationSettingsDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_NOTIFICATION_FULL)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_NOTIFICATION_FULL);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return;
     }
 

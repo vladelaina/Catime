@@ -28,7 +28,7 @@ static SetThreadDpiAwarenessContextFunc LoadSetThreadDpiAwarenessContext(HMODULE
 void ShowAboutDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_ABOUT)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_ABOUT);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return;
     }
 

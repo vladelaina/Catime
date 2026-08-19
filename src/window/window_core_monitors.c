@@ -67,6 +67,8 @@ void WindowCore_GetPrimaryMonitorInfo(MONITORINFO* info) {
 
 typedef struct {
     RECT windowRect;
+    int requiredWidth;
+    int requiredHeight;
     BOOL visible;
 } MonitorVisibilityCheck;
 
@@ -78,8 +80,8 @@ static BOOL CALLBACK CheckWindowVisibilityOnMonitor(
     if (!check || !monitorRect) return FALSE;
     RECT intersection = {0};
     if (IntersectRect(&intersection, &check->windowRect, monitorRect) &&
-        intersection.right - intersection.left >= WINDOW_VISIBLE_MARGIN &&
-        intersection.bottom - intersection.top >= WINDOW_VISIBLE_MARGIN) {
+        intersection.right - intersection.left >= check->requiredWidth &&
+        intersection.bottom - intersection.top >= check->requiredHeight) {
         check->visible = TRUE;
         return FALSE;
     }
@@ -90,7 +92,16 @@ BOOL WindowCore_IsWindowRectVisibleOnAnyMonitor(const RECT* rect) {
     if (!rect || rect->right <= rect->left || rect->bottom <= rect->top) {
         return FALSE;
     }
-    MonitorVisibilityCheck check = {*rect, FALSE};
+    int width = rect->right - rect->left;
+    int height = rect->bottom - rect->top;
+    MonitorVisibilityCheck check = {
+        *rect,
+        WindowPlacement_GetMinimumVisibleLength(
+            width, WINDOW_VISIBLE_MARGIN),
+        WindowPlacement_GetMinimumVisibleLength(
+            height, WINDOW_VISIBLE_MARGIN),
+        FALSE
+    };
     EnumDisplayMonitors(
         NULL, NULL, CheckWindowVisibilityOnMonitor, (LPARAM)&check);
     return check.visible;

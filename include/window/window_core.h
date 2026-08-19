@@ -19,6 +19,7 @@ extern float CLOCK_WINDOW_SCALE;
 extern int CLOCK_WINDOW_POS_X;
 extern int CLOCK_WINDOW_POS_Y;
 extern BOOL CLOCK_WINDOW_POSITION_MANUAL;
+extern BOOL CLOCK_WINDOW_TASKBAR_ANCHORED;
 
 extern BOOL CLOCK_EDIT_MODE;
 extern BOOL CLOCK_IS_DRAGGING;
@@ -97,6 +98,9 @@ void ResolveConfiguredWindowPosition(int width, int height, int* outX, int* outY
 
 /** Keep at least a small, usable portion of a window on an active monitor. */
 void ClampWindowPositionToVisibleMonitor(int width, int height, int* x, int* y);
+
+/** Restore an inaccessible window to a usable portion of an active monitor. */
+BOOL EnsureWindowPositionVisible(HWND hwnd);
 
 /**
  * @brief Begin a short guard window after system-driven display changes

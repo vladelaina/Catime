@@ -107,6 +107,7 @@ void DialogModern_ShowPaintedWindow(HWND hwnd, int showCommand) {
 
     ModernDialogState* state = ModernGetState(hwnd);
     if (state) (void)ModernFinalize(state);
+    Dialog_EnsureWindowVisible(hwnd);
 
     BOOL cloaked = FALSE;
     BOOL transparent = FALSE;

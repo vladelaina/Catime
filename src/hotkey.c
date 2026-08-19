@@ -14,7 +14,7 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
     HWND dialog;
 
     if (Dialog_IsOpen(DIALOG_INSTANCE_HOTKEY)) {
-        SetForegroundWindow(Dialog_GetInstance(DIALOG_INSTANCE_HOTKEY));
+        Dialog_ActivateWindow(Dialog_GetInstance(DIALOG_INSTANCE_HOTKEY));
         return;
     }
     if (!Hotkey_IsValidParent(hwndParent)) return;
@@ -25,6 +25,7 @@ void ShowHotkeySettingsDialog(HWND hwndParent) {
         if (!DialogModern_PrepareForShow(dialog)) {
             LOG_WARNING("Failed to prepare hotkey dialog before show");
         }
+        Dialog_EnsureWindowVisible(dialog);
         ShowWindow(dialog, SW_SHOW);
     } else {
         LOG_ERROR("Failed to create hotkey dialog (error=%lu)",

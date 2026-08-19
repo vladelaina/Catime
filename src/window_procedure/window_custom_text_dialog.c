@@ -51,7 +51,7 @@ static void FocusCustomTextDisplayEdit(HWND hwndDlg, BOOL moveCaretToEnd) {
         return;
     }
 
-    SetForegroundWindow(hwndDlg);
+    Dialog_ActivateWindow(hwndDlg);
     SetFocus(hwndEdit);
     if (moveCaretToEnd) {
         WindowPlugin_MoveEditCaretToEnd(hwndEdit);

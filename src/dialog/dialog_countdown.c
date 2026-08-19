@@ -11,7 +11,7 @@ static void ShowModernTimeInputDialog(HWND hwndParent,
                                       int pomodoroTimeIndex) {
     if (Dialog_IsOpen(instanceType)) {
         HWND existing = Dialog_GetInstance(instanceType);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return;
     }
 
@@ -29,7 +29,7 @@ static void ShowModernTimeInputDialog(HWND hwndParent,
 
     if (hwndDlg) {
         DialogModern_ShowPaintedWindow(hwndDlg, SW_SHOWNORMAL);
-        SetForegroundWindow(hwndDlg);
+        Dialog_ActivateWindow(hwndDlg);
     }
 }
 

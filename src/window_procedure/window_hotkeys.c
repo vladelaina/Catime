@@ -20,7 +20,7 @@ typedef void (*HotkeyAction)(HWND);
 
 static void HotkeyCustomCountdown(HWND hwnd) {
     if (g_hwndInputDialog && IsWindow(g_hwndInputDialog)) {
-        SetForegroundWindow(g_hwndInputDialog);
+        Dialog_ActivateWindow(g_hwndInputDialog);
         return;
     }
     ClearInputBuffer(inputText, sizeof(inputText));

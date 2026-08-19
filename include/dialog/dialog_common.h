@@ -209,6 +209,12 @@ BOOL Dialog_HandleColorMessages(UINT msg, WPARAM wParam, DialogContext* ctx, INT
  */
 void Dialog_CenterOnPrimaryScreen(HWND hwndDlg);
 
+/** Move a dialog into the nearest monitor work area when necessary. */
+BOOL Dialog_EnsureWindowVisible(HWND hwndDlg);
+
+/** Restore, recover, and bring an existing dialog to the foreground. */
+void Dialog_ActivateWindow(HWND hwndDlg);
+
 /* ============================================================================
  * Validation and Utilities
  * ============================================================================ */

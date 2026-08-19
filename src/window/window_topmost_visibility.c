@@ -68,6 +68,7 @@ void EnsureWindowVisibleWithTopmostState(HWND hwnd) {
                      SWP_SHOWWINDOW);
     }
     TryRestorePendingWindowPosition(hwnd);
+    EnsureWindowPositionVisible(hwnd);
 }
 
 void HideWindowIntentionally(HWND hwnd) {

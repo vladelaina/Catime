@@ -156,7 +156,7 @@ void Dialog_FocusControl(HWND hwndDlg, int controlId, BOOL selectAll) {
     if (!hwndDlg || !IsWindow(hwndDlg)) return;
     HWND control = GetDlgItem(hwndDlg, controlId);
     if (!control || !IsWindow(control)) return;
-    SetForegroundWindow(hwndDlg);
+    Dialog_ActivateWindow(hwndDlg);
     SetFocus(control);
     if (selectAll) Dialog_SelectAllText(control);
 }

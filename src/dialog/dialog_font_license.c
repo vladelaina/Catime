@@ -200,7 +200,7 @@ INT_PTR CALLBACK FontLicenseDlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARA
 void ShowFontLicenseDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_FONT_LICENSE)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_FONT_LICENSE);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return;
     }
 

@@ -3,6 +3,26 @@
 
 #include <windows.h>
 
+/** Return the minimum usable portion that must remain visible. */
+int WindowPlacement_GetMinimumVisibleLength(int windowLength,
+                                            int minimumMargin);
+
+/** Clamp a window origin so the window remains within the supplied bounds. */
+BOOL WindowPlacement_ClampFullyVisible(const RECT* bounds,
+                                       int windowWidth,
+                                       int windowHeight,
+                                       int* x,
+                                       int* y);
+
+/**
+ * Return TRUE when a saved taskbar anchor should be preserved for this
+ * window geometry. Incidental taskbar overlap is not treated as an anchor.
+ */
+BOOL WindowPlacement_ShouldPreserveTaskbarAnchor(
+    BOOL configuredTaskbarAnchored,
+    const RECT* windowRect,
+    const RECT* taskbarRect);
+
 /** Capture a taskbar-relative placement that remains meaningful after resize. */
 BOOL WindowPlacement_CaptureTaskbarAnchor(const RECT* windowRect,
                                           const RECT* taskbarRect,

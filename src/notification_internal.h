@@ -17,6 +17,7 @@
 #include "dialog/dialog_notification.h"
 #include "log.h"
 #include "utils/render_retry.h"
+#include "window/window_placement.h"
 #include "../resource/resource.h"
 
 #define NOTIFICATION_OPACITY_SAVE_TIMER_ID 1003
@@ -83,6 +84,7 @@ void NotificationLoadConfigs(void);
 BOOL NotificationStartGradientTimer(HWND hwnd, NotificationData* data);
 void NotificationStopGradientTimer(HWND hwnd);
 void NotificationCalculatePosition(int width, int height, int* x, int* y);
+BOOL NotificationConstrainPosition(int width, int height, int* x, int* y);
 BYTE NotificationUpdateAnimationOpacity(AnimationState state,
                                         BYTE currentOpacity,
                                         BYTE maxOpacity,

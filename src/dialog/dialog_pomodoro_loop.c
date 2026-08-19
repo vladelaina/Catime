@@ -61,7 +61,7 @@ static BOOL ParsePomodoroLoopCount(const wchar_t* input, int* loopCount) {
 void ShowPomodoroLoopDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_POMODORO_LOOP)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_POMODORO_LOOP);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         PostMessageW(existing, POMODORO_LOOP_FOCUS_MESSAGE, 0, 0);
         return;
     }

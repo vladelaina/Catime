@@ -89,6 +89,36 @@ void NotificationCalculatePosition(int width, int height, int* x, int* y) {
     *y = workArea.bottom - height - NOTIFICATION_BOTTOM_MARGIN;
 }
 
+BOOL NotificationConstrainPosition(int width, int height, int* x, int* y) {
+    if (width <= 0 || height <= 0 || !x || !y) return FALSE;
+
+    POINT origin = {*x, *y};
+    HMONITOR monitor = MonitorFromPoint(origin, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO info = {0};
+    info.cbSize = sizeof(info);
+    RECT bounds = {0};
+
+    if (monitor && GetMonitorInfoW(monitor, &info)) {
+        bounds = info.rcWork;
+        if (bounds.right <= bounds.left || bounds.bottom <= bounds.top) {
+            bounds = info.rcMonitor;
+        }
+    }
+
+    if (bounds.right <= bounds.left || bounds.bottom <= bounds.top) {
+        if (!SystemParametersInfoW(SPI_GETWORKAREA, 0, &bounds, 0) ||
+            bounds.right <= bounds.left || bounds.bottom <= bounds.top) {
+            bounds.left = 0;
+            bounds.top = 0;
+            bounds.right = GetSystemMetrics(SM_CXSCREEN);
+            bounds.bottom = GetSystemMetrics(SM_CYSCREEN);
+        }
+    }
+
+    return WindowPlacement_ClampFullyVisible(
+        &bounds, width, height, x, y);
+}
+
 /** Centralized opacity calculation for fade animations */
 BYTE NotificationUpdateAnimationOpacity(AnimationState state, BYTE currentOpacity,
                                    BYTE maxOpacity, BOOL* shouldDestroy) {

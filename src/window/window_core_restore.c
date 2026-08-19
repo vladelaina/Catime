@@ -25,6 +25,40 @@ BOOL IsSystemPositionChangeGuardActive(void) {
     return FALSE;
 }
 
+BOOL EnsureWindowPositionVisible(HWND hwnd) {
+    if (!hwnd || !IsWindow(hwnd)) return FALSE;
+
+    RECT rect = {0};
+    if (!GetWindowRect(hwnd, &rect) ||
+        rect.right <= rect.left || rect.bottom <= rect.top) {
+        return FALSE;
+    }
+    if (WindowCore_IsWindowRectVisibleOnAnyMonitor(&rect)) return TRUE;
+
+    int width = rect.right - rect.left;
+    int height = rect.bottom - rect.top;
+    int x = rect.left;
+    int y = rect.top;
+    if (CLOCK_EDIT_MODE) {
+        ClampWindowPositionToVisibleMonitor(width, height, &x, &y);
+    } else {
+        ResolveConfiguredWindowPosition(width, height, &x, &y);
+    }
+    if (x == rect.left && y == rect.top) return FALSE;
+    if (!SetWindowPos(hwnd, NULL, x, y, 0, 0,
+                      SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE)) {
+        LOG_WARNING("Failed to recover inaccessible window position (error=%lu)",
+                    GetLastError());
+        return FALSE;
+    }
+
+    CLOCK_WINDOW_POS_X = x;
+    CLOCK_WINDOW_POS_Y = y;
+    LOG_INFO("Recovered inaccessible window position: (%ld, %ld) -> (%d, %d)",
+             rect.left, rect.top, x, y);
+    return TRUE;
+}
+
 void RestoreWindowPositionAfterSystemChange(HWND hwnd) {
     if (!hwnd || !IsWindow(hwnd)) return;
     if (CLOCK_EDIT_MODE) {

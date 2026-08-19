@@ -85,6 +85,7 @@ static void ForceForegroundAndFocus(HWND hwndDialog) {
         AttachThreadInput(foreThread, curThread, TRUE);
     }
     
+    Dialog_EnsureWindowVisible(hwndDialog);
     AllowSetForegroundWindow(ASFW_ANY);
     BringWindowToTop(hwndDialog);
     SetForegroundWindow(hwndDialog);

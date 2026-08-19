@@ -23,6 +23,12 @@ BOOL ValidateWindowConfig(ConfigSnapshot* snapshot) {
         snapshot->windowScale = MIN_SCALE_FACTOR;
         modified = TRUE;
     }
+    if (snapshot->windowScale > MAX_SCALE_FACTOR) {
+        LOG_WARNING("Window scale too large (%.2f), setting to %.2f",
+                   snapshot->windowScale, MAX_SCALE_FACTOR);
+        snapshot->windowScale = MAX_SCALE_FACTOR;
+        modified = TRUE;
+    }
     if (!isfinite(snapshot->pluginScale)) {
         LOG_WARNING("Plugin scale is not finite, setting to %.2f", MIN_SCALE_FACTOR);
         snapshot->pluginScale = MIN_SCALE_FACTOR;
@@ -32,6 +38,12 @@ BOOL ValidateWindowConfig(ConfigSnapshot* snapshot) {
         LOG_WARNING("Plugin scale too small (%.2f), setting to %.2f",
                    snapshot->pluginScale, MIN_SCALE_FACTOR);
         snapshot->pluginScale = MIN_SCALE_FACTOR;
+        modified = TRUE;
+    }
+    if (snapshot->pluginScale > MAX_SCALE_FACTOR) {
+        LOG_WARNING("Plugin scale too large (%.2f), setting to %.2f",
+                   snapshot->pluginScale, MAX_SCALE_FACTOR);
+        snapshot->pluginScale = MAX_SCALE_FACTOR;
         modified = TRUE;
     }
     if (snapshot->windowOpacity < MIN_VISIBLE_OPACITY) {

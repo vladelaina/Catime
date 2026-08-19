@@ -49,7 +49,7 @@ static INT_PTR CALLBACK SimpleFontPickerProc(HWND hdlg, UINT msg,
 BOOL ShowSystemFontDialog(HWND hwndParent) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_FONT_PICKER)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_FONT_PICKER);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return TRUE;
     }
 

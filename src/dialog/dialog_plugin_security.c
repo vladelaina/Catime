@@ -234,7 +234,7 @@ static INT_PTR CALLBACK PluginSecurityDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wP
 void ShowPluginSecurityDialog(HWND hwndParent, const char* pluginPath, const char* pluginName, int pluginIndex, const char* pluginHash) {
     if (Dialog_IsOpen(DIALOG_INSTANCE_PLUGIN_SECURITY)) {
         HWND existing = Dialog_GetInstance(DIALOG_INSTANCE_PLUGIN_SECURITY);
-        SetForegroundWindow(existing);
+        Dialog_ActivateWindow(existing);
         return;
     }
     if (!IsValidPluginSecurityParentWindow(hwndParent)) {

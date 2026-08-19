@@ -107,7 +107,7 @@ BOOL TryStartDragWindowFromMouseMove(HWND hwnd);
  * @return TRUE if scaled, FALSE if not in edit mode or minimum limit reached
  * 
  * @details
- * Proportional scaling, clamped only to MIN_SCALE_FACTOR, schedules save.
+ * Proportional scaling, clamped to the supported scale range, schedules save.
  */
 BOOL HandleScaleWindow(HWND hwnd, int delta);
 

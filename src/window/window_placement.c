@@ -26,6 +26,68 @@ static BOOL IsValidRect(const RECT* rect) {
     return rect && rect->right > rect->left && rect->bottom > rect->top;
 }
 
+int WindowPlacement_GetMinimumVisibleLength(int windowLength,
+                                            int minimumMargin) {
+    if (windowLength <= 0) return 0;
+    if (minimumMargin < 0) minimumMargin = 0;
+
+    int visibleLength = windowLength / 2 + windowLength % 2;
+    if (visibleLength < minimumMargin) visibleLength = minimumMargin;
+    if (visibleLength > windowLength) visibleLength = windowLength;
+    return visibleLength;
+}
+
+BOOL WindowPlacement_ClampFullyVisible(const RECT* bounds,
+                                       int windowWidth,
+                                       int windowHeight,
+                                       int* x,
+                                       int* y) {
+    if (!IsValidRect(bounds) || windowWidth <= 0 || windowHeight <= 0 ||
+        !x || !y) {
+        return FALSE;
+    }
+
+    long long boundsWidth = (long long)bounds->right - bounds->left;
+    long long boundsHeight = (long long)bounds->bottom - bounds->top;
+    long long clampedX = *x;
+    long long clampedY = *y;
+
+    if ((long long)windowWidth >= boundsWidth) {
+        clampedX = bounds->left;
+    } else {
+        long long maximumX = (long long)bounds->right - windowWidth;
+        if (clampedX < bounds->left) clampedX = bounds->left;
+        if (clampedX > maximumX) clampedX = maximumX;
+    }
+
+    if ((long long)windowHeight >= boundsHeight) {
+        clampedY = bounds->top;
+    } else {
+        long long maximumY = (long long)bounds->bottom - windowHeight;
+        if (clampedY < bounds->top) clampedY = bounds->top;
+        if (clampedY > maximumY) clampedY = maximumY;
+    }
+
+    *x = ClampInt64ToInt(clampedX);
+    *y = ClampInt64ToInt(clampedY);
+    return TRUE;
+}
+
+BOOL WindowPlacement_ShouldPreserveTaskbarAnchor(
+    BOOL configuredTaskbarAnchored,
+    const RECT* windowRect,
+    const RECT* taskbarRect) {
+    if (!configuredTaskbarAnchored ||
+        !IsValidRect(windowRect) || !IsValidRect(taskbarRect)) {
+        return FALSE;
+    }
+
+    return windowRect->left < taskbarRect->right &&
+           windowRect->right > taskbarRect->left &&
+           windowRect->top < taskbarRect->bottom &&
+           windowRect->bottom > taskbarRect->top;
+}
+
 BOOL WindowPlacement_GetManualTopLeftRestore(const RECT* manualRect,
                                              const RECT* layoutRect,
                                              POINT* outPosition) {

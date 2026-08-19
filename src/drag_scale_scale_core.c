@@ -5,18 +5,17 @@
 
 #include "drag_scale_internal.h"
 #include "config.h"
-#include <float.h>
 #include <math.h>
 
 float ClampScaleFactor(double scale) {
     if (!isfinite(scale)) {
-        return scale > 0.0 ? FLT_MAX : MIN_SCALE_FACTOR;
+        return scale > 0.0 ? MAX_SCALE_FACTOR : MIN_SCALE_FACTOR;
     }
     if (scale < MIN_SCALE_FACTOR) {
         return MIN_SCALE_FACTOR;
     }
-    if (scale > (double)FLT_MAX) {
-        return FLT_MAX;
+    if (scale > MAX_SCALE_FACTOR) {
+        return MAX_SCALE_FACTOR;
     }
     return (float)scale;
 }
