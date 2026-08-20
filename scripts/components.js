@@ -176,7 +176,8 @@ class ComponentLoader {
         const currentPath = window.location.pathname;
         const depth = (currentPath.match(/\//g) || []).length - 1;
 
-        if (currentPath === '/tray' || currentPath.startsWith('/tray/')) {
+        if (currentPath === '/tray' || currentPath.startsWith('/tray/')
+            || currentPath === '/plugins' || currentPath.startsWith('/plugins/')) {
             return '../components/';
         }
 

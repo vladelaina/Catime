@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
@@ -83,6 +83,61 @@ const trayLibraryInteraction = `async () => {
             && JSON.stringify([...result.detailOrder].sort()) === JSON.stringify([
                 'source-1', 'source-2', 'source-3', 'source-4', 'source-5', 'source-6',
             ]),
+        ...result,
+    };
+}`;
+const pluginLibraryInteraction = `async () => {
+    const cards = () => [...document.querySelectorAll('.plugin-card')];
+    const catalogDeadline = Date.now() + 5000;
+    while (cards().length < 2 && Date.now() < catalogDeadline) {
+        await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    const initialCardCount = cards().length;
+    const initialOrder = cards().map(card => card.dataset.pluginId);
+    const expectedIds = [...initialOrder].sort();
+    const imageOnly = cards().every(card => card.matches('button')
+        && Boolean(card.querySelector(':scope > img'))
+        && !card.textContent.trim());
+    const noDirectoryControls = !document.querySelector('.plugin-toolbar, .plugin-card-content');
+    const download = cards()[0];
+    if (!download) return {
+        ok: false,
+        initialCardCount,
+        catalog: window.CatimePlugins.catalog,
+        errorHidden: document.getElementById('pluginError').hidden,
+        gridText: document.getElementById('pluginGrid').textContent.trim(),
+    };
+    download.click();
+    const deadline = Date.now() + 5000;
+    while (download.disabled && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 25));
+    }
+
+    const toast = document.getElementById('pluginToast');
+    await window.CatimePlugins.refreshCatalog();
+    const refreshedOrder = cards().map(card => card.dataset.pluginId);
+    const result = {
+        initialCardCount,
+        containsBothPlugins: JSON.stringify(expectedIds) === JSON.stringify(['local_clock', 'network_stats']),
+        stableRandomOrder: JSON.stringify(initialOrder) === JSON.stringify(refreshedOrder),
+        imageOnly,
+        noDirectoryControls,
+        downloadVerified: !download.disabled && !toast.hidden && /校验|verification/i.test(toast.textContent),
+        activeNavigation: Boolean(document.querySelector('.main-header .nav-links a.active[href$="plugins"]')),
+        catalogCount: window.CatimePlugins.catalog?.count,
+        documentFits: document.documentElement.scrollWidth <= window.innerWidth,
+    };
+
+    return {
+        ok: result.initialCardCount === 2
+            && result.containsBothPlugins
+            && result.stableRandomOrder
+            && result.imageOnly
+            && result.noDirectoryControls
+            && result.downloadVerified
+            && result.activeNavigation
+            && result.catalogCount === 2
+            && result.documentFits,
         ...result,
     };
 }`;
@@ -309,6 +364,13 @@ const pages = [
     { path: '/support', selector: '.support-project', minimum: 1 },
     { path: '/guide', selector: 'main', minimum: 1 },
     {
+        path: '/plugins',
+        selector: '.plugin-card',
+        minimum: 2,
+        mockPluginCatalog: true,
+        interaction: pluginLibraryInteraction,
+    },
+    {
         path: '/tray',
         selector: '.artist-showcase',
         minimum: 1,
@@ -429,10 +491,15 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
     const target = await targetResponse.json();
     const client = createCdpClient(target.webSocketDebuggerUrl);
     const exceptions = [];
+    const consoleErrors = [];
 
     await client.ready;
     client.on('Runtime.exceptionThrown', ({ exceptionDetails }) => {
         exceptions.push(exceptionDetails.exception?.description || exceptionDetails.text);
+    });
+    client.on('Runtime.consoleAPICalled', ({ type, args }) => {
+        if (type !== 'error') return;
+        consoleErrors.push(args.map(arg => arg.value || arg.description || '').join(' '));
     });
     await Promise.all([
         client.send('Page.enable'),
@@ -447,6 +514,7 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
         }),
     ]);
     if (page.mockTrayManifest) await enableTrayManifestMock(client, baseUrl, exceptions);
+    if (page.mockPluginCatalog) await enablePluginCatalogMock(client, baseUrl, exceptions);
 
     const loaded = new Promise((resolveLoaded) => client.on('Page.loadEventFired', resolveLoaded));
     await client.send('Page.navigate', { url: `${baseUrl}${page.path}` });
@@ -500,6 +568,8 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
         }
     }
 
+    if (exceptions.length) throw new Error(`${page.path}: ${exceptions.join(' | ')}`);
+
     if (page.interaction) {
         const interactionEvaluation = await client.send('Runtime.evaluate', {
             expression: `(${page.interaction})()`,
@@ -512,8 +582,15 @@ async function verifyPage(debugPort, baseUrl, page, viewport) {
             throw new Error(`${page.path}: interaction failed: ${message}`);
         }
         if (!interactionEvaluation.result.value?.ok) {
-            throw new Error(`${page.path}: interaction assertions failed: ${JSON.stringify(interactionEvaluation.result.value)}`);
+            throw new Error(`${page.path}: interaction assertions failed: ${JSON.stringify(interactionEvaluation.result.value)}${consoleErrors.length ? ` | console: ${consoleErrors.join(' | ')}` : ''}`);
         }
+    }
+
+    if (process.env.VERIFY_SCREENSHOT_DIR) {
+        await mkdir(process.env.VERIFY_SCREENSHOT_DIR, { recursive: true });
+        const screenshot = await client.send('Page.captureScreenshot', { format: 'png' });
+        const filename = `${page.path.replace(/\W+/g, '-').replace(/^-|-$/g, '') || 'home'}-${viewport.name}.png`;
+        await writeFile(join(process.env.VERIFY_SCREENSHOT_DIR, filename), Buffer.from(screenshot.data, 'base64'));
     }
 
     client.close();
@@ -571,6 +648,56 @@ async function enableTrayManifestMock(client, baseUrl, exceptions) {
     });
     await client.send('Fetch.enable', {
         patterns: [{ urlPattern: 'https://tray.cati.me/sections.json*', requestStage: 'Request' }],
+    });
+}
+
+async function enablePluginCatalogMock(client, baseUrl, exceptions) {
+    const pluginBytes = Buffer.from('@echo off\r\n');
+    const digest = 'c134b2f85415ba5cfce3e3fe4745688335745a9bb22152ac8f5c77f190d8aee3';
+    const commit = '0123456789abcdef0123456789abcdef01234567';
+    const plugin = (id, filename) => ({
+        id,
+        filename,
+        previewUrl: 'https://vladelaina.github.io/Catime-Plugins/previews/verification.webp',
+        downloadUrl: `https://vladelaina.github.io/Catime-Plugins/files/${filename}?v=${digest.slice(0, 12)}`,
+        size: pluginBytes.length,
+        sha256: digest,
+    });
+    const catalog = {
+        schemaVersion: 1,
+        generatedAt: '2026-08-15T00:00:00.000Z',
+        source: {
+            repository: 'https://github.com/vladelaina/Catime-Plugins',
+            commit,
+        },
+        count: 2,
+        plugins: [
+            plugin('local_clock', 'local_clock.bat'),
+            plugin('network_stats', 'network_stats.py'),
+        ],
+    };
+    const catalogBody = Buffer.from(JSON.stringify(catalog)).toString('base64');
+    const pluginBody = pluginBytes.toString('base64');
+
+    client.on('Fetch.requestPaused', ({ requestId, request }) => {
+        const isCatalog = request.url.includes('/api/v1/catalog.json');
+        client.send('Fetch.fulfillRequest', {
+            requestId,
+            responseCode: 200,
+            responseHeaders: [
+                {
+                    name: 'Content-Type',
+                    value: isCatalog ? 'application/json; charset=utf-8' : 'application/octet-stream',
+                },
+                { name: 'Access-Control-Allow-Origin', value: '*' },
+                { name: 'Content-Length', value: String(isCatalog ? Buffer.byteLength(JSON.stringify(catalog)) : pluginBytes.length) },
+                { name: 'Cache-Control', value: 'no-store' },
+            ],
+            body: isCatalog ? catalogBody : pluginBody,
+        }).catch(error => exceptions.push(`Unable to fulfill plugin request: ${error.message}`));
+    });
+    await client.send('Fetch.enable', {
+        patterns: [{ urlPattern: 'https://vladelaina.github.io/Catime-Plugins/*', requestStage: 'Request' }],
     });
 }
 

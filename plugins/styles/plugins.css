@@ -1,0 +1,308 @@
+.plugin-library-page {
+    min-height: 100vh;
+    color: var(--text-color);
+    background: var(--background-color);
+}
+
+.plugin-library-page main {
+    min-height: 80vh;
+}
+
+.plugin-workspace {
+    padding: 8.5rem 0 5rem;
+}
+
+.plugin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+    min-height: 260px;
+}
+
+.plugin-card {
+    position: relative;
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    place-items: center;
+    overflow: hidden;
+    min-height: 180px;
+    padding: 0;
+    color: var(--primary-color);
+    background: #f3f5fb;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    box-shadow: var(--card-shadow);
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.plugin-card:hover,
+.plugin-card:focus-visible {
+    border-color: var(--primary-color);
+    box-shadow: var(--card-hover-shadow);
+    outline: none;
+    transform: translateY(-2px);
+}
+
+.plugin-card:disabled {
+    cursor: wait;
+}
+
+.plugin-card img {
+    display: block;
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.plugin-card.is-loaded img {
+    opacity: 1;
+}
+
+.plugin-preview-placeholder {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    display: grid;
+    min-height: 180px;
+    place-items: center;
+    color: #54aeff;
+    background: #f3f5fb;
+    font-size: 2rem;
+    opacity: 1;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.plugin-preview-placeholder i {
+    animation: pluginPlaceholder 1.35s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(84, 174, 255, 0.2));
+}
+
+.plugin-card.is-loaded .plugin-preview-placeholder {
+    visibility: hidden;
+    opacity: 0;
+}
+
+.plugin-card.is-missing img {
+    display: none;
+}
+
+.plugin-loading {
+    grid-column: 1 / -1;
+    display: flex;
+    min-height: 240px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    color: #75809f;
+}
+
+.plugin-loading span {
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    animation: pluginLoading 1s ease-in-out infinite alternate;
+}
+
+.plugin-loading span:nth-child(2) {
+    background: var(--accent-color);
+    animation-delay: 0.15s;
+}
+
+.plugin-loading span:nth-child(3) {
+    background: #4d9b84;
+    animation-delay: 0.3s;
+}
+
+.plugin-loading p {
+    margin: 0 0 0 0.4rem;
+    font-size: 0.86rem;
+}
+
+.plugin-empty,
+.plugin-error {
+    min-height: 230px;
+    align-items: center;
+    justify-content: center;
+    color: #75809f;
+    text-align: center;
+}
+
+.plugin-empty:not([hidden]) {
+    display: flex;
+    flex-direction: column;
+}
+
+.plugin-empty > i,
+.plugin-error > i {
+    margin-bottom: 0.75rem;
+    color: #929bb7;
+    font-size: 2rem;
+}
+
+.plugin-empty h3,
+.plugin-error h3 {
+    margin: 0 0 0.35rem;
+    color: var(--heading-color);
+    font-size: 1rem;
+    letter-spacing: 0;
+}
+
+.plugin-empty h3:hover,
+.plugin-error h3:hover {
+    color: var(--heading-color);
+    text-shadow: none;
+    transform: none;
+}
+
+.plugin-empty p,
+.plugin-error p {
+    margin: 0;
+    font-size: 0.84rem;
+}
+
+.plugin-error:not([hidden]) {
+    display: flex;
+    gap: 1rem;
+    text-align: left;
+}
+
+.plugin-error > i {
+    margin: 0;
+}
+
+.plugin-error button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 42px;
+    margin-left: 1rem;
+    padding: 0.6rem 0.9rem;
+    color: #fff;
+    background: var(--primary-color);
+    border: 0;
+    border-radius: 10px;
+    box-shadow: var(--button-shadow);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.plugin-toast {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 1300;
+    max-width: min(420px, calc(100% - 2rem));
+    padding: 0.8rem 1rem 0.8rem 0.9rem;
+    color: var(--text-color);
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(122, 162, 247, 0.26);
+    border-left: 3px solid #54aeff;
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(122, 162, 247, 0.18), 0 3px 10px rgba(65, 72, 104, 0.08);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.plugin-toast:not([hidden]) {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    animation: pluginToastIn 0.22s ease-out both;
+}
+
+.plugin-toast.is-pending::before {
+    width: 15px;
+    height: 15px;
+    flex: 0 0 15px;
+    content: '';
+    border: 2px solid rgba(84, 174, 255, 0.24);
+    border-top-color: #54aeff;
+    border-radius: 50%;
+    animation: pluginToastSpin 0.7s linear infinite;
+}
+
+.visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+@keyframes pluginLoading {
+    to { transform: translateY(-7px); }
+}
+
+@keyframes pluginPlaceholder {
+    0%, 100% {
+        opacity: 0.62;
+        transform: translateY(1px) scale(0.94);
+    }
+    50% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.04);
+    }
+}
+
+@keyframes pluginToastIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pluginToastSpin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 700px) {
+    .plugin-workspace {
+        padding-top: 6.5rem;
+    }
+
+    .plugin-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+
+    .plugin-error:not([hidden]) {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .plugin-error button {
+        margin-left: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .plugin-card,
+    .plugin-card img,
+    .plugin-loading span,
+    .plugin-preview-placeholder i,
+    .plugin-toast,
+    .plugin-toast.is-pending::before {
+        animation: none;
+        transition: none;
+    }
+}

@@ -8,6 +8,8 @@ const cleanRoutes = new Map([
     ['/support', '/support.html'],
     ['/tray', '/tray/index.html'],
     ['/tray/', '/tray/index.html'],
+    ['/plugins', '/plugins/index.html'],
+    ['/plugins/', '/plugins/index.html'],
     ['/tools/tray-icon-sorter', '/tools/tray-icon-sorter/index.html'],
     ['/tools/tray-icon-sorter/', '/tools/tray-icon-sorter/index.html'],
 ]);
@@ -78,6 +80,7 @@ export default defineConfig({
                 about: resolve(import.meta.dirname, 'about.html'),
                 support: resolve(import.meta.dirname, 'support.html'),
                 tray: resolve(import.meta.dirname, 'tray/index.html'),
+                plugins: resolve(import.meta.dirname, 'plugins/index.html'),
                 fontTool: resolve(import.meta.dirname, 'tools/font-tool/index.html'),
                 trayIconSorter: resolve(import.meta.dirname, 'tools/tray-icon-sorter/index.html'),
             },

@@ -7,7 +7,7 @@ import {
     loadImmediateLibraryData,
     loadLibraryData,
 } from './library-data.js';
-import { createPreviewLoader, resolveMotionPolicy } from './adaptive-image-loading.js';
+import { createPreviewLoader, loadPreviewImage, resolveMotionPolicy } from './adaptive-image-loading.js';
 import { createAuthorWorkOrder } from './author-work-order.js';
 import { colorForIndex, escapeAttribute, escapeHtml } from './dom-utils.js';
 import { createSecureRandomOrder } from './secure-random-order.js';
@@ -550,37 +550,6 @@ function requestAnimationMotion(image, { manual = false, priority = false } = {}
 function restorePoster(image) {
     const posterUrl = image.dataset.posterUrl;
     if (posterUrl && image.getAttribute('src') !== posterUrl) image.src = posterUrl;
-}
-
-function loadPreviewImage(url) {
-    return new Promise(resolve => {
-        const image = new Image();
-        let settled = false;
-        let loadHandled = false;
-        const finish = loaded => {
-            if (settled) return;
-            settled = true;
-            resolve(loaded);
-        };
-        const finishLoaded = () => {
-            if (loadHandled) return;
-            loadHandled = true;
-            if (typeof image.decode !== 'function') {
-                finish(true);
-                return;
-            }
-            image.decode().catch(() => {}).finally(() => finish(true));
-        };
-        image.decoding = 'async';
-        image.referrerPolicy = 'strict-origin-when-cross-origin';
-        image.addEventListener('load', finishLoaded, { once: true });
-        image.addEventListener('error', () => finish(false), { once: true });
-        image.src = url;
-        if (image.complete) {
-            if (image.naturalWidth > 0) finishLoaded();
-            else finish(false);
-        }
-    });
 }
 
 function updateTrayClock() {

@@ -14,6 +14,10 @@ class CatimeNavigation {
         if (path === '/tray' || path.startsWith('/tray/')) {
             return 'tray';
         }
+
+        if (path === '/plugins' || path.startsWith('/plugins/')) {
+            return 'plugins';
+        }
         
         if (path.includes('/tools/font-tool/')) {
             return 'font-tool';
@@ -28,7 +32,8 @@ class CatimeNavigation {
 
     getPathPrefix() {
         const path = window.location.pathname;
-        if (path === '/tray' || path.startsWith('/tray/')) {
+        if (path === '/tray' || path.startsWith('/tray/')
+            || path === '/plugins' || path.startsWith('/plugins/')) {
             return '../';
         }
         if (path.includes('/tools/')) {
@@ -84,7 +89,7 @@ class CatimeNavigation {
                                 <li><a href="${prefix}tools/tray-icon-sorter/"${this.currentPage === 'tray-icon-sorter' ? ' class="active"' : ''}><i class="fas fa-arrow-down-1-9" aria-hidden="true"></i> ${labels.trayIconSorter}</a></li>
                             </ul>
                         </li>
-                        <li><a href="https://github.com/vladelaina/Catime-Plugins" target="_blank" rel="noopener noreferrer">${labels.plugins}</a></li>
+                        <li><a href="${prefix}plugins"${this.currentPage === 'plugins' ? ' class="active"' : ''}>${labels.plugins}</a></li>
                         <li><a href="https://github.com/vladelaina/Catime" target="_blank" rel="noopener noreferrer">GitHub</a></li>
                     </ul>
                     ${this.generateActionButtons(prefix)}

@@ -11,6 +11,7 @@ const htmlPages = [
     'support.html',
     'guide.html',
     'tray/index.html',
+    'plugins/index.html',
     'tools/font-tool/index.html',
     'tools/tray-icon-sorter/index.html',
 ];

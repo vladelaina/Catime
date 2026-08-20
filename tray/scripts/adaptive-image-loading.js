@@ -63,3 +63,34 @@ export function createPreviewLoader({ concurrency = 4, loadPreview }) {
 
     return { request };
 }
+
+export function loadPreviewImage(url) {
+    return new Promise(resolve => {
+        const image = new Image();
+        let settled = false;
+        let loadHandled = false;
+        const finish = loaded => {
+            if (settled) return;
+            settled = true;
+            resolve(loaded);
+        };
+        const finishLoaded = () => {
+            if (loadHandled) return;
+            loadHandled = true;
+            if (typeof image.decode !== 'function') {
+                finish(true);
+                return;
+            }
+            image.decode().catch(() => {}).finally(() => finish(true));
+        };
+        image.decoding = 'async';
+        image.referrerPolicy = 'strict-origin-when-cross-origin';
+        image.addEventListener('load', finishLoaded, { once: true });
+        image.addEventListener('error', () => finish(false), { once: true });
+        image.src = url;
+        if (image.complete) {
+            if (image.naturalWidth > 0) finishLoaded();
+            else finish(false);
+        }
+    });
+}
