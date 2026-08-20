@@ -104,6 +104,9 @@ void NotificationShowToastInternal(HWND hwnd, const wchar_t* message,
                                    BOOL requireTimeout);
 LRESULT CALLBACK NotificationWndProc(HWND hwnd, UINT msg,
                                      WPARAM wParam, LPARAM lParam);
+BOOL NotificationHandleInteractionMessage(HWND hwnd, UINT msg,
+                                           WPARAM wParam, LPARAM lParam,
+                                           LRESULT* result);
 
 static inline BOOL NotificationIsCurrentProcessWindow(HWND hwnd) {
     DWORD processId = 0;
