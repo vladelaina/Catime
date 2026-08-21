@@ -351,7 +351,7 @@ With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.co
         <a href="https://github.com/kissholic"><img src="https://vladelaina.github.io/Catime/assets/Contributors/kissholic.webp" width="100px;" alt="kissholic"/><br /><sub><b>kissholic</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
-        <a href=""><img src="https://vladelaina.github.io/Catime/assets/Contributors/Alnilam.webp" width="100px;" alt="Alnilam"/><br /><sub><b>Alnilam</b></sub></a><br />
+        <a href="https://github.com/Alnilam-y"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Alnilam.webp" width="100px;" alt="Alnilam"/><br /><sub><b>Alnilam</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/pyqmlp"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%9F%92.webp" width="100px;" alt="柒"/><br /><sub><b>柒</b></sub></a><br />
