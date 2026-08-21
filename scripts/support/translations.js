@@ -285,6 +285,10 @@ function translateSupportElements() {
     }
     
     const supporterCellTranslations = {
+        '简单好用': 'Simple and easy to use',
+        'vlaina提了一把需求，开工了开工了': 'vlaina made a feature request—time to get to work!',
+        'vlaina加油做': 'Keep it up, vlaina!',
+        '一切努力终将迎来胜利的曙光': 'Every effort will eventually be rewarded with the dawn of victory',
         'catime很可爱哦': 'Catime is so cute!',
         '感谢UP主开源': 'Thank you for open-sourcing this project!',
         '功能简洁 实用便利 赞': 'Simple, practical, and convenient. Great!',
