@@ -93,6 +93,7 @@ jobs:
             --enable=warning,style,performance,portability,information \
             --inconclusive \
             --quiet \
+            --inline-suppr \
             --max-configs=12 \
             --std=c11 \
             --library=windows \

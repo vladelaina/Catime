@@ -110,7 +110,7 @@ BOOL PluginManager_StartPluginAfterSecurityCheck(int index, BOOL trustPlugin) {
 }
 
 BOOL StartPluginAfterSecurityCheckWithSnapshot(int index, BOOL trustPlugin,
-                                               const char* expectedPluginPathUtf8,
+                                               const char* expectedPathUtf8,
                                                const char* savedHash) {
     if (!g_pluginManagerInitialized) return FALSE;
 
@@ -136,8 +136,8 @@ BOOL StartPluginAfterSecurityCheckWithSnapshot(int index, BOOL trustPlugin,
         return FALSE;
     }
 
-    if (expectedPluginPathUtf8[0] != '\0' &&
-        _stricmp(expectedPluginPathUtf8, pluginPathUtf8) != 0) {
+    if (expectedPathUtf8[0] != '\0' &&
+        _stricmp(expectedPathUtf8, pluginPathUtf8) != 0) {
         LOG_WARNING("Plugin index changed during security dialog; launch cancelled");
         PluginProcess_SetLastError(L"File changed");
         LeaveCriticalSection(&g_pluginCS);

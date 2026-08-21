@@ -32,7 +32,6 @@ BOOL SaveWindowSettings(HWND hwnd) {
     BOOL taskbarAnchored = FALSE;
     int taskbarAxisRatio = 0;
     int taskbarCrossOffset = 0;
-    BOOL placementAvailable = FALSE;
     if (savePosition) {
         if (!GetWindowRect(hwnd, &rect)) {
             LOG_WARNING("Failed to get window rect for saving");
@@ -40,12 +39,11 @@ BOOL SaveWindowSettings(HWND hwnd) {
         }
         CLOCK_WINDOW_POS_X = rect.left;
         CLOCK_WINDOW_POS_Y = rect.top;
-        placementAvailable = WindowCore_GetMonitorPlacementData(
-            &rect, monitorId, sizeof(monitorId),
-            &monitorOffsetX, &monitorOffsetY,
-            &taskbarAvailable, &taskbarAnchored,
-            &taskbarAxisRatio, &taskbarCrossOffset);
-        if (!placementAvailable) {
+        if (!WindowCore_GetMonitorPlacementData(
+                &rect, monitorId, sizeof(monitorId),
+                &monitorOffsetX, &monitorOffsetY,
+                &taskbarAvailable, &taskbarAnchored,
+                &taskbarAxisRatio, &taskbarCrossOffset)) {
             monitorId[0] = '\0';
             monitorOffsetX = 0;
             monitorOffsetY = 0;

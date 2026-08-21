@@ -94,12 +94,12 @@ int PluginManager_PostAsyncSecurityRequest(int index, const char* path,
 static BOOL RunStartOperation(const PluginOperation* op, BOOL* securityRequested) {
     PluginInfo plugin;
     char pathUtf8[MAX_PATH] = {0};
-    char hash[65] = {0};
     if (!PluginManager_CopyPlugin(op->index, &plugin) ||
         !WideToUtf8Fixed(plugin.path, pathUtf8, MAX_PATH)) {
         return FALSE;
     }
     if (!IsPluginTrusted(pathUtf8)) {
+        char hash[65] = {0};
         if (!CalculatePluginHash(pathUtf8, hash)) {
             PluginProcess_SetLastError(L"Hash error");
             return FALSE;
@@ -190,13 +190,16 @@ static BOOL QueueOperation(const PluginOperation* source) {
         g_operationThread = NULL;
     }
     InterlockedExchange(&g_operationPending, 1);
-    g_operationThread = CreateThread(NULL, 0, PluginOperationThread, op, 0, NULL);
+    g_operationThread = CreateThread(
+        NULL, 0, PluginOperationThread, op, 0, NULL);
     ReleaseSRWLockExclusive(&g_operationLock);
     if (!g_operationThread) {
         free(op);
         InterlockedExchange(&g_operationPending, 0);
         return FALSE;
     }
+    /* The worker owns and frees op after successful thread creation. */
+    // cppcheck-suppress memleak
     return TRUE;
 }
 
@@ -236,10 +239,10 @@ BOOL PluginManager_RequestStopAllPreserveData(HWND hwnd) {
     return QueueOperation(&op);
 }
 
-BOOL PluginManager_RequestHotReload(HWND hwnd, LONG generation) {
+BOOL PluginManager_RequestHotReload(HWND hwnd, LONG requestGeneration) {
     PluginOperation op = {0};
     op.hwnd = hwnd; op.operation = PLUGIN_OPERATION_HOT_RELOAD;
-    op.generation = generation;
+    op.generation = requestGeneration;
     return QueueOperation(&op);
 }
 
