@@ -44,9 +44,6 @@
 </p>
 
 
-<img  height="1000" alt="638887275-a8f7dcd6-98a8-4540-827f-651e61281a4a" src="https://github.com/user-attachments/assets/9a1beaad-a014-49f1-bf53-bea0a67abf5c" />
-
-
 <!-- Demo Video -->
 <div align="center" style="margin-bottom: 30px;">
   <video src="https://github.com/user-attachments/assets/a59a85af-c522-4081-9a84-e0d3a71be236
@@ -354,7 +351,7 @@ With special appreciation to [猫屋敷梨梨Official](https://space.bilibili.co
         <a href="https://github.com/kissholic"><img src="https://vladelaina.github.io/Catime/assets/Contributors/kissholic.webp" width="100px;" alt="kissholic"/><br /><sub><b>kissholic</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
-        <a href=""><img src="https://vladelaina.github.io/Catime/assets/Contributors/Alnilam.webp" width="100px;" alt="Alnilam"/><br /><sub><b>Alnilam</b></sub></a><br />
+        <a href="https://github.com/Alnilam-y"><img src="https://vladelaina.github.io/Catime/assets/Contributors/Alnilam.webp" width="100px;" alt="Alnilam"/><br /><sub><b>Alnilam</b></sub></a><br />
       </td>
       <td align="center" valign="top" width="14.28%">
         <a href="https://github.com/pyqmlp"><img src="https://vladelaina.github.io/Catime/assets/Contributors/%E6%9F%92.webp" width="100px;" alt="柒"/><br /><sub><b>柒</b></sub></a><br />
