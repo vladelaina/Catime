@@ -22,6 +22,7 @@ bool CLOCK_USE_24HOUR = false;
 TextEffectType CLOCK_TEXT_EFFECT = TEXT_EFFECT_NONE;
 BOOL g_isPreviewActive = FALSE;
 static BOOL g_fontLoadSucceeds = TRUE;
+static BOOL g_hasPendingAnimationCommit = FALSE;
 
 void CancelAnimationPreview(void) {
     g_isPreviewActive = FALSE;
@@ -57,6 +58,10 @@ void ResetTimerWithInterval(HWND hwnd) { (void)hwnd; }
 BOOL StartAnimationPreview(const char* name) {
     g_isPreviewActive = name && name[0];
     return g_isPreviewActive;
+}
+
+BOOL TrayAnimation_HasPendingCommit(void) {
+    return g_hasPendingAnimationCommit;
 }
 
 void TaskbarMonitor_ApplyConfig(BOOL enabled, BOOL cpuMemoryEnabled,
@@ -190,12 +195,28 @@ static void TestApplyClearsPreviewSource(void) {
     assert(strcmp(FONT_RUNTIME_FILE_NAME, "applied.ttf") == 0);
 }
 
+static void TestPendingAnimationCommitSurvivesCancel(void) {
+    ResetPreview();
+    assert(StartPreview(PREVIEW_TYPE_ANIMATION, "walking.gif", NULL));
+    assert(g_isPreviewActive);
+
+    g_hasPendingAnimationCommit = TRUE;
+    CancelPreview(NULL);
+    assert(!IsPreviewActive());
+    assert(g_isPreviewActive);
+
+    g_hasPendingAnimationCommit = FALSE;
+    CancelPreview(NULL);
+    assert(!g_isPreviewActive);
+}
+
 int main(void) {
     TestCommandPolicy();
     TestPreviewSourceTransitions();
     TestInvalidSourceDoesNotReplacePreview();
     TestFailedPreviewDoesNotTransferSource();
     TestApplyClearsPreviewSource();
+    TestPendingAnimationCommitSurvivesCancel();
     puts("menu preview lifecycle tests passed");
     return 0;
 }

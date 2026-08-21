@@ -24,8 +24,6 @@
 /** @brief Application limits and constraints */
 #define MAX_RECENT_FILES 5               /**< Maximum recent files to remember */
 #define MAX_TIME_OPTIONS 50              /**< Maximum configurable time options */
-#define MIN_SCALE_FACTOR 0.5f            /**< Minimum window scale factor */
-#define MAX_SCALE_FACTOR 100.0f          /**< Maximum window scale factor */
 #define MAX_POMODORO_TIMES 10            /**< Maximum Pomodoro time configurations */
 
 /** @brief Window message and layout constants */

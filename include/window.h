@@ -25,8 +25,8 @@
  * Scaling constraints
  * ============================================================================ */
 
-#define MIN_SCALE_FACTOR 0.5f
-#define MAX_SCALE_FACTOR 20.0f
+#define MIN_SCALE_FACTOR 0.5f  /**< Minimum supported window scale factor */
+#define MAX_SCALE_FACTOR 20.0f /**< Maximum supported window scale factor */
 
 static inline int ScaleWindowDimensionClamped(int baseDimension, float scaleFactor) {
     double scaled;
