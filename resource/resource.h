@@ -6,7 +6,7 @@
 #ifndef CATIME_RESOURCE_H
 #define CATIME_RESOURCE_H
 
-#define CATIME_VERSION "1.6.0-alpha4"
+#define CATIME_VERSION "1.6.0"
 
 /* Kept in the aggregate header for the embedded-resource packaging tool. */
 #define IDR_COMPRESSED_ASSETS 1200
