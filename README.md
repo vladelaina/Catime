@@ -18,8 +18,8 @@
 
 <!-- Project Description + Rocket Icon -->
 <p align="center"> 
-  An ultra-lightweight Windows countdown and Pomodoro tool written in <b>pure C</b> with a clean transparent interface,<br/>
-  rich customization, powerful shortcuts, and almost no resource usage. 
+  A pure C-written, ultra-lightweight Windows countdown and Pomodoro tool with a clean transparent interface,<br/>
+  extensive customization, powerful shortcuts, and negligible resource consumption—all in just 995KB. 
 </p>
 
 
@@ -81,7 +81,7 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 ## 💫[Plugins](https://github.com/vladelaina/Catime-Plugins)
 
-> Plugins write to **./output.txt**, Catime displays it — that simple.
+> Plugins simply write their output to **./output.txt**, and Catime displays it in real time—it's that simple!
 
 <img width="1105" height="481" alt="image" src="https://github.com/user-attachments/assets/734037a7-997c-48dd-b93f-513d1696ac54" />
 
@@ -96,7 +96,7 @@ Your tray icon can now come alive! Catime brings powerful custom animation featu
 
 
 ## ❤️‍🔥Staying tuned with us
->  **Star us** and witness how this pure C-crafted minimalist time tool continues to evolve - don't miss any exciting updates!
+>  ⭐ **Star us** and witness the evolution of this pure C-crafted minimalist time tool—stay tuned for exciting updates and new features!
 <a href="https://github.com/vladelaina/Catime" target="_blank">
     <img  src="https://github.com/user-attachments/assets/50cfc9d4-3d3f-4370-b233-89d76f78977e" />
 </a>
