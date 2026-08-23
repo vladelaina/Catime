@@ -92,6 +92,7 @@ jobs:
           "path=$($package.FullName)" >> $env:GITHUB_OUTPUT
 
       - name: Test Chocolatey package installation
+        id: test
         shell: pwsh
         run: |
           choco install catime `
@@ -104,6 +105,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             exit $LASTEXITCODE
           }
+          "installed=true" >> $env:GITHUB_OUTPUT
 
           $shim = Join-Path $env:ChocolateyInstall "bin\catime.exe"
           if (-not (Test-Path $shim)) {
@@ -112,7 +114,7 @@ jobs:
           }
 
       - name: Uninstall test package
-        if: always()
+        if: always() && steps.test.outputs.installed == 'true'
         shell: pwsh
         run: |
           choco uninstall catime --yes --no-progress --limit-output

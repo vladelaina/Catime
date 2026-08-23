@@ -177,7 +177,7 @@ jobs:
 
     - name: Create GitHub Release
       id: create_release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3.0.2
       with:
         files: ./signed-release/catime_${{ needs.build.outputs.tag_version }}.exe
         name: ${{ github.ref_name }}

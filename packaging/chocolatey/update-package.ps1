@@ -62,12 +62,12 @@ Set-FileContentUtf8 -Path $nuspecPath -Content $nuspec
 $install = Get-Content $installPath -Raw
 $install = Replace-SingleMatch `
     -Text $install `
-    -Pattern '(?m)^\$url = ''[^'']+''$' `
+    -Pattern '(?m)^[ \t]*\$url[ \t]*=[ \t]*''[^''\r\n]+''[ \t]*\r?$' `
     -Replacement "`$url = '$releaseUrl'" `
     -Label 'installer URL'
 $install = Replace-SingleMatch `
     -Text $install `
-    -Pattern '(?m)^\$checksum = ''[0-9a-fA-F]{64}''$' `
+    -Pattern '(?m)^[ \t]*\$checksum[ \t]*=[ \t]*''[0-9a-fA-F]{64}''[ \t]*\r?$' `
     -Replacement "`$checksum = '$normalizedChecksum'" `
     -Label 'installer checksum'
 Set-FileContentUtf8 -Path $installPath -Content $install
