@@ -83,7 +83,10 @@ BOOL IsDragSuppressedAfterScale(void) {
 }
 
 BOOL IsLeftButtonPhysicallyDown(void) {
-    return (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    /* All callers run on the window thread while processing input messages.
+     * Queue-local state is sufficient and avoids asynchronous global input
+     * polling. */
+    return (GetKeyState(VK_LBUTTON) & 0x8000) != 0;
 }
 
 void ClearDragBlockUntilLeftUp(void) {

@@ -147,6 +147,15 @@ target_include_directories(tray_update_policy_tests PRIVATE
 )
 add_test(NAME tray_update_policy COMMAND tray_update_policy_tests)
 
+add_executable(tray_recovery_policy_tests
+    tests/tray_recovery_policy_tests.c
+    src/tray/tray_recovery_policy.c
+)
+target_include_directories(tray_recovery_policy_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+add_test(NAME tray_recovery_policy COMMAND tray_recovery_policy_tests)
+
 add_executable(tray_menu_tracking_tests
     tests/tray_menu_tracking_tests.c
     src/tray/tray_menu_tracking.c
@@ -318,6 +327,7 @@ set(_catime_test_targets
     tray_hover_cache_tests
     tray_event_protocol_tests
     tray_update_policy_tests
+    tray_recovery_policy_tests
     tray_menu_tracking_tests
     audio_player_cleanup_tests
     tray_menu_pagination_tests

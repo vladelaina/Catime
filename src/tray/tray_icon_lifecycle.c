@@ -14,7 +14,8 @@
 
 void RemoveTrayIconInternal(BOOL finalCleanup) {
     HWND trayHwnd = nid.hWnd;
-    BOOL hadActiveTrayItem = g_trayIconActive && trayHwnd;
+    BOOL hadTrayIdentity = trayHwnd &&
+                           nid.uID == CLOCK_ID_TRAY_APP_ICON;
     if (finalCleanup) {
         g_trayShuttingDown = TRUE;
         CancelTrayRecreateRetry(trayHwnd ? trayHwnd : g_mainHwnd);
@@ -25,6 +26,7 @@ void RemoveTrayIconInternal(BOOL finalCleanup) {
     if (trayHwnd) {
         KillTimer(trayHwnd, TRAY_TIP_TIMER_ID);
         g_trayTipTimerActive = FALSE;
+        StopTrayHealthCheck(trayHwnd);
         KillTimer(trayHwnd, TRAY_OPACITY_SAVE_TIMER_ID);
         CompleteTrayOpacityFeedback(trayHwnd, FALSE);
         if (finalCleanup) {
@@ -35,14 +37,13 @@ void RemoveTrayIconInternal(BOOL finalCleanup) {
     }
 
     StopTrayHoverDetection();
-    TryReleaseTrayMouseHook();
     if (finalCleanup) {
         SystemMonitor_Shutdown();
         g_traySystemMonitorActive = FALSE;
         CleanupTraySubmenuResources();
         g_trayBackgroundWorkEnabled = FALSE;
     }
-    if (hadActiveTrayItem) {
+    if (hadTrayIdentity) {
         Shell_NotifyIconW(NIM_DELETE, &nid);
     }
     TrayIconLifetime_ReleaseAll();
@@ -64,17 +65,19 @@ void RemoveTrayIcon(void) {
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     KillTimer(hwnd, TRAY_RECREATE_RETRY_TIMER_ID);
     HWND oldTrayHwnd = nid.hWnd;
-    BOOL hadActiveTrayItem = g_trayIconActive && oldTrayHwnd;
+    BOOL hadTrayIdentity = oldTrayHwnd &&
+                           nid.uID == CLOCK_ID_TRAY_APP_ICON;
     g_trayIconActive = FALSE;
     g_trayCallbackVersion = 0;
     if (oldTrayHwnd) {
         KillTimer(oldTrayHwnd, TRAY_TIP_TIMER_ID);
         g_trayTipTimerActive = FALSE;
+        StopTrayHealthCheck(oldTrayHwnd);
     }
     StopTrayHoverDetection();
 
     BOOL oldTrayItemDeleted = FALSE;
-    if (hadActiveTrayItem) {
+    if (hadTrayIdentity) {
         oldTrayItemDeleted = Shell_NotifyIconW(NIM_DELETE, &nid);
     }
     if (oldTrayItemDeleted) {
@@ -93,6 +96,8 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
         }
         return;
     }
+
+    LOG_INFO("Tray icon recreation succeeded");
 
     if (TrayAnimation_IsRunning()) {
         TrayAnimation_RefreshCurrentIcon();

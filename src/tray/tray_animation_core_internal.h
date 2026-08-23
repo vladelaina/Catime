@@ -165,6 +165,8 @@ void RecordSuccessfulUpdate(void);
 BOOL RecordFailedUpdate(void);
 void HandleRepeatedTrayUpdateFailure(void);
 void LogPreviewShellFailureThrottled(void);
+void ReportTrayIconModifySuccess(HWND hwnd);
+void ReportTrayIconModifyFailure(HWND hwnd);
 double ComputeAnimationSpeedScalePercent(AnimationSpeedMetric metric);
 BOOL IsSpeedScaleCacheFresh(DWORD now, LONG invalidationSerial);
 void RefreshSpeedScaleCache(DWORD now, LONG invalidationSerial);

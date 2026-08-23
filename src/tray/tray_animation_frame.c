@@ -189,8 +189,10 @@ applyIcon:
     BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
     if (success) {
         TrayIconLifetime_Retain(hIcon);
+        ReportTrayIconModifySuccess(trayHwnd);
     } else {
         DestroyIcon(hIcon);
+        ReportTrayIconModifyFailure(trayHwnd);
     }
 
     if (success) {

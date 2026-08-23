@@ -109,7 +109,6 @@ INT_PTR DialogInput_HandleInit(HWND hwndDlg, LPARAM parameter) {
     if (!SetTimer(hwndDlg, INPUT_FOCUS_TIMER_ID, INPUT_FOCUS_TIMER_DELAY_MS, NULL))
         LOG_WARNING("InputDialog: Failed to start focus timer (error=%lu)",
                     GetLastError());
-    PostMessage(hwndDlg, WM_APP + 103, 0, 0);
     ShowBuildDate(hwndDlg);
     return FALSE;
 }

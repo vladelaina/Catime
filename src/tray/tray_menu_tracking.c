@@ -33,6 +33,28 @@ static BOOL IsForegroundWindow(HWND window) {
     return window && GetForegroundWindow() == window;
 }
 
+static BOOL IsWindowOwnedByShell(HWND window) {
+    HWND shellWindow = GetShellWindow();
+    if (!window || !shellWindow) return FALSE;
+
+    DWORD windowProcessId = 0;
+    DWORD shellProcessId = 0;
+    GetWindowThreadProcessId(window, &windowProcessId);
+    GetWindowThreadProcessId(shellWindow, &shellProcessId);
+    return windowProcessId != 0 && windowProcessId == shellProcessId;
+}
+
+static DWORD GetShellInteractionThread(void) {
+    HWND notificationArea = FindWindowW(L"Shell_TrayWnd", NULL);
+    if (IsWindowOwnedByShell(notificationArea)) {
+        return GetWindowThreadProcessId(notificationArea, NULL);
+    }
+
+    HWND shellWindow = GetShellWindow();
+    return shellWindow
+        ? GetWindowThreadProcessId(shellWindow, NULL) : 0;
+}
+
 static BOOL TryAcquireForeground(HWND window) {
     if (!window || !IsWindow(window)) return FALSE;
     if (IsForegroundWindow(window)) return TRUE;
@@ -41,19 +63,21 @@ static BOOL TryAcquireForeground(HWND window) {
     (void)SetForegroundWindow(window);
     if (IsForegroundWindow(window)) return TRUE;
 
-    HWND foreground = GetForegroundWindow();
-    DWORD foregroundThread = foreground
-        ? GetWindowThreadProcessId(foreground, NULL) : 0;
+    DWORD shellThread = GetShellInteractionThread();
     DWORD currentThread = GetCurrentThreadId();
-    BOOL attached = foregroundThread != 0 &&
-                    foregroundThread != currentThread &&
-                    AttachThreadInput(currentThread, foregroundThread, TRUE);
+    /* A tray click may leave a fullscreen game as the foreground process.
+     * Never join Catime's input queue to that process.  The fallback targets
+     * only Explorer/the configured Windows shell thread that owns the
+     * notification area. */
+    BOOL attached = shellThread != 0 &&
+                    shellThread != currentThread &&
+                    AttachThreadInput(currentThread, shellThread, TRUE);
     if (attached) {
         (void)BringWindowToTop(window);
         (void)SetActiveWindow(window);
         (void)SetForegroundWindow(window);
         (void)SetFocus(window);
-        (void)AttachThreadInput(currentThread, foregroundThread, FALSE);
+        (void)AttachThreadInput(currentThread, shellThread, FALSE);
     }
     return IsForegroundWindow(window);
 }
@@ -80,11 +104,15 @@ BOOL TrayMenuTracking_Begin(HWND owner, TrayMenuTrackingState* state) {
     state->owner = owner;
     state->initialized = TRUE;
     LONG_PTR style = 0;
-    if (ReadExtendedStyle(owner, &style) &&
-        (style & WS_EX_NOACTIVATE)) {
-        state->restoreNoActivate = TRUE;
-        if (!WriteExtendedStyle(owner, style & ~WS_EX_NOACTIVATE)) {
+    if (ReadExtendedStyle(owner, &style)) {
+        state->restoreNoActivate = (style & WS_EX_NOACTIVATE) != 0;
+        state->restoreTransparent = (style & WS_EX_TRANSPARENT) != 0;
+        LONG_PTR activeStyle =
+            style & ~(WS_EX_NOACTIVATE | WS_EX_TRANSPARENT);
+        if (activeStyle != style &&
+            !WriteExtendedStyle(owner, activeStyle)) {
             state->restoreNoActivate = FALSE;
+            state->restoreTransparent = FALSE;
         }
     }
     return TrayMenuTracking_ReassertForeground(state);
@@ -95,11 +123,16 @@ void TrayMenuTracking_End(TrayMenuTrackingState* state) {
     HWND owner = state->owner;
     if (owner && IsWindow(owner)) {
         (void)PostMessageW(owner, WM_NULL, 0, 0);
-        if (state->restoreNoActivate) {
+        if (state->restoreNoActivate || state->restoreTransparent) {
             LONG_PTR style = 0;
             if (ReadExtendedStyle(owner, &style)) {
-                (void)WriteExtendedStyle(
-                    owner, style | WS_EX_NOACTIVATE);
+                if (state->restoreNoActivate) {
+                    style |= WS_EX_NOACTIVATE;
+                }
+                if (state->restoreTransparent) {
+                    style |= WS_EX_TRANSPARENT;
+                }
+                (void)WriteExtendedStyle(owner, style);
             }
         }
     }

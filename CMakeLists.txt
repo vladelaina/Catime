@@ -22,6 +22,7 @@ project(Catime VERSION
 )
 include(cmake/CatimePureC.cmake)
 include(cmake/CatimeSourceLayout.cmake)
+include(cmake/CatimeInteractionSafety.cmake)
 
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/resource/catime_version_numeric.h.in"
@@ -84,6 +85,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.c")
 include(cmake/CatimeResources.cmake)
 
 add_executable(catime ${SOURCES} ${HEADERS} ${RESOURCE_FILES})
+add_dependencies(catime catime_interaction_safety_check)
 include(cmake/CatimeTests.cmake)
 include(cmake/CatimeTarget.cmake)
 include(cmake/CatimeCompiler.cmake)

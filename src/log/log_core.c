@@ -3,10 +3,12 @@
 #include "log_file.h"
 #include "config.h"
 #include "log.h"
+#include "utils/string_convert.h"
 #include "../../resource/resource.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -29,6 +31,19 @@ BOOL InitializeLogSystem(void) {
     LogOSVersion();
     LogCPUArchitecture();
     LogPackageIdentity();
+
+    wchar_t executablePath[MAX_PATH] = {0};
+    DWORD executablePathLength = GetModuleFileNameW(
+        NULL, executablePath, _countof(executablePath));
+    if (executablePathLength > 0 &&
+        executablePathLength < _countof(executablePath)) {
+        char* executablePathUtf8 = WideToUtf8Alloc(executablePath);
+        if (executablePathUtf8) {
+            WriteLog(LOG_LEVEL_INFO, "Executable Path: %s",
+                     executablePathUtf8);
+            free(executablePathUtf8);
+        }
+    }
 
     char configPath[MAX_PATH] = {0};
     GetConfigPath(configPath, sizeof(configPath));

@@ -83,5 +83,9 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
         notification.szInfo[converted] = L'\0';
     }
     notification.szInfoTitle[0] = L'\0';
-    Shell_NotifyIconW(NIM_MODIFY, &notification);
+    /* Notifications can be requested by the modal-notification worker.
+     * Keep this best-effort Shell call side-effect free here: recovery state
+     * and tray timers are owned by the main window thread and are updated by
+     * the periodic probe and UI-thread icon/tooltip updates. */
+    (void)Shell_NotifyIconW(NIM_MODIFY, &notification);
 }

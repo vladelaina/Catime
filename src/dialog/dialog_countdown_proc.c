@@ -134,10 +134,6 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             }
             return 0;
 
-        case WM_APP + 103:
-            CountdownReleaseModifiers();
-            return 0;
-
         case WM_KEYDOWN:
             if (wParam == VK_ESCAPE) {
                 DestroyWindow(hwnd);

@@ -102,6 +102,7 @@ BOOL UpdatePercentIconIfNeededInternal(
                   synchronizedTooltip, _TRUNCATE);
     }
     if (Shell_NotifyIconW(NIM_MODIFY, &updateData)) {
+        ReportTrayIconModifySuccess(trayHwnd);
         TrayIconLifetime_Retain(hIcon);
         hIcon = NULL;
         RecordBuiltinIconUpdateCache(animationName, value,
@@ -112,6 +113,8 @@ BOOL UpdatePercentIconIfNeededInternal(
                      updateData.szTip);
             tooltipApplied = TRUE;
         }
+    } else {
+        ReportTrayIconModifyFailure(trayHwnd);
     }
 
     if (hIcon) DestroyIcon(hIcon);

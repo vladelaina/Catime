@@ -180,7 +180,6 @@ LRESULT CALLBACK CountdownButtonSubclassProc(HWND hwnd, UINT msg, WPARAM wParam,
                                              LPARAM lParam, UINT_PTR subclassId,
                                              DWORD_PTR refData);
 
-void CountdownReleaseModifiers(void);
 BOOL CountdownRegisterWindowClass(void);
 BOOL CountdownCreateControls(HWND hwnd, CountdownDialogState* state);
 HWND CreateCustomTimeInputDialog(HWND hwndParent, DWORD dialogId,

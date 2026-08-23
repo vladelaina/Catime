@@ -8,7 +8,6 @@
 NOTIFYICONDATAW nid;
 UINT WM_TASKBARCREATED = 0;
 
-HHOOK g_mouseHook = NULL;
 HWND g_mainHwnd = NULL;
 HINSTANCE g_hInstance = NULL;
 BOOL g_trayIconActive = FALSE;
@@ -16,12 +15,9 @@ BOOL g_trayBackgroundWorkEnabled = FALSE;
 volatile LONG g_trayTooltipActive = FALSE;
 BOOL g_trayTipTimerActive = FALSE;
 BOOL g_traySystemMonitorActive = FALSE;
-DWORD g_lastMouseHookInstallAttemptTick = 0;
-DWORD g_lastMouseHookInstallWarningTick = 0;
-DWORD g_lastMouseHookReleaseWarningTick = 0;
 UINT g_trayRecreateRetryCount = 0;
-DWORD g_lastTrayRecreateRetryTick = 0;
 BOOL g_trayRecreateRetryLimitLogged = FALSE;
+TrayRecoveryPolicyState g_trayRecoveryPolicyState = {0};
 BOOL g_trayShuttingDown = FALSE;
 BOOL g_showingOpacityTip = FALSE;
 UINT g_trayCallbackVersion = 0;

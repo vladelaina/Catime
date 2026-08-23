@@ -21,21 +21,6 @@ static void CountdownPopulateInitialInput(CountdownDialogState* state) {
     }
 }
 
-void CountdownReleaseModifiers(void) {
-    INPUT inputs[8] = {0};
-    WORD keys[8] = {
-        VK_LSHIFT, VK_RSHIFT, VK_LCONTROL, VK_RCONTROL,
-        VK_LMENU, VK_RMENU, VK_LWIN, VK_RWIN
-    };
-
-    for (int i = 0; i < (int)_countof(keys); i++) {
-        inputs[i].type = INPUT_KEYBOARD;
-        inputs[i].ki.wVk = keys[i];
-        inputs[i].ki.dwFlags = KEYEVENTF_KEYUP;
-    }
-    SendInput((UINT)_countof(inputs), inputs, sizeof(INPUT));
-}
-
 BOOL CountdownRegisterWindowClass(void) {
     HINSTANCE instance = GetModuleHandleW(NULL);
     WNDCLASSEXW existing = {0};
@@ -131,7 +116,6 @@ BOOL CountdownCreateControls(HWND hwnd, CountdownDialogState* state) {
 
     SetFocus(state->hwndEdit);
     PostMessageW(hwnd, WM_APP + 200, 0, 0);
-    PostMessageW(hwnd, WM_APP + 103, 0, 0);
     if (!SetTimer(hwnd, INPUT_FOCUS_TIMER_ID,
                   INPUT_FOCUS_TIMER_DELAY_MS, NULL)) {
         LOG_WARNING("CountdownDialog: failed to start focus timer (error=%lu)",

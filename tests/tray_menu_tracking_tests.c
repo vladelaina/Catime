@@ -31,7 +31,7 @@ static void TestInvalidArguments(void) {
 
 static void TestNoActivateLifecycle(void) {
     HWND window = CreateWindowExW(
-        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE,
+        WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT,
         L"STATIC", L"Catime tray menu tracking test", WS_POPUP,
         0, 0, 1, 1, NULL, NULL, GetModuleHandleW(NULL), NULL);
     assert(window != NULL);
@@ -41,14 +41,17 @@ static void TestNoActivateLifecycle(void) {
     assert(state.initialized);
     assert(state.owner == window);
     assert(state.restoreNoActivate);
+    assert(state.restoreTransparent);
     assert((ReadStyle(window) & WS_EX_NOACTIVATE) == 0);
+    assert((ReadStyle(window) & WS_EX_TRANSPARENT) == 0);
 
-    LONG_PTR duringTracking = ReadStyle(window) | WS_EX_TRANSPARENT;
+    LONG_PTR duringTracking = ReadStyle(window) | WS_EX_LAYERED;
     WriteStyle(window, duringTracking);
     TrayMenuTracking_End(&state);
     LONG_PTR restored = ReadStyle(window);
     assert(restored & WS_EX_NOACTIVATE);
     assert(restored & WS_EX_TRANSPARENT);
+    assert(restored & WS_EX_LAYERED);
     assert(!state.initialized);
 
     TrayMenuTracking_End(&state);
@@ -65,6 +68,7 @@ static void TestExistingActivationStyleIsPreserved(void) {
     (void)TrayMenuTracking_Begin(window, &state);
     assert(state.initialized);
     assert(!state.restoreNoActivate);
+    assert(!state.restoreTransparent);
     TrayMenuTracking_End(&state);
     assert((ReadStyle(window) & WS_EX_NOACTIVATE) == 0);
     assert(DestroyWindow(window));

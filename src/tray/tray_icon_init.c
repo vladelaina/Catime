@@ -142,6 +142,7 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
         }
         wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip), nid.szTip);
         CancelTrayRecreateRetry(hwnd);
+        StartTrayHealthCheck(hwnd);
     } else {
         LOG_WARNING("Failed to add tray icon (error=%lu)", GetLastError());
         ZeroMemory(&nid, sizeof(nid));

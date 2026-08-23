@@ -115,24 +115,6 @@ void UpdateTrayTooltip(const wchar_t* tip);
 BOOL IsTrayIconActive(HWND hwnd);
 
 /**
- * @brief Install mouse hook for tray wheel events
- * @note Called when mouse enters tray icon area (NIN_POPUPOPEN)
- */
-void InstallTrayMouseHook(void);
-
-/**
- * @brief Uninstall mouse hook for tray wheel events
- * @note Called when mouse leaves tray icon area (NIN_POPUPCLOSE)
- */
-void UninstallTrayMouseHook(void);
-
-/**
- * @brief Check if mouse hook is currently installed
- * @return TRUE if hook is installed
- */
-BOOL IsTrayMouseHookInstalled(void);
-
-/**
  * @brief Check if mouse is over tray icon area
  * @param pt Mouse position in screen coordinates
  * @return TRUE if mouse is over tray icon
@@ -149,7 +131,7 @@ BOOL IsMouseNearTrayIconArea(POINT pt, int marginPx);
 
 /**
  * @brief Suspend or resume tray hover and tooltip work during menu interaction
- * @param suspended TRUE to pause hover hooks and tooltip updates
+ * @param suspended TRUE to pause hover polling and tooltip updates
  */
 void SetTrayInteractionSuspended(BOOL suspended);
 

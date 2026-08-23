@@ -97,55 +97,6 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
             return TRUE;
 
-        case WM_APP+103: {
-            /* Release stuck modifier keys */
-            INPUT inputs[8] = {0};
-            int inputCount = 0;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_LSHIFT;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_RSHIFT;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_LCONTROL;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_RCONTROL;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_LMENU;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_RMENU;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_LWIN;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            inputs[inputCount].type = INPUT_KEYBOARD;
-            inputs[inputCount].ki.wVk = VK_RWIN;
-            inputs[inputCount].ki.dwFlags = KEYEVENTF_KEYUP;
-            inputCount++;
-
-            SendInput(inputCount, inputs, sizeof(INPUT));
-            return TRUE;
-        }
-
         case WM_DESTROY: {
             KillTimer(hwndDlg, INPUT_FOCUS_TIMER_ID);
 

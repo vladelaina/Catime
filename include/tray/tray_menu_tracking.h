@@ -12,6 +12,7 @@ typedef struct {
     HWND owner;
     BOOL initialized;
     BOOL restoreNoActivate;
+    BOOL restoreTransparent;
     BOOL foregroundAcquired;
 } TrayMenuTrackingState;
 

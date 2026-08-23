@@ -31,7 +31,7 @@
 #define CLOCK_WM_ANIMATION_PREVIEW_LOADED (WM_USER + 3)  /**< Animation preview loaded message */
 #define CLOCK_WM_PLUGIN_EXIT (WM_USER + 4)  /**< Plugin requested exit via <exit> tag */
 #define CLOCK_WM_MAIN_TIMER_TICK (WM_USER + 5)  /**< High-precision main timer tick for smooth milliseconds */
-#define CLOCK_WM_TRAY_OPACITY_WHEEL (WM_USER + 6)  /**< Tray icon wheel opacity change */
+#define CLOCK_WM_TRAY_OPACITY_WHEEL (WM_USER + 6)  /**< Reserved tray wheel message; no global hook is installed */
 #define CLOCK_WM_PLUGIN_DATA_REDRAW (WM_USER + 7)  /**< Coalesced plugin data redraw request */
 
 /** @brief Modeless dialog result notification messages */

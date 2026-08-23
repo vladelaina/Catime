@@ -8,6 +8,7 @@
 
 #include "tray/tray.h"
 #include "tray/tray_hover_cache.h"
+#include "tray/tray_recovery_policy.h"
 #include "system_monitor.h"
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
@@ -15,11 +16,15 @@
 #define ICON_RECT_STALE_GRACE_MS 2000
 #define TRAY_OPACITY_SAVE_TIMER_ID 42423
 #define TRAY_RECREATE_RETRY_TIMER_ID 42430
+#define TRAY_HEALTH_CHECK_TIMER_ID 42434
 #define TRAY_OPACITY_SAVE_DELAY_MS 400
 #define TRAY_OPACITY_SAVE_MAX_RETRIES 3
 #define TRAY_RECREATE_RETRY_DELAY_MS 750
 #define TRAY_RECREATE_RETRY_MAX_ATTEMPTS 5
-#define TRAY_RECREATE_RETRY_RESET_MS 30000
+#define TRAY_RECREATE_BACKGROUND_RETRY_MS 30000
+#define TRAY_HEALTH_CHECK_INTERVAL_MS 30000
+#define TRAY_MODIFY_FAILURE_THRESHOLD 3
+#define TRAY_MODIFY_FAILURE_RESET_MS 120000
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
 
 typedef enum {
@@ -33,7 +38,6 @@ typedef enum {
 } AnimationType;
 
 extern NOTIFYICONDATAW nid;
-extern HHOOK g_mouseHook;
 extern HWND g_mainHwnd;
 extern HINSTANCE g_hInstance;
 extern BOOL g_trayIconActive;
@@ -41,12 +45,9 @@ extern BOOL g_trayBackgroundWorkEnabled;
 extern volatile LONG g_trayTooltipActive;
 extern BOOL g_trayTipTimerActive;
 extern BOOL g_traySystemMonitorActive;
-extern DWORD g_lastMouseHookInstallAttemptTick;
-extern DWORD g_lastMouseHookInstallWarningTick;
-extern DWORD g_lastMouseHookReleaseWarningTick;
 extern UINT g_trayRecreateRetryCount;
-extern DWORD g_lastTrayRecreateRetryTick;
 extern BOOL g_trayRecreateRetryLimitLogged;
+extern TrayRecoveryPolicyState g_trayRecoveryPolicyState;
 extern BOOL g_trayShuttingDown;
 extern UINT g_trayCallbackVersion;
 extern TrayHoverRectCache g_trayIconRectCache;
@@ -62,6 +63,12 @@ HWND GetValidTrayMainWindow(void);
 BOOL IsTrayIconActiveForWindow(HWND hwnd);
 void CancelTrayRecreateRetry(HWND hwnd);
 void ScheduleTrayRecreateRetry(HWND hwnd);
+void StartTrayHealthCheck(HWND hwnd);
+void StopTrayHealthCheck(HWND hwnd);
+void ReportTrayIconModifySuccess(HWND hwnd);
+void ReportTrayIconModifyFailure(HWND hwnd);
+void CALLBACK TrayHealthCheckTimerProc(HWND hwnd, UINT msg,
+                                       UINT_PTR id, DWORD time);
 
 AnimationType GetAnimationType(const char* animName);
 BOOL IsPercentIcon(AnimationType type);
@@ -86,8 +93,6 @@ BOOL TrayMetricSync_UpdateIconAndTooltip(
     const SystemMonitorSnapshot* snapshot, const wchar_t* tip);
 
 BOOL IsMouseOverTrayIconCached(POINT pt);
-BOOL TryReleaseTrayMouseHook(void);
-LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam);
 void CALLBACK TrayRecreateRetryTimerProc(HWND hwnd, UINT msg,
                                          UINT_PTR id, DWORD time);
 BOOL HandleTrayIconMenuActivation(HWND hwnd, UINT mouseMessage,

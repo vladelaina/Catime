@@ -164,7 +164,10 @@ void UpdateTrayTooltip(const wchar_t* tip) {
         return;
     }
     if (Shell_NotifyIconW(NIM_MODIFY, &n)) {
+        ReportTrayIconModifySuccess(owner);
         wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip), n.szTip);
+    } else {
+        ReportTrayIconModifyFailure(owner);
     }
 }
 

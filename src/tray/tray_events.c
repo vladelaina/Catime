@@ -79,9 +79,6 @@ static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, D
             g_hoverCheckTimer = 0;
             g_hoverCheckIntervalMs = 0;
             g_trayEventHwnd = NULL;
-            if (IsTrayMouseHookInstalled()) {
-                UninstallTrayMouseHook();
-            }
             SetTrayTooltipActive(FALSE);
         }
         return;
@@ -96,17 +93,9 @@ static void CALLBACK TrayHoverCheckTimerProc(HWND hwnd, UINT msg, UINT_PTR id, D
     BOOL isOverIcon = IsMouseOverTrayIconArea(pt);
     BOOL isNearIcon = isOverIcon ||
                       IsMouseNearTrayIconArea(pt, TRAY_HOVER_NEAR_MARGIN_PX);
-    BOOL hookInstalled = IsTrayMouseHookInstalled();
-    if (isOverIcon && !hookInstalled) {
-        InstallTrayMouseHook();
-        hookInstalled = TRUE;
-    } else if (!isOverIcon && hookInstalled) {
-        UninstallTrayMouseHook();
-        hookInstalled = IsTrayMouseHookInstalled();
-    }
     SetTrayTooltipActive(isOverIcon);
     SetTrayHoverCheckInterval(hwnd,
-                              (isNearIcon || hookInstalled) ?
+                              isNearIcon ?
                                   TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS :
                                   TRAY_HOVER_CHECK_IDLE_INTERVAL_MS);
 }
@@ -147,9 +136,6 @@ void StopTrayHoverDetection(void) {
     g_hoverCheckTimer = 0;
     g_hoverCheckIntervalMs = 0;
     g_trayEventHwnd = NULL;
-    if (IsTrayMouseHookInstalled()) {
-        UninstallTrayMouseHook();
-    }
     SetTrayTooltipActive(FALSE);
 }
 static inline void OpenUrlInBrowser(const wchar_t* url) {
@@ -192,13 +178,11 @@ void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     switch (event.kind) {
         case TRAY_CALLBACK_HOVER_MOVE:
             if (interactionSuspended) break;
-            InstallTrayMouseHook();
             SetTrayTooltipActive(TRUE);
             SetTrayHoverCheckInterval(hwnd, TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS);
             break;
         case TRAY_CALLBACK_HOVER_OPEN:
             if (interactionSuspended) break;
-            InstallTrayMouseHook();
             SetTrayTooltipActive(TRUE);
             SetTrayHoverCheckInterval(hwnd, TRAY_HOVER_CHECK_ACTIVE_INTERVAL_MS);
             break;
@@ -213,11 +197,15 @@ void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
             }
             break;
         case TRAY_CALLBACK_PRIMARY_MENU:
+            if (interactionSuspended) break;
+            LOG_INFO("Tray primary-menu activation received");
             (void)HandleTrayIconMenuActivation(
                 hwnd, WM_LBUTTONUP,
                 event.hasAnchor ? &event.anchor : NULL);
             break;
         case TRAY_CALLBACK_SECONDARY_MENU:
+            if (interactionSuspended) break;
+            LOG_INFO("Tray secondary-menu activation received");
             (void)HandleTrayIconMenuActivation(
                 hwnd, WM_RBUTTONUP,
                 event.hasAnchor ? &event.anchor : NULL);

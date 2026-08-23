@@ -3,7 +3,7 @@
  * @brief CLI parser with multiple input formats
  *
  * Supports natural time input: "25m", "1h30m", "1 30" (minutes:seconds), "14 30t" (absolute time).
- * Aggressive focus stealing for help dialog (Windows fails topmost focus).
+ * Uses normal foreground activation for the help dialog.
  */
 #include <windows.h>
 #include <shellapi.h>
@@ -75,27 +75,23 @@ static BOOL ShouldCloseHelpDialog(UINT msg, WPARAM wParam) {
     }
 }
 
-/** Aggressive focus stealing (Windows fails topmost window focus) */
+/** Request focus without attaching to another process's input queue. */
 static void ForceForegroundAndFocus(HWND hwndDialog) {
-    HWND hwndFore = GetForegroundWindow();
-    DWORD foreThread = hwndFore ? GetWindowThreadProcessId(hwndFore, NULL) : 0;
-    DWORD curThread = GetCurrentThreadId();
-    
-    if (foreThread && foreThread != curThread) {
-        AttachThreadInput(foreThread, curThread, TRUE);
-    }
-    
     Dialog_EnsureWindowVisible(hwndDialog);
-    AllowSetForegroundWindow(ASFW_ANY);
-    BringWindowToTop(hwndDialog);
-    SetForegroundWindow(hwndDialog);
-    SetActiveWindow(hwndDialog);
+    (void)BringWindowToTop(hwndDialog);
+    (void)SetForegroundWindow(hwndDialog);
+    (void)SetActiveWindow(hwndDialog);
     
     HWND hOk = GetDlgItem(hwndDialog, IDOK);
     if (hOk) SetFocus(hOk);
-    
-    if (foreThread && foreThread != curThread) {
-        AttachThreadInput(foreThread, curThread, FALSE);
+
+    if (GetForegroundWindow() != hwndDialog) {
+        FLASHWINFO flash = {0};
+        flash.cbSize = sizeof(flash);
+        flash.hwnd = hwndDialog;
+        flash.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
+        flash.uCount = 3;
+        (void)FlashWindowEx(&flash);
     }
 }
 
