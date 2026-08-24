@@ -34,3 +34,5 @@ body:
           required: true
         - label: "📋 I've reviewed existing feature requests to make sure this isn't a duplicate."
           required: true
+        - label: "🌍 This report is written in English so that more members of the community can read and understand it."
+          required: true

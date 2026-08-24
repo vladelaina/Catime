@@ -43,3 +43,5 @@ body:
           required: true
         - label: "📋 I've checked the FAQ and known issues list to confirm this is a new bug."
           required: true
+        - label: "🌍 This report is written in English so that more members of the community can read and understand it."
+          required: true
