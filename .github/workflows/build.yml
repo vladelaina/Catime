@@ -827,6 +827,7 @@ jobs:
           # The signing workflow deletes this input after a successful request.
           archive: true
           compression-level: 0
+          retention-days: 1
 
   sign:
     if: >-
@@ -847,10 +848,13 @@ jobs:
   virus-total:
     name: security / virustotal
     if: >-
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.sign.result == 'success' || needs.sign.result == 'skipped') &&
       github.repository == 'vladelaina/Catime' &&
       (github.event_name != 'pull_request' ||
        github.event.pull_request.head.repo.full_name == github.repository)
-    needs: build
+    needs: [build, sign]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -859,7 +863,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Download signed build executable
+        if: needs.sign.result == 'success'
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
+          path: vt-input
+
       - name: Download unsigned build executable
+        if: needs.sign.result == 'skipped'
         uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ needs.build.outputs.artifact-id }}
