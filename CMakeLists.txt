@@ -54,7 +54,7 @@ option(CATIME_VALIDATE_LANGUAGES "Validate language resource key alignment" ON)
 option(CATIME_COMPACT_LANGUAGE_RESOURCES
     "Compact language resources when bundle compression is disabled" ON)
 option(CATIME_COMPRESS_EMBEDDED_ASSETS
-    "Compress embedded language and font resources" ON)
+    "Compress embedded language and font resources" OFF)
 option(CATIME_AVOID_GNU_EMULATED_TLS
     "Use Win32 FLS with GNU POSIX thread-model compilers" ON)
 

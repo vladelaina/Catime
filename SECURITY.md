@@ -23,8 +23,11 @@ security baseline for a newly built binary.
 
 The `security / source-policy` job runs before CI and release builds. It blocks
 PowerShell execution-policy bypass arguments and high-entropy tokens embedded
-in URLs. This keeps these avoidable heuristic triggers out of compiled builds;
-approved short public links remain valid.
+in URLs. It also prevents build settings that disable stack protection, strip
+all PE metadata, or suppress the PE timestamp. Release builds use conventional
+optimization and native Windows resources by default instead of a custom
+compressed asset container. These choices keep avoidable heuristic triggers out
+of compiled builds; approved short public links remain valid.
 
 The GitHub Actions `security / virustotal` job uploads the final CI artifact and
 writes the SHA-256, VirusTotal link, engine counts, and any engine names to the

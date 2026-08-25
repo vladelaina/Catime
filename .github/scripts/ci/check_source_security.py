@@ -17,6 +17,11 @@ URL_PATTERN = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
 POWERSHELL_POLICY_PATTERN = re.compile(
     r"(?i)(?:-|/)executionpolicy(?:\s+|\s*=\s*)(?:\"|')?" + "by" + "pass\b"
 )
+RISKY_BUILD_SWITCHES = {
+    "-fno-" + "stack-protector": "disabling compiler stack protection is forbidden",
+    "--strip-" + "all": "stripping all PE metadata is forbidden",
+    "--no-insert-" + "timestamp": "suppressing the PE timestamp is forbidden",
+}
 OPAQUE_TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_+/%=-]+$")
 SENSITIVE_QUERY_KEYS = {
     "access_token",
@@ -133,6 +138,9 @@ def main() -> int:
                 findings.append(
                     (path, line_number, "PowerShell execution-policy bypass is forbidden")
                 )
+            for switch, reason in RISKY_BUILD_SWITCHES.items():
+                if switch in line:
+                    findings.append((path, line_number, reason))
             for match in URL_PATTERN.finditer(line):
                 reason = suspicious_url_reason(match.group(0))
                 if reason:
