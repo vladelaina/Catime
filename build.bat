@@ -17,7 +17,7 @@ set START_TIME=%TIME%
 
 REM Display elegant gradient logo using PowerShell
 chcp 65001 >nul
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+powershell -NoProfile -Command ^
 "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ^
 Write-Host ''; ^
 Write-Host ''; ^
@@ -132,7 +132,7 @@ start /b "" cmd /c call "%CD%\..\build_worker.bat" "%BUILD_TYPE%" "%BUILD_JOBS%"
 REM Start progress monitor
 REM Get absolute path to the script
 set SCRIPT_PATH=%CD%\..\build_monitor.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_PATH%" -BuildDir "." -TotalFiles %TOTAL_FILES%
+powershell -NoProfile -File "%SCRIPT_PATH%" -BuildDir "." -TotalFiles %TOTAL_FILES%
 
 REM Check build result
 set BUILD_EXIT_CODE=1

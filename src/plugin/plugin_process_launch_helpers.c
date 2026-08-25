@@ -49,8 +49,9 @@ const wchar_t* PluginProcess_GetInterpreter(const wchar_t* path) {
     if (_wcsicmp(extension, L".py") == 0 ||
         _wcsicmp(extension, L".pyw") == 0) return L"pythonw.exe";
     if (_wcsicmp(extension, L".ps1") == 0) {
-        return L"powershell.exe -NoProfile -ExecutionPolicy Bypass "
-               L"-WindowStyle Hidden -NonInteractive -File";
+        /* Respect the host PowerShell policy; plugins are already gated by
+         * Catime's per-file trust confirmation before this path is reached. */
+        return L"powershell.exe -NoProfile -NonInteractive -File";
     }
     if (_wcsicmp(extension, L".bat") == 0 ||
         _wcsicmp(extension, L".cmd") == 0) return L"cmd.exe /c";

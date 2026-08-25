@@ -36,6 +36,16 @@ jobs:
       - name: Validate publishing guards
         run: python3 .github/scripts/ci/check_publish_guards.py
 
+  source-policy:
+    name: security / source-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Reject risky source patterns
+        run: python3 .github/scripts/ci/check_source_security.py
+
   codeql:
     name: quality / codeql
     runs-on: ubuntu-latest
@@ -737,6 +747,7 @@ jobs:
     name: build / mingw-release
     needs:
       - publishing-policy
+      - source-policy
       - codeql
       - cppcheck
       - gitleaks
@@ -832,6 +843,57 @@ jobs:
       archive-signed-artifact: false
     secrets:
       SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+
+  virus-total:
+    name: security / virustotal
+    if: >-
+      github.repository == 'vladelaina/Catime' &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Download unsigned build executable
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: vt-input
+
+      - name: Scan executable with VirusTotal
+        env:
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+          VT_REPORT_PATH: virustotal-report.json
+        run: |
+          set -euo pipefail
+          file=$(find vt-input -type f -iname '*.exe' -print -quit)
+          if [ -z "$file" ]; then
+            echo "::error::VirusTotal input executable was not found"
+            exit 1
+          fi
+          python3 .github/scripts/ci/scan_virustotal.py --file "$file"
+
+      - name: Add VirusTotal link to job summary when scan is skipped
+        if: always() && hashFiles('virustotal-report.json') == ''
+        run: |
+          {
+            echo "## VirusTotal scan"
+            echo
+            echo "The scan did not produce a report (usually because `VIRUSTOTAL_API_KEY` is not configured)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload VirusTotal report
+        if: always() && hashFiles('virustotal-report.json') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: virustotal-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: virustotal-report.json
+          retention-days: 30
 
   store-package:
     name: package / microsoft-store

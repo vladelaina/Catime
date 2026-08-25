@@ -14,7 +14,7 @@ AboutLinkInfo g_aboutLinkInfos[] = {
     {IDC_COPYRIGHT_LINK, NULL, L"Copyright Notice", L"https://github.com/vladelaina/Catime#️copyright-notice"},
     {IDC_SUPPORT, NULL, L"Discord", L"https://discord.com/invite/W3tW2gtp6g"},
     {IDC_QQ_GROUP_LINK, L"QQ群（1079222265）", L"QQ Group (1079222265)",
-     L"https://qun.qq.com/universal-share/share?ac=1&authKey=ZCDmL8bNwuEDJa356bVF7Fj32MnLNVqGmGYa0%2BQkRcmmdoV2N665OVTuMPD6mNnc&busi_data=eyJncm91cENvZGUiOiIxMDc5MjIyMjY1IiwidG9rZW4iOiJlMEREUS9XeFVUQWpRSkNJSjNoU0F2TSs1M1NGdTUrRmZyOE13aGJBM2xOS3FwaUF4bU9KZWZiSHNHSTZCTUU4IiwidWluIjoiMjM3NzY0MDY5OSJ9&data=lMYxB9vSqwDoob-O8j5_4Z_kAtDoF1BUr3GVXlpmYT02pHPeu_oKI6oihwuYfSZBJZl3TxYexAYK0bJVD5EfEw&svctype=4&tempid=h5_group_info"}
+     L"https://qm.qq.com/q/vjCduOQILI"}
 };
 
 const size_t g_aboutLinkInfoCount = sizeof(g_aboutLinkInfos) / sizeof(g_aboutLinkInfos[0]);
