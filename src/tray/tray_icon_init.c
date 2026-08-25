@@ -138,13 +138,17 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
             g_trayCallbackVersion = NOTIFYICON_VERSION;
         } else {
             nid.uVersion = 0;
-            LOG_WARNING("Tray callback version 3 unavailable; using legacy events");
+            LOG_WARNING("Tray callback version 3 unavailable; using legacy events "
+                        "(error=%lu)", GetLastError());
         }
         wcscpy_s(g_lastTrayTooltip, _countof(g_lastTrayTooltip), nid.szTip);
         CancelTrayRecreateRetry(hwnd);
         StartTrayHealthCheck(hwnd);
     } else {
-        LOG_WARNING("Failed to add tray icon (error=%lu)", GetLastError());
+        LOG_WARNING("Failed to add tray icon: hwnd=0x%p iconId=%u callback=0x%X "
+                    "error=%lu", hwnd, nid.uID, nid.uCallbackMessage,
+                    GetLastError());
+        Tray_LogDiagnosticSnapshot("tray-icon-add-failed", hwnd);
         ZeroMemory(&nid, sizeof(nid));
         ScheduleTrayRecreateRetry(hwnd);
     }

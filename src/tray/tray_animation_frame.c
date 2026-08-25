@@ -187,11 +187,13 @@ applyIcon:
     nid.hIcon = hIcon;
 
     BOOL success = Shell_NotifyIconW(NIM_MODIFY, &nid);
+    DWORD shellError = success ? ERROR_SUCCESS : GetLastError();
     if (success) {
         TrayIconLifetime_Retain(hIcon);
         ReportTrayIconModifySuccess(trayHwnd);
     } else {
         DestroyIcon(hIcon);
+        SetLastError(shellError);
         ReportTrayIconModifyFailure(trayHwnd);
     }
 

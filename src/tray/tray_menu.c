@@ -62,12 +62,17 @@ static POINT ResolveTrayMenuAnchor(HWND hwnd, const POINT* anchor) {
  */
 void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     TrayMenuTrackingState tracking = {0};
-    (void)TrayMenuTracking_Begin(hwnd, &tracking);
+    if (!TrayMenuTracking_Begin(hwnd, &tracking)) {
+        LOG_WARNING("Tray color menu tracking initialization failed: hwnd=0x%p "
+                    "foreground=0x%p", hwnd, GetForegroundWindow());
+    }
     ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
     if (!hMenu) {
+        LOG_WINDOWS_ERROR("Failed to create tray color menu");
+        Tray_LogDiagnosticSnapshot("color-menu-create-failed", hwnd);
         TrayMenuTracking_End(&tracking);
         return;
     }
@@ -116,11 +121,24 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     /* Display menu */
     POINT pt = ResolveTrayMenuAnchor(hwnd, anchor);
     if (!TrayMenuTracking_ReassertForeground(&tracking)) {
-        LOG_WARNING("Tray menu foreground acquisition failed");
+        LOG_WARNING("Tray color menu foreground acquisition failed: hwnd=0x%p "
+                    "foreground=0x%p", hwnd, GetForegroundWindow());
     }
+    SetLastError(ERROR_SUCCESS);
     UINT selectedCommand = TrackPopupMenu(
         hMenu, TPM_LEFTALIGN | TPM_RIGHTBUTTON | TPM_RETURNCMD,
         pt.x, pt.y, 0, hwnd, NULL);
+    DWORD trackError = GetLastError();
+    if (selectedCommand == 0) {
+        LOG_INFO("Tray color menu ended without command: hwnd=0x%p "
+                 "anchor=(%ld,%ld) error=%lu", hwnd, pt.x, pt.y,
+                 trackError);
+        if (trackError != ERROR_SUCCESS) {
+            LOG_WARNING("Tray color menu tracking failed (error=%lu)",
+                        trackError);
+            Tray_LogDiagnosticSnapshot("color-menu-track-failed", hwnd);
+        }
+    }
     TrayMenuTracking_End(&tracking);
     BOOL isTaskbarMonitorCommand =
         selectedCommand == CLOCK_IDM_TASKBAR_MONITOR_CPU_MEMORY ||
@@ -149,7 +167,6 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     DestroyMenu(hMenu);
 }
 
-
 /**
  * @brief Build and display left-click timer control menu
  * @param hwnd Main window handle
@@ -157,18 +174,25 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
  */
 void ShowContextMenu(HWND hwnd, const POINT* anchor) {
     TrayMenuTrackingState tracking = {0};
-    (void)TrayMenuTracking_Begin(hwnd, &tracking);
+    if (!TrayMenuTracking_Begin(hwnd, &tracking)) {
+        LOG_WARNING("Tray context menu tracking initialization failed: hwnd=0x%p "
+                    "foreground=0x%p", hwnd, GetForegroundWindow());
+    }
     ApplyNativeMenuThemeToWindow(hwnd);
     SetCursor(LoadCursorW(NULL, IDC_ARROW));
     
     HMENU hMenu = CreatePopupMenu();
     if (!hMenu) {
+        LOG_WINDOWS_ERROR("Failed to create tray context menu");
+        Tray_LogDiagnosticSnapshot("context-menu-create-failed", hwnd);
         TrayMenuTracking_End(&tracking);
         return;
     }
     
     HMENU hTimerManageMenu = CreatePopupMenu();
     if (!hTimerManageMenu) {
+        LOG_WINDOWS_ERROR("Failed to create tray timer-management submenu");
+        Tray_LogDiagnosticSnapshot("timer-submenu-create-failed", hwnd);
         DestroyMenu(hMenu);
         TrayMenuTracking_End(&tracking);
         return;
@@ -227,7 +251,6 @@ void ShowContextMenu(HWND hwnd, const POINT* anchor) {
 
     /* Build Pomodoro submenu using dedicated module */
     BuildPomodoroMenu(hMenu);
-    
 
     AppendMenuW(hMenu, MF_STRING | (CLOCK_COUNT_UP ? MF_CHECKED : MF_UNCHECKED),
                CLOCK_IDM_COUNT_UP_START,
@@ -250,11 +273,24 @@ void ShowContextMenu(HWND hwnd, const POINT* anchor) {
 
     POINT pt = ResolveTrayMenuAnchor(hwnd, anchor);
     if (!TrayMenuTracking_ReassertForeground(&tracking)) {
-        LOG_WARNING("Tray menu foreground acquisition failed");
+        LOG_WARNING("Tray context menu foreground acquisition failed: hwnd=0x%p "
+                    "foreground=0x%p", hwnd, GetForegroundWindow());
     }
+    SetLastError(ERROR_SUCCESS);
     UINT selectedCommand = TrackPopupMenu(
         hMenu, TPM_BOTTOMALIGN | TPM_LEFTALIGN | TPM_RETURNCMD,
         pt.x, pt.y, 0, hwnd, NULL);
+    DWORD trackError = GetLastError();
+    if (selectedCommand == 0) {
+        LOG_INFO("Tray context menu ended without command: hwnd=0x%p "
+                 "anchor=(%ld,%ld) error=%lu timerRunning=%d", hwnd,
+                 pt.x, pt.y, trackError, timerRunning);
+        if (trackError != ERROR_SUCCESS) {
+            LOG_WARNING("Tray context menu tracking failed (error=%lu)",
+                        trackError);
+            Tray_LogDiagnosticSnapshot("context-menu-track-failed", hwnd);
+        }
+    }
     TrayMenuTracking_End(&tracking);
     DestroyMenu(hMenu);
     if (selectedCommand != 0 && IsWindow(hwnd)) {

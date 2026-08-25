@@ -4,6 +4,7 @@
  */
 
 #include "tray_internal.h"
+#include "log.h"
 #include <limits.h>
 #include <shellapi.h>
 
@@ -87,5 +88,8 @@ void ShowTrayNotification(HWND hwnd, const char* message) {
      * Keep this best-effort Shell call side-effect free here: recovery state
      * and tray timers are owned by the main window thread and are updated by
      * the periodic probe and UI-thread icon/tooltip updates. */
-    (void)Shell_NotifyIconW(NIM_MODIFY, &notification);
+    if (!Shell_NotifyIconW(NIM_MODIFY, &notification)) {
+        LOG_WARNING("Tray timeout notification submission failed: hwnd=0x%p "
+                    "error=%lu", owner, GetLastError());
+    }
 }

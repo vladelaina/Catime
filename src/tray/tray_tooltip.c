@@ -179,6 +179,9 @@ void CALLBACK TrayTipTimerProc(HWND hwnd, UINT msg, UINT_PTR id, DWORD time) {
     if (!IsTrayIconActiveForWindow(hwnd)) {
         if (hwnd) KillTimer(hwnd, TRAY_TIP_TIMER_ID);
         g_trayTipTimerActive = FALSE;
+        LOG_WARNING("Tray tooltip timer stopped because tray identity is inactive: "
+                    "hwnd=0x%p", hwnd);
+        Tray_LogDiagnosticSnapshot("tooltip-timer-inactive", hwnd);
         return;
     }
 

@@ -48,6 +48,12 @@ BOOL Timer_HasPresentedMainWindowFrame(void) {
 }
 
 void TimerEvents_HandleCountdownCompletion(HWND hwnd) {
+    LOG_INFO("Countdown completed: hwnd=0x%p total=%d elapsed=%d action=%d "
+             "showTime=%d countUp=%d paused=%d mainTimerRunning=%d",
+             hwnd, CLOCK_TOTAL_TIME, countdown_elapsed_time,
+             CLOCK_TIMEOUT_ACTION, CLOCK_SHOW_CURRENT_TIME, CLOCK_COUNT_UP,
+             CLOCK_IS_PAUSED, MainTimer_IsRunning());
+    Tray_LogDiagnosticSnapshot("countdown-complete", hwnd);
     BOOL shouldNotify = CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&

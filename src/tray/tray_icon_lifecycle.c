@@ -44,7 +44,10 @@ void RemoveTrayIconInternal(BOOL finalCleanup) {
         g_trayBackgroundWorkEnabled = FALSE;
     }
     if (hadTrayIdentity) {
-        Shell_NotifyIconW(NIM_DELETE, &nid);
+        if (!Shell_NotifyIconW(NIM_DELETE, &nid)) {
+            LOG_WARNING("Failed to delete tray icon during cleanup: hwnd=0x%p "
+                        "error=%lu", trayHwnd, GetLastError());
+        }
     }
     TrayIconLifetime_ReleaseAll();
     InterlockedExchange(&g_trayTooltipActive, 0);
@@ -79,6 +82,10 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     BOOL oldTrayItemDeleted = FALSE;
     if (hadTrayIdentity) {
         oldTrayItemDeleted = Shell_NotifyIconW(NIM_DELETE, &nid);
+        if (!oldTrayItemDeleted) {
+            LOG_WARNING("Failed to remove old tray icon before recreation: "
+                        "hwnd=0x%p error=%lu", oldTrayHwnd, GetLastError());
+        }
     }
     if (oldTrayItemDeleted) {
         TrayIconLifetime_ReleaseAll();
@@ -86,6 +93,9 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     ZeroMemory(&nid, sizeof(nid));
     InitTrayIconInternal(hwnd, hInstance, FALSE, FALSE, TRUE);
     if (!IsTrayIconActive(hwnd)) {
+        LOG_WARNING("Tray icon recreation did not produce an active icon: hwnd=0x%p",
+                    hwnd);
+        Tray_LogDiagnosticSnapshot("tray-recreation-inactive", hwnd);
         KillTimer(hwnd, TRAY_TIP_TIMER_ID);
         g_trayTipTimerActive = FALSE;
         KillTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID);
@@ -96,8 +106,6 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
         }
         return;
     }
-
-    LOG_INFO("Tray icon recreation succeeded");
 
     if (TrayAnimation_IsRunning()) {
         TrayAnimation_RefreshCurrentIcon();

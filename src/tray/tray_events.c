@@ -166,12 +166,31 @@ void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
     BOOL version4 = g_trayCallbackVersion == NOTIFYICON_VERSION_4;
     if (!TrayCallback_DecodeCompatible(
             version4, wParam, lParam,
-            CLOCK_ID_TRAY_APP_ICON, &event) ||
-        !IsValidTrayEventWindow(hwnd) ||
-        !IsTrayIconActive(hwnd)) {
+            CLOCK_ID_TRAY_APP_ICON, &event)) {
+        Tray_LogRejectedCallback(hwnd, version4, wParam, lParam,
+                                 "decode-or-icon-id");
+        return;
+    }
+    if (!IsValidTrayEventWindow(hwnd)) {
+        Tray_LogRejectedCallback(hwnd, version4, wParam, lParam,
+                                 "invalid-window");
+        return;
+    }
+    if (!IsTrayIconActive(hwnd)) {
+        Tray_LogRejectedCallback(hwnd, version4, wParam, lParam,
+                                 "inactive-icon");
         return;
     }
     BOOL interactionSuspended = IsTrayInteractionSuspended();
+    if (event.kind == TRAY_CALLBACK_PRIMARY_MENU ||
+        event.kind == TRAY_CALLBACK_SECONDARY_MENU) {
+        LOG_INFO("Tray menu callback received: button=%s version4=%d icon=%u "
+                 "anchor=(%ld,%ld) hasAnchor=%d suspended=%d",
+                 event.kind == TRAY_CALLBACK_SECONDARY_MENU ? "right" : "left",
+                 version4, event.iconId,
+                 event.anchor.x, event.anchor.y,
+                 event.hasAnchor, interactionSuspended);
+    }
     if (!interactionSuspended) {
         StartTrayHoverDetection(hwnd);
     }
@@ -197,15 +216,19 @@ void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
             }
             break;
         case TRAY_CALLBACK_PRIMARY_MENU:
-            if (interactionSuspended) break;
-            LOG_INFO("Tray primary-menu activation received");
+            if (interactionSuspended) {
+                Tray_LogDiagnosticSnapshot("menu-callback-suspended", hwnd);
+                break;
+            }
             (void)HandleTrayIconMenuActivation(
                 hwnd, WM_LBUTTONUP,
                 event.hasAnchor ? &event.anchor : NULL);
             break;
         case TRAY_CALLBACK_SECONDARY_MENU:
-            if (interactionSuspended) break;
-            LOG_INFO("Tray secondary-menu activation received");
+            if (interactionSuspended) {
+                Tray_LogDiagnosticSnapshot("menu-callback-suspended", hwnd);
+                break;
+            }
             (void)HandleTrayIconMenuActivation(
                 hwnd, WM_RBUTTONUP,
                 event.hasAnchor ? &event.anchor : NULL);
