@@ -56,6 +56,7 @@ static BOOL PostSecurityRequest(const PluginOperation* op,
     PluginSecurityRequest* request = calloc(1, sizeof(*request));
     if (!request) return FALSE;
     request->index = op->index;
+    request->operation = op->operation;
     request->serial = op->serial;
     strncpy_s(request->path, sizeof(request->path), path, _TRUNCATE);
     WideToUtf8Fixed(plugin->displayName, request->displayName,
@@ -77,6 +78,7 @@ int PluginManager_PostAsyncSecurityRequest(int index, const char* path,
     PluginSecurityRequest* request = calloc(1, sizeof(*request));
     if (!request) return -1;
     request->serial = op->serial;
+    request->operation = op->operation;
     request->index = index;
     if (path) strncpy_s(request->path, sizeof(request->path), path, _TRUNCATE);
     if (displayName) strncpy_s(request->displayName, sizeof(request->displayName),

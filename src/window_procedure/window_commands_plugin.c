@@ -9,8 +9,10 @@
 static BOOL HandlePluginToggle(HWND hwnd, int pluginIndex) {
     ClosePluginSecurityDialog();
     /* Check if this plugin is already running - toggle off */
-    if (PluginManager_GetActivePluginIndex() == pluginIndex) {
+    if (PluginManager_GetActivePluginIndex() == pluginIndex ||
+        PluginManager_IsPluginRunning(pluginIndex)) {
         if (!PluginManager_RequestStop(hwnd, pluginIndex)) {
+            PluginManager_StopPlugin(pluginIndex);
             PluginData_Clear();
         }
 
@@ -47,7 +49,9 @@ void HandlePluginExit(HWND hwnd) {
     ClosePluginSecurityDialog();
 
     /* Stop all plugins */
-    PluginManager_RequestStopAll(hwnd);
+    if (!PluginManager_RequestStopAll(hwnd)) {
+        PluginManager_StopAllPlugins();
+    }
 
     /* Prevent countdown completion notification from triggering */
     countdown_message_shown = true;

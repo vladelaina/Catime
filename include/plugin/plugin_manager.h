@@ -30,6 +30,7 @@ typedef struct {
     char path[MAX_PATH];
     char displayName[128];
     char hash[65];
+    int operation;
 } PluginSecurityRequest;
 
 typedef struct {

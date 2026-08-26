@@ -125,6 +125,7 @@ BOOL PreparePluginLaunchLocked(int index, const wchar_t* expectedPath,
     }
 
     if (plugin->isRunning) {
+        *launchPlugin = *plugin;
         *alreadyRunning = TRUE;
         return TRUE;
     }
@@ -179,9 +180,25 @@ BOOL LaunchPreparedPlugin(int index, const wchar_t* expectedPath) {
         return FALSE;
     }
     if (alreadyRunning) {
+        BOOL stillRunning = PluginManager_IsPluginRunning(index);
+        if (stillRunning) {
+            EnterCriticalSection(&g_pluginCS);
+            if (g_pluginManagerInitialized && index >= 0 && index < g_pluginCount &&
+                (!expectedPath || wcscmp(g_plugins[index].path, expectedPath) == 0)) {
+                g_activePluginIndex = index;
+                g_lastRunningPluginIndex = -1;
+            } else {
+                stillRunning = FALSE;
+            }
+            LeaveCriticalSection(&g_pluginCS);
+        }
+        if (stillRunning) {
+            PluginData_SetOutputDirectoryFromPluginPath(launchPlugin.path);
+            PluginData_SetActive(TRUE);
+        }
         LeaveCriticalSection(&g_pluginLifecycleCS);
         free(detachedPlugins);
-        return TRUE;
+        return stillRunning;
     }
 
     PluginProcess_TerminateAllOrphans();
@@ -190,6 +207,11 @@ BOOL LaunchPreparedPlugin(int index, const wchar_t* expectedPath) {
     }
 
     PluginData_SetOutputDirectoryFromPluginPath(launchPlugin.path);
+    wchar_t loadingText[256];
+    _snwprintf_s(loadingText, _countof(loadingText), _TRUNCATE,
+                 L"Loading %ls...", launchPlugin.displayName);
+    PluginData_SetText(loadingText);
+    PluginData_SetActive(TRUE);
 
     if (!PluginProcess_Launch(&launchPlugin)) {
         LOG_ERROR("Failed to launch plugin: %ls", launchPlugin.displayName);

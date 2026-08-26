@@ -135,7 +135,9 @@ void CleanupBeforeTimerAction(HWND hwnd) {
     StopNotificationSound();
     CloseAllNotifications();
     if (!PluginData_HasCatimeTag()) {
-        PluginManager_RequestStopAll(hwnd);
+        if (!PluginManager_RequestStopAll(hwnd)) {
+            PluginManager_StopAllPlugins();
+        }
     }
 }
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {

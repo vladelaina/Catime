@@ -119,7 +119,9 @@ void WindowPlugin_StopPluginsForCustomTextDisplay(CustomTextDisplayState* state)
     }
     ClosePluginSecurityDialog();
     if (state && state->owner) {
-        PluginManager_RequestStopAllPreserveData(state->owner);
+        if (!PluginManager_RequestStopAllPreserveData(state->owner)) {
+            PluginManager_StopAllPlugins();
+        }
     }
     if (state) {
         state->pluginsStopped = TRUE;

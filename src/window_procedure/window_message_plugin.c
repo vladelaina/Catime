@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 static LONG g_pluginSecurityOperationSerial = 0;
+static int g_pluginSecurityOperation = 0;
 
 static void ApplyStartedPluginWindowState(HWND hwnd) {
     StopNotificationSound();
@@ -46,8 +47,18 @@ LRESULT HandlePluginSecurityRequest(HWND hwnd, WPARAM wp, LPARAM lp) {
         if (PluginManager_IsOperationCurrent(request->serial)) {
             if (IsPluginSecurityDialogOpen()) ClosePluginSecurityDialog();
             g_pluginSecurityOperationSerial = request->serial;
+            g_pluginSecurityOperation = request->operation;
             ShowPluginSecurityDialog(hwnd, request->path, request->displayName,
                                      request->index, request->hash);
+            if (!IsPluginSecurityDialogOpen()) {
+                if (request->operation == PLUGIN_OPERATION_HOT_RELOAD) {
+                    PluginData_Clear();
+                    InvalidateRect(hwnd, NULL, TRUE);
+                }
+                g_pluginSecurityOperationSerial = 0;
+                g_pluginSecurityOperation = 0;
+                ClearPendingPluginInfo();
+            }
         }
         free(request);
     }
@@ -64,16 +75,19 @@ LRESULT HandlePluginOperationComplete(HWND hwnd, WPARAM wp, LPARAM lp) {
     }
     if (!result->success &&
         (result->operation == PLUGIN_OPERATION_START ||
-         result->operation == PLUGIN_OPERATION_START_AFTER_SECURITY)) {
+         result->operation == PLUGIN_OPERATION_START_AFTER_SECURITY ||
+         result->operation == PLUGIN_OPERATION_HOT_RELOAD)) {
         PluginData_SetStatusText(result->error[0] ? result->error : L"FAIL");
     }
     if (result->success &&
         (result->operation == PLUGIN_OPERATION_START ||
-         result->operation == PLUGIN_OPERATION_START_AFTER_SECURITY)) {
+         result->operation == PLUGIN_OPERATION_START_AFTER_SECURITY ||
+         result->operation == PLUGIN_OPERATION_HOT_RELOAD)) {
         ApplyStartedPluginWindowState(hwnd);
     }
     if (result->operation == PLUGIN_OPERATION_START ||
-        result->operation == PLUGIN_OPERATION_START_AFTER_SECURITY) {
+        result->operation == PLUGIN_OPERATION_START_AFTER_SECURITY ||
+        result->operation == PLUGIN_OPERATION_HOT_RELOAD) {
         EnsureWindowVisibleWithTopmostState(hwnd);
     }
     InvalidateRect(hwnd, NULL, TRUE);
@@ -88,18 +102,25 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     const char* pendingPluginPath = GetPendingPluginPath();
 
     if (wp == IDCANCEL) {
-        /* User cancelled - just clear pending info, don't change display state */
+        if (PluginManager_IsOperationCurrent(g_pluginSecurityOperationSerial) &&
+            g_pluginSecurityOperation == PLUGIN_OPERATION_HOT_RELOAD) {
+            PluginData_Clear();
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
         g_pluginSecurityOperationSerial = 0;
+        g_pluginSecurityOperation = 0;
         ClearPendingPluginInfo();
         return 0;
     }
     if ((wp != IDYES && wp != IDOK) ||
-        !PluginManager_IsOperationCurrent(g_pluginSecurityOperationSerial) ||
+        (g_pluginSecurityOperationSerial != 0 &&
+         !PluginManager_IsOperationCurrent(g_pluginSecurityOperationSerial)) ||
         pluginIndex < 0 ||
         !pendingPluginPath ||
         pendingPluginPath[0] == '\0') {
         LOG_WARNING("Ignoring stale plugin security dialog result");
         g_pluginSecurityOperationSerial = 0;
+        g_pluginSecurityOperation = 0;
         ClearPendingPluginInfo();
         return 0;
     }
@@ -114,9 +135,15 @@ LRESULT HandleDialogPluginSecurity(HWND hwnd, WPARAM wp, LPARAM lp) {
     if (pendingHash) strncpy_s(savedHash, sizeof(savedHash), pendingHash, _TRUNCATE);
     BOOL queued = PluginManager_RequestStartAfterSecurityCheck(
         hwnd, pluginIndex, trustPlugin, expectedPath, savedHash);
+    BOOL wasHotReload = g_pluginSecurityOperation == PLUGIN_OPERATION_HOT_RELOAD;
     g_pluginSecurityOperationSerial = 0;
+    g_pluginSecurityOperation = 0;
     ClearPendingPluginInfo();
     if (!queued) {
+        if (wasHotReload) {
+            PluginData_Clear();
+            InvalidateRect(hwnd, NULL, TRUE);
+        }
         MessageBeep(MB_OK);
         return 0;
     }
