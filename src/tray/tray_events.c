@@ -176,7 +176,8 @@ void HandleTrayIconMessage(HWND hwnd, WPARAM wParam, LPARAM lParam) {
                                  "invalid-window");
         return;
     }
-    if (!IsTrayIconActive(hwnd)) {
+    if (!IsTrayIconActive(hwnd) &&
+        !TryRestoreTrayIconFromCallback(hwnd)) {
         Tray_LogRejectedCallback(hwnd, version4, wParam, lParam,
                                  "inactive-icon");
         return;

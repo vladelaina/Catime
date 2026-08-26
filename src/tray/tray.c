@@ -11,6 +11,7 @@ UINT WM_TASKBARCREATED = 0;
 HWND g_mainHwnd = NULL;
 HINSTANCE g_hInstance = NULL;
 BOOL g_trayIconActive = FALSE;
+BOOL g_trayCallbackRecoveryAllowed = FALSE;
 BOOL g_trayBackgroundWorkEnabled = FALSE;
 volatile LONG g_trayTooltipActive = FALSE;
 BOOL g_trayTipTimerActive = FALSE;

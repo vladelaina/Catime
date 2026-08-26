@@ -19,6 +19,13 @@
 
 extern void ReadPercentIconColorsConfig(void);
 
+static void PreserveTrayIdentityForRetry(HWND hwnd) {
+    ZeroMemory(&nid, sizeof(nid));
+    nid.cbSize = sizeof(nid);
+    nid.hWnd = hwnd;
+    nid.uID = CLOCK_ID_TRAY_APP_ICON;
+}
+
 void RegisterTaskbarCreatedMessage(void) {
     if (WM_TASKBARCREATED != 0) return;
 
@@ -133,6 +140,7 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
     BOOL iconAdded = Shell_NotifyIconW(NIM_ADD, &nid);
     if (iconAdded) {
         g_trayIconActive = TRUE;
+        g_trayCallbackRecoveryAllowed = FALSE;
         nid.uVersion = NOTIFYICON_VERSION;
         if (Shell_NotifyIconW(NIM_SETVERSION, &nid)) {
             g_trayCallbackVersion = NOTIFYICON_VERSION;
@@ -145,11 +153,17 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
         CancelTrayRecreateRetry(hwnd);
         StartTrayHealthCheck(hwnd);
     } else {
+        DWORD addError = GetLastError();
         LOG_WARNING("Failed to add tray icon: hwnd=0x%p iconId=%u callback=0x%X "
                     "error=%lu", hwnd, nid.uID, nid.uCallbackMessage,
-                    GetLastError());
+                    addError);
         Tray_LogDiagnosticSnapshot("tray-icon-add-failed", hwnd);
-        ZeroMemory(&nid, sizeof(nid));
+        /* NIM_DELETE can time out during resume even though Explorer keeps the
+         * old item.  Retain its stable identity so every retry can remove that
+         * item before another NIM_ADD.  Do not retain hIcon: a generated
+         * initial icon is destroyed below when the add failed. */
+        PreserveTrayIdentityForRetry(hwnd);
+        g_trayCallbackRecoveryAllowed = TRUE;
         ScheduleTrayRecreateRetry(hwnd);
     }
 

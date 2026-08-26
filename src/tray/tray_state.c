@@ -100,6 +100,7 @@ static void InvalidateTrayIconRegistration(HWND hwnd) {
     LOG_WARNING(
         "Tray Shell registration appears stale; scheduling recreation");
     g_trayIconActive = FALSE;
+    g_trayCallbackRecoveryAllowed = TRUE;
     g_trayCallbackVersion = 0;
     StopTrayHealthCheck(hwnd);
     StopTrayHoverDetection();
@@ -211,6 +212,33 @@ HWND GetValidTrayMainWindow(void) {
 BOOL IsTrayIconActiveForWindow(HWND hwnd) {
     return IsValidTrayMainWindow(hwnd) && g_trayIconActive &&
            nid.hWnd == hwnd && nid.uID == CLOCK_ID_TRAY_APP_ICON;
+}
+
+BOOL TryRestoreTrayIconFromCallback(HWND hwnd) {
+    if (g_trayShuttingDown || !IsValidTrayMainWindow(hwnd)) {
+        return FALSE;
+    }
+    if (IsTrayIconActiveForWindow(hwnd)) {
+        return TRUE;
+    }
+    if (!g_trayCallbackRecoveryAllowed ||
+        nid.hWnd != hwnd || nid.uID != CLOCK_ID_TRAY_APP_ICON) {
+        return FALSE;
+    }
+
+    /* A callback from Explorer is stronger evidence than a timed-out Shell
+     * request.  Restore local state immediately so an old but functional item
+     * remains usable while the health probe verifies it in the background. */
+    g_trayIconActive = TRUE;
+    g_trayCallbackRecoveryAllowed = FALSE;
+    g_trayCallbackVersion = NOTIFYICON_VERSION;
+    CancelTrayRecreateRetry(hwnd);
+    StartTrayHealthCheck(hwnd);
+    RefreshTrayBackgroundWorkState();
+    LOG_INFO("Tray registration restored from Explorer callback: hwnd=0x%p",
+             hwnd);
+    Tray_LogDiagnosticSnapshot("callback-restored-registration", hwnd);
+    return TRUE;
 }
 
 BOOL IsTrayIconActive(HWND hwnd) {

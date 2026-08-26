@@ -18,12 +18,14 @@
 #define TRAY_OPACITY_SAVE_TIMER_ID 42423
 #define TRAY_RECREATE_RETRY_TIMER_ID 42430
 #define TRAY_HEALTH_CHECK_TIMER_ID 42434
+#define TRAY_RESUME_REFRESH_TIMER_ID 42435
 #define TRAY_OPACITY_SAVE_DELAY_MS 400
 #define TRAY_OPACITY_SAVE_MAX_RETRIES 3
 #define TRAY_RECREATE_RETRY_DELAY_MS 750
 #define TRAY_RECREATE_RETRY_MAX_ATTEMPTS 5
 #define TRAY_RECREATE_BACKGROUND_RETRY_MS 30000
 #define TRAY_HEALTH_CHECK_INTERVAL_MS 30000
+#define TRAY_RESUME_REFRESH_DELAY_MS 2500
 #define TRAY_MODIFY_FAILURE_THRESHOLD 3
 #define TRAY_MODIFY_FAILURE_RESET_MS 120000
 #define CATIME_MAIN_WINDOW_CLASS_NAME L"CatimeWindowClass"
@@ -42,6 +44,7 @@ extern NOTIFYICONDATAW nid;
 extern HWND g_mainHwnd;
 extern HINSTANCE g_hInstance;
 extern BOOL g_trayIconActive;
+extern BOOL g_trayCallbackRecoveryAllowed;
 extern BOOL g_trayBackgroundWorkEnabled;
 extern volatile LONG g_trayTooltipActive;
 extern BOOL g_trayTipTimerActive;
@@ -62,8 +65,10 @@ extern BOOL g_showingOpacityTip;
 BOOL IsValidTrayMainWindow(HWND hwnd);
 HWND GetValidTrayMainWindow(void);
 BOOL IsTrayIconActiveForWindow(HWND hwnd);
+BOOL TryRestoreTrayIconFromCallback(HWND hwnd);
 void CancelTrayRecreateRetry(HWND hwnd);
 void ScheduleTrayRecreateRetry(HWND hwnd);
+void CancelTrayResumeRefresh(HWND hwnd);
 void StartTrayHealthCheck(HWND hwnd);
 void StopTrayHealthCheck(HWND hwnd);
 void ReportTrayIconModifySuccess(HWND hwnd);

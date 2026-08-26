@@ -60,6 +60,12 @@ void ShowTrayNotification(HWND hwnd, const char* message);
 void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance);
 
 /**
+ * @brief Coalesce resume notifications and refresh the tray after Explorer settles
+ * @param hwnd Main window handle
+ */
+void ScheduleTrayResumeRefresh(HWND hwnd);
+
+/**
  * @brief Update icon via full recreation
  * @param hwnd Window handle
  */
