@@ -9,32 +9,7 @@
 #include "audio_player.h"
 #include "window/window_core.h"
 #include "log.h"
-#include <limits.h>
 #include <shellapi.h>
-
-static DWORD g_lastTrayMenuRejectionLogTick = 0;
-static UINT g_trayMenuRejectionSuppressedCount = 0;
-
-static void LogTrayMenuRejection(const char* reason, HWND hwnd,
-                                 UINT mouseMessage, BOOL active) {
-    DWORD now = GetTickCount();
-    if (g_lastTrayMenuRejectionLogTick != 0 &&
-        (DWORD)(now - g_lastTrayMenuRejectionLogTick) < 10000u) {
-        if (g_trayMenuRejectionSuppressedCount < UINT_MAX) {
-            g_trayMenuRejectionSuppressedCount++;
-        }
-        return;
-    }
-
-    UINT suppressedCount = g_trayMenuRejectionSuppressedCount;
-    g_lastTrayMenuRejectionLogTick = now ? now : 1u;
-    g_trayMenuRejectionSuppressedCount = 0;
-    LOG_WARNING(
-        "Tray menu rejected (%s): hwnd=0x%p message=0x%X active=%d "
-        "suspended=%d suppressed=%u",
-        reason ? reason : "unknown", hwnd, mouseMessage, active,
-        IsTrayInteractionSuspended(), suppressedCount);
-}
 
 static void RestoreNotificationAreaFocus(HWND hwnd) {
     if (!IsValidTrayMainWindow(hwnd) || !IsTrayIconActiveForWindow(hwnd)) {
@@ -53,21 +28,12 @@ static void RestoreNotificationAreaFocus(HWND hwnd) {
 static BOOL ShowTrayMenu(HWND hwnd, UINT mouseMessage,
                          const POINT* anchor, BOOL restoreTrayFocus) {
     if (mouseMessage != WM_LBUTTONUP && mouseMessage != WM_RBUTTONUP) {
-        LogTrayMenuRejection("unsupported-message", hwnd, mouseMessage,
-                             IsTrayIconActiveForWindow(hwnd));
-        Tray_LogDiagnosticSnapshot("menu-rejected-unsupported-message", hwnd);
         return FALSE;
     }
     if (!IsValidTrayMainWindow(hwnd)) {
-        LogTrayMenuRejection("invalid-owner-window", hwnd, mouseMessage,
-                             FALSE);
-        Tray_LogDiagnosticSnapshot("menu-rejected-invalid-window", hwnd);
         return FALSE;
     }
     if (IsTrayInteractionSuspended()) {
-        LogTrayMenuRejection("interaction-suspended", hwnd, mouseMessage,
-                             IsTrayIconActiveForWindow(hwnd));
-        Tray_LogDiagnosticSnapshot("menu-rejected-suspended", hwnd);
         return FALSE;
     }
 
@@ -93,9 +59,6 @@ BOOL HandleTrayIconMenuActivation(HWND hwnd, UINT mouseMessage,
                                   const POINT* anchor) {
     if (!IsValidTrayMainWindow(hwnd) ||
         !IsTrayIconActiveForWindow(hwnd)) {
-        LogTrayMenuRejection("inactive-tray", hwnd, mouseMessage,
-                             IsTrayIconActiveForWindow(hwnd));
-        Tray_LogDiagnosticSnapshot("activation-rejected-inactive-tray", hwnd);
         return FALSE;
     }
     return ShowTrayMenu(hwnd, mouseMessage, anchor, TRUE);

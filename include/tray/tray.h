@@ -147,12 +147,4 @@ void SetTrayInteractionSuspended(BOOL suspended);
  */
 BOOL IsTrayInteractionSuspended(void);
 
-/**
- * @brief Write one detailed, rate-limited snapshot of tray/timer state.
- *
- * This is intentionally event-driven and coalesces repeated reasons so long
- * idle periods or recovery loops do not flood logs.
- */
-void Tray_LogDiagnosticSnapshot(const char* reason, HWND hwnd);
-
 #endif

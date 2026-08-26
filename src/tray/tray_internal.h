@@ -10,7 +10,6 @@
 #include "tray/tray_hover_cache.h"
 #include "tray/tray_recovery_policy.h"
 #include "system_monitor.h"
-#include "tray/tray_event_protocol.h"
 
 #define TOOLTIP_UPDATE_INTERVAL_MS 1000
 #define ICON_RECT_CACHE_TIMEOUT_MS 250
@@ -103,9 +102,6 @@ void CALLBACK TrayRecreateRetryTimerProc(HWND hwnd, UINT msg,
                                          UINT_PTR id, DWORD time);
 BOOL HandleTrayIconMenuActivation(HWND hwnd, UINT mouseMessage,
                                   const POINT* anchor);
-void Tray_LogRejectedCallback(HWND hwnd, BOOL version4, WPARAM wParam, LPARAM lParam,
-                              const char* reason);
-
 void ClearPendingTrayOpacitySave(void);
 void RollBackPendingTrayOpacitySave(HWND hwnd);
 void FlushPendingTrayOpacitySave(HWND hwnd);

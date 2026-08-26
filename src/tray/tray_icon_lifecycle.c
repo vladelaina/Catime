@@ -121,8 +121,6 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
                 RefreshTrayBackgroundWorkState();
                 return;
             }
-            LOG_INFO("Old tray icon was not removable; continuing with a new "
-                     "registration (error=%lu)", deleteError);
         }
     }
     if (oldTrayItemDeleted) {
@@ -133,7 +131,6 @@ void RecreateTaskbarIcon(HWND hwnd, HINSTANCE hInstance) {
     if (!IsTrayIconActive(hwnd)) {
         LOG_WARNING("Tray icon recreation did not produce an active icon: hwnd=0x%p",
                     hwnd);
-        Tray_LogDiagnosticSnapshot("tray-recreation-inactive", hwnd);
         KillTimer(hwnd, TRAY_TIP_TIMER_ID);
         g_trayTipTimerActive = FALSE;
         KillTimer(hwnd, TRAY_OPACITY_SAVE_TIMER_ID);

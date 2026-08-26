@@ -10,10 +10,8 @@
 #include <shellapi.h>
 
 #define TRAY_MODIFY_FAILURE_LOG_INTERVAL_MS 5000u
-#define TRAY_HEALTH_DIAGNOSTIC_INTERVAL_MS (15u * 60u * 1000u)
 
 static DWORD g_lastTrayModifyFailureLogTick = 0;
-static DWORD g_lastTrayHealthDiagnosticTick = 0;
 
 void CancelTrayRecreateRetry(HWND hwnd) {
     if (hwnd) {
@@ -62,7 +60,6 @@ void StartTrayHealthCheck(HWND hwnd) {
      * otherwise healthy replacement to be invalidated on its first probe. */
     TrayRecoveryPolicy_RecordSuccess(&g_trayRecoveryPolicyState);
     g_lastTrayModifyFailureLogTick = 0;
-    g_lastTrayHealthDiagnosticTick = GetTickCount();
     if (!SetTimer(hwnd, TRAY_HEALTH_CHECK_TIMER_ID,
                   TRAY_HEALTH_CHECK_INTERVAL_MS,
                   TrayHealthCheckTimerProc)) {
@@ -77,7 +74,6 @@ void StopTrayHealthCheck(HWND hwnd) {
     }
     TrayRecoveryPolicy_RecordSuccess(&g_trayRecoveryPolicyState);
     g_lastTrayModifyFailureLogTick = 0;
-    g_lastTrayHealthDiagnosticTick = 0;
 }
 
 void ReportTrayIconModifySuccess(HWND hwnd) {
@@ -130,7 +126,6 @@ void ReportTrayIconModifyFailure(HWND hwnd) {
         g_lastTrayModifyFailureLogTick = now ? now : 1u;
     }
     if (shouldRecover) {
-        Tray_LogDiagnosticSnapshot("health-probe-triggered-recovery", hwnd);
         InvalidateTrayIconRegistration(hwnd);
     }
 }
@@ -143,9 +138,6 @@ void CALLBACK TrayHealthCheckTimerProc(HWND hwnd, UINT msg,
     }
 
     if (!IsTrayIconActiveForWindow(hwnd)) {
-        LOG_WARNING("Tray health check stopped because tray identity is inactive: "
-                    "hwnd=0x%p", hwnd);
-        Tray_LogDiagnosticSnapshot("health-check-inactive", hwnd);
         StopTrayHealthCheck(hwnd);
         return;
     }
@@ -165,20 +157,10 @@ void CALLBACK TrayHealthCheckTimerProc(HWND hwnd, UINT msg,
     probe.uCallbackMessage = CLOCK_WM_TRAYICON;
 
     BOOL modified = Shell_NotifyIconW(NIM_MODIFY, &probe);
-    DWORD error = modified ? ERROR_SUCCESS : GetLastError();
     if (modified) {
         ReportTrayIconModifySuccess(hwnd);
     } else {
         ReportTrayIconModifyFailure(hwnd);
-    }
-    DWORD now = GetTickCount();
-    if (g_lastTrayHealthDiagnosticTick == 0 ||
-        (DWORD)(now - g_lastTrayHealthDiagnosticTick) >=
-            TRAY_HEALTH_DIAGNOSTIC_INTERVAL_MS) {
-        g_lastTrayHealthDiagnosticTick = now ? now : 1u;
-        LOG_INFO("Tray health checkpoint: modify=%d error=%lu", modified,
-                 error);
-        Tray_LogDiagnosticSnapshot("health-checkpoint", hwnd);
     }
 }
 
@@ -237,7 +219,6 @@ BOOL TryRestoreTrayIconFromCallback(HWND hwnd) {
     RefreshTrayBackgroundWorkState();
     LOG_INFO("Tray registration restored from Explorer callback: hwnd=0x%p",
              hwnd);
-    Tray_LogDiagnosticSnapshot("callback-restored-registration", hwnd);
     return TRUE;
 }
 

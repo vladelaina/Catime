@@ -5,11 +5,7 @@
 
 #include "tray_internal.h"
 #include "tray/tray_animation_core.h"
-#include "log.h"
 #include <shellapi.h>
-
-static DWORD g_lastDeferredTrayRecoveryLogTick = 0;
-static DWORD g_lastTrayRectFailureLogTick = 0;
 
 BOOL IsMouseOverTrayIconCached(POINT pt) {
     if (!g_trayIconActive || !nid.hWnd) {
@@ -27,17 +23,6 @@ BOOL IsMouseOverTrayIconCached(POINT pt) {
 
         RECT refreshedRect = {0};
         HRESULT hr = Shell_NotifyIconGetRect(&iconId, &refreshedRect);
-        if (FAILED(hr)) {
-            if (g_lastTrayRectFailureLogTick == 0 ||
-                (DWORD)(now - g_lastTrayRectFailureLogTick) >= 10000u) {
-                g_lastTrayRectFailureLogTick = now ? now : 1u;
-                LOG_WARNING("Failed to query tray icon rectangle: hwnd=0x%p "
-                            "iconId=%u hr=0x%08lX", nid.hWnd, nid.uID,
-                            (unsigned long)hr);
-            }
-        } else {
-            g_lastTrayRectFailureLogTick = 0;
-        }
         TrayHoverRectCache_RecordQuery(
             &g_trayIconRectCache, SUCCEEDED(hr), &refreshedRect, now,
             ICON_RECT_STALE_GRACE_MS);
@@ -62,15 +47,6 @@ void CALLBACK TrayRecreateRetryTimerProc(HWND hwnd, UINT msg,
         return;
     }
     if (IsTrayInteractionSuspended()) {
-        DWORD now = GetTickCount();
-        if (g_lastDeferredTrayRecoveryLogTick == 0 ||
-            (DWORD)(now - g_lastDeferredTrayRecoveryLogTick) >= 60000u) {
-            g_lastDeferredTrayRecoveryLogTick = now ? now : 1u;
-            LOG_WARNING("Tray icon recreation retry deferred while interaction "
-                        "is suspended (attempt=%u)",
-                        g_trayRecreateRetryCount);
-            Tray_LogDiagnosticSnapshot("tray-recovery-deferred", hwnd);
-        }
         if (g_trayRecreateRetryCount > 0 &&
             g_trayRecreateRetryCount <
                 TRAY_RECREATE_RETRY_MAX_ATTEMPTS) {
@@ -79,7 +55,6 @@ void CALLBACK TrayRecreateRetryTimerProc(HWND hwnd, UINT msg,
         ScheduleTrayRecreateRetry(hwnd);
         return;
     }
-    g_lastDeferredTrayRecoveryLogTick = 0;
     RecreateTaskbarIcon(hwnd, g_hInstance ? g_hInstance :
                         GetModuleHandleW(NULL));
 }
@@ -105,13 +80,7 @@ BOOL IsMouseNearTrayIconArea(POINT pt, int marginPx) {
 
 void SetTrayInteractionSuspended(BOOL suspended) {
     LONG requested = suspended ? 1L : 0L;
-    LONG previous = InterlockedExchange(&g_trayInteractionSuspended,
-                                        requested);
-    if (previous != requested) {
-        LOG_INFO("Tray interaction state changed: suspended=%d previous=%d "
-                 "hwnd=0x%p", requested != 0, previous != 0,
-                 g_mainHwnd);
-    }
+    InterlockedExchange(&g_trayInteractionSuspended, requested);
     HWND hwndMain = GetValidTrayMainWindow();
     if (suspended) {
         InterlockedExchange(&g_trayTooltipActive, 0);

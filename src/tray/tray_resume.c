@@ -23,7 +23,6 @@ static void CALLBACK TrayResumeRefreshTimerProc(
         return;
     }
 
-    LOG_INFO("Refreshing tray state after system resume");
     if (!IsTrayIconActiveForWindow(hwnd)) {
         ScheduleTrayRecreateRetry(hwnd);
         return;

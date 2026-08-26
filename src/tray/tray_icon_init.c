@@ -157,7 +157,6 @@ void InitTrayIconInternal(HWND hwnd, HINSTANCE hInstance,
         LOG_WARNING("Failed to add tray icon: hwnd=0x%p iconId=%u callback=0x%X "
                     "error=%lu", hwnd, nid.uID, nid.uCallbackMessage,
                     addError);
-        Tray_LogDiagnosticSnapshot("tray-icon-add-failed", hwnd);
         /* NIM_DELETE can time out during resume even though Explorer keeps the
          * old item.  Retain its stable identity so every retry can remove that
          * item before another NIM_ADD.  Do not retain hIcon: a generated
