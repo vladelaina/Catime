@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "generate-download-manifest": "node scripts/generate-download-manifest.js",
+    "predev": "npm run generate-download-manifest",
+    "prebuild": "npm run generate-download-manifest",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",

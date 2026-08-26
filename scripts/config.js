@@ -1,18 +1,19 @@
-const CATIME_DOWNLOAD_VERSION = '1.4.0';
-const CATIME_DOWNLOAD_FILE = `catime_${CATIME_DOWNLOAD_VERSION}.exe`;
 const CATIME_GITHUB_URL = 'https://github.com/vladelaina/Catime';
+const CATIME_DOWNLOAD_MANIFEST_URL = new URL('../downloads/releases.json', document.currentScript.src).href;
 
-window.CATIME_CONFIG = {
-    DOWNLOAD_FILE: CATIME_DOWNLOAD_FILE,
-    DOWNLOAD_VERSION: CATIME_DOWNLOAD_VERSION,
-    DOWNLOAD_URL: new URL(`../downloads/${CATIME_DOWNLOAD_FILE}`, document.currentScript.src).href,
-    DOWNLOAD_MANIFEST_URL: new URL('../downloads/releases.json', document.currentScript.src).href,
-    GITHUB_DOWNLOAD_URL: `${CATIME_GITHUB_URL}/releases/download/v${CATIME_DOWNLOAD_VERSION}/${CATIME_DOWNLOAD_FILE}`,
+const catimeConfig = {
+    // The manifest is generated from the installer filenames. Keep no version here,
+    // so replacing downloads/catime_<version>.exe does not require another edit.
+    DOWNLOAD_FILE: null,
+    DOWNLOAD_VERSION: null,
+    DOWNLOAD_URL: null,
+    DOWNLOAD_MANIFEST_URL: CATIME_DOWNLOAD_MANIFEST_URL,
+    GITHUB_DOWNLOAD_URL: `${CATIME_GITHUB_URL}/releases`,
 
     GITHUB_URL: CATIME_GITHUB_URL,
     GITHUB_RELEASES_URL: `${CATIME_GITHUB_URL}/releases`,
 
-    VERSION: CATIME_DOWNLOAD_VERSION,
+    VERSION: null,
     
     AUTHOR: {
         name: 'vladelaina',
@@ -34,5 +35,47 @@ window.CATIME_CONFIG = {
         license: 'Apache 2.0'
     }
 };
+
+window.CATIME_CONFIG = catimeConfig;
+
+window.CATIME_CONFIG_READY = (async () => {
+    if (window.location.protocol === 'file:' || typeof fetch !== 'function') return null;
+
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 3000) : null;
+
+    try {
+        const response = await fetch(CATIME_DOWNLOAD_MANIFEST_URL, {
+            cache: 'no-store',
+            signal: controller?.signal,
+        });
+        if (!response.ok) return null;
+
+        const manifest = await response.json();
+        const latest = manifest?.latest || (Array.isArray(manifest?.files) ? manifest.files[0] : null);
+        if (!latest?.file) return manifest;
+
+        const installerUrl = new URL(latest.url || latest.file, CATIME_DOWNLOAD_MANIFEST_URL).href;
+        const version = latest.version || null;
+
+        Object.assign(catimeConfig, {
+            DOWNLOAD_FILE: latest.file,
+            DOWNLOAD_VERSION: version,
+            DOWNLOAD_URL: installerUrl,
+            GITHUB_DOWNLOAD_URL: version
+                ? `${CATIME_GITHUB_URL}/releases/download/v${version}/${latest.file}`
+                : `${CATIME_GITHUB_URL}/releases`,
+            VERSION: version,
+        });
+
+        return manifest;
+    } catch {
+        return null;
+    } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+    }
+})();
+
+catimeConfig.DOWNLOAD_MANIFEST_PROMISE = window.CATIME_CONFIG_READY;
 
 console.log('✅ Catime 全局配置已加载', window.CATIME_CONFIG);

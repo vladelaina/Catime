@@ -145,11 +145,17 @@ let catimeDownloadInfoPromise = null;
 let catimeDownloadClickInitialized = false;
 
 function getConfiguredDownloadInfo() {
+    const hasConfiguredInstaller = Boolean(CATIME_CONFIG.DOWNLOAD_URL && CATIME_CONFIG.DOWNLOAD_FILE);
+
     return {
-        source: 'local',
-        url: CATIME_CONFIG.DOWNLOAD_URL,
-        file: CATIME_CONFIG.DOWNLOAD_FILE,
-        version: CATIME_CONFIG.DOWNLOAD_VERSION || CATIME_CONFIG.VERSION,
+        source: hasConfiguredInstaller ? 'local' : 'github',
+        url: hasConfiguredInstaller
+            ? CATIME_CONFIG.DOWNLOAD_URL
+            : (CATIME_CONFIG.GITHUB_RELEASES_URL || CATIME_CONFIG.GITHUB_URL),
+        file: hasConfiguredInstaller ? CATIME_CONFIG.DOWNLOAD_FILE : null,
+        version: hasConfiguredInstaller
+            ? (CATIME_CONFIG.DOWNLOAD_VERSION || CATIME_CONFIG.VERSION)
+            : null,
     };
 }
 
@@ -180,6 +186,10 @@ function getDownloadInfoFromManifest(manifest) {
 async function fetchDownloadManifest() {
     if (!CATIME_CONFIG.DOWNLOAD_MANIFEST_URL || window.location.protocol === 'file:') {
         return null;
+    }
+
+    if (CATIME_CONFIG.DOWNLOAD_MANIFEST_PROMISE) {
+        return CATIME_CONFIG.DOWNLOAD_MANIFEST_PROMISE;
     }
 
     try {

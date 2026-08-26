@@ -4,7 +4,13 @@ class CatimeNavigation {
         this.lastScrollY = 0;
         this.ticking = false;
         this.headerMorphAnimations = [];
-        this.init();
+
+        const configReady = window.CATIME_CONFIG_READY;
+        if (configReady && typeof configReady.then === 'function') {
+            configReady.then(() => this.init(), () => this.init());
+        } else {
+            this.init();
+        }
     }
 
     getCurrentPage() {
