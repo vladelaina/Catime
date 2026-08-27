@@ -26,13 +26,17 @@ PowerShell execution-policy bypass arguments and high-entropy tokens embedded
 in URLs. It also prevents build settings that disable stack protection, strip
 all PE metadata, or suppress the PE timestamp. Release builds use conventional
 size optimization, retain PE metadata needed for diagnostics, and remove only
-linker symbols that are not required at runtime. Native Windows resources are
-used by default instead of a custom compressed asset container. These choices
+linker symbols that are not required at runtime. The pinned 32-bit release build
+compresses only embedded language and font data, not executable code. The build
+records source and container hashes, and the runtime validates container bounds,
+member metadata, and decompressed lengths before use. Icons, dialogs, version
+information, and the manifest remain standard Windows resources. These choices
 keep avoidable heuristic triggers out of compiled builds; approved short public
 links remain valid.
 
-The pinned 32-bit CI build also enforces a 1.5 MiB unsigned executable budget
-to catch accidental release-size regressions before signing.
+The pinned 32-bit CI build also enforces a 1000 KiB unsigned executable budget.
+This catches release-size regressions and reserves space for the Authenticode
+signature while keeping the signed executable below 1 MiB.
 
 The GitHub Actions `security / virustotal` job uploads the final CI artifact and
 writes the SHA-256, VirusTotal link, engine counts, and any engine names to the

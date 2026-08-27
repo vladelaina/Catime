@@ -21,7 +21,9 @@ $make = (Join-Path $env:WINLIBS_BIN "mingw32-make.exe").Replace('\', '/')
     "-DCMAKE_BUILD_TYPE=Release" `
     "-DCMAKE_C_COMPILER=$gcc" `
     "-DCMAKE_RC_COMPILER=$windres" `
-    "-DCMAKE_MAKE_PROGRAM=$make"
+    "-DCMAKE_MAKE_PROGRAM=$make" `
+    "-DCATIME_RELEASE_OPTIMIZATION=-Oz" `
+    "-DCATIME_COMPRESS_EMBEDDED_ASSETS=ON"
 if ($LASTEXITCODE -ne 0) {
     throw "CMake configuration failed"
 }
@@ -44,14 +46,14 @@ if ($LASTEXITCODE -ne 0 -or $peHeader -notmatch "file format pei-i386") {
 }
 
 $file = Get-Item -LiteralPath $executable
-$maximumReleaseBytes = 1536 * 1KB
+$maximumReleaseBytes = 1000 * 1KB
 if ($file.Length -gt $maximumReleaseBytes) {
-    throw "Release binary exceeds the 1536 KB size budget: $($file.Length) bytes"
+    throw "Release binary exceeds the 1000 KiB size budget: $($file.Length) bytes"
 }
-$sizeKB = "{0:F2}" -f ($file.Length / 1KB)
+$sizeKiB = "{0:F2}" -f ($file.Length / 1KB)
 $sha256 = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash
-Write-Host "Unsigned x86 EXE size: $sizeKB KB"
-Write-Host "Release size budget: 1536.00 KB"
+Write-Host "Unsigned x86 EXE size: $sizeKiB KiB"
+Write-Host "Release size budget: 1000.00 KiB"
 Write-Host "SHA-256: $sha256"
 
 $smoke = Start-Process -FilePath $file.FullName `

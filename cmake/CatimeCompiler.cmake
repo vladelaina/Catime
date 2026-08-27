@@ -88,6 +88,14 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         target_compile_options(catime PRIVATE
             $<$<COMPILE_LANGUAGE:C>:-fno-unwind-tables>
             $<$<COMPILE_LANGUAGE:C>:-fno-asynchronous-unwind-tables>
+            $<$<COMPILE_LANGUAGE:C>:-fipa-pta>
+            $<$<COMPILE_LANGUAGE:C>:-fwhole-program>
+            $<$<COMPILE_LANGUAGE:C>:-flto-partition=none>
+        )
+        target_link_options(catime PRIVATE
+            -fipa-pta
+            -fwhole-program
+            -flto-partition=none
         )
     endif()
     if(CATIME_ENABLE_BINARY_HARDENING)
