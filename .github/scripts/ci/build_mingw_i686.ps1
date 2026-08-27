@@ -44,9 +44,14 @@ if ($LASTEXITCODE -ne 0 -or $peHeader -notmatch "file format pei-i386") {
 }
 
 $file = Get-Item -LiteralPath $executable
+$maximumReleaseBytes = 1536 * 1KB
+if ($file.Length -gt $maximumReleaseBytes) {
+    throw "Release binary exceeds the 1536 KB size budget: $($file.Length) bytes"
+}
 $sizeKB = "{0:F2}" -f ($file.Length / 1KB)
 $sha256 = (Get-FileHash -LiteralPath $executable -Algorithm SHA256).Hash
 Write-Host "Unsigned x86 EXE size: $sizeKB KB"
+Write-Host "Release size budget: 1536.00 KB"
 Write-Host "SHA-256: $sha256"
 
 $smoke = Start-Process -FilePath $file.FullName `

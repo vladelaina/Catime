@@ -72,7 +72,7 @@ if(MSVC)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
     target_compile_definitions(catime PRIVATE NDEBUG)
     target_compile_options(catime PRIVATE
-        $<$<COMPILE_LANGUAGE:C>:-O2>
+        $<$<COMPILE_LANGUAGE:C>:${CATIME_RELEASE_OPTIMIZATION}>
         $<$<COMPILE_LANGUAGE:C>:-mtune=generic>
         $<$<COMPILE_LANGUAGE:C>:-ffunction-sections>
         $<$<COMPILE_LANGUAGE:C>:-fdata-sections>
@@ -81,6 +81,15 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         $<$<COMPILE_LANGUAGE:C>:-fno-omit-frame-pointer>
         $<$<AND:$<COMPILE_LANGUAGE:C>,$<C_COMPILER_ID:Clang>>:-Wno-unknown-warning-option>
     )
+    # Win32 stack walking can use the retained frame pointers; Catime does not
+    # use GCC exception unwinding, so per-function DWARF tables are redundant.
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND
+       CMAKE_SIZEOF_VOID_P EQUAL 4)
+        target_compile_options(catime PRIVATE
+            $<$<COMPILE_LANGUAGE:C>:-fno-unwind-tables>
+            $<$<COMPILE_LANGUAGE:C>:-fno-asynchronous-unwind-tables>
+        )
+    endif()
     if(CATIME_ENABLE_BINARY_HARDENING)
         target_compile_options(catime PRIVATE
             $<$<COMPILE_LANGUAGE:C>:-fstack-protector-strong>
@@ -96,6 +105,13 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
         -Wl,--gc-sections
         -static
     )
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_STRIP)
+        add_custom_command(TARGET catime POST_BUILD
+            COMMAND "${CMAKE_STRIP}" --strip-unneeded "$<TARGET_FILE:catime>"
+            COMMENT "Removing symbols not needed at runtime"
+            VERBATIM
+        )
+    endif()
 else()
     target_compile_options(catime PRIVATE
         $<$<COMPILE_LANGUAGE:C>:-g>

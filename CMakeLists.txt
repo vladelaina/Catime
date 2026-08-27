@@ -49,6 +49,15 @@ option(CATIME_WARNINGS_AS_ERRORS "Treat warnings as errors" OFF)
 option(CATIME_ENABLE_ASAN "Enable AddressSanitizer for analyzer builds" OFF)
 option(CATIME_ENABLE_MSVC_ANALYZE "Enable MSVC static analysis" OFF)
 option(CATIME_ENABLE_BINARY_HARDENING "Enable Win32 binary hardening flags" ON)
+set(CATIME_RELEASE_OPTIMIZATION "-Os" CACHE STRING
+    "GNU/Clang optimization level for Release builds (-Os or -Oz)"
+)
+set_property(CACHE CATIME_RELEASE_OPTIMIZATION PROPERTY STRINGS "-Os" "-Oz")
+if(NOT CATIME_RELEASE_OPTIMIZATION MATCHES "^-O[sz]$")
+    message(FATAL_ERROR
+        "CATIME_RELEASE_OPTIMIZATION must be -Os or -Oz"
+    )
+endif()
 option(CATIME_ENABLE_WIN32_RESOURCES "Enable Win32 resource compilation" ON)
 option(CATIME_VALIDATE_LANGUAGES "Validate language resource key alignment" ON)
 option(CATIME_COMPACT_LANGUAGE_RESOURCES

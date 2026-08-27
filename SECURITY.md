@@ -25,9 +25,14 @@ The `security / source-policy` job runs before CI and release builds. It blocks
 PowerShell execution-policy bypass arguments and high-entropy tokens embedded
 in URLs. It also prevents build settings that disable stack protection, strip
 all PE metadata, or suppress the PE timestamp. Release builds use conventional
-optimization and native Windows resources by default instead of a custom
-compressed asset container. These choices keep avoidable heuristic triggers out
-of compiled builds; approved short public links remain valid.
+size optimization, retain PE metadata needed for diagnostics, and remove only
+linker symbols that are not required at runtime. Native Windows resources are
+used by default instead of a custom compressed asset container. These choices
+keep avoidable heuristic triggers out of compiled builds; approved short public
+links remain valid.
+
+The pinned 32-bit CI build also enforces a 1.5 MiB unsigned executable budget
+to catch accidental release-size regressions before signing.
 
 The GitHub Actions `security / virustotal` job uploads the final CI artifact and
 writes the SHA-256, VirusTotal link, engine counts, and any engine names to the
