@@ -210,6 +210,29 @@ target_include_directories(pomodoro_suspend_tests PRIVATE
 target_link_libraries(pomodoro_suspend_tests PRIVATE user32)
 add_test(NAME pomodoro_suspend COMMAND pomodoro_suspend_tests)
 
+add_executable(pomodoro_navigation_tests
+    tests/pomodoro_navigation_tests.c
+    src/timer/pomodoro_navigation.c
+)
+target_include_directories(pomodoro_navigation_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/timer"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+target_link_libraries(pomodoro_navigation_tests PRIVATE user32)
+add_test(NAME pomodoro_navigation COMMAND pomodoro_navigation_tests)
+
+add_executable(pomodoro_loop_tests
+    tests/pomodoro_loop_tests.c
+    src/timer/pomodoro_loop.c
+)
+target_include_directories(pomodoro_loop_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+target_link_libraries(pomodoro_loop_tests PRIVATE user32)
+add_test(NAME pomodoro_loop COMMAND pomodoro_loop_tests)
+
 add_executable(render_retry_tests
     tests/render_retry_tests.c
     src/utils/render_retry.c
@@ -345,6 +368,8 @@ set(_catime_test_targets
     tray_menu_pagination_tests
     timer_render_cache_tests
     pomodoro_suspend_tests
+    pomodoro_navigation_tests
+    pomodoro_loop_tests
     render_retry_tests
     system_monitor_snapshot_tests
     tray_metric_sync_tests

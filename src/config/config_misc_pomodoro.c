@@ -105,8 +105,7 @@ BOOL WriteConfigPomodoroSettings(
 }
 
 BOOL WriteConfigPomodoroLoopCount(int loopCount) {
-    if (loopCount < MIN_POMODORO_LOOP_COUNT) loopCount = MIN_POMODORO_LOOP_COUNT;
-    if (loopCount > MAX_POMODORO_LOOP_COUNT) loopCount = MAX_POMODORO_LOOP_COUNT;
+    loopCount = PomodoroLoopCount_Normalize(loopCount);
 
     char loopCountString[32];
     if (snprintf(loopCountString, sizeof(loopCountString),

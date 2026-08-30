@@ -42,9 +42,7 @@ static void ApplyDefaultPomodoroTimes(void) {
     g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
 }
 static int ClampPomodoroLoopCountForApply(int loopCount) {
-    if (loopCount < MIN_POMODORO_LOOP_COUNT) return MIN_POMODORO_LOOP_COUNT;
-    if (loopCount > MAX_POMODORO_LOOP_COUNT) return MAX_POMODORO_LOOP_COUNT;
-    return loopCount;
+    return PomodoroLoopCount_Normalize(loopCount);
 }
 static void ApplyDefaultQuickCountdownOptions(void) {
     static const int defaultOptions[] = {

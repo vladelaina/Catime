@@ -102,7 +102,7 @@ static void TestSuspendAndRestore(void) {
     assert(g_target_end_time == 123456);
     assert(CLOCK_IS_PAUSED);
     assert(!CLOCK_SHOW_CURRENT_TIME);
-    assert(g_pause_start_time == 200000);
+    assert(g_pause_start_time == 121000);
     assert(PomodoroSuspend_HasSnapshot());
 
     PomodoroSuspend_Discard();
@@ -118,9 +118,35 @@ static void TestOnlyPausedPomodoroCanBeSuspended(void) {
     assert(!PomodoroSuspend_HasSnapshot());
 }
 
+static void TestInfiniteLoopCountIsPreserved(void) {
+    PomodoroSuspend_Discard();
+    SetPausedPomodoro();
+    pomodoro_initial_loop_count = POMODORO_LOOP_COUNT_INFINITE;
+
+    assert(PomodoroSuspend_BeginTemporaryMode());
+    assert(PomodoroSuspend_Restore());
+    assert(pomodoro_initial_loop_count == POMODORO_LOOP_COUNT_INFINITE);
+
+    PomodoroSuspend_Discard();
+}
+
+static void TestSuspendedLoopCountCanBeUpdated(void) {
+    PomodoroSuspend_Discard();
+    SetPausedPomodoro();
+
+    assert(PomodoroSuspend_BeginTemporaryMode());
+    assert(PomodoroSuspend_SetLoopCount(POMODORO_LOOP_COUNT_INFINITE));
+    assert(PomodoroSuspend_Restore());
+    assert(pomodoro_initial_loop_count == POMODORO_LOOP_COUNT_INFINITE);
+
+    PomodoroSuspend_Discard();
+}
+
 int main(void) {
     TestSuspendAndRestore();
     TestOnlyPausedPomodoroCanBeSuspended();
+    TestInfiniteLoopCountIsPreserved();
+    TestSuspendedLoopCountCanBeUpdated();
     puts("pomodoro suspend tests passed");
     return 0;
 }

@@ -15,6 +15,7 @@
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
 #include "timer/pomodoro_suspend.h"
+#include "timer/pomodoro_navigation.h"
 #include "config.h"
 #include "window.h"
 #include "pomodoro.h"
@@ -272,25 +273,5 @@ BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index) {
 
 BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index) {
     (void)cmd;
-    return HandlePomodoroTimeConfig(hwnd, index);
-}
-
-/* ============================================================================
- * Pomodoro Time Configuration
- * ============================================================================ */
-
-BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex) {
-    int timesCount = g_AppConfig.pomodoro.times_count;
-    if (timesCount < 0) timesCount = 0;
-    if (timesCount > (int)_countof(g_AppConfig.pomodoro.times)) {
-        timesCount = (int)_countof(g_AppConfig.pomodoro.times);
-    }
-    if (selectedIndex < 0 || selectedIndex >= timesCount ||
-        g_AppConfig.pomodoro.times[selectedIndex] <= 0) {
-        return FALSE;
-    }
-
-    /* Use modeless dialog - config saved directly by dialog */
-    ShowPomodoroTimeEditDialog(hwnd, selectedIndex);
-    return TRUE;
+    return PomodoroNavigation_JumpToTimeIndex(hwnd, index);
 }

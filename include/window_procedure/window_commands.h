@@ -63,7 +63,6 @@ LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp);
 /* Range handlers */
 BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index);
 BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index);
-BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
 
 /* ============================================================================
  * Plugin Commands (window_commands_plugin.c)

@@ -40,6 +40,25 @@ BOOL PomodoroSuspend_HasSnapshot(void) {
     return g_suspendedPomodoro.valid;
 }
 
+BOOL PomodoroSuspend_SetLoopCount(int loopCount) {
+    if (!g_suspendedPomodoro.valid ||
+        !PomodoroLoopCount_IsValid(loopCount)) {
+        return FALSE;
+    }
+
+    g_suspendedPomodoro.loopCount = loopCount;
+    return TRUE;
+}
+
+BOOL PomodoroSuspend_GetLoopCount(int* loopCount) {
+    if (!loopCount || !g_suspendedPomodoro.valid) {
+        return FALSE;
+    }
+
+    *loopCount = g_suspendedPomodoro.loopCount;
+    return TRUE;
+}
+
 BOOL PomodoroSuspend_BeginTemporaryMode(void) {
     if (g_suspendedPomodoro.valid) {
         return TRUE;
@@ -99,9 +118,10 @@ BOOL PomodoroSuspend_Restore(void) {
     ms_accumulator = g_suspendedPomodoro.millisecondAccumulator;
     last_displayed_second = g_suspendedPomodoro.lastDisplayedSecond;
 
-    /* Time spent in the temporary mode must not be charged to Pomodoro. */
+    /* Resume must account for the entire paused interval, including the
+     * temporary mode, before the Pomodoro deadline is allowed to advance. */
     CLOCK_IS_PAUSED = true;
-    g_pause_start_time = GetAbsoluteTimeMs();
+    g_pause_start_time = g_suspendedPomodoro.pauseStartTime;
     return TRUE;
 }
 

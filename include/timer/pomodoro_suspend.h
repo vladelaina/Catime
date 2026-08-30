@@ -19,6 +19,12 @@ BOOL PomodoroSuspend_BeginTemporaryMode(void);
 /** Return TRUE while a paused Pomodoro session can be resumed. */
 BOOL PomodoroSuspend_HasSnapshot(void);
 
+/** Update the loop count stored in a paused, suspended Pomodoro session. */
+BOOL PomodoroSuspend_SetLoopCount(int loopCount);
+
+/** Get the loop count stored in a paused, suspended Pomodoro session. */
+BOOL PomodoroSuspend_GetLoopCount(int* loopCount);
+
 /**
  * Restore the saved Pomodoro session in its paused state.
  *

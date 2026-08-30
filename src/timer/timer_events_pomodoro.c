@@ -3,26 +3,23 @@
  * @brief Pomodoro session state and interval completion handling.
  */
 
+#include <limits.h>
 #include <string.h>
 #include <wchar.h>
 
 #include "timer_events_internal.h"
+#include "timer/pomodoro_loop.h"
+#include "timer/pomodoro_suspend.h"
 
 BOOL TimerEvents_AdvancePomodoroState(void) {
     if (pomodoro_initial_times_count == 0) {
         return FALSE;
     }
 
-    current_pomodoro_time_index++;
-    if (current_pomodoro_time_index >= pomodoro_initial_times_count) {
-        current_pomodoro_time_index = 0;
-        complete_pomodoro_cycles++;
-        if (complete_pomodoro_cycles >= pomodoro_initial_loop_count) {
-            return FALSE;
-        }
-    }
-
-    return TRUE;
+    return PomodoroLoop_Advance(&current_pomodoro_time_index,
+                                pomodoro_initial_times_count,
+                                &complete_pomodoro_cycles,
+                                pomodoro_initial_loop_count);
 }
 
 void ResetPomodoroState(void) {
@@ -43,6 +40,32 @@ BOOL TimerEvents_IsActivePomodoroTimer(void) {
 
     return CLOCK_TOTAL_TIME ==
            pomodoro_initial_times[current_pomodoro_time_index];
+}
+
+BOOL TimerEvents_SetActivePomodoroLoopCount(int loopCount) {
+    if (!PomodoroLoopCount_IsValid(loopCount)) {
+        return FALSE;
+    }
+
+    if (TimerEvents_IsActivePomodoroTimer()) {
+        pomodoro_initial_loop_count = loopCount;
+        return TRUE;
+    }
+
+    return PomodoroSuspend_SetLoopCount(loopCount);
+}
+
+BOOL TimerEvents_GetActivePomodoroLoopCount(int* loopCount) {
+    if (!loopCount) {
+        return FALSE;
+    }
+
+    if (TimerEvents_IsActivePomodoroTimer()) {
+        *loopCount = pomodoro_initial_loop_count;
+        return TRUE;
+    }
+
+    return PomodoroSuspend_GetLoopCount(loopCount);
 }
 
 void TimerEvents_FormatPomodoroTime(int seconds,
@@ -67,7 +90,9 @@ static void BuildCompletionMessage(wchar_t* completionMsg,
                                    size_t completionMsgSize,
                                    int completedIndex,
                                    int timesCount,
+                                   const wchar_t* loopCountText,
                                    int loopCount,
+                                   BOOL isInfinite,
                                    int currentCycle,
                                    int stepInCycle) {
     wchar_t timeStr[32];
@@ -80,7 +105,7 @@ static void BuildCompletionMessage(wchar_t* completionMsg,
 
     const wchar_t* completedText =
         GetLocalizedString(NULL, L"Pomodoro completed");
-    if (timesCount <= 1 && loopCount <= 1) {
+    if (timesCount <= 1 && !isInfinite && loopCount == 1) {
         _snwprintf_s(completionMsg, completionMsgSize, _TRUNCATE,
                      L"%ls %ls", timeStr, completedText);
         return;
@@ -89,8 +114,8 @@ static void BuildCompletionMessage(wchar_t* completionMsg,
     const wchar_t* cycleText = GetLocalizedString(NULL, L"Cycle");
     const wchar_t* roundText = GetLocalizedString(NULL, L"Round");
     _snwprintf_s(completionMsg, completionMsgSize, _TRUNCATE,
-                 L"%ls %ls (%ls%d/%d%ls %d/%d)",
-                 timeStr, completedText, cycleText, currentCycle, loopCount,
+                 L"%ls %ls (%ls%d/%ls%ls %d/%d)",
+                 timeStr, completedText, cycleText, currentCycle, loopCountText,
                  roundText, stepInCycle, timesCount);
 }
 
@@ -101,12 +126,24 @@ BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
     int loopCount = pomodoro_initial_loop_count;
 
     if (timesCount <= 0) timesCount = 1;
-    if (loopCount <= 0) loopCount = 1;
+    if (!PomodoroLoopCount_IsValid(loopCount)) {
+        loopCount = DEFAULT_POMODORO_LOOP_COUNT;
+    }
 
     int stepInCycle = completedIndex + 1;
-    int currentCycle = complete_pomodoro_cycles + 1;
+    BOOL isInfinite = PomodoroLoopCount_IsInfinite(loopCount);
+    wchar_t loopCountText[16];
+    if (isInfinite) {
+        wcscpy_s(loopCountText, _countof(loopCountText), L"Inf");
+    } else {
+        _snwprintf_s(loopCountText, _countof(loopCountText), _TRUNCATE,
+                     L"%d", loopCount);
+    }
+    int currentCycle = complete_pomodoro_cycles < INT_MAX
+        ? complete_pomodoro_cycles + 1 : INT_MAX;
     BuildCompletionMessage(completionMsg, _countof(completionMsg),
-                           completedIndex, timesCount, loopCount,
+                           completedIndex, timesCount, loopCountText, loopCount,
+                           isInfinite,
                            currentCycle, stepInCycle);
 
     if (!TimerEvents_AdvancePomodoroState()) {
@@ -156,13 +193,8 @@ void InitializePomodoro(void) {
         pomodoro_initial_times_count = MAX_POMODORO_TIMES;
     }
 
-    pomodoro_initial_loop_count = g_AppConfig.pomodoro.loop_count;
-    if (pomodoro_initial_loop_count < MIN_POMODORO_LOOP_COUNT) {
-        pomodoro_initial_loop_count = MIN_POMODORO_LOOP_COUNT;
-    }
-    if (pomodoro_initial_loop_count > MAX_POMODORO_LOOP_COUNT) {
-        pomodoro_initial_loop_count = MAX_POMODORO_LOOP_COUNT;
-    }
+    pomodoro_initial_loop_count = PomodoroLoopCount_Normalize(
+        g_AppConfig.pomodoro.loop_count);
 
     memset(pomodoro_initial_times, 0, sizeof(pomodoro_initial_times));
     for (int i = 0; i < pomodoro_initial_times_count; i++) {
