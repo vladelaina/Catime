@@ -14,6 +14,7 @@
 #include "timer/timer.h"
 #include "timer/main_timer.h"
 #include "timer/timer_events.h"
+#include "timer/pomodoro_suspend.h"
 #include "config.h"
 #include "window.h"
 #include "pomodoro.h"
@@ -61,10 +62,7 @@ LRESULT CmdCountUpStart(HWND hwnd, WPARAM wp, LPARAM lp) {
     CleanupBeforeTimerAction(hwnd);
     
     if (!CLOCK_COUNT_UP) {
-        TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
-        SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
-        MainTimer_Stop();
-        ResetTimerWithInterval(hwnd);
+        StartCountUp(hwnd);
     } else {
         TogglePauseResumeTimer(hwnd);
     }
@@ -205,6 +203,7 @@ LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp) {
 LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     CleanupBeforeTimerAction(hwnd);
+    PomodoroSuspend_Discard();
 
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;

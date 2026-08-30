@@ -35,6 +35,7 @@ LRESULT CmdCountUpReset(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdPauseResume(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdRestartTimer(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdResumePomodoro(HWND hwnd, WPARAM wp, LPARAM lp);
 
 /* Time format */
 LRESULT CmdTimeFormat(HWND hwnd, TimeFormatType format);

@@ -15,6 +15,7 @@
 #include "window.h"
 #include "drag_scale.h"
 #include "pomodoro.h"
+#include "timer/pomodoro_suspend.h"
 #include "timer/timer.h"
 #include "config.h"
 #include "../resource/resource.h"
@@ -199,6 +200,11 @@ void ShowContextMenu(HWND hwnd, const POINT* anchor) {
     
     AppendMenuW(hTimerManageMenu, MF_STRING | (timerRunning ? MF_ENABLED : MF_GRAYED),
                CLOCK_IDM_TIMER_PAUSE_RESUME, pauseResumeText);
+
+    if (PomodoroSuspend_HasSnapshot()) {
+        AppendMenuW(hTimerManageMenu, MF_STRING, CLOCK_IDM_RESUME_POMODORO,
+                    GetLocalizedString(NULL, L"Resume Pomodoro"));
+    }
     
     BOOL canRestart = (!CLOCK_SHOW_CURRENT_TIME && (CLOCK_COUNT_UP || CLOCK_TOTAL_TIME > 0));
     

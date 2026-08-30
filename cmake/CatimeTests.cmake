@@ -198,6 +198,18 @@ target_include_directories(timer_render_cache_tests PRIVATE
 target_link_libraries(timer_render_cache_tests PRIVATE user32)
 add_test(NAME timer_render_cache COMMAND timer_render_cache_tests)
 
+add_executable(pomodoro_suspend_tests
+    tests/pomodoro_suspend_tests.c
+    src/timer/pomodoro_suspend.c
+)
+target_include_directories(pomodoro_suspend_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/timer"
+    "${CMAKE_CURRENT_BINARY_DIR}/generated"
+)
+target_link_libraries(pomodoro_suspend_tests PRIVATE user32)
+add_test(NAME pomodoro_suspend COMMAND pomodoro_suspend_tests)
+
 add_executable(render_retry_tests
     tests/render_retry_tests.c
     src/utils/render_retry.c
@@ -332,6 +344,7 @@ set(_catime_test_targets
     audio_player_cleanup_tests
     tray_menu_pagination_tests
     timer_render_cache_tests
+    pomodoro_suspend_tests
     render_retry_tests
     system_monitor_snapshot_tests
     tray_metric_sync_tests
