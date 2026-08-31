@@ -82,8 +82,11 @@ void ShowColorMenu(HWND hwnd, const POINT* anchor) {
     
     /* Edit mode toggle */
     AppendMenuW(hMenu, MF_STRING | (CLOCK_EDIT_MODE ? MF_CHECKED : MF_UNCHECKED),
-               CLOCK_IDC_EDIT_MODE, 
+               CLOCK_IDC_EDIT_MODE,
                GetLocalizedString(NULL, L"Edit Mode"));
+
+    AppendMenuW(hMenu, MF_STRING, CLOCK_IDM_NEW_TIMER_WINDOW,
+                GetLocalizedString(NULL, L"New Catime"));
 
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
 
@@ -224,7 +227,7 @@ void ShowContextMenu(HWND hwnd, const POINT* anchor) {
     }
     
     AppendMenuW(hMenu, MF_SEPARATOR, 0, NULL);
-    
+
     HMENU hTimeMenu = CreatePopupMenu();
     if (hTimeMenu) {
         AppendMenuW(hTimeMenu, MF_STRING | (CLOCK_SHOW_CURRENT_TIME ? MF_CHECKED : MF_UNCHECKED),

@@ -233,6 +233,16 @@ target_include_directories(pomodoro_loop_tests PRIVATE
 target_link_libraries(pomodoro_loop_tests PRIVATE user32)
 add_test(NAME pomodoro_loop COMMAND pomodoro_loop_tests)
 
+add_executable(multi_window_tests
+    tests/multi_window_tests.c
+    src/multi_window.c
+)
+target_include_directories(multi_window_tests PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+target_link_libraries(multi_window_tests PRIVATE user32)
+add_test(NAME multi_window COMMAND multi_window_tests)
+
 add_executable(render_retry_tests
     tests/render_retry_tests.c
     src/utils/render_retry.c
@@ -370,6 +380,7 @@ set(_catime_test_targets
     pomodoro_suspend_tests
     pomodoro_navigation_tests
     pomodoro_loop_tests
+    multi_window_tests
     render_retry_tests
     system_monitor_snapshot_tests
     tray_metric_sync_tests

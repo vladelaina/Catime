@@ -20,6 +20,7 @@
 #include "tray/tray_animation_core.h"
 #include "async_update_checker.h"
 #include "drawing/drawing_render.h"
+#include "multi_window.h"
 #include "../resource/resource.h"
 
 /* ============================================================================
@@ -63,7 +64,7 @@ BOOL HandleWindowCreate(HWND hwnd) {
  * @param hwnd Window handle being destroyed
  */
 void HandleWindowDestroy(HWND hwnd) {
-    SaveWindowSettings(hwnd);
+    if (!MultiWindow_IsSecondary()) SaveWindowSettings(hwnd);
     CancelScheduledConfigSave(hwnd);
     
     /* Cleanup OLE drag and drop */

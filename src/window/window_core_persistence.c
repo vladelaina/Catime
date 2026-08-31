@@ -1,4 +1,5 @@
 #include "window_core_internal.h"
+#include "multi_window.h"
 
 static UINT g_windowSettingsDirtyFlags = 0;
 
@@ -12,6 +13,7 @@ void ClearWindowSettingsDirty(UINT flags) {
 
 BOOL SaveWindowSettings(HWND hwnd) {
     if (!hwnd) return FALSE;
+    if (MultiWindow_IsSecondary()) return TRUE;
     UINT dirtyFlags = g_windowSettingsDirtyFlags;
     if (!dirtyFlags) return TRUE;
     if ((IsSystemPositionChangeGuardActive() ||

@@ -8,11 +8,13 @@
 #include "config/config_defaults.h"
 #include "log.h"
 #include "window_procedure/window_utils.h"
+#include "multi_window.h"
 
 #include <string.h>
 
 LRESULT HandleAppPomodoroChanged(HWND hwnd) {
     (void)hwnd;
+    if (MultiWindow_IsSecondary()) return 0;
 
     /* Pomodoro time options */
     char buf[POMODORO_OPTIONS_CONFIG_BUFFER_SIZE] = {0};

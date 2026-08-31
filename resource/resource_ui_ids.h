@@ -22,6 +22,7 @@
 #define CLOCK_IDM_POMODORO_LOOP_COUNT 185 /**< Configure loop count */
 #define CLOCK_IDM_POMODORO_RESET 186     /**< Reset Pomodoro timer */
 #define CLOCK_IDM_POMODORO_COMBINATION 188 /**< Pomodoro combination settings */
+#define CLOCK_IDM_NEW_TIMER_WINDOW 189 /**< Create an independent timer window */
 
 /** @brief Pomodoro dialog identifiers */
 #define CLOCK_IDD_POMODORO_TIME_DIALOG 510  /**< Pomodoro time configuration dialog */

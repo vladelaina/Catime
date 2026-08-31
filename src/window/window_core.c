@@ -4,6 +4,7 @@
  */
 
 #include "window_core_internal.h"
+#include "multi_window.h"
 
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
@@ -59,12 +60,14 @@ BOOL WindowCore_IsCurrentProcessWindow(HWND hwnd) {
 
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     LOG_INFO("Creating main window");
+    if (!MultiWindow_BeginMainWindowCreation()) return NULL;
     WNDCLASSW windowClass = {0};
     windowClass.lpfnWndProc = WindowProcedure;
     windowClass.hInstance = hInstance;
     windowClass.lpszClassName = WINDOW_CLASS_NAME;
     if (!RegisterClassW(&windowClass)) {
         LOG_WINDOWS_ERROR("Window class registration failed");
+        MultiWindow_EndMainWindowCreation();
         return NULL;
     }
 
@@ -82,6 +85,7 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     ResolveConfiguredWindowPosition(
         initialWidth, initialHeight,
         &CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
+    MultiWindow_OffsetInitialPosition(&CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
     HWND hwnd = CreateWindowExW(
         extendedStyle, WINDOW_CLASS_NAME, WINDOW_TITLE, WS_POPUP,
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
@@ -89,8 +93,10 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     if (!hwnd) {
         LOG_WINDOWS_ERROR("Window creation failed");
         UnregisterClassW(WINDOW_CLASS_NAME, hInstance);
+        MultiWindow_EndMainWindowCreation();
         return NULL;
     }
+    MultiWindow_EndMainWindowCreation();
     InitializeTrayAndAnimation(hwnd, hInstance);
     ApplyInitialWindowState(hwnd, nCmdShow);
     if (g_pendingSystemPositionRestore) {
