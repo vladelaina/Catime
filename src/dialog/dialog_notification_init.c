@@ -11,6 +11,7 @@
 #include "dialog/dialog_modern.h"
 #include "dialog/dialog_notification_audio.h"
 #include "dialog/dialog_procedure.h"
+#include "language.h"
 #include "notification.h"
 #include "../resource/resource.h"
 
@@ -37,6 +38,17 @@ INT_PTR DialogNotificationInternal_OnInit(HWND hwndDlg) {
         CP_UTF8, 0, g_AppConfig.notification.messages.timeout_message, -1,
         wideText, sizeof(wideText) / sizeof(wchar_t));
     SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_EDIT1, wideText);
+    CheckDlgButton(hwndDlg, IDC_NOTIFICATION_USE_FOR_POMODORO,
+                   g_AppConfig.notification.messages.use_for_pomodoro
+                       ? BST_CHECKED : BST_UNCHECKED);
+    SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_USE_FOR_POMODORO,
+                    GetLocalizedString(L"适用于番茄时钟", L"Apply to Pomodoro"));
+    SetDlgItemTextW(hwndDlg, IDC_NOTIFICATION_POMODORO_VARIABLES,
+                    GetLocalizedString(L"保留变量：{Cycle}  {Round}",
+                                       L"Variables: {Cycle}  {Round}"));
+    ShowWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_POMODORO_VARIABLES),
+               g_AppConfig.notification.messages.use_for_pomodoro
+                   ? SW_SHOW : SW_HIDE);
 
     SYSTEMTIME st = {0};
     GetLocalTime(&st);

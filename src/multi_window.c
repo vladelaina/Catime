@@ -8,9 +8,11 @@
 
 static HANDLE g_creationMutex = NULL;
 static int g_initialWindowIndex = 0;
+static BOOL g_isSecondaryInstance = FALSE;
 
 BOOL MultiWindow_IsSecondary(void) {
-    return wcsstr(GetCommandLineW(), L"--new-window") != NULL;
+    return g_isSecondaryInstance ||
+           wcsstr(GetCommandLineW(), L"--new-window") != NULL;
 }
 
 static int CountMainWindows(void) {
@@ -30,6 +32,14 @@ BOOL MultiWindow_BeginMainWindowCreation(void) {
         return FALSE;
     }
     g_initialWindowIndex = CountMainWindows();
+    /*
+     * Windows launched directly from catime.exe have no --new-window flag.
+     * Once another timer window already exists, they are nevertheless an
+     * independent timer instance and must not share its per-instance state.
+     */
+    if (g_initialWindowIndex > 0) {
+        g_isSecondaryInstance = TRUE;
+    }
     if (g_initialWindowIndex < CATIME_MAX_TIMER_WINDOWS) return TRUE;
     MessageBoxW(NULL, L"At most 20 Catime timer windows can run at once.",
                 L"Catime", MB_OK | MB_ICONINFORMATION);

@@ -54,6 +54,7 @@ typedef struct {
 
 typedef struct {
     char timeout_message[NOTIFICATION_MESSAGE_BUFFER_SIZE];
+    BOOL use_for_pomodoro;
 } NotificationMessages;
 
 typedef struct {

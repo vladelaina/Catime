@@ -73,6 +73,8 @@ LRESULT HandleAppNotificationChanged(HWND hwnd) {
                   sizeof(g_AppConfig.notification.messages.timeout_message),
                   timeoutMessage, _TRUNCATE);
     }
+    g_AppConfig.notification.messages.use_for_pomodoro = ReadConfigBool(
+        INI_SECTION_NOTIFICATION, NOTIFICATION_USE_FOR_POMODORO_KEY, FALSE);
 
     char soundBuf[MAX_PATH] = {0};
     BOOL soundConfigComplete = WindowConfigInternal_ReadStringExact(

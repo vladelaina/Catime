@@ -226,6 +226,8 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     strncpy(g_AppConfig.notification.messages.timeout_message, snapshot->timeoutMessage,
            sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
     g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
+    g_AppConfig.notification.messages.use_for_pomodoro =
+        snapshot->notificationUseForPomodoro;
     g_AppConfig.notification.display.timeout_ms = snapshot->notificationTimeoutMs;
     g_AppConfig.notification.display.max_opacity = snapshot->notificationMaxOpacity;
     g_AppConfig.notification.display.corner_radius = snapshot->notificationCornerRadius;

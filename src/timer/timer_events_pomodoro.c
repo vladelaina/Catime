@@ -119,6 +119,53 @@ static void BuildCompletionMessage(wchar_t* completionMsg,
                  roundText, stepInCycle, timesCount);
 }
 
+static void ReplacePomodoroVariable(const wchar_t* source, const wchar_t* token,
+                                    const wchar_t* value, wchar_t* output,
+                                    size_t outputSize) {
+    size_t outputIndex = 0;
+    size_t tokenLength = wcslen(token);
+    for (size_t sourceIndex = 0; source[sourceIndex] && outputIndex + 1 < outputSize;) {
+        const wchar_t* replacement = wcsncmp(source + sourceIndex, token,
+                                              tokenLength) == 0 ? value : NULL;
+        if (replacement) {
+            for (size_t i = 0; replacement[i] && outputIndex + 1 < outputSize; ++i) {
+                output[outputIndex++] = replacement[i];
+            }
+            sourceIndex += tokenLength;
+        } else {
+            output[outputIndex++] = source[sourceIndex++];
+        }
+    }
+    output[outputIndex] = L'\0';
+}
+
+static BOOL BuildConfiguredPomodoroMessage(wchar_t* completionMsg,
+                                           size_t completionMsgSize,
+                                           const wchar_t* loopCountText,
+                                           int currentCycle,
+                                           int stepInCycle,
+                                           int timesCount) {
+    wchar_t configuredMessage[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
+    if (!Utf8ToWide(g_AppConfig.notification.messages.timeout_message,
+                    configuredMessage, _countof(configuredMessage)) ||
+        configuredMessage[0] == L'\0') {
+        return FALSE;
+    }
+
+    wchar_t cycleValue[32] = {0};
+    wchar_t roundValue[32] = {0};
+    wchar_t intermediate[NOTIFICATION_MESSAGE_CHAR_BUFFER_SIZE] = {0};
+    _snwprintf_s(cycleValue, _countof(cycleValue), _TRUNCATE, L"%d/%ls",
+                 currentCycle, loopCountText);
+    _snwprintf_s(roundValue, _countof(roundValue), _TRUNCATE, L"%d/%d",
+                 stepInCycle, timesCount);
+    ReplacePomodoroVariable(configuredMessage, L"{Cycle}", cycleValue,
+                            intermediate, _countof(intermediate));
+    ReplacePomodoroVariable(intermediate, L"{Round}", roundValue,
+                            completionMsg, completionMsgSize);
+    return TRUE;
+}
+
 BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
     wchar_t completionMsg[256];
     int completedIndex = current_pomodoro_time_index;
@@ -141,19 +188,28 @@ BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
     }
     int currentCycle = complete_pomodoro_cycles < INT_MAX
         ? complete_pomodoro_cycles + 1 : INT_MAX;
-    BuildCompletionMessage(completionMsg, _countof(completionMsg),
-                           completedIndex, timesCount, loopCountText, loopCount,
-                           isInfinite,
-                           currentCycle, stepInCycle);
+    BOOL useConfiguredMessage =
+        g_AppConfig.notification.messages.use_for_pomodoro &&
+        BuildConfiguredPomodoroMessage(completionMsg, _countof(completionMsg),
+                                       loopCountText, currentCycle,
+                                       stepInCycle, timesCount);
+    if (!useConfiguredMessage) {
+        BuildCompletionMessage(completionMsg, _countof(completionMsg),
+                               completedIndex, timesCount, loopCountText,
+                               loopCount, isInfinite, currentCycle,
+                               stepInCycle);
+    }
 
     if (!TimerEvents_AdvancePomodoroState()) {
         ShowNotification(hwnd, completionMsg);
         TimerEvents_ResetTimerState(0);
         ResetPomodoroState();
 
-        const wchar_t* allCompleted =
-            GetLocalizedString(NULL, L"All Pomodoro cycles completed!");
-        ShowNotification(hwnd, allCompleted);
+        if (!useConfiguredMessage) {
+            const wchar_t* allCompleted =
+                GetLocalizedString(NULL, L"All Pomodoro cycles completed!");
+            ShowNotification(hwnd, allCompleted);
+        }
         PlayNotificationSound(hwnd);
 
         CLOCK_COUNT_UP = false;
