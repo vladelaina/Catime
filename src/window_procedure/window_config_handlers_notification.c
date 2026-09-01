@@ -7,12 +7,16 @@
 #include "config.h"
 #include "config/config_defaults.h"
 #include "notification.h"
+#include "multi_window.h"
 #include "window_procedure/window_utils.h"
 
 #include <string.h>
 
 LRESULT HandleAppNotificationChanged(HWND hwnd) {
     (void)hwnd;
+
+    /* Secondary timer processes keep their notification preferences local. */
+    if (MultiWindow_IsSecondary()) return 0;
 
     /* Reload notification settings from INI file for hot-reload support */
     int timeoutMs = ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000);

@@ -1,5 +1,6 @@
 #include "config.h"
 #include "config/config_defaults.h"
+#include "multi_window.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,8 +69,24 @@ static BOOL NotificationIniValueMatches(const char* config_path, const char* key
     }
     return strcmp(current, expected ? expected : "") == 0;
 }
+
+/*
+ * A --new-window timer is an independent timer process.  It inherits the
+ * persisted notification defaults at startup, but changes made from that
+ * window must stay local so another running timer cannot overwrite them.
+ */
+static BOOL NotificationSettingsAreProcessLocal(void) {
+    return MultiWindow_IsSecondary();
+}
+
 BOOL WriteConfigNotificationMessages(const char* timeoutMessage) {
     if (!timeoutMessage) timeoutMessage = "";
+    if (NotificationSettingsAreProcessLocal()) {
+        strncpy_s(g_AppConfig.notification.messages.timeout_message,
+                  sizeof(g_AppConfig.notification.messages.timeout_message),
+                  timeoutMessage, _TRUNCATE);
+        return TRUE;
+    }
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     BOOL runtimeMatches =
@@ -90,6 +107,10 @@ BOOL WriteConfigNotificationMessages(const char* timeoutMessage) {
 }
 BOOL WriteConfigNotificationTimeout(int timeoutMs) {
     if (timeoutMs < 0) timeoutMs = 0;
+    if (NotificationSettingsAreProcessLocal()) {
+        g_AppConfig.notification.display.timeout_ms = timeoutMs;
+        return TRUE;
+    }
     char timeoutStr[32];
     if (snprintf(timeoutStr, sizeof(timeoutStr), "%d", timeoutMs) < 0) {
         return FALSE;
@@ -112,6 +133,10 @@ BOOL WriteConfigNotificationTimeout(int timeoutMs) {
 BOOL WriteConfigNotificationOpacity(int opacity) {
     if (opacity < MIN_VISIBLE_OPACITY) opacity = MIN_VISIBLE_OPACITY;
     if (opacity > 100) opacity = 100;
+    if (NotificationSettingsAreProcessLocal()) {
+        g_AppConfig.notification.display.max_opacity = opacity;
+        return TRUE;
+    }
     char opacityStr[32];
     if (snprintf(opacityStr, sizeof(opacityStr), "%d", opacity) < 0) {
         return FALSE;
@@ -135,6 +160,10 @@ void WriteConfigNotificationType(NotificationType type) {
     if (type < NOTIFICATION_TYPE_CATIME || type > NOTIFICATION_TYPE_OS) {
         type = NOTIFICATION_TYPE_CATIME;
     }
+    if (NotificationSettingsAreProcessLocal()) {
+        g_AppConfig.notification.display.type = type;
+        return;
+    }
     const char* typeStr = EnumToString(NOTIFICATION_TYPE_MAP, type, "CATIME");
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -152,6 +181,10 @@ void WriteConfigNotificationType(NotificationType type) {
 }
 void WriteConfigNotificationDisabled(BOOL disabled) {
     disabled = disabled ? TRUE : FALSE;
+    if (NotificationSettingsAreProcessLocal()) {
+        g_AppConfig.notification.display.disabled = disabled;
+        return;
+    }
     const char* disabledStr = disabled ? "TRUE" : "FALSE";
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
@@ -173,6 +206,12 @@ void WriteConfigNotificationSound(const char* soundFile) {
     char to_write[MAX_PATH] = {0};
     BuildNotificationSoundConfigValue(soundFile, clean_path, sizeof(clean_path),
                                       to_write, sizeof(to_write));
+    if (NotificationSettingsAreProcessLocal()) {
+        strncpy_s(g_AppConfig.notification.sound.sound_file,
+                  sizeof(g_AppConfig.notification.sound.sound_file),
+                  clean_path, _TRUNCATE);
+        return;
+    }
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);
     BOOL runtimeMatches =
@@ -232,6 +271,22 @@ BOOL WriteConfigNotificationSettings(const char* timeoutMessage, int timeoutMs,
     char soundConfigValue[MAX_PATH] = {0};
     BuildNotificationSoundConfigValue(soundFile, cleanSoundPath, sizeof(cleanSoundPath),
                                       soundConfigValue, sizeof(soundConfigValue));
+    if (NotificationSettingsAreProcessLocal()) {
+        strncpy_s(g_AppConfig.notification.messages.timeout_message,
+                  sizeof(g_AppConfig.notification.messages.timeout_message),
+                  timeoutMessage, _TRUNCATE);
+        g_AppConfig.notification.display.timeout_ms = timeoutMs;
+        g_AppConfig.notification.display.max_opacity = opacity;
+        g_AppConfig.notification.display.corner_radius = cornerRadius;
+        g_AppConfig.notification.display.font_size = fontPercent;
+        g_AppConfig.notification.display.type = type;
+        g_AppConfig.notification.display.disabled = disabled;
+        strncpy_s(g_AppConfig.notification.sound.sound_file,
+                  sizeof(g_AppConfig.notification.sound.sound_file),
+                  cleanSoundPath, _TRUNCATE);
+        g_AppConfig.notification.sound.volume = volume;
+        return TRUE;
+    }
     const char* typeStr = EnumToString(NOTIFICATION_TYPE_MAP, type, "CATIME");
     const char* disabledStr = disabled ? "TRUE" : "FALSE";
     BOOL runtimeMatches =
