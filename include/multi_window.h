@@ -7,6 +7,12 @@
 #define CATIME_MAX_TIMER_WINDOWS 20
 
 BOOL MultiWindow_IsSecondary(void);
+/**
+ * Returns the stable placement slot assigned while this process creates its
+ * main window. Slot zero is the primary window; secondary windows use their
+ * own slot for persisted display placement.
+ */
+int MultiWindow_GetPlacementSlot(void);
 BOOL MultiWindow_BeginMainWindowCreation(void);
 void MultiWindow_EndMainWindowCreation(void);
 void MultiWindow_OffsetInitialPosition(int* x, int* y);

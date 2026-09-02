@@ -85,7 +85,6 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     ResolveConfiguredWindowPosition(
         initialWidth, initialHeight,
         &CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
-    MultiWindow_OffsetInitialPosition(&CLOCK_WINDOW_POS_X, &CLOCK_WINDOW_POS_Y);
     HWND hwnd = CreateWindowExW(
         extendedStyle, WINDOW_CLASS_NAME, WINDOW_TITLE, WS_POPUP,
         CLOCK_WINDOW_POS_X, CLOCK_WINDOW_POS_Y,
@@ -97,6 +96,13 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         return NULL;
     }
     MultiWindow_EndMainWindowCreation();
+    if (MultiWindow_IsSecondary()) {
+        /* Persist the newly assigned slot immediately.  Without this, a
+           TaskbarCreated/display recovery before the user moves the window
+           would fall back to the primary window's shared coordinates. */
+        MarkWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_POSITION);
+        SaveWindowSettings(hwnd);
+    }
     InitializeTrayAndAnimation(hwnd, hInstance);
     ApplyInitialWindowState(hwnd, nCmdShow);
     if (g_pendingSystemPositionRestore) {

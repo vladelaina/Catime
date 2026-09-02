@@ -5,6 +5,7 @@
 
 int main(void) {
     assert(CATIME_MAX_TIMER_WINDOWS == 20);
+    assert(MultiWindow_GetPlacementSlot() == 0);
     assert(MultiWindow_GetOffsetForWindowIndex(0) == 28);
     assert(MultiWindow_GetOffsetForWindowIndex(7) == 224);
     assert(MultiWindow_GetOffsetForWindowIndex(8) == 28);

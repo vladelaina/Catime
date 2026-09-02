@@ -64,7 +64,7 @@ BOOL HandleWindowCreate(HWND hwnd) {
  * @param hwnd Window handle being destroyed
  */
 void HandleWindowDestroy(HWND hwnd) {
-    if (!MultiWindow_IsSecondary()) SaveWindowSettings(hwnd);
+    SaveWindowSettings(hwnd);
     CancelScheduledConfigSave(hwnd);
     
     /* Cleanup OLE drag and drop */

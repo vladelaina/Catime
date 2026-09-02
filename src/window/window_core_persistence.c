@@ -1,6 +1,35 @@
 #include "window_core_internal.h"
 #include "multi_window.h"
 
+#define WINDOW_INSTANCE_PLACEMENT_SECTION "WindowPositions"
+
+static const char* GetPrimaryPlacementKey(const char* suffix) {
+    if (strcmp(suffix, "X") == 0) return "CLOCK_WINDOW_POS_X";
+    if (strcmp(suffix, "Y") == 0) return "CLOCK_WINDOW_POS_Y";
+    if (strcmp(suffix, "Manual") == 0) return WINDOW_POSITION_MANUAL_KEY;
+    if (strcmp(suffix, "MonitorId") == 0) return WINDOW_MONITOR_ID_KEY;
+    if (strcmp(suffix, "MonitorOffsetX") == 0) return WINDOW_MONITOR_OFFSET_X_KEY;
+    if (strcmp(suffix, "MonitorOffsetY") == 0) return WINDOW_MONITOR_OFFSET_Y_KEY;
+    if (strcmp(suffix, "TaskbarAnchored") == 0) return WINDOW_TASKBAR_ANCHORED_KEY;
+    if (strcmp(suffix, "TaskbarAxisRatio") == 0) return WINDOW_TASKBAR_AXIS_RATIO_KEY;
+    if (strcmp(suffix, "TaskbarCrossOffset") == 0) return WINDOW_TASKBAR_CROSS_OFFSET_KEY;
+    return suffix;
+}
+
+static void GetPlacementStorage(const char* suffix, const char** section,
+                                char* key, size_t keySize) {
+    if (!section || !key || keySize == 0) return;
+    if (!MultiWindow_IsSecondary()) {
+        *section = INI_SECTION_DISPLAY;
+        _snprintf_s(key, keySize, _TRUNCATE, "%s",
+                    GetPrimaryPlacementKey(suffix));
+        return;
+    }
+    *section = WINDOW_INSTANCE_PLACEMENT_SECTION;
+    _snprintf_s(key, keySize, _TRUNCATE, "Window%d_%s",
+                MultiWindow_GetPlacementSlot(), suffix);
+}
+
 static UINT g_windowSettingsDirtyFlags = 0;
 
 void MarkWindowSettingsDirty(UINT flags) {
@@ -13,8 +42,12 @@ void ClearWindowSettingsDirty(UINT flags) {
 
 BOOL SaveWindowSettings(HWND hwnd) {
     if (!hwnd) return FALSE;
-    if (MultiWindow_IsSecondary()) return TRUE;
     UINT dirtyFlags = g_windowSettingsDirtyFlags;
+    /* Secondary windows own their placement, but retain the existing rule
+       that scale and other display preferences belong to the primary config. */
+    if (MultiWindow_IsSecondary()) {
+        dirtyFlags &= WINDOW_SETTINGS_DIRTY_POSITION;
+    }
     if (!dirtyFlags) return TRUE;
     if ((IsSystemPositionChangeGuardActive() ||
          g_pendingSystemPositionRestore) && !CLOCK_EDIT_MODE) return FALSE;
@@ -71,29 +104,49 @@ BOOL SaveWindowSettings(HWND hwnd) {
     snprintf(crossOffset, sizeof(crossOffset), "%d", taskbarCrossOffset);
 
     IniKeyValue updates[11];
+    char placementKeys[9][64] = {{0}};
     size_t count = 0;
     if (savePosition) {
+        const char* placementSection = NULL;
+        GetPlacementStorage("X", &placementSection, placementKeys[0],
+                            sizeof(placementKeys[0]));
+        GetPlacementStorage("Y", &placementSection, placementKeys[1],
+                            sizeof(placementKeys[1]));
+        GetPlacementStorage("Manual", &placementSection, placementKeys[2],
+                            sizeof(placementKeys[2]));
+        GetPlacementStorage("MonitorId", &placementSection, placementKeys[3],
+                            sizeof(placementKeys[3]));
+        GetPlacementStorage("MonitorOffsetX", &placementSection, placementKeys[4],
+                            sizeof(placementKeys[4]));
+        GetPlacementStorage("MonitorOffsetY", &placementSection, placementKeys[5],
+                            sizeof(placementKeys[5]));
+        GetPlacementStorage("TaskbarAnchored", &placementSection, placementKeys[6],
+                            sizeof(placementKeys[6]));
+        GetPlacementStorage("TaskbarAxisRatio", &placementSection, placementKeys[7],
+                            sizeof(placementKeys[7]));
+        GetPlacementStorage("TaskbarCrossOffset", &placementSection, placementKeys[8],
+                            sizeof(placementKeys[8]));
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X", posX};
+            placementSection, placementKeys[0], posX};
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y", posY};
+            placementSection, placementKeys[1], posY};
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY, "TRUE"};
+            placementSection, placementKeys[2], "TRUE"};
         /* Always overwrite metadata so failed probes cannot leave stale
            monitor or taskbar anchors behind. */
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, WINDOW_MONITOR_ID_KEY, monitorId};
+            placementSection, placementKeys[3], monitorId};
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_X_KEY, offsetX};
+            placementSection, placementKeys[4], offsetX};
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_Y_KEY, offsetY};
+            placementSection, placementKeys[5], offsetY};
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
+            placementSection, placementKeys[6],
             taskbarAnchored ? "TRUE" : "FALSE"};
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, WINDOW_TASKBAR_AXIS_RATIO_KEY, axisRatio};
+            placementSection, placementKeys[7], axisRatio};
         updates[count++] = (IniKeyValue){
-            INI_SECTION_DISPLAY, WINDOW_TASKBAR_CROSS_OFFSET_KEY,
+            placementSection, placementKeys[8],
             crossOffset};
     }
     if (dirtyFlags & WINDOW_SETTINGS_DIRTY_SCALE) {

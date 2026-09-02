@@ -15,6 +15,10 @@ BOOL MultiWindow_IsSecondary(void) {
            wcsstr(GetCommandLineW(), L"--new-window") != NULL;
 }
 
+int MultiWindow_GetPlacementSlot(void) {
+    return g_initialWindowIndex < 0 ? 0 : g_initialWindowIndex;
+}
+
 static int CountMainWindows(void) {
     int count = 0;
     HWND window = NULL;
