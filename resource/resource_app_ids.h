@@ -207,6 +207,7 @@
 #define CLOCK_IDM_TIMER_MANAGEMENT 159       /**< Timer management submenu */
 #define CLOCK_IDM_TIMER_PAUSE_RESUME 158     /**< Pause/resume timer menu item */
 #define CLOCK_IDM_TIMER_RESTART 178          /**< Restart timer menu item */
+#define CLOCK_IDM_RESUME_POMODORO 180        /**< Resume a temporarily suspended Pomodoro */
 #define CLOCK_IDM_SLEEP 125                  /**< Sleep timeout action */
 
 #endif /* CATIME_RESOURCE_APP_IDS_H */

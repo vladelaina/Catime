@@ -10,9 +10,9 @@ output/
 *.o
 *.obj
 *.log
-*.tmp 
+*.tmp
 *.res
-*.aps 
+*.aps
 
 # Build system temps
 .xmake/
@@ -32,4 +32,6 @@ output/
 
 # Project documentation
 CLAUDE.md
+AGENTS.md
+.codexignore
 .reference

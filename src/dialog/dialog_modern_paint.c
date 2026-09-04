@@ -163,7 +163,10 @@ void ModernPaintChoiceControl(ModernControl* control, HDC suppliedDc) {
 
         RECT textRect = {glyph.right + DialogModern_Scale(state->dpi, 8), 0,
                          client.right, client.bottom};
-        DialogModern_DrawText(hdc, state->bodyFont, textColor, &textRect, text,
+        HFONT textFont = (HFONT)SendMessageW(
+            control->hwnd, WM_GETFONT, 0, 0);
+        DialogModern_DrawText(hdc, textFont ? textFont : state->bodyFont,
+                              textColor, &textRect, text,
                               DT_LEFT | DT_VCENTER | DT_SINGLELINE |
                               DT_END_ELLIPSIS);
     }

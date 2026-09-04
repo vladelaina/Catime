@@ -4,6 +4,7 @@
  */
 
 #include "timer_events_internal.h"
+#include "timer/pomodoro_suspend.h"
 
 BOOL TimerEvents_ShouldRenderMainTimer(void) {
     g_visibleTimerCurrentText[0] = L'\0';
@@ -48,6 +49,15 @@ BOOL Timer_HasPresentedMainWindowFrame(void) {
 }
 
 void TimerEvents_HandleCountdownCompletion(HWND hwnd) {
+    if (PomodoroSuspend_HasSnapshot()) {
+        TimerEvents_ShowTimeoutNotification(
+            hwnd, g_AppConfig.notification.messages.timeout_message, TRUE);
+        TimerEvents_ResetTimerState(0);
+        TimerEvents_ResetMillisecondAccumulator();
+        MainTimer_Stop();
+        return;
+    }
+
     BOOL shouldNotify = CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_OPEN_FILE &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_LOCK &&
                         CLOCK_TIMEOUT_ACTION != TIMEOUT_ACTION_SHUTDOWN &&

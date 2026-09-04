@@ -4,6 +4,7 @@
  */
 
 #include "window/window_initialization.h"
+#include "multi_window.h"
 #include "window/window_core.h"
 #include "timer/timer.h"
 #include "language.h"
@@ -209,7 +210,7 @@ static BOOL InitializeDefaultSettings(void) {
     ReadConfig();
     CLOCK_FONT_SCALE_FACTOR = CLOCK_WINDOW_SCALE;
 
-    if (!IsCiSmokeMode() && !EnsureAutoStart()) {
+    if (!IsCiSmokeMode() && !MultiWindow_IsSecondary() && !EnsureAutoStart()) {
         LOG_WARNING("Auto-start registration could not be fully initialized");
     }
     InitializeDefaultLanguage();

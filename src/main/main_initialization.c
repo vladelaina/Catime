@@ -22,6 +22,7 @@
 #include "tray/tray_menu_theme.h"
 #include "utils/package_identity.h"
 #include "utils/string_convert.h"
+#include "multi_window.h"
 #include "window/window_desktop_integration.h"
 #include "window/window_initialization.h"
 #include "window/window_visual_effects.h"
@@ -216,10 +217,16 @@ BOOL SetupMainWindow(HINSTANCE hInstance, HWND hwnd, int nCmdShow) {
         LOG_WARNING("Font validation timer creation failed");
     }
 
-    if (!IsCiSmokeMode()) {
+    if (!IsCiSmokeMode() && !MultiWindow_IsSecondary()) {
         StartAutomaticUpdateCheck(hwnd);
     }
-    HandleStartupMode(hwnd);
+    if (MultiWindow_IsSecondary()) {
+        CLOCK_SHOW_CURRENT_TIME = true;
+        CLOCK_COUNT_UP = false;
+        CLOCK_IS_PAUSED = false;
+    } else {
+        HandleStartupMode(hwnd);
+    }
     HandleCommandLine(hwnd, &launchedFromStartup);
     if (IsCiSmokeMode()) {
         Main_ScheduleCiSmokeExit(hwnd, GetCiExitTimeoutMs());
