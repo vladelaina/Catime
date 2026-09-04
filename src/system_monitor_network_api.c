@@ -58,7 +58,13 @@ static BOOL CollectCounters64(NetInterfaceCounter* counters, DWORD* outCount) {
             if (Monitor_IsInitialized() == 0) break;
             const MIB_IF_ROW2* row = &table->Table[i];
             if (row->Type == MONITOR_LOOPBACK_INTERFACE_TYPE ||
-                row->OperStatus != IfOperStatusUp) {
+                row->OperStatus != IfOperStatusUp ||
+                row->InterfaceAndOperStatusFlags.FilterInterface ||
+                !row->InterfaceAndOperStatusFlags.HardwareInterface) {
+                /* Loopback/down interfaces carry no Internet traffic; NDIS
+                 * filter interfaces and virtual (tunnel) adapters mirror the
+                 * same traffic as the physical NIC, so summing them would
+                 * count each byte several times and inflate the rate. */
                 continue;
             }
             if (count < MONITOR_MAX_TRACKED_INTERFACES) {
@@ -108,7 +114,9 @@ static BOOL CollectCounters32(NetInterfaceCounter* counters, DWORD* outCount) {
             return FALSE;
         }
         const MIB_IFROW* row = &table->table[i];
-        if (row->dwType == MONITOR_LOOPBACK_INTERFACE_TYPE) continue;
+        if (row->dwType == MONITOR_LOOPBACK_INTERFACE_TYPE ||
+            row->dwType == MONITOR_TUNNEL_INTERFACE_TYPE ||
+            row->dwType == MONITOR_PPP_INTERFACE_TYPE) continue;
 #ifdef IF_OPER_STATUS_OPERATIONAL
         if (row->dwOperStatus != IF_OPER_STATUS_OPERATIONAL) continue;
 #endif
