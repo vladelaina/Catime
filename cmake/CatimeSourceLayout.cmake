@@ -5,12 +5,19 @@ set(CATIME_MAX_FIRST_PARTY_SOURCE_LINES 300)
 set(_catime_line_limit_allowlist)
 
 set(_catime_first_party_code)
+if(CMAKE_SCRIPT_MODE_FILE)
+    get_filename_component(_catime_layout_root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+    set(_catime_layout_glob_options)
+else()
+    set(_catime_layout_root "${CMAKE_CURRENT_SOURCE_DIR}")
+    set(_catime_layout_glob_options CONFIGURE_DEPENDS)
+endif()
 foreach(_catime_root IN ITEMS src include tests)
     file(GLOB_RECURSE _catime_root_code
-        CONFIGURE_DEPENDS
+        ${_catime_layout_glob_options}
         LIST_DIRECTORIES FALSE
-        "${CMAKE_CURRENT_SOURCE_DIR}/${_catime_root}/*.c"
-        "${CMAKE_CURRENT_SOURCE_DIR}/${_catime_root}/*.h"
+        "${_catime_layout_root}/${_catime_root}/*.c"
+        "${_catime_layout_root}/${_catime_root}/*.h"
     )
     list(APPEND _catime_first_party_code ${_catime_root_code})
 endforeach()
@@ -27,7 +34,7 @@ foreach(_catime_file IN LISTS _catime_first_party_code)
     endif()
 
     file(RELATIVE_PATH _catime_relative
-        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${_catime_layout_root}"
         "${_catime_file}"
     )
     string(REPLACE "\\" "/" _catime_relative "${_catime_relative}")
@@ -72,6 +79,8 @@ if(_catime_stale_allowlist)
 endif()
 
 unset(_catime_line_limit_allowlist)
+unset(_catime_layout_root)
+unset(_catime_layout_glob_options)
 unset(_catime_first_party_code)
 unset(_catime_root_code)
 unset(_catime_line_limit_violations)

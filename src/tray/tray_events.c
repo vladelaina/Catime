@@ -256,6 +256,9 @@ void OpenSupportPage(void) {
 void OpenVlainaPage(void) {
     OpenUrlInBrowser(URL_VLAINA);
 }
+void OpenBongoCatPage(void) {
+    OpenUrlInBrowser(URL_BONGOCAT);
+}
 void OpenFeedbackPage(void) {
     const wchar_t* url = (CURRENT_LANGUAGE == APP_LANG_CHINESE_SIMP)
         ? URL_FEEDBACK

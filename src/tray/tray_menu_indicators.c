@@ -15,7 +15,7 @@ static HBITMAP s_hVlainaCheck = NULL;
 static int s_vlainaCheckCx = 0;
 static int s_vlainaCheckCy = 0;
 
-static void GetMenuIndicatorBitmapSize(int* outCx, int* outCy) {
+void TraySubmenu_GetIndicatorBitmapSize(int* outCx, int* outCy) {
     int cx = GetSystemMetrics(SM_CXSMICON);
     int cy = GetSystemMetrics(SM_CYSMICON);
     if (cx <= 0) cx = 16;
@@ -209,7 +209,7 @@ static HBITMAP CreateMenuCheckBitmap(int cx, int cy, DWORD color) {
 HBITMAP TraySubmenu_GetUpdateDotBitmap(void) {
     int cx = 0;
     int cy = 0;
-    GetMenuIndicatorBitmapSize(&cx, &cy);
+    TraySubmenu_GetIndicatorBitmapSize(&cx, &cy);
 
     if (s_hUpdateDot && (s_updateDotCx != cx || s_updateDotCy != cy)) {
         DeleteObject(s_hUpdateDot);
@@ -231,7 +231,7 @@ HBITMAP TraySubmenu_GetUpdateDotBitmap(void) {
 HBITMAP TraySubmenu_GetSupportHeartBitmap(void) {
     int cx = 0;
     int cy = 0;
-    GetMenuIndicatorBitmapSize(&cx, &cy);
+    TraySubmenu_GetIndicatorBitmapSize(&cx, &cy);
 
     if (s_hSupportHeart && (s_supportHeartCx != cx || s_supportHeartCy != cy)) {
         DeleteObject(s_hSupportHeart);
@@ -253,7 +253,7 @@ HBITMAP TraySubmenu_GetSupportHeartBitmap(void) {
 HBITMAP TraySubmenu_GetVlainaCheckBitmap(void) {
     int cx = 0;
     int cy = 0;
-    GetMenuIndicatorBitmapSize(&cx, &cy);
+    TraySubmenu_GetIndicatorBitmapSize(&cx, &cy);
 
     if (s_hVlainaCheck &&
         (s_vlainaCheckCx != cx || s_vlainaCheckCy != cy)) {
@@ -274,6 +274,7 @@ HBITMAP TraySubmenu_GetVlainaCheckBitmap(void) {
 }
 
 void CleanupTraySubmenuResources(void) {
+    TraySubmenu_CleanupBongoCatBitmap();
     if (s_hUpdateDot) {
         DeleteObject(s_hUpdateDot);
         s_hUpdateDot = NULL;

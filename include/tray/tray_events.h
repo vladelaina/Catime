@@ -87,6 +87,7 @@ void OpenSupportPage(void);
  * @brief Open Vlaina project page in browser
  */
 void OpenVlainaPage(void);
+void OpenBongoCatPage(void);
 
 /**
  * @brief Open feedback page (language-aware)

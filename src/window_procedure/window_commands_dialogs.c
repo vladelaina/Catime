@@ -67,6 +67,12 @@ LRESULT CmdFeedback(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+LRESULT CmdBongoCat(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)hwnd; (void)wp; (void)lp;
+    OpenBongoCatPage();
+    return 0;
+}
+
 LRESULT CmdBrowseFile(HWND hwnd, WPARAM wp, LPARAM lp) {
     (void)wp; (void)lp;
     char path[MAX_PATH];

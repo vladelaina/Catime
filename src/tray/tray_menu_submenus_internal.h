@@ -47,5 +47,8 @@ void GetConfigPath(char* path, size_t size);
 HBITMAP TraySubmenu_GetUpdateDotBitmap(void);
 HBITMAP TraySubmenu_GetSupportHeartBitmap(void);
 HBITMAP TraySubmenu_GetVlainaCheckBitmap(void);
+HBITMAP TraySubmenu_GetBongoCatBitmap(void);
+void TraySubmenu_CleanupBongoCatBitmap(void);
+void TraySubmenu_GetIndicatorBitmapSize(int* outCx, int* outCy);
 
 #endif /* CATIME_TRAY_MENU_SUBMENUS_INTERNAL_H */

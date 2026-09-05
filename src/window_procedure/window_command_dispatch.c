@@ -56,6 +56,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDM_HELP, CmdHelp},
     {CLOCK_IDM_SUPPORT, CmdSupport},
     {CLOCK_IDM_VLAINA, CmdVlaina},
+    {CLOCK_IDM_BONGOCAT, CmdBongoCat},
     {CLOCK_IDM_FEEDBACK, CmdFeedback},
     {0, NULL}
 };

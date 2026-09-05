@@ -76,6 +76,13 @@ void BuildHelpSubmenu(HMENU hMenu) {
     vlainaMii.fMask = MIIM_BITMAP;
     vlainaMii.hbmpItem = hVlainaCheck;
     SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_VLAINA, FALSE, &vlainaMii);
+    AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_BONGOCAT,
+                GetLocalizedString(NULL, L"Try the creator's desktop pet"));
+    MENUITEMINFOW bongoCatMii = {0};
+    bongoCatMii.cbSize = sizeof(bongoCatMii);
+    bongoCatMii.fMask = MIIM_BITMAP;
+    bongoCatMii.hbmpItem = TraySubmenu_GetBongoCatBitmap();
+    SetMenuItemInfoW(hAboutMenu, CLOCK_IDM_BONGOCAT, FALSE, &bongoCatMii);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_FEEDBACK, GetLocalizedString(NULL, L"Feedback"));
     AppendMenuW(hAboutMenu, MF_SEPARATOR, 0, NULL);
     AppendMenuW(hAboutMenu, MF_STRING, CLOCK_IDM_HELP, GetLocalizedString(NULL, L"User Guide"));
