@@ -72,7 +72,10 @@ BOOL TaskbarMonitor_AttachToTaskbar(void) {
     }
     RECT taskbarRect = {0};
     HWND taskbar = FindWindowW(L"Shell_TrayWnd", NULL);
-    if (!taskbar || !GetWindowRect(taskbar, &taskbarRect)) {
+    if (!taskbar || !IsWindowVisible(taskbar) ||
+        !GetWindowRect(taskbar, &taskbarRect) ||
+        taskbarRect.right <= taskbarRect.left ||
+        taskbarRect.bottom <= taskbarRect.top) {
         TaskbarMonitor_RestoreClassicTaskList();
         ConfigureHiddenRetry();
         TaskbarMonitor_ScheduleWindowRecovery();
