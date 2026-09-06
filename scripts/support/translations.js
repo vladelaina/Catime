@@ -285,6 +285,7 @@ function translateSupportElements() {
     }
     
     const supporterCellTranslations = {
+        '支持你产出更好更多的学习工具（钱少，一点点心意啦。）': 'Supporting you in creating more and better learning tools (It is not much, just a small token of appreciation.)',
         '简单好用': 'Simple and easy to use',
         'vlaina提了一把需求，开工了开工了': 'vlaina made a feature request—time to get to work!',
         'vlaina加油做': 'Keep it up, vlaina!',
