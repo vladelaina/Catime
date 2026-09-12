@@ -1,4 +1,5 @@
 #include "config_misc_internal.h"
+#include "multi_window.h"
 
 static BOOL BuildPomodoroTimesString(
     const int* times, int count, char* buffer, size_t bufferSize) {
@@ -64,6 +65,10 @@ static BOOL WritePomodoroTimeOptionsStringIfChanged(
         return FALSE;
     }
 
+    if (MultiWindow_IsSecondary()) {
+        UpdatePomodoroTimesState(times, count);
+        return TRUE;
+    }
     char timesString[POMODORO_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
     if (!BuildPomodoroTimesString(
             times, count, timesString, sizeof(timesString))) {
@@ -105,8 +110,12 @@ BOOL WriteConfigPomodoroSettings(
 }
 
 BOOL WriteConfigPomodoroLoopCount(int loopCount) {
-    if (loopCount < MIN_POMODORO_LOOP_COUNT) loopCount = MIN_POMODORO_LOOP_COUNT;
-    if (loopCount > MAX_POMODORO_LOOP_COUNT) loopCount = MAX_POMODORO_LOOP_COUNT;
+    loopCount = PomodoroLoopCount_Normalize(loopCount);
+
+    if (MultiWindow_IsSecondary()) {
+        g_AppConfig.pomodoro.loop_count = loopCount;
+        return TRUE;
+    }
 
     char loopCountString[32];
     if (snprintf(loopCountString, sizeof(loopCountString),

@@ -13,11 +13,13 @@ typedef struct {
 
 static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDM_CUSTOM_COUNTDOWN, CmdCustomCountdown},
+    {CLOCK_IDM_NEW_TIMER_WINDOW, CmdNewTimerWindow},
     {CLOCK_IDM_EXIT, CmdExit},
     {CLOCK_IDM_RESET_POSITION, CmdResetPosition},
     {CLOCK_IDM_RESET_ALL, CmdResetDefaults},
     {CLOCK_IDM_TIMER_PAUSE_RESUME, CmdPauseResume},
     {CLOCK_IDM_TIMER_RESTART, CmdRestartTimer},
+    {CLOCK_IDM_RESUME_POMODORO, CmdResumePomodoro},
     {CLOCK_IDM_COUNTDOWN_RESET, CmdCountdownReset},
     {CLOCK_IDM_SHOW_CURRENT_TIME, CmdShowCurrentTime},
     {CLOCK_IDM_24HOUR_FORMAT, Cmd24HourFormat},

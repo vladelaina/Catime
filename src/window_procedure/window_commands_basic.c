@@ -1,4 +1,12 @@
 #include "window_commands_internal.h"
+#include "multi_window.h"
+
+LRESULT CmdNewTimerWindow(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp;
+    (void)lp;
+    (void)MultiWindow_LaunchNewTimerWindow(hwnd);
+    return 0;
+}
 
 float ParseDefaultScaleOrFallback(const char* value, float fallback) {
     char* end = NULL;

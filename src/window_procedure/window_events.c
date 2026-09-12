@@ -20,6 +20,7 @@
 #include "tray/tray_animation_core.h"
 #include "async_update_checker.h"
 #include "drawing/drawing_render.h"
+#include "multi_window.h"
 #include "../resource/resource.h"
 
 /* ============================================================================

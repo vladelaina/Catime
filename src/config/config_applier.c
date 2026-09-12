@@ -42,9 +42,7 @@ static void ApplyDefaultPomodoroTimes(void) {
     g_AppConfig.pomodoro.long_break = g_AppConfig.pomodoro.times[2];
 }
 static int ClampPomodoroLoopCountForApply(int loopCount) {
-    if (loopCount < MIN_POMODORO_LOOP_COUNT) return MIN_POMODORO_LOOP_COUNT;
-    if (loopCount > MAX_POMODORO_LOOP_COUNT) return MAX_POMODORO_LOOP_COUNT;
-    return loopCount;
+    return PomodoroLoopCount_Normalize(loopCount);
 }
 static void ApplyDefaultQuickCountdownOptions(void) {
     static const int defaultOptions[] = {
@@ -228,6 +226,8 @@ void ApplyNotificationSettings(const ConfigSnapshot* snapshot) {
     strncpy(g_AppConfig.notification.messages.timeout_message, snapshot->timeoutMessage,
            sizeof(g_AppConfig.notification.messages.timeout_message) - 1);
     g_AppConfig.notification.messages.timeout_message[sizeof(g_AppConfig.notification.messages.timeout_message) - 1] = '\0';
+    g_AppConfig.notification.messages.use_for_pomodoro =
+        snapshot->notificationUseForPomodoro;
     g_AppConfig.notification.display.timeout_ms = snapshot->notificationTimeoutMs;
     g_AppConfig.notification.display.max_opacity = snapshot->notificationMaxOpacity;
     g_AppConfig.notification.display.corner_radius = snapshot->notificationCornerRadius;

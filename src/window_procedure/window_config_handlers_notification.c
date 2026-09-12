@@ -7,12 +7,16 @@
 #include "config.h"
 #include "config/config_defaults.h"
 #include "notification.h"
+#include "multi_window.h"
 #include "window_procedure/window_utils.h"
 
 #include <string.h>
 
 LRESULT HandleAppNotificationChanged(HWND hwnd) {
     (void)hwnd;
+
+    /* Secondary timer processes keep their notification preferences local. */
+    if (MultiWindow_IsSecondary()) return 0;
 
     /* Reload notification settings from INI file for hot-reload support */
     int timeoutMs = ReadConfigInt(INI_SECTION_NOTIFICATION, "NOTIFICATION_TIMEOUT_MS", 3000);
@@ -69,6 +73,8 @@ LRESULT HandleAppNotificationChanged(HWND hwnd) {
                   sizeof(g_AppConfig.notification.messages.timeout_message),
                   timeoutMessage, _TRUNCATE);
     }
+    g_AppConfig.notification.messages.use_for_pomodoro = ReadConfigBool(
+        INI_SECTION_NOTIFICATION, NOTIFICATION_USE_FOR_POMODORO_KEY, FALSE);
 
     char soundBuf[MAX_PATH] = {0};
     BOOL soundConfigComplete = WindowConfigInternal_ReadStringExact(

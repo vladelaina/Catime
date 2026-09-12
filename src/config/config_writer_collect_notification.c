@@ -22,6 +22,10 @@ BOOL ConfigWriter_CollectNotification(ConfigItemBuilder* builder) {
             builder, INI_SECTION_NOTIFICATION,
             "CLOCK_TIMEOUT_MESSAGE_TEXT",
             notification->messages.timeout_message) ||
+        !ConfigWriter_AppendBool(
+            builder, INI_SECTION_NOTIFICATION,
+            NOTIFICATION_USE_FOR_POMODORO_KEY,
+            notification->messages.use_for_pomodoro) ||
         !ConfigWriter_AppendInt(builder, INI_SECTION_NOTIFICATION,
                                 "NOTIFICATION_TIMEOUT_MS",
                                 notification->display.timeout_ms) ||

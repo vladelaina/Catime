@@ -90,8 +90,8 @@ void ModernSetBodyScrollOffset(ModernDialogState* state, int offset96) {
     state->bodyScrollOffset96 = offset96;
 
     /* DeferWindowPos and SWP_NOREDRAW commit the child layout without exposing
-     * intermediate positions. Invalidate the complete body once afterward so
-     * consecutive wheel and thumb updates can coalesce. */
+     * intermediate positions. Redraw both the body and its children afterward:
+     * Windows 11 can otherwise retain stale child pixels after wheel scrolling. */
     ModernLayoutBodyControls(state, TRUE);
 
     RECT client = {0};
@@ -105,7 +105,7 @@ void ModernSetBodyScrollOffset(ModernDialogState* state, int offset96) {
             state->headerHeight96 + state->bodyViewportHeight96)
     };
     RedrawWindow(state->hwnd, &body, NULL,
-                 RDW_INVALIDATE | RDW_NOERASE | RDW_NOCHILDREN);
+                 RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_UPDATENOW);
 }
 
 BOOL ModernGetScrollbarRects(const ModernDialogState* state,

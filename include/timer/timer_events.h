@@ -65,6 +65,17 @@ void InitializePomodoro(void);
 void ResetPomodoroState(void);
 
 /**
+ * Update the loop count of the active Pomodoro session without changing
+ * its current interval, elapsed time, or paused state.
+ */
+BOOL TimerEvents_SetActivePomodoroLoopCount(int loopCount);
+
+/**
+ * Read the loop count captured by the active Pomodoro session.
+ */
+BOOL TimerEvents_GetActivePomodoroLoopCount(int* loopCount);
+
+/**
  * @brief Arm a one-time system timeout action selected through trusted UI.
  *
  * @details Shutdown/restart/sleep are dangerous and are intentionally not
