@@ -86,6 +86,54 @@ const trayLibraryInteraction = `async () => {
         ...result,
     };
 }`;
+const downloadPageInteraction = `async () => {
+    const directLink = document.getElementById('direct-download-btn');
+    const copyButton = document.querySelector('.copy-command');
+    const copyLabel = copyButton?.querySelector('.copy-label');
+    let clipboardValue = '';
+
+    Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+            writeText(value) {
+                clipboardValue = value;
+                return Promise.resolve();
+            },
+        },
+    });
+
+    copyButton?.click();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    const result = {
+        version: document.getElementById('download-version')?.textContent,
+        size: document.getElementById('download-size')?.textContent,
+        filename: document.getElementById('download-filename')?.textContent,
+        directHref: directLink?.href,
+        directDownload: directLink?.download,
+        storeHref: document.querySelector('.microsoft-store-link')?.href,
+        packageCount: document.querySelectorAll('.package-command').length,
+        clipboardValue,
+        copyLabel: copyLabel?.textContent,
+        downloadButtonCount: document.querySelectorAll('.main-header .download-btn').length,
+        documentFits: document.documentElement.scrollWidth <= window.innerWidth,
+    };
+
+    return {
+        ok: result.version === 'v1.6.2'
+            && result.size === '1.1 MB'
+            && result.filename === 'catime_1.6.2.exe'
+            && /downloads\\/catime_1\\.6\\.2\\.exe$/.test(result.directHref || '')
+            && result.directDownload === 'catime_1.6.2.exe'
+            && result.storeHref?.includes('apps.microsoft.com/detail/9n3mzdf1z34v')
+            && result.packageCount === 3
+            && result.clipboardValue === 'choco install catime'
+            && /Copied|已复制/.test(result.copyLabel || '')
+            && result.downloadButtonCount === 0
+            && result.documentFits,
+        ...result,
+    };
+}`;
 const pluginLibraryInteraction = `async () => {
     const cards = () => [...document.querySelectorAll('.plugin-card')];
     const catalogDeadline = Date.now() + 5000;
@@ -360,6 +408,12 @@ const traySorterInteraction = `async () => {
 }`;
 const pages = [
     { path: '/', selector: 'main', minimum: 1 },
+    {
+        path: '/download',
+        selector: '.download-column',
+        minimum: 2,
+        interaction: downloadPageInteraction,
+    },
     { path: '/about', selector: 'main', minimum: 1 },
     { path: '/support', selector: '.support-project', minimum: 1 },
     { path: '/guide', selector: 'main', minimum: 1 },

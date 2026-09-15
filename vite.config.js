@@ -3,6 +3,7 @@ import { cp } from 'node:fs/promises';
 import { defineConfig } from 'vite';
 
 const cleanRoutes = new Map([
+    ['/download', '/download.html'],
     ['/guide', '/guide.html'],
     ['/about', '/about.html'],
     ['/support', '/support.html'],
@@ -59,6 +60,7 @@ function copyClassicScriptsPlugin() {
             await Promise.all([
                 cp(resolve(import.meta.dirname, 'scripts'), resolve(import.meta.dirname, 'dist/scripts'), { recursive: true }),
                 cp(resolve(import.meta.dirname, 'components'), resolve(import.meta.dirname, 'dist/components'), { recursive: true }),
+                cp(resolve(import.meta.dirname, 'downloads'), resolve(import.meta.dirname, 'dist/downloads'), { recursive: true }),
                 cp(resolve(import.meta.dirname, 'assets/catime.webp'), resolve(import.meta.dirname, 'dist/assets/catime.webp')),
                 cp(
                     resolve(import.meta.dirname, 'tools/font-tool/scripts'),
@@ -76,6 +78,7 @@ export default defineConfig({
         rollupOptions: {
             input: {
                 index: resolve(import.meta.dirname, 'index.html'),
+                download: resolve(import.meta.dirname, 'download.html'),
                 guide: resolve(import.meta.dirname, 'guide.html'),
                 about: resolve(import.meta.dirname, 'about.html'),
                 support: resolve(import.meta.dirname, 'support.html'),

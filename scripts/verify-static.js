@@ -7,6 +7,7 @@ const checkedFiles = new Set();
 
 const htmlPages = [
     'index.html',
+    'download.html',
     'about.html',
     'support.html',
     'guide.html',

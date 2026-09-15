@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Download Catime for Windows from the direct installer, Microsoft Store, Chocolatey, Scoop, or Winget." id="meta-description">
+    <title id="page-title">Download Catime for Windows</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800;900&family=Noto+Sans+SC:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="styles/download.css">
+    <link rel="icon" type="image/webp" href="assets/catime.webp">
+
+    <script vite-ignore src="scripts/config.js" defer></script>
+    <script vite-ignore src="scripts/ui-utils.js" defer></script>
+    <script vite-ignore src="scripts/components.js" data-auto-load defer></script>
+    <script vite-ignore src="scripts/navigation.js" defer></script>
+    <script vite-ignore src="scripts/main.js" defer></script>
+    <script vite-ignore src="scripts/download.js" defer></script>
+</head>
+<body class="download-body">
+    <header class="main-header"></header>
+
+    <main class="download-page">
+        <div class="download-page__shell">
+            <section class="download-layout" aria-label="Catime download methods">
+                <section class="download-column binary-column">
+                    <div class="binary-actions">
+                        <a id="direct-download-btn" class="binary-row binary-row--primary" href="https://github.com/vladelaina/Catime/releases" data-download>
+                            <span class="binary-row__icon-wrap"><i class="fas fa-download" aria-hidden="true"></i></span>
+                            <span class="binary-row__copy">
+                                <strong data-download-copy="exe-label">EXE</strong>
+                                <small id="download-filename">catime.exe</small>
+                            </span>
+                            <span class="binary-row__meta"><span id="download-version">Loading...</span><span id="download-size">--</span></span>
+                            <i class="fas fa-arrow-right binary-row__arrow" aria-hidden="true"></i>
+                        </a>
+                        <a id="microsoft-store-link" class="microsoft-store-link microsoft-store-badge" href="https://apps.microsoft.com/detail/9n3mzdf1z34v?referrer=appbadge&amp;mode=full" target="_blank" rel="noopener noreferrer" aria-label="Get Catime from Microsoft Store">
+                            <img id="microsoft-store-badge" src="https://get.microsoft.com/images/en-us%20light.svg" width="600" height="208" alt="Get Catime from Microsoft Store">
+                        </a>
+                    </div>
+                </section>
+
+                <section class="download-column package-column">
+                    <h2 class="download-column__title"><i class="fas fa-terminal" aria-hidden="true"></i><span data-download-copy="package-title">Package managers</span></h2>
+                    <div class="command-list">
+                    <button type="button" class="command-block package-command copy-command" data-command="winget install --id VladElaina.Catime" aria-label="Copy Winget command">
+                        <span class="command-block__label"><span class="command-brand-icon"><img src="assets/package-managers/winget.png" alt=""> </span><span>WINGET</span></span>
+                        <code>winget install --id VladElaina.Catime</code>
+                        <i class="far fa-copy command-block__copy" aria-hidden="true"></i>
+                        <span class="copy-label visually-hidden" data-download-copy="copy">Copy</span>
+                    </button>
+                    <button type="button" class="command-block package-command copy-command" data-command="choco install catime" aria-label="Copy Chocolatey command">
+                        <span class="command-block__label"><span class="command-brand-icon"><img src="assets/package-managers/chocolatey.png" alt=""> </span><span>CHOCOLATEY</span></span>
+                        <code>choco install catime</code>
+                        <i class="far fa-copy command-block__copy" aria-hidden="true"></i>
+                        <span class="copy-label visually-hidden" data-download-copy="copy">Copy</span>
+                    </button>
+                    <button type="button" class="command-block package-command copy-command" data-command="scoop bucket add extras&#10;scoop install catime" aria-label="Copy Scoop commands">
+                        <span class="command-block__label"><span class="command-brand-icon"><img src="assets/package-managers/scoop.svg" alt=""> </span><span>SCOOP</span></span>
+                        <code>scoop bucket add extras<br><br>scoop install catime</code>
+                        <i class="far fa-copy command-block__copy" aria-hidden="true"></i>
+                        <span class="copy-label visually-hidden" data-download-copy="copy">Copy</span>
+                    </button>
+                    </div>
+                </section>
+            </section>
+
+        </div>
+    </main>
+
+</body>
+</html>
