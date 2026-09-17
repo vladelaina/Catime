@@ -279,22 +279,7 @@ function applyDownloadLink(link, info) {
 }
 
 function getDownloadLinks() {
-    const downloadButtons = [
-        'hero-download-btn',
-        'cta-download-btn'
-    ];
-
-    const links = downloadButtons
-        .map(id => document.getElementById(id))
-        .filter(Boolean);
-
-    document.querySelectorAll('a[data-download], a.download-link').forEach(link => {
-        if (!links.includes(link)) {
-            links.push(link);
-        }
-    });
-
-    return links;
+    return Array.from(document.querySelectorAll('a[data-download]'));
 }
 
 function triggerDownload(info) {
@@ -323,7 +308,7 @@ function initDownloadClickFallback() {
 
     document.addEventListener('click', async (event) => {
         const target = event.target instanceof Element ? event.target : event.target.parentElement;
-        const link = target ? target.closest('a[data-download], a.download-link') : null;
+        const link = target ? target.closest('a[data-download]') : null;
         if (!link) return;
 
         event.preventDefault();
