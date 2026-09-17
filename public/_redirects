@@ -1,4 +1,7 @@
 /download         /download.html  200
+/support          https://vladelaina.com/support  301
+/support/         https://vladelaina.com/support  301
+/support.html     https://vladelaina.com/support  301
 /tray             /tray/index.html  200
 /tray/            /tray/index.html  200
 /plugins          /plugins/index.html  200

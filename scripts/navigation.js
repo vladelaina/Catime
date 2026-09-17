@@ -109,18 +109,19 @@ class CatimeNavigation {
     }
 
     generateActionButtons(prefix) {
+        const supportUrl = 'https://vladelaina.com/support';
         const downloadUrl = `${prefix}download`;
         const downloadCurrent = this.currentPage === 'download' ? ' aria-current="page"' : '';
 
         if (this.currentPage === 'download') {
-            return `<div class="nav-actions"><a href="${prefix}support" class="nav-button support-btn"><i class="fas fa-mug-hot" aria-hidden="true"></i> <span>${this.translate('Support', '支持项目')}</span></a></div>`;
+            return `<div class="nav-actions"><a href="${supportUrl}" class="nav-button support-btn"><i class="fas fa-mug-hot" aria-hidden="true"></i> <span>${this.translate('Support', '支持项目')}</span></a></div>`;
         }
 
         if (this.currentPage === 'support') {
             return `<div class="nav-actions"><a href="${downloadUrl}" class="nav-button download-btn"${downloadCurrent}><i class="fas fa-download" aria-hidden="true"></i> <span>${this.translate('Download', '下载')}</span></a></div>`;
         } else {
             return `<div class="nav-actions action-buttons">
-                        <a href="${prefix}support" class="nav-button support-btn"><i class="fas fa-mug-hot" aria-hidden="true"></i> <span>${this.translate('Support', '支持项目')}</span></a>
+                        <a href="${supportUrl}" class="nav-button support-btn"><i class="fas fa-mug-hot" aria-hidden="true"></i> <span>${this.translate('Support', '支持项目')}</span></a>
                         <a href="${downloadUrl}" class="nav-button download-btn"${downloadCurrent}><i class="fas fa-download" aria-hidden="true"></i> <span>${this.translate('Download', '下载')}</span></a>
                     </div>`;
         }

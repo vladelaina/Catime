@@ -6,7 +6,6 @@ const cleanRoutes = new Map([
     ['/download', '/download.html'],
     ['/guide', '/guide.html'],
     ['/about', '/about.html'],
-    ['/support', '/support.html'],
     ['/tray', '/tray/index.html'],
     ['/tray/', '/tray/index.html'],
     ['/plugins', '/plugins/index.html'],
@@ -20,9 +19,23 @@ const legacyRoutes = new Map([
     ['/tray-animations/', '/tray'],
 ]);
 
+const externalRoutes = new Map([
+    ['/support', 'https://vladelaina.com/support'],
+    ['/support/', 'https://vladelaina.com/support'],
+    ['/support.html', 'https://vladelaina.com/support'],
+]);
+
 function cleanUrlPlugin() {
     const rewriteCleanUrl = (request, response, next) => {
         const url = new URL(request.url, 'http://localhost');
+        const externalRedirect = externalRoutes.get(url.pathname);
+        if (externalRedirect) {
+            response.statusCode = 308;
+            response.setHeader('Location', `${externalRedirect}${url.search}`);
+            response.end();
+            return;
+        }
+
         const redirect = legacyRoutes.get(url.pathname);
 
         if (redirect) {
