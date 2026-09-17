@@ -94,7 +94,6 @@ export default defineConfig({
                 download: resolve(import.meta.dirname, 'download.html'),
                 guide: resolve(import.meta.dirname, 'guide.html'),
                 about: resolve(import.meta.dirname, 'about.html'),
-                support: resolve(import.meta.dirname, 'support.html'),
                 tray: resolve(import.meta.dirname, 'tray/index.html'),
                 plugins: resolve(import.meta.dirname, 'plugins/index.html'),
                 fontTool: resolve(import.meta.dirname, 'tools/font-tool/index.html'),
