@@ -10,6 +10,7 @@
 #include "config.h"
 #include "timer/timer.h"
 #include "timer/timer_events.h"
+#include "timer/pomodoro_suspend.h"
 #include "timer/main_timer.h"
 #include "audio_player.h"
 #include "window.h"
@@ -30,12 +31,18 @@
 #include "drag_scale.h" // Added this line
 #include "preview_display.h"
 extern UINT WM_TASKBARCREATED;
-void ToggleShowTimeMode(HWND hwnd) {
-    CleanupBeforeTimerAction(hwnd);
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
+
+static void PrepareTemporaryTimerMode(void) {
+    if (!PomodoroSuspend_BeginTemporaryMode() &&
+        current_pomodoro_phase != POMODORO_PHASE_IDLE) {
         ResetPomodoroState();
     }
+}
+
+void ToggleShowTimeMode(HWND hwnd) {
+    CleanupBeforeTimerAction(hwnd);
     if (!CLOCK_SHOW_CURRENT_TIME) {
+        PrepareTemporaryTimerMode();
         TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_SHOW_TIME, &params);
     } else {
@@ -52,9 +59,7 @@ void ToggleShowTimeMode(HWND hwnd) {
 }
 void StartCountUp(HWND hwnd) {
     CleanupBeforeTimerAction(hwnd);
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        ResetPomodoroState();
-    }
+    PrepareTemporaryTimerMode();
     TimerModeParams params = {0, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
     SwitchTimerMode(hwnd, TIMER_MODE_COUNTUP, &params);
     MainTimer_Stop();
@@ -62,10 +67,8 @@ void StartCountUp(HWND hwnd) {
 }
 void StartDefaultCountDown(HWND hwnd) {
     CleanupBeforeTimerAction(hwnd);
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        ResetPomodoroState();
-    }
     if (g_AppConfig.timer.default_start_time > 0) {
+        PrepareTemporaryTimerMode();
         countdown_message_shown = false;
         TimerModeParams params = {g_AppConfig.timer.default_start_time, TRUE, TRUE, TRUE};  /* showWindow = TRUE */
         SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
@@ -77,6 +80,7 @@ void StartDefaultCountDown(HWND hwnd) {
 }
 void StartPomodoroTimer(HWND hwnd) {
     CleanupBeforeTimerAction(hwnd);
+    PomodoroSuspend_Discard();
     EnsureWindowVisibleWithTopmostState(hwnd);
     InitializePomodoro();
     CLOCK_SHOW_CURRENT_TIME = false;
@@ -143,14 +147,36 @@ void CleanupBeforeTimerAction(HWND hwnd) {
 BOOL StartCountdownWithTime(HWND hwnd, int seconds) {
     if (seconds <= 0) return FALSE;
     countdown_message_shown = false;
-    if (current_pomodoro_phase != POMODORO_PHASE_IDLE) {
-        ResetPomodoroState();
-    }
+    PrepareTemporaryTimerMode();
     TimerModeParams params = {seconds, TRUE, TRUE, TRUE};
     BOOL result = SwitchTimerMode(hwnd, TIMER_MODE_COUNTDOWN, &params);
     MainTimer_Stop();
     ResetTimerWithInterval(hwnd);
     return result;
+}
+
+LRESULT CmdResumePomodoro(HWND hwnd, WPARAM wp, LPARAM lp) {
+    (void)wp;
+    (void)lp;
+
+    if (!PomodoroSuspend_Restore()) {
+        return 0;
+    }
+
+    StopNotificationSound();
+    CloseAllNotifications();
+    MainTimer_Stop();
+    TogglePauseTimer();
+    if (!MainTimer_Start(hwnd, GetTimerInterval())) {
+        LOG_WARNING("Failed to resume suspended Pomodoro; keeping it paused");
+        TogglePauseTimer();
+        InvalidateRect(hwnd, NULL, TRUE);
+        return 0;
+    }
+
+    PomodoroSuspend_Discard();
+    InvalidateRect(hwnd, NULL, TRUE);
+    return 0;
 }
 void ToggleMilliseconds(HWND hwnd) {
     BOOL previousState = g_AppConfig.display.time_format.show_milliseconds;

@@ -22,6 +22,7 @@
 #define CLOCK_IDM_POMODORO_LOOP_COUNT 185 /**< Configure loop count */
 #define CLOCK_IDM_POMODORO_RESET 186     /**< Reset Pomodoro timer */
 #define CLOCK_IDM_POMODORO_COMBINATION 188 /**< Pomodoro combination settings */
+#define CLOCK_IDM_NEW_TIMER_WINDOW 189 /**< Create an independent timer window */
 
 /** @brief Pomodoro dialog identifiers */
 #define CLOCK_IDD_POMODORO_TIME_DIALOG 510  /**< Pomodoro time configuration dialog */
@@ -64,6 +65,8 @@
 #define IDC_NOTIFICATION_FONT_SIZE_LABEL 2029   /**< Notification text height ratio label */
 #define IDC_NOTIFICATION_FONT_SIZE_SLIDER 2030  /**< Notification text height ratio slider */
 #define IDC_NOTIFICATION_FONT_SIZE_TEXT 2031    /**< Notification text height ratio text */
+#define IDC_NOTIFICATION_USE_FOR_POMODORO 2032  /**< Apply message to Pomodoro */
+#define IDC_NOTIFICATION_POMODORO_VARIABLES 2033 /**< Pomodoro message variables */
 
 /** @brief Notification type and audio control identifiers */
 #define IDC_NOTIFICATION_TYPE_CATIME 2011      /**< Catime notification type radio */

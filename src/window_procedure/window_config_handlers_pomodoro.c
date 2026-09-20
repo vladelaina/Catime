@@ -8,11 +8,13 @@
 #include "config/config_defaults.h"
 #include "log.h"
 #include "window_procedure/window_utils.h"
+#include "multi_window.h"
 
 #include <string.h>
 
 LRESULT HandleAppPomodoroChanged(HWND hwnd) {
     (void)hwnd;
+    if (MultiWindow_IsSecondary()) return 0;
 
     /* Pomodoro time options */
     char buf[POMODORO_OPTIONS_CONFIG_BUFFER_SIZE] = {0};
@@ -38,11 +40,9 @@ LRESULT HandleAppPomodoroChanged(HWND hwnd) {
     }
 
     /* Loop count */
-    g_AppConfig.pomodoro.loop_count = WindowConfigInternal_ClampInt(
-        CFG_KEY_POMODORO_LOOP_COUNT,
+    g_AppConfig.pomodoro.loop_count = PomodoroLoopCount_Normalize(
         ReadConfigInt(CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LOOP_COUNT,
-                      DEFAULT_POMODORO_LOOP_COUNT),
-        MIN_POMODORO_LOOP_COUNT, MAX_POMODORO_LOOP_COUNT);
+                      DEFAULT_POMODORO_LOOP_COUNT));
 
     return 0;
 }

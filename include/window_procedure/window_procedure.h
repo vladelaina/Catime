@@ -190,10 +190,10 @@ void ToggleMilliseconds(HWND hwnd);
 BOOL HandleLanguageSelection(HWND hwnd, UINT menuId);
 
 /**
- * @brief Configure Pomodoro phase duration
- * @param selectedIndex Phase (0=work, 1=short break, 2=long break)
- * @return TRUE if updated, FALSE if cancelled
+ * @brief Jump the active Pomodoro session to a phase duration
+ * @param selectedIndex Pomodoro phase index
+ * @return TRUE when the active session jumped to the selected phase
  */
-BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
+BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index);
 
 #endif

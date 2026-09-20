@@ -30,6 +30,7 @@
 #define DEFAULT_POMODORO_OPTIONS_INI    "1500,300,1500,600"
 #define DEFAULT_POMODORO_TIMES_COUNT    4
 #define DEFAULT_POMODORO_LOOP_COUNT     1
+#define POMODORO_LOOP_COUNT_INFINITE    0
 #ifndef MAX_POMODORO_TIMES
 #define MAX_POMODORO_TIMES              10
 #endif
@@ -57,6 +58,32 @@
 #define MAX_MOVE_STEP                   500
 #define MIN_VOLUME                      0
 #define MAX_VOLUME                      100
+
+static inline BOOL PomodoroLoopCount_IsInfinite(int loopCount)
+{
+    return loopCount == POMODORO_LOOP_COUNT_INFINITE;
+}
+
+static inline BOOL PomodoroLoopCount_IsValid(int loopCount)
+{
+    return PomodoroLoopCount_IsInfinite(loopCount) ||
+           (loopCount >= MIN_POMODORO_LOOP_COUNT &&
+            loopCount <= MAX_POMODORO_LOOP_COUNT);
+}
+
+static inline int PomodoroLoopCount_Normalize(int loopCount)
+{
+    if (PomodoroLoopCount_IsInfinite(loopCount)) {
+        return POMODORO_LOOP_COUNT_INFINITE;
+    }
+    if (loopCount < MIN_POMODORO_LOOP_COUNT) {
+        return DEFAULT_POMODORO_LOOP_COUNT;
+    }
+    if (loopCount > MAX_POMODORO_LOOP_COUNT) {
+        return MAX_POMODORO_LOOP_COUNT;
+    }
+    return loopCount;
+}
 
 /* ============================================================================
  * Configuration value types

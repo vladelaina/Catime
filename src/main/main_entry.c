@@ -11,6 +11,7 @@
 #include "log.h"
 #include "config.h"
 #include "startup.h"
+#include "multi_window.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "dwmapi.lib")
@@ -35,7 +36,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    if (!IsCiSmokeMode() && !RepairExistingAutoStartShortcut()) {
+    if (!IsCiSmokeMode() && !MultiWindow_IsSecondary() &&
+        !RepairExistingAutoStartShortcut()) {
         LOG_WARNING("Could not repair the existing startup shortcut before startup");
     }
 
@@ -44,7 +46,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         return 1;
     }
 
-    if (!IsCiSmokeMode()) {
+    if (!IsCiSmokeMode() && !MultiWindow_IsSecondary()) {
         SetupDesktopShortcut();
     }
     InitializeDialogLanguages();

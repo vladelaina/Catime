@@ -1,4 +1,69 @@
 #include "window_core_internal.h"
+#include "multi_window.h"
+
+#define WINDOW_INSTANCE_PLACEMENT_SECTION "WindowPositions"
+
+static const char* GetPrimaryPlacementKey(const char* suffix) {
+    if (strcmp(suffix, "X") == 0) return "CLOCK_WINDOW_POS_X";
+    if (strcmp(suffix, "Y") == 0) return "CLOCK_WINDOW_POS_Y";
+    if (strcmp(suffix, "Manual") == 0) return WINDOW_POSITION_MANUAL_KEY;
+    if (strcmp(suffix, "MonitorId") == 0) return WINDOW_MONITOR_ID_KEY;
+    if (strcmp(suffix, "MonitorOffsetX") == 0) return WINDOW_MONITOR_OFFSET_X_KEY;
+    if (strcmp(suffix, "MonitorOffsetY") == 0) return WINDOW_MONITOR_OFFSET_Y_KEY;
+    if (strcmp(suffix, "TaskbarAnchored") == 0) return WINDOW_TASKBAR_ANCHORED_KEY;
+    if (strcmp(suffix, "TaskbarAxisRatio") == 0) return WINDOW_TASKBAR_AXIS_RATIO_KEY;
+    if (strcmp(suffix, "TaskbarCrossOffset") == 0) return WINDOW_TASKBAR_CROSS_OFFSET_KEY;
+    return suffix;
+}
+
+static void GetPlacementStorage(const char* suffix, const char** section,
+                                char* key, size_t keySize) {
+    if (!section || !key || keySize == 0) return;
+    if (!MultiWindow_IsSecondary()) {
+        *section = INI_SECTION_DISPLAY;
+        _snprintf_s(key, keySize, _TRUNCATE, "%s",
+                    GetPrimaryPlacementKey(suffix));
+        return;
+    }
+    *section = WINDOW_INSTANCE_PLACEMENT_SECTION;
+    _snprintf_s(key, keySize, _TRUNCATE, "Window%d_%s",
+                MultiWindow_GetPlacementSlot(), suffix);
+}
+
+static int ReadPlacementInt(const char* configPath, const char* suffix,
+                            int defaultValue) {
+    const char* section = NULL;
+    char key[64] = {0};
+    GetPlacementStorage(suffix, &section, key, sizeof(key));
+    return ReadIniInt(section, key, defaultValue, configPath);
+}
+
+static BOOL ReadPlacementBool(const char* configPath, const char* suffix,
+                              BOOL defaultValue) {
+    const char* section = NULL;
+    char key[64] = {0};
+    GetPlacementStorage(suffix, &section, key, sizeof(key));
+    return ReadIniBool(section, key, defaultValue, configPath);
+}
+
+static void ReadPlacementString(const char* configPath, const char* suffix,
+                                const char* defaultValue, char* value,
+                                size_t valueSize) {
+    const char* section = NULL;
+    char key[64] = {0};
+    GetPlacementStorage(suffix, &section, key, sizeof(key));
+    ReadIniString(section, key, defaultValue, value, (DWORD)valueSize,
+                  configPath);
+}
+
+static BOOL HasDedicatedSecondaryPlacement(const char* configPath) {
+    if (!MultiWindow_IsSecondary()) return FALSE;
+    char x[32] = {0};
+    char y[32] = {0};
+    ReadPlacementString(configPath, "X", "", x, sizeof(x));
+    ReadPlacementString(configPath, "Y", "", y, sizeof(y));
+    return x[0] != '\0' && y[0] != '\0';
+}
 
 BOOL WindowCore_GetMonitorPlacementData(
     const RECT* windowRect, char* monitorId, size_t monitorIdSize,
@@ -52,8 +117,8 @@ BOOL WindowCore_TryResolvePlacementMetadata(
     if (!configPath || !posX || !posY || !placementUnavailable ||
         !CLOCK_WINDOW_POSITION_MANUAL) return FALSE;
     char monitorId[256] = {0};
-    ReadIniString(INI_SECTION_DISPLAY, WINDOW_MONITOR_ID_KEY, "",
-                  monitorId, sizeof(monitorId), configPath);
+    ReadPlacementString(configPath, "MonitorId", "",
+                        monitorId, sizeof(monitorId));
     if (monitorId[0] == '\0') return FALSE;
     HMONITOR monitor = NULL;
     MONITORINFOEXW info = {0};
@@ -61,25 +126,19 @@ BOOL WindowCore_TryResolvePlacementMetadata(
         *placementUnavailable = TRUE;
         return FALSE;
     }
-    int offsetX = ReadIniInt(
-        INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_X_KEY, 0, configPath);
-    int offsetY = ReadIniInt(
-        INI_SECTION_DISPLAY, WINDOW_MONITOR_OFFSET_Y_KEY, 0, configPath);
+    int offsetX = ReadPlacementInt(configPath, "MonitorOffsetX", 0);
+    int offsetY = ReadPlacementInt(configPath, "MonitorOffsetY", 0);
     *posX = WindowCore_AddIntsClamped(info.rcMonitor.left, offsetX);
     *posY = WindowCore_AddIntsClamped(info.rcMonitor.top, offsetY);
-    if (!ReadIniBool(
-            INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
-            FALSE, configPath)) return TRUE;
+    if (!ReadPlacementBool(configPath, "TaskbarAnchored", FALSE)) return TRUE;
     RECT taskbarRect = {0};
     if (!GetTaskbarRectForMonitor(monitor, &taskbarRect)) {
         *placementUnavailable = TRUE;
         g_placementRetryNeeded = TRUE;
         return TRUE;
     }
-    int ratio = ReadIniInt(
-        INI_SECTION_DISPLAY, WINDOW_TASKBAR_AXIS_RATIO_KEY, 0, configPath);
-    int crossOffset = ReadIniInt(
-        INI_SECTION_DISPLAY, WINDOW_TASKBAR_CROSS_OFFSET_KEY, 0, configPath);
+    int ratio = ReadPlacementInt(configPath, "TaskbarAxisRatio", 0);
+    int crossOffset = ReadPlacementInt(configPath, "TaskbarCrossOffset", 0);
     if (!WindowPlacement_ResolveTaskbarAnchor(
             &taskbarRect, &info.rcMonitor, width, height,
             ratio, crossOffset, posX, posY)) {
@@ -129,19 +188,29 @@ void ResolveConfiguredWindowPosition(
     if (!outX || !outY) return;
     char configPath[MAX_PATH] = {0};
     GetConfigPath(configPath, MAX_PATH);
-    int configX = ReadIniInt(
-        INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X",
-        CLOCK_WINDOW_POS_X, configPath);
-    int configY = ReadIniInt(
-        INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y",
-        CLOCK_WINDOW_POS_Y, configPath);
-    CLOCK_WINDOW_POSITION_MANUAL = ReadIniBool(
-        INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY,
-        FALSE, configPath);
-    CLOCK_WINDOW_TASKBAR_ANCHORED =
-        CLOCK_WINDOW_POSITION_MANUAL && ReadIniBool(
-            INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
-            FALSE, configPath);
+    BOOL hasDedicatedPlacement = HasDedicatedSecondaryPlacement(configPath);
+    int configX;
+    int configY;
+    if (MultiWindow_IsSecondary() && !hasDedicatedPlacement) {
+        /* Preserve the existing first-launch behavior: start beside the
+           primary placement, then create a dedicated secondary slot below. */
+        configX = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_X",
+                             CLOCK_WINDOW_POS_X, configPath);
+        configY = ReadIniInt(INI_SECTION_DISPLAY, "CLOCK_WINDOW_POS_Y",
+                             CLOCK_WINDOW_POS_Y, configPath);
+        CLOCK_WINDOW_POSITION_MANUAL = ReadIniBool(
+            INI_SECTION_DISPLAY, WINDOW_POSITION_MANUAL_KEY, FALSE, configPath);
+        CLOCK_WINDOW_TASKBAR_ANCHORED = CLOCK_WINDOW_POSITION_MANUAL &&
+            ReadIniBool(INI_SECTION_DISPLAY, WINDOW_TASKBAR_ANCHORED_KEY,
+                        FALSE, configPath);
+    } else {
+        configX = ReadPlacementInt(configPath, "X", CLOCK_WINDOW_POS_X);
+        configY = ReadPlacementInt(configPath, "Y", CLOCK_WINDOW_POS_Y);
+        CLOCK_WINDOW_POSITION_MANUAL = ReadPlacementBool(
+            configPath, "Manual", FALSE);
+        CLOCK_WINDOW_TASKBAR_ANCHORED = CLOCK_WINDOW_POSITION_MANUAL &&
+            ReadPlacementBool(configPath, "TaskbarAnchored", FALSE);
+    }
     g_placementRetryNeeded = FALSE;
     MONITORINFO info = {0};
     WindowCore_GetPrimaryMonitorInfo(&info);
@@ -175,6 +244,13 @@ void ResolveConfiguredWindowPosition(
     g_positionTemporarilyRelocatedForDisplay =
         CLOCK_WINDOW_POSITION_MANUAL && (unavailable || !visible);
     if (g_placementRetryNeeded) g_pendingSystemPositionRestore = TRUE;
+    /* A new secondary instance has no stored slot yet. Offset it once before
+       its first save; later restores read that slot and do not apply this
+       offset again. */
+    if (MultiWindow_IsSecondary() && !hasDedicatedPlacement) {
+        MultiWindow_OffsetInitialPosition(&posX, &posY);
+        CLOCK_WINDOW_POSITION_MANUAL = TRUE;
+    }
     *outX = posX;
     *outY = posY;
 }
