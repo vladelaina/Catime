@@ -1,967 +1,157 @@
-name: Catime CI
+name: Manual Code Signing
+
+on:
+  workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Source GitHub repository URL or owner/repo (latest stable release)'
+        required: true
+        type: string
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  WINLIBS_ARCHIVE_NAME: winlibs-i686-posix-dwarf-gcc-16.1.0-mingw-w64ucrt-14.0.0-r3.zip
-  WINLIBS_URL: https://github.com/brechtsanders/winlibs_mingw/releases/download/16.1.0posix-14.0.0-ucrt-r3/winlibs-i686-posix-dwarf-gcc-16.1.0-mingw-w64ucrt-14.0.0-r3.zip
-  WINLIBS_SHA256: C4C7419F2820AC2E169DC86F1397A07DEFF20297A107C7A1CA486643D8D435BE
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-    paths-ignore:
-      - "README.md"
-      - "README_EN.md"
-      - "SECURITY.md"
-      - "PRIVACY.md"
-  workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * 1"
 
 permissions:
   contents: read
-  security-events: write
   actions: write
 
 jobs:
-  publishing-policy:
-    name: security / publishing-policy
+  download:
+    if: github.repository == 'vladelaina/Catime' && github.ref == 'refs/heads/temp'
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Validate publishing guards
-        run: python3 .github/scripts/ci/check_publish_guards.py
-
-  source-policy:
-    name: security / source-policy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Reject risky source patterns
-        run: python3 .github/scripts/ci/check_source_security.py
-
-  codeql:
-    name: quality / codeql
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: c-cpp
-          build-mode: none
-
-      - name: Analyze with CodeQL
-        uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:c-cpp"
-
-  cppcheck:
-    name: quality / cppcheck
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Install Cppcheck
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cppcheck python3
-
-      - name: Run Cppcheck
-        id: cppcheck
-        run: |
-          set +e
-          mkdir -p quality-cppcheck
-          VERSION=$(grep -oP '#define CATIME_VERSION "\K[^"]+' resource/resource.h)
-          VERSION_CORE=${VERSION%%-*}
-          IFS=. read -r VERSION_MAJOR VERSION_MINOR VERSION_PATCH <<< "$VERSION_CORE"
-          if [[ ! "$VERSION_MAJOR" =~ ^[0-9]+$ ||
-                ! "$VERSION_MINOR" =~ ^[0-9]+$ ||
-                ! "$VERSION_PATCH" =~ ^[0-9]+$ ]]; then
-            echo "Unable to parse CATIME_VERSION: $VERSION" >&2
-            echo "exit_code=1" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          mkdir -p quality-cppcheck/generated
-          sed \
-            -e "s/@CATIME_VERSION_MAJOR@/$VERSION_MAJOR/g" \
-            -e "s/@CATIME_VERSION_MINOR@/$VERSION_MINOR/g" \
-            -e "s/@CATIME_VERSION_PATCH@/$VERSION_PATCH/g" \
-            -e "s/@CATIME_VERSION_BUILD@/0/g" \
-            resource/catime_version_numeric.h.in \
-            > quality-cppcheck/generated/catime_version_numeric.h
-          cppcheck \
-            --enable=warning,style,performance,portability,information \
-            --inconclusive \
-            --quiet \
-            --inline-suppr \
-            --max-configs=12 \
-            --std=c11 \
-            --library=windows \
-            --suppress=missingIncludeSystem \
-            --suppress=unmatchedSuppression \
-            --suppress=toomanyconfigs \
-            -i libs \
-            -i src/audio_player.c \
-            --xml \
-            --xml-version=2 \
-            -I quality-cppcheck/generated \
-            -I include \
-            -I libs/miniz \
-            -I src \
-            src > quality-cppcheck/cppcheck.stdout 2> quality-cppcheck/cppcheck.xml
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Emit Cppcheck annotations
-        id: summarize
-        run: |
-          output=$(python3 .github/scripts/ci/emit_cppcheck_annotations.py quality-cppcheck/cppcheck.xml)
-          printf '%s\n' "$output"
-          findings=$(printf '%s\n' "$output" | tail -n 1)
-          echo "findings=$findings" >> "$GITHUB_OUTPUT"
-
-      - name: Enforce Cppcheck gate
-        if: always()
-        run: |
-          if [ "${{ steps.cppcheck.outputs.exit_code }}" != "0" ]; then
-            exit 1
-          fi
-
-  gitleaks:
-    name: security / gitleaks
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Install Gitleaks
-        run: |
-          set -e
-          GITLEAKS_VERSION="8.30.0"
-          curl -sSL -o /tmp/gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          tar -xzf /tmp/gitleaks.tar.gz -C /tmp
-          chmod +x /tmp/gitleaks
-          /tmp/gitleaks version
-
-      - name: Run Gitleaks
-        id: gitleaks
-        run: |
-          set +e
-          mkdir -p quality-gitleaks
-          /tmp/gitleaks dir . \
-            --config .gitleaks.toml \
-            --report-format sarif \
-            --report-path quality-gitleaks/gitleaks.sarif \
-            --redact \
-            --no-banner
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Emit Gitleaks annotations
-        id: summarize
-        if: always()
-        run: |
-          if [ -f quality-gitleaks/gitleaks.sarif ]; then
-            output=$(python3 .github/scripts/ci/emit_sarif_annotations.py quality-gitleaks/gitleaks.sarif "Gitleaks")
-            printf '%s\n' "$output"
-            findings=$(printf '%s\n' "$output" | tail -n 1)
-          else
-            echo "::error::Gitleaks SARIF report was not produced"
-            findings=1
-          fi
-          echo "findings=$findings" >> "$GITHUB_OUTPUT"
-
-      - name: Enforce Gitleaks gate
-        if: always()
-        run: |
-          if [ "${{ steps.gitleaks.outputs.exit_code }}" != "0" ] || [ "${{ steps.summarize.outputs.findings }}" != "0" ]; then
-            exit 1
-          fi
-
-  semgrep:
-    name: security / semgrep
-    runs-on: ubuntu-latest
-    container:
-      image: semgrep/semgrep
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Run Semgrep CE
-        id: semgrep
-        run: |
-          set +e
-          mkdir -p quality-semgrep
-          semgrep scan --config auto --sarif --output quality-semgrep/semgrep.sarif src include
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Emit Semgrep annotations
-        id: summarize
-        if: always()
-        run: |
-          if [ -f quality-semgrep/semgrep.sarif ]; then
-            output=$(python3 .github/scripts/ci/emit_sarif_annotations.py quality-semgrep/semgrep.sarif "Semgrep")
-            printf '%s\n' "$output"
-            findings=$(printf '%s\n' "$output" | tail -n 1)
-          else
-            echo "::error::Semgrep SARIF report was not produced"
-            findings=1
-          fi
-          echo "findings=$findings" >> "$GITHUB_OUTPUT"
-
-      - name: Enforce Semgrep gate
-        if: always()
-        run: |
-          if [ "${{ steps.semgrep.outputs.exit_code }}" != "0" ]; then
-            exit 1
-          fi
-
-  msvc-analyze:
-    name: quality / msvc-analyze
-    runs-on: windows-2025-vs2026
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-
-      - name: Determine analyzer scope
-        id: scope
-        shell: pwsh
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          EVENT_BEFORE: ${{ github.event.before }}
-          CURRENT_SHA: ${{ github.sha }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          $runAnalyzer = $false
-          $diffRange = $null
-
-          switch ($env:EVENT_NAME) {
-            "schedule" { $runAnalyzer = $true }
-            "workflow_dispatch" { $runAnalyzer = $true }
-            "push" {
-              if ([string]::IsNullOrWhiteSpace($env:EVENT_BEFORE) -or
-                  $env:EVENT_BEFORE -match '^0+$') {
-                $runAnalyzer = $true
-              } else {
-                $diffRange = "$($env:EVENT_BEFORE)..$($env:CURRENT_SHA)"
-              }
-            }
-            "pull_request" {
-              if ([string]::IsNullOrWhiteSpace($env:PR_BASE_SHA)) {
-                $runAnalyzer = $true
-              } else {
-                $diffRange = "$($env:PR_BASE_SHA)..$($env:CURRENT_SHA)"
-              }
-            }
-            default { $runAnalyzer = $true }
-          }
-
-          if (-not $runAnalyzer) {
-            $changedFiles = @(git diff --name-only --diff-filter=ACMRTUXB $diffRange)
-            if ($LASTEXITCODE -ne 0) {
-              throw "Unable to determine changed files for $diffRange"
-            }
-
-            $relevantFiles = @($changedFiles | Where-Object {
-              $_ -match '^(src|include|libs|resource|cmake)/' -or
-              $_ -eq 'CMakeLists.txt' -or
-              $_ -eq '.github/workflows/build.yml'
-            })
-            $runAnalyzer = $relevantFiles.Count -gt 0
-            if ($runAnalyzer) {
-              Write-Output "MSVC analyzer relevant changes:"
-              $relevantFiles | ForEach-Object { Write-Output "  $_" }
-            } else {
-              Write-Output "No MSVC analyzer relevant changes in $diffRange"
-            }
-          }
-
-          "run=$($runAnalyzer.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
-
-      - name: Configure MSVC analyzer build
-        if: steps.scope.outputs.run == 'true'
-        shell: pwsh
-        run: |
-          cmake -S . -B build-msvc -G "Visual Studio 18 2026" -A Win32 `
-            -DCMAKE_BUILD_TYPE=Debug `
-            -DBUILD_TESTING=OFF `
-            -DCATIME_ENABLE_MSVC_ANALYZE=ON `
-            -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_BINARY_HARDENING=OFF `
-            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
-
-      - name: Build with MSVC analyzer
-        id: build
-        if: steps.scope.outputs.run == 'true'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
-          $ErrorActionPreference = "Continue"
-          cmake --build build-msvc --config Debug --target catime *>&1 | Tee-Object quality-msvc-analyze\build.log
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          $binary = Get-ChildItem .\build-msvc -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($binary) {
-            "binary_exists=true" >> $env:GITHUB_OUTPUT
-            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
-          } else {
-            "binary_exists=false" >> $env:GITHUB_OUTPUT
-          }
-          exit 0
-
-      - name: Dump MSVC ResourceCompile config
-        if: always() && steps.scope.outputs.run == 'true' && steps.build.outputs.binary_exists != 'true'
-        shell: pwsh
-        run: |
-          $project = Get-ChildItem .\build-msvc -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($project) {
-            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
-          } else {
-            Write-Output "::warning::catime.vcxproj was not found under build-msvc"
-          }
-
-      - name: Merge analyzer SARIF
-        id: sarif
-        if: always() && steps.scope.outputs.run == 'true'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
-          $count = python .github/scripts/ci/merge_sarif.py build-msvc quality-msvc-analyze\analysis.sarif
-          "sarif_results=$count" >> $env:GITHUB_OUTPUT
-
-      - name: Summarize analyzer findings
-        id: summarize
-        if: always() && steps.scope.outputs.run == 'true'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-msvc-analyze | Out-Null
-          if (-not (Test-Path quality-msvc-analyze\build.log)) {
-            "" | Set-Content -Encoding utf8 quality-msvc-analyze\build.log
-          }
-          $warningOutput = @(python .github/scripts/ci/emit_build_log_annotations.py quality-msvc-analyze\build.log warnings --max 20)
-          foreach ($line in $warningOutput) {
-            Write-Output $line
-          }
-          $warningCount = 0
-          if ($warningOutput.Count -gt 0) {
-            $warningCount = [int]$warningOutput[-1]
-          }
-          $sarifCount = 0
-          if (Test-Path quality-msvc-analyze\analysis.sarif) {
-            $sarifOutput = @(python .github/scripts/ci/emit_sarif_annotations.py quality-msvc-analyze\analysis.sarif "MSVC /analyze")
-            foreach ($line in $sarifOutput) {
-              Write-Output $line
-            }
-            if ($sarifOutput.Count -gt 0) {
-              $sarifCount = $sarifOutput[-1]
-            }
-          }
-          $totalCount = $warningCount + [int]$sarifCount
-          $reason = "MSVC /analyze completed"
-          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
-            $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py quality-msvc-analyze\build.log errors --max 20)
-            foreach ($line in $errorOutput) {
-              Write-Output $line
-            }
-            Write-Output "::error::MSVC /analyze build failed before analysis completed"
-            $reason = "MSVC /analyze build failed before analysis completed"
-          }
-          $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true") { "passed" } else { "failed" }
-          "finding_count=$totalCount" >> $env:GITHUB_OUTPUT
-          "status=$status" >> $env:GITHUB_OUTPUT
-          "reason=$reason" >> $env:GITHUB_OUTPUT
-
-      - name: Enforce analyzer gate
-        if: always()
-        shell: pwsh
-        run: |
-          if ("${{ steps.scope.outcome }}" -ne "success") {
-            Write-Output "::error::Unable to determine MSVC analyzer scope"
-            exit 1
-          }
-          if ("${{ steps.scope.outputs.run }}" -ne "true") {
-            Write-Output "::notice::MSVC analyzer skipped because no relevant files changed"
-            exit 0
-          }
-          if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
-            Write-Output "::error::${{ steps.summarize.outputs.reason }}"
-            Write-Output "::notice::MSVC /analyze finding count: ${{ steps.summarize.outputs.finding_count }}"
-            exit 1
-          }
-
-  windows-asan-smoke:
-    name: quality / windows-asan-smoke
-    runs-on: windows-2025-vs2026
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Configure ASan smoke build
-        shell: pwsh
-        run: |
-          cmake -S . -B build-asan -G "Visual Studio 18 2026" -A Win32 `
-            -DCMAKE_BUILD_TYPE=Debug `
-            -DCATIME_ENABLE_ASAN=ON `
-            -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_BINARY_HARDENING=OFF `
-            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
-
-      - name: Build ASan smoke binary
-        id: build
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-windows-asan | Out-Null
-          $ErrorActionPreference = "Continue"
-          cmake --build build-asan --config Debug *>&1 | Tee-Object quality-windows-asan\build.log
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          $binary = Get-ChildItem .\build-asan -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($binary) {
-            "binary_exists=true" >> $env:GITHUB_OUTPUT
-            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
-          } else {
-            "binary_exists=false" >> $env:GITHUB_OUTPUT
-          }
-          exit 0
-
-      - name: Dump ASan ResourceCompile config
-        if: always() && steps.build.outputs.binary_exists != 'true'
-        shell: pwsh
-        run: |
-          $project = Get-ChildItem .\build-asan -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($project) {
-            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
-          } else {
-            Write-Output "::warning::catime.vcxproj was not found under build-asan"
-          }
-
-      - name: Run ASan smoke test
-        id: smoke
-        if: always() && steps.build.outputs.binary_exists == 'true'
-        shell: pwsh
-        env:
-          ASAN_SAVE_DUMPS: quality-windows-asan\catime-asan.dmp
-        run: |
-          $ErrorActionPreference = "Continue"
-          .\.github\scripts\ci\prepare_msvc_asan_runtime.ps1 -BinaryPath "${{ steps.build.outputs.binary_path }}"
-          & "${{ steps.build.outputs.binary_path }}" --ci-smoke --ci-exit-ms=4000 *>&1 | Tee-Object quality-windows-asan\asan.log
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          exit 0
-
-      - name: Summarize ASan findings
-        id: summarize
-        if: always()
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-windows-asan | Out-Null
-          if (-not (Test-Path quality-windows-asan\asan.log)) {
-            "" | Set-Content -Encoding utf8 quality-windows-asan\asan.log
-          }
-
-          $patterns = @(
-            "ERROR: AddressSanitizer",
-            "Address Sanitizer Error",
-            "AddressSanitizer:"
-          )
-
-          $details = @()
-          foreach ($pattern in $patterns) {
-            $matches = Select-String -Path quality-windows-asan\asan.log -Pattern $pattern -ErrorAction SilentlyContinue
-            foreach ($match in $matches) {
-              if ($details.Count -ge 5) {
-                break
-              }
-              $details += $match.Line.Trim()
-            }
-          }
-
-          $dumpCount = @(Get-ChildItem quality-windows-asan -Filter *.dmp -ErrorAction SilentlyContinue).Count
-          $findingCount = $details.Count + $dumpCount
-          $runExit = if ("${{ steps.smoke.outputs.exit_code }}") { "${{ steps.smoke.outputs.exit_code }}" } else { "0" }
-          $reason = "Windows ASan smoke completed"
-          $status = if ("${{ steps.build.outputs.binary_exists }}" -eq "true" -and $runExit -eq "0" -and $findingCount -eq 0) { "passed" } else { "failed" }
-          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
-            if (Test-Path .\quality-windows-asan\build.log) {
-              $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py .\quality-windows-asan\build.log errors --max 20)
-              foreach ($line in $errorOutput) {
-                Write-Output $line
-              }
-            }
-            Write-Output "::error::Windows ASan smoke build failed"
-            $reason = "Windows ASan smoke build failed"
-          }
-          if ($runExit -ne "0") {
-            Write-Output "::error::Windows ASan smoke run exited with code $runExit"
-            $reason = "Windows ASan smoke run exited with code $runExit"
-          }
-          foreach ($detail in $details) {
-            Write-Output "::error::$detail"
-          }
-          if ($dumpCount -gt 0) {
-            Write-Output "::error::Windows ASan generated $dumpCount dump file(s)"
-            $reason = "Windows ASan generated $dumpCount dump file(s)"
-          }
-          "status=$status" >> $env:GITHUB_OUTPUT
-          "finding_count=$findingCount" >> $env:GITHUB_OUTPUT
-          "reason=$reason" >> $env:GITHUB_OUTPUT
-
-      - name: Enforce ASan gate
-        if: always()
-        shell: pwsh
-        run: |
-          if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
-            Write-Output "::error::${{ steps.summarize.outputs.reason }}"
-            Write-Output "::notice::Windows ASan finding count: ${{ steps.summarize.outputs.finding_count }}"
-            exit 1
-          }
-
-  win32-binary-baseline:
-    name: quality / win32-binary-baseline
-    runs-on: windows-2025-vs2026
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Configure Win32 release build
-        shell: pwsh
-        run: |
-          cmake -S . -B build-win32-baseline -G "Visual Studio 18 2026" -A Win32 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCATIME_ENABLE_BINARY_HARDENING=ON `
-            -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
-
-      - name: Build Win32 release binary
-        id: build
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-win32-baseline | Out-Null
-          $ErrorActionPreference = "Continue"
-          cmake --build build-win32-baseline --config Release *>&1 | Tee-Object quality-win32-baseline\build.log
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          $binary = Get-ChildItem .\build-win32-baseline -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($binary) {
-            "binary_exists=true" >> $env:GITHUB_OUTPUT
-            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
-          } else {
-            "binary_exists=false" >> $env:GITHUB_OUTPUT
-          }
-          exit 0
-
-      - name: Dump Win32 ResourceCompile config
-        if: always() && steps.build.outputs.binary_exists != 'true'
-        shell: pwsh
-        run: |
-          $project = Get-ChildItem .\build-win32-baseline -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($project) {
-            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
-          } else {
-            Write-Output "::warning::catime.vcxproj was not found under build-win32-baseline"
-          }
-
-      - name: Check Win32 PE hardening
-        if: always() && steps.build.outputs.binary_exists == 'true'
-        shell: pwsh
-        run: |
-          .\.github\scripts\ci\check_pe_hardening.ps1 `
-            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
-            -OutputDir .\quality-win32-baseline
-
-      - name: Enforce Win32 baseline gate
-        if: always()
-        shell: pwsh
-        run: |
-          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
-            if (Test-Path .\quality-win32-baseline\build.log) {
-              $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py .\quality-win32-baseline\build.log errors --max 20)
-              foreach ($line in $errorOutput) {
-                Write-Output $line
-              }
-            }
-            Write-Output "::error::Win32 baseline build failed before hardening checks could run"
-            exit 1
-          }
-
-  binskim:
-    name: quality / binskim
-    runs-on: windows-2025-vs2026
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-
-      - name: Configure BinSkim release build
-        shell: pwsh
-        run: |
-          cmake -S . -B build-binskim -G "Visual Studio 18 2026" -A Win32 `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DCATIME_ENABLE_BINARY_HARDENING=ON `
-            -DCATIME_ENABLE_WARNINGS=ON `
-            -DCATIME_WARNINGS_AS_ERRORS=OFF `
-            -DCATIME_ENABLE_WIN32_RESOURCES=OFF
-
-      - name: Build BinSkim target
-        id: build
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path quality-binskim | Out-Null
-          $ErrorActionPreference = "Continue"
-          cmake --build build-binskim --config Release *>&1 | Tee-Object quality-binskim\build.log
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          $binary = Get-ChildItem .\build-binskim -Filter catime.exe -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($binary) {
-            "binary_exists=true" >> $env:GITHUB_OUTPUT
-            "binary_path=$($binary.FullName)" >> $env:GITHUB_OUTPUT
-          } else {
-            "binary_exists=false" >> $env:GITHUB_OUTPUT
-          }
-          exit 0
-
-      - name: Dump BinSkim ResourceCompile config
-        if: always() && steps.build.outputs.binary_exists != 'true'
-        shell: pwsh
-        run: |
-          $project = Get-ChildItem .\build-binskim -Filter catime.vcxproj -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($project) {
-            .\.github\scripts\ci\dump_vcxproj_resource_debug.ps1 -ProjectPath $project.FullName
-          } else {
-            Write-Output "::warning::catime.vcxproj was not found under build-binskim"
-          }
-
-      - name: Run BinSkim
-        id: binskim
-        if: always() && steps.build.outputs.binary_exists == 'true'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Continue"
-          .\.github\scripts\ci\run_binskim.ps1 `
-            -BinaryPath "${{ steps.build.outputs.binary_path }}" `
-            -OutputDir .\quality-binskim
-          "exit_code=$LASTEXITCODE" >> $env:GITHUB_OUTPUT
-          exit 0
-
-      - name: Summarize BinSkim findings
-        id: summarize
-        if: always()
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path .\quality-binskim | Out-Null
-          $reason = "BinSkim completed"
-          if ("${{ steps.build.outputs.binary_exists }}" -ne "true") {
-            if (Test-Path .\quality-binskim\build.log) {
-              $errorOutput = @(python .github/scripts/ci/emit_build_log_annotations.py .\quality-binskim\build.log errors --max 20)
-              foreach ($line in $errorOutput) {
-                Write-Output $line
-              }
-            }
-            Write-Output "::error::BinSkim build failed before producing catime.exe"
-            "finding_count=1" >> $env:GITHUB_OUTPUT
-            "status=failed" >> $env:GITHUB_OUTPUT
-            "reason=BinSkim build failed before producing catime.exe" >> $env:GITHUB_OUTPUT
-          } elseif (Test-Path .\quality-binskim\binskim.sarif) {
-            $annotationOutput = @(python .github/scripts/ci/emit_sarif_annotations.py .\quality-binskim\binskim.sarif "BinSkim")
-            foreach ($line in $annotationOutput) {
-              Write-Output $line
-            }
-            $count = if ($annotationOutput.Count -gt 0) { $annotationOutput[-1] } else { "0" }
-            "finding_count=$count" >> $env:GITHUB_OUTPUT
-            $exitCode = "${{ steps.binskim.outputs.exit_code }}"
-            if ([int]$count -eq 0) {
-              if ($exitCode -ne "0") {
-                Write-Output "BinSkim rich return code was $exitCode with zero emitted findings"
-              }
-              "status=passed" >> $env:GITHUB_OUTPUT
-              "reason=$reason" >> $env:GITHUB_OUTPUT
-            } else {
-              if (Test-Path .\quality-binskim\binskim-stderr.txt) {
-                Get-Content .\quality-binskim\binskim-stderr.txt | Select-Object -First 20 | ForEach-Object {
-                  if ($_.Trim()) {
-                    Write-Output "COPYABLE ERROR BinSkim stderr: $($_.Trim())"
-                    Write-Output "::error::BinSkim stderr: $($_.Trim())"
-                  }
-                }
-              }
-              if (Test-Path .\quality-binskim\binskim-stdout.txt) {
-                Get-Content .\quality-binskim\binskim-stdout.txt | Select-Object -First 20 | ForEach-Object {
-                  if ($_.Trim()) {
-                    Write-Output "COPYABLE NOTICE BinSkim stdout: $($_.Trim())"
-                    Write-Output "::notice::BinSkim stdout: $($_.Trim())"
-                  }
-                }
-              }
-              $reason = "BinSkim reported findings (exit code $exitCode)"
-              "status=failed" >> $env:GITHUB_OUTPUT
-              "reason=$reason" >> $env:GITHUB_OUTPUT
-            }
-          } else {
-            Write-Output "::error::BinSkim SARIF report was not produced"
-            if (Test-Path .\quality-binskim\binskim-stderr.txt) {
-              Get-Content .\quality-binskim\binskim-stderr.txt | Select-Object -First 20 | ForEach-Object {
-                if ($_.Trim()) {
-                  Write-Output "COPYABLE ERROR BinSkim stderr: $($_.Trim())"
-                  Write-Output "::error::BinSkim stderr: $($_.Trim())"
-                }
-              }
-            }
-            "finding_count=1" >> $env:GITHUB_OUTPUT
-            "status=failed" >> $env:GITHUB_OUTPUT
-            "reason=BinSkim SARIF report was not produced" >> $env:GITHUB_OUTPUT
-          }
-
-      - name: Enforce BinSkim gate
-        if: always()
-        shell: pwsh
-        run: |
-          if ("${{ steps.summarize.outputs.status }}" -ne "passed") {
-            Write-Output "::error::${{ steps.summarize.outputs.reason }}"
-            Write-Output "::notice::BinSkim finding count: ${{ steps.summarize.outputs.finding_count }}"
-            exit 1
-          }
-
-  build:
-    name: build / mingw-release
-    needs:
-      - publishing-policy
-      - source-policy
-      - codeql
-      - cppcheck
-      - gitleaks
-      - semgrep
-      - msvc-analyze
-      - windows-asan-smoke
-      - win32-binary-baseline
-      - binskim
-    runs-on: windows-latest
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
-      artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
-      artifact-name: ${{ steps.rename_output.outputs.artifact-name }}
+      filenames: ${{ steps.release.outputs.filenames }}
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Set up deterministic Node.js
-        uses: actions/setup-node@v6
+      - name: Download latest stable Windows release
+        id: release
+        uses: actions/github-script@v8
+        env:
+          SOURCE_REPOSITORY: ${{ inputs.repository }}
+          GH_TOKEN: ${{ github.token }}
         with:
-          node-version: '24.18.0'
+          script: |
+            const fs = require('node:fs');
+            const crypto = require('node:crypto');
+            const input = process.env.SOURCE_REPOSITORY.trim();
+            const match = /^(?:https:\/\/github\.com\/)?([A-Za-z0-9-]+)\/([A-Za-z0-9_.-]+?)\/?$/.exec(input);
+            if (!match) {
+              throw new Error('Enter a GitHub repository URL or owner/repo.');
+            }
+            const owner = match[1];
+            const repo = match[2].replace(/\.git$/, '');
+            if (!repo || repo === '.' || repo === '..') {
+              throw new Error('Invalid repository name.');
+            }
+            const { data: release } = await github.rest.repos.getLatestRelease({ owner, repo });
+            const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
+              owner, repo, release_id: release.id, per_page: 100,
+            });
+            const selected = [];
+            for (const arch of ['x64', 'x86']) {
+              for (const kind of ['portable', 'setup']) {
+                const suffix = `-windows-${arch}-${kind}.exe`;
+                const matches = assets.filter(asset =>
+                  asset.name.endsWith(suffix) && asset.size > 0);
+                if (matches.length !== 1) {
+                  throw new Error(`Expected exactly one nonempty *${suffix} asset; found ${matches.length}.`);
+                }
+                const asset = matches[0];
+                if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(asset.name)) {
+                  throw new Error(`Unsupported asset filename: ${asset.name}`);
+                }
+                selected.push(asset);
+              }
+            }
+            fs.mkdirSync('unsigned', { recursive: true });
+            const rows = [];
+            for (const asset of selected) {
+              await exec.exec('gh', ['release', 'download', release.tag_name,
+                '--repo', `${owner}/${repo}`, '--pattern', asset.name, '--dir', 'unsigned']);
+              const bytes = fs.readFileSync(`unsigned/${asset.name}`);
+              if (bytes.length !== asset.size || bytes.subarray(0, 2).toString() !== 'MZ') {
+                throw new Error(`Invalid executable or size mismatch: ${asset.name}`);
+              }
+              const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+              if (asset.digest && asset.digest !== `sha256:${digest}`) {
+                throw new Error(`Release digest mismatch: ${asset.name}`);
+              }
+              rows.push([asset.name, digest]);
+            }
+            core.setOutput('filenames', JSON.stringify(selected.map(asset => asset.name)));
+            await core.summary
+              .addHeading('Signing source')
+              .addLink(`${owner}/${repo} — ${release.tag_name}`, release.html_url)
+              .addTable([['Executable', 'SHA-256'], ...rows])
+              .write();
 
-      - name: Cache pinned WinLibs archive
-        uses: actions/cache@v5
-        with:
-          path: ${{ runner.temp }}\winlibs-cache
-          key: winlibs-i686-gcc-16.1.0-${{ env.WINLIBS_SHA256 }}
-
-      - name: Set up pinned WinLibs i686 compiler
-        shell: pwsh
-        run: |
-          ./.github/scripts/ci/setup_winlibs_i686.ps1 `
-            -ArchiveDirectory "${{ runner.temp }}\winlibs-cache" `
-            -InstallDirectory "${{ runner.temp }}\winlibs-toolchain" `
-            -ArchiveName "${{ env.WINLIBS_ARCHIVE_NAME }}" `
-            -DownloadUrl "${{ env.WINLIBS_URL }}" `
-            -ExpectedSha256 "${{ env.WINLIBS_SHA256 }}"
-
-      - name: Set up China timezone
-        shell: pwsh
-        run: Set-TimeZone -Id "China Standard Time"
-
-      - name: Extract version number
-        id: get_version
-        shell: pwsh
-        run: |
-          $header = Get-Content "resource/resource.h" -Raw
-          if ($header -notmatch '#define\s+CATIME_VERSION\s+"([^"]+)"') {
-            throw "Unable to extract CATIME_VERSION"
-          }
-          $version = $Matches[1]
-          "VERSION=$version" >> $env:GITHUB_ENV
-          "version=$version" >> $env:GITHUB_OUTPUT
-
-      - name: Build application
-        shell: pwsh
-        run: |
-          ./.github/scripts/ci/build_mingw_i686.ps1
-          New-Item -ItemType Directory -Path "output" -Force | Out-Null
-          Copy-Item -LiteralPath "build/catime.exe" -Destination "output/catime.exe"
-
-      - name: Rename output file
-        id: rename_output
-        shell: pwsh
-        run: |
-          $artifactName = "catime_${{ env.VERSION }}_${{ github.run_number }}.exe"
-          Move-Item -LiteralPath "output/catime.exe" -Destination "output/$artifactName"
-          "artifact-name=$artifactName" >> $env:GITHUB_OUTPUT
-
-      - name: Upload build artifacts
-        id: upload-unsigned
+      - name: Upload signing input
+        id: upload
         uses: actions/upload-artifact@v7
         with:
           name: catime-signing-input-${{ github.run_id }}-${{ github.run_attempt }}
-          path: output/${{ steps.rename_output.outputs.artifact-name }}
-          # SignPath requires the standard archived GitHub artifact format.
-          # The signing workflow deletes this input after a successful request.
+          path: unsigned/*.exe
+          if-no-files-found: error
           archive: true
           compression-level: 0
           retention-days: 1
 
   sign:
-    if: >-
-      github.repository == 'vladelaina/Catime' &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main'
-    needs: build
-    uses: ./.github/workflows/signpath-sign.yml
-    with:
-      artifact-name: catime_${{ needs.build.outputs.version }}_${{ github.run_number }}_${{ github.run_attempt }}.exe
-      artifact-id: ${{ needs.build.outputs.artifact-id }}
-      version: ${{ needs.build.outputs.version }}
-      is-release: false
-      archive-signed-artifact: false
-    secrets:
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-
-  virus-total:
-    name: security / virustotal
-    if: >-
-      always() &&
-      needs.build.result == 'success' &&
-      (needs.sign.result == 'success' || needs.sign.result == 'skipped') &&
-      github.repository == 'vladelaina/Catime' &&
-      (github.event_name != 'pull_request' ||
-       github.event.pull_request.head.repo.full_name == github.repository)
-    needs: [build, sign]
+    if: github.repository == 'vladelaina/Catime' && github.ref == 'refs/heads/temp'
+    needs: download
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
+    outputs:
+      signed-artifact-id: ${{ steps.upload-signed.outputs.artifact-id }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Download signed build executable
-        if: needs.sign.result == 'success'
-        uses: actions/download-artifact@v8
+      - name: Submit four executables with a separate artifact configuration
+        uses: signpath/github-action-submit-signing-request@v2
         with:
-          artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
-          path: vt-input
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
+          project-slug: 'Catime'
+          signing-policy-slug: 'windows-four-exe'
+          # Create this separate configuration in SignPath using
+          # .github/signpath/windows-four-exe.xml; keep the default unchanged.
+          artifact-configuration-slug: 'windows-four-exe'
+          github-artifact-id: ${{ needs.download.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: './signed-output'
 
-      - name: Download unsigned build executable
-        if: needs.sign.result == 'skipped'
-        uses: actions/download-artifact@v8
-        with:
-          artifact-ids: ${{ needs.build.outputs.artifact-id }}
-          path: vt-input
-
-      - name: Scan executable with VirusTotal
-        env:
-          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
-          VT_REPORT_PATH: virustotal-report.json
-        run: |
-          set -euo pipefail
-          file=$(find vt-input -type f -iname '*.exe' -print -quit)
-          if [ -z "$file" ]; then
-            echo "::error::VirusTotal input executable was not found"
-            exit 1
-          fi
-          python3 .github/scripts/ci/scan_virustotal.py --file "$file"
-
-      - name: Add VirusTotal link to job summary when scan is skipped
-        if: always() && hashFiles('virustotal-report.json') == ''
-        run: |
-          {
-            echo "## VirusTotal scan"
-            echo
-            echo "The scan did not produce a report (usually because `VIRUSTOTAL_API_KEY` is not configured)."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload VirusTotal report
-        if: always() && hashFiles('virustotal-report.json') != ''
+      - name: Upload signed executables
+        id: upload-signed
         uses: actions/upload-artifact@v7
         with:
-          name: virustotal-report-${{ github.run_id }}-${{ github.run_attempt }}
-          path: virustotal-report.json
-          retention-days: 30
-
-  store-package:
-    name: package / microsoft-store
-    if: >-
-      github.repository == 'vladelaina/Catime' &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      !contains(needs.build.outputs.version, '-')
-    needs: [build, sign]
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Set up deterministic Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24.18.0'
-
-      - name: Download signed executable
-        uses: actions/download-artifact@v8
-        with:
-          artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
-          path: signed-build
-
-      - name: Locate signed executable
-        id: locate-executable
-        shell: pwsh
-        run: |
-          $executable = Get-ChildItem -Path "signed-build" -Filter "*.exe" -File -Recurse |
-            Select-Object -First 1
-          if (-not $executable) {
-            Write-Output "::error::Signed Catime executable was not found"
-            exit 1
-          }
-          $sizeKB = [math]::Round($executable.Length / 1KB, 2)
-          Write-Host "Signed x86 EXE size: $sizeKB KB"
-          "path=$($executable.FullName)" >> $env:GITHUB_OUTPUT
-
-      - name: Build Microsoft Store package
-        shell: pwsh
-        run: |
-          ./packaging/microsoft-store/build-store-package.ps1 `
-            -ExecutablePath "${{ steps.locate-executable.outputs.path }}" `
-            -Version "${{ needs.build.outputs.version }}" `
-            -OutputDirectory "./store-output"
-
-          $msix = Get-Item "store-output/catime_${{ needs.build.outputs.version }}_x86.msix"
-          $sizeKB = [math]::Round($msix.Length / 1KB, 2)
-          Write-Host "Microsoft Store MSIX size: $sizeKB KB"
-
-      - name: Upload Microsoft Store MSIX
-        uses: actions/upload-artifact@v7
-        with:
-          name: catime-store-msix-${{ needs.build.outputs.version }}-${{ github.run_number }}-${{ github.run_attempt }}
-          path: store-output/catime_${{ needs.build.outputs.version }}_x86.msix
+          name: windows-signed-${{ github.run_id }}-${{ github.run_attempt }}
+          path: signed-output/*.exe
           if-no-files-found: error
           retention-days: 90
-          archive: false
+
+  verify:
+    needs: [download, sign]
+    runs-on: windows-latest
+    steps:
+      - name: Download signed executables
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
+          path: signed
+
+      - name: Verify all four Authenticode signatures
+        shell: pwsh
+        env:
+          FILENAMES: ${{ needs.download.outputs.filenames }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $names = @(ConvertFrom-Json $env:FILENAMES)
+          $files = @(Get-ChildItem -LiteralPath signed -File -Recurse)
+          if ($names.Count -ne 4 -or $files.Count -ne 4) {
+            throw 'Expected exactly four signed executables.'
+          }
+          foreach ($name in $names) {
+            $file = Get-Item -LiteralPath "signed/$name"
+            $signature = Get-AuthenticodeSignature -LiteralPath $file.FullName
+            if ($signature.Status -ne 'Valid') {
+              throw "Invalid signature for ${name}: $($signature.Status) - $($signature.StatusMessage)"
+            }
+            "- Verified: $name" >> $env:GITHUB_STEP_SUMMARY
+          }
