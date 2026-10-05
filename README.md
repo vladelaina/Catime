@@ -4,7 +4,6 @@
 # v1.5.0 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
 </div>
 
-
 <div align="center">
   <a href="https://cati.me" target="_blank">
     <img src="Images/catime_resize.png" alt="Catime" width="249">
