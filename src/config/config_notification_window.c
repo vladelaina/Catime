@@ -1,5 +1,6 @@
 #include "config.h"
 #include "config/config_defaults.h"
+#include "multi_window.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +15,10 @@ static BOOL NotificationIniValueMatches(const char* path, const char* key,
 void WriteConfigNotificationVolume(int volume) {
     if (volume < 0) volume = 0;
     if (volume > 100) volume = 100;
+    if (MultiWindow_IsSecondary()) {
+        g_AppConfig.notification.sound.volume = volume;
+        return;
+    }
     char volumeStr[32];
     if (snprintf(volumeStr, sizeof(volumeStr), "%d", volume) < 0) {
         return;
@@ -42,6 +47,13 @@ BOOL WriteConfigNotificationWindow(int x, int y, int width, int height) {
         snprintf(widthStr, sizeof(widthStr), "%d", width) < 0 ||
         snprintf(heightStr, sizeof(heightStr), "%d", height) < 0) {
         return FALSE;
+    }
+    if (MultiWindow_IsSecondary()) {
+        g_AppConfig.notification.display.window_x = x;
+        g_AppConfig.notification.display.window_y = y;
+        g_AppConfig.notification.display.window_width = width;
+        g_AppConfig.notification.display.window_height = height;
+        return TRUE;
     }
     char config_path[MAX_PATH];
     GetConfigPath(config_path, MAX_PATH);

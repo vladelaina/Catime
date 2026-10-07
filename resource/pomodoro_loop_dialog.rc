@@ -17,5 +17,7 @@ BEGIN
     LTEXT           "Please enter loop count (1-100):", CLOCK_IDC_STATIC, 10, 10, 180, 60
     /** Numeric input for cycle count */
     EDITTEXT        CLOCK_IDC_EDIT, 10, 75, 180, 20, ES_AUTOHSCROLL
+    /* Positioned beside OK after the modern dialog footer is laid out. */
+    AUTOCHECKBOX    "Inf", IDC_POMODORO_LOOP_INFINITE, 95, 100, 42, 14
     PUSHBUTTON      "OK", CLOCK_IDC_BUTTON_OK, 140, 100, 50, 14
-END 
+END

@@ -5,6 +5,7 @@
 #include "config/config_writer.h"
 #include "timer/timer.h"
 #include "timer/timer_events.h"
+#include "multi_window.h"
 #include "log.h"
 #include <stdio.h>
 #include <string.h>
@@ -163,11 +164,16 @@ BOOL WriteConfigTimeOptions(const char* options) {
     if (!options) {
         return FALSE;
     }
+    if (MultiWindow_IsSecondary()) return TRUE;
     return UpdateConfigKeyValueAtomic(INI_SECTION_TIMER, "CLOCK_TIME_OPTIONS", options);
 }
 BOOL WriteConfigDefaultCountdownStartup(int seconds) {
     if (seconds <= 0) {
         return FALSE;
+    }
+    if (MultiWindow_IsSecondary()) {
+        g_AppConfig.timer.default_start_time = seconds;
+        return TRUE;
     }
     char secondsStr[32];
     if (snprintf(secondsStr, sizeof(secondsStr), "%d", seconds) < 0) {

@@ -18,7 +18,7 @@
  *
  * @details
  * Configures: Number of Pomodoro cycles before long break
- * Format: Plain number (1-99)
+ * Format: Plain number (1-100), or the Inf checkbox for unlimited cycles
  * Persists to: [POMODORO]loop_count
  */
 void ShowPomodoroLoopDialog(HWND hwndParent);

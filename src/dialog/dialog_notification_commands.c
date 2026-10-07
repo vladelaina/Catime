@@ -74,9 +74,12 @@ static void SaveNotificationSettings(
 
     int volume = (int)SendDlgItemMessage(
         hwndDlg, IDC_VOLUME_SLIDER, TBM_GETPOS, 0, 0);
+    BOOL useForPomodoro = IsDlgButtonChecked(
+        hwndDlg, IDC_NOTIFICATION_USE_FOR_POMODORO) == BST_CHECKED;
     if (!WriteConfigNotificationSettings(
             timeoutMessage, timeoutMs, opacity, notificationType,
-            cornerRadius, fontPercent, isDisabled, soundFile, volume)) {
+            cornerRadius, fontPercent, isDisabled, soundFile, volume,
+            useForPomodoro)) {
         Dialog_ShowErrorAndRefocus(hwndDlg, IDC_NOTIFICATION_EDIT1);
         return;
     }
@@ -127,6 +130,14 @@ INT_PTR DialogNotificationInternal_OnCommand(
             hwndDlg, IDC_DISABLE_NOTIFICATION_CHECK) == BST_CHECKED;
         EnableWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_TIME_EDIT),
                      !isChecked);
+        return TRUE;
+    }
+    if (controlId == IDC_NOTIFICATION_USE_FOR_POMODORO &&
+        notificationCode == BN_CLICKED) {
+        BOOL enabled = IsDlgButtonChecked(
+            hwndDlg, IDC_NOTIFICATION_USE_FOR_POMODORO) == BST_CHECKED;
+        ShowWindow(GetDlgItem(hwndDlg, IDC_NOTIFICATION_POMODORO_VARIABLES),
+                   enabled ? SW_SHOW : SW_HIDE);
         return TRUE;
     }
 

@@ -79,6 +79,7 @@ typedef struct {
 
     /* Notifications */
     char timeoutMessage[NOTIFICATION_MESSAGE_BUFFER_SIZE];
+    BOOL notificationUseForPomodoro;
     int notificationTimeoutMs;
     int notificationMaxOpacity;
     int notificationCornerRadius;

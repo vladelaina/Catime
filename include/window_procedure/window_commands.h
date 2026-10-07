@@ -35,6 +35,8 @@ LRESULT CmdCountUpReset(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdCountdownReset(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdPauseResume(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdRestartTimer(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdResumePomodoro(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdNewTimerWindow(HWND hwnd, WPARAM wp, LPARAM lp);
 
 /* Time format */
 LRESULT CmdTimeFormat(HWND hwnd, TimeFormatType format);
@@ -62,7 +64,6 @@ LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp);
 /* Range handlers */
 BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index);
 BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index);
-BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
 
 /* ============================================================================
  * Plugin Commands (window_commands_plugin.c)

@@ -4,6 +4,7 @@
  */
 
 #include "window_core_internal.h"
+#include "multi_window.h"
 
 int CLOCK_BASE_WINDOW_WIDTH = 200;
 int CLOCK_BASE_WINDOW_HEIGHT = 100;
@@ -59,12 +60,14 @@ BOOL WindowCore_IsCurrentProcessWindow(HWND hwnd) {
 
 HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     LOG_INFO("Creating main window");
+    if (!MultiWindow_BeginMainWindowCreation()) return NULL;
     WNDCLASSW windowClass = {0};
     windowClass.lpfnWndProc = WindowProcedure;
     windowClass.hInstance = hInstance;
     windowClass.lpszClassName = WINDOW_CLASS_NAME;
     if (!RegisterClassW(&windowClass)) {
         LOG_WINDOWS_ERROR("Window class registration failed");
+        MultiWindow_EndMainWindowCreation();
         return NULL;
     }
 
@@ -89,7 +92,16 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
     if (!hwnd) {
         LOG_WINDOWS_ERROR("Window creation failed");
         UnregisterClassW(WINDOW_CLASS_NAME, hInstance);
+        MultiWindow_EndMainWindowCreation();
         return NULL;
+    }
+    MultiWindow_EndMainWindowCreation();
+    if (MultiWindow_IsSecondary()) {
+        /* Persist the newly assigned slot immediately.  Without this, a
+           TaskbarCreated/display recovery before the user moves the window
+           would fall back to the primary window's shared coordinates. */
+        MarkWindowSettingsDirty(WINDOW_SETTINGS_DIRTY_POSITION);
+        SaveWindowSettings(hwnd);
     }
     InitializeTrayAndAnimation(hwnd, hInstance);
     ApplyInitialWindowState(hwnd, nCmdShow);
