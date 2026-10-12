@@ -2,6 +2,7 @@
 #include "config.h"
 #include "font.h"
 #include "text_effect.h"
+#include "pomodoro_phase_color_palette.h"
 
 extern char FONT_INTERNAL_NAME[MAX_PATH];
 extern char CLOCK_TEXT_COLOR[COLOR_HEX_BUFFER];
@@ -11,9 +12,11 @@ extern char PREVIEW_INTERNAL_NAME[MAX_PATH];
 
 void GetActiveColor(char* outColor, size_t bufferSize) {
     if (!outColor || !bufferSize) return;
-    const char* value = g_previewState.type == PREVIEW_TYPE_COLOR
-        ? g_previewState.data.colorHex : CLOCK_TEXT_COLOR;
-    strncpy_s(outColor, bufferSize, value, _TRUNCATE);
+    if (g_previewState.type == PREVIEW_TYPE_COLOR) {
+        strncpy_s(outColor, bufferSize, g_previewState.data.colorHex, _TRUNCATE);
+    } else if (!GetPomodoroDisplayColor(outColor, bufferSize)) {
+        strncpy_s(outColor, bufferSize, CLOCK_TEXT_COLOR, _TRUNCATE);
+    }
 }
 
 void GetActiveFont(char* outFontName, char* outInternalName, size_t bufferSize) {

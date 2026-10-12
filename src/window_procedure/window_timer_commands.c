@@ -78,7 +78,7 @@ void StartDefaultCountDown(HWND hwnd) {
 void StartPomodoroTimer(HWND hwnd) {
     CleanupBeforeTimerAction(hwnd);
     EnsureWindowVisibleWithTopmostState(hwnd);
-    InitializePomodoro();
+    InitializePomodoro(hwnd);
     CLOCK_SHOW_CURRENT_TIME = false;
     CLOCK_COUNT_UP = false;
     CLOCK_IS_PAUSED = false;

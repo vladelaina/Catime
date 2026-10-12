@@ -7,8 +7,97 @@
 #include <wchar.h>
 
 #include "timer_events_internal.h"
+#include "pomodoro_phase_action.h"
+#include "pomodoro_phase_color_palette.h"
 
-BOOL TimerEvents_AdvancePomodoroState(void) {
+static POMODORO_PHASE GetPomodoroPhaseForIndex(int index, int timesCount) {
+    if (timesCount <= 0 || index < 0 || index >= timesCount) {
+        return POMODORO_PHASE_IDLE;
+    }
+
+    if (index == 0) {
+        return POMODORO_PHASE_WORK;
+    }
+
+    if (timesCount > 2 && index == timesCount - 1) {
+        return POMODORO_PHASE_LONG_BREAK;
+    }
+
+    return (index % 2 == 1) ? POMODORO_PHASE_BREAK : POMODORO_PHASE_WORK;
+}
+
+static const char* GetPomodoroPhaseHookText(POMODORO_PHASE phase) {
+    switch (phase) {
+        case POMODORO_PHASE_WORK:
+            return "work";
+        case POMODORO_PHASE_BREAK:
+            return "short_break";
+        case POMODORO_PHASE_LONG_BREAK:
+            return "long_break";
+        default:
+            return "idle";
+    }
+}
+
+static const char* GetPomodoroPhaseActions(POMODORO_PHASE phase) {
+    switch (phase) {
+        case POMODORO_PHASE_WORK:
+            return g_AppConfig.pomodoro.work_actions;
+        case POMODORO_PHASE_BREAK:
+            return g_AppConfig.pomodoro.short_break_actions;
+        case POMODORO_PHASE_LONG_BREAK:
+            return g_AppConfig.pomodoro.long_break_actions;
+        default:
+            return "";
+    }
+}
+
+static void ExecutePomodoroPhaseActions(HWND hwnd, POMODORO_PHASE phase) {
+    const char* actionChain = GetPomodoroPhaseActions(phase);
+    if (!actionChain || actionChain[0] == '\0') {
+        return;
+    }
+
+    char actions[POMODORO_ACTION_CHAIN_BUFFER];
+    if (!PomodoroPhaseAction_NormalizeChain(actionChain, actions, sizeof(actions))) {
+        LOG_WARNING("Failed to parse Pomodoro phase actions: %s", actionChain);
+        return;
+    }
+
+    char* context = NULL;
+    char* token = strtok_s(actions, ",|", &context);
+    while (token) {
+        if (!PomodoroPhaseAction_ExecuteByToken(hwnd, phase, token)) {
+            LOG_WARNING("Failed to execute Pomodoro phase action: %s", token);
+        }
+        token = strtok_s(NULL, ",|", &context);
+    }
+}
+
+static void TriggerPomodoroPhaseChangedHook(POMODORO_PHASE previousPhase,
+                                            POMODORO_PHASE nextPhase,
+                                            HWND hwnd,
+                                            int currentIndex,
+                                            int timesCount) {
+    if (previousPhase != nextPhase) {
+        LOG_INFO("Pomodoro phase changed: %s -> %s (index=%d/%d)",
+                 GetPomodoroPhaseHookText(previousPhase),
+                 GetPomodoroPhaseHookText(nextPhase),
+                 currentIndex + 1,
+                 timesCount);
+    }
+
+    /* Every new interval/session enters its actions, even when the phase is unchanged. */
+    ClearPomodoroPhaseColor();
+    ExecutePomodoroPhaseActions(hwnd, nextPhase);
+    if (hwnd) {
+        TimerEvents_RequestWindowRepaint(hwnd);
+    }
+}
+
+
+BOOL TimerEvents_AdvancePomodoroState(HWND hwnd) {
+    POMODORO_PHASE previousPhase = current_pomodoro_phase;
     if (pomodoro_initial_times_count == 0) {
         return FALSE;
     }
@@ -22,10 +111,15 @@ BOOL TimerEvents_AdvancePomodoroState(void) {
         }
     }
 
+    current_pomodoro_phase = GetPomodoroPhaseForIndex(current_pomodoro_time_index,
+                                                       pomodoro_initial_times_count);
+    TriggerPomodoroPhaseChangedHook(previousPhase, current_pomodoro_phase, hwnd,
+                                    current_pomodoro_time_index, pomodoro_initial_times_count);
     return TRUE;
 }
 
 void ResetPomodoroState(void) {
+    ClearPomodoroPhaseColor();
     current_pomodoro_phase = POMODORO_PHASE_IDLE;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
@@ -109,7 +203,7 @@ BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
                            completedIndex, timesCount, loopCount,
                            currentCycle, stepInCycle);
 
-    if (!TimerEvents_AdvancePomodoroState()) {
+    if (!TimerEvents_AdvancePomodoroState(hwnd)) {
         ShowNotification(hwnd, completionMsg);
         TimerEvents_ResetTimerState(0);
         ResetPomodoroState();
@@ -128,7 +222,6 @@ BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
     }
 
     ShowNotification(hwnd, completionMsg);
-    PlayNotificationSound(hwnd);
 
     /* Preserve the absolute deadline so notification work introduces no drift. */
     int nextDurationSec =
@@ -143,7 +236,8 @@ BOOL TimerEvents_HandlePomodoroCompletion(HWND hwnd) {
     return TRUE;
 }
 
-void InitializePomodoro(void) {
+void InitializePomodoro(HWND hwnd) {
+    POMODORO_PHASE previousPhase = current_pomodoro_phase;
     current_pomodoro_phase = POMODORO_PHASE_WORK;
     current_pomodoro_time_index = 0;
     complete_pomodoro_cycles = 0;
@@ -175,4 +269,6 @@ void InitializePomodoro(void) {
     countdown_elapsed_time = 0;
     countdown_message_shown = false;
     TimerEvents_ResetMillisecondAccumulator();
+    TriggerPomodoroPhaseChangedHook(previousPhase, current_pomodoro_phase, hwnd,
+                                    current_pomodoro_time_index, pomodoro_initial_times_count);
 }

@@ -54,6 +54,9 @@ LRESULT CmdPomodoroStart(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdPomodoroReset(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdPomodoroLoopCount(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdPomodoroCombo(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdPomodoroWorkActions(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdPomodoroBreakActions(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdPomodoroLongBreakActions(HWND hwnd, WPARAM wp, LPARAM lp);
 
 /* Time options */
 LRESULT CmdModifyTimeOptions(HWND hwnd, WPARAM wp, LPARAM lp);
@@ -63,6 +66,7 @@ LRESULT CmdModifyDefaultTime(HWND hwnd, WPARAM wp, LPARAM lp);
 BOOL HandleQuickCountdown(HWND hwnd, UINT cmd, int index);
 BOOL HandlePomodoroTime(HWND hwnd, UINT cmd, int index);
 BOOL HandlePomodoroTimeConfig(HWND hwnd, int selectedIndex);
+BOOL HandlePomodoroPhaseActionSelection(HWND hwnd, UINT cmd, int index);
 
 /* ============================================================================
  * Plugin Commands (window_commands_plugin.c)

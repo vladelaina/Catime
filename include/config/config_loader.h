@@ -76,6 +76,9 @@ typedef struct {
     int pomodoroTimes[10];
     int pomodoroTimesCount;
     int pomodoroLoopCount;
+    char pomodoroWorkActions[256];
+    char pomodoroShortBreakActions[256];
+    char pomodoroLongBreakActions[256];
 
     /* Notifications */
     char timeoutMessage[NOTIFICATION_MESSAGE_BUFFER_SIZE];

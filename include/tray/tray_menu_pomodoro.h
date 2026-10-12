@@ -31,9 +31,11 @@ void LoadPomodoroConfig(void);
  * - Time interval options (work, short break, long break, etc.)
  * - Loop count display
  * - Combination settings
+ * - State action settings (after Combination)
  *
  * Checkmarks indicate currently active Pomodoro phase.
  */
 void BuildPomodoroMenu(HMENU hMenu);
+void AppendPomodoroPhaseActionMenu(HMENU hPomodoroMenu);
 
 #endif /* TRAY_MENU_POMODORO_H */

@@ -50,6 +50,9 @@ typedef struct {
     int times[10];
     int times_count;
     int loop_count;
+    char work_actions[256];
+    char short_break_actions[256];
+    char long_break_actions[256];
 } PomodoroConfig;
 
 typedef struct {

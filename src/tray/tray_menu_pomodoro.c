@@ -193,6 +193,8 @@ void BuildPomodoroMenu(HMENU hMenu) {
     AppendMenuW(hPomodoroMenu, MF_STRING, CLOCK_IDM_POMODORO_COMBINATION,
               GetLocalizedString(NULL, L"Combination"));
 
+    AppendPomodoroPhaseActionMenu(hPomodoroMenu);
+
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hPomodoroMenu,
                      GetLocalizedString(NULL, L"Pomodoro"))) {
         DestroyMenu(hPomodoroMenu);
