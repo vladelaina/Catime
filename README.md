@@ -226,11 +226,6 @@ build.bat                         # Windows
 ## Sponsors
 
 <div align="center">
-  <a href="https://www.dkdun.cn/aff/SCEYKYCH">
-    <img width="732" height="246" alt="dk" src="https://github.com/user-attachments/assets/6d06ac2a-ae1d-4b3f-b828-65b653f6e189" />
-  </a>
-
-  <br><br>
 
   <table align="center">
     <tr>
