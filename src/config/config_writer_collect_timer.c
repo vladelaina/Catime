@@ -89,7 +89,13 @@ BOOL ConfigWriter_CollectTimerPomodoro(ConfigItemBuilder* builder) {
             "POMODORO_TIME_OPTIONS") ||
         !ConfigWriter_AppendInt(builder, INI_SECTION_POMODORO,
                                 "POMODORO_LOOP_COUNT",
-                                g_AppConfig.pomodoro.loop_count)) {
+                                g_AppConfig.pomodoro.loop_count) ||
+        !ConfigWriter_AppendString(builder, INI_SECTION_POMODORO,
+                                   "POMODORO_WORK_ACTIONS", g_AppConfig.pomodoro.work_actions) ||
+        !ConfigWriter_AppendString(builder, INI_SECTION_POMODORO,
+                                   "POMODORO_SHORT_BREAK_ACTIONS", g_AppConfig.pomodoro.short_break_actions) ||
+        !ConfigWriter_AppendString(builder, INI_SECTION_POMODORO,
+                                   "POMODORO_LONG_BREAK_ACTIONS", g_AppConfig.pomodoro.long_break_actions)) {
         return FALSE;
     }
     return TRUE;

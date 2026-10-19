@@ -57,7 +57,7 @@ void ResetMillisecondAccumulator(void);
  * 
  * @note Uses POMODORO_TIMES array from config
  */
-void InitializePomodoro(void);
+void InitializePomodoro(HWND hwnd);
 
 /**
  *  Reset Pomodoro state back to idle

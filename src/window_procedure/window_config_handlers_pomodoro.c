@@ -7,6 +7,7 @@
 #include "config.h"
 #include "config/config_defaults.h"
 #include "log.h"
+#include "pomodoro_phase_action.h"
 #include "window_procedure/window_utils.h"
 
 #include <string.h>
@@ -43,6 +44,29 @@ LRESULT HandleAppPomodoroChanged(HWND hwnd) {
         ReadConfigInt(CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LOOP_COUNT,
                       DEFAULT_POMODORO_LOOP_COUNT),
         MIN_POMODORO_LOOP_COUNT, MAX_POMODORO_LOOP_COUNT);
+
+    ReadConfigStr(CFG_SECTION_POMODORO, CFG_KEY_POMODORO_WORK_ACTIONS,
+                  DEFAULT_POMODORO_WORK_ACTIONS,
+                  g_AppConfig.pomodoro.work_actions,
+                  sizeof(g_AppConfig.pomodoro.work_actions));
+    ReadConfigStr(CFG_SECTION_POMODORO, CFG_KEY_POMODORO_SHORT_BREAK_ACTIONS,
+                  DEFAULT_POMODORO_SHORT_BREAK_ACTIONS,
+                  g_AppConfig.pomodoro.short_break_actions,
+                  sizeof(g_AppConfig.pomodoro.short_break_actions));
+    ReadConfigStr(CFG_SECTION_POMODORO, CFG_KEY_POMODORO_LONG_BREAK_ACTIONS,
+                  DEFAULT_POMODORO_LONG_BREAK_ACTIONS,
+                  g_AppConfig.pomodoro.long_break_actions,
+                  sizeof(g_AppConfig.pomodoro.long_break_actions));
+
+    PomodoroPhaseAction_NormalizeChain(g_AppConfig.pomodoro.work_actions,
+                                       g_AppConfig.pomodoro.work_actions,
+                                       sizeof(g_AppConfig.pomodoro.work_actions));
+    PomodoroPhaseAction_NormalizeChain(g_AppConfig.pomodoro.short_break_actions,
+                                       g_AppConfig.pomodoro.short_break_actions,
+                                       sizeof(g_AppConfig.pomodoro.short_break_actions));
+    PomodoroPhaseAction_NormalizeChain(g_AppConfig.pomodoro.long_break_actions,
+                                       g_AppConfig.pomodoro.long_break_actions,
+                                       sizeof(g_AppConfig.pomodoro.long_break_actions));
 
     return 0;
 }

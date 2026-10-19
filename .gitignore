@@ -33,3 +33,4 @@ output/
 # Project documentation
 CLAUDE.md
 .reference
+temp/

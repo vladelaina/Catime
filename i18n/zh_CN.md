@@ -137,6 +137,8 @@
 
 > 配置文件保存在 `%LOCALAPPDATA%\Catime\config.ini`
 
+- **番茄钟阶段动作**：[使用说明](../docs/pomodoro-phase-actions.md) · [变更说明](../docs/changes/pomodoro-phase-actions.md)
+
 ## ⚡ [字体优化](https://vladelaina.github.io/Catime/tools/font-tool/)
 
 使用官方 [字体精简工具](https://vladelaina.github.io/Catime/tools/font-tool/) 可将自定义字体体积缩小 **90% 以上**。

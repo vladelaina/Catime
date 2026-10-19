@@ -14,6 +14,10 @@ BOOL WriteConfigPomodoroTimes(int work, int shortBreak, int longBreak);
 BOOL WriteConfigPomodoroSettings(int work, int shortBreak,
                                  int longBreak, int longBreak2);
 BOOL WriteConfigPomodoroLoopCount(int loopCount);
+BOOL WriteConfigPomodoroPhaseActionKey(const char* key, const char* actions);
+BOOL WriteConfigPomodoroPhaseActions(const char* workActions,
+                                     const char* shortBreakActions,
+                                     const char* longBreakActions);
 BOOL WriteConfigTimeoutFile(const char* filePath);
 BOOL WriteConfigTopmost(const char* topmost);
 BOOL WriteConfigTimeoutWebsite(const char* url);
