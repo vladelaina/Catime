@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Catime
+GenericName=Countdown & Pomodoro Timer
+Comment=Lightweight transparent countdown and Pomodoro timer
+Comment[zh_CN]=轻量透明倒计时与番茄钟
+Exec=catime
+Icon=catime
+Terminal=false
+Categories=Utility;Clock;
+Keywords=timer;countdown;pomodoro;clock;catime;
+StartupNotify=false
+StartupWMClass=catime
