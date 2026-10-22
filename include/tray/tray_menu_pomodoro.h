@@ -28,11 +28,12 @@ void LoadPomodoroConfig(void);
  * @details
  * Creates Pomodoro submenu with:
  * - Start button
- * - Time interval options (work, short break, long break, etc.)
+ * - Active-session interval navigation options
  * - Loop count display
  * - Combination settings
  *
- * Checkmarks indicate currently active Pomodoro phase.
+ * Interval navigation is enabled only while a Pomodoro session is active.
+ * Checkmarks indicate the currently active Pomodoro phase.
  */
 void BuildPomodoroMenu(HMENU hMenu);
 

@@ -154,10 +154,10 @@ BOOL ValidatePomodoroConfig(ConfigSnapshot* snapshot) {
             }
         }
     }
-    if (snapshot->pomodoroLoopCount < MIN_POMODORO_LOOP_COUNT) {
+    if (snapshot->pomodoroLoopCount < POMODORO_LOOP_COUNT_INFINITE) {
         LOG_WARNING("Invalid Pomodoro loop count %d, resetting to %d",
-                   snapshot->pomodoroLoopCount, MIN_POMODORO_LOOP_COUNT);
-        snapshot->pomodoroLoopCount = MIN_POMODORO_LOOP_COUNT;
+                   snapshot->pomodoroLoopCount, DEFAULT_POMODORO_LOOP_COUNT);
+        snapshot->pomodoroLoopCount = DEFAULT_POMODORO_LOOP_COUNT;
         modified = TRUE;
     }
     if (snapshot->pomodoroLoopCount > MAX_POMODORO_LOOP_COUNT) {

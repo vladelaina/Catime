@@ -10,6 +10,7 @@
 #include "timer/main_timer.h"
 #include "timer/timer.h"
 #include "window_procedure/window_utils.h"
+#include "multi_window.h"
 
 #include <string.h>
 
@@ -67,6 +68,8 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
     WindowConfigInternal_LoadAndCompareString(CFG_SECTION_TIMER, CFG_KEY_TIMEOUT_WEBSITE,
                          CLOCK_TIMEOUT_WEBSITE_URL, sizeof(CLOCK_TIMEOUT_WEBSITE_URL), "");
 
+    if (MultiWindow_IsSecondary()) goto finish;
+
     /* Default start time */
     int newDefaultStartTime = WindowConfigInternal_NormalizeDefaultStartTime(
         ReadConfigInt(CFG_SECTION_TIMER, CFG_KEY_DEFAULT_START_TIME,
@@ -106,6 +109,7 @@ LRESULT HandleAppTimerChanged(HWND hwnd) {
                   normalizedStartupMode, _TRUNCATE);
     }
 
+finish:
     if (changed) {
         if (intervalChanged) {
             ResetTimerWithInterval(hwnd);

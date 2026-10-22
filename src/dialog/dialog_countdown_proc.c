@@ -248,7 +248,13 @@ LRESULT CALLBACK CountdownDialogProc(HWND hwnd, UINT msg,
             if (wParam == SPI_SETWORKAREA) {
                 Dialog_EnsureWindowVisible(hwnd);
             }
-            /* Fall through to refresh theme-dependent colors. */
+            if (state) {
+                CountdownRefreshPalette(state);
+                RedrawWindow(hwnd, NULL, NULL,
+                             RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+                return 0;
+            }
+            break;
         case WM_THEMECHANGED:
             if (state) {
                 CountdownRefreshPalette(state);

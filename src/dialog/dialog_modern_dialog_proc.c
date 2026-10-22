@@ -4,11 +4,9 @@
  */
 
 #include "dialog_modern_internal.h"
-
-LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
-                                                 WPARAM wParam, LPARAM lParam,
-                                                 UINT_PTR subclassId,
-                                                 DWORD_PTR refData) {
+LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg, WPARAM wParam,
+                                          LPARAM lParam, UINT_PTR subclassId,
+                                          DWORD_PTR refData) {
     (void)subclassId;
     ModernDialogState* state = (ModernDialogState*)refData;
 
@@ -197,9 +195,7 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             }
             break;
         case WM_NCMOUSELEAVE:
-            if (state) {
-                ModernRefreshTitleHoverFromCursor(state);
-            }
+            if (state) ModernRefreshTitleHoverFromCursor(state);
             break;
         case WM_CAPTURECHANGED:
             if (state && state->scrollBarDragging &&
@@ -279,7 +275,11 @@ LRESULT CALLBACK ModernDialogSubclassProc(HWND hwnd, UINT msg,
             if (wParam == SPI_SETWORKAREA) {
                 Dialog_EnsureWindowVisible(hwnd);
             }
-            /* Fall through to refresh theme-dependent colors. */
+            if (state && state->finalized) {
+                DialogModern_Refresh(hwnd);
+                return 0;
+            }
+            break;
         case WM_THEMECHANGED:
             if (state && state->finalized) {
                 DialogModern_Refresh(hwnd);
