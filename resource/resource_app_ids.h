@@ -155,6 +155,7 @@
 #define CLOCK_IDM_24HOUR_FORMAT 151      /**< 24-hour format menu item */
 #define CLOCK_IDM_SHOW_SECONDS 152       /**< Show seconds menu item */
 #define CLOCK_IDM_TOPMOST 187            /**< Window topmost menu item */
+#define CLOCK_IDM_HIDE_WHEN_CAPTURE 189  /**< Window hide when capture menu item */
 #define CLOCK_IDM_TEXT_EFFECT_BASE 5300  /**< Text effect menu command range start */
 #define CLOCK_IDM_TEXT_EFFECT_END (CLOCK_IDM_TEXT_EFFECT_BASE + 99) /**< Text effect menu command range end */
 

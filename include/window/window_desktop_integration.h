@@ -28,6 +28,16 @@
 BOOL SetWindowTopmost(HWND hwnd, BOOL topmost);
 
 /**
+ * @brief Set window hide when capture
+ * @param hwnd Window handle
+ *
+ * @details When taking a screenshot, the clock will not appear in the screenshot.
+ *
+ * @return TRUE when the requested state was fully applied, FALSE if it was failed.
+ */
+BOOL SetWindowHideWhenCapture(HWND hwnd);
+
+/**
  * @brief Apply topmost preference loaded from configuration
  * @param hwnd Window handle
  * @param topmost TRUE for topmost, FALSE for normal desktop-anchor mode

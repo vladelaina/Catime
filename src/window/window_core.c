@@ -29,6 +29,7 @@ BOOL CLOCK_TEXT_RECT_VALID = FALSE;
 float CLOCK_FONT_SCALE_FACTOR = 1.0f;
 float PLUGIN_FONT_SCALE_FACTOR = 1.0f;
 int CLOCK_BASE_FONT_SIZE = 24;
+BOOL CLOCK_HIDE_WHEN_CAPTURE = FALSE;
 TextEffectType CLOCK_TEXT_EFFECT = TEXT_EFFECT_NONE;
 
 static void InitializeTrayAndAnimation(HWND hwnd, HINSTANCE instance) {
@@ -91,6 +92,9 @@ HWND CreateMainWindow(HINSTANCE hInstance, int nCmdShow) {
         UnregisterClassW(WINDOW_CLASS_NAME, hInstance);
         return NULL;
     }
+
+    SetWindowDisplayAffinity(hwnd, CLOCK_HIDE_WHEN_CAPTURE ? WDA_NONE : WDA_EXCLUDEFROMCAPTURE);
+    
     InitializeTrayAndAnimation(hwnd, hInstance);
     ApplyInitialWindowState(hwnd, nCmdShow);
     if (g_pendingSystemPositionRestore) {

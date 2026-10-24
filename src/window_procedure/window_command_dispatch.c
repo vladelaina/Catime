@@ -45,6 +45,7 @@ static const CommandDispatchEntry COMMAND_DISPATCH_TABLE[] = {
     {CLOCK_IDC_TIMEOUT_BROWSE, CmdBrowseFile},
     {CLOCK_IDM_ABOUT, CmdAbout},
     {CLOCK_IDM_TOPMOST, CmdToggleTopmost},
+    {CLOCK_IDM_HIDE_WHEN_CAPTURE, CmdToggleHideWhenCapture},
     {CLOCK_IDM_BROWSE_FILE, CmdBrowseFile},
     {CLOCK_IDM_CHECK_UPDATE, CmdCheckUpdate},
     {CLOCK_IDM_OPEN_WEBSITE, CmdOpenWebsite},

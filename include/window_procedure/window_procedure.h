@@ -174,6 +174,11 @@ void ToggleWindowVisibility(HWND hwnd);
 void ToggleTopmost(HWND hwnd);
 
 /**
+ * @brief Toggle window hide when capture
+ */
+void ToggleHideWhenCapture(HWND hwnd);
+
+/**
  * @brief Toggle millisecond display
  */
 void ToggleMilliseconds(HWND hwnd);
