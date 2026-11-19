@@ -1,4 +1,3 @@
-
 <div align="center">
 
 # v1.5.0 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
