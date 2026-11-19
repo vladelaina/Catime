@@ -199,6 +199,10 @@ void BuildPresetManagementSubmenu(HMENU hMenu) {
     AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_WINDOW_TOPMOST ? MF_CHECKED : MF_UNCHECKED),
                 CLOCK_IDM_TOPMOST,
                 GetLocalizedString(NULL, L"Always on Top"));
+    
+    AppendMenuW(hTimeOptionsMenu, MF_STRING | (CLOCK_HIDE_WHEN_CAPTURE ? MF_CHECKED : MF_UNCHECKED),
+                CLOCK_IDM_HIDE_WHEN_CAPTURE,
+                GetLocalizedString(NULL, L"Hide when capture"));
 
     if (!AppendMenuW(hMenu, MF_POPUP, (UINT_PTR)hTimeOptionsMenu,
                      GetLocalizedString(NULL, L"Preset Management"))) {

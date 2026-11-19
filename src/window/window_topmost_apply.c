@@ -165,9 +165,19 @@ BOOL WindowTopmost_ApplyInternal(HWND hwnd, BOOL topmost,
     return FALSE;
 }
 
+BOOL WindowHideWhenCapture_ApplyInternal(HWND hwnd){
+    if (!hwnd) return FALSE;
+    return SetWindowDisplayAffinity(hwnd,
+        CLOCK_HIDE_WHEN_CAPTURE ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE);
+}
+
 BOOL SetWindowTopmost(HWND hwnd, BOOL topmost) {
     if (!WindowDesktop_IsValid(hwnd, "SetWindowTopmost")) return FALSE;
     return WindowTopmost_ApplyInternal(hwnd, topmost, TRUE, TRUE, TRUE, TRUE);
+}
+
+BOOL SetWindowHideWhenCapture(HWND hwnd) {
+    return WindowHideWhenCapture_ApplyInternal(hwnd);
 }
 
 BOOL SetWindowTopmostFromConfig(HWND hwnd, BOOL topmost) {

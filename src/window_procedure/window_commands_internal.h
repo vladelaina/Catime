@@ -64,6 +64,7 @@ void ToggleTextEffect(HWND hwnd, TextEffectType effect);
 LRESULT CmdExit(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdAbout(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp);
+LRESULT CmdToggleHideWhenCapture(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdEditMode(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdToggleVisibility(HWND hwnd, WPARAM wp, LPARAM lp);
 LRESULT CmdCustomizeColor(HWND hwnd, WPARAM wp, LPARAM lp);

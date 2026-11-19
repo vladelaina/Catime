@@ -28,6 +28,12 @@ LRESULT CmdToggleTopmost(HWND hwnd, WPARAM wp, LPARAM lp) {
     return 0;
 }
 
+LRESULT CmdToggleHideWhenCapture(HWND hwnd, WPARAM wp, LPARAM lp){
+    (void)wp; (void)lp;
+    ToggleHideWhenCapture(hwnd);
+    return 0;
+}
+
 void ToggleTextEffect(HWND hwnd, TextEffectType effect) {
     if (effect != TEXT_EFFECT_NONE && !TextEffect_IsSelectable(effect)) return;
     TextEffectType previous = CLOCK_TEXT_EFFECT;

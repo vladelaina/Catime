@@ -165,6 +165,10 @@ void ToggleTopmost(HWND hwnd) {
     MarkEditModeTopmostOverride();
     SetWindowTopmost(hwnd, !CLOCK_WINDOW_TOPMOST);
 }
+void ToggleHideWhenCapture(HWND hwnd) {
+    CLOCK_HIDE_WHEN_CAPTURE = !CLOCK_HIDE_WHEN_CAPTURE;
+    SetWindowHideWhenCapture(hwnd);
+}
 void ToggleWindowVisibility(HWND hwnd) {
     if (IsWindowVisible(hwnd)) {
         HideWindowIntentionally(hwnd);
