@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
   <zip-file>
-    <pe-file path="**/*.exe" min-matches="4" max-matches="4">
+    <pe-file path="*.exe" min-matches="0" max-matches="unbounded">
       <authenticode-sign />
     </pe-file>
+    <pe-file path="*.dll" min-matches="0" max-matches="unbounded">
+      <authenticode-sign />
+    </pe-file>
+    <msi-file path="*.msi" min-matches="0" max-matches="unbounded">
+      <authenticode-sign />
+    </msi-file>
+    <msix-file path="*.msix" min-matches="0" max-matches="unbounded">
+      <authenticode-sign />
+    </msix-file>
+    <appx-file path="*.appx" min-matches="0" max-matches="unbounded">
+      <authenticode-sign />
+    </appx-file>
   </zip-file>
 </artifact-configuration>

@@ -20,11 +20,10 @@ jobs:
     if: github.repository == 'vladelaina/Catime' && github.ref == 'refs/heads/temp'
     runs-on: ubuntu-latest
     outputs:
-      filenames: ${{ steps.release.outputs.filenames }}
       artifact-id: ${{ steps.upload.outputs.artifact-id }}
+      manifest-id: ${{ steps.upload-manifest.outputs.artifact-id }}
     steps:
-      - name: Download latest stable Windows release
-        id: release
+      - name: Download all assets from the latest stable release
         uses: actions/github-script@v8
         env:
           SOURCE_REPOSITORY: ${{ inputs.repository }}
@@ -33,6 +32,9 @@ jobs:
           script: |
             const fs = require('node:fs');
             const crypto = require('node:crypto');
+            const path = require('node:path');
+            const { spawn } = require('node:child_process');
+            const { once } = require('node:events');
             const input = process.env.SOURCE_REPOSITORY.trim();
             const match = /^(?:https:\/\/github\.com\/)?([A-Za-z0-9-]+)\/([A-Za-z0-9_.-]+?)\/?$/.exec(input);
             if (!match) {
@@ -47,42 +49,47 @@ jobs:
             const assets = await github.paginate(github.rest.repos.listReleaseAssets, {
               owner, repo, release_id: release.id, per_page: 100,
             });
-            const selected = [];
-            for (const arch of ['x64', 'x86']) {
-              for (const kind of ['portable', 'setup']) {
-                const suffix = `-windows-${arch}-${kind}.exe`;
-                const matches = assets.filter(asset =>
-                  asset.name.endsWith(suffix) && asset.size > 0);
-                if (matches.length !== 1) {
-                  throw new Error(`Expected exactly one nonempty *${suffix} asset; found ${matches.length}.`);
-                }
-                const asset = matches[0];
-                if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(asset.name)) {
-                  throw new Error(`Unsupported asset filename: ${asset.name}`);
-                }
-                selected.push(asset);
-              }
+            if (!assets.length) {
+              throw new Error('The latest stable release has no uploaded assets.');
             }
             fs.mkdirSync('unsigned', { recursive: true });
-            const rows = [];
-            for (const asset of selected) {
-              await exec.exec('gh', ['release', 'download', release.tag_name,
-                '--repo', `${owner}/${repo}`, '--pattern', asset.name, '--dir', 'unsigned']);
-              const bytes = fs.readFileSync(`unsigned/${asset.name}`);
-              if (bytes.length !== asset.size || bytes.subarray(0, 2).toString() !== 'MZ') {
-                throw new Error(`Invalid executable or size mismatch: ${asset.name}`);
+            const manifest = [];
+            for (const asset of assets) {
+              const { id, name, size } = asset;
+              if (!name || name === '.' || name === '..' || /[/\\\x00]/.test(name)) {
+                throw new Error(`Invalid release asset path: ${JSON.stringify(name)}`);
               }
-              const digest = crypto.createHash('sha256').update(bytes).digest('hex');
+              const filename = path.join('unsigned', name);
+              const fd = fs.openSync(filename, 'wx');
+              try {
+                const download = spawn('gh', ['api', '--header', 'Accept: application/octet-stream',
+                  `repos/${owner}/${repo}/releases/assets/${id}`], { stdio: ['ignore', fd, 'inherit'] });
+                const [status] = await once(download, 'close');
+                if (status !== 0) {
+                  throw new Error(`Could not download release asset ${id}: ${JSON.stringify(name)}`);
+                }
+              } finally {
+                fs.closeSync(fd);
+              }
+              if (fs.statSync(filename).size !== size) {
+                throw new Error(`Release asset size mismatch: ${JSON.stringify(name)}`);
+              }
+              const hash = crypto.createHash('sha256');
+              for await (const chunk of fs.createReadStream(filename)) {
+                hash.update(chunk);
+              }
+              const digest = hash.digest('hex');
               if (asset.digest && asset.digest !== `sha256:${digest}`) {
-                throw new Error(`Release digest mismatch: ${asset.name}`);
+                throw new Error(`Release digest mismatch: ${JSON.stringify(name)}`);
               }
-              rows.push([asset.name, digest]);
+              manifest.push({ name, digest, sign: /\.(exe|dll|msi|msix|appx)$/i.test(name) });
             }
-            core.setOutput('filenames', JSON.stringify(selected.map(asset => asset.name)));
+            fs.writeFileSync('release-manifest.json', JSON.stringify(manifest));
+            const signingCount = manifest.filter(asset => asset.sign).length;
             await core.summary
               .addHeading('Signing source')
-              .addLink(`${owner}/${repo} — ${release.tag_name}`, release.html_url)
-              .addTable([['Executable', 'SHA-256'], ...rows])
+              .addLink(`${owner}/${repo} release`, release.html_url)
+              .addRaw(`\n\nDownloaded ${manifest.length} assets, ${signingCount} matched for Authenticode signing.`, true)
               .write();
 
       - name: Upload signing input
@@ -90,10 +97,20 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: catime-signing-input-${{ github.run_id }}-${{ github.run_attempt }}
-          path: unsigned/*.exe
+          path: unsigned/
           if-no-files-found: error
+          include-hidden-files: true
           archive: true
           compression-level: 0
+          retention-days: 1
+
+      - name: Upload release asset manifest
+        id: upload-manifest
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-manifest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-manifest.json
+          if-no-files-found: error
           retention-days: 1
 
   sign:
@@ -103,55 +120,71 @@ jobs:
     outputs:
       signed-artifact-id: ${{ steps.upload-signed.outputs.artifact-id }}
     steps:
-      - name: Submit four executables with a separate artifact configuration
+      - name: Submit all release assets to SignPath
         uses: signpath/github-action-submit-signing-request@v2
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
           organization-id: '66aa6e96-a394-43f9-b3c3-65214fcd285d'
           project-slug: 'Catime'
           signing-policy-slug: 'windows-four-exe'
-          # Create this separate configuration in SignPath using
-          # .github/signpath/windows-four-exe.xml; keep the default unchanged.
+          # Update this configuration in SignPath using .github/signpath/windows-four-exe.xml.
           artifact-configuration-slug: 'windows-four-exe'
           github-artifact-id: ${{ needs.download.outputs.artifact-id }}
           wait-for-completion: true
           output-artifact-directory: './signed-output'
 
-      - name: Upload signed executables
+      - name: Upload processed release assets
         id: upload-signed
         uses: actions/upload-artifact@v7
         with:
           name: windows-signed-${{ github.run_id }}-${{ github.run_attempt }}
-          path: signed-output/*.exe
+          path: signed-output/
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 90
 
   verify:
     needs: [download, sign]
     runs-on: windows-latest
     steps:
-      - name: Download signed executables
+      - name: Download processed release assets
         uses: actions/download-artifact@v8
         with:
           artifact-ids: ${{ needs.sign.outputs.signed-artifact-id }}
           path: signed
 
-      - name: Verify all four Authenticode signatures
+      - name: Download release asset manifest
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.download.outputs.manifest-id }}
+          path: manifest
+
+      - name: Verify signatures and unchanged assets
         shell: pwsh
-        env:
-          FILENAMES: ${{ needs.download.outputs.filenames }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $names = @(ConvertFrom-Json $env:FILENAMES)
-          $files = @(Get-ChildItem -LiteralPath signed -File -Recurse)
-          if ($names.Count -ne 4 -or $files.Count -ne 4) {
-            throw 'Expected exactly four signed executables.'
+          $json = Get-Content -LiteralPath manifest/release-manifest.json -Raw -Encoding utf8
+          [array]$assets = ConvertFrom-Json -InputObject $json
+          $files = @(Get-ChildItem -LiteralPath signed -File -Recurse -Force)
+          if ($files.Count -ne $assets.Count) {
+            throw "Expected $($assets.Count) release assets, received $($files.Count)."
           }
-          foreach ($name in $names) {
-            $file = Get-Item -LiteralPath "signed/$name"
-            $signature = Get-AuthenticodeSignature -LiteralPath $file.FullName
-            if ($signature.Status -ne 'Valid') {
-              throw "Invalid signature for ${name}: $($signature.Status) - $($signature.StatusMessage)"
+          foreach ($asset in $assets) {
+            $name = $asset.name
+            $file = Get-Item -LiteralPath "signed/$name" -Force
+            if ($file.PSIsContainer -or $file.Name -cne $name) {
+              throw "Unexpected output filename for $name."
             }
-            "- Verified: $name" >> $env:GITHUB_STEP_SUMMARY
+            if ($asset.sign) {
+              $signature = Get-AuthenticodeSignature -LiteralPath $file.FullName
+              if ($signature.Status -ne 'Valid') {
+                throw "Invalid signature for ${name}: $($signature.Status) - $($signature.StatusMessage)"
+              }
+            } else {
+              $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+              if ($digest -ne $asset.digest) {
+                throw "Release asset changed without a signing rule: $name"
+              }
+            }
           }
+          "Verified $($assets.Count) release assets." >> $env:GITHUB_STEP_SUMMARY
