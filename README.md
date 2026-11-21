@@ -1,6 +1,13 @@
+<a href="https://store.steampowered.com/app/5438180/vlaina/">
+  <img width="920" height="430" alt="A game by the author" src="https://github.com/user-attachments/assets/a099f838-c516-490e-a038-4450ba07afb0" />
+</a>
+
+# ⇑🎮 A game by the author: [vlaina](https://store.steampowered.com/app/5438180/vlaina/)
+
+
 <div align="center">
 
-# v1.5.0 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
+# Catime v1.5.0 is out! 🎉 [Download Now](https://github.com/vladelaina/Catime/releases/latest) - `Only 995KB`!
 </div>
 
 <div align="center">
